@@ -226,6 +226,9 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   @Override
   public Query<Result<TopNResultValue>> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {
+    if (!context().isOptimizeAggregators()) {
+      return this;
+    }
     return new TopNQueryBuilder(this).aggregators(optimizeAggs(optimizationContext)).build();
   }
 

@@ -2886,6 +2886,169 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     verifyAll();
   }
 
+  /**
+   * Verifies that when N stored offsets are all outside stream retention, all N partitions are collected in a single
+   * pass and reset together in one {@code resetInternal()} call, producing exactly one exception event.
+   */
+  @Test
+  public void testBatchResetOfMultipleUnavailableOffsets() throws IOException
+  {
+    final StreamPartition<String> shard1Partition = StreamPartition.of(STREAM, "1");
+    final ImmutableMap<String, String> storedOffsets = ImmutableMap.of("0", "5", "1", "10");
+
+    final SeekableStreamSupervisorTuningConfig tuningConfigWithAutoReset = new SeekableStreamSupervisorTuningConfig()
+    {
+      @Override
+      public Integer getWorkerThreads()
+      {
+        return 1;
+      }
+
+      @Override
+      public Long getChatRetries()
+      {
+        return 1L;
+      }
+
+      @Override
+      public Duration getHttpTimeout()
+      {
+        return new Period("PT1M").toStandardDuration();
+      }
+
+      @Override
+      public Duration getShutdownTimeout()
+      {
+        return new Period("PT1S").toStandardDuration();
+      }
+
+      @Override
+      public Duration getRepartitionTransitionDuration()
+      {
+        return new Period("PT2M").toStandardDuration();
+      }
+
+      @Override
+      public Duration getOffsetFetchPeriod()
+      {
+        return new Period("PT5M").toStandardDuration();
+      }
+
+      @Override
+      public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
+      {
+        return new SeekableStreamIndexTaskTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+        {
+          @Override
+          public SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir)
+          {
+            return null;
+          }
+
+          @Override
+          public String toString()
+          {
+            return null;
+          }
+        };
+      }
+    };
+
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(createSupervisorIOConfig()).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(tuningConfigWithAutoReset).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+
+    final TestSeekableStreamDataSourceMetadata storedMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamEndSequenceNumbers<>(STREAM, storedOffsets)
+    );
+    // After resetting both stale partitions, no offsets remain in the metadata store.
+    final TestSeekableStreamDataSourceMetadata expectedAfterReset = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of())
+    );
+
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    // Called once in getOffsetsFromMetadataStorage() and once inside resetInternal().
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID))
+            .andReturn(storedMetadata)
+            .anyTimes();
+    // Must be called exactly once — not once per unavailable partition.
+    EasyMock.expect(
+        indexerMetadataStorageCoordinator.resetDataSourceMetadata(SUPERVISOR_ID, expectedAfterReset)
+    ).andReturn(true).times(1);
+
+    EasyMock.reset(recordSupplier);
+    EasyMock.expect(recordSupplier.getAssignment())
+            .andReturn(ImmutableSet.of(SHARD0_PARTITION, shard1Partition))
+            .anyTimes();
+    EasyMock.expect(recordSupplier.getLatestSequenceNumber(EasyMock.anyObject()))
+            .andReturn("10")
+            .anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM))
+            .andReturn(ImmutableSet.of(SHARD_ID, "1"))
+            .anyTimes();
+    // Both stored offsets are outside stream retention.
+    EasyMock.expect(recordSupplier.isOffsetAvailable(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(false)
+            .anyTimes();
+
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor()
+    {
+      @Override
+      protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
+          String stream,
+          Map<String, String> map
+      )
+      {
+        return new TestSeekableStreamDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(stream, map));
+      }
+    };
+
+    supervisor.start();
+    supervisor.runInternal();
+
+    // The StreamException is recorded exactly once — not once per unavailable partition.
+    final List<SupervisorStateManager.ExceptionEvent> exceptionEvents = supervisor.stateManager.getExceptionEvents();
+    Assert.assertEquals(1, exceptionEvents.size());
+    Assert.assertTrue(((SeekableStreamExceptionEvent) exceptionEvents.get(0)).isStreamException());
+
+    // EasyMock validates that resetDataSourceMetadata was called exactly once (see .times(1) above).
+    verifyAll();
+  }
+
   private static DataSchema getDataSchema()
   {
     List<DimensionSchema> dimensions = new ArrayList<>();
@@ -3725,7 +3888,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     // minScaleUpDelay = 0 means any scale-up is immediately allowed.
     supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
 
-    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
@@ -3744,11 +3907,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     // First scale-up succeeds and stamps the last-scale timestamp.
     supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
-    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
     // Second scale-up is within the 1h minScaleUpDelay window and must be blocked.
     supervisor.handleDynamicAllocationTasksNotice(() -> 7, () -> {}, scalingEmitter);
-    Assert.assertEquals("Second scale-up must not take effect", 5, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals("Second scale-up must not take effect", 5, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
@@ -3771,7 +3934,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     // minScaleDownDelay = 0 means any scale-down is immediately allowed.
     supervisor.handleDynamicAllocationTasksNotice(() -> 2, () -> {}, scalingEmitter);
 
-    Assert.assertEquals(2, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals(2, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
@@ -3790,11 +3953,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     // First scale-down succeeds and stamps the last-scale timestamp.
     supervisor.handleDynamicAllocationTasksNotice(() -> 3, () -> {}, scalingEmitter);
-    Assert.assertEquals(3, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals(3, supervisor.getIoConfig().getTaskCount());
 
     // Second scale-down is within the 1h minScaleDownDelay window and must be blocked.
     supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, scalingEmitter);
-    Assert.assertEquals("Second scale-down must not take effect", 3, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertEquals("Second scale-down must not take effect", 3, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);

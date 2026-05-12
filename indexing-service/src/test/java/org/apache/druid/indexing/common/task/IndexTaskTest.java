@@ -276,8 +276,6 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    Assert.assertFalse(indexTask.supportsQueries());
-
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
@@ -321,8 +319,6 @@ public class IndexTaskTest extends IngestionTestBase
         ImmutableMap.of(Tasks.STORE_EMPTY_COLUMNS_KEY, false)
     );
 
-    Assert.assertFalse(indexTask.supportsQueries());
-
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
     Assert.assertEquals(1, segments.size());
@@ -360,8 +356,6 @@ public class IndexTaskTest extends IngestionTestBase
         ),
         null
     );
-
-    Assert.assertFalse(indexTask.supportsQueries());
 
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());

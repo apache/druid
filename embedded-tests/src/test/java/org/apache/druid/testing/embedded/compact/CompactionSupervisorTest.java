@@ -106,6 +106,7 @@ import org.apache.druid.testing.embedded.tools.WikipediaStreamEventStreamGenerat
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.hamcrest.Matcher;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -610,14 +611,21 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     // Verify the correct rows were filtered
     verifyNoRowsWithNestedValue("extraInfo", "fieldA", "valueA");
 
-    List<ServiceMetricEvent> events = emitter.getMetricEvents(StorageMonitor.VSF_LOAD_COUNT);
-    long count = 0;
-    for (ServiceMetricEvent event : events) {
-      count += event.getValue().longValue();
+    List<ServiceMetricEvent> loadBeginEvents = emitter.getMetricEvents(StorageMonitor.VSF_LOAD_BEGIN_COUNT);
+    List<ServiceMetricEvent> loadEvents = emitter.getMetricEvents(StorageMonitor.VSF_LOAD_COUNT);
+    long loadBeginCount = 0, loadCount = 0;
+    for (ServiceMetricEvent event : loadBeginEvents) {
+      loadBeginCount += event.getValue().longValue();
       Assertions.assertNotNull(event.getUserDims().get("taskId"));
       Assertions.assertNotNull(event.getUserDims().get("groupId"));
     }
-    Assertions.assertTrue(count > 0);
+    for (ServiceMetricEvent event : loadEvents) {
+      loadCount += event.getValue().longValue();
+      Assertions.assertNotNull(event.getUserDims().get("taskId"));
+      Assertions.assertNotNull(event.getUserDims().get("groupId"));
+    }
+    MatcherAssert.assertThat(loadBeginCount, Matchers.greaterThan(0L));
+    MatcherAssert.assertThat(loadCount, Matchers.greaterThan(0L));
   }
 
   @Test

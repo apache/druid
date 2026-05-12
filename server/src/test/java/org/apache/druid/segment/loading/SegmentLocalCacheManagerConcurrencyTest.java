@@ -604,16 +604,16 @@ class SegmentLocalCacheManagerConcurrencyTest
         totalFailures += result.exceptions.size();
         Assertions.assertEquals(
             totalSuccess,
-            location.getWeakStats().getLoadCount() +
+            location.getWeakStats().getLoadBeginCount() +
             location.getWeakStats().getHitCount() +
-            location2.getWeakStats().getLoadCount() +
+            location2.getWeakStats().getLoadBeginCount() +
             location2.getWeakStats().getHitCount(),
             StringUtils.format(
                 "iteration[%s] - loc1: loads[%s] hits[%s] loc2: loads[%s] hits[%s]",
                 i,
-                location.getWeakStats().getLoadCount(),
+                location.getWeakStats().getLoadBeginCount(),
                 location.getWeakStats().getHitCount(),
-                location2.getWeakStats().getLoadCount(),
+                location2.getWeakStats().getLoadBeginCount(),
                 location2.getWeakStats().getHitCount()
             )
         );
@@ -631,9 +631,9 @@ class SegmentLocalCacheManagerConcurrencyTest
     Assertions.assertEquals(iterations, totalSuccess + totalFailures);
     Assertions.assertEquals(
         totalSuccess,
-        location.getWeakStats().getLoadCount()
+        location.getWeakStats().getLoadBeginCount()
         + location.getWeakStats().getHitCount()
-        + location2.getWeakStats().getLoadCount()
+        + location2.getWeakStats().getLoadBeginCount()
         + location2.getWeakStats().getHitCount()
     );
     Assertions.assertTrue(totalFailures <= location.getWeakStats().getRejectCount() + location2.getWeakStats()
@@ -805,14 +805,14 @@ class SegmentLocalCacheManagerConcurrencyTest
     // 5 because __drop path
     Assertions.assertTrue(5 >= location.getPath().listFiles().length);
     Assertions.assertTrue(5 >= location2.getPath().listFiles().length);
-    Assertions.assertTrue(location.getWeakStats().getLoadCount() >= 4);
-    Assertions.assertTrue(location2.getWeakStats().getLoadCount() >= 4);
+    Assertions.assertTrue(location.getWeakStats().getLoadBeginCount() >= 4);
+    Assertions.assertTrue(location2.getWeakStats().getLoadBeginCount() >= 4);
     Assertions.assertEquals(location.getWeakStats().getEvictionCount(), location.getWeakStats().getUnmountCount());
     Assertions.assertEquals(location2.getWeakStats().getEvictionCount(), location2.getWeakStats().getUnmountCount());
-    Assertions.assertEquals(location.getWeakStats().getLoadCount() - 4, location.getWeakStats().getEvictionCount());
-    Assertions.assertEquals(location2.getWeakStats().getLoadCount() - 4, location2.getWeakStats().getEvictionCount());
-    Assertions.assertEquals(location.getWeakStats().getLoadCount() - 4, location.getWeakStats().getUnmountCount());
-    Assertions.assertEquals(location2.getWeakStats().getLoadCount() - 4, location2.getWeakStats().getUnmountCount());
+    Assertions.assertEquals(location.getWeakStats().getLoadBeginCount() - 4, location.getWeakStats().getEvictionCount());
+    Assertions.assertEquals(location2.getWeakStats().getLoadBeginCount() - 4, location2.getWeakStats().getEvictionCount());
+    Assertions.assertEquals(location.getWeakStats().getLoadBeginCount() - 4, location.getWeakStats().getUnmountCount());
+    Assertions.assertEquals(location2.getWeakStats().getLoadBeginCount() - 4, location2.getWeakStats().getUnmountCount());
   }
 
   private void makeSegmentsToLoad(

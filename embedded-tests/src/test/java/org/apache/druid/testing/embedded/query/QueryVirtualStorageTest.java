@@ -67,7 +67,7 @@ import java.util.concurrent.ThreadLocalRandom;
 class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 {
   // size of wiki segments, adjust this if segment size changes for some reason
-  private static final long SIZE_BYTES = 3776682L;
+  private static final long SIZE_BYTES = 3777834L;
   private static final long CACHE_SIZE = HumanReadableBytes.parse("1MiB");
   private static final long MAX_SIZE = HumanReadableBytes.parse("100MiB");
 
@@ -181,15 +181,15 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     LatchableEmitter coordinatorEmitter = coordinator.latchableEmitter();
 
     // clear out the pipe to get zerod out storage monitor metrics
-    ServiceMetricEvent monitorEvent = emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+    ServiceMetricEvent monitorEvent = emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_BEGIN_COUNT));
     while (monitorEvent != null && monitorEvent.getValue().longValue() > 0) {
-      monitorEvent = emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+      monitorEvent = emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_BEGIN_COUNT));
     }
     // then flush (which clears out the internal events stores in test emitter) so we can do clean sums across them
     emitter.flush();
 
-    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
-    long beforeLoads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT);
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_BEGIN_COUNT));
+    long beforeLoads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BEGIN_COUNT);
     // confirm flushed
     Assertions.assertEquals(0, beforeLoads);
 
@@ -203,8 +203,8 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(expectedResults[3], Long.parseLong(cluster.runSql(queries[3], dataSource)));
     assertQueryMetrics(4, expectedLoads[3]);
 
-    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
-    long firstLoads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT);
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_BEGIN_COUNT));
+    long firstLoads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BEGIN_COUNT);
     Assertions.assertTrue(firstLoads >= 24, "expected " + 24 + " but only got " + firstLoads);
 
     long expectedTotalHits = 0;
@@ -225,9 +225,11 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
       emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_HIT_BYTES));
       Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_HIT_BYTES) >= 0);
     }
-    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
-    long loads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT);
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_BEGIN_COUNT));
+    long loads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BEGIN_COUNT);
     Assertions.assertTrue(loads >= expectedTotalLoad, "expected " + expectedTotalLoad + " but only got " + loads);
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BEGIN_BYTES) > 0);
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT) > 0);
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BYTES) > 0);
     emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_EVICT_COUNT));
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_COUNT) >= 0);
@@ -294,7 +296,8 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(segmentChannelCounters.getLoadFiles()[0] > 0 && segmentChannelCounters.getLoadFiles()[0] <= segmentChannelCounters.getFiles()[0]);
     // size of all segments at time of writing, possibly we have to load all of them, but possibly less depending on
     // test order
-    Assertions.assertTrue(segmentChannelCounters.getLoadBytes()[0] > 0 && segmentChannelCounters.getLoadBytes()[0] <= SIZE_BYTES);
+    Assertions.assertTrue(segmentChannelCounters.getLoadBytes()[0] > 0);
+    Assertions.assertTrue(segmentChannelCounters.getLoadBytes()[0] <= SIZE_BYTES);
     Assertions.assertTrue(segmentChannelCounters.getLoadTime()[0] > 0);
     Assertions.assertTrue(segmentChannelCounters.getLoadWait()[0] > 0);
   }

@@ -138,6 +138,7 @@ public class KinesisIndexTaskSerdeTest
     Assert.assertEquals(ACCESS_KEY, awsCredentialsConfig.getAccessKey().getPassword());
     Assert.assertEquals(SECRET_KEY, awsCredentialsConfig.getSecretKey().getPassword());
     Assert.assertEquals(FILE_SESSION_CREDENTIALS, awsCredentialsConfig.getFileSessionCredentials());
+    Assert.assertNotNull(target.getPeonProcessingModuleConfig());
     Assert.assertEquals(
         Collections.singleton(
             new ResourceAction(new Resource(

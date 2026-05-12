@@ -4099,6 +4099,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
 
     // check that there is a current task group for each group of partitions in [partitionGroups]
+    // Fetch metadata offsets once and collect all stale partitions across all groups before committing
+    // any state changes. New TaskGroups are staged locally and only written to activelyReadingTaskGroups
+    // if no reset is required, keeping state consistent: either all new groups are committed or none are.
+    final Map<PartitionIdType, SequenceOffsetType> metadataOffsets = getOffsetsFromMetadataStorage();
+    final Map<PartitionIdType, SequenceOffsetType> partitionsToReset = new HashMap<>();
+    final Map<Integer, TaskGroup> newTaskGroups = new HashMap<>();
     for (Integer groupId : partitionGroups.keySet()) {
       if (!activelyReadingTaskGroups.containsKey(groupId)) {
         log.info("Creating new taskGroup[%d] for partitions[%s].", groupId, partitionGroups.get(groupId));
@@ -4118,7 +4124,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                             : null;
 
         final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> unfilteredStartingOffsets =
-            generateStartingSequencesForPartitionGroup(groupId);
+            generateStartingSequencesForPartitionGroup(groupId, metadataOffsets, partitionsToReset);
 
         final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets;
         if (supportsPartitionExpiration()) {
@@ -4167,8 +4173,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               .collect(Collectors.toSet());
         }
 
-        log.info("Initializing taskGroup[%d] with startingOffsets[%s].", groupId, simpleStartingOffsets);
-        activelyReadingTaskGroups.put(
+        newTaskGroups.put(
             groupId,
             new TaskGroup(
                 groupId,
@@ -4180,6 +4185,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             )
         );
       }
+    }
+
+    // If any partitions need a reset, issue a single batch reset.
+    if (!partitionsToReset.isEmpty()) {
+      resetInternal(createDataSourceMetaDataForReset(ioConfig.getStream(), partitionsToReset));
+      throw new StreamException(
+          new ISE(
+              "Previous sequenceNumbers %s are no longer available - automatically resetting sequences",
+              partitionsToReset
+          )
+      );
+    }
+
+    for (Entry<Integer, TaskGroup> entry : newTaskGroups.entrySet()) {
+      log.info("Initializing taskGroup[%d] with startingOffsets[%s].", entry.getKey(), entry.getValue().startingSequences);
+      activelyReadingTaskGroups.put(entry.getKey(), entry.getValue());
     }
 
     // iterate through all the current task groups and make sure each one has the desired number of replica tasks
@@ -4233,12 +4254,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return notices.size();
   }
 
+  /**
+   * Builds the starting sequence map for one partition group.
+   *
+   * <p>Stale partitions (whose stored offsets are no longer available) are added to
+   * {@code partitionsToReset} instead of the result map. The caller is responsible for
+   * issuing the single batch reset after all groups have been processed.
+   *
+   * @param metadataOffsets pre-fetched metadata offsets shared across all groups in this run
+   * @param partitionsToReset accumulator for partitions that need to be reset; mutated in-place
+   */
   private Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> generateStartingSequencesForPartitionGroup(
-      int groupId
+      int groupId,
+      Map<PartitionIdType, SequenceOffsetType> metadataOffsets,
+      Map<PartitionIdType, SequenceOffsetType> partitionsToReset
   )
   {
     ImmutableMap.Builder<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> builder = ImmutableMap.builder();
-    final Map<PartitionIdType, SequenceOffsetType> metadataOffsets = getOffsetsFromMetadataStorage();
     for (PartitionIdType partitionId : partitionGroups.get(groupId)) {
       SequenceOffsetType sequence = partitionOffsets.get(partitionId);
 
@@ -4252,7 +4284,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         // get the sequence from metadata storage (if available) or Kafka/Kinesis (otherwise)
         OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage = getOffsetFromStorageForPartition(
             partitionId,
-            metadataOffsets
+            metadataOffsets,
+            partitionsToReset
         );
 
         if (offsetFromStorage != null) {
@@ -4267,10 +4300,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * Queries the dataSource metadata table to see if there is a previous ending sequence for this partition. If it
    * doesn't find any data, it will retrieve the latest or earliest Kafka/Kinesis sequence depending on the
    * {@link SeekableStreamSupervisorIOConfig#useEarliestSequenceNumber}.
+   *
+   * When {@code resetOffsetAutomatically} is enabled and the stored offset is no longer available, the partition is
+   * added to {@code partitionsToReset} and {@code null} is returned. The caller is responsible for performing the
+   * batch reset after iterating all partitions.
    */
+  @Nullable
   private OrderedSequenceNumber<SequenceOffsetType> getOffsetFromStorageForPartition(
       PartitionIdType partition,
-      final Map<PartitionIdType, SequenceOffsetType> metadataOffsets
+      final Map<PartitionIdType, SequenceOffsetType> metadataOffsets,
+      final Map<PartitionIdType, SequenceOffsetType> partitionsToReset
   )
   {
     SequenceOffsetType sequence = metadataOffsets.get(partition);
@@ -4279,17 +4318,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       if (!taskTuningConfig.isSkipSequenceNumberAvailabilityCheck()) {
         if (!checkOffsetAvailability(partition, sequence)) {
           if (taskTuningConfig.isResetOffsetAutomatically()) {
-            resetInternal(
-                createDataSourceMetaDataForReset(ioConfig.getStream(), ImmutableMap.of(partition, sequence))
-            );
-            throw new StreamException(
-                new ISE(
-                    "Previous sequenceNumber [%s] is no longer available for partition [%s] - automatically resetting"
-                    + " sequence",
-                    sequence,
-                    partition
-                )
-            );
+            partitionsToReset.put(partition, sequence);
+            return null;
           } else {
             throw new StreamException(
                 new ISE(

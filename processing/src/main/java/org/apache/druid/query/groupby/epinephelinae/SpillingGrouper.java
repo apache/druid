@@ -35,12 +35,14 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -80,10 +82,19 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   private final Comparator<Grouper.Entry<KeyType>> keyObjComparator;
   private final Comparator<Grouper.Entry<KeyType>> defaultOrderKeyObjComparator;
   private final GroupByStatsProvider.PerQueryStats perQueryStats;
+  private final long minSpillFileSize;
 
   private final List<File> files = new ArrayList<>();
   private final List<File> dictionaryFiles = new ArrayList<>();
   private final boolean sortHasNonGroupingFields;
+
+  // Pending spill runs not yet written to disk. Each entry is one buffer flush serialized as a
+  // LZ4-compressed JSON byte array — the same format as an on-disk spill file, so it can be
+  // re-read with the same read() path. Runs are held in heap memory and merged into a single
+  // sorted file only when pendingSpillBytes reaches minSpillFileSize.
+  private final List<byte[]> pendingSpillRuns = new ArrayList<>();
+  private final Set<String> pendingDictionaryEntries = new HashSet<>();
+  private long pendingSpillBytes = 0;
 
   private boolean diskFull = false;
   private boolean maxFileCount = false;
@@ -103,6 +114,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       final DefaultLimitSpec limitSpec,
       final boolean sortHasNonGroupingFields,
       final int mergeBufferSize,
+      final long minSpillFileSize,
       final GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
@@ -163,6 +175,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     this.spillMapper = keySerde.decorateObjectMapper(spillMapper);
     this.spillingAllowed = spillingAllowed;
     this.sortHasNonGroupingFields = sortHasNonGroupingFields;
+    this.minSpillFileSize = minSpillFileSize;
     this.perQueryStats = perQueryStats;
   }
 
@@ -225,6 +238,9 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   public void reset()
   {
     grouper.reset();
+    pendingSpillRuns.clear();
+    pendingSpillBytes = 0;
+    pendingDictionaryEntries.clear();
     deleteFiles();
   }
 
@@ -233,8 +249,20 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   {
     perQueryStats.dictionarySize(getDictionarySizeEstimate());
     perQueryStats.maxMergeBufferUsedBytes(getMaxMergeBufferUsedBytes());
+    // Record spilled bytes before deleteFiles() decrements bytesUsed in temporaryStorage.
+    long spilledBytes = 0;
+    for (final File file : files) {
+      spilledBytes += file.length();
+    }
+    for (final File file : dictionaryFiles) {
+      spilledBytes += file.length();
+    }
+    perQueryStats.spilledBytes(spilledBytes);
     grouper.close();
     keySerde.reset();
+    pendingSpillRuns.clear();
+    pendingSpillBytes = 0;
+    pendingDictionaryEntries.clear();
     deleteFiles();
   }
 
@@ -290,9 +318,36 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     this.spillingAllowed = spillingAllowed;
   }
 
+  /**
+   * Returns an iterator over all grouped entries, merging results from the in-memory grouper and
+   * any spill files on disk. When sorted is true, uses a merge-sorted iterator across all sources;
+   * when false, simply concatenates them.
+   *
+   * <p>In practice, sorted is always true. {@link RowBasedGrouperHelper} hardcodes
+   * {@code grouper.iterator(true)} because the merge layer above — CombiningIterator in
+   * {@link ConcurrentGrouper} and the broker merge — detects duplicate keys by comparing
+   * consecutive sorted entries. So sorted=true is required for merge correctness, not output
+   * ordering. The sorted=false path exists but is unreachable through any production query path.
+   */
   @Override
   public CloseableIterator<Entry<KeyType>> iterator(final boolean sorted)
   {
+    // Flush any runs that did not reach minSpillFileSize during the spill phase.
+    try {
+      flushPendingRunsToDisk();
+    }
+    catch (TemporaryStorageFullException e) {
+      diskFull = true;
+      throw new ResourceLimitExceededException(DISK_FULL.getReason());
+    }
+    catch (TemporaryStorageFileLimitException e) {
+      maxFileCount = true;
+      throw new ResourceLimitExceededException(MAX_FILE.getReason());
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
     final List<CloseableIterator<Entry<KeyType>>> iterators = new ArrayList<>(1 + files.size());
 
     iterators.add(grouper.iterator(sorted));
@@ -301,33 +356,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     for (final File file : files) {
       final MappingIterator<Entry<KeyType>> fileIterator = read(file, keySerde.keyClazz());
 
-      iterators.add(
-          CloseableIterators.withEmptyBaggage(
-              Iterators.transform(
-                  fileIterator,
-                  new Function<>()
-                  {
-                    final ReusableEntry<KeyType> reusableEntry =
-                        ReusableEntry.create(keySerde, aggregatorFactories.length);
-
-                    @Override
-                    public Entry<KeyType> apply(Entry<KeyType> entry)
-                    {
-                      final Object[] deserializedValues = reusableEntry.getValues();
-                      for (int i = 0; i < deserializedValues.length; i++) {
-                        deserializedValues[i] = aggregatorFactories[i].deserialize(entry.getValues()[i]);
-                        if (deserializedValues[i] instanceof Integer) {
-                          // Hack to satisfy the groupBy unit tests; perhaps we could do better by adjusting Jackson config.
-                          deserializedValues[i] = ((Integer) deserializedValues[i]).longValue();
-                        }
-                      }
-                      reusableEntry.setKey(entry.getKey());
-                      return reusableEntry;
-                    }
-                  }
-              )
-          )
-      );
+      iterators.add(deserializeIterator(fileIterator));
       closer.register(fileIterator);
     }
 
@@ -345,12 +374,113 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 
   private void spill() throws IOException
   {
+    // Stream directly to a temp file first, then check the file size. If the file is small
+    // (serialized size much smaller than the pre-allocated buffer, e.g. HLL sketches in List mode),
+    // read it back into memory for batching to avoid creating thousands of tiny disk files.
+    // If the file is already large enough, keep it on disk as-is.
+    final File file;
     try (CloseableIterator<Entry<KeyType>> iterator = grouper.iterator(true)) {
-      files.add(spill(iterator));
-      dictionaryFiles.add(spill(keySerde.getDictionary().iterator()));
-
-      grouper.reset();
+      file = spill(iterator);
     }
+    pendingDictionaryEntries.addAll(keySerde.getDictionary());
+    grouper.reset();
+
+    final long fileSize = file.length();
+    if (fileSize < minSpillFileSize) {
+      pendingSpillRuns.add(Files.readAllBytes(file.toPath()));
+      pendingSpillBytes += fileSize;
+      temporaryStorage.delete(file);
+
+      if (pendingSpillBytes >= minSpillFileSize) {
+        flushPendingRunsToDisk();
+      }
+    } else {
+      files.add(file);
+      dictionaryFiles.add(spill(pendingDictionaryEntries.iterator()));
+      pendingDictionaryEntries.clear();
+    }
+  }
+
+  /**
+   * Merge-sorts all pending in-memory spill runs and writes them as a single sorted file to disk.
+   * Each run is already individually sorted (from grouper.iterator(true)); this method merges them
+   * so the output file is fully sorted, as required by iterator()'s mergeSorted across files.
+   * <p>
+   * We always merge-sort rather than concatenating runs (regardless of sorted / sortHasNonGroupingFields flags).
+   * The processing cost is dominated by JSON deserialization and re-serialization; the merge-sort comparison itself
+   * is O(N log K) key comparisons and negligible relative to the serde overhead, so concatenation would save little.
+   * <p>
+   * An alternative approach of writing each pending run's raw byte[] sequentially into one file
+   * (avoiding serde entirely) was rejected because at read time each sub-stream would require its own
+   * LZ4BlockInputStream with an internal buffer. With large amount of small spills we can end up with large number of
+   * sub-streams, each with its own buffer, which can lead to OOM. By merging runs together, we ensure that the number
+   * of spill files (and thus sub-streams) is small regardless of spill pattern.
+   */
+  private void flushPendingRunsToDisk() throws IOException
+  {
+    if (pendingSpillRuns.isEmpty()) {
+      return;
+    }
+
+    final Comparator<Entry<KeyType>> sortComparator =
+        sortHasNonGroupingFields ? defaultOrderKeyObjComparator : keyObjComparator;
+
+    final List<MappingIterator<Entry<KeyType>>> readers = new ArrayList<>(pendingSpillRuns.size());
+    try {
+      for (final byte[] runBytes : pendingSpillRuns) {
+        readers.add(spillMapper.readValues(
+            spillMapper.getFactory().createParser(new LZ4BlockInputStream(new ByteArrayInputStream(runBytes))),
+            spillMapper.getTypeFactory().constructParametricType(ReusableEntry.class, keySerde.keyClazz())
+        ));
+      }
+      final List<CloseableIterator<Entry<KeyType>>> iterators = new ArrayList<>(readers.size());
+      for (final MappingIterator<Entry<KeyType>> reader : readers) {
+        iterators.add(deserializeIterator(reader));
+      }
+      files.add(spill(CloseableIterators.mergeSorted(iterators, sortComparator)));
+      dictionaryFiles.add(spill(pendingDictionaryEntries.iterator()));
+    }
+    finally {
+      for (final MappingIterator<Entry<KeyType>> reader : readers) {
+        try {
+          reader.close();
+        }
+        catch (IOException e) {
+          log.warn(e, "Failed to close reader while flushing pending spill runs");
+        }
+      }
+      pendingSpillRuns.clear();
+      pendingSpillBytes = 0;
+      pendingDictionaryEntries.clear();
+    }
+  }
+
+  private CloseableIterator<Entry<KeyType>> deserializeIterator(final Iterator<Entry<KeyType>> iterator)
+  {
+    return CloseableIterators.withEmptyBaggage(
+        Iterators.transform(
+            iterator,
+            new Function<>()
+            {
+              final ReusableEntry<KeyType> reusableEntry =
+                  ReusableEntry.create(keySerde, aggregatorFactories.length);
+
+              @Override
+              public Entry<KeyType> apply(Entry<KeyType> entry)
+              {
+                final Object[] deserializedValues = reusableEntry.getValues();
+                for (int i = 0; i < deserializedValues.length; i++) {
+                  deserializedValues[i] = aggregatorFactories[i].deserialize(entry.getValues()[i]);
+                  if (deserializedValues[i] instanceof Integer) {
+                    deserializedValues[i] = ((Integer) deserializedValues[i]).longValue();
+                  }
+                }
+                reusableEntry.setKey(entry.getKey());
+                return reusableEntry;
+              }
+            }
+        )
+    );
   }
 
   private <T> File spill(Iterator<T> iterator) throws IOException
@@ -390,5 +520,9 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       temporaryStorage.delete(file);
     }
     files.clear();
+    for (final File file : dictionaryFiles) {
+      temporaryStorage.delete(file);
+    }
+    dictionaryFiles.clear();
   }
 }

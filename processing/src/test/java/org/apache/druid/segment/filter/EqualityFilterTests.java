@@ -1602,12 +1602,24 @@ public class EqualityFilterTests
       Assert.assertEquals(set, filter.getDimensionRangeSet("x"));
       Assert.assertNull(filter.getDimensionRangeSet("y"));
 
-      ExprEval<?> eval = ExprEval.ofType(ExpressionType.STRING_ARRAY, new Object[]{"abc", "def"});
-      filter = new EqualityFilter("x", ColumnType.STRING_ARRAY, eval.value(), null);
-      set = TreeRangeSet.create();
-      set.add(Range.singleton(Arrays.deepToString(eval.asArray())));
-      Assert.assertEquals(set, filter.getDimensionRangeSet("x"));
-      Assert.assertNull(filter.getDimensionRangeSet("y"));
+      // Non-STRING match value types must not return a RangeSet.
+      Assert.assertNull(
+          new EqualityFilter("x", ColumnType.LONG, 1L, null).getDimensionRangeSet("x")
+      );
+      Assert.assertNull(
+          new EqualityFilter("x", ColumnType.DOUBLE, 1.5, null).getDimensionRangeSet("x")
+      );
+      Assert.assertNull(
+          new EqualityFilter("x", ColumnType.FLOAT, 1.5f, null).getDimensionRangeSet("x")
+      );
+      Assert.assertNull(
+          new EqualityFilter(
+              "x",
+              ColumnType.STRING_ARRAY,
+              ExprEval.ofType(ExpressionType.STRING_ARRAY, new Object[]{"abc", "def"}).value(),
+              null
+          ).getDimensionRangeSet("x")
+      );
     }
 
     @Test

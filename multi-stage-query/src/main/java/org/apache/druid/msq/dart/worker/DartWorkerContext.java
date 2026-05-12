@@ -250,10 +250,9 @@ public class DartWorkerContext implements WorkerContext
         this,
         FrameWriterSpec.fromContext(workOrder.getWorkerContext()),
         segmentWrangler,
-        groupingEngine,
         segmentManager,
         coordinatorClient,
-        processingBuffersSet.get().acquireForStage(workOrder.getStageDefinition()),
+        workOrder.getStageDefinition().getProcessor().usesProcessingBuffers() ? processingBuffersSet.get() : null,
         memoryParameters,
         storageParameters,
         dataServerQueryHandlerFactory
