@@ -123,18 +123,20 @@ The following built-in functions are available.
 ### Using `now()` in ingestion
 
 :::warning
-`now()` is non-deterministic: replicated streaming tasks and task replays evaluate it to different
-values, producing inconsistent results across replicas. Do not use `now()` to overwrite `__time`.
-For Kafka, prefer [`kafka.timestamp`](../ingestion/data-formats.md#kafka) as the
-`__time` source.
+`now()` is non-deterministic — replicated streaming tasks and task replays evaluate it at
+different wall-clock times, producing inconsistent results across replicas. Use `now()` to
+populate regular columns (e.g. ingestion time, lag metrics), but Druid rejects mapping
+`__time` to `now()`. For Kafka, prefer
+[`kafka.timestamp`](../ingestion/data-formats.md#kafka) as the `__time` source.
 :::
 
-To troubleshoot end-to-end pipeline delays, store `now() - __time` as a separate dimension via a
-[`transformSpec`](../ingestion/ingestion-spec.md#transformspec):
+To troubleshoot end-to-end pipeline delays, store `now()` or `now() - __time` as a separate
+dimension via a [`transformSpec`](../ingestion/ingestion-spec.md#transformspec):
 
 ```json
 "transformSpec": {
   "transforms": [
+    { "type": "expression", "name": "druid_ingestion_time", "expression": "now()" },
     { "type": "expression", "name": "ingestion_lag_ms", "expression": "now() - __time" }
   ]
 }

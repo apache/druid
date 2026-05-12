@@ -427,7 +427,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
 
   private Supplier<byte[]> makeCacheKeySupplier()
   {
-    final Supplier<byte[]> supplier = () -> {
+    return () -> {
       CacheKeyBuilder builder = new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
           .appendString(name)
           .appendCacheable(expression.parsed.get());
@@ -436,10 +436,6 @@ public class ExpressionVirtualColumn implements VirtualColumn
       }
       return builder.build();
     };
-    if (expressionAnalysis.get().isNonDeterministic()) {
-      return supplier;
-    }
-    return Suppliers.memoize(supplier);
   }
 
   /**
