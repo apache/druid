@@ -53,7 +53,6 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -61,7 +60,6 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -390,23 +388,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   @Override
   protected boolean isOffsetAtOrBeyond(String current, String target)
   {
-    // Kinesis sequence numbers are decimal numeric strings that must be compared numerically.
-    // Use BigInteger because Kinesis sequence numbers can be very large (128-bit).
-    try {
-      BigInteger currentNum = new BigInteger(current);
-      BigInteger targetNum = new BigInteger(target);
-      return currentNum.compareTo(targetNum) >= 0;
-    }
-    catch (NumberFormatException e) {
-      throw new IAE(
-          StringUtils.format(
-              "Invalid Kinesis sequence number. Expected numeric string but got current=[%s], target=[%s]",
-              current,
-              target
-          ),
-          e
-      );
-    }
+    return KinesisSequenceNumber.of(current).compareTo(KinesisSequenceNumber.of(target)) >= 0;
   }
 
   @Override

@@ -213,10 +213,8 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
   }
 
   /**
-   * Regression test: a new bounded run whose endOffset is less than the offset committed by a prior
-   * run must not silently reach COMPLETED. Before the fix, hasTaskGroupReachedBoundedEnd() compared
-   * the stale committed offset against the new endOffset (e.g. committed=100 >= newEnd=50) and
-   * returned true, bypassing task creation and the documented mismatch error entirely.
+   * A new bounded run whose endOffset is less than the offset committed by a prior
+   * run must not silently reach COMPLETED.
    */
   @Test
   public void test_boundedSupervisor_doesNotSilentlyCompleteWhenStaleOffsetExceedsNewEnd()
@@ -232,13 +230,13 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
 
     Map<String, Long> endOffsets1 = new HashMap<>();
     endOffsets1.put("0", 100L);
-    endOffsets1.put("1", 100L);
+    endOffsets1.put("1", 150L);
 
     BoundedStreamConfig boundedConfig1 = new BoundedStreamConfig(startOffsets1, endOffsets1);
     final KafkaSupervisorSpec supervisor1 = createBoundedKafkaSupervisor(kafkaServer, topic, boundedConfig1);
 
     cluster.callApi().postSupervisor(supervisor1);
-    waitUntilPublishedRecordsAreIngested(200);
+    waitUntilPublishedRecordsAreIngested(150);
     waitForSupervisorToComplete(supervisor1.getId());
 
     final SupervisorStatus status1 = cluster.callApi().getSupervisorStatus(supervisor1.getId());

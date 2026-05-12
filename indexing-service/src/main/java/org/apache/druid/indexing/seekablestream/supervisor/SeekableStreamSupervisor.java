@@ -4679,9 +4679,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * For bounded supervisors, we determine completion by checking if new tasks would be created.
-   * In createNewTasks(), bounded mode checks hasTaskGroupReachedBoundedEnd() before creating tasks.
+   * In {@link #createNewTasks()}, bounded mode checks {@link #hasTaskGroupReachedBoundedEnd(int)} before creating tasks.
    * If that returns true (offsets reached), no new tasks are created.
-   * So completion is: no active tasks, no pending tasks, and createNewTasks() chose not to create any.
+   * So completion is: no active tasks, no pending tasks, and {@link #createNewTasks()} chose not to create any.
    *
    * @return true if all bounded work is complete, false otherwise
    */
