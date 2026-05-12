@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class GroupByQueryConfigTest
 {
@@ -48,15 +48,15 @@ public class GroupByQueryConfigTest
   {
     final GroupByQueryConfig config = MAPPER.convertValue(CONFIG_MAP, GroupByQueryConfig.class);
 
-    Assert.assertEquals(true, config.isSingleThreaded());
-    Assert.assertEquals(1, config.getBufferGrouperInitialBuckets());
-    Assert.assertEquals(4_000_000, config.getMaxOnDiskStorage().getBytes());
-    Assert.assertEquals(123, config.getMaxSpillFileCount());
-    Assert.assertEquals(1_000_000, config.getDefaultOnDiskStorage().getBytes());
-    Assert.assertEquals(5, config.getConfiguredMaxSelectorDictionarySize());
-    Assert.assertEquals(6_000_000, config.getConfiguredMaxMergingDictionarySize());
-    Assert.assertEquals(7.0, config.getBufferGrouperMaxLoadFactor(), 0.0);
-    Assert.assertFalse(config.isApplyLimitPushDownToSegment());
+    Assertions.assertEquals(true, config.isSingleThreaded());
+    Assertions.assertEquals(1, config.getBufferGrouperInitialBuckets());
+    Assertions.assertEquals(4_000_000, config.getMaxOnDiskStorage().getBytes());
+    Assertions.assertEquals(123, config.getMaxSpillFileCount());
+    Assertions.assertEquals(1_000_000, config.getDefaultOnDiskStorage().getBytes());
+    Assertions.assertEquals(5, config.getConfiguredMaxSelectorDictionarySize());
+    Assertions.assertEquals(6_000_000, config.getConfiguredMaxMergingDictionarySize());
+    Assertions.assertEquals(7.0, config.getBufferGrouperMaxLoadFactor(), 0.0);
+    Assertions.assertFalse(config.isApplyLimitPushDownToSegment());
   }
 
   @Test
@@ -71,15 +71,15 @@ public class GroupByQueryConfigTest
                     .build()
     );
 
-    Assert.assertEquals(true, config2.isSingleThreaded());
-    Assert.assertEquals(1, config2.getBufferGrouperInitialBuckets());
-    Assert.assertEquals(1_000_000, config2.getMaxOnDiskStorage().getBytes());
-    Assert.assertEquals(123, config2.getMaxSpillFileCount());
-    Assert.assertEquals(5, config2.getConfiguredMaxSelectorDictionarySize());
-    Assert.assertEquals(6_000_000, config2.getConfiguredMaxMergingDictionarySize());
-    Assert.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
-    Assert.assertEquals(DeferExpressionDimensions.FIXED_WIDTH_NON_NUMERIC, config2.getDeferExpressionDimensions());
-    Assert.assertFalse(config2.isApplyLimitPushDownToSegment());
+    Assertions.assertEquals(true, config2.isSingleThreaded());
+    Assertions.assertEquals(1, config2.getBufferGrouperInitialBuckets());
+    Assertions.assertEquals(1_000_000, config2.getMaxOnDiskStorage().getBytes());
+    Assertions.assertEquals(123, config2.getMaxSpillFileCount());
+    Assertions.assertEquals(5, config2.getConfiguredMaxSelectorDictionarySize());
+    Assertions.assertEquals(6_000_000, config2.getConfiguredMaxMergingDictionarySize());
+    Assertions.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
+    Assertions.assertEquals(DeferExpressionDimensions.FIXED_WIDTH_NON_NUMERIC, config2.getDeferExpressionDimensions());
+    Assertions.assertFalse(config2.isApplyLimitPushDownToSegment());
   }
 
   @Test
@@ -108,15 +108,15 @@ public class GroupByQueryConfigTest
                     .build()
     );
 
-    Assert.assertEquals(true, config2.isSingleThreaded());
-    Assert.assertEquals(1, config2.getBufferGrouperInitialBuckets());
-    Assert.assertEquals(3_000_000, config2.getMaxOnDiskStorage().getBytes());
-    Assert.assertEquals(333, config2.getMaxSpillFileCount());
-    Assert.assertEquals(3, config2.getConfiguredMaxSelectorDictionarySize());
-    Assert.assertEquals(4, config2.getConfiguredMaxMergingDictionarySize());
-    Assert.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
-    Assert.assertEquals(DeferExpressionDimensions.ALWAYS, config2.getDeferExpressionDimensions());
-    Assert.assertTrue(config2.isApplyLimitPushDownToSegment());
+    Assertions.assertEquals(true, config2.isSingleThreaded());
+    Assertions.assertEquals(1, config2.getBufferGrouperInitialBuckets());
+    Assertions.assertEquals(3_000_000, config2.getMaxOnDiskStorage().getBytes());
+    Assertions.assertEquals(333, config2.getMaxSpillFileCount());
+    Assertions.assertEquals(3, config2.getConfiguredMaxSelectorDictionarySize());
+    Assertions.assertEquals(4, config2.getConfiguredMaxMergingDictionarySize());
+    Assertions.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
+    Assertions.assertEquals(DeferExpressionDimensions.ALWAYS, config2.getDeferExpressionDimensions());
+    Assertions.assertTrue(config2.isApplyLimitPushDownToSegment());
   }
 
   @Test
@@ -127,8 +127,8 @@ public class GroupByQueryConfigTest
         GroupByQueryConfig.class
     );
 
-    Assert.assertEquals(GroupByQueryConfig.AUTOMATIC, config.getConfiguredMaxMergingDictionarySize());
-    Assert.assertEquals(150_000_000, config.getActualMaxMergingDictionarySize(1_000_000_000, 2));
+    Assertions.assertEquals(GroupByQueryConfig.AUTOMATIC, config.getConfiguredMaxMergingDictionarySize());
+    Assertions.assertEquals(150_000_000, config.getActualMaxMergingDictionarySize(1_000_000_000, 2));
   }
 
   @Test
@@ -139,8 +139,8 @@ public class GroupByQueryConfigTest
         GroupByQueryConfig.class
     );
 
-    Assert.assertEquals(100, config.getConfiguredMaxMergingDictionarySize());
-    Assert.assertEquals(100, config.getActualMaxMergingDictionarySize(1_000_000_000, 2));
+    Assertions.assertEquals(100, config.getConfiguredMaxMergingDictionarySize());
+    Assertions.assertEquals(100, config.getActualMaxMergingDictionarySize(1_000_000_000, 2));
   }
 
   @Test
@@ -151,8 +151,8 @@ public class GroupByQueryConfigTest
         GroupByQueryConfig.class
     );
 
-    Assert.assertEquals(GroupByQueryConfig.AUTOMATIC, config.getConfiguredMaxSelectorDictionarySize());
-    Assert.assertEquals(50_000_000, config.getActualMaxSelectorDictionarySize(1_000_000_000, 2));
+    Assertions.assertEquals(GroupByQueryConfig.AUTOMATIC, config.getConfiguredMaxSelectorDictionarySize());
+    Assertions.assertEquals(50_000_000, config.getActualMaxSelectorDictionarySize(1_000_000_000, 2));
   }
 
   @Test
@@ -163,8 +163,8 @@ public class GroupByQueryConfigTest
         GroupByQueryConfig.class
     );
 
-    Assert.assertEquals(100, config.getConfiguredMaxSelectorDictionarySize());
-    Assert.assertEquals(100, config.getActualMaxSelectorDictionarySize(1_000_000_000, 2));
+    Assertions.assertEquals(100, config.getConfiguredMaxSelectorDictionarySize());
+    Assertions.assertEquals(100, config.getActualMaxSelectorDictionarySize(1_000_000_000, 2));
   }
 
   /**
@@ -188,7 +188,7 @@ public class GroupByQueryConfigTest
                     .setContext(ImmutableMap.<String, Object>builder().build())
                     .build()
     );
-    Assert.assertEquals(5_000_000_000L, config2.getMaxOnDiskStorage().getBytes());
+    Assertions.assertEquals(5_000_000_000L, config2.getMaxOnDiskStorage().getBytes());
   }
 
   @Test
@@ -210,7 +210,7 @@ public class GroupByQueryConfigTest
                     )
                     .build()
     );
-    Assert.assertEquals(500_000_000, config2.getMaxOnDiskStorage().getBytes());
+    Assertions.assertEquals(500_000_000, config2.getMaxOnDiskStorage().getBytes());
   }
 
   @Test
@@ -225,7 +225,7 @@ public class GroupByQueryConfigTest
                         "defaultOnDiskStorage", "100M"),
         GroupByQueryConfig.class
     );
-    Assert.assertEquals(500_000_000, config.getDefaultOnDiskStorage().getBytes());
-    Assert.assertEquals(100_000_000, config2.getDefaultOnDiskStorage().getBytes());
+    Assertions.assertEquals(500_000_000, config.getDefaultOnDiskStorage().getBytes());
+    Assertions.assertEquals(100_000_000, config2.getDefaultOnDiskStorage().getBytes());
   }
 }

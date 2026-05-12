@@ -27,7 +27,6 @@ import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -60,8 +59,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Responsible for bootstrapping segments already cached on disk and bootstrap segments fetched from the coordinator.
- * Also responsible for announcing the node as a data server if applicable, once the bootstrapping operations
- * are complete.
  */
 @ManageLifecycle
 public class SegmentCacheBootstrapper
@@ -69,9 +66,7 @@ public class SegmentCacheBootstrapper
   private final SegmentLoadDropHandler loadDropHandler;
   private final SegmentLoaderConfig config;
   private final DataSegmentAnnouncer segmentAnnouncer;
-  private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentManager segmentManager;
-  private final ServerTypeConfig serverTypeConfig;
   private final CoordinatorClient coordinatorClient;
   private final ServiceEmitter emitter;
   private final LoadSpecHolder loadSpecHolder;
@@ -88,9 +83,7 @@ public class SegmentCacheBootstrapper
       SegmentLoadDropHandler loadDropHandler,
       SegmentLoaderConfig config,
       DataSegmentAnnouncer segmentAnnouncer,
-      DataSegmentServerAnnouncer serverAnnouncer,
       SegmentManager segmentManager,
-      ServerTypeConfig serverTypeConfig,
       CoordinatorClient coordinatorClient,
       ServiceEmitter emitter,
       LoadSpecHolder loadSpecHolder
@@ -99,9 +92,7 @@ public class SegmentCacheBootstrapper
     this.loadDropHandler = loadDropHandler;
     this.config = config;
     this.segmentAnnouncer = segmentAnnouncer;
-    this.serverAnnouncer = serverAnnouncer;
     this.segmentManager = segmentManager;
-    this.serverTypeConfig = serverTypeConfig;
     this.coordinatorClient = coordinatorClient;
     this.emitter = emitter;
     this.loadSpecHolder = loadSpecHolder;
@@ -119,10 +110,6 @@ public class SegmentCacheBootstrapper
       try {
         if (segmentManager.canHandleSegments()) {
           loadSegmentsOnStartup();
-        }
-
-        if (shouldAnnounce()) {
-          serverAnnouncer.announce();
         }
       }
       catch (Exception e) {
@@ -144,9 +131,6 @@ public class SegmentCacheBootstrapper
 
       log.info("Stopping...");
       try {
-        if (shouldAnnounce()) {
-          serverAnnouncer.unannounce();
-        }
         segmentManager.shutdown();
       }
       catch (Exception e) {
@@ -312,21 +296,6 @@ public class SegmentCacheBootstrapper
       log.info("Fetched [%d] bootstrap segments in [%d]ms.", bootstrapSegments.size(), fetchRunMillis);
     }
     return bootstrapSegments;
-  }
-
-  /**
-   * Returns whether or not we should announce ourselves as a data server using {@link DataSegmentServerAnnouncer}.
-   *
-   * Returns true if _either_:
-   *
-   * <li> Our {@link #serverTypeConfig} indicates we are a segment server. This is necessary for Brokers to be able
-   * to detect that we exist.</li>
-   * <li> The segment manager is able to handle segments. This is necessary for Coordinators to be able to
-   * assign segments to us.</li>
-   */
-  private boolean shouldAnnounce()
-  {
-    return serverTypeConfig.getServerType().isSegmentServer() || segmentManager.canHandleSegments();
   }
 
   private static class BackgroundSegmentAnnouncer implements AutoCloseable

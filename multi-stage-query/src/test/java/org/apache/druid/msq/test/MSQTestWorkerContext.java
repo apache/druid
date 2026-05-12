@@ -161,7 +161,7 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public WorkerClient makeWorkerClient()
   {
-    return new MSQTestWorkerClient(inMemoryWorkers, mapper);
+    return new MSQTestWorkerClient(inMemoryWorkers, mapper, false);
   }
 
   @Override
@@ -202,6 +202,12 @@ public class MSQTestWorkerContext implements WorkerContext
 
   @Override
   public boolean includeAllCounters()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean isDebug()
   {
     return true;
   }
@@ -309,6 +315,12 @@ public class MSQTestWorkerContext implements WorkerContext
           OffHeapMemorySegmentWriteOutMediumFactory.instance(),
           true
       );
+    }
+
+    @Override
+    public void acquireProcessingBuffers(final int requestedSlices)
+    {
+      // No-op: this mock returns a fixed ProcessingBuffers regardless of slice count.
     }
 
     @Override

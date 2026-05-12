@@ -78,8 +78,10 @@ The following table outlines the configuration properties for `autoScalerConfig`
 |`enableTaskAutoScaler`|Enables the autoscaler. If not specified, Druid disables the autoscaler even when `autoScalerConfig` is not null.|No|`false`|
 |`taskCountMax`|The maximum number of ingestion tasks. Must be greater than or equal to `taskCountMin`. If `taskCountMax` is greater than the number of Kafka partitions or Kinesis shards, Druid sets the maximum number of reading tasks to the number of Kafka partitions or Kinesis shards and ignores `taskCountMax`.|Yes||
 |`taskCountMin`|The minimum number of ingestion tasks. When you enable the autoscaler, Druid computes the initial number of tasks to launch by checking the configs in the following order: `taskCountStart`, then `taskCount` (in `ioConfig`), then `taskCountMin`.|Yes||
-|`taskCountStart`|Optional config to specify the number of ingestion tasks to start with. When you enable the autoscaler, Druid computes the initial number of tasks to launch by checking the configs in the following order: `taskCountStart`, then `taskCount` (in `ioConfig`), then `taskCountMin`.|No|`taskCount` or `taskCountMin`|
-|`minTriggerScaleActionFrequencyMillis`|The minimum time interval between two scale actions.| No|600000|
+|`taskCountStart`|Optional config to specify the number of ingestion tasks to start with. If `taskCountStart` is provided on POST of a supervisor, it takes priority and the `taskCount` is reset to `taskCountStart` at that time.|No|`taskCount` or `taskCountMin`|
+|`minScaleUpDelay`|Minimum cooldown duration between scale-up actions, specified as an ISO-8601 duration string. Falls back to `minTriggerScaleActionFrequencyMillis` if not set.|No||
+|`minScaleDownDelay`|Minimum cooldown duration between scale-down actions, specified as an ISO-8601 duration string. Falls back to `minTriggerScaleActionFrequencyMillis` if not set.|No||
+|`minTriggerScaleActionFrequencyMillis`|**Deprecated.** Use `minScaleUpDelay` and `minScaleDownDelay` instead. Minimum time interval in milliseconds between scale actions, used as the fallback when the Duration-based fields are not set.|No|600000|
 |`autoScalerStrategy`|The algorithm of autoscaler. Druid only supports the `lagBased` strategy. See [Autoscaler strategy](#autoscaler-strategy) for more information.|No|`lagBased`|
 |`stopTaskCountRatio`|A variable version of `ioConfig.stopTaskCount` with a valid range of (0.0, 1.0]. Allows the maximum number of stoppable tasks in steady state to be proportional to the number of tasks currently running.|No||
 
@@ -161,7 +163,8 @@ The following example shows a supervisor spec with `lagBased` autoscaler:
       "enableTaskAutoScaler": true,
       "taskCountMax": 6,
       "taskCountMin": 2,
-      "minTriggerScaleActionFrequencyMillis": 600000,
+      "minScaleUpDelay": "PT10M",
+      "minScaleDownDelay": "PT10M",
       "autoScalerStrategy": "lagBased",
       "lagCollectionIntervalMillis": 30000,
       "lagCollectionRangeMillis": 600000,
@@ -190,30 +193,32 @@ The following example shows a supervisor spec with `lagBased` autoscaler:
 ```
 </details>
 
-**2. Cost-based autoscaler strategy (experimental)**
+**2. Cost-based autoscaler strategy**
 
-An autoscaler which computes the required supervisor task count via cost function based on ingestion lag and poll-to-idle ratio.
-Task counts are selected from a bounded range derived from the current partitions-per-task ratio,
-not strictly from factors/divisors of the partition count. This bounded partitions-per-task window enables gradual scaling while
-voiding large jumps and still allowing non-divisor task counts when needed.
+The cost-based autoscaler picks the number of ingestion tasks that minimizes a combined cost score. The score has two components:
 
-**It is experimental and the implementation details as well as cost function parameters are subject to change.**
+- **Lag cost** — how long it would take to drain the current backlog at the observed processing rate. More tasks reduce this cost.
+- **Idle cost** — how far the predicted idle ratio is from the target of ~25%. Tasks that are too busy (under-provisioned) or too idle (over-provisioned) both drive the score up. 
+The sweet spot is roughly 25% idle, giving headroom to absorb traffic spikes without wasting resources.
+
+At every evaluation interval, Druid computes the score for each candidate task count and picks the one with the lowest total cost.
 
 Note: Kinesis is not supported yet, support is in progress.
 
 The following table outlines the configuration properties related to the `costBased` autoscaler strategy:
 
-| Property|Description|Required|Default|
-|---------|-----------|--------|-------|
-|`scaleActionPeriodMillis`|The frequency in milliseconds to check if a scale action is triggered. | No | 600000 |
-|`lagWeight`|The weight of extracted lag value in cost function.| No| 0.25 |
-|`idleWeight`|The weight of extracted poll idle value in cost function. | No | 0.75 |
-|`useTaskCountBoundaries`|Enables the bounded partitions-per-task window when selecting task counts.|No| `false` |
-|`highLagThreshold`|Average partition lag threshold that triggers burst scale-up when set to a value greater than `0`. Set to a negative value to disable burst scale-up.|No|-1|
-|`minScaleDownDelay`|Minimum duration between successful scale actions, specified as an ISO-8601 duration string.|No|`PT30M`|
-|`scaleDownDuringTaskRolloverOnly`|Indicates whether task scaling down is limited to periods during task rollovers only.|No|`false`|
+| Property | Description | Required | Default                   |
+|----------|-------------|----------|---------------------------|
+|`scaleActionPeriodMillis`|How often, in milliseconds, Druid evaluates whether to scale.|No| `600000` (10 min)         |
+|`lagWeight`|How much weight to give the lag cost relative to the idle cost. Higher values make the autoscaler more aggressive about adding tasks to drain backlog.|No| `0.4`                     |
+|`idleWeight`|How much weight to give the idle cost relative to the lag cost. Higher values make the autoscaler more aggressive about removing over-provisioned tasks.|No| `0.6`                     |
+|`useTaskCountBoundariesOnScaleUp`|Limits scale-up to a small step relative to the current task count, preventing large jumps. Disable to allow the autoscaler to jump directly to any task count.|No| `false`                   |
+|`useTaskCountBoundariesOnScaleDown`|Limits scale-down to a small step relative to the current task count, preventing large drops. Disable to allow the autoscaler to drop directly to any task count.|No| `true`                    |
+|`minScaleUpDelay`|Minimum cooldown after a scale-up before the next scale-up is allowed. Specified as an ISO-8601 duration.|No| `scaleActionPeriodMillis` |
+|`minScaleDownDelay`|Minimum cooldown after a scale-down before the next scale-down is allowed. Specified as an ISO-8601 duration.|No| `PT30M`                   |
+|`scaleDownDuringTaskRolloverOnly`|If `true`, scale-down actions are deferred until the next task rollover. This avoids disrupting in-progress ingestion.|No| `false`                   |
 
-The following example shows a supervisor spec with `lagBased` autoscaler:
+The following example shows a supervisor spec with `costBased` autoscaler:
 
 <details>
   <summary>Click to view the example</summary>
@@ -227,9 +232,10 @@ The following example shows a supervisor spec with `lagBased` autoscaler:
       "autoScalerStrategy": "costBased",
       "taskCountMin": 1,
       "taskCountMax": 10,
-      "minTriggerScaleActionFrequencyMillis": 600000,
-      "lagWeight": 0.1,
-      "idleWeight": 0.9,
+      "lagWeight": 0.4,
+      "idleWeight": 0.6,
+      "minScaleUpDelay": "PT10M",
+      "minScaleDownDelay": "PT30M"
     }
   }
 }

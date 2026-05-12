@@ -76,7 +76,7 @@ public class JoinStage
     public ShuffleSpec buildShuffleSpec()
     {
       final ClusterBy clusterBy = new ClusterBy(keyColumns, 0);
-      return new HashShuffleSpec(clusterBy, 1);
+      return new HashShuffleSpec(clusterBy, 1, true);
     }
 
     @Override

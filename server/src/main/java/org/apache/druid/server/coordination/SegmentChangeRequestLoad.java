@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import org.apache.druid.java.util.common.StringUtils;
@@ -29,28 +30,46 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
+ * Wire form for a coordinator load request and a historical's load announcement.
+ * <p>
+ * The {@code fingerprint} and {@code loadedBytes} fields are optional and only populated by historicals when
+ * announcing a partial load. Coordinator-issued load requests leave them null; partial-load metadata rides inside the
+ * wrapped {@code LoadSpec} on outbound requests instead.
  */
 public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
 {
   private final DataSegment segment;
+  @Nullable private final String fingerprint;
+  @Nullable private final Long loadedBytes;
 
   /**
    * To avoid pruning of the loadSpec on the broker, needed when the broker is loading broadcast segments,
-   * we deserialize into an {@link LoadableDataSegment}, which never removes the loadSpec.
+   * we deserialize into a {@link LoadableDataSegment}, which never removes the loadSpec.
    */
   @JsonCreator
   public SegmentChangeRequestLoad(
-      @JsonUnwrapped LoadableDataSegment segment
+      @JsonUnwrapped LoadableDataSegment segment,
+      @JsonProperty("fingerprint") @Nullable String fingerprint,
+      @JsonProperty("loadedBytes") @Nullable Long loadedBytes
   )
   {
-    this.segment = segment;
+    this((DataSegment) segment, fingerprint, loadedBytes);
+  }
+
+  public SegmentChangeRequestLoad(DataSegment segment)
+  {
+    this(segment, null, null);
   }
 
   public SegmentChangeRequestLoad(
-      DataSegment segment
+      DataSegment segment,
+      @Nullable String fingerprint,
+      @Nullable Long loadedBytes
   )
   {
     this.segment = segment;
+    this.fingerprint = fingerprint;
+    this.loadedBytes = loadedBytes;
   }
 
 
@@ -65,6 +84,22 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
   public DataSegment getSegment()
   {
     return segment;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public String getFingerprint()
+  {
+    return fingerprint;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public Long getLoadedBytes()
+  {
+    return loadedBytes;
   }
 
   @Override
@@ -83,13 +118,15 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
       return false;
     }
     SegmentChangeRequestLoad that = (SegmentChangeRequestLoad) o;
-    return Objects.equals(segment, that.segment);
+    return Objects.equals(segment, that.segment)
+        && Objects.equals(fingerprint, that.fingerprint)
+        && Objects.equals(loadedBytes, that.loadedBytes);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(segment);
+    return Objects.hash(segment, fingerprint, loadedBytes);
   }
 
   @Override
@@ -97,6 +134,8 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
   {
     return "SegmentChangeRequestLoad{" +
            "segment=" + segment +
+           (fingerprint != null ? ", fingerprint=" + fingerprint : "") +
+           (loadedBytes != null ? ", loadedBytes=" + loadedBytes : "") +
            '}';
   }
 }

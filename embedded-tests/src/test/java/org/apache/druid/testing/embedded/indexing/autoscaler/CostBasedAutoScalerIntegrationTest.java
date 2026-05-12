@@ -143,7 +143,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
       }
     });
 
-    // These values were carefully handpicked to allow that test to pass in a stable manner.
+    // These values were carefully handpicked to allow that test to pass stably.
     final CostBasedAutoScalerConfig autoScalerConfig = CostBasedAutoScalerConfig
         .builder()
         .enableTaskAutoScaler(true)
@@ -152,8 +152,8 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .taskCountStart(lowInitialTaskCount)
         .scaleActionPeriodMillis(500)
         .minTriggerScaleActionFrequencyMillis(1000)
-        .lagWeight(0.2)
-        .idleWeight(0.8)
+        .lagWeight(0.8)
+        .idleWeight(0.2)
         .build();
 
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisorWithAutoScaler(
@@ -192,11 +192,11 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
     final CostBasedAutoScalerConfig autoScalerConfig = CostBasedAutoScalerConfig
         .builder()
+        .enableTaskAutoScaler(true)
         .taskCountMin(1)
         .taskCountMax(4)
-        .lagWeight(1.0)
-        .idleWeight(1.0)
-        .enableTaskAutoScaler(true)
+        .lagWeight(0.5)
+        .idleWeight(0.5)
         .minTriggerScaleActionFrequencyMillis(10L)
         .scaleActionPeriodMillis(10L)
         .minScaleDownDelay(Duration.standardSeconds(1))

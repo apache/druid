@@ -84,6 +84,17 @@ public interface FrameContext extends Closeable
 
   IndexMerger indexMerger();
 
+  /**
+   * Acquire processing buffers sized for {@code requestedSlices} concurrent processors. Must be called exactly
+   * once for stages that use processing buffers, before any call to {@link #processingBuffers()}. Stages that
+   * don't use processing buffers must not call this method.
+   */
+  void acquireProcessingBuffers(int requestedSlices);
+
+  /**
+   * Returns the {@link ProcessingBuffers} previously acquired via {@link #acquireProcessingBuffers}. Throws if
+   * not yet acquired.
+   */
   ProcessingBuffers processingBuffers();
 
   WorkerMemoryParameters memoryParameters();

@@ -22,8 +22,8 @@ package org.apache.druid.segment;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -83,7 +83,7 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
         94L
     );
 
-    Assert.assertEquals(306L, totalEstimatedSize);
+    Assertions.assertEquals(306L, totalEstimatedSize);
   }
 
   @Test
@@ -108,7 +108,7 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
     }
 
     // If all dimension values are unique (or cardinality is high),
-    Assert.assertEquals(940L, totalSizeWithAvgEstimates);
+    Assertions.assertEquals(940L, totalSizeWithAvgEstimates);
 
     // Verify sizes with repeated dimension values
     for (int i = 0; i < 100; ++i) {
@@ -122,7 +122,7 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
       );
     }
 
-    Assert.assertEquals(2940L, totalSizeWithAvgEstimates);
+    Assertions.assertEquals(2940L, totalSizeWithAvgEstimates);
   }
 
   @Test
@@ -135,7 +135,7 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
     );
     final byte[] byteVal = new byte[]{0x01, 0x02, 0x03, 0x04};
     EncodedKeyComponent<int[]> keyComponent = indexer.processRowValsToUnsortedEncodedKeyComponent(byteVal, false);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         StringUtils.encodeBase64String(byteVal),
         indexer.convertUnsortedEncodedKeyComponentToActualList(keyComponent.getComponent())
     );
@@ -152,7 +152,7 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
     );
 
     EncodedKeyComponent<int[]> keyComponent = indexer.processRowValsToUnsortedEncodedKeyComponent("abcdefghij", false);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "abcde",
         indexer.convertUnsortedEncodedKeyComponentToActualList(keyComponent.getComponent())
     );
@@ -172,7 +172,7 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
         Collections.singletonList("abcdefghij"),
         false
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "abcde",
         indexer.convertUnsortedEncodedKeyComponentToActualList(keyComponent.getComponent())
     );
@@ -192,7 +192,7 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
         Arrays.asList("abcdefghij", "klmnopqrst"),
         false
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList("abcdefghij", "klmnopqrst"),
         indexer.convertUnsortedEncodedKeyComponentToActualList(keyComponent.getComponent())
     );
@@ -207,8 +207,8 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
   {
     EncodedKeyComponent<int[]> encodedKeyComponent = indexer
         .processRowValsToUnsortedEncodedKeyComponent(dimensionValues, false);
-    Assert.assertArrayEquals(expectedEncodedValues, encodedKeyComponent.getComponent());
-    Assert.assertEquals(expectedSizeDelta, encodedKeyComponent.getEffectiveSizeBytes());
+    Assertions.assertArrayEquals(expectedEncodedValues, encodedKeyComponent.getComponent());
+    Assertions.assertEquals(expectedSizeDelta, encodedKeyComponent.getEffectiveSizeBytes());
 
     return encodedKeyComponent.getEffectiveSizeBytes();
   }

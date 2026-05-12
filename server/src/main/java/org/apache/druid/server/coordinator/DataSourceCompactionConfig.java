@@ -60,6 +60,11 @@ public interface DataSourceCompactionConfig
 
   String getDataSource();
 
+  /**
+   * Validates that the compaction config is well-formed and can be executed.
+   */
+  CompactionConfigValidationResult validate(ClusterCompactionConfig clusterCompactionConfig);
+
   @Nullable
   CompactionEngine getEngine();
 

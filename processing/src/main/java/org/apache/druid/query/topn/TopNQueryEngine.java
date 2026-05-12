@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.topn;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import org.apache.druid.collections.NonBlockingPool;
@@ -157,7 +158,8 @@ public class TopNQueryEngine
   /**
    * Choose the best {@link TopNAlgorithm} for the given query.
    */
-  private TopNMapFn getMapFn(
+  @VisibleForTesting
+  TopNMapFn getMapFn(
       final TopNQuery query,
       final TopNCursorInspector cursorInspector,
       final @Nullable TopNQueryMetrics queryMetrics
@@ -172,7 +174,10 @@ public class TopNQueryEngine
 
     int numBytesPerRecord = 0;
     for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
-      numBytesPerRecord += aggregatorFactory.getMaxIntermediateSizeWithNulls();
+      numBytesPerRecord += PooledTopNAlgorithm.getMaxIntermediateSizeWithNullsForPooledTopN(
+          cursorInspector.getColumnInspector(),
+          aggregatorFactory
+      );
     }
 
     final TopNAlgorithmSelector selector = new TopNAlgorithmSelector(

@@ -19,6 +19,8 @@
 
 package org.apache.druid.msq.counters;
 
+import com.google.common.base.Preconditions;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.SuperSorterProgressTracker;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
@@ -99,6 +101,16 @@ public class CounterTracker
   public SegmentGenerationProgressCounter segmentGenerationProgress()
   {
     return counter(CounterNames.getSegmentGenerationProgress(), SegmentGenerationProgressCounter::new);
+  }
+
+  public StorageCounters storage(final ByteTracker localByteTracker)
+  {
+    final StorageCounters storageCounters = counter(CounterNames.storage(), () -> new StorageCounters(localByteTracker));
+    Preconditions.checkState(
+        storageCounters.getLocalByteTracker() == localByteTracker,
+        "StorageCounters already exists with a different ByteTracker"
+    );
+    return storageCounters;
   }
 
   public WarningCounters warnings()

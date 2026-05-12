@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -34,7 +33,6 @@ import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.discovery.LatchableServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -96,7 +94,6 @@ public class DruidCoordinatorTest
 {
   private static final long COORDINATOR_START_DELAY = 1;
   private static final long COORDINATOR_PERIOD = 100;
-  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
   private DruidCoordinator coordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
@@ -172,7 +169,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
   }
 
@@ -463,7 +460,7 @@ public class DruidCoordinatorTest
   {
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
             .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
+    EasyMock.replay(segmentsMetadataManager, metadataRuleManager);
 
     CoordinatorCustomDutyGroups emptyCustomDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of());
     coordinator = new DruidCoordinator(
@@ -485,7 +482,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
     coordinator.start();
 
@@ -512,7 +509,7 @@ public class DruidCoordinatorTest
   {
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
             .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
+    EasyMock.replay(segmentsMetadataManager, metadataRuleManager);
     CoordinatorCustomDutyGroup group = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
@@ -538,7 +535,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
     coordinator.start();
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
@@ -565,7 +562,7 @@ public class DruidCoordinatorTest
   {
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
             .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
+    EasyMock.replay(segmentsMetadataManager, metadataRuleManager);
     CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
@@ -591,7 +588,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
     coordinator.start();
 
@@ -656,7 +653,7 @@ public class DruidCoordinatorTest
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(Collections.emptyList()).anyTimes();
-    EasyMock.replay(serverInventoryView, loadQueueTaskMaster, segmentsMetadataManager);
+    EasyMock.replay(serverInventoryView, loadQueueTaskMaster, segmentsMetadataManager, metadataRuleManager);
 
     // Create CoordinatorCustomDutyGroups
     // We will have two groups and each group has one duty
@@ -702,14 +699,18 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
     coordinator.start();
-
-    // Wait until group 1 duty ran for latch1 to countdown
-    latch1.await();
-    // Wait until group 2 duty ran for latch2 to countdown
-    latch2.await();
+    try {
+      // Wait until group 1 duty ran for latch1 to countdown
+      latch1.await();
+      // Wait until group 2 duty ran for latch2 to countdown
+      latch2.await();
+    }
+    finally {
+      coordinator.stop();
+    }
   }
 
   @Test(timeout = 60_000L)

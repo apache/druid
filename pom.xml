@@ -70,12 +70,12 @@
     </scm>
 
     <properties>
-        <java.version>17</java.version>
+        <java.version>21</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.8.0</apache.curator.version>
-        <apache.kafka.version>3.9.1</apache.kafka.version>
+        <apache.kafka.version>3.9.2</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
         and update as needed in extensions-contrib/druid-ranger-security/pom.xml  -->
         <apache.ranger.version>2.8.0</apache.ranger.version>
@@ -106,7 +106,7 @@
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.20.2</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
-        <log4j.version>2.25.3</log4j.version>
+        <log4j.version>2.25.4</log4j.version>
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
@@ -683,7 +683,12 @@
             <dependency>
                 <groupId>org.mozilla</groupId>
                 <artifactId>rhino</artifactId>
-                <version>1.7.14.1</version>
+                <version>1.8.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mozilla</groupId>
+                <artifactId>rhino-engine</artifactId>
+                <version>1.8.1</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -1740,7 +1745,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.26.0</version>
+                <version>3.28.0</version>
                 <configuration>
                     <linkXRef>false</linkXRef> <!-- prevent "Unable to locate Source XRef to link to" warning -->
                     <printFailingErrors>true</printFailingErrors>
@@ -1765,7 +1770,7 @@
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
-                <version>3.5.1</version>
+                <version>3.9</version>
                 <configuration>
                     <ignoreSignaturesOfMissingClasses>true</ignoreSignaturesOfMissingClasses>
                     <bundledSignatures>
@@ -2079,7 +2084,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
-                    <version>3.3.0</version>
+                    <version>3.8.1</version>
                     <configuration>
                         <ignoredNonTestScopedDependencies>
                             <ignoredNonTestScopedDependency>*</ignoredNonTestScopedDependency>
@@ -2161,7 +2166,8 @@
         <profile>
             <id>java-12+</id>
             <activation>
-                <jdk>[12,)</jdk>
+                <!-- Security Manager was permanently removed in JDK 24 (JEP 486); this flag is fatal on 24+ -->
+                <jdk>[12,24)</jdk>
             </activation>
             <properties>
                 <jdk.security.manager.allow.argLine>

@@ -34,8 +34,8 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestSegmentUtils.SegmentForTesting;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class RestrictAllTablesPolicyEnforcerTest
 {
@@ -47,7 +47,7 @@ public class RestrictAllTablesPolicyEnforcerTest
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
     String expected = "{\"type\":\"restrictAllTables\",\"allowedPolicies\":[\"org.apache.druid.query.policy.NoRestrictionPolicy\"]}";
-    Assert.assertEquals(expected, jsonMapper.writeValueAsString(policyEnforcer));
+    Assertions.assertEquals(expected, jsonMapper.writeValueAsString(policyEnforcer));
   }
 
   @Test
@@ -59,7 +59,7 @@ public class RestrictAllTablesPolicyEnforcerTest
         jsonMapper.writeValueAsString(policyEnforcer),
         PolicyEnforcer.class
     );
-    Assert.assertEquals(policyEnforcer, deserialized);
+    Assertions.assertEquals(policyEnforcer, deserialized);
   }
 
   @Test
@@ -70,30 +70,30 @@ public class RestrictAllTablesPolicyEnforcerTest
     TableDataSource table = TableDataSource.create("table");
     RestrictedDataSource restricted = RestrictedDataSource.create(table, policy);
     // Test validate data source, fail for TableDataSource, success for RestrictedDataSource
-    Assert.assertFalse(policyEnforcer.validate(null));
-    Assert.assertTrue(policyEnforcer.validate(policy));
-    final DruidException e = Assert.assertThrows(
+    Assertions.assertFalse(policyEnforcer.validate(null));
+    Assertions.assertTrue(policyEnforcer.validate(policy));
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> policyEnforcer.validateOrElseThrow(table, null)
     );
-    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
-    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
-    Assert.assertEquals(
+    Assertions.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assertions.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assertions.assertEquals(
         "Failed security validation with dataSource [table]",
         e.getMessage()
     );
     policyEnforcer.validateOrElseThrow(restricted.getBase(), restricted.getPolicy());
     // Test validate segment, fail for ReferenceCountingSegment not wrapped with any policy, success when wrapped with a policy
     Segment segment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
-    Assert.assertFalse(policyEnforcer.validate(null));
-    Assert.assertTrue(policyEnforcer.validate(policy));
-    final DruidException e2 = Assert.assertThrows(
+    Assertions.assertFalse(policyEnforcer.validate(null));
+    Assertions.assertTrue(policyEnforcer.validate(policy));
+    final DruidException e2 = Assertions.assertThrows(
         DruidException.class,
         () -> policyEnforcer.validateOrElseThrow(segment, null)
     );
-    Assert.assertEquals(DruidException.Category.FORBIDDEN, e2.getCategory());
-    Assert.assertEquals(DruidException.Persona.OPERATOR, e2.getTargetPersona());
-    Assert.assertEquals(
+    Assertions.assertEquals(DruidException.Category.FORBIDDEN, e2.getCategory());
+    Assertions.assertEquals(DruidException.Persona.OPERATOR, e2.getTargetPersona());
+    Assertions.assertEquals(
         "Failed security validation with segment [table_-146136543-09-08T08:23:32.096Z_146140482-04-24T15:36:27.903Z_1]",
         e2.getMessage()
     );
@@ -125,16 +125,16 @@ public class RestrictAllTablesPolicyEnforcerTest
     TableDataSource table = TableDataSource.create("table");
     RestrictedDataSource restricted = RestrictedDataSource.create(table, policy);
 
-    Assert.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(table, null));
-    Assert.assertThrows(
+    Assertions.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(table, null));
+    Assertions.assertThrows(
         DruidException.class,
         () -> policyEnforcer.validateOrElseThrow(restricted.getBase(), restricted.getPolicy())
     );
     policyEnforcer.validateOrElseThrow(table, NoRestrictionPolicy.instance());
 
     Segment segment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
-    Assert.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(segment, null));
-    Assert.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(segment, policy));
+    Assertions.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(segment, null));
+    Assertions.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(segment, policy));
     policyEnforcer.validateOrElseThrow(segment, NoRestrictionPolicy.instance());
   }
 }

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -66,9 +67,16 @@ public class QueryContexts
   public static final String MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
   public static final String CURSOR_AUTO_ARRANGE_FILTERS = "cursorAutoArrangeFilters";
   public static final String CLONE_QUERY_MODE = "cloneQueryMode";
-  // This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
-  // instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
-  // data servers.
+  /**
+   * This flag controls whether {@link AggregatorFactory#optimizeForSegment(PerSegmentQueryOptimizationContext)}
+   * is used. It is undocumented because its main purpose is to help developers debug issues with the optimizations.
+   */
+  public static final String OPTIMIZE_AGGREGATORS_KEY = "optimizeAggregators";
+  /**
+   * This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
+   * instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
+   * data servers.
+   */
   public static final String SQL_JOIN_LEFT_SCAN_DIRECT = "enableJoinLeftTableScanDirect";
   public static final String USE_FILTER_CNF_KEY = "useFilterCNF";
   public static final String NUM_RETRIES_ON_MISSING_SEGMENTS_KEY = "numRetriesOnMissingSegments";
@@ -176,6 +184,7 @@ public class QueryContexts
   public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
   public static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
   public static final boolean DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED = true;
+  public static final boolean DEFAULT_OPTIMIZE_AGGREGATORS = true;
   public static final boolean DEFAULT_CTX_FULL_REPORT = false;
 
 

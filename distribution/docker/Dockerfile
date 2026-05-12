@@ -17,7 +17,7 @@
 # under the License.
 #
 
-ARG JDK_VERSION=17
+ARG JDK_VERSION=21
 
 # The platform is explicitly specified as x64 to build the Druid distribution.
 # This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012
@@ -35,7 +35,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
 COPY . /src
 WORKDIR /src
-RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
+RUN --mount=type=cache,target=/root/.m2,sharing=locked if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
       mvn -B -ff -q \
       install \
       -Pdist,bundle-contrib-exts \
@@ -43,7 +43,7 @@ RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; th
       -Dmaven.javadoc.skip=true -T1C \
       ; fi
 
-RUN --mount=type=cache,target=/root/.m2 VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
+RUN --mount=type=cache,target=/root/.m2,sharing=locked VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
       -Dexpression=project.version -DforceStdout=true \
     ) \
  && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \

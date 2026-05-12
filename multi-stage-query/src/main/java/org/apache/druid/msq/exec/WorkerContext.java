@@ -116,6 +116,11 @@ public interface WorkerContext extends Closeable
    */
   boolean includeAllCounters();
 
+  /**
+   * Whether to log full stack traces for all errors.
+   */
+  boolean isDebug();
+
   @Override
   void close();
 }
