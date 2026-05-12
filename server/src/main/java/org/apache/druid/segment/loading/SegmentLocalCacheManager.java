@@ -1128,14 +1128,21 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         }
 
         // since we do not hold a lock on the location while mounting, make sure that we actually are reserved and
-        // should have mounted, otherwise unmount so we don't leave any orphaned files
-        if (!mountLocation.isReserved(this.id) && !mountLocation.isWeakReserved(this.id)) {
+        // should have mounted, otherwise unmount so we don't leave any orphaned files. These checks acquire the
+        // location lock, so they must run with entryLock released to avoid deadlocking.
+        final boolean isWeak = mountLocation.isWeakReserved(this.id);
+        final boolean isStatic = !isWeak && mountLocation.isReserved(this.id);
+        if (!isWeak && !isStatic) {
           log.debug(
               "aborting mount in location[%s] since entry[%s] is no longer reserved",
               mountLocation.getPath(),
               this.id
           );
           unmount();
+        } else if (isWeak) {
+          mountLocation.trackWeakLoad(dataSegment.getSize());
+        } else {
+          mountLocation.trackStaticLoad(dataSegment.getSize());
         }
 
         if (config.isVirtualStorageEphemeral()) {
