@@ -109,6 +109,10 @@ public class DartProcessingBuffersProvider implements ProcessingBuffersProvider
         );
       }
 
+      if (requestedSlices < 1) {
+        throw DruidException.defensive("requestedSlices[%d] must be positive", requestedSlices);
+      }
+
       final int sliceSize = chunk.capacity() / requestedSlices;
       final BlockingQueue<ByteBuffer> queue = new ArrayBlockingQueue<>(requestedSlices);
       final ByteBuffer working = chunk.duplicate();
