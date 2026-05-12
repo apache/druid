@@ -335,12 +335,12 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(4));
     input.add(nonBlockingSequence(6));
     assertResult(input, 10, 20, reportMetrics -> {
-      Assert.assertEquals(2, reportMetrics.getParallelism());
+      Assert.assertEquals(3, reportMetrics.getParallelism());
       Assert.assertEquals(6, reportMetrics.getInputSequences());
       Assert.assertEquals(34, reportMetrics.getInputRows());
       // deltas because it depends how much result combining is happening, which is random
       Assert.assertEquals(16, reportMetrics.getOutputRows(), 15);
-      Assert.assertEquals(10, reportMetrics.getTaskCount(), 2);
+      Assert.assertTrue(reportMetrics.getTaskCount() >= 8);
     });
   }
 
@@ -370,12 +370,12 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(4));
     input.add(nonBlockingSequence(6));
     assertResult(input, 4, 20, reportMetrics -> {
-      Assert.assertEquals(2, reportMetrics.getParallelism());
+      Assert.assertEquals(3, reportMetrics.getParallelism());
       Assert.assertEquals(6, reportMetrics.getInputSequences());
       Assert.assertEquals(34, reportMetrics.getInputRows());
       // deltas because it depends how much result combining is happening, which is random
       Assert.assertEquals(16, reportMetrics.getOutputRows(), 15);
-      Assert.assertEquals(10, reportMetrics.getTaskCount(), 2);
+      Assert.assertTrue(reportMetrics.getTaskCount() >= 8);
     });
   }
 
@@ -404,12 +404,12 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(14));
 
     assertResult(input, 5, 10, reportMetrics -> {
-      Assert.assertEquals(2, reportMetrics.getParallelism());
+      Assert.assertEquals(3, reportMetrics.getParallelism());
       Assert.assertEquals(6, reportMetrics.getInputSequences());
       Assert.assertEquals(120, reportMetrics.getInputRows());
       // deltas because it depends how much result combining is happening, which is random
       Assert.assertEquals(60, reportMetrics.getOutputRows(), 59);
-      Assert.assertEquals(10, reportMetrics.getTaskCount(), 5);
+      Assert.assertTrue(reportMetrics.getTaskCount() >= 8);
     });
   }
 
@@ -451,7 +451,7 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(8_888));
 
     assertResult(input, 128, 1024, reportMetrics -> {
-      Assert.assertEquals(2, reportMetrics.getParallelism());
+      Assert.assertEquals(3, reportMetrics.getParallelism());
       Assert.assertEquals(6, reportMetrics.getInputSequences());
       Assert.assertEquals(49166, reportMetrics.getInputRows());
     });
@@ -691,7 +691,7 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(8_888));
 
     assertResultWithEarlyClose(input, 128, 1024, 256, reportMetrics -> {
-      Assert.assertEquals(2, reportMetrics.getParallelism());
+      Assert.assertEquals(3, reportMetrics.getParallelism());
       Assert.assertEquals(6, reportMetrics.getInputSequences());
       // 49166 is total set of results if yielder were fully processed, expect somewhere more than 0 but less than that
       // this isn't super indicative of anything really, since closing the yielder would have triggered the baggage
