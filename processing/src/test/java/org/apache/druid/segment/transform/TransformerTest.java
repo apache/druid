@@ -531,12 +531,11 @@ public class TransformerTest extends InitializedNullHandlingTest
     Transformer transformer = transformSpec.toTransformer();
     InputRow transformed = transformer.transform(row);
 
-    long afterTransform = System.currentTimeMillis();
-
     Assert.assertNotNull(transformed);
     Assert.assertNotNull(transformed.getRaw("ingestion_time"));
 
     long ingestionTime = ((Number) transformed.getRaw("ingestion_time")).longValue();
+    long afterTransform = System.currentTimeMillis();
     Assert.assertTrue(
         "Ingestion time should be between transform start and end: "
             + beforeTransform + " <= " + ingestionTime + " <= " + afterTransform,
