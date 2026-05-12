@@ -20,11 +20,11 @@
 package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class BoundedStreamConfigTest
@@ -32,137 +32,83 @@ public class BoundedStreamConfigTest
   private final ObjectMapper mapper = new ObjectMapper();
 
   @Test
-  public void testConstructorWithValidMaps()
+  public void testEqualsAndHashCode()
   {
-    Map<String, Long> startOffsets = new HashMap<>();
-    startOffsets.put("0", 100L);
-    startOffsets.put("1", 200L);
-
-    Map<String, Long> endOffsets = new HashMap<>();
-    endOffsets.put("0", 500L);
-    endOffsets.put("1", 600L);
-
-    BoundedStreamConfig config = new BoundedStreamConfig(startOffsets, endOffsets);
-
-    Assert.assertEquals(startOffsets, config.getStartSequenceNumbers());
-    Assert.assertEquals(endOffsets, config.getEndSequenceNumbers());
+    EqualsVerifier.forClass(BoundedStreamConfig.class)
+                  .withNonnullFields("startSequenceNumbers", "endSequenceNumbers")
+                  .usingGetClass()
+                  .verify();
   }
 
   @Test
   public void testConstructorWithNullStartSequenceNumbers()
   {
-    Map<String, Long> endOffsets = new HashMap<>();
-    endOffsets.put("0", 500L);
-
     DruidException ex = Assert.assertThrows(
         DruidException.class,
-        () -> new BoundedStreamConfig(null, endOffsets)
+        () -> new BoundedStreamConfig(null, Map.of("0", 500L))
     );
-
     Assert.assertTrue(ex.getMessage().contains("cannot be null or empty"));
   }
 
   @Test
   public void testConstructorWithNullEndSequenceNumbers()
   {
-    Map<String, Long> startOffsets = new HashMap<>();
-    startOffsets.put("0", 100L);
-
     DruidException ex = Assert.assertThrows(
         DruidException.class,
-        () -> new BoundedStreamConfig(startOffsets, null)
+        () -> new BoundedStreamConfig(Map.of("0", 100L), null)
     );
-
     Assert.assertTrue(ex.getMessage().contains("cannot be null or empty"));
   }
 
   @Test
   public void testConstructorWithEmptyStartSequenceNumbers()
   {
-    Map<String, Long> startOffsets = new HashMap<>();
-    Map<String, Long> endOffsets = new HashMap<>();
-    endOffsets.put("0", 500L);
-
     DruidException ex = Assert.assertThrows(
         DruidException.class,
-        () -> new BoundedStreamConfig(startOffsets, endOffsets)
+        () -> new BoundedStreamConfig(Map.of(), Map.of("0", 500L))
     );
-
     Assert.assertTrue(ex.getMessage().contains("cannot be null or empty"));
   }
 
   @Test
   public void testConstructorWithEmptyEndSequenceNumbers()
   {
-    Map<String, Long> startOffsets = new HashMap<>();
-    startOffsets.put("0", 100L);
-    Map<String, Long> endOffsets = new HashMap<>();
-
     DruidException ex = Assert.assertThrows(
         DruidException.class,
-        () -> new BoundedStreamConfig(startOffsets, endOffsets)
+        () -> new BoundedStreamConfig(Map.of("0", 100L), Map.of())
     );
-
     Assert.assertTrue(ex.getMessage().contains("cannot be null or empty"));
   }
 
   @Test
   public void testConstructorWithMismatchedPartitions()
   {
-    Map<String, Long> startOffsets = new HashMap<>();
-    startOffsets.put("0", 100L);
-    Map<String, Long> endOffsets = new HashMap<>();
-    endOffsets.put("1", 500L);
-
     DruidException ex = Assert.assertThrows(
         DruidException.class,
-        () -> new BoundedStreamConfig(startOffsets, endOffsets)
+        () -> new BoundedStreamConfig(Map.of("0", 100L), Map.of("1", 500L))
     );
-
     Assert.assertTrue(ex.getMessage().contains("must have matching partition sets"));
   }
 
   @Test
   public void testSerializationDeserialization() throws Exception
   {
-    Map<String, Integer> startOffsets = new HashMap<>();
-    startOffsets.put("0", 100);
-    startOffsets.put("1", 200);
+    BoundedStreamConfig config = new BoundedStreamConfig(
+        Map.of("0", 100, "1", 200),
+        Map.of("0", 500, "1", 600)
+    );
 
-    Map<String, Integer> endOffsets = new HashMap<>();
-    endOffsets.put("0", 500);
-    endOffsets.put("1", 600);
+    BoundedStreamConfig deserialized = mapper.readValue(
+        mapper.writeValueAsString(config),
+        BoundedStreamConfig.class
+    );
 
-    BoundedStreamConfig config = new BoundedStreamConfig(startOffsets, endOffsets);
-
-    String json = mapper.writeValueAsString(config);
-    BoundedStreamConfig deserialized = mapper.readValue(json, BoundedStreamConfig.class);
-
-    // Check sizes
     Assert.assertEquals(2, deserialized.getStartSequenceNumbers().size());
     Assert.assertEquals(2, deserialized.getEndSequenceNumbers().size());
-
-    // Check that deserialized maps contain expected values (keys will be Strings after deserialization)
     Assert.assertEquals(100, deserialized.getStartSequenceNumbers().get("0"));
     Assert.assertEquals(200, deserialized.getStartSequenceNumbers().get("1"));
     Assert.assertEquals(500, deserialized.getEndSequenceNumbers().get("0"));
     Assert.assertEquals(600, deserialized.getEndSequenceNumbers().get("1"));
-  }
-
-  @Test
-  public void testDeserializationWithIntegerValues() throws Exception
-  {
-    String json = "{"
-                  + "\"startSequenceNumbers\": {\"0\": 100, \"1\": 200},"
-                  + "\"endSequenceNumbers\": {\"0\": 500, \"1\": 600}"
-                  + "}";
-
-    BoundedStreamConfig config = mapper.readValue(json, BoundedStreamConfig.class);
-
-    Assert.assertNotNull(config.getStartSequenceNumbers());
-    Assert.assertNotNull(config.getEndSequenceNumbers());
-    Assert.assertEquals(2, config.getStartSequenceNumbers().size());
-    Assert.assertEquals(2, config.getEndSequenceNumbers().size());
   }
 
   @Test
@@ -175,8 +121,6 @@ public class BoundedStreamConfigTest
 
     BoundedStreamConfig config = mapper.readValue(json, BoundedStreamConfig.class);
 
-    Assert.assertNotNull(config.getStartSequenceNumbers());
-    Assert.assertNotNull(config.getEndSequenceNumbers());
     Assert.assertEquals(2, config.getStartSequenceNumbers().size());
     Assert.assertEquals(2, config.getEndSequenceNumbers().size());
   }
@@ -191,139 +135,7 @@ public class BoundedStreamConfigTest
 
     BoundedStreamConfig config = mapper.readValue(json, BoundedStreamConfig.class);
 
-    Assert.assertNotNull(config.getStartSequenceNumbers());
-    Assert.assertNotNull(config.getEndSequenceNumbers());
     Assert.assertEquals(2, config.getStartSequenceNumbers().size());
     Assert.assertEquals(2, config.getEndSequenceNumbers().size());
-  }
-
-  @Test
-  public void testEquals_equalObjects()
-  {
-    Map<String, Long> start1 = new HashMap<>();
-    start1.put("0", 0L);
-    Map<String, Long> end1 = new HashMap<>();
-    end1.put("0", 100L);
-
-    Map<String, Long> start2 = new HashMap<>();
-    start2.put("0", 0L);
-    Map<String, Long> end2 = new HashMap<>();
-    end2.put("0", 100L);
-
-    BoundedStreamConfig config1 = new BoundedStreamConfig(start1, end1);
-    BoundedStreamConfig config2 = new BoundedStreamConfig(start2, end2);
-
-    Assert.assertEquals(config1, config2);
-    Assert.assertEquals(config1.hashCode(), config2.hashCode());
-  }
-
-  @Test
-  public void testEquals_nullObject()
-  {
-    Map<String, Long> start = new HashMap<>();
-    start.put("0", 0L);
-    Map<String, Long> end = new HashMap<>();
-    end.put("0", 100L);
-
-    BoundedStreamConfig config = new BoundedStreamConfig(start, end);
-
-    Assert.assertNotEquals(config, null);
-  }
-
-  @Test
-  public void testEquals_differentClass()
-  {
-    Map<String, Long> start = new HashMap<>();
-    start.put("0", 0L);
-    Map<String, Long> end = new HashMap<>();
-    end.put("0", 100L);
-
-    BoundedStreamConfig config = new BoundedStreamConfig(start, end);
-
-    Assert.assertNotEquals(config, "not a BoundedStreamConfig");
-  }
-
-  @Test
-  public void testEquals_differentStartOffsets()
-  {
-    Map<String, Long> start1 = new HashMap<>();
-    start1.put("0", 0L);
-    Map<String, Long> start2 = new HashMap<>();
-    start2.put("0", 10L);
-    Map<String, Long> end = new HashMap<>();
-    end.put("0", 100L);
-
-    BoundedStreamConfig config1 = new BoundedStreamConfig(start1, end);
-    BoundedStreamConfig config2 = new BoundedStreamConfig(start2, end);
-
-    Assert.assertNotEquals(config1, config2);
-  }
-
-  @Test
-  public void testEquals_differentEndOffsets()
-  {
-    Map<String, Long> start = new HashMap<>();
-    start.put("0", 0L);
-    Map<String, Long> end1 = new HashMap<>();
-    end1.put("0", 100L);
-    Map<String, Long> end2 = new HashMap<>();
-    end2.put("0", 200L);
-
-    BoundedStreamConfig config1 = new BoundedStreamConfig(start, end1);
-    BoundedStreamConfig config2 = new BoundedStreamConfig(start, end2);
-
-    Assert.assertNotEquals(config1, config2);
-  }
-
-  @Test
-  public void testHashCode_consistency()
-  {
-    Map<String, Long> start = new HashMap<>();
-    start.put("0", 0L);
-    Map<String, Long> end = new HashMap<>();
-    end.put("0", 100L);
-
-    BoundedStreamConfig config = new BoundedStreamConfig(start, end);
-
-    int hashCode1 = config.hashCode();
-    int hashCode2 = config.hashCode();
-
-    Assert.assertEquals(hashCode1, hashCode2);
-  }
-
-  @Test
-  public void testHashCode_equalObjectsSameHashCode()
-  {
-    Map<String, Long> start1 = new HashMap<>();
-    start1.put("0", 0L);
-    Map<String, Long> end1 = new HashMap<>();
-    end1.put("0", 100L);
-
-    Map<String, Long> start2 = new HashMap<>();
-    start2.put("0", 0L);
-    Map<String, Long> end2 = new HashMap<>();
-    end2.put("0", 100L);
-
-    BoundedStreamConfig config1 = new BoundedStreamConfig(start1, end1);
-    BoundedStreamConfig config2 = new BoundedStreamConfig(start2, end2);
-
-    Assert.assertEquals(config1.hashCode(), config2.hashCode());
-  }
-
-  @Test
-  public void testToString()
-  {
-    Map<String, Long> start = new HashMap<>();
-    start.put("0", 0L);
-    Map<String, Long> end = new HashMap<>();
-    end.put("0", 100L);
-
-    BoundedStreamConfig config = new BoundedStreamConfig(start, end);
-    String str = config.toString();
-
-    Assert.assertNotNull(str);
-    Assert.assertTrue(str.contains("BoundedStreamConfig"));
-    Assert.assertTrue(str.contains("startSequenceNumbers"));
-    Assert.assertTrue(str.contains("endSequenceNumbers"));
   }
 }
