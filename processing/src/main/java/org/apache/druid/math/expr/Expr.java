@@ -321,6 +321,9 @@ public interface Expr extends Cacheable
   {
     final Expr.BindingAnalysis details = analyzeInputs();
     if (details.getRequiredBindings().isEmpty()) {
+      if (details.isNonDeterministic()) {
+        return null;
+      }
       // Constant expression.
       final ExprEval<?> eval = eval(InputBindings.nilBindings());
       if (eval.value() == null) {
