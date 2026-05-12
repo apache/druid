@@ -562,8 +562,8 @@ public class TransformerTest extends InitializedNullHandlingTest
   public void testNowCannotBeUsedForTimeColumn()
   {
     DruidExceptionMatcher.invalidInput().expectMessageIs(
-        "Cannot use expression[now] to set column name[__time]."
-        + " Consider adding a different column name with expression[now]."
+        "Cannot use non-deterministic expression[now()] to set column name[__time]."
+        + " Non-deterministic expressions such as now() are not supported as __time transforms."
     ).assertThrowsAndMatches(
         () -> new ExpressionTransform("__time", "now()", TestExprMacroTable.INSTANCE)
     );
@@ -573,8 +573,8 @@ public class TransformerTest extends InitializedNullHandlingTest
   public void testNowRejectedWhenWrappedInArithmeticForTimeColumn()
   {
     DruidExceptionMatcher.invalidInput().expectMessageIs(
-        "Cannot use expression[now] to set column name[__time]."
-        + " Consider adding a different column name with expression[now]."
+        "Cannot use non-deterministic expression[now() + 1000] to set column name[__time]."
+        + " Non-deterministic expressions such as now() are not supported as __time transforms."
     ).assertThrowsAndMatches(
         () -> new ExpressionTransform("__time", "now() + 1000", TestExprMacroTable.INSTANCE)
     );

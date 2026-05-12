@@ -222,11 +222,6 @@ public class ExprTest
                   .verify();
   }
 
-  /**
-   * now() depends on wall-clock time, so its cache key must not be stable across calls — otherwise queries containing
-   * now() can hit a stale cached result. NowExpression overrides {@link Expr#decorateCacheKeyBuilder} to mix in
-   * nanoTime, which makes any containing Expr produce a fresh key on every {@link Expr#getCacheKey()} call.
-   */
   @Test
   public void testNowExprCacheKeyIsNotStable()
   {

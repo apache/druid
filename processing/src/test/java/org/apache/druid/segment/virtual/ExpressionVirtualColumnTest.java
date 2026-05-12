@@ -811,7 +811,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
 
     Assert.assertFalse(
         "ExpressionVirtualColumn cache keys for now() must differ across instances to defeat result caching",
-        java.util.Arrays.equals(vc1.getCacheKey(), vc2.getCacheKey())
+        Arrays.equals(vc1.getCacheKey(), vc2.getCacheKey())
     );
   }
 }

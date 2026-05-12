@@ -28,7 +28,6 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.math.expr.BuiltInExprMacros;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.InputBindings;
@@ -61,11 +60,13 @@ public class ExpressionTransform implements Transform
         () -> Parser.parse(expression, Preconditions.checkNotNull(this.macroTable, "macroTable"))
     )::get;
 
-    if (ColumnHolder.TIME_COLUMN_NAME.equals(name)
-        && BuiltInExprMacros.NowExprMacro.containsNow(parsedExpression.get())) {
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(name) && parsedExpression.get().analyzeInputs().isNonDeterministic()) {
       throw InvalidInput.exception(
-          "Cannot use expression[%s] to set column name[%s]. Consider adding a different"
-          + " column name with expression[%s].", BuiltInExprMacros.NowExprMacro.NAME, ColumnHolder.TIME_COLUMN_NAME, BuiltInExprMacros.NowExprMacro.NAME);
+          "Cannot use non-deterministic expression[%s] to set column name[%s]."
+          + " Non-deterministic expressions such as now() are not supported as __time transforms.",
+          expression,
+          ColumnHolder.TIME_COLUMN_NAME
+      );
     }
   }
 
