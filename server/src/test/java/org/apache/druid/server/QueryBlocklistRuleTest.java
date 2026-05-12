@@ -36,7 +36,7 @@ public class QueryBlocklistRuleTest
     // Rule with all null criteria would block ALL queries - this should be rejected
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new QueryBlocklistRule("match-all", null, null, null)
+        () -> new DefaultQueryBlocklistRule("match-all", null, null, null)
     );
   }
 
@@ -46,7 +46,7 @@ public class QueryBlocklistRuleTest
     // Rule with all empty collections should also be rejected (same as null)
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new QueryBlocklistRule("match-all", ImmutableSet.of(), ImmutableSet.of(), ImmutableMap.of())
+        () -> new DefaultQueryBlocklistRule("match-all", ImmutableSet.of(), ImmutableSet.of(), ImmutableMap.of())
     );
   }
 
@@ -54,7 +54,7 @@ public class QueryBlocklistRuleTest
   public void testMatchByDataSource()
   {
     Set<String> dataSources = ImmutableSet.of("sensitive_data", "pii_table");
-    QueryBlocklistRule rule = new QueryBlocklistRule("block-sensitive", dataSources, null, null);
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule("block-sensitive", dataSources, null, null);
 
     // Should match when datasource is in the list
     TimeseriesQuery matchingQuery = Druids.newTimeseriesQueryBuilder()
@@ -75,7 +75,7 @@ public class QueryBlocklistRuleTest
   public void testMatchByContext()
   {
     Map<String, String> contextMatches = ImmutableMap.of("priority", "0", "application", "rogue-app");
-    QueryBlocklistRule rule = new QueryBlocklistRule("block-rogue-app", null, null, contextMatches);
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule("block-rogue-app", null, null, contextMatches);
 
     // Should match when all context values match
     TimeseriesQuery matchingQuery = Druids.newTimeseriesQueryBuilder()
@@ -105,7 +105,7 @@ public class QueryBlocklistRuleTest
   public void testMatchByQueryType()
   {
     Set<String> queryTypes = ImmutableSet.of("timeseries", "groupBy");
-    QueryBlocklistRule rule = new QueryBlocklistRule("block-timeseries-groupby", null, queryTypes, null);
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule("block-timeseries-groupby", null, queryTypes, null);
 
     // Should match when query type is in the list (timeseries)
     TimeseriesQuery matchingQuery = Druids.newTimeseriesQueryBuilder()
@@ -121,7 +121,7 @@ public class QueryBlocklistRuleTest
     // Rule with multiple criteria - all must match (AND logic)
     Set<String> dataSources = ImmutableSet.of("large_table");
     Map<String, String> contextMatches = ImmutableMap.of("priority", "0");
-    QueryBlocklistRule rule = new QueryBlocklistRule(
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule(
         "block-low-priority-large-table",
         dataSources,
         null,
@@ -156,7 +156,7 @@ public class QueryBlocklistRuleTest
   @Test
   public void testWildcardBehavior_nullQueryTypes()
   {
-    QueryBlocklistRule rule = new QueryBlocklistRule(
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule(
         "block-datasource-all-types",
         ImmutableSet.of("blocked_ds"),
         null,  // null means match all query types
@@ -177,7 +177,7 @@ public class QueryBlocklistRuleTest
     // Rule name cannot be null
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new QueryBlocklistRule(null, ImmutableSet.of("ds"), null, null)
+        () -> new DefaultQueryBlocklistRule(null, ImmutableSet.of("ds"), null, null)
     );
   }
 
@@ -187,7 +187,7 @@ public class QueryBlocklistRuleTest
     // Rule name cannot be empty
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new QueryBlocklistRule("", ImmutableSet.of("ds"), null, null)
+        () -> new DefaultQueryBlocklistRule("", ImmutableSet.of("ds"), null, null)
     );
   }
 }
