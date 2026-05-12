@@ -68,6 +68,29 @@ public class BrokerDynamicConfigTest
   }
 
   @Test
+  public void testSerdeWithExplicitDefaultType() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"queryBlocklist\": [\n"
+                     + "    {\n"
+                     + "      \"type\": \"default\",\n"
+                     + "      \"ruleName\": \"block-wikipedia\",\n"
+                     + "      \"dataSources\": [\"wikipedia\"]\n"
+                     + "    }\n"
+                     + "  ]\n"
+                     + "}\n";
+
+    BrokerDynamicConfig actual = mapper.readValue(jsonStr, BrokerDynamicConfig.class);
+
+    Assert.assertEquals(1, actual.getQueryBlocklist().size());
+    Assert.assertTrue(actual.getQueryBlocklist().get(0) instanceof DefaultQueryBlocklistRule);
+    Assert.assertEquals(
+        new DefaultQueryBlocklistRule("block-wikipedia", ImmutableSet.of("wikipedia"), null, null),
+        actual.getQueryBlocklist().get(0)
+    );
+  }
+
+  @Test
   public void testSerdeWithNullBlocklist() throws Exception
   {
     String jsonStr = "{}";
