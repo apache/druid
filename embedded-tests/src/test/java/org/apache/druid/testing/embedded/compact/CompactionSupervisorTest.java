@@ -74,6 +74,7 @@ import org.apache.druid.testing.embedded.tools.WikipediaStreamEventStreamGenerat
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
