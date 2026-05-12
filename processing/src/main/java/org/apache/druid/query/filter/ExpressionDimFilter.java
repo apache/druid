@@ -123,12 +123,8 @@ public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements
   }
 
   @Override
-  @Nullable
   public byte[] getCacheKey()
   {
-    if (parsed.get().analyzeInputs().isNonDeterministic()) {
-      return null;
-    }
     return cacheKey.get();
   }
 

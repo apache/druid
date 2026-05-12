@@ -21,10 +21,12 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class BuiltInExprMacros
 {
@@ -222,6 +224,10 @@ public class BuiltInExprMacros
   {
     public static final String NAME = "now";
 
+    // Strictly monotonic counter. Mixed into the cache key of any Expr containing now() so each computation
+    // produces a unique key, effectively disabling result caching for non-deterministic expressions.
+    private static final AtomicLong CACHE_KEY_NONCE = new AtomicLong();
+
     @Override
     public String name()
     {
@@ -275,6 +281,14 @@ public class BuiltInExprMacros
       public BindingAnalysis analyzeInputs()
       {
         return new BindingAnalysis().withNonDeterministic();
+      }
+
+      @Override
+      public void decorateCacheKeyBuilder(CacheKeyBuilder builder)
+      {
+        // Append a strictly increasing nonce so any Expr containing now() produces a fresh cache key on every
+        // computation, effectively disabling result caching.
+        builder.appendLong(CACHE_KEY_NONCE.incrementAndGet());
       }
 
       @Nullable

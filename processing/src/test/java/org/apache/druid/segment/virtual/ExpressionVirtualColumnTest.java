@@ -793,24 +793,25 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     Assert.assertEquals(ImmutableList.of("a", "b", "c"), multiConstantSelector.getObject());
   }
 
-  /**
-   * ExpressionVirtualColumn serializes the expression string into its cache key. Because now() always stringifies to
-   * "now()", two virtual columns created at different wall-clock times would produce the same bytes, allowing stale
-   * cached results to be reused. getCacheKey() must return null when the underlying expression is non-deterministic.
-   */
   @Test
-  public void testNowCacheKeyIsNull()
+  public void testNowCacheKeyIsNotStableAcrossInstances()
   {
-    ExpressionVirtualColumn vc = new ExpressionVirtualColumn(
+    ExpressionVirtualColumn vc1 = new ExpressionVirtualColumn(
+        "v0",
+        "now()",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    ExpressionVirtualColumn vc2 = new ExpressionVirtualColumn(
         "v0",
         "now()",
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertNull(
-        "ExpressionVirtualColumn.getCacheKey should return null for non-deterministic now()",
-        vc.getCacheKey()
+    Assert.assertFalse(
+        "ExpressionVirtualColumn cache keys for now() must differ across instances to defeat result caching",
+        java.util.Arrays.equals(vc1.getCacheKey(), vc2.getCacheKey())
     );
   }
 }

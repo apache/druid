@@ -381,16 +381,17 @@ public class ExpressionFilterTest extends BaseFilterTest
   }
 
   /**
-   * ExpressionDimFilter serializes the expression string into its cache key. Because now() always stringifies to
-   * "now()", two filters created at different wall-clock times would produce the same bytes, allowing stale cached
-   * results to be reused. getCacheKey() must return null when the expression is non-deterministic.
+   * Two ExpressionDimFilters built at different times that both wrap now() would otherwise produce identical cache
+   * keys (now() stringifies the same way every time), allowing stale cached results to be reused.
+   * NowExpression mixes nanoTime into the cache key via decorateCacheKeyBuilder so two distinct filter instances
+   * over the same expression produce different bytes.
    */
   @Test
-  public void testNowDimFilterCacheKeyIsNull()
+  public void testNowDimFilterCacheKeyIsNotStableAcrossInstances()
   {
-    Assert.assertNull(
-        "ExpressionDimFilter.getCacheKey should return null for non-deterministic now()",
-        edf("now()").getCacheKey()
+    Assert.assertFalse(
+        "ExpressionDimFilter cache keys for now() must differ across instances to defeat result caching",
+        java.util.Arrays.equals(edf("now()").getCacheKey(), edf("now()").getCacheKey())
     );
   }
 

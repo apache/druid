@@ -360,7 +360,6 @@ public class ExpressionVirtualColumn implements VirtualColumn
     return false;
   }
 
-  @Nullable
   @Override
   public byte[] getCacheKey()
   {
@@ -429,9 +428,6 @@ public class ExpressionVirtualColumn implements VirtualColumn
   private Supplier<byte[]> makeCacheKeySupplier()
   {
     return Suppliers.memoize(() -> {
-      if (expressionAnalysis.get().isNonDeterministic()) {
-        return null;
-      }
       CacheKeyBuilder builder = new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
           .appendString(name)
           .appendCacheable(expression.parsed.get());
