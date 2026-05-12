@@ -339,6 +339,46 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   }
 
   /**
+   * If the search interval at index {@code i} extends past {@code endBoundary}, truncates it to a
+   * granularity-aligned subrange ending at or before the boundary and updates the list entry in
+   * place. The in-place update keeps the downstream synthetic-timeline lookup in
+   * {@link ReindexingConfigBuilder} matched against the truncated interval.
+   *
+   * <p>Shared by {@link #createCompactionJobs} and {@link #getReindexingTimelineView} so job
+   * generation and the timeline preview apply identical skip-offset truncation semantics.
+   *
+   * @return the resolved interval — unchanged if already within the boundary, truncated if it
+   *         straddled, or {@code null} if no aligned subrange remains before the boundary
+   */
+  @Nullable
+  private static Interval truncateSearchIntervalAt(
+      List<IntervalPartitioningInfo> searchIntervals,
+      int i,
+      DateTime endBoundary
+  )
+  {
+    IntervalPartitioningInfo intervalInfo = searchIntervals.get(i);
+    Interval interval = intervalInfo.getInterval();
+    if (!intervalEndsAfter(interval, endBoundary)) {
+      return interval;
+    }
+    DateTime alignedEnd = intervalInfo.getGranularity().bucketStart(endBoundary);
+    if (!alignedEnd.isAfter(interval.getStart())) {
+      return null;
+    }
+    Interval truncated = new Interval(interval.getStart(), alignedEnd);
+    searchIntervals.set(
+        i,
+        new IntervalPartitioningInfo(
+            truncated,
+            intervalInfo.getSourceRule(),
+            intervalInfo.isRuleSynthetic()
+        )
+    );
+    return truncated;
+  }
+
+  /**
    * Generates a timeline view showing the search intervals and their associated reindexing
    * configurations. This is useful for operators to understand how rules are applied across
    * different time periods and to preview the effects of rule changes before they are applied.
@@ -415,19 +455,27 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
 
     // Build configs for each interval
     List<ReindexingTimelineView.IntervalConfig> intervalConfigs = new ArrayList<>();
-    for (IntervalPartitioningInfo intervalInfo : searchIntervals) {
+    for (int i = 0; i < searchIntervals.size(); i++) {
+      IntervalPartitioningInfo intervalInfo = searchIntervals.get(i);
       Interval searchInterval = intervalInfo.getInterval();
 
-      // Check if interval extends past skip offset
-      if (intervalEndsAfter(searchInterval, effectiveEndTime)) {
-        // Include in timeline, but indicate skipped by applying no rules.
-        intervalConfigs.add(new ReindexingTimelineView.IntervalConfig(
-            searchInterval,
-            0,
-            null,
-            Collections.emptyList()
-        ));
-        continue;
+      // Mirror createCompactionJobs: truncate any interval that extends past the skip-offset
+      // boundary so the preview reflects what will actually be compacted. skipOffsetFromLatest
+      // can only be simulated when its boundary derives from referenceTime — otherwise the
+      // SkipOffsetInfo above already flags appliedInPreview = false and intervals are left alone.
+      if (skipOffsetFromNow != null) {
+        Interval truncated = truncateSearchIntervalAt(searchIntervals, i, effectiveEndTime);
+        if (truncated == null) {
+          // Fully past the boundary — render as skipped (no rules applied).
+          intervalConfigs.add(new ReindexingTimelineView.IntervalConfig(
+              searchInterval,
+              0,
+              null,
+              Collections.emptyList()
+          ));
+          continue;
+        }
+        searchInterval = truncated;
       }
 
       InlineSchemaDataSourceCompactionConfig.Builder builder = createBaseBuilder();
@@ -505,24 +553,14 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         continue;
       }
 
-      // Skip offsets, if configured, can result in needing to truncate a search interval. If the truncation makes the interval invalid, skip it.
-      if ((skipOffsetFromNow != null || skipOffsetFromLatest != null) &&
-          intervalEndsAfter(reindexingInterval, adjustedTimelineInterval.getEnd())) {
-
-        DateTime alignedEnd = intervalInfo.getGranularity().bucketStart(adjustedTimelineInterval.getEnd());
-        if (!alignedEnd.isAfter(reindexingInterval.getStart())) {
+      // Skip offsets, if configured, can require truncating a search interval to the boundary.
+      if (skipOffsetFromNow != null || skipOffsetFromLatest != null) {
+        Interval truncated = truncateSearchIntervalAt(searchIntervals, i, adjustedTimelineInterval.getEnd());
+        if (truncated == null) {
           LOG.debug("Search interval[%s] is entirely within skip offset, skipping", reindexingInterval);
           continue;
         }
-        reindexingInterval = new Interval(reindexingInterval.getStart(), alignedEnd);
-        // Replace the entry in searchIntervals so the downstream synthetic-timeline lookup
-        // in ReindexingConfigBuilder matches the truncated interval.
-        intervalInfo = new IntervalPartitioningInfo(
-            reindexingInterval,
-            intervalInfo.getSourceRule(),
-            intervalInfo.isRuleSynthetic()
-        );
-        searchIntervals.set(i, intervalInfo);
+        reindexingInterval = truncated;
       }
 
       InlineSchemaDataSourceCompactionConfig.Builder builder = createBaseBuilder();
