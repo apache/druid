@@ -566,7 +566,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
               metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
               segmentsAndCommitMetadata.getSegmentSchemaMapping(),
               segmentsAndCommitMetadata.getUpgradedSegments()
-          );
+          ).withWasPublished(segmentsAndCommitMetadata.wasPublished());
         },
         MoreExecutors.directExecutor()
     );
@@ -648,7 +648,9 @@ public abstract class BaseAppenderatorDriver implements Closeable
                   }
 
                   log.info("Published segment schemas[%s].", segmentsAndCommitMetadata.getSegmentSchemaMapping());
-                  return segmentsAndCommitMetadata.withUpgradedSegments(upgradedSegments);
+                  return segmentsAndCommitMetadata
+                      .withUpgradedSegments(upgradedSegments)
+                      .withWasPublished(true);
                 } else {
                   // Publishing didn't affirmatively succeed. However, segments
                   // with these IDs may have already been published:
