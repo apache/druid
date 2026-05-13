@@ -45,7 +45,7 @@
     <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-clients</artifactId>
-      <version>4.2.0</version>
+      <version>${apache.kafka.version}</version>
       <scope>test</scope>
     </dependency>
 
