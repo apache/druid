@@ -4555,16 +4555,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   private boolean hasTaskGroupReachedBoundedEnd(int groupId)
   {
+    Set<PartitionIdType> partitionsInGroup = partitionGroups.get(groupId);
+    if (partitionsInGroup == null || partitionsInGroup.isEmpty()) {
+      return false;
+    }
     BoundedStreamConfig boundedConfig = ioConfig.getBoundedStreamConfig();
     Map<PartitionIdType, SequenceOffsetType> startOffsets =
         convertBoundedConfigMap(boundedConfig.getStartSequenceNumbers());
     Map<PartitionIdType, SequenceOffsetType> endOffsets =
         convertBoundedConfigMap(boundedConfig.getEndSequenceNumbers());
-
-    Set<PartitionIdType> partitionsInGroup = partitionGroups.get(groupId);
-    if (partitionsInGroup == null || partitionsInGroup.isEmpty()) {
-      return false;
-    }
 
     // Check if all partitions have empty ranges
     // For exclusive end offsets (Kafka): start >= end means empty

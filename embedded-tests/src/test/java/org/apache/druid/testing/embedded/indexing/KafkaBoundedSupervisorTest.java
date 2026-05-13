@@ -236,7 +236,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     final KafkaSupervisorSpec supervisor1 = createBoundedKafkaSupervisor(kafkaServer, topic, boundedConfig1);
 
     cluster.callApi().postSupervisor(supervisor1);
-    waitUntilPublishedRecordsAreIngested(150);
+    waitUntilPublishedRecordsAreIngested(250);
     waitForSupervisorToComplete(supervisor1.getId());
 
     final SupervisorStatus status1 = cluster.callApi().getSupervisorStatus(supervisor1.getId());
