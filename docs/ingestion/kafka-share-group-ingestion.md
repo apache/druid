@@ -115,12 +115,12 @@ Share consumers (KIP-932) reject some keys that are valid for regular consumer g
 
 ### Tuning configuration
 
-`tuningConfig` accepts the standard `KafkaTuningConfig` fields. Phase 1 honors:
+`tuningConfig` accepts the standard `KafkaTuningConfig` fields. The runner currently honors:
 
 - `maxRowsInMemory` / `maxBytesInMemory`: triggers a mid-batch persist when the appenderator signals `isPersistRequired`.
 - `maxRowsPerSegment`: when reached during a batch the runner logs the event; over-threshold segments are pushed at the end-of-batch publish boundary.
 
-Mid-batch checkpoint and sequence rollover are deferred to Phase 2.
+Mid-batch checkpoint and sequence rollover are not supported.
 
 ## How it works
 
