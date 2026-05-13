@@ -115,16 +115,34 @@ public class ClusterGroupTuples
     return virtualColumns;
   }
 
-  private static VirtualColumns internVirtualColumns(@Nullable VirtualColumns virtualColumns)
+  @Override
+  public boolean equals(Object o)
   {
-    if (virtualColumns == null || virtualColumns.isEmpty()) {
-      return VirtualColumns.EMPTY;
+    if (this == o) {
+      return true;
     }
-    return VirtualColumns.create(
-        Arrays.stream(virtualColumns.getVirtualColumns())
-              .map(DataSegment.virtualColumnInterner()::intern)
-              .toList()
-    );
+    if (!(o instanceof ClusterGroupTuples)) {
+      return false;
+    }
+    ClusterGroupTuples that = (ClusterGroupTuples) o;
+    return Objects.equals(clusteringColumns, that.clusteringColumns)
+           && Objects.equals(tuples, that.tuples)
+           && Objects.equals(virtualColumns, that.virtualColumns);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(clusteringColumns, tuples, virtualColumns);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ClusterGroupTuples{clusteringColumns=" + clusteringColumns
+           + ", tuples=" + tuples
+           + ", virtualColumns=" + virtualColumns
+           + '}';
   }
 
   /**
@@ -181,6 +199,18 @@ public class ClusterGroupTuples
     );
   }
 
+  private static VirtualColumns internVirtualColumns(@Nullable VirtualColumns virtualColumns)
+  {
+    if (virtualColumns == null || virtualColumns.isEmpty()) {
+      return VirtualColumns.EMPTY;
+    }
+    return VirtualColumns.create(
+        Arrays.stream(virtualColumns.getVirtualColumns())
+              .map(DataSegment.virtualColumnInterner()::intern)
+              .toList()
+    );
+  }
+
   private static DruidException cannotCoerce(Object raw, String columnName, String targetType)
   {
     return InvalidInput.exception(
@@ -190,35 +220,5 @@ public class ClusterGroupTuples
         columnName,
         targetType
     );
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof ClusterGroupTuples)) {
-      return false;
-    }
-    ClusterGroupTuples that = (ClusterGroupTuples) o;
-    return Objects.equals(clusteringColumns, that.clusteringColumns)
-           && Objects.equals(tuples, that.tuples)
-           && Objects.equals(virtualColumns, that.virtualColumns);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(clusteringColumns, tuples, virtualColumns);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "ClusterGroupTuples{clusteringColumns=" + clusteringColumns
-           + ", tuples=" + tuples
-           + ", virtualColumns=" + virtualColumns
-           + '}';
   }
 }

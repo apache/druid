@@ -46,7 +46,10 @@ public class PartialLoadSpecModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return List.of(
-        new SimpleModule().registerSubtypes(PartialProjectionLoadSpec.class, PartialClusterGroupLoadSpec.class)
+        new SimpleModule().registerSubtypes(
+            PartialProjectionLoadSpec.class,
+            PartialClusterGroupLoadSpec.class
+        )
     );
   }
 }

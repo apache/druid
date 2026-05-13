@@ -44,13 +44,13 @@ import java.util.regex.Pattern;
 /**
  * Selects cluster groups whose clustering tuples match any of the configured per-column glob patterns, minus any
  * groups matched by an entry in {@code excludePatterns}. Each pattern is a {@code Map<String, String>} where keys are
- * clustering column names (or operator-side virtual column names — see below) and values are glob patterns matched
+ * clustering column names (or operator-side virtual column names, see below) and values are glob patterns matched
  * against the rendered tuple value at that column. Columns omitted from a pattern are treated as wildcards. Glob
  * syntax (including escape semantics) is shared with {@link WildcardProjectionPartialLoadMatcher} via {@link Globs}.
  * <p>
  * If the operator supplies {@link #getVirtualColumns()}, a pattern key may also reference one of those virtual
  * columns. At match time, the matcher resolves such a key to a clustering column on the segment via
- * {@link VirtualColumns#findEquivalent(VirtualColumns.Node)} between the operator's VCs and the segment's clustering
+ * {@link VirtualColumns#findEquivalent(VirtualColumns.Node)} between the matchers VCs and the segment's clustering
  * VCs (carried on {@link ClusterGroupTuples#getVirtualColumns()}). This lets operators author portable rules, they
  * write their preferred VC name and expression, and the matcher resolves to whatever name the segment happens to use
  * for the equivalent clustering VC.
@@ -155,6 +155,35 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
       matched.add(i);
     }
     return new ArrayList<>(matched);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    WildcardClusterGroupPartialLoadMatcher that = (WildcardClusterGroupPartialLoadMatcher) o;
+    return Objects.equals(patterns, that.patterns)
+           && Objects.equals(excludePatterns, that.excludePatterns)
+           && Objects.equals(virtualColumns, that.virtualColumns);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(patterns, excludePatterns, virtualColumns);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "WildcardClusterGroupPartialLoadMatcher{patterns=" + patterns
+           + ", excludePatterns=" + excludePatterns
+           + ", virtualColumns=" + virtualColumns + "}";
   }
 
   /**
@@ -334,34 +363,5 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
       }
       return new CompiledGlob(false, Pattern.compile(Globs.globToRegex(glob)));
     }
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    WildcardClusterGroupPartialLoadMatcher that = (WildcardClusterGroupPartialLoadMatcher) o;
-    return Objects.equals(patterns, that.patterns)
-           && Objects.equals(excludePatterns, that.excludePatterns)
-           && Objects.equals(virtualColumns, that.virtualColumns);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(patterns, excludePatterns, virtualColumns);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "WildcardClusterGroupPartialLoadMatcher{patterns=" + patterns
-           + ", excludePatterns=" + excludePatterns
-           + ", virtualColumns=" + virtualColumns + "}";
   }
 }
