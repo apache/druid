@@ -31,6 +31,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -90,8 +91,10 @@ public class OpenLineageRequestLoggerTest
     };
   }
 
+  // --- logSqlQuery is a no-op ---
+
   @Test
-  public void testSqlSimpleSelect() throws IOException
+  public void testSqlQueryIsNoOp() throws IOException
   {
     logger.logSqlQuery(sqlLine(
         "SELECT * FROM \"kttm\"",
@@ -99,220 +102,10 @@ public class OpenLineageRequestLoggerTest
         ImmutableMap.of("success", true)
     ));
 
-    Assertions.assertEquals(1, capturedEvents.size());
-    ObjectNode event = capturedEvents.get(0);
-
-    Assertions.assertEquals("COMPLETE", event.get("eventType").asText());
-    Assertions.assertEquals(NAMESPACE, event.get("job").get("namespace").asText());
-
-    JsonNode inputs = event.get("inputs");
-    Assertions.assertEquals(1, inputs.size());
-    Assertions.assertEquals("kttm", inputs.get(0).get("name").asText());
-    Assertions.assertEquals(NAMESPACE, inputs.get(0).get("namespace").asText());
-
-    Assertions.assertEquals(0, event.get("outputs").size());
+    Assertions.assertEquals(0, capturedEvents.size());
   }
 
-  @Test
-  public void testSqlJoin() throws IOException
-  {
-    logger.logSqlQuery(sqlLine(
-        "SELECT a.\"x\" FROM \"tableA\" AS a JOIN \"tableB\" AS b ON a.\"id\" = b.\"id\"",
-        ImmutableMap.of("sqlQueryId", "qid-2"),
-        ImmutableMap.of("success", true)
-    ));
-
-    Assertions.assertEquals(1, capturedEvents.size());
-    Set<String> names = inputNames(capturedEvents.get(0));
-    Assertions.assertEquals(2, names.size());
-    Assertions.assertTrue(names.contains("tableA"));
-    Assertions.assertTrue(names.contains("tableB"));
-  }
-
-  @Test
-  public void testSqlCteExcludesCteNames() throws IOException
-  {
-    logger.logSqlQuery(sqlLine(
-        "WITH \"cte\" AS (SELECT * FROM \"realTable\") SELECT * FROM \"cte\"",
-        ImmutableMap.of("sqlQueryId", "qid-3"),
-        ImmutableMap.of("success", true)
-    ));
-
-    Assertions.assertEquals(1, capturedEvents.size());
-    Set<String> names = inputNames(capturedEvents.get(0));
-    Assertions.assertTrue(names.contains("realTable"));
-    Assertions.assertFalse(names.contains("cte"));
-  }
-
-  @Test
-  public void testSqlInsertExtractsInputAndOutput() throws IOException
-  {
-    logger.logSqlQuery(sqlLine(
-        "INSERT INTO \"outputTable\" SELECT * FROM \"inputTable\"",
-        ImmutableMap.of("sqlQueryId", "qid-4"),
-        ImmutableMap.of("success", true)
-    ));
-
-    Assertions.assertEquals(1, capturedEvents.size());
-    ObjectNode event = capturedEvents.get(0);
-
-    Assertions.assertTrue(inputNames(event).contains("inputTable"));
-
-    JsonNode outputs = event.get("outputs");
-    Assertions.assertEquals(1, outputs.size());
-    Assertions.assertEquals("outputTable", outputs.get(0).get("name").asText());
-  }
-
-  @Test
-  public void testSqlReplaceIntoExtractsOutputAndInputs() throws IOException
-  {
-    // REPLACE INTO is Druid-specific and not parsed by standard Calcite; the regex fallback
-    // extracts the output table and re-parses the SELECT for inputs.
-    logger.logSqlQuery(sqlLine(
-        "REPLACE INTO \"ds\" OVERWRITE ALL SELECT * FROM \"src\" PARTITIONED BY DAY",
-        ImmutableMap.of("sqlQueryId", "qid-5"),
-        ImmutableMap.of("success", true)
-    ));
-
-    Assertions.assertEquals(1, capturedEvents.size());
-    ObjectNode event = capturedEvents.get(0);
-    Assertions.assertEquals("COMPLETE", event.get("eventType").asText());
-    Assertions.assertTrue(inputNames(event).contains("src"));
-    JsonNode outputs = event.get("outputs");
-    Assertions.assertEquals(1, outputs.size());
-    Assertions.assertEquals("ds", outputs.get(0).get("name").asText());
-  }
-
-  @Test
-  public void testSqlInsertIntoWithDruidSourceExtractsInputAndOutput() throws IOException
-  {
-    // INSERT INTO with PARTITIONED BY is unparseable by standard Calcite; regex fallback
-    // extracts the output table and re-parses the SELECT for inputs.
-    logger.logSqlQuery(sqlLine(
-        "INSERT INTO \"target\" SELECT * FROM \"source\" PARTITIONED BY DAY",
-        ImmutableMap.of("sqlQueryId", "qid-insert-partitioned"),
-        ImmutableMap.of("success", true)
-    ));
-
-    Assertions.assertEquals(1, capturedEvents.size());
-    ObjectNode event = capturedEvents.get(0);
-    Assertions.assertEquals("COMPLETE", event.get("eventType").asText());
-    Assertions.assertTrue(inputNames(event).contains("source"));
-    JsonNode outputs = event.get("outputs");
-    Assertions.assertEquals(1, outputs.size());
-    Assertions.assertEquals("target", outputs.get(0).get("name").asText());
-  }
-
-  @Test
-  public void testSqlInsertIntoWithExternExtractsOutputOnly() throws IOException
-  {
-    // INSERT INTO with EXTERN is unparseable by standard Calcite; the regex fallback
-    // extracts the output table only (EXTERN sources are external, not Druid datasets).
-    logger.logSqlQuery(sqlLine(
-        "INSERT INTO \"target\" SELECT * FROM TABLE(EXTERN('{\"type\":\"inline\",\"data\":\"\"}','{\"type\":\"json\"}')) PARTITIONED BY ALL",
-        ImmutableMap.of("sqlQueryId", "qid-extern"),
-        ImmutableMap.of("success", true)
-    ));
-
-    Assertions.assertEquals(1, capturedEvents.size());
-    ObjectNode event = capturedEvents.get(0);
-    Assertions.assertEquals("COMPLETE", event.get("eventType").asText());
-    Assertions.assertEquals(0, event.get("inputs").size());
-    JsonNode outputs = event.get("outputs");
-    Assertions.assertEquals(1, outputs.size());
-    Assertions.assertEquals("target", outputs.get(0).get("name").asText());
-  }
-
-  @Test
-  public void testSqlUnparsedStatementStillEmitsEvent() throws IOException
-  {
-    // Completely unparseable SQL still emits an event (without lineage) rather than failing.
-    logger.logSqlQuery(sqlLine(
-        "THIS IS NOT VALID SQL !!!",
-        ImmutableMap.of("sqlQueryId", "qid-bad"),
-        ImmutableMap.of("success", true)
-    ));
-
-    Assertions.assertEquals(1, capturedEvents.size());
-    Assertions.assertEquals(0, capturedEvents.get(0).get("inputs").size());
-    Assertions.assertEquals(0, capturedEvents.get(0).get("outputs").size());
-    Assertions.assertEquals("COMPLETE", capturedEvents.get(0).get("eventType").asText());
-  }
-
-  @Test
-  public void testSqlQueryFacets() throws IOException
-  {
-    String sql = "SELECT * FROM \"t\"";
-    logger.logSqlQuery(sqlLine(
-        sql,
-        ImmutableMap.of("sqlQueryId", "qid-facets", "nativeQueryIds", "[native-1, native-2]"),
-        ImmutableMap.of(
-            "success", true,
-            "sqlQuery/time", 300L,
-            "sqlQuery/bytes", 2048L,
-            "sqlQuery/planningTimeMs", 25L,
-            "statusCode", "200",
-            "identity", "bob"
-        )
-    ));
-
-    Assertions.assertEquals(1, capturedEvents.size());
-    ObjectNode event = capturedEvents.get(0);
-
-    // OpenLineage envelope
-    Assertions.assertNotNull(event.get("schemaURL"));
-    Assertions.assertNotNull(event.get("producer"));
-    Assertions.assertEquals("2024-01-01T00:00:00.000Z", event.get("eventTime").asText());
-
-    // Job facets
-    JsonNode jobFacets = event.get("job").get("facets");
-    Assertions.assertEquals(sql, jobFacets.get("sql").get("query").asText());
-    Assertions.assertEquals("BATCH", jobFacets.get("jobType").get("processingType").asText());
-    Assertions.assertEquals("DRUID", jobFacets.get("jobType").get("integration").asText());
-    Assertions.assertEquals("QUERY", jobFacets.get("jobType").get("jobType").asText());
-
-    // Run facets
-    JsonNode runFacets = event.get("run").get("facets");
-    Assertions.assertEquals("druid", runFacets.get("processing_engine").get("name").asText());
-    Assertions.assertNotNull(runFacets.get("processing_engine").get("version"));
-
-    // Query context facet
-    JsonNode ctx = runFacets.get("druid_query_context");
-    Assertions.assertEquals("bob", ctx.get("identity").asText());
-    Assertions.assertEquals(REMOTE_ADDR, ctx.get("remoteAddress").asText());
-    Assertions.assertEquals("sql", ctx.get("queryType").asText());
-    Assertions.assertEquals("[native-1, native-2]", ctx.get("nativeQueryIds").asText());
-
-    // Statistics facet
-    JsonNode stats = runFacets.get("druid_query_statistics");
-    Assertions.assertEquals(300L, stats.get("durationMs").asLong());
-    Assertions.assertEquals(2048L, stats.get("bytes").asLong());
-    Assertions.assertEquals(25L, stats.get("planningTimeMs").asLong());
-    Assertions.assertEquals("200", stats.get("statusCode").asText());
-
-    // No error facet on success
-    Assertions.assertNull(runFacets.get("errorMessage"));
-  }
-
-  @Test
-  public void testSqlQueryFailure() throws IOException
-  {
-    logger.logSqlQuery(sqlLine(
-        "SELECT * FROM \"t\"",
-        ImmutableMap.of("sqlQueryId", "qid-fail"),
-        ImmutableMap.of("success", false, "exception", "Query timed out")
-    ));
-
-    Assertions.assertEquals(1, capturedEvents.size());
-    ObjectNode event = capturedEvents.get(0);
-
-    Assertions.assertEquals("FAIL", event.get("eventType").asText());
-
-    JsonNode errorFacet = event.get("run").get("facets").get("errorMessage");
-    Assertions.assertNotNull(errorFacet);
-    Assertions.assertEquals("Query timed out", errorFacet.get("message").asText());
-    Assertions.assertEquals("SQL", errorFacet.get("programmingLanguage").asText());
-  }
+  // --- Native query tests ---
 
   @Test
   public void testNativeQuery() throws IOException
@@ -329,7 +122,6 @@ public class OpenLineageRequestLoggerTest
     Assertions.assertEquals("COMPLETE", event.get("eventType").asText());
     Assertions.assertTrue(inputNames(event).contains("myDatasource"));
 
-    // Native queries use "query/time" and "query/bytes" stat keys (not "sqlQuery/*")
     JsonNode stats = event.get("run").get("facets").get("druid_query_statistics");
     Assertions.assertEquals(50L, stats.get("durationMs").asLong());
     Assertions.assertEquals(512L, stats.get("bytes").asLong());
@@ -342,17 +134,28 @@ public class OpenLineageRequestLoggerTest
   }
 
   @Test
-  public void testNativeSubQueryOfSqlIsSkipped() throws IOException
+  public void testNativeSubQueryOfSqlEmits() throws IOException
   {
-    // Queries with sqlQueryId in context are sub-queries of a SQL execution; skip to avoid
-    // duplicate events since the SQL-level event already captures the lineage.
+    // Native sub-queries of SQL emit events with the plain native queryType.
+    // SQL origin is indicated by sqlQueryId in the context facet.
     TestQuery query = new TestQuery(
         new TableDataSource("myDatasource"),
         ImmutableMap.of("queryId", "native-qid-2", BaseQuery.SQL_QUERY_ID, "parent-sql-id")
     );
     logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
 
-    Assertions.assertEquals(0, capturedEvents.size());
+    Assertions.assertEquals(1, capturedEvents.size());
+    ObjectNode event = capturedEvents.get(0);
+
+    // queryType is the plain native type, not prefixed with "sql/"
+    Assertions.assertEquals("test",
+        event.get("run").get("facets").get("druid_query_context").get("queryType").asText());
+
+    // sqlQueryId included for correlation with parent SQL
+    Assertions.assertEquals("parent-sql-id",
+        event.get("run").get("facets").get("druid_query_context").get("sqlQueryId").asText());
+
+    Assertions.assertTrue(inputNames(event).contains("myDatasource"));
   }
 
   @Test
@@ -371,71 +174,144 @@ public class OpenLineageRequestLoggerTest
   }
 
   @Test
-  public void testSqlUnnestDoesNotAddColumnAsInput() throws IOException
+  public void testNativeQueryExcludedType() throws IOException
   {
-    // UNNEST operands are column references, not table names — they must not appear in inputs.
-    logger.logSqlQuery(sqlLine(
-        "SELECT a FROM \"myTable\", UNNEST(\"arrayCol\") AS u(a)",
-        ImmutableMap.of("sqlQueryId", "qid-unnest"),
-        ImmutableMap.of("success", true)
-    ));
+    TestQuery query = new TestQuery(
+        new TableDataSource("myDatasource"),
+        ImmutableMap.of("queryId", "native-qid-excluded")
+    )
+    {
+      @Override
+      public String getType()
+      {
+        return "segmentMetadata";
+      }
+    };
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
 
-    Assertions.assertEquals(1, capturedEvents.size());
-    Set<String> names = inputNames(capturedEvents.get(0));
-    Assertions.assertTrue(names.contains("myTable"));
-    Assertions.assertFalse(names.contains("arrayCol"));
+    Assertions.assertEquals(0, capturedEvents.size());
   }
 
   @Test
-  public void testSqlUnionAll() throws IOException
+  public void testNativeUnionDataSourceExtractsBothTables() throws IOException
   {
-    logger.logSqlQuery(sqlLine(
-        "SELECT * FROM \"tableA\" UNION ALL SELECT * FROM \"tableB\"",
-        ImmutableMap.of("sqlQueryId", "qid-union"),
-        ImmutableMap.of("success", true)
-    ));
+    // UnionDataSource.getTableNames() returns all member table names.
+    // JoinDataSource has the same behavior but requires complex construction (ExprMacroTable etc.),
+    // so we test UnionDataSource as the multi-table representative.
+    DataSource unionDs = new UnionDataSource(
+        List.of(new TableDataSource("leftTable"), new TableDataSource("rightTable"))
+    );
+    TestQuery query = new TestQuery(unionDs, ImmutableMap.of("queryId", "native-multi-1"));
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
 
     Assertions.assertEquals(1, capturedEvents.size());
     Set<String> names = inputNames(capturedEvents.get(0));
-    Assertions.assertTrue(names.contains("tableA"));
-    Assertions.assertTrue(names.contains("tableB"));
+    Assertions.assertEquals(2, names.size());
+    Assertions.assertTrue(names.contains("leftTable"));
+    Assertions.assertTrue(names.contains("rightTable"));
   }
 
   @Test
-  public void testSqlSubqueryInWhere() throws IOException
+  public void testNativeQueryFacets() throws IOException
   {
-    logger.logSqlQuery(sqlLine(
-        "SELECT * FROM \"outer\" WHERE \"x\" IN (SELECT \"y\" FROM \"inner\")",
-        ImmutableMap.of("sqlQueryId", "qid-subquery"),
-        ImmutableMap.of("success", true)
-    ));
+    TestQuery query = new TestQuery(
+        new TableDataSource("t"),
+        ImmutableMap.of("queryId", "native-facets")
+    );
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of(
+        "success", true,
+        "query/time", 300L,
+        "query/bytes", 2048L,
+        "statusCode", "200",
+        "identity", "bob"
+    )));
 
     Assertions.assertEquals(1, capturedEvents.size());
-    Set<String> names = inputNames(capturedEvents.get(0));
-    Assertions.assertTrue(names.contains("outer"));
-    Assertions.assertTrue(names.contains("inner"));
+    ObjectNode event = capturedEvents.get(0);
+
+    // OpenLineage envelope
+    Assertions.assertNotNull(event.get("schemaURL"));
+    Assertions.assertNotNull(event.get("producer"));
+    Assertions.assertEquals("2024-01-01T00:00:00.000Z", event.get("eventTime").asText());
+
+    // Job facets — no SQL facet
+    JsonNode jobFacets = event.get("job").get("facets");
+    Assertions.assertNull(jobFacets.get("sql"));
+    Assertions.assertEquals("BATCH", jobFacets.get("jobType").get("processingType").asText());
+    Assertions.assertEquals("DRUID", jobFacets.get("jobType").get("integration").asText());
+    Assertions.assertEquals("QUERY", jobFacets.get("jobType").get("jobType").asText());
+
+    // Run facets
+    JsonNode runFacets = event.get("run").get("facets");
+    Assertions.assertEquals("druid", runFacets.get("processing_engine").get("name").asText());
+
+    // Query context facet
+    JsonNode ctx = runFacets.get("druid_query_context");
+    Assertions.assertEquals("bob", ctx.get("identity").asText());
+    Assertions.assertEquals(REMOTE_ADDR, ctx.get("remoteAddress").asText());
+    Assertions.assertEquals("test", ctx.get("queryType").asText());
+    Assertions.assertNull(ctx.get("sqlQueryId"));
+
+    // Statistics facet
+    JsonNode stats = runFacets.get("druid_query_statistics");
+    Assertions.assertEquals(300L, stats.get("durationMs").asLong());
+    Assertions.assertEquals(2048L, stats.get("bytes").asLong());
+    Assertions.assertEquals("200", stats.get("statusCode").asText());
+
+    // No error facet on success
+    Assertions.assertNull(runFacets.get("errorMessage"));
   }
 
   @Test
-  public void testSqlScalarSubqueryInSelect() throws IOException
+  public void testNativeQueryFailure() throws IOException
   {
-    logger.logSqlQuery(sqlLine(
-        "SELECT (SELECT COUNT(*) FROM \"counts\") AS cnt FROM \"main\"",
-        ImmutableMap.of("sqlQueryId", "qid-scalar"),
-        ImmutableMap.of("success", true)
-    ));
+    TestQuery query = new TestQuery(
+        new TableDataSource("t"),
+        ImmutableMap.of("queryId", "native-fail")
+    );
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of(
+        "success", false,
+        "exception", "Query timed out"
+    )));
 
     Assertions.assertEquals(1, capturedEvents.size());
-    Set<String> names = inputNames(capturedEvents.get(0));
-    Assertions.assertTrue(names.contains("main"));
-    Assertions.assertTrue(names.contains("counts"));
+    ObjectNode event = capturedEvents.get(0);
+
+    Assertions.assertEquals("FAIL", event.get("eventType").asText());
+
+    JsonNode errorFacet = event.get("run").get("facets").get("errorMessage");
+    Assertions.assertNotNull(errorFacet);
+    Assertions.assertEquals("Query timed out", errorFacet.get("message").asText());
+    // Native query — no "programmingLanguage" field
+    Assertions.assertNull(errorFacet.get("programmingLanguage"));
+  }
+
+  @Test
+  public void testNativeSqlSubQueryFailure() throws IOException
+  {
+    TestQuery query = new TestQuery(
+        new TableDataSource("t"),
+        ImmutableMap.of("queryId", "native-sql-fail", BaseQuery.SQL_QUERY_ID, "parent-sql")
+    );
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of(
+        "success", false,
+        "exception", "Query timed out"
+    )));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    ObjectNode event = capturedEvents.get(0);
+
+    Assertions.assertEquals("FAIL", event.get("eventType").asText());
+
+    JsonNode errorFacet = event.get("run").get("facets").get("errorMessage");
+    Assertions.assertNotNull(errorFacet);
+    // SQL-originated query — has "programmingLanguage"
+    Assertions.assertEquals("SQL", errorFacet.get("programmingLanguage").asText());
   }
 
   @Test
   public void testConstructorThrowsWhenHttpWithoutUrl()
   {
-    // HTTP URL validation is enforced at construction time so it fails fast during Guice wiring,
-    // even when ComposingRequestLogger does not delegate @LifecycleStart to sub-loggers.
     Assertions.assertThrows(IllegalStateException.class, () -> new OpenLineageRequestLogger(
         MAPPER,
         NAMESPACE,
