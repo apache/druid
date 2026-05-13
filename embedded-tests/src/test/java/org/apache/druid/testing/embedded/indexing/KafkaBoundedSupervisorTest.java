@@ -25,7 +25,8 @@ import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
-import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -38,13 +39,23 @@ import java.util.Map;
  */
 public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
 {
-  private static final EmittingLogger log = new EmittingLogger(KafkaBoundedSupervisorTest.class);
   private final KafkaResource kafkaServer = new KafkaResource();
 
   @Override
   protected StreamIngestResource<?> getStreamIngestResource()
   {
     return kafkaServer;
+  }
+
+  @Override
+  protected EmbeddedDruidCluster createCluster()
+  {
+    overlord.addProperty(
+        "druid.monitoring.monitors",
+        "[\"org.apache.druid.server.metrics.SupervisorStatsMonitor\"]"
+    );
+    overlord.addProperty("druid.monitoring.emissionPeriod", "PT1s");
+    return super.createCluster();
   }
 
   @Test
@@ -203,7 +214,6 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     cluster.callApi().postSupervisor(supervisor2);
 
     // Wait for the supervisor to process and detect the metadata mismatch
-    // The exception we're testing for is thrown and logged, and causes the supervisor to become unhealthy
     waitForSupervisorToBeUnhealthy(supervisor2.getId());
 
     // Verify the supervisor is unhealthy
@@ -266,75 +276,19 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
 
   private void waitForSupervisorToComplete(String supervisorId)
   {
-    // Wait for supervisor to reach COMPLETED state
-    int maxAttempts = 60; // 60 seconds timeout
-    int attempt = 0;
-
-    while (attempt < maxAttempts) {
-      try {
-        SupervisorStatus status = cluster.callApi().getSupervisorStatus(supervisorId);
-        if ("COMPLETED".equals(status.getState())) {
-          return;
-        }
-        Thread.sleep(1000);
-        attempt++;
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new RuntimeException("Interrupted while waiting for supervisor to complete", e);
-      }
-      catch (Exception e) {
-        // Supervisor might not be found immediately, retry
-        attempt++;
-        try {
-          Thread.sleep(1000);
-        }
-        catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-          throw new RuntimeException("Interrupted while waiting", ie);
-        }
-      }
-    }
-
-    Assertions.fail("Supervisor did not complete within timeout");
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("supervisor/count")
+                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+                      .hasDimension("state", "COMPLETED")
+    );
   }
 
   private void waitForSupervisorToBeUnhealthy(String supervisorId)
   {
-    // Wait for supervisor to become unhealthy after detecting the metadata mismatch
-    int maxAttempts = 30; // 30 seconds timeout
-    int attempt = 0;
-
-    while (attempt < maxAttempts) {
-      try {
-        SupervisorStatus status = cluster.callApi().getSupervisorStatus(supervisorId);
-
-        // The supervisor should become unhealthy when the exception is thrown
-        if (!status.isHealthy()) {
-          log.info("Supervisor became unhealthy with state: %s", status.getDetailedState());
-          return;
-        }
-
-        Thread.sleep(1000);
-        attempt++;
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new RuntimeException("Interrupted while waiting for supervisor to become unhealthy", e);
-      }
-      catch (Exception e) {
-        // Supervisor might not be found immediately, retry
-        attempt++;
-        try {
-          Thread.sleep(1000);
-        }
-        catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-          throw new RuntimeException("Interrupted while waiting", ie);
-        }
-      }
-    }
-
-    Assertions.fail("Supervisor did not become unhealthy due to metadata mismatch within timeout");
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("supervisor/count")
+                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+                      .hasDimension("state", "UNHEALTHY_SUPERVISOR")
+    );
   }
 }
