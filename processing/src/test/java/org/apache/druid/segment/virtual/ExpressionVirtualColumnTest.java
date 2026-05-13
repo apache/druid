@@ -792,4 +792,26 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     Assert.assertTrue(multiConstantSelector instanceof ConstantMultiValueDimensionSelector);
     Assert.assertEquals(ImmutableList.of("a", "b", "c"), multiConstantSelector.getObject());
   }
+
+  @Test
+  public void testNowCacheKeyIsNotStableAcrossInstances()
+  {
+    ExpressionVirtualColumn vc1 = new ExpressionVirtualColumn(
+        "v0",
+        "now()",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    ExpressionVirtualColumn vc2 = new ExpressionVirtualColumn(
+        "v0",
+        "now()",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+
+    Assert.assertFalse(
+        "ExpressionVirtualColumn cache keys for now() must differ across instances to defeat result caching",
+        Arrays.equals(vc1.getCacheKey(), vc2.getCacheKey())
+    );
+  }
 }
