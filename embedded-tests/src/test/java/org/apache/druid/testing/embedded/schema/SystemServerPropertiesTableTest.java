@@ -246,10 +246,16 @@ public class SystemServerPropertiesTableTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_serverPropertiesTable_errorMessageColumnExists()
+  public void test_serverPropertiesTable_errorMessageIsNullForHealthyServers()
   {
-    final String result = cluster.runSql("SELECT COUNT(*) FROM sys.server_properties WHERE error_message IS NULL");
-    Assertions.assertFalse(result.isEmpty(), "Should return count of servers with null error_message");
+    // All 3 servers in the embedded cluster are healthy, so no rows should have a non-null error_message
+    final String errorRows = cluster.runSql("SELECT server FROM sys.server_properties WHERE error_message IS NOT NULL");
+    Assertions.assertTrue(errorRows.isEmpty(), "Healthy servers should have null error_message");
+
+    // Every row should have a null error_message
+    final String totalCount = cluster.runSql("SELECT COUNT(*) FROM sys.server_properties");
+    final String nullErrorCount = cluster.runSql("SELECT COUNT(*) FROM sys.server_properties WHERE error_message IS NULL");
+    Assertions.assertEquals(totalCount, nullErrorCount, "All rows should have null error_message in a healthy cluster");
   }
 
   private void verifyPropertiesForServer(Map<String, String> properties, String serivceName, String hostAndPort, String nodeRole)

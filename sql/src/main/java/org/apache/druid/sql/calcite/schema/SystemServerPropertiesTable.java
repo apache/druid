@@ -183,21 +183,14 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
     return Linq4j.asEnumerable(rows);
   }
 
-  /**
-   * Single-pass extraction of equality filters for multiple columns.
-   * Consumed filters are removed from the list so Calcite won't re-apply them.
-   */
   private static Map<Integer, Set<String>> extractColumnFilters(final List<RexNode> filters, final int... columnIndices)
   {
     final Map<Integer, Set<String>> result = new HashMap<>();
-    final Iterator<RexNode> iterator = filters.iterator();
-    while (iterator.hasNext()) {
-      final RexNode filter = iterator.next();
+    for (final RexNode filter : filters) {
       for (final int columnIndex : columnIndices) {
         final String value = extractEqualityOnColumn(filter, columnIndex);
         if (value != null) {
           result.computeIfAbsent(columnIndex, k -> new HashSet<>()).add(value);
-          iterator.remove();
           break;
         }
       }
@@ -263,6 +256,10 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
           jsonMapper.readValue(response.getContent(), new TypeReference<>(){}),
           null
       );
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(StringUtils.format("Interrupted while fetching properties from node[%s]", url), e);
     }
     catch (Exception e) {
       final String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
