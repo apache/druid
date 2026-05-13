@@ -304,7 +304,7 @@ public class IndexerWorkerContext implements WorkerContext
         indexIO,
         segmentManager,
         coordinatorClient,
-        processingBuffersSet.get().acquireForStage(workOrder.getStageDefinition()),
+        workOrder.getStageDefinition().getProcessor().usesProcessingBuffers() ? processingBuffersSet.get() : null,
         dataServerQueryHandlerFactory,
         memoryParameters,
         WorkerStorageParameters.createProductionInstance(injector, workOrder.getOutputChannelMode())

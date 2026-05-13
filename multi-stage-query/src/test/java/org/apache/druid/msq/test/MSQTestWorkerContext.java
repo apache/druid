@@ -318,6 +318,12 @@ public class MSQTestWorkerContext implements WorkerContext
     }
 
     @Override
+    public void acquireProcessingBuffers(final int requestedSlices)
+    {
+      // No-op: this mock returns a fixed ProcessingBuffers regardless of slice count.
+    }
+
+    @Override
     public ProcessingBuffers processingBuffers()
     {
       return new ProcessingBuffers(

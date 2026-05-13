@@ -320,7 +320,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ImmutableMap.of(SHARD_ID1, "2"),
         ImmutableMap.of(SHARD_ID1, "4")
     );
-    Assert.assertTrue(task.supportsQueries());
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 

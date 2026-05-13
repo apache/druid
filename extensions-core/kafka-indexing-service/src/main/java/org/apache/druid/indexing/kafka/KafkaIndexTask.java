@@ -163,10 +163,4 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
   {
     return INPUT_SOURCE_RESOURCES;
   }
-
-  @Override
-  public boolean supportsQueries()
-  {
-    return true;
-  }
 }

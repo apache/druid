@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.PeonProcessingModule;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.junit.Assert;
 import org.junit.Test;
@@ -112,6 +113,15 @@ public class MSQWorkerTaskTest
   {
     MSQWorkerTask msqWorkerTask = new MSQWorkerTask(controllerTaskId, dataSource, workerNumber, context, retryCount);
     Assert.assertTrue(msqWorkerTask.getInputSourceResources().isEmpty());
+  }
+
+  @Test
+  public void testGetPeonProcessingModuleConfig()
+  {
+    final PeonProcessingModule.Config config = msqWorkerTask.getPeonProcessingModuleConfig();
+    Assert.assertTrue(config.hasProcessingThreads());
+    Assert.assertTrue(config.hasProcessingBuffers());
+    Assert.assertFalse(config.hasMergeBuffers());
   }
 
   @Test

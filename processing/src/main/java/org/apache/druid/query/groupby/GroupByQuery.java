@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DimensionComparisonUtils;
+import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -872,6 +873,19 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   public GroupByQuery withPostAggregatorSpecs(final List<PostAggregator> postAggregatorSpecs)
   {
     return new Builder(this).setPostAggregatorSpecs(postAggregatorSpecs).build();
+  }
+
+  @Override
+  public Query<ResultRow> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
+  {
+    if (!context().isOptimizeAggregators()) {
+      return this;
+    }
+    final List<AggregatorFactory> optimizedAggs = new ArrayList<>(aggregatorSpecs.size());
+    for (AggregatorFactory aggregatorFactory : aggregatorSpecs) {
+      optimizedAggs.add(aggregatorFactory.optimizeForSegment(optimizationContext));
+    }
+    return withAggregatorSpecs(optimizedAggs);
   }
 
   private static void verifyOutputNames(

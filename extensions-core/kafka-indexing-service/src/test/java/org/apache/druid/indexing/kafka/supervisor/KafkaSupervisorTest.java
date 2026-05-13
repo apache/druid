@@ -3750,14 +3750,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
                     new SeekableStreamEndSequenceNumbers<>(topic, singlePartitionMap(topic, 1, -100L, 2, 200L))
                 )
             ).times(4);
-    // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
-    // Since getOffsetFromStorageForPartition() is called per partition, all partitions can't be reset at the same time.
-    // Instead, subsequent partitions will be reset in the following supervisor runs.
+    // All unavailable partitions are collected in a single pass and reset together in one resetInternal() call.
+    // Only partition 1 (-100L) is unavailable (below earliest=0); partition 2 (200L) is valid since
+    // Kafka only checks offset >= earliest.
     EasyMock.expect(
         indexerMetadataStorageCoordinator.resetDataSourceMetadata(
             DATASOURCE,
             new KafkaDataSourceMetadata(
-                // Only one partition is reset in a single supervisor run.
                 new SeekableStreamEndSequenceNumbers<>(topic, singlePartitionMap(topic, 2, 200L))
             )
         )
