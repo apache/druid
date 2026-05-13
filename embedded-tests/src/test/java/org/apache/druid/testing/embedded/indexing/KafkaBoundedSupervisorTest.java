@@ -138,6 +138,24 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     Assertions.assertEquals("COMPLETED", status.getState());
   }
 
+  @Test
+  public void test_boundedSupervisor_withReversedRange_isUnhealthy()
+  {
+    final String topic = IdUtils.getRandomId();
+    kafkaServer.createTopicWithPartitions(topic, 1);
+
+    // start > end — invalid range, KafkaIndexTaskIOConfig rejects it when a task is created.
+    BoundedStreamConfig boundedConfig = new BoundedStreamConfig(Map.of("0", 500L), Map.of("0", 100L));
+    final KafkaSupervisorSpec supervisor = createBoundedKafkaSupervisor(kafkaServer, topic, boundedConfig);
+
+    cluster.callApi().postSupervisor(supervisor);
+    waitForSupervisorToBeUnhealthy(supervisor.getId());
+
+    final SupervisorStatus status = cluster.callApi().getSupervisorStatus(supervisor.getId());
+    Assertions.assertFalse(status.isHealthy());
+    Assertions.assertEquals("UNHEALTHY_SUPERVISOR", status.getState());
+  }
+
   private KafkaSupervisorSpec createBoundedKafkaSupervisor(
       KafkaResource kafkaServer,
       String topic,

@@ -4596,23 +4596,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Map<PartitionIdType, SequenceOffsetType> endOffsets =
         convertBoundedConfigMap(boundedConfig.getEndSequenceNumbers());
 
-    // Check if all partitions have empty ranges
-    // For exclusive end offsets (Kafka): start >= end means empty
-    // For inclusive end offsets (Kinesis): only start > end means empty (start == end is one record)
+    // Check if all partitions have empty ranges.
+    // Reversed ranges (start > end) return false so createNewTasks() runs and the task IO config
+    // rejects the invalid range with a clear error, making the supervisor UNHEALTHY.
+    // For exclusive end offsets (Kafka): start == end is a legitimate empty range.
+    // For inclusive end offsets (Kinesis): start == end is one record, not empty.
     boolean allPartitionsEmptyRange = true;
     for (PartitionIdType partition : partitionsInGroup) {
       SequenceOffsetType start = startOffsets.get(partition);
       SequenceOffsetType end = endOffsets.get(partition);
 
-      boolean isEmpty;
-      if (isEndOffsetExclusive()) {
-        // Exclusive: empty if start >= end
-        isEmpty = isOffsetAtOrBeyond(start, end);
-      } else {
-        // Inclusive: empty only if start > end
-        isEmpty = isOffsetAtOrBeyond(start, end) && !start.equals(end);
+      boolean startBeyondEnd = isOffsetAtOrBeyond(start, end) && !start.equals(end);
+      if (startBeyondEnd) {
+        return false;
       }
 
+      boolean isEmpty = isEndOffsetExclusive() && start.equals(end);
       if (!isEmpty) {
         allPartitionsEmptyRange = false;
         break;
@@ -4621,10 +4620,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     if (allPartitionsEmptyRange) {
       log.warn(
-          "TaskGroup[%d] has empty range for all partitions (start %s end). "
+          "TaskGroup[%d] has empty range for all partitions (start == end). "
           + "No work to do, marking as complete. Start: %s, End: %s",
           groupId,
-          isEndOffsetExclusive() ? ">=" : ">",
           startOffsets,
           endOffsets
       );
