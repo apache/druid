@@ -3414,7 +3414,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 3.9.2
+version: 4.2.0
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -4418,7 +4418,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 3.6.1
+version: 4.2.0
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
@@ -4446,17 +4446,6 @@ notices:
 
       This project contains the following code copied from Apache Hive:
         streams/src/main/java/org/apache/kafka/streams/state/internals/Murmur3.java
-
----
-
-name: Scala Library
-license_category: binary
-module: extensions/kafka-extraction-namespace
-license_name: Apache License version 2.0
-copyright: LAMP/EPFL and Lightbend, Inc.
-version: 2.13.16
-libraries:
-  - org.scala-lang: scala-library
 
 ---
 
