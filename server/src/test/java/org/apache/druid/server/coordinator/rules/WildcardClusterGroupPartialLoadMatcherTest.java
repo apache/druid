@@ -38,7 +38,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -324,29 +326,6 @@ class WildcardClusterGroupPartialLoadMatcherTest
     Assertions.assertEquals(original, back);
   }
 
-  // --- Operator-side virtual columns (findEquivalent resolution) ---
-
-  private static VirtualColumns lowerTenantVcs(String outputName)
-  {
-    return VirtualColumns.create(new ExpressionVirtualColumn(
-        outputName,
-        "lower(tenant)",
-        ColumnType.STRING,
-        TestExprMacroTable.INSTANCE
-    ));
-  }
-
-  /** Segment clusters on a VC named "tenant_lower" with expression lower(tenant). */
-  private static DataSegment vcClusteredSegment(String... lowerTenants)
-  {
-    final RowSignature clusteringColumns = RowSignature.builder().add("tenant_lower", ColumnType.STRING).build();
-    final List<List<Object>> tuples = new java.util.ArrayList<>(lowerTenants.length);
-    for (String t : lowerTenants) {
-      tuples.add(java.util.Collections.singletonList(t));
-    }
-    return segmentWithGroups(new ClusterGroupTuples(clusteringColumns, tuples, lowerTenantVcs("tenant_lower")));
-  }
-
   @Test
   void testOperatorVcResolvesToClusteringVcByEquivalence()
   {
@@ -446,5 +425,25 @@ class WildcardClusterGroupPartialLoadMatcherTest
     );
     final String json = mapper.writeValueAsString(matcher);
     Assertions.assertFalse(json.contains("virtualColumns"), () -> "did not expect virtualColumns in JSON: " + json);
+  }
+
+  private static VirtualColumns lowerTenantVcs(String outputName)
+  {
+    return VirtualColumns.create(new ExpressionVirtualColumn(
+        outputName,
+        "lower(tenant)",
+        ColumnType.STRING,
+        TestExprMacroTable.INSTANCE
+    ));
+  }
+
+  private static DataSegment vcClusteredSegment(String... lowerTenants)
+  {
+    final RowSignature clusteringColumns = RowSignature.builder().add("tenant_lower", ColumnType.STRING).build();
+    final List<List<Object>> tuples = new ArrayList<>(lowerTenants.length);
+    for (String t : lowerTenants) {
+      tuples.add(Collections.singletonList(t));
+    }
+    return segmentWithGroups(new ClusterGroupTuples(clusteringColumns, tuples, lowerTenantVcs("tenant_lower")));
   }
 }

@@ -19,8 +19,10 @@
 
 package org.apache.druid.timeline;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -28,6 +30,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +40,14 @@ import java.util.List;
 class ClusterGroupTuplesTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+  private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
+      new ExpressionVirtualColumn(
+          "tenant_lower",
+          "lower(tenant)",
+          ColumnType.STRING,
+          TestExprMacroTable.INSTANCE
+      )
+  );
 
   private static RowSignature tenantRegion()
   {
@@ -57,18 +68,24 @@ class ClusterGroupTuplesTest
   @Test
   void testConstructorRejectsNullClusteringColumns()
   {
-    Assertions.assertThrows(
-        DruidException.class,
-        () -> new ClusterGroupTuples(null, List.of(List.of("acme", "us-east-1")))
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            DruidException.class,
+            () -> new ClusterGroupTuples(null, List.of(List.of("acme", "us-east-1")))
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageContains("clusteringColumns must not be null or empty")
     );
   }
 
   @Test
   void testConstructorRejectsEmptyClusteringColumns()
   {
-    Assertions.assertThrows(
-        DruidException.class,
-        () -> new ClusterGroupTuples(RowSignature.empty(), List.of())
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            DruidException.class,
+            () -> new ClusterGroupTuples(RowSignature.empty(), List.of())
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageContains("clusteringColumns must not be null or empty")
     );
   }
 
@@ -89,18 +106,26 @@ class ClusterGroupTuplesTest
   @Test
   void testConstructorRejectsTupleLengthMismatch()
   {
-    Assertions.assertThrows(
-        DruidException.class,
-        () -> new ClusterGroupTuples(tenantRegion(), List.of(List.of("acme")))
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            DruidException.class,
+            () -> new ClusterGroupTuples(tenantRegion(), List.of(List.of("acme")))
+        ),
+        DruidExceptionMatcher.invalidInput()
+                             .expectMessageContains("tuple[0] has size [1] but clusteringColumns size is [2]")
     );
   }
 
   @Test
   void testConstructorRejectsNullTuple()
   {
-    Assertions.assertThrows(
-        DruidException.class,
-        () -> new ClusterGroupTuples(tenantRegion(), Arrays.asList(Arrays.asList("acme", "us-east-1"), null))
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            DruidException.class,
+            () -> new ClusterGroupTuples(tenantRegion(), Arrays.asList(Arrays.asList("acme", "us-east-1"), null))
+        ),
+        DruidExceptionMatcher.invalidInput()
+                             .expectMessageContains("tuple[1] has size [null] but clusteringColumns size is [2]")
     );
   }
 
@@ -108,9 +133,12 @@ class ClusterGroupTuplesTest
   void testConstructorRejectsUntypedClusteringColumn()
   {
     final RowSignature untyped = RowSignature.builder().add("tenant", null).build();
-    Assertions.assertThrows(
-        DruidException.class,
-        () -> new ClusterGroupTuples(untyped, List.of(List.of("acme")))
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            DruidException.class,
+            () -> new ClusterGroupTuples(untyped, List.of(List.of("acme")))
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageContains("clusteringColumn[tenant] has no declared type")
     );
   }
 
@@ -118,9 +146,12 @@ class ClusterGroupTuplesTest
   void testConstructorRejectsUnsupportedColumnType()
   {
     final RowSignature arraySig = RowSignature.builder().add("arr", ColumnType.STRING_ARRAY).build();
-    Assertions.assertThrows(
-        DruidException.class,
-        () -> new ClusterGroupTuples(arraySig, List.of(List.of(List.of("a"))))
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            DruidException.class,
+            () -> new ClusterGroupTuples(arraySig, List.of(List.of(List.of("a"))))
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageContains("Unsupported clustering column type")
     );
   }
 
@@ -162,28 +193,24 @@ class ClusterGroupTuplesTest
   {
     final ClusterGroupTuples groups = new ClusterGroupTuples(
         tenantPriority(),
-        List.of(List.of("acme", (Object) Integer.valueOf(5)))
+        List.of(List.of("acme", Integer.valueOf(5)))
     );
     Assertions.assertEquals(Long.class, groups.getTuples().get(0).get(1).getClass());
     Assertions.assertEquals(5L, groups.getTuples().get(0).get(1));
   }
 
   @Test
-  void testCoercionStringToLong()
+  void testCoercionStringRejectedForLong()
   {
-    final ClusterGroupTuples groups = new ClusterGroupTuples(
-        tenantPriority(),
-        List.of(List.of("acme", "42"))
-    );
-    Assertions.assertEquals(42L, groups.getTuples().get(0).get(1));
-  }
-
-  @Test
-  void testCoercionUnparseableStringToLongThrows()
-  {
-    Assertions.assertThrows(
-        DruidException.class,
-        () -> new ClusterGroupTuples(tenantPriority(), List.of(List.of("acme", "notanumber")))
+    // Coercion is intentionally narrow: only Number-family inputs are normalized. A String numeric value is rejected
+    // rather than parsed, so operator typos don't silently broaden the matched set in future rule consumers.
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            DruidException.class,
+            () -> new ClusterGroupTuples(tenantPriority(), List.of(List.of("acme", "42")))
+        ),
+        DruidExceptionMatcher.invalidInput()
+                             .expectMessageContains("Cannot coerce value [42] of type [java.lang.String] for column [priority] to LONG")
     );
   }
 
@@ -197,12 +224,30 @@ class ClusterGroupTuplesTest
   }
 
   @Test
-  void testCoercionStringToDouble()
+  void testCoercionStringRejectedForDouble()
   {
     final RowSignature sig = RowSignature.builder().add("v", ColumnType.DOUBLE).build();
-    final ClusterGroupTuples groups = new ClusterGroupTuples(sig, List.of(List.of("3.14")));
-    Assertions.assertEquals(Double.class, groups.getTuples().get(0).get(0).getClass());
-    Assertions.assertEquals(3.14d, (Double) groups.getTuples().get(0).get(0), 0.0001d);
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            DruidException.class,
+            () -> new ClusterGroupTuples(sig, List.of(List.of("3.14")))
+        ),
+        DruidExceptionMatcher.invalidInput()
+                             .expectMessageContains("Cannot coerce value [3.14] of type [java.lang.String] for column [v] to DOUBLE")
+    );
+  }
+
+  @Test
+  void testCoercionBooleanRejectedForLong()
+  {
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            DruidException.class,
+            () -> new ClusterGroupTuples(tenantPriority(), List.of(List.of("acme", (Object) Boolean.TRUE)))
+        ),
+        DruidExceptionMatcher.invalidInput()
+                             .expectMessageContains("Cannot coerce value [true] of type [java.lang.Boolean] for column [priority] to LONG")
+    );
   }
 
   @Test
@@ -216,9 +261,10 @@ class ClusterGroupTuplesTest
   @Test
   void testJsonRoundTripPreservesCoercedTypes() throws Exception
   {
+    // Both small Integer (Jackson default) and large Long pass through coercion to canonical Long.
     final ClusterGroupTuples groups = new ClusterGroupTuples(
         tenantPriority(),
-        List.of(List.of("acme", (Object) 5), List.of("globex", (Object) "10"))
+        List.of(List.of("acme", (Object) 5), List.of("globex", (Object) 5_000_000_000L))
     );
     final String json = MAPPER.writeValueAsString(groups);
     final ClusterGroupTuples back = MAPPER.readValue(json, ClusterGroupTuples.class);
@@ -245,16 +291,6 @@ class ClusterGroupTuplesTest
     );
   }
 
-  private static VirtualColumns lowerTenantVcs()
-  {
-    return VirtualColumns.create(new ExpressionVirtualColumn(
-        "tenant_lower",
-        "lower(tenant)",
-        ColumnType.STRING,
-        TestExprMacroTable.INSTANCE
-    ));
-  }
-
   @Test
   void testVirtualColumnsDefaultEmpty()
   {
@@ -268,7 +304,7 @@ class ClusterGroupTuplesTest
     final ClusterGroupTuples groups = new ClusterGroupTuples(
         RowSignature.builder().add("tenant_lower", ColumnType.STRING).build(),
         List.of(List.of("acme")),
-        lowerTenantVcs()
+        VIRTUAL_COLUMNS
     );
     Assertions.assertNotNull(groups.getVirtualColumns().getVirtualColumn("tenant_lower"));
   }
@@ -279,12 +315,12 @@ class ClusterGroupTuplesTest
     final ClusterGroupTuples original = new ClusterGroupTuples(
         RowSignature.builder().add("tenant_lower", ColumnType.STRING).build(),
         List.of(List.of("acme")),
-        lowerTenantVcs()
+        VIRTUAL_COLUMNS
     );
     // Round-trip needs an injectable ExprMacroTable for ExpressionVirtualColumn deserialization.
     final ObjectMapper mapper = new DefaultObjectMapper();
     mapper.setInjectableValues(
-        new com.fasterxml.jackson.databind.InjectableValues.Std()
+        new InjectableValues.Std()
             .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
     );
     final String json = mapper.writeValueAsString(original);
@@ -309,12 +345,12 @@ class ClusterGroupTuplesTest
     final ClusterGroupTuples a = new ClusterGroupTuples(
         RowSignature.builder().add("tenant_lower", ColumnType.STRING).build(),
         List.of(List.of("acme")),
-        lowerTenantVcs()
+        VIRTUAL_COLUMNS
     );
     final ClusterGroupTuples b = new ClusterGroupTuples(
         RowSignature.builder().add("tenant_lower", ColumnType.STRING).build(),
         List.of(List.of("globex")),
-        lowerTenantVcs()
+        VIRTUAL_COLUMNS
     );
     Assertions.assertSame(
         a.getVirtualColumns().getVirtualColumns()[0],

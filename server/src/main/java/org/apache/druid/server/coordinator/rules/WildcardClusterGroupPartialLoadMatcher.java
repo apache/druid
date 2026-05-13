@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
@@ -50,7 +51,7 @@ import java.util.regex.Pattern;
  * If the operator supplies {@link #getVirtualColumns()}, a pattern key may also reference one of those virtual
  * columns. At match time, the matcher resolves such a key to a clustering column on the segment via
  * {@link VirtualColumns#findEquivalent(VirtualColumns.Node)} between the operator's VCs and the segment's clustering
- * VCs (carried on {@link ClusterGroupTuples#getVirtualColumns()}). This lets operators author portable rules — they
+ * VCs (carried on {@link ClusterGroupTuples#getVirtualColumns()}). This lets operators author portable rules, they
  * write their preferred VC name and expression, and the matcher resolves to whatever name the segment happens to use
  * for the equivalent clustering VC.
  * <p>
@@ -179,7 +180,7 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
 
   @Nullable
   private Map<String, String> resolvePattern(
-      java.util.Set<String> patternKeys,
+      Set<String> patternKeys,
       RowSignature clusteringColumns,
       VirtualColumns segmentVcs
   )
@@ -198,11 +199,11 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
   /**
    * Resolve a pattern key to a clustering column name on the segment. Three cases:
    * <ol>
-   *   <li>The matcher carries an operator-VC by this name → resolve via
+   *   <li>The matcher carries an virtual column by this name, resolve via
    *       {@link VirtualColumns#findEquivalent(VirtualColumns.Node)} against the segment's clustering VCs. The
-   *       operator-VC interpretation wins regardless of any same-name clustering column (shadowing).</li>
-   *   <li>Otherwise, if the key is directly a clustering column name → identity.</li>
-   *   <li>Otherwise → unresolvable (returns {@code null}).</li>
+   *       matcher VC interpretation wins regardless of any same-name clustering column (shadowing).</li>
+   *   <li>Otherwise, if the key is directly a clustering column name -> identity.</li>
+   *   <li>Otherwise -> unresolvable (returns {@code null}).</li>
    * </ol>
    */
   @Nullable
@@ -215,9 +216,9 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
         return null;
       }
       final String equivalentName = equivalent.getOutputName();
-      return clusteringColumns.indexOf(equivalentName) >= 0 ? equivalentName : null;
+      return clusteringColumns.contains(equivalentName) ? equivalentName : null;
     }
-    return clusteringColumns.indexOf(key) >= 0 ? key : null;
+    return clusteringColumns.contains(key) ? key : null;
   }
 
   private static boolean matchesAnyPattern(

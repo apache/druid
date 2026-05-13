@@ -22,6 +22,7 @@ package org.apache.druid.timeline;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -37,15 +38,9 @@ import java.util.Objects;
 /**
  * Typed clustering tuples carried on {@link DataSegment#getClusterGroups()} for clustered base-table segments. Each
  * entry in {@link #getTuples()} is one cluster group's clustering-column values, in the order declared by
- * {@link #getClusteringColumns()}.
- * <p>
- * Optionally carries the clustering {@link VirtualColumns} when the segment was clustered on a virtual-column
- * expression (e.g., {@code lower(tenant)}). The matchers don't require it today, but it's persisted so future
- * broker-side consumers (tier-routing helpers, {@code SegmentPruner} / {@code FilterSegmentPruner}) can resolve a
- * query VC against the clustering side via {@link VirtualColumns#findEquivalent}. Defaults to
- * {@link VirtualColumns#EMPTY} when absent; constituent VC instances are interned through
- * {@link DataSegment#virtualColumnInterner()} so identical clustering VCs across segments collapse to a single
- * reference in broker/coordinator memory.
+ * {@link #getClusteringColumns()}. Optionally carries the clustering {@link VirtualColumns} when the segment was
+ * clustered on a virtual-column expression, so that matching for things like partial load rules and query time
+ * segment pruning can make use of this information.
  */
 public class ClusterGroupTuples
 {
@@ -133,71 +128,67 @@ public class ClusterGroupTuples
   }
 
   /**
-   * Coerce {@code raw} into the canonical Java representation of {@code type}. Null in, null out. STRING uses
-   * {@link String#valueOf}; LONG / DOUBLE / FLOAT accept any {@link Number} (down/up-cast via the matching primitive
-   * accessor) or a parseable numeric {@link String}. Throws on unsupported types or unparseable strings.
+   * Canonicalize {@code raw} for the declared clustering column {@code type}. This is intentionally narrow: its job
+   * is to unbreak Jackson's number-type narrowing (e.g., an Integer arriving for a LONG column gets normalized to a
+   * Long), not to do general value coercion. Rules:
+   * <ul>
+   *   <li>{@code null} → {@code null}.</li>
+   *   <li>STRING: {@link Objects#toString} on any non-null value (stringifying numeric operator input is benign).</li>
+   *   <li>LONG / DOUBLE / FLOAT: require {@link Number}; return via the matching primitive accessor. Strings,
+   *       Booleans, etc. are rejected — typed rule authoring should produce typed JSON, and silently parsing
+   *       strings risks accepting operator typos that change the matched set.</li>
+   * </ul>
+   * Unsupported column types (anything that isn't STRING/LONG/DOUBLE/FLOAT) are rejected.
    * <p>
    * Used by:
    * <ul>
    *   <li>{@link ClusterGroupTuples}'s constructor to canonicalize segment-side tuples (strict).</li>
-   *   <li>Operator-supplied rule tuples in the cluster-group partial-load matchers, which catch the exception and
-   *       treat it as "no match for this segment" rather than a hard failure.</li>
+   *   <li>Operator-supplied rule tuples in future cluster-group partial-load matchers, which can catch the
+   *       exception and treat it as "no match for this segment" rather than a hard failure.</li>
    * </ul>
    */
+  @Nullable
   public static Object coerceValue(String columnName, ColumnType type, @Nullable Object raw)
   {
     if (raw == null) {
       return null;
     }
     if (ColumnType.STRING.equals(type)) {
-      return raw instanceof String ? raw : String.valueOf(raw);
+      return raw instanceof String ? raw : Objects.toString(raw);
     }
     if (ColumnType.LONG.equals(type)) {
       if (raw instanceof Number) {
         return ((Number) raw).longValue();
       }
-      if (raw instanceof String) {
-        try {
-          return Long.parseLong((String) raw);
-        }
-        catch (NumberFormatException e) {
-          throw InvalidInput.exception("Cannot coerce value [%s] for column [%s] to LONG", raw, columnName);
-        }
-      }
-      throw InvalidInput.exception("Cannot coerce value [%s] for column [%s] to LONG", raw, columnName);
+      throw cannotCoerce(raw, columnName, "LONG");
     }
     if (ColumnType.DOUBLE.equals(type)) {
       if (raw instanceof Number) {
         return ((Number) raw).doubleValue();
       }
-      if (raw instanceof String) {
-        try {
-          return Double.parseDouble((String) raw);
-        }
-        catch (NumberFormatException e) {
-          throw InvalidInput.exception("Cannot coerce value [%s] for column [%s] to DOUBLE", raw, columnName);
-        }
-      }
-      throw InvalidInput.exception("Cannot coerce value [%s] for column [%s] to DOUBLE", raw, columnName);
+      throw cannotCoerce(raw, columnName, "DOUBLE");
     }
     if (ColumnType.FLOAT.equals(type)) {
       if (raw instanceof Number) {
         return ((Number) raw).floatValue();
       }
-      if (raw instanceof String) {
-        try {
-          return Float.parseFloat((String) raw);
-        }
-        catch (NumberFormatException e) {
-          throw InvalidInput.exception("Cannot coerce value [%s] for column [%s] to FLOAT", raw, columnName);
-        }
-      }
-      throw InvalidInput.exception("Cannot coerce value [%s] for column [%s] to FLOAT", raw, columnName);
+      throw cannotCoerce(raw, columnName, "FLOAT");
     }
     throw InvalidInput.exception(
         "Unsupported clustering column type [%s] for column [%s]; supported types are STRING, LONG, DOUBLE, FLOAT",
         type,
         columnName
+    );
+  }
+
+  private static DruidException cannotCoerce(Object raw, String columnName, String targetType)
+  {
+    return InvalidInput.exception(
+        "Cannot coerce value [%s] of type [%s] for column [%s] to %s",
+        raw,
+        raw.getClass().getName(),
+        columnName,
+        targetType
     );
   }
 

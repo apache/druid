@@ -31,8 +31,8 @@ import java.util.Map;
 
 /**
  * Base for {@link PartialLoadMatcher} implementations that decide which of a clustered segment's cluster groups to
- * partially load. Subclasses supply the resolution policy via {@link #resolveClusterGroupIndices(DataSegment)} — the
- * sorted, deduped indices into {@code segment.getClusterGroups().getTuples()} — and this base handles fingerprint
+ * partially load. Subclasses supply the resolution policy via {@link #resolveClusterGroupIndices(DataSegment)}; the
+ * sorted, deduped indices into {@code segment.getClusterGroups().getTuples()}, and this base handles fingerprint
  * computation and wraps the result into the {@code partialClusterGroup} load-spec wire form consumed by the
  * historical-side partial loader.
  * <p>

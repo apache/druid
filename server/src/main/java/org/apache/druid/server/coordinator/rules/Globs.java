@@ -41,6 +41,7 @@ final class Globs
 {
   private Globs()
   {
+    // no instantiation
   }
 
   /**
