@@ -4824,13 +4824,13 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testIsOffsetAtOrBeyond_nonNumericSequenceNumber()
+  public void testIsOffsetAtOrBeyond_specialMarkerIsAtOrBeyondNumeric()
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
 
-    // Non-numeric strings (e.g. EOS, EXPIRED) are treated as max sequence numbers by
-    // KinesisSequenceNumber, so they are considered at or beyond any numeric offset.
-    Assert.assertTrue(supervisor.isOffsetAtOrBeyond("not-a-number", "12345"));
+    // Special markers like EOS are treated as max sequence numbers by KinesisSequenceNumber,
+    // so they are considered at or beyond any numeric offset.
+    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(KinesisSequenceNumber.END_OF_SHARD_MARKER, "12345"));
   }
 
   @Test
