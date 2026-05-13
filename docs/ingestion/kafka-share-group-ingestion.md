@@ -151,7 +151,7 @@ The broker controls the lock via `group.share.record.lock.duration.ms`. The runn
 Effective broker acquisition lock timeout for share-group[my-group]: 30000 ms
 ```
 
-In Phase 1 a single thread does both poll and publish. If a batch exceeds the lock duration, in-flight records may be redelivered (duplicates). Tune `pollTimeout`, `maxRowsInMemory`, and `maxRowsPerSegment` so each cycle stays well under the lock window. Background renewal via `RENEW` is a Phase 2 enhancement.
+A single thread does both poll and publish. If a batch exceeds the lock duration, in-flight records may be redelivered (duplicates). Tune `pollTimeout`, `maxRowsInMemory`, and `maxRowsPerSegment` so each cycle stays well under the lock window.
 
 ## Scaling
 
@@ -179,7 +179,7 @@ In addition to the standard ingestion metrics (`ingest/events/processed`, `inges
 
 ## Limitations (current release)
 
-- Single-threaded ingestion per task. Two-thread architecture with background `RENEW` is a Phase 2 enhancement.
+- Single-threaded ingestion per task; a future enhancement may add a background `RENEW` thread to extend the broker lock for long-running batches.
 - No supervisor integration; tasks are submitted manually via the Overlord API. A `KafkaShareGroupSupervisor` is planned for Phase 2.
 - No deduplication cache (at-least-once).
 - Delivery order within a partition is not guaranteed.
