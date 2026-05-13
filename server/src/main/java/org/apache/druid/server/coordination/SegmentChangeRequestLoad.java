@@ -24,9 +24,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.loading.PartialProjectionLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -38,6 +40,29 @@ import java.util.Objects;
  */
 public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
 {
+  /**
+   * Builds a load announcement for a segment loaded on a historical. When the segment was loaded via a
+   * {@link PartialProjectionLoadSpec} wrapper (the coordinator stamped a partial-load request onto the outbound
+   * segment), the announcement carries the wrapper's fingerprint and {@link DataSegment#getSize()} as
+   * {@code loadedBytes}; a "full-fallback" advertisement that satisfies the coordinator's partial-load rule even
+   * though the historical did a regular full load via the inner delegate. Without this, the coordinator's reconciler
+   * would treat the replica as stale and re-queue the load indefinitely.
+   * <p>
+   * For segments loaded without a partial-load wrapper (the common case), this returns a bare load request with no
+   * fingerprint or loadedBytes, equivalent to {@link #SegmentChangeRequestLoad(DataSegment)}.
+   */
+  public static SegmentChangeRequestLoad forAnnouncement(DataSegment segment)
+  {
+    final Map<String, Object> loadSpec = segment.getLoadSpec();
+    if (loadSpec != null && PartialProjectionLoadSpec.TYPE.equals(loadSpec.get("type"))) {
+      final Object fingerprint = loadSpec.get("fingerprint");
+      if (fingerprint instanceof String) {
+        return new SegmentChangeRequestLoad(segment, (String) fingerprint, segment.getSize());
+      }
+    }
+    return new SegmentChangeRequestLoad(segment);
+  }
+
   private final DataSegment segment;
   @Nullable private final String fingerprint;
   @Nullable private final Long loadedBytes;

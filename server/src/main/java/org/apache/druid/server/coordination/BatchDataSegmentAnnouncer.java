@@ -58,7 +58,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       log.info("Skipping announcement of segment [%s]. Announcement exists already.", segment.getId());
       return;
     }
-    changes.addChangeRequest(new SegmentChangeRequestLoad(segment));
+    changes.addChangeRequest(SegmentChangeRequestLoad.forAnnouncement(segment));
   }
 
   @Override
@@ -77,7 +77,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
     List<DataSegmentChangeRequest> changesBatch = new ArrayList<>();
     for (DataSegment segment : segments) {
       if (announcedSegments.add(segment)) {
-        changesBatch.add(new SegmentChangeRequestLoad(segment));
+        changesBatch.add(SegmentChangeRequestLoad.forAnnouncement(segment));
       } else {
         log.info("Skipping announcement of segment [%s]. Announcement exists already.", segment.getId());
       }
@@ -128,7 +128,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
     if (counter.getCounter() < 0) {
       Iterable<DataSegmentChangeRequest> segments = Iterables.transform(
           announcedSegments,
-          SegmentChangeRequestLoad::new
+          SegmentChangeRequestLoad::forAnnouncement
       );
 
       Iterable<DataSegmentChangeRequest> sinkSchema = Iterables.transform(

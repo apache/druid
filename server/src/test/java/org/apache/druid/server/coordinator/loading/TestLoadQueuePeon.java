@@ -24,7 +24,10 @@ import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
@@ -35,13 +38,53 @@ public class TestLoadQueuePeon implements LoadQueuePeon
 {
   private final ConcurrentSkipListSet<DataSegment> segmentsToLoad = new ConcurrentSkipListSet<>();
   private final ConcurrentSkipListSet<DataSegment> segmentsToDrop = new ConcurrentSkipListSet<>();
+  private final ConcurrentHashMap<DataSegment, PartialLoadProfile> segmentToProfile = new ConcurrentHashMap<>();
+  private final ConcurrentSkipListSet<SegmentHolder> queuedHolders = new ConcurrentSkipListSet<>();
 
   private final CoordinatorRunStats stats = new CoordinatorRunStats();
+
+  /**
+   * Adds a {@link SegmentHolder} to the in-flight queue as if a previous coordinator run had queued the load. Tests
+   * use this to simulate pre-existing in-flight loads (e.g., stale-fingerprint loads from a prior run) so the
+   * reconciler can observe and act on them.
+   */
+  public void addInFlightHolder(SegmentHolder holder)
+  {
+    queuedHolders.add(holder);
+    segmentsToLoad.add(holder.getSegment());
+    if (holder.getProfile() != null) {
+      segmentToProfile.put(holder.getSegment(), holder.getProfile());
+    }
+  }
 
   @Override
   public void loadSegment(DataSegment segment, SegmentAction action, @Nullable LoadPeonCallback callback)
   {
     segmentsToLoad.add(segment);
+  }
+
+  @Override
+  public void loadSegment(
+      DataSegment segment,
+      SegmentAction action,
+      @Nullable PartialLoadProfile profile,
+      @Nullable LoadPeonCallback callback
+  )
+  {
+    segmentsToLoad.add(segment);
+    if (profile != null) {
+      segmentToProfile.put(segment, profile);
+    }
+  }
+
+  /**
+   * Returns the {@link PartialLoadProfile} that was passed alongside the load request for the given segment, or
+   * {@code null} if the segment was loaded as a regular full-load (no profile threaded).
+   */
+  @Nullable
+  public PartialLoadProfile getProfileFor(DataSegment segment)
+  {
+    return segmentToProfile.get(segment);
   }
 
   @Override
@@ -71,7 +114,11 @@ public class TestLoadQueuePeon implements LoadQueuePeon
   @Override
   public boolean cancelOperation(DataSegment segment)
   {
-    return false;
+    final boolean removedFromLoad = segmentsToLoad.remove(segment);
+    final boolean removedFromDrop = segmentsToDrop.remove(segment);
+    queuedHolders.removeIf(h -> h.getSegment().equals(segment));
+    segmentToProfile.remove(segment);
+    return removedFromLoad || removedFromDrop;
   }
 
   @Override
@@ -95,7 +142,7 @@ public class TestLoadQueuePeon implements LoadQueuePeon
   @Override
   public Set<SegmentHolder> getSegmentsInQueue()
   {
-    return Collections.emptySet();
+    return queuedHolders;
   }
 
   @Override

@@ -30,27 +30,15 @@ public class SegmentLoadingCapabilities
 {
   private final int numLoadingThreads;
   private final int numTurboLoadingThreads;
-  private final boolean supportsPartialLoad;
 
   @JsonCreator
   public SegmentLoadingCapabilities(
       @JsonProperty("numLoadingThreads") int numLoadingThreads,
-      @JsonProperty("numTurboLoadingThreads") int numTurboLoadingThreads,
-      @JsonProperty("supportsPartialLoad") boolean supportsPartialLoad
+      @JsonProperty("numTurboLoadingThreads") int numTurboLoadingThreads
   )
   {
     this.numLoadingThreads = numLoadingThreads;
     this.numTurboLoadingThreads = numTurboLoadingThreads;
-    this.supportsPartialLoad = supportsPartialLoad;
-  }
-
-  /**
-   * Convenience for callers that don't care about the partial-load capability (older code paths and tests).
-   * Defaults the capability to {@code false}.
-   */
-  public SegmentLoadingCapabilities(int numLoadingThreads, int numTurboLoadingThreads)
-  {
-    this(numLoadingThreads, numTurboLoadingThreads, false);
   }
 
   @JsonProperty
@@ -65,25 +53,12 @@ public class SegmentLoadingCapabilities
     return numTurboLoadingThreads;
   }
 
-  /**
-   * Whether the server understands the partial-load {@code LoadSpec} wrapper wire formats this Druid version ships
-   * with (e.g., {@code PartialProjectionLoadSpec}). Older historicals deserialize an unknown wrapper type and fail;
-   * the coordinator consults this flag and degrades partial-load requests to full-loads when it is {@code false}.
-   * Treated as a single capability across all built-in partial-load schemes since they are all core-loaded.
-   */
-  @JsonProperty
-  public boolean isSupportsPartialLoad()
-  {
-    return supportsPartialLoad;
-  }
-
   @Override
   public String toString()
   {
     return "SegmentLoadingCapabilities{" +
            "numLoadingThreads=" + numLoadingThreads +
            ", numTurboLoadingThreads=" + numTurboLoadingThreads +
-           ", supportsPartialLoad=" + supportsPartialLoad +
            '}';
   }
 }

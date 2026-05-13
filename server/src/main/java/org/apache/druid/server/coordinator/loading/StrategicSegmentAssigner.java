@@ -34,6 +34,7 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -185,9 +186,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
         int loadedCountOnTier = replicaCountMap.get(segment.getId(), tier)
                                                .loadedNotDropping();
         if (loadedCountOnTier >= 1) {
-          return replicateSegment(segment, serverB);
+          return replicateSegment(segment, serverB, null);
         } else {
-          return loadSegment(segment, serverB);
+          return loadSegment(segment, serverB, null);
         }
       }
 
@@ -274,6 +275,273 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   }
 
   /**
+   * Fingerprint-aware partial-load reconciler. Mirrors {@link #replicateSegment} for replica-count and surplus
+   * accounting, but per-tier the load/drop decisions are made by classifying replicas as matching or stale relative
+   * to the requested {@link PartialLoadProfile#fingerprint()} and applying the load-then-drop swap pattern: stale
+   * replicas keep serving until matching replicas have actually loaded.
+   */
+  @Override
+  public void replicateSegmentPartially(
+      DataSegment segment,
+      PartialLoadProfile profile,
+      Map<String, Integer> tierToReplicaCount
+  )
+  {
+    final Map<String, Integer> effectiveTierToReplicaCount = expandWithAliases(tierToReplicaCount);
+    final Set<String> allTiersInCluster = Sets.newHashSet(cluster.getTierNames());
+
+    if (effectiveTierToReplicaCount.isEmpty()) {
+      replicaCountMap.computeIfAbsent(segment.getId(), DruidServer.DEFAULT_TIER);
+    } else {
+      effectiveTierToReplicaCount.forEach((tier, requiredReplicas) -> {
+        reportTierCapacityStats(segment, requiredReplicas, tier);
+
+        SegmentReplicaCount replicaCount = replicaCountMap.computeIfAbsent(segment.getId(), tier);
+        replicaCount.setRequired(requiredReplicas, tierToHistoricalCount.getOrDefault(tier, 0));
+
+        if (!allTiersInCluster.contains(tier)) {
+          datasourceToInvalidLoadTiers.computeIfAbsent(segment.getDataSource(), ds -> new HashSet<>())
+                                      .add(tier);
+        }
+      });
+    }
+
+    final SegmentReplicaCount replicaCountInCluster = replicaCountMap.getTotal(segment.getId());
+    if (replicaCountInCluster.required() <= 0) {
+      segmentsWithZeroRequiredReplicas
+          .computeIfAbsent(segment.getDataSource(), ds -> new HashSet<>())
+          .add(segment);
+    }
+
+    final int replicaSurplus = replicaCountInCluster.loadedNotDropping()
+                               - replicaCountInCluster.requiredAndLoadable();
+
+    int dropsQueued = 0;
+    for (String tier : allTiersInCluster) {
+      dropsQueued += updateReplicasInTierPartial(
+          segment,
+          profile,
+          tier,
+          effectiveTierToReplicaCount.getOrDefault(tier, 0),
+          replicaSurplus - dropsQueued
+      );
+    }
+  }
+
+  /**
+   * Per-tier reconciliation under the partial-load model. The flow is:
+   * <ol>
+   *   <li>Compute matching count: matching-loaded + matching-in-flight − pending-move-drop.</li>
+   *   <li>If matching count is short of {@code requiredReplicas}, cancel stale-fingerprint in-flight loads to free
+   *       slots, then queue fresh partial-load requests on eligible servers (preferring empty servers, falling back
+   *       to additive reload on stale-loaded servers; the historical fills in missing parts in place).</li>
+   *   <li>If matching count exceeds requirement, drop the excess like the full-load surplus path.</li>
+   *   <li>Drop stale-loaded replicas only when the count of actually-loaded matching replicas already meets the
+   *       requirement; this preserves availability across the swap (stale replicas keep serving until matching
+   *       replicas have completed loading and announced).</li>
+   * </ol>
+   * Returns the total number of drop operations queued on this tier (matching surplus + stale), used to budget
+   * cross-tier drop pressure.
+   */
+  private int updateReplicasInTierPartial(
+      DataSegment segment,
+      PartialLoadProfile profile,
+      String tier,
+      int requiredReplicas,
+      int maxReplicasToDrop
+  )
+  {
+    final SegmentReplicaCount replicaCountOnTier = replicaCountMap.get(segment.getId(), tier);
+    final int movingReplicas = replicaCountOnTier.moving();
+    final int moveCompletedPendingDrop = Math.max(0, replicaCountOnTier.moveCompletedPendingDrop());
+
+    final PartialSegmentStatusInTier status = new PartialSegmentStatusInTier(
+        segment,
+        profile.fingerprint(),
+        cluster.getManagedHistoricalsByTier(tier)
+    );
+
+    final int matchingProjected = status.getMatchingLoaded().size()
+                                  + status.getMatchingInFlight().size()
+                                  - moveCompletedPendingDrop;
+    final boolean shouldCancelMoves = requiredReplicas == 0 && movingReplicas > 0;
+
+    // If everything's already in shape and no stale work, fast-exit.
+    if (matchingProjected == requiredReplicas
+        && !shouldCancelMoves
+        && status.getStaleInFlight().isEmpty()
+        && (status.getStaleLoaded().isEmpty() || status.getMatchingLoaded().size() < requiredReplicas)) {
+      return 0;
+    }
+
+    if (shouldCancelMoves) {
+      // Convert to SegmentStatusInTier for the existing cancelOperations move-cancel helper.
+      final SegmentStatusInTier vanillaStatus =
+          new SegmentStatusInTier(segment, cluster.getManagedHistoricalsByTier(tier));
+      cancelOperations(SegmentAction.MOVE_TO, movingReplicas, segment, vanillaStatus);
+      cancelOperations(SegmentAction.MOVE_FROM, movingReplicas, segment, vanillaStatus);
+    }
+
+    // Cancel stale in-flight: when there's a matching deficit we want their slots back; when requirement is 0 we
+    // want them gone unconditionally so we don't realize a stale fingerprint nobody asked for. Canceled servers
+    // become eligible for a fresh matching load later in this same run.
+    final int matchingDeficit = requiredReplicas - matchingProjected;
+    final List<ServerHolder> cancelledStaleServers = new ArrayList<>();
+    if (matchingDeficit > 0 || requiredReplicas == 0) {
+      final int toCancel = requiredReplicas == 0 ? status.getStaleInFlight().size() : matchingDeficit;
+      cancelLoadsOnServers(segment, status.getStaleInFlight(), toCancel, cancelledStaleServers);
+      if (!cancelledStaleServers.isEmpty()) {
+        incrementStat(Stats.Segments.PARTIAL_STALE_CANCELLED, segment, tier, cancelledStaleServers.size());
+      }
+    }
+
+    // Queue fresh matching loads to fill the deficit.
+    if (matchingDeficit > 0) {
+      final int numLoadedReplicas = status.getMatchingLoaded().size() + status.getStaleLoaded().size();
+      final int queued = loadPartialReplicas(
+          matchingDeficit, numLoadedReplicas, segment, tier, status, cancelledStaleServers, profile
+      );
+      if (queued > 0) {
+        incrementStat(Stats.Segments.PARTIAL_ASSIGNED, segment, tier, queued);
+      }
+    }
+
+    int dropsQueuedOnTier = 0;
+    int dropBudget = maxReplicasToDrop;
+
+    // Surplus matching: drop excess matching replicas. Same shape as the full-load surplus path.
+    if (matchingProjected > requiredReplicas) {
+      final int surplus = matchingProjected - requiredReplicas;
+      final List<ServerHolder> cancelledMatching = new ArrayList<>();
+      cancelLoadsOnServers(segment, status.getMatchingInFlight(), surplus, cancelledMatching);
+      final int numToDrop = Math.min(surplus - cancelledMatching.size(), dropBudget);
+      if (numToDrop > 0) {
+        final int dropped = dropFromList(numToDrop, segment, status.getMatchingLoaded());
+        incrementStat(Stats.Segments.DROPPED, segment, tier, dropped);
+        dropsQueuedOnTier += dropped;
+        dropBudget -= dropped;
+      }
+    }
+
+    // Stale drops: only safe once matching-loaded already satisfies the requirement (i.e., truly-serving matching
+    // replicas already cover the rule before we touch any stale). This is the "load then drop" half of the swap.
+    if (status.getMatchingLoaded().size() >= requiredReplicas
+        && !status.getStaleLoaded().isEmpty()
+        && dropBudget > 0) {
+      final int numToDrop = Math.min(status.getStaleLoaded().size(), dropBudget);
+      final int dropped = dropFromList(numToDrop, segment, status.getStaleLoaded());
+      if (dropped > 0) {
+        incrementStat(Stats.Segments.PARTIAL_STALE_DROPPED, segment, tier, dropped);
+        dropsQueuedOnTier += dropped;
+      }
+    }
+
+    return dropsQueuedOnTier;
+  }
+
+  /**
+   * Queues fresh partial-load requests on up to {@code numToLoad} eligible servers. Preference order: empty
+   * (fresh-load) servers first; then servers whose stale-fingerprint in-flight loads were just canceled (their slot
+   * is now free); then stale-loaded servers (additive reload; the historical fills missing parts in place). The last
+   * fallback is what mitigates the "tier saturated with stale" stuck state.
+   */
+  private int loadPartialReplicas(
+      int numToLoad,
+      int numLoadedReplicas,
+      DataSegment segment,
+      String tier,
+      PartialSegmentStatusInTier status,
+      List<ServerHolder> cancelledStaleServers,
+      PartialLoadProfile profile
+  )
+  {
+    final boolean isAlreadyLoadedOnTier = numLoadedReplicas >= 1;
+
+    if (isAlreadyLoadedOnTier && replicationThrottler.isReplicationThrottledForTier(tier)) {
+      return 0;
+    }
+
+    final List<ServerHolder> destinations = new ArrayList<>(
+        status.getEligibleForFreshLoad().size()
+        + cancelledStaleServers.size()
+        + status.getEligibleForAdditiveReload().size()
+    );
+    destinations.addAll(status.getEligibleForFreshLoad());
+    destinations.addAll(cancelledStaleServers);
+    destinations.addAll(status.getEligibleForAdditiveReload());
+
+    if (destinations.isEmpty()) {
+      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "No eligible server", segment, tier);
+      return 0;
+    }
+
+    int numLoadsQueued = 0;
+    for (ServerHolder server : destinations) {
+      if (numLoadsQueued >= numToLoad) {
+        break;
+      }
+      final boolean queuedSuccessfully = isAlreadyLoadedOnTier
+                                         ? replicateSegment(segment, server, profile)
+                                         : loadSegment(segment, server, profile);
+      if (queuedSuccessfully) {
+        ++numLoadsQueued;
+      }
+    }
+    return numLoadsQueued;
+  }
+
+  /**
+   * Cancels up to {@code numToCancel} in-flight load operations across the given list of servers. Successfully
+   * canceled servers are appended to {@code cancelledOut} so the caller can re-target them as fresh-load
+   * destinations within the same run. Used both to release slots taken by stale-fingerprint in-flight loads and to
+   * reduce a matching surplus.
+   */
+  private void cancelLoadsOnServers(
+      DataSegment segment,
+      List<ServerHolder> servers,
+      int numToCancel,
+      List<ServerHolder> cancelledOut
+  )
+  {
+    if (numToCancel <= 0) {
+      return;
+    }
+    for (ServerHolder server : servers) {
+      if (cancelledOut.size() >= numToCancel) {
+        break;
+      }
+      // Try LOAD then REPLICATE; the queued action depends on whether this was a primary or a replica.
+      if (server.cancelOperation(SegmentAction.LOAD, segment)
+          || server.cancelOperation(SegmentAction.REPLICATE, segment)) {
+        cancelledOut.add(server);
+      }
+    }
+  }
+
+  /**
+   * Drops the segment from up to {@code numToDrop} servers in the given list, preferring decommissioning servers
+   * first (they're trying to shed load anyway). Returns the number of drop operations queued.
+   */
+  private int dropFromList(int numToDrop, DataSegment segment, List<ServerHolder> candidates)
+  {
+    if (numToDrop <= 0 || candidates.isEmpty()) {
+      return 0;
+    }
+    final List<ServerHolder> ordered = new ArrayList<>(candidates);
+    ordered.sort((a, b) -> Boolean.compare(b.isDecommissioning(), a.isDecommissioning()));
+    int dropped = 0;
+    for (ServerHolder server : ordered) {
+      if (dropped >= numToDrop) {
+        break;
+      }
+      if (loadQueueManager.dropSegment(segment, server)) {
+        ++dropped;
+      }
+    }
+    return dropped;
+  }
+
+  /**
    * Queues load or drop operations on this tier based on the required
    * number of replicas and the current state.
    * <p>
@@ -324,7 +592,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       int numReplicasToLoad = replicaDeficit - cancelledDrops;
       if (numReplicasToLoad > 0) {
         int numLoadedReplicas = replicaCountOnTier.loadedNotDropping() + cancelledDrops;
-        int numLoadsQueued = loadReplicas(numReplicasToLoad, numLoadedReplicas, segment, tier, segmentStatus);
+        int numLoadsQueued = loadReplicas(numReplicasToLoad, numLoadedReplicas, segment, tier, segmentStatus, null);
         incrementStat(Stats.Segments.ASSIGNED, segment, tier, numLoadsQueued);
       }
     }
@@ -411,7 +679,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     } else if (server.isDroppingSegment(segment)) {
       return server.cancelOperation(SegmentAction.DROP, segment);
     } else if (server.canLoadSegment(segment)) {
-      return loadSegment(segment, server);
+      return loadSegment(segment, server, null);
     }
 
     final String skipReason;
@@ -534,7 +802,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       int numLoadedReplicas,
       DataSegment segment,
       String tier,
-      SegmentStatusInTier segmentStatus
+      SegmentStatusInTier segmentStatus,
+      @Nullable PartialLoadProfile profile
   )
   {
     final boolean isAlreadyLoadedOnTier = numLoadedReplicas >= 1;
@@ -563,17 +832,17 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     int numLoadsQueued = 0;
     while (numLoadsQueued < numToLoad && serverIterator.hasNext()) {
       ServerHolder server = serverIterator.next();
-      boolean queuedSuccessfully = isAlreadyLoadedOnTier ? replicateSegment(segment, server)
-                                                         : loadSegment(segment, server);
+      boolean queuedSuccessfully = isAlreadyLoadedOnTier ? replicateSegment(segment, server, profile)
+                                                         : loadSegment(segment, server, profile);
       numLoadsQueued += queuedSuccessfully ? 1 : 0;
     }
 
     return numLoadsQueued;
   }
 
-  private boolean loadSegment(DataSegment segment, ServerHolder server)
+  private boolean loadSegment(DataSegment segment, ServerHolder server, @Nullable PartialLoadProfile profile)
   {
-    final boolean assigned = loadQueueManager.loadSegment(segment, server, SegmentAction.LOAD);
+    final boolean assigned = loadQueueManager.loadSegment(segment, server, SegmentAction.LOAD, profile);
 
     if (!assigned) {
       incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "Encountered error", segment, server);
@@ -582,7 +851,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     return assigned;
   }
 
-  private boolean replicateSegment(DataSegment segment, ServerHolder server)
+  private boolean replicateSegment(DataSegment segment, ServerHolder server, @Nullable PartialLoadProfile profile)
   {
     final String tier = server.getServer().getTier();
     if (replicationThrottler.isReplicationThrottledForTier(tier)) {
@@ -590,7 +859,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return false;
     }
 
-    final boolean assigned = loadQueueManager.loadSegment(segment, server, SegmentAction.REPLICATE);
+    final boolean assigned = loadQueueManager.loadSegment(segment, server, SegmentAction.REPLICATE, profile);
     if (!assigned) {
       incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "Encountered error", segment, server);
     } else {

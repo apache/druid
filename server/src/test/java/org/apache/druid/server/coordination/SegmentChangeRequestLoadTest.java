@@ -132,6 +132,54 @@ public class SegmentChangeRequestLoadTest
   }
 
   @Test
+  public void testForAnnouncementBareSegment()
+  {
+    // A segment loaded without a partial-load wrapper produces a plain announcement with no partial fields.
+    DataSegment segment = new DataSegment(
+        "ds",
+        Intervals.of("2024-01-01/2024-02-01"),
+        "v1",
+        Map.of("type", "local"),
+        List.of("d"),
+        List.of("m"),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        100
+    );
+    SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
+    Assert.assertNull(announcement.getFingerprint());
+    Assert.assertNull(announcement.getLoadedBytes());
+  }
+
+  @Test
+  public void testForAnnouncementPartialProjectionWrapperProducesFullFallback()
+  {
+    // When the segment's loadSpec is a partialProjection wrapper, the announcement stamps the wrapper's fingerprint
+    // and the segment's full size as loadedBytes — coordinator reads this as a full-fallback profile and counts the
+    // replica as matching, avoiding reload thrash on historicals that don't (yet) do real partial loading.
+    Map<String, Object> wrapped = Map.of(
+        "type", "partialProjection",
+        "delegate", Map.of("type", "local", "path", "/var/druid/segments/foo"),
+        "projections", List.of("revenue"),
+        "fingerprint", "v1:abcdef0123456789"
+    );
+    DataSegment segment = new DataSegment(
+        "ds",
+        Intervals.of("2024-01-01/2024-02-01"),
+        "v1",
+        wrapped,
+        List.of("d"),
+        List.of("m"),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        12345
+    );
+    SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
+    Assert.assertEquals("v1:abcdef0123456789", announcement.getFingerprint());
+    Assert.assertEquals(Long.valueOf(12345L), announcement.getLoadedBytes());
+  }
+
+  @Test
   public void testOldPayloadDeserializesWithoutPartialFields() throws Exception
   {
     // An old-version payload with no partial-load fields should deserialize cleanly; the partial fields are null.

@@ -755,7 +755,7 @@ public class DataSourcesResource
       }
     }
 
-    return new ImmutableDruidDataSource(dataSourceName, Collections.emptyMap(), segmentMap);
+    return new ImmutableDruidDataSource(dataSourceName, Collections.emptyMap(), segmentMap.values());
   }
 
   @Nullable
