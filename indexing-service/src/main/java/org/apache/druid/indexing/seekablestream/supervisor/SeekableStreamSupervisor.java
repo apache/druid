@@ -4450,7 +4450,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                   + "Metadata bounded config [%s] does not match current config [%s]. "
                                   + "To start a new bounded ingestion, either: "
                                   + "(1) use the supervisor reset API to clear existing metadata, or "
-                                  + "(2) use a different supervisor ID / datasource.",
+                                  + "(2) use a different supervisor ID.",
                                   metadataBoundedConfig,
                                   currentBoundedConfig
                               );
@@ -4602,8 +4602,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     // Offsets from a prior bounded run with a different config must not count as completion evidence.
-    // Returning false lets createNewTasks() run, which calls getOffsetFromStorageForPartition()
-    // and throws the documented mismatch error.
     BoundedStreamConfig metadataBoundedConfig = getBoundedConfigFromMetadata(retrieveDataSourceMetadata());
     if (!boundedConfig.equals(metadataBoundedConfig)) {
       return false;
