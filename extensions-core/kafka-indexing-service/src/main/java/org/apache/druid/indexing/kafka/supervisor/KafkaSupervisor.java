@@ -227,7 +227,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         ioConfig.getInputFormat(),
         kafkaIoConfig.getConfigOverrides(),
         kafkaIoConfig.isMultiTopic(),
-        ioConfig.getTaskDuration().getStandardMinutes()
+        ioConfig.getTaskDuration().getStandardMinutes(),
+        kafkaIoConfig.getBoundedStreamConfig()  // Pass through bounded config
     );
   }
 
@@ -391,9 +392,40 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   }
 
   @Override
+  protected boolean isOffsetAtOrBeyond(Long current, Long target)
+  {
+    return current >= target;
+  }
+
+  @Override
+  protected KafkaTopicPartition createPartitionIdFromString(String partitionIdString)
+  {
+    return KafkaTopicPartition.fromString(partitionIdString);
+  }
+
+  @Override
+  protected Long createSequenceOffsetFromObject(Object offsetObj)
+  {
+    // Jackson may deserialize numbers as Integer if they fit, but Kafka needs Long
+    if (offsetObj instanceof Number) {
+      return ((Number) offsetObj).longValue();
+    }
+    if (offsetObj instanceof String) {
+      return Long.parseLong((String) offsetObj);
+    }
+    throw new IllegalArgumentException("Cannot convert " + offsetObj.getClass() + " to Long offset");
+  }
+
+  @Override
   protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return false;
+  }
+
+  @Override
+  protected boolean isEndOffsetExclusive()
+  {
+    return true;
   }
 
   @Override

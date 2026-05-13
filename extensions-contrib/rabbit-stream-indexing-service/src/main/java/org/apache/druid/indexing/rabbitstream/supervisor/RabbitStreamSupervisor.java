@@ -203,7 +203,8 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
         maximumMessageTime,
         ioConfig.getInputFormat(),
         rabbitConfig.getUri(),
-        ioConfig.getTaskDuration().getStandardMinutes()
+        ioConfig.getTaskDuration().getStandardMinutes(),
+        rabbitConfig.getBoundedStreamConfig()  // Pass through bounded config
     );
   }
 
@@ -360,6 +361,39 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return false;
+  }
+
+  @Override
+  protected boolean isEndOffsetExclusive()
+  {
+    return true;
+  }
+
+  @Override
+  protected boolean isOffsetAtOrBeyond(Long current, Long target)
+  {
+    // RabbitMQ uses Long sequence numbers (delivery tags)
+    return current >= target;
+  }
+
+  @Override
+  protected String createPartitionIdFromString(String partitionIdString)
+  {
+    // RabbitMQ uses String as partition ID, so just return the string as-is
+    return partitionIdString;
+  }
+
+  @Override
+  protected Long createSequenceOffsetFromObject(Object offsetObj)
+  {
+    // RabbitMQ uses Long as sequence offset
+    if (offsetObj instanceof Number) {
+      return ((Number) offsetObj).longValue();
+    }
+    if (offsetObj instanceof String) {
+      return Long.parseLong((String) offsetObj);
+    }
+    throw new IllegalArgumentException("Cannot convert " + offsetObj.getClass() + " to Long offset");
   }
 
   @Override

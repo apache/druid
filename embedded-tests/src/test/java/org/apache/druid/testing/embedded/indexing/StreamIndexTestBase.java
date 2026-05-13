@@ -120,6 +120,7 @@ public abstract class StreamIndexTestBase extends EmbeddedClusterTestBase
             Period.seconds(60),
             null, null, null, null, null, null, null, null,
             false,
+            null,
             null
         ),
         Map.of(),

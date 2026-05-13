@@ -291,6 +291,7 @@ averagers
 backend
 backfills
 backfilled
+backfilling
 backpressure
 base64
 baseTime
@@ -303,6 +304,7 @@ boolean
 breakpoint
 broadcasted
 bucketSize
+checkpointed
 checksums
 classpath
 clickstream
@@ -508,6 +510,7 @@ prepends
 prepopulated
 preprocessing
 priori
+reprocessing
 procs
 processFromRaw
 programmatically

@@ -48,6 +48,7 @@ import java.util.Map;
 
 public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 {
+
   protected static final String ILLEGAL_INPUT_SOURCE_UPDATE_ERROR_MESSAGE =
       "Update of the input source stream from [%s] to [%s] is not supported for a running supervisor."
       + "%nTo perform the update safely, follow these steps:"
