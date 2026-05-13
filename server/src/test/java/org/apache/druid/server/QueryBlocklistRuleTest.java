@@ -19,10 +19,12 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 import java.util.Map;
@@ -189,5 +191,37 @@ public class QueryBlocklistRuleTest
         IllegalArgumentException.class,
         () -> new DefaultQueryBlocklistRule("", ImmutableSet.of("ds"), null, null)
     );
+  }
+
+  @Test
+  public void testDeserialize_missingType_usesDefault() throws Exception
+  {
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    String json = "{\"ruleName\":\"block-ds\",\"dataSources\":[\"foo\"]}";
+    QueryBlocklistRule rule = mapper.readValue(json, QueryBlocklistRule.class);
+    Assert.assertTrue(rule instanceof DefaultQueryBlocklistRule);
+    Assert.assertEquals("block-ds", rule.getRuleName());
+  }
+
+  @Test
+  public void testDeserialize_explicitDefaultType() throws Exception
+  {
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    String json = "{\"type\":\"default\",\"ruleName\":\"block-ds\",\"dataSources\":[\"foo\"]}";
+    QueryBlocklistRule rule = mapper.readValue(json, QueryBlocklistRule.class);
+    Assert.assertTrue(rule instanceof DefaultQueryBlocklistRule);
+    Assert.assertEquals("block-ds", rule.getRuleName());
+  }
+
+  @Test
+  public void testDeserialize_unrecognizedType_fails()
+  {
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    String json = "{\"type\":\"customExtension\",\"ruleName\":\"block-ds\",\"dataSources\":[\"foo\"]}";
+    Exception e = Assert.assertThrows(
+        Exception.class,
+        () -> mapper.readValue(json, QueryBlocklistRule.class)
+    );
+    Assert.assertTrue(e.getMessage().contains("Could not resolve type id 'customExtension'"));
   }
 }

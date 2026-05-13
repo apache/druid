@@ -21,6 +21,8 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.annotation.JsonTypeResolver;
+import org.apache.druid.jackson.StrictTypeIdResolver;
 import org.apache.druid.query.Query;
 
 /**
@@ -29,13 +31,16 @@ import org.apache.druid.query.Query;
  * (datasources, query types, context).
  *
  * <p>Rules with no {@code "type"} field in JSON deserialize as {@link DefaultQueryBlocklistRule}
- * for backwards compatibility. Extensions can register additional implementations as Jackson
- * subtypes via {@code SimpleModule.registerSubtypes(...)}.
+ * for backwards compatibility. An explicit but unrecognized {@code "type"} value will fail
+ * deserialization rather than silently falling back to the default — this prevents extension
+ * rules from being misinterpreted when the extension is not loaded. Extensions can register
+ * additional implementations as Jackson subtypes via {@code SimpleModule.registerSubtypes(...)}.
  *
  * <p>Implementations must define {@code equals} and {@code hashCode} so that
  * {@link org.apache.druid.server.broker.BrokerDynamicConfig} can detect changes correctly.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultQueryBlocklistRule.class)
+@JsonTypeResolver(StrictTypeIdResolver.Builder.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, property = "type", defaultImpl = DefaultQueryBlocklistRule.class)
 @JsonSubTypes({
     @JsonSubTypes.Type(value = DefaultQueryBlocklistRule.class, name = "default")
 })
