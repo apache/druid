@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import junitparams.converters.Nullable;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -2038,10 +2039,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     mockAllNodeRolesWithCoordinator(coordinator);
 
-    @SuppressWarnings("unchecked")
-    ListenableFuture<StringFullResponseHolder> interruptingFuture = EasyMock.createMock(ListenableFuture.class);
-    EasyMock.expect(interruptingFuture.get()).andThrow(new InterruptedException("test interrupt"));
-    EasyMock.replay(interruptingFuture);
+    SettableFuture<StringFullResponseHolder> interruptingFuture = SettableFuture.create();
 
     EasyMock.expect(
         httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class))
@@ -2050,6 +2048,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
 
     DataContext dataContext = createDataContext(Users.SUPER);
+    Thread.currentThread().interrupt();
     RuntimeException ex = Assert.assertThrows(
         RuntimeException.class,
         () -> propertiesTable.scan(dataContext, Collections.emptyList(), null).toList()
