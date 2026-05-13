@@ -119,14 +119,14 @@ public class SystemServerPropertiesTableTest extends EmbeddedClusterTestBase
     );
 
     Assertions.assertEquals(
-        StringUtils.format("localhost:%s,%s,[%s],test.onlyBroker,brokerValue", BROKER_PORT, BROKER_SERVICE, NodeRole.BROKER_JSON_NAME),
+        StringUtils.format("localhost:%s,%s,[%s],test.onlyBroker,brokerValue,", BROKER_PORT, BROKER_SERVICE, NodeRole.BROKER_JSON_NAME),
         cluster.runSql("SELECT * FROM sys.server_properties WHERE server = 'localhost:%s' AND property = 'test.onlyBroker'", BROKER_PORT)
     );
 
     String[] expectedRows = new String[] {
-        StringUtils.format("localhost:%s,%s,[%s],test.nonUniqueProperty,brokerNonUniqueValue", BROKER_PORT, BROKER_SERVICE, NodeRole.BROKER_JSON_NAME),
-        StringUtils.format("localhost:%s,%s,[%s],test.nonUniqueProperty,overlordNonUniqueValue", OVERLORD_PORT, OVERLORD_SERVICE, NodeRole.OVERLORD_JSON_NAME),
-        StringUtils.format("localhost:%s,%s,[%s],test.nonUniqueProperty,coordinatorNonUniqueValue", COORDINATOR_PORT, COORDINATOR_SERVICE, NodeRole.COORDINATOR_JSON_NAME),
+        StringUtils.format("localhost:%s,%s,[%s],test.nonUniqueProperty,brokerNonUniqueValue,", BROKER_PORT, BROKER_SERVICE, NodeRole.BROKER_JSON_NAME),
+        StringUtils.format("localhost:%s,%s,[%s],test.nonUniqueProperty,overlordNonUniqueValue,", OVERLORD_PORT, OVERLORD_SERVICE, NodeRole.OVERLORD_JSON_NAME),
+        StringUtils.format("localhost:%s,%s,[%s],test.nonUniqueProperty,coordinatorNonUniqueValue,", COORDINATOR_PORT, COORDINATOR_SERVICE, NodeRole.COORDINATOR_JSON_NAME),
     };
     Arrays.sort(expectedRows, String::compareTo);
     final String result = cluster.runSql("SELECT * FROM sys.server_properties WHERE property='test.nonUniqueProperty'");
@@ -146,6 +146,13 @@ public class SystemServerPropertiesTableTest extends EmbeddedClusterTestBase
     Assertions.assertFalse(brokerProps.containsKey("password"));
   }
 
+  @Test
+  public void test_serverPropertiesTable_errorMessageColumnExists()
+  {
+    final String result = cluster.runSql("SELECT COUNT(*) FROM sys.server_properties WHERE error_message IS NULL");
+    Assertions.assertFalse(result.isEmpty(), "Should return count of servers with null error_message");
+  }
+
   private void verifyPropertiesForServer(Map<String, String> properties, String serivceName, String hostAndPort, String nodeRole)
   {
     String[] expectedRows = properties.entrySet().stream().map(entry -> String.join(
@@ -154,7 +161,8 @@ public class SystemServerPropertiesTableTest extends EmbeddedClusterTestBase
         escapeCsvField(serivceName),
         escapeCsvField(ImmutableList.of(nodeRole).toString()),
         escapeCsvField(entry.getKey()),
-        escapeCsvField(entry.getValue())
+        escapeCsvField(entry.getValue()),
+        escapeCsvField(null)
     )).toArray(String[]::new);
     Arrays.sort(expectedRows, String::compareTo);
     final String result = cluster.runSql("SELECT * FROM sys.server_properties WHERE server='%s'", hostAndPort);

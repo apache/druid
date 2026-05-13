@@ -596,7 +596,7 @@ public class SystemSchemaTest extends CalciteTestBase
                                                                                             .get("server_properties");
     final RelDataType propertiesRowType = propertiesTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> propertiesFields = propertiesRowType.getFieldList();
-    Assert.assertEquals(5, propertiesFields.size());
+    Assert.assertEquals(6, propertiesFields.size());
   }
 
   @Test
@@ -1586,7 +1586,9 @@ public class SystemSchemaTest extends CalciteTestBase
         coordinator.getDruidNode().getHostAndPortToUse(),
         coordinator.getDruidNode().getServiceName(),
         ImmutableList.of(coordinator.getNodeRole().getJsonName()).toString(),
-        "druid.test-key", "test-value"
+        "druid.test-key",
+        "test-value",
+        null
     });
 
     HttpResponse coordinator2HttpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -1598,7 +1600,9 @@ public class SystemSchemaTest extends CalciteTestBase
             coordinator2.getDruidNode().getHostAndPortToUse(),
             coordinator2.getDruidNode().getServiceName(),
             ImmutableList.of(coordinator2.getNodeRole().getJsonName()).toString(),
-            "druid.test-key3", "test-value3"
+            "druid.test-key3",
+            "test-value3",
+            null
         });
 
     mockNodeDiscovery(NodeRole.MIDDLE_MANAGER, middleManager);
@@ -1614,14 +1618,18 @@ public class SystemSchemaTest extends CalciteTestBase
             middleManager.getDruidNode().getHostAndPortToUse(),
             middleManager.getDruidNode().getServiceName(),
             ImmutableList.of(middleManager.getNodeRole().getJsonName()).toString(),
-            "druid.test-key", "test-value"
+            "druid.test-key",
+            "test-value",
+            null
         });
     expectedRows
         .add(new Object[]{
             middleManager.getDruidNode().getHostAndPortToUse(),
-            middleManager.getDruidNode().getServiceName(),  
+            middleManager.getDruidNode().getServiceName(),
             ImmutableList.of(middleManager.getNodeRole().getJsonName()).toString(),
-            "druid.test-key2", "test-value2"
+            "druid.test-key2",
+            "test-value2",
+            null
         });
 
     Map<String, ListenableFuture<StringFullResponseHolder>> urlToResponse = ImmutableMap.of(
@@ -1649,7 +1657,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.replay(druidNodeDiscoveryProvider, responseHandler, httpClient);
 
     DataContext dataContext = createDataContext(Users.SUPER);
-    final List<Object[]> rows = propertiesTable.scan(dataContext).toList();
+    final List<Object[]> rows = propertiesTable.scan(dataContext, Collections.emptyList(), null).toList();
     expectedRows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
     Assert.assertEquals(expectedRows.size(), rows.size());
@@ -1657,6 +1665,108 @@ public class SystemSchemaTest extends CalciteTestBase
       Assert.assertArrayEquals(expectedRows.get(i), rows.get(i));
     }
 
+  }
+
+  @Test
+  public void testPropertiesTable_withUnreachableServer()
+  {
+    SystemServerPropertiesTable propertiesTable = new SystemServerPropertiesTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+
+    // Mock all node roles (getDruidServers iterates through all of them)
+    mockNodeDiscovery(NodeRole.BROKER);
+    mockNodeDiscovery(NodeRole.ROUTER);
+    mockNodeDiscovery(NodeRole.HISTORICAL);
+    mockNodeDiscovery(NodeRole.OVERLORD);
+    mockNodeDiscovery(NodeRole.PEON);
+    mockNodeDiscovery(NodeRole.INDEXER);
+    mockNodeDiscovery(NodeRole.MIDDLE_MANAGER);
+
+    // Mock a single coordinator that will fail to respond
+    mockNodeDiscovery(NodeRole.COORDINATOR, coordinator);
+
+    // Mock HTTP client to throw exception (connection refused)
+    EasyMock.expect(
+        httpClient.go(
+            EasyMock.isA(Request.class),
+            EasyMock.isA(StringFullResponseHandler.class)
+        )
+    ).andThrow(new RuntimeException("Connection refused")).once();
+
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    DataContext dataContext = createDataContext(Users.SUPER);
+    final List<Object[]> rows = propertiesTable.scan(dataContext, Collections.emptyList(), null).toList();
+
+    // Should return 1 row even though properties fetch failed
+    Assert.assertEquals(1, rows.size());
+
+    // Verify server info is present
+    Assert.assertEquals(coordinator.getDruidNode().getHostAndPortToUse(), rows.get(0)[0]);
+    Assert.assertEquals(coordinator.getDruidNode().getServiceName(), rows.get(0)[1]);
+
+    // Property and value should be null
+    Assert.assertNull(rows.get(0)[3]);
+    Assert.assertNull(rows.get(0)[4]);
+
+    // Error column (index 5) should contain error message
+    Assert.assertNotNull(rows.get(0)[5]);
+    String error = (String) rows.get(0)[5];
+    Assert.assertTrue("Error should mention connection refused", error.contains("Connection refused"));
+
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+  }
+
+  @Test
+  public void testPropertiesTable_withHttpError()
+  {
+    SystemServerPropertiesTable propertiesTable = new SystemServerPropertiesTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+
+    // Mock all node roles
+    mockNodeDiscovery(NodeRole.BROKER);
+    mockNodeDiscovery(NodeRole.ROUTER);
+    mockNodeDiscovery(NodeRole.HISTORICAL);
+    mockNodeDiscovery(NodeRole.OVERLORD);
+    mockNodeDiscovery(NodeRole.PEON);
+    mockNodeDiscovery(NodeRole.INDEXER);
+    mockNodeDiscovery(NodeRole.MIDDLE_MANAGER);
+
+    mockNodeDiscovery(NodeRole.COORDINATOR, coordinator);
+
+    // Mock HTTP client to return 503 error
+    HttpResponse errorHttpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE);
+    StringFullResponseHolder errorResponseHolder = new StringFullResponseHolder(errorHttpResponse, StandardCharsets.UTF_8);
+    errorResponseHolder.addChunk("Service temporarily unavailable");
+
+    EasyMock.expect(
+        httpClient.go(
+            EasyMock.isA(Request.class),
+            EasyMock.isA(StringFullResponseHandler.class)
+        )
+    ).andReturn(Futures.immediateFuture(errorResponseHolder)).once();
+
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    DataContext dataContext = createDataContext(Users.SUPER);
+    final List<Object[]> rows = propertiesTable.scan(dataContext, Collections.emptyList(), null).toList();
+
+    Assert.assertEquals(1, rows.size());
+
+    // Error column should contain HTTP status
+    Assert.assertNotNull(rows.get(0)[5]);
+    String error = (String) rows.get(0)[5];
+    Assert.assertTrue("Error should mention HTTP 503", error.contains("503"));
+
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
   }
 
   @Test
