@@ -4317,7 +4317,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             simpleStartingOffsets,
             endOffsets
         );
-        activelyReadingTaskGroups.put(
         newTaskGroups.put(
             groupId,
             new TaskGroup(
@@ -4419,7 +4418,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // Existing logic for both streaming and bounded mode
     ImmutableMap.Builder<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> builder = ImmutableMap.builder();
     final DataSourceMetadata dataSourceMetadata = retrieveDataSourceMetadata();
-    final Map<PartitionIdType, SequenceOffsetType> metadataOffsets = getOffsetsFromMetadataStorage();
     final BoundedStreamConfig metadataBoundedConfig = getBoundedConfigFromMetadata(dataSourceMetadata);
 
     for (PartitionIdType partitionId : partitionGroups.get(groupId)) {
@@ -4436,7 +4434,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage = getOffsetFromStorageForPartition(
             partitionId,
             metadataOffsets,
-            metadataBoundedConfig
+            metadataBoundedConfig,
             partitionsToReset
         );
 
@@ -4473,7 +4471,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private OrderedSequenceNumber<SequenceOffsetType> getOffsetFromStorageForPartition(
       PartitionIdType partition,
       final Map<PartitionIdType, SequenceOffsetType> metadataOffsets,
-      @Nullable final BoundedStreamConfig metadataBoundedConfig
+      @Nullable final BoundedStreamConfig metadataBoundedConfig,
       final Map<PartitionIdType, SequenceOffsetType> partitionsToReset
   )
   {
