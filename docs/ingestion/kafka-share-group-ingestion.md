@@ -191,7 +191,7 @@ In addition to the standard ingestion metrics (`ingest/events/processed`, `inges
 
 - Java 17
 - Kafka 4.2.0 (with share groups enabled)
-- Druid 31.0.0 release (downloaded)
+- Druid checked out from this repository (built from source)
 
 ### Step 1: Start Kafka with share groups
 
@@ -227,24 +227,19 @@ Paste these JSON records:
 {"__time":"2025-06-01T04:00:00.000Z","item":"widget_e","value":320,"category":"electronics"}
 ```
 
-### Step 3: Build the extension and set up Druid
+### Step 3: Build Druid from source
+
+Build a full Druid distribution from this repository. This packages the share-group code natively, so no JAR overlay is required:
 
 ```bash
 cd /path/to/druid
-JAVA_HOME=$(/usr/libexec/java_home -v 17) mvn package \
-  -pl extensions-core/kafka-indexing-service -am \
-  -Pskip-static-checks -Dmaven.test.skip=true -T1C -q
+JAVA_HOME=$(/usr/libexec/java_home -v 17) \
+  mvn clean install -Pdist -T1C -DskipTests \
+    -Dforbiddenapis.skip=true -Dcheckstyle.skip=true \
+    -Dpmd.skip=true -Dmaven.javadoc.skip=true -Denforcer.skip=true
 
-cd ~/Downloads
-curl -O https://dlcdn.apache.org/druid/31.0.0/apache-druid-31.0.0-bin.tar.gz
-tar -xzf apache-druid-31.0.0-bin.tar.gz
-cd apache-druid-31.0.0
-
-rm extensions/druid-kafka-indexing-service/*.jar
-cp /path/to/druid/extensions-core/kafka-indexing-service/target/druid-kafka-indexing-service-*.jar \
-   extensions/druid-kafka-indexing-service/
-cp ~/.m2/repository/org/apache/kafka/kafka-clients/4.2.0/kafka-clients-4.2.0.jar \
-   extensions/druid-kafka-indexing-service/
+tar -xzf distribution/target/apache-druid-*-bin.tar.gz -C /tmp
+cd /tmp/apache-druid-*
 
 bin/start-druid
 ```
