@@ -27,10 +27,14 @@ import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.impl.AbstractTable;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.java.util.common.StringUtils;
@@ -56,9 +60,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -133,6 +139,11 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
     );
     SystemSchema.checkStateReadAccessForServers(authenticationResult, authorizerMapper);
 
+    // Extract equality filters to skip fetching properties from non-matching servers.
+    final Map<Integer, Set<String>> columnFilters = extractColumnFilters(filters, SERVER_INDEX, SERVICE_NAME_INDEX);
+    final Set<String> serverFilter = columnFilters.get(SERVER_INDEX);
+    final Set<String> serviceNameFilter = columnFilters.get(SERVICE_NAME_INDEX);
+
     final Iterator<DiscoveryDruidNode> druidServers = SystemSchema.getDruidServers(druidNodeDiscoveryProvider);
 
     final Map<String, ServerProperties> serverToPropertiesMap = new HashMap<>();
@@ -141,6 +152,14 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
       final String nodeRole = discoveryDruidNode.getNodeRole().getJsonName();
 
       final String serverKey = druidNode.getHostAndPortToUse();
+
+      if (serverFilter != null && !serverFilter.contains(serverKey)) {
+        return;
+      }
+      if (serviceNameFilter != null && !serviceNameFilter.contains(druidNode.getServiceName())) {
+        return;
+      }
+
       final ServerProperties serverProperties = serverToPropertiesMap.get(serverKey);
       if (serverProperties != null) {
         serverProperties.addNodeRole(nodeRole);
@@ -162,6 +181,53 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
       rows.addAll(serverProperties.buildRows(this, projects));
     }
     return Linq4j.asEnumerable(rows);
+  }
+
+  /**
+   * Single-pass extraction of equality filters for multiple columns.
+   * Consumed filters are removed from the list so Calcite won't re-apply them.
+   */
+  private static Map<Integer, Set<String>> extractColumnFilters(final List<RexNode> filters, final int... columnIndices)
+  {
+    final Map<Integer, Set<String>> result = new HashMap<>();
+    final Iterator<RexNode> iterator = filters.iterator();
+    while (iterator.hasNext()) {
+      final RexNode filter = iterator.next();
+      for (final int columnIndex : columnIndices) {
+        final String value = extractEqualityOnColumn(filter, columnIndex);
+        if (value != null) {
+          result.computeIfAbsent(columnIndex, k -> new HashSet<>()).add(value);
+          iterator.remove();
+          break;
+        }
+      }
+    }
+    return result;
+  }
+
+  @Nullable
+  private static String extractEqualityOnColumn(final RexNode node, final int columnIndex)
+  {
+    if (!(node instanceof RexCall)) {
+      return null;
+    }
+    final RexCall call = (RexCall) node;
+    if (call.getKind() != SqlKind.EQUALS) {
+      return null;
+    }
+    final RexNode left = call.getOperands().get(0);
+    final RexNode right = call.getOperands().get(1);
+
+    if (left instanceof RexInputRef && right instanceof RexLiteral) {
+      if (((RexInputRef) left).getIndex() == columnIndex) {
+        return RexLiteral.stringValue(right);
+      }
+    } else if (right instanceof RexInputRef && left instanceof RexLiteral) {
+      if (((RexInputRef) right).getIndex() == columnIndex) {
+        return RexLiteral.stringValue(left);
+      }
+    }
+    return null;
   }
 
   private static Object[] projectRow(final Object[] row, @Nullable final int[] projects)

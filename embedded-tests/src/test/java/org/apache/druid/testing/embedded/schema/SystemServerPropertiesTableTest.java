@@ -147,6 +147,105 @@ public class SystemServerPropertiesTableTest extends EmbeddedClusterTestBase
   }
 
   @Test
+  public void test_serverPropertiesTable_serverFilterPushdown()
+  {
+    final String brokerHost = StringUtils.format("localhost:%s", BROKER_PORT);
+
+    // Equality filter returns only matching server rows
+    final String result = cluster.runSql(
+        "SELECT server, service_name, property FROM sys.server_properties WHERE server = '%s'",
+        brokerHost
+    );
+    Assertions.assertFalse(result.isEmpty(), "Should return properties for the broker");
+    for (String row : result.split("\n")) {
+      Assertions.assertTrue(
+          row.startsWith(brokerHost + ","),
+          "Row should belong to filtered server: " + row
+      );
+    }
+
+    // Non-existent server returns no rows
+    final String emptyResult = cluster.runSql(
+        "SELECT * FROM sys.server_properties WHERE server = 'nonexistent:9999'"
+    );
+    Assertions.assertTrue(emptyResult.isEmpty(), "Non-existent server filter should return no rows");
+
+    // != is not consumed — falls back to Calcite post-filter, still correct
+    final String neResult = cluster.runSql(
+        "SELECT DISTINCT server FROM sys.server_properties WHERE server != '%s'",
+        brokerHost
+    );
+    Assertions.assertFalse(neResult.isEmpty(), "!= filter should still return other servers");
+    for (String row : neResult.split("\n")) {
+      Assertions.assertFalse(
+          row.trim().equals(brokerHost),
+          "!= filter should exclude the broker: " + row
+      );
+    }
+
+    // AND with a non-pushdown predicate — server filter consumed, rest handled by Calcite
+    final String andResult = cluster.runSql(
+        "SELECT server, property FROM sys.server_properties WHERE server = '%s' AND node_roles LIKE '%%broker%%'",
+        brokerHost
+    );
+    Assertions.assertFalse(andResult.isEmpty(), "AND with node_roles filter should return rows");
+    for (String row : andResult.split("\n")) {
+      Assertions.assertTrue(
+          row.startsWith(brokerHost + ","),
+          "Row should belong to filtered server: " + row
+      );
+    }
+  }
+
+  @Test
+  public void test_serverPropertiesTable_serviceNameFilterPushdown()
+  {
+    final String brokerHost = StringUtils.format("localhost:%s", BROKER_PORT);
+
+    // Equality filter on service_name returns only matching rows
+    final String result = cluster.runSql(
+        "SELECT server, service_name, property FROM sys.server_properties WHERE service_name = '%s'",
+        BROKER_SERVICE
+    );
+    Assertions.assertFalse(result.isEmpty(), "Should return properties for the broker service");
+    for (String row : result.split("\n")) {
+      String[] cols = row.split(",", -1);
+      Assertions.assertEquals(BROKER_SERVICE, cols[1], "Row should belong to filtered service_name: " + row);
+    }
+
+    // Non-existent service_name returns no rows
+    final String emptyResult = cluster.runSql(
+        "SELECT * FROM sys.server_properties WHERE service_name = 'nonexistent/service'"
+    );
+    Assertions.assertTrue(emptyResult.isEmpty(), "Non-existent service_name filter should return no rows");
+
+    // != falls back to Calcite post-filter
+    final String neResult = cluster.runSql(
+        "SELECT DISTINCT service_name FROM sys.server_properties WHERE service_name != '%s'",
+        BROKER_SERVICE
+    );
+    Assertions.assertFalse(neResult.isEmpty(), "!= filter should still return other services");
+    for (String row : neResult.split("\n")) {
+      Assertions.assertFalse(
+          row.trim().equals(BROKER_SERVICE),
+          "!= filter should exclude the broker service: " + row
+      );
+    }
+
+    // Both server and service_name filters consumed together
+    final String andResult = cluster.runSql(
+        "SELECT server, service_name, property FROM sys.server_properties WHERE service_name = '%s' AND server = '%s'",
+        BROKER_SERVICE, brokerHost
+    );
+    Assertions.assertFalse(andResult.isEmpty(), "AND with server and service_name should return rows");
+    for (String row : andResult.split("\n")) {
+      String[] cols = row.split(",", -1);
+      Assertions.assertEquals(brokerHost, cols[0], "Row server should match: " + row);
+      Assertions.assertEquals(BROKER_SERVICE, cols[1], "Row service_name should match: " + row);
+    }
+  }
+
+  @Test
   public void test_serverPropertiesTable_errorMessageColumnExists()
   {
     final String result = cluster.runSql("SELECT COUNT(*) FROM sys.server_properties WHERE error_message IS NULL");
