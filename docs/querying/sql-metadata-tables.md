@@ -322,7 +322,7 @@ SELECT * FROM sys.supervisors WHERE healthy=0;
 
 ### SERVER_PROPERTIES table
 
-The `server_properties` table exposes the runtime properties configured on each Druid server. Each row represents a single property key-value pair associated with a specific server. This table supports filter and projection pushdown for efficient querying. If a server is unreachable, the table still returns a row for that server with the `error` column populated instead of failing the entire query.
+The `server_properties` table exposes the runtime properties configured on each Druid server. Each row represents a single property key-value pair associated with a specific server. This table supports filter and projection pushdown for efficient querying. If a server is unreachable, the table still returns a row for that server with the `error_message` column populated instead of failing the entire query.
 
 |Column|Type|Notes|
 |------|-----|-----|
