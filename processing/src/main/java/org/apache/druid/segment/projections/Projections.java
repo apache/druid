@@ -19,8 +19,11 @@
 
 package org.apache.druid.segment.projections;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -30,18 +33,30 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.DruidPredicateMatch;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.filter.AndFilter;
+import org.apache.druid.segment.filter.NotFilter;
+import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +70,10 @@ public class Projections
 {
   public static final String BASE_TABLE_PROJECTION_NAME = "__base";
 
+  private static final String CLUSTER_GROUP_PREFIX = BASE_TABLE_PROJECTION_NAME + "$";
+
   private static final ConcurrentHashMap<byte[], Boolean> PERIOD_GRAN_CACHE = new ConcurrentHashMap<>();
+
 
   public static String validateProjectionName(@Nullable String name)
   {
@@ -528,6 +546,241 @@ public class Projections
   public static String getProjectionSegmentInternalFilePrefix(ProjectionSchema projectionSchema)
   {
     return projectionSchema.getName() + "/";
+  }
+
+  /**
+   * Check whether {@code type} is an allowed cluster group clustering-column type. Clustering is restricted to the
+   * primitive scalar types: {@link ValueType#STRING}, {@link ValueType#LONG}, {@link ValueType#DOUBLE},
+   * {@link ValueType#FLOAT}. Complex and array types are rejected.
+   */
+  public static boolean isAllowedClusteringType(@Nullable ColumnType type)
+  {
+    return type != null && type.anyOf(ValueType.STRING, ValueType.LONG, ValueType.DOUBLE, ValueType.FLOAT);
+  }
+
+  /**
+   * Segment internal file prefix + column for a cluster group's per-group column data:
+   * {@code __base$<id0>_<id1>...<idK>/<column>}
+   */
+  public static String getClusterGroupSegmentInternalFileName(List<Integer> clusteringValueIds, String column)
+  {
+    return getClusterGroupSegmentInternalFilePrefix(clusteringValueIds) + column;
+  }
+
+  public static String getClusterGroupSegmentInternalFilePrefix(List<Integer> clusteringValueIds)
+  {
+    if (clusteringValueIds == null || clusteringValueIds.isEmpty()) {
+      throw DruidException.defensive("clusteringValueIds must not be null or empty");
+    }
+    final StringBuilder sb = new StringBuilder(CLUSTER_GROUP_PREFIX);
+    for (int i = 0; i < clusteringValueIds.size(); i++) {
+      if (i > 0) {
+        sb.append('_');
+      }
+      sb.append(clusteringValueIds.get(i));
+    }
+    sb.append('/');
+    return sb.toString();
+  }
+
+  /**
+   * Returns the subset of {@code groups} that a query filter can't rule out from clustering values alone.
+   * Filters not referencing any clustering column are conservatively retained for every group.
+   */
+  public static List<TableClusterGroupSpec> pruneClusterGroups(
+      List<TableClusterGroupSpec> groups,
+      @Nullable Filter filter,
+      @Nullable VirtualColumns queryVirtualColumns
+  )
+  {
+    if (filter == null || groups.isEmpty()) {
+      return groups;
+    }
+    final VirtualColumns queryVcs = queryVirtualColumns == null ? VirtualColumns.EMPTY : queryVirtualColumns;
+    final List<TableClusterGroupSpec> kept = new ArrayList<>(groups.size());
+    for (TableClusterGroupSpec group : groups) {
+      if (matchesClusterGroup(filter, group, queryVcs)) {
+        kept.add(group);
+      }
+    }
+    return kept;
+  }
+
+  private static boolean matchesClusterGroup(
+      Filter filter,
+      TableClusterGroupSpec group,
+      VirtualColumns queryVcs
+  )
+  {
+    final ClusteredValueGroupsBaseTableSchema summary = group.getSummary();
+    final RowSignature clusteringColumns = summary.getClusteringColumns();
+    final VirtualColumns groupVcs = summary.getVirtualColumns();
+
+    // remap query-side column names that are virtual-column-equivalent to a clustering column
+    final Map<String, String> remap = buildClusterGroupRemap(
+        filter.getRequiredColumns(),
+        clusteringColumns,
+        queryVcs,
+        groupVcs
+    );
+    final Filter rewritten = remap.isEmpty() ? filter : filter.rewriteRequiredColumns(remap);
+
+    // keep unless provably FALSE; UNKNOWN (filter references non-clustering data) keeps conservatively
+    return matchesClusterGroupFilter(rewritten, clusteringColumns, group.lookupClusteringValues())
+        != DruidPredicateMatch.FALSE;
+  }
+
+  /**
+   * Build a name-rewrite map so the pruner can walk the filter against a group's clustering tuple. Three cases per
+   * filter column:
+   * <ol>
+   *   <li>Query virtual column by that name (shadows any physical of the same name): prunable iff the group has an
+   *       equivalent VC whose output is a clustering column. Same-name equivalence is an identity entry; different-name
+   *       equivalence remaps. Otherwise, the column is remapped to a non-clustering sentinel so the pruner returns
+   *       UNKNOWN, without that, a query virtual sharing a clustering column's name would be mis-matched against the
+   *       clustering value.</li>
+   *   <li>No query virtual column, but the name is a clustering column: identity entry, filter walks it directly.</li>
+   *   <li>Neither query virtual column nor clustering column: identity entry, pruner returns UNKNOWN at that leaf.</li>
+   * </ol>
+   * The query virtual column check must come first because query VC names are allowed to shadow physical/clustering
+   * column names.
+   * <p/>
+   * If no column needs a non-identity rewrite the result is empty and the caller skips the rewrite call. When any
+   * non-identity rewrite is present, identity entries are populated for all remaining required columns because
+   * {@link Filter#rewriteRequiredColumns} requires an entry for every referenced column (missing entries throw).
+   */
+  private static Map<String, String> buildClusterGroupRemap(
+      Set<String> requiredColumns,
+      RowSignature clusteringColumns,
+      VirtualColumns queryVcs,
+      VirtualColumns groupVcs
+  )
+  {
+    // if Query virtual column isn't equivalent to a clustering column, we remap to a sentinel name that is guaranteed
+    // not to be a clustering column so the pruner returns UNKNOWN for any leaf referencing it; compute it lazily
+    final Supplier<String> sentinel = Suppliers.memoize(() -> {
+      String candidate = "__nonClusteringRef";
+      while (clusteringColumns.indexOf(candidate) >= 0) {
+        candidate = "_" + candidate;
+      }
+      return candidate;
+    });
+
+    Map<String, String> remap = null;
+    for (String col : requiredColumns) {
+      final VirtualColumns.Node queryNode = queryVcs.getNode(col);
+      if (queryNode == null) {
+        continue;
+      }
+      // query treats `col` as a virtual column, shadowing any physical/clustering column of the same name
+      final VirtualColumn equivalent = groupVcs.findEquivalent(queryNode);
+      final String target = equivalent != null && clusteringColumns.contains(equivalent.getOutputName())
+                            ? equivalent.getOutputName()
+                            : null;
+      if (target == null) {
+        // query column has same name as a clustering column, but has no equivalent clustering virtual column; remap to
+        // use sentinel to be safe
+        if (remap == null) {
+          remap = new HashMap<>();
+        }
+        remap.put(col, sentinel.get());
+      } else if (!col.equals(target)) {
+        if (remap == null) {
+          remap = new HashMap<>();
+        }
+        remap.put(col, target);
+      }
+      // else: same name, handled below if remap ends up non-empty
+    }
+    if (remap == null) {
+      return Collections.emptyMap();
+    }
+    // fill identity entries for the remaining required columns; rewriteRequiredColumns rejects partial maps
+    for (String col : requiredColumns) {
+      remap.putIfAbsent(col, col);
+    }
+    return remap;
+  }
+
+  /**
+   * Walk a (remapped) filter against a group's constant clustering values. Returns a {@link DruidPredicateMatch}
+   * 3VL result: TRUE = filter holds for every row in the group, FALSE = filter holds for no row (group can be
+   * pruned), UNKNOWN = can't decide from clustering values alone (filter references non-clustering data, or
+   * unrecognized filter type). UNKNOWN is distinct from FALSE so that {@code NOT(can't-tell)} stays
+   * {@code can't-tell} rather than flipping to "definitely false" and silently pruning live groups.
+   */
+  private static DruidPredicateMatch matchesClusterGroupFilter(
+      Filter filter,
+      RowSignature clusteringColumns,
+      Object[] clusteringValues
+  )
+  {
+    if (filter instanceof AndFilter andFilter) {
+      DruidPredicateMatch result = DruidPredicateMatch.TRUE;   // identity for AND
+      for (Filter sub : andFilter.getFilters()) {
+        result = DruidPredicateMatch.and(result, matchesClusterGroupFilter(sub, clusteringColumns, clusteringValues));
+        if (result == DruidPredicateMatch.FALSE) {
+          return result;   // short-circuit: AND with false stays false
+        }
+      }
+      return result;
+    }
+
+    if (filter instanceof OrFilter orFilter) {
+      DruidPredicateMatch result = DruidPredicateMatch.FALSE;   // identity for OR
+      for (Filter sub : orFilter.getFilters()) {
+        result = DruidPredicateMatch.or(result, matchesClusterGroupFilter(sub, clusteringColumns, clusteringValues));
+        if (result == DruidPredicateMatch.TRUE) {
+          return result;   // short-circuit: OR with true stays true
+        }
+      }
+      return result;
+    }
+
+    if (filter instanceof NotFilter notFilter) {
+      return DruidPredicateMatch.not(
+          matchesClusterGroupFilter(notFilter.getBaseFilter(), clusteringColumns, clusteringValues)
+      );
+    }
+
+    if (filter instanceof NullFilter isNull) {
+      final int idx = clusteringColumns.indexOf(isNull.getColumn());
+      if (idx < 0) {
+        return DruidPredicateMatch.UNKNOWN;
+      }
+      return DruidPredicateMatch.of(clusteringValues[idx] == null);
+    }
+
+    if (filter instanceof EqualityFilter eq) {
+      final int idx = clusteringColumns.indexOf(eq.getColumn());
+      if (idx < 0) {
+        return DruidPredicateMatch.UNKNOWN;
+      }
+      // EqualityFilter doesn't match nulls; constructor also rejects null match values.
+      if (clusteringValues[idx] == null) {
+        return DruidPredicateMatch.FALSE;
+      }
+      return DruidPredicateMatch.of(Objects.equals(clusteringValues[idx], eq.getMatchValue()));
+    }
+
+    if (filter instanceof TypedInFilter in) {
+      final int idx = clusteringColumns.indexOf(in.getColumn());
+      if (idx < 0) {
+        return DruidPredicateMatch.UNKNOWN;
+      }
+      // TypedInFilter matches nulls if present in the values list. Iterate explicitly — immutable List impls
+      // (List.of, ImmutableList) NPE on contains(null).
+      final Object val = clusteringValues[idx];
+      for (Object v : in.getSortedValues()) {
+        if (Objects.equals(v, val)) {
+          return DruidPredicateMatch.TRUE;
+        }
+      }
+      return DruidPredicateMatch.FALSE;
+    }
+
+    // anything else, fall through as UNKNOWN (this could be improved in the future)
+    return DruidPredicateMatch.UNKNOWN;
   }
 
   /**

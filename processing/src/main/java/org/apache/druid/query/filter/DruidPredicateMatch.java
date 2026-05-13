@@ -20,7 +20,10 @@
 package org.apache.druid.query.filter;
 
 /**
- * Three-value logic result for matching values with predicates produced by {@link DruidPredicateFactory}
+ * Three-value logic result for matching values with predicates produced by {@link DruidPredicateFactory}.
+ * <p/>
+ * Also serves as a general 3VL atom for filter-tree composition where a sub-expression can be provably true,
+ * provably false, or undecidable.
  *
  * @see DruidObjectPredicate
  * @see DruidLongPredicate
@@ -57,5 +60,36 @@ public enum DruidPredicateMatch
       return TRUE;
     }
     return FALSE;
+  }
+
+  public static DruidPredicateMatch and(DruidPredicateMatch a, DruidPredicateMatch b)
+  {
+    if (a == FALSE || b == FALSE) {
+      return FALSE;
+    }
+    if (a == TRUE && b == TRUE) {
+      return TRUE;
+    }
+    return UNKNOWN;
+  }
+
+  public static DruidPredicateMatch or(DruidPredicateMatch a, DruidPredicateMatch b)
+  {
+    if (a == TRUE || b == TRUE) {
+      return TRUE;
+    }
+    if (a == FALSE && b == FALSE) {
+      return FALSE;
+    }
+    return UNKNOWN;
+  }
+
+  public static DruidPredicateMatch not(DruidPredicateMatch a)
+  {
+    return switch (a) {
+      case TRUE -> FALSE;
+      case FALSE -> TRUE;
+      default -> UNKNOWN;
+    };
   }
 }
