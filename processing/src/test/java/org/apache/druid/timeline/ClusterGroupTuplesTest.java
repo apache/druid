@@ -22,8 +22,12 @@ package org.apache.druid.timeline;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -238,6 +242,83 @@ class ClusterGroupTuplesTest
     Assertions.assertThrows(
         UnsupportedOperationException.class,
         () -> groups.getTuples().get(0).set(0, "hijacked")
+    );
+  }
+
+  private static VirtualColumns lowerTenantVcs()
+  {
+    return VirtualColumns.create(new ExpressionVirtualColumn(
+        "tenant_lower",
+        "lower(tenant)",
+        ColumnType.STRING,
+        TestExprMacroTable.INSTANCE
+    ));
+  }
+
+  @Test
+  void testVirtualColumnsDefaultEmpty()
+  {
+    final ClusterGroupTuples groups = new ClusterGroupTuples(tenantRegion(), List.of());
+    Assertions.assertSame(VirtualColumns.EMPTY, groups.getVirtualColumns());
+  }
+
+  @Test
+  void testVirtualColumnsAreStored()
+  {
+    final ClusterGroupTuples groups = new ClusterGroupTuples(
+        RowSignature.builder().add("tenant_lower", ColumnType.STRING).build(),
+        List.of(List.of("acme")),
+        lowerTenantVcs()
+    );
+    Assertions.assertNotNull(groups.getVirtualColumns().getVirtualColumn("tenant_lower"));
+  }
+
+  @Test
+  void testVirtualColumnsJsonRoundTrip() throws Exception
+  {
+    final ClusterGroupTuples original = new ClusterGroupTuples(
+        RowSignature.builder().add("tenant_lower", ColumnType.STRING).build(),
+        List.of(List.of("acme")),
+        lowerTenantVcs()
+    );
+    // Round-trip needs an injectable ExprMacroTable for ExpressionVirtualColumn deserialization.
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new com.fasterxml.jackson.databind.InjectableValues.Std()
+            .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
+    );
+    final String json = mapper.writeValueAsString(original);
+    Assertions.assertTrue(json.contains("\"virtualColumns\""), () -> "expected virtualColumns in JSON: " + json);
+    final ClusterGroupTuples back = mapper.readValue(json, ClusterGroupTuples.class);
+    Assertions.assertEquals(original, back);
+  }
+
+  @Test
+  void testVirtualColumnsOmittedFromJsonWhenEmpty() throws Exception
+  {
+    final ClusterGroupTuples groups = new ClusterGroupTuples(tenantRegion(), List.of(List.of("acme", "us-east-1")));
+    final String json = MAPPER.writeValueAsString(groups);
+    Assertions.assertFalse(json.contains("virtualColumns"), () -> "did not expect virtualColumns in JSON: " + json);
+  }
+
+  @Test
+  void testVirtualColumnInternerSharesAcrossInstances()
+  {
+    // Two ClusterGroupTuples built from independent (but equal) VC inputs should share their VC instances via the
+    // shared interner on DataSegment, so identical clustering VCs dedupe across segments held in memory.
+    final ClusterGroupTuples a = new ClusterGroupTuples(
+        RowSignature.builder().add("tenant_lower", ColumnType.STRING).build(),
+        List.of(List.of("acme")),
+        lowerTenantVcs()
+    );
+    final ClusterGroupTuples b = new ClusterGroupTuples(
+        RowSignature.builder().add("tenant_lower", ColumnType.STRING).build(),
+        List.of(List.of("globex")),
+        lowerTenantVcs()
+    );
+    Assertions.assertSame(
+        a.getVirtualColumns().getVirtualColumns()[0],
+        b.getVirtualColumns().getVirtualColumns()[0]
     );
   }
 }

@@ -24,8 +24,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -318,5 +322,129 @@ class WildcardClusterGroupPartialLoadMatcherTest
     final String json = mapper.writeValueAsString(original);
     final PartialLoadMatcher back = mapper.readValue(json, PartialLoadMatcher.class);
     Assertions.assertEquals(original, back);
+  }
+
+  // --- Operator-side virtual columns (findEquivalent resolution) ---
+
+  private static VirtualColumns lowerTenantVcs(String outputName)
+  {
+    return VirtualColumns.create(new ExpressionVirtualColumn(
+        outputName,
+        "lower(tenant)",
+        ColumnType.STRING,
+        TestExprMacroTable.INSTANCE
+    ));
+  }
+
+  /** Segment clusters on a VC named "tenant_lower" with expression lower(tenant). */
+  private static DataSegment vcClusteredSegment(String... lowerTenants)
+  {
+    final RowSignature clusteringColumns = RowSignature.builder().add("tenant_lower", ColumnType.STRING).build();
+    final List<List<Object>> tuples = new java.util.ArrayList<>(lowerTenants.length);
+    for (String t : lowerTenants) {
+      tuples.add(java.util.Collections.singletonList(t));
+    }
+    return segmentWithGroups(new ClusterGroupTuples(clusteringColumns, tuples, lowerTenantVcs("tenant_lower")));
+  }
+
+  @Test
+  void testOperatorVcResolvesToClusteringVcByEquivalence()
+  {
+    // Operator names their VC "queryLower" with lower(tenant); the segment's clustering VC is "tenant_lower" with
+    // the same expression. The matcher should find equivalence and match the segment's tuples.
+    final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("queryLower", "acme")),
+        null,
+        lowerTenantVcs("queryLower")
+    );
+    final DataSegment segment = vcClusteredSegment("acme", "globex");
+    final PartialLoadMatcher.MatchResult result = matcher.match(segment, BASE_LOAD_SPEC);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(List.of(0), result.wrappedLoadSpec().get("clusterGroupIndices"));
+  }
+
+  @Test
+  void testOperatorVcWithoutEquivalenceIsNonMatching()
+  {
+    // Operator-VC computes upper(tenant); segment's clustering VC computes lower(tenant). Not equivalent → the
+    // pattern is non-matching for this segment.
+    final VirtualColumns operatorVcs = VirtualColumns.create(new ExpressionVirtualColumn(
+        "queryUpper",
+        "upper(tenant)",
+        ColumnType.STRING,
+        TestExprMacroTable.INSTANCE
+    ));
+    final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("queryUpper", "ACME")),
+        null,
+        operatorVcs
+    );
+    Assertions.assertNull(matcher.match(vcClusteredSegment("acme"), BASE_LOAD_SPEC));
+  }
+
+  @Test
+  void testOperatorVcShadowsClusteringColumnName()
+  {
+    // Operator declares a VC named "tenant" with an unrelated expression. The pattern key "tenant" resolves through
+    // the operator's VC (operator-VC interpretation wins). Without an equivalent on the segment side, the pattern
+    // is non-matching even though "tenant" happens to also be a clustering column name on a different segment.
+    final VirtualColumns operatorVcs = VirtualColumns.create(new ExpressionVirtualColumn(
+        "tenant",
+        "lower(otherCol)",
+        ColumnType.STRING,
+        TestExprMacroTable.INSTANCE
+    ));
+    final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("tenant", "acme")),
+        null,
+        operatorVcs
+    );
+    // Segment that clusters directly on physical "tenant" (no segment VCs). The operator-VC shadowing rule means
+    // we don't silently treat the pattern's "tenant" as the clustering column "tenant" — it's interpreted as the
+    // operator-VC, which has no equivalent on the segment → non-matching.
+    Assertions.assertNull(matcher.match(threeGroupSegment(), BASE_LOAD_SPEC));
+  }
+
+  @Test
+  void testNoOperatorVcsKeepsDirectNameMatching()
+  {
+    // Sanity check: when no operator VCs are configured, the pattern key path falls through to direct clustering
+    // column name resolution, unchanged from the pre-VC behavior.
+    final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("tenant", "acme")),
+        null
+    );
+    Assertions.assertNotNull(matcher.match(threeGroupSegment(), BASE_LOAD_SPEC));
+  }
+
+  @Test
+  void testOperatorVcJsonRoundTrip() throws Exception
+  {
+    // Round-trip needs an injectable ExprMacroTable for ExpressionVirtualColumn deserialization.
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT)
+            .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
+    );
+    final WildcardClusterGroupPartialLoadMatcher original = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("queryLower", "acme")),
+        null,
+        lowerTenantVcs("queryLower")
+    );
+    final String json = mapper.writeValueAsString(original);
+    Assertions.assertTrue(json.contains("\"virtualColumns\""), () -> "expected virtualColumns in JSON: " + json);
+    final PartialLoadMatcher back = mapper.readValue(json, PartialLoadMatcher.class);
+    Assertions.assertEquals(original, back);
+  }
+
+  @Test
+  void testVirtualColumnsOmittedFromJsonWhenEmpty() throws Exception
+  {
+    final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("tenant", "acme")),
+        null
+    );
+    final String json = mapper.writeValueAsString(matcher);
+    Assertions.assertFalse(json.contains("virtualColumns"), () -> "did not expect virtualColumns in JSON: " + json);
   }
 }

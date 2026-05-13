@@ -20,8 +20,10 @@
 package org.apache.druid.timeline;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -36,22 +38,33 @@ import java.util.Objects;
  * Typed clustering tuples carried on {@link DataSegment#getClusterGroups()} for clustered base-table segments. Each
  * entry in {@link #getTuples()} is one cluster group's clustering-column values, in the order declared by
  * {@link #getClusteringColumns()}.
+ * <p>
+ * Optionally carries the clustering {@link VirtualColumns} when the segment was clustered on a virtual-column
+ * expression (e.g., {@code lower(tenant)}). The matchers don't require it today, but it's persisted so future
+ * broker-side consumers (tier-routing helpers, {@code SegmentPruner} / {@code FilterSegmentPruner}) can resolve a
+ * query VC against the clustering side via {@link VirtualColumns#findEquivalent}. Defaults to
+ * {@link VirtualColumns#EMPTY} when absent; constituent VC instances are interned through
+ * {@link DataSegment#virtualColumnInterner()} so identical clustering VCs across segments collapse to a single
+ * reference in broker/coordinator memory.
  */
 public class ClusterGroupTuples
 {
   private final RowSignature clusteringColumns;
   private final List<List<Object>> tuples;
+  private final VirtualColumns virtualColumns;
 
   @JsonCreator
   public ClusterGroupTuples(
       @JsonProperty("clusteringColumns") RowSignature clusteringColumns,
-      @JsonProperty("tuples") @Nullable List<List<Object>> tuples
+      @JsonProperty("tuples") @Nullable List<List<Object>> tuples,
+      @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns
   )
   {
     if (clusteringColumns == null || clusteringColumns.size() == 0) {
       throw InvalidInput.exception("clusteringColumns must not be null or empty");
     }
     this.clusteringColumns = clusteringColumns;
+    this.virtualColumns = internVirtualColumns(virtualColumns);
 
     final List<List<Object>> source = tuples == null ? Collections.emptyList() : tuples;
     final int numCols = clusteringColumns.size();
@@ -79,6 +92,15 @@ public class ClusterGroupTuples
     this.tuples = Collections.unmodifiableList(coerced);
   }
 
+  /**
+   * Convenience constructor for callers that don't carry clustering virtual columns. Equivalent to passing
+   * {@code null} for the virtual columns argument.
+   */
+  public ClusterGroupTuples(RowSignature clusteringColumns, @Nullable List<List<Object>> tuples)
+  {
+    this(clusteringColumns, tuples, null);
+  }
+
   @JsonProperty
   public RowSignature getClusteringColumns()
   {
@@ -89,6 +111,25 @@ public class ClusterGroupTuples
   public List<List<Object>> getTuples()
   {
     return tuples;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  public VirtualColumns getVirtualColumns()
+  {
+    return virtualColumns;
+  }
+
+  private static VirtualColumns internVirtualColumns(@Nullable VirtualColumns virtualColumns)
+  {
+    if (virtualColumns == null || virtualColumns.isEmpty()) {
+      return VirtualColumns.EMPTY;
+    }
+    return VirtualColumns.create(
+        Arrays.stream(virtualColumns.getVirtualColumns())
+              .map(DataSegment.virtualColumnInterner()::intern)
+              .toList()
+    );
   }
 
   /**
@@ -170,18 +211,23 @@ public class ClusterGroupTuples
       return false;
     }
     ClusterGroupTuples that = (ClusterGroupTuples) o;
-    return Objects.equals(clusteringColumns, that.clusteringColumns) && Objects.equals(tuples, that.tuples);
+    return Objects.equals(clusteringColumns, that.clusteringColumns)
+           && Objects.equals(tuples, that.tuples)
+           && Objects.equals(virtualColumns, that.virtualColumns);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(clusteringColumns, tuples);
+    return Objects.hash(clusteringColumns, tuples, virtualColumns);
   }
 
   @Override
   public String toString()
   {
-    return "ClusterGroupTuples{clusteringColumns=" + clusteringColumns + ", tuples=" + tuples + '}';
+    return "ClusterGroupTuples{clusteringColumns=" + clusteringColumns
+           + ", tuples=" + tuples
+           + ", virtualColumns=" + virtualColumns
+           + '}';
   }
 }

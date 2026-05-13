@@ -38,7 +38,6 @@ import java.util.Map;
 @JsonSubTypes({
     @JsonSubTypes.Type(name = ExactProjectionPartialLoadMatcher.TYPE, value = ExactProjectionPartialLoadMatcher.class),
     @JsonSubTypes.Type(name = WildcardProjectionPartialLoadMatcher.TYPE, value = WildcardProjectionPartialLoadMatcher.class),
-    @JsonSubTypes.Type(name = ExactClusterGroupPartialLoadMatcher.TYPE, value = ExactClusterGroupPartialLoadMatcher.class),
     @JsonSubTypes.Type(name = WildcardClusterGroupPartialLoadMatcher.TYPE, value = WildcardClusterGroupPartialLoadMatcher.class)
 })
 public interface PartialLoadMatcher
