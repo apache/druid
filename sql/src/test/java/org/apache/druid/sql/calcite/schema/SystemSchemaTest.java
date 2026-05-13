@@ -34,8 +34,11 @@ import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
@@ -150,6 +153,10 @@ import java.util.Set;
 public class SystemSchemaTest extends CalciteTestBase
 {
   private static final ObjectMapper MAPPER = CalciteTests.getJsonMapper();
+
+  private static final int SERVER_INDEX = SystemServerPropertiesTable.ROW_SIGNATURE.indexOf("server");
+  private static final int SERVICE_NAME_INDEX = SystemServerPropertiesTable.ROW_SIGNATURE.indexOf("service_name");
+  private static final int PROPERTY_INDEX = SystemServerPropertiesTable.ROW_SIGNATURE.indexOf("property");
 
   private static final String DATASOURCE_ALL_ACCESS = "allAccess";
 
@@ -1677,17 +1684,7 @@ public class SystemSchemaTest extends CalciteTestBase
         MAPPER
     );
 
-    // Mock all node roles (getDruidServers iterates through all of them)
-    mockNodeDiscovery(NodeRole.BROKER);
-    mockNodeDiscovery(NodeRole.ROUTER);
-    mockNodeDiscovery(NodeRole.HISTORICAL);
-    mockNodeDiscovery(NodeRole.OVERLORD);
-    mockNodeDiscovery(NodeRole.PEON);
-    mockNodeDiscovery(NodeRole.INDEXER);
-    mockNodeDiscovery(NodeRole.MIDDLE_MANAGER);
-
-    // Mock a single coordinator that will fail to respond
-    mockNodeDiscovery(NodeRole.COORDINATOR, coordinator);
+    mockAllNodeRolesWithCoordinator(coordinator);
 
     // Mock HTTP client to throw exception (connection refused)
     EasyMock.expect(
@@ -1731,16 +1728,7 @@ public class SystemSchemaTest extends CalciteTestBase
         MAPPER
     );
 
-    // Mock all node roles
-    mockNodeDiscovery(NodeRole.BROKER);
-    mockNodeDiscovery(NodeRole.ROUTER);
-    mockNodeDiscovery(NodeRole.HISTORICAL);
-    mockNodeDiscovery(NodeRole.OVERLORD);
-    mockNodeDiscovery(NodeRole.PEON);
-    mockNodeDiscovery(NodeRole.INDEXER);
-    mockNodeDiscovery(NodeRole.MIDDLE_MANAGER);
-
-    mockNodeDiscovery(NodeRole.COORDINATOR, coordinator);
+    mockAllNodeRolesWithCoordinator(coordinator);
 
     // Mock HTTP client to return 503 error
     HttpResponse errorHttpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE);
@@ -1765,6 +1753,338 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertNotNull(rows.get(0)[5]);
     String error = (String) rows.get(0)[5];
     Assert.assertTrue("Error should mention HTTP 503", error.contains("503"));
+
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+  }
+
+  @Test
+  public void testPropertiesTable_filterPushdown()
+  {
+    SystemServerPropertiesTable propertiesTable = new SystemServerPropertiesTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+
+    mockAllNodeRolesWithCoordinator(coordinator, coordinator2);
+
+    // coordinator (localhost:8081, service "s1") will be fetched; coordinator2 (localhost:8181, service "s1") will not
+    HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    StringFullResponseHolder holder = new StringFullResponseHolder(resp, StandardCharsets.UTF_8);
+    holder.addChunk("{\"druid.key\": \"val\"}");
+
+    EasyMock.expect(
+        httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class))
+    ).andReturn(Futures.immediateFuture(holder)).once();
+
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
+    final RelDataType rowType = propertiesTable.getRowType(new JavaTypeFactoryImpl());
+
+    // server = 'localhost:8081' — only coordinator matches, coordinator2 skipped (1 HTTP call)
+    final RexNode serverEquality = rexBuilder.makeCall(
+        SqlStdOperatorTable.EQUALS,
+        rexBuilder.makeInputRef(rowType.getFieldList().get(SERVER_INDEX).getType(), SERVER_INDEX),
+        rexBuilder.makeLiteral("localhost:8081")
+    );
+
+    DataContext dataContext = createDataContext(Users.SUPER);
+    final List<Object[]> rows = propertiesTable.scan(dataContext, ImmutableList.of(serverEquality), null).toList();
+
+    Assert.assertEquals(1, rows.size());
+    Assert.assertEquals("localhost:8081", rows.get(0)[0]);
+    Assert.assertEquals("druid.key", rows.get(0)[3]);
+    Assert.assertEquals("val", rows.get(0)[4]);
+
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+  }
+
+  @Test
+  public void testPropertiesTable_filterPushdownServiceNameAndNonMatching()
+  {
+    SystemServerPropertiesTable propertiesTable = new SystemServerPropertiesTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+
+    mockAllNodeRolesWithCoordinator(coordinator, coordinator2);
+
+    // Both coordinators have service "s1", so both match service_name filter
+    HttpResponse resp1 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    StringFullResponseHolder holder1 = new StringFullResponseHolder(resp1, StandardCharsets.UTF_8);
+    holder1.addChunk("{\"k1\": \"v1\"}");
+
+    HttpResponse resp2 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    StringFullResponseHolder holder2 = new StringFullResponseHolder(resp2, StandardCharsets.UTF_8);
+    holder2.addChunk("{\"k2\": \"v2\"}");
+
+    EasyMock.expect(
+        httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class))
+    ).andAnswer(() -> {
+      Request req = (Request) EasyMock.getCurrentArguments()[0];
+      String url = req.getUrl().toString();
+      if (url.contains("8081")) {
+        return Futures.immediateFuture(holder1);
+      } else {
+        return Futures.immediateFuture(holder2);
+      }
+    }).times(2);
+
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
+    final RelDataType rowType = propertiesTable.getRowType(new JavaTypeFactoryImpl());
+
+    // service_name = 's1' — both coordinators match
+    final RexNode serviceNameEquality = rexBuilder.makeCall(
+        SqlStdOperatorTable.EQUALS,
+        rexBuilder.makeInputRef(rowType.getFieldList().get(SERVICE_NAME_INDEX).getType(), SERVICE_NAME_INDEX),
+        rexBuilder.makeLiteral("s1")
+    );
+
+    DataContext dataContext = createDataContext(Users.SUPER);
+    List<Object[]> rows = propertiesTable.scan(dataContext, ImmutableList.of(serviceNameEquality), null).toList();
+    Assert.assertEquals(2, rows.size());
+
+    // Non-matching server filter returns 0 rows with no HTTP calls
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+    EasyMock.reset(druidNodeDiscoveryProvider, httpClient);
+    mockAllNodeRolesWithCoordinator(coordinator);
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    final RexNode nonMatchingFilter = rexBuilder.makeCall(
+        SqlStdOperatorTable.EQUALS,
+        rexBuilder.makeInputRef(rowType.getFieldList().get(SERVER_INDEX).getType(), SERVER_INDEX),
+        rexBuilder.makeLiteral("nonexistent:9999")
+    );
+
+    dataContext = createDataContext(Users.SUPER);
+    rows = propertiesTable.scan(dataContext, ImmutableList.of(nonMatchingFilter), null).toList();
+    Assert.assertEquals(0, rows.size());
+
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+  }
+
+  @Test
+  public void testPropertiesTable_filterFallback()
+  {
+    SystemServerPropertiesTable propertiesTable = new SystemServerPropertiesTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+
+    final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
+    final RelDataType rowType = propertiesTable.getRowType(new JavaTypeFactoryImpl());
+
+    // 1) NOT_EQUALS is not pushed down — all rows returned
+    mockAllNodeRolesWithCoordinator(coordinator);
+    HttpResponse resp1 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    StringFullResponseHolder holder1 = new StringFullResponseHolder(resp1, StandardCharsets.UTF_8);
+    holder1.addChunk("{\"druid.key\": \"val\", \"druid.other\": \"other\"}");
+    EasyMock.expect(httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class)))
+        .andReturn(Futures.immediateFuture(holder1)).once();
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    final RexNode notEquals = rexBuilder.makeCall(
+        SqlStdOperatorTable.NOT_EQUALS,
+        rexBuilder.makeInputRef(rowType.getFieldList().get(SERVER_INDEX).getType(), SERVER_INDEX),
+        rexBuilder.makeLiteral("some-server:1234")
+    );
+    Assert.assertEquals(2, propertiesTable.scan(createDataContext(Users.SUPER), ImmutableList.of(notEquals), null).toList().size());
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+
+    // 2) Non-RexCall filter (bare RexInputRef) is ignored
+    EasyMock.reset(druidNodeDiscoveryProvider, httpClient);
+    mockAllNodeRolesWithCoordinator(coordinator);
+    HttpResponse resp2 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    StringFullResponseHolder holder2 = new StringFullResponseHolder(resp2, StandardCharsets.UTF_8);
+    holder2.addChunk("{\"druid.key\": \"val\", \"druid.other\": \"other\"}");
+    EasyMock.expect(httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class)))
+        .andReturn(Futures.immediateFuture(holder2)).once();
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    final RexNode inputRef = rexBuilder.makeInputRef(rowType.getFieldList().get(SERVER_INDEX).getType(), SERVER_INDEX);
+    Assert.assertEquals(2, propertiesTable.scan(createDataContext(Users.SUPER), ImmutableList.of(inputRef), null).toList().size());
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+
+    // 3) Equality on non-pushed column (property) is ignored
+    EasyMock.reset(druidNodeDiscoveryProvider, httpClient);
+    mockAllNodeRolesWithCoordinator(coordinator);
+    HttpResponse resp3 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    StringFullResponseHolder holder3 = new StringFullResponseHolder(resp3, StandardCharsets.UTF_8);
+    holder3.addChunk("{\"druid.key\": \"val\", \"druid.other\": \"other\"}");
+    EasyMock.expect(httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class)))
+        .andReturn(Futures.immediateFuture(holder3)).once();
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    final RexNode propertyEquality = rexBuilder.makeCall(
+        SqlStdOperatorTable.EQUALS,
+        rexBuilder.makeInputRef(rowType.getFieldList().get(PROPERTY_INDEX).getType(), PROPERTY_INDEX),
+        rexBuilder.makeLiteral("druid.key")
+    );
+    Assert.assertEquals(2, propertiesTable.scan(createDataContext(Users.SUPER), ImmutableList.of(propertyEquality), null).toList().size());
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+
+    // 4) Reversed equality ('localhost:8081' = server) is correctly extracted
+    EasyMock.reset(druidNodeDiscoveryProvider, httpClient);
+    mockAllNodeRolesWithCoordinator(coordinator);
+    HttpResponse resp4 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    StringFullResponseHolder holder4 = new StringFullResponseHolder(resp4, StandardCharsets.UTF_8);
+    holder4.addChunk("{\"druid.key\": \"val\", \"druid.other\": \"other\"}");
+    EasyMock.expect(httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class)))
+        .andReturn(Futures.immediateFuture(holder4)).once();
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    final RexNode reversedEquality = rexBuilder.makeCall(
+        SqlStdOperatorTable.EQUALS,
+        rexBuilder.makeLiteral("localhost:8081"),
+        rexBuilder.makeInputRef(rowType.getFieldList().get(SERVER_INDEX).getType(), SERVER_INDEX)
+    );
+    List<Object[]> rows = propertiesTable.scan(createDataContext(Users.SUPER), ImmutableList.of(reversedEquality), null).toList();
+    Assert.assertEquals(2, rows.size());
+    Assert.assertEquals("localhost:8081", rows.get(0)[0]);
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+  }
+
+  @Test
+  public void testPropertiesTable_projectionAndMultiRole()
+  {
+    SystemServerPropertiesTable propertiesTable = new SystemServerPropertiesTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+
+    // Same host:port under two roles
+    DiscoveryDruidNode coordinatorRole = new DiscoveryDruidNode(
+        new DruidNode("s1", "localhost", false, 8081, null, true, false),
+        NodeRole.COORDINATOR,
+        ImmutableMap.of(),
+        startTime
+    );
+    DiscoveryDruidNode overlordRole = new DiscoveryDruidNode(
+        new DruidNode("s1", "localhost", false, 8081, null, true, false),
+        NodeRole.OVERLORD,
+        ImmutableMap.of(),
+        startTime
+    );
+
+    mockNodeDiscovery(NodeRole.BROKER);
+    mockNodeDiscovery(NodeRole.ROUTER);
+    mockNodeDiscovery(NodeRole.HISTORICAL);
+    mockNodeDiscovery(NodeRole.OVERLORD, overlordRole);
+    mockNodeDiscovery(NodeRole.PEON);
+    mockNodeDiscovery(NodeRole.INDEXER);
+    mockNodeDiscovery(NodeRole.MIDDLE_MANAGER);
+    mockNodeDiscovery(NodeRole.COORDINATOR, coordinatorRole);
+
+    HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    StringFullResponseHolder holder = new StringFullResponseHolder(resp, StandardCharsets.UTF_8);
+    holder.addChunk("{\"druid.port\": \"8081\"}");
+
+    EasyMock.expect(
+        httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class))
+    ).andReturn(Futures.immediateFuture(holder)).once();
+
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    DataContext dataContext = createDataContext(Users.SUPER);
+
+    // Multi-role: only 1 HTTP call, node_roles contains both
+    final List<Object[]> fullRows = propertiesTable.scan(dataContext, Collections.emptyList(), null).toList();
+    Assert.assertEquals(1, fullRows.size());
+    String nodeRoles = (String) fullRows.get(0)[2];
+    Assert.assertTrue(nodeRoles.contains("coordinator"));
+    Assert.assertTrue(nodeRoles.contains("overlord"));
+
+    // Projection: project only server (0) and property (3)
+    EasyMock.reset(druidNodeDiscoveryProvider, httpClient);
+    mockAllNodeRolesWithCoordinator(coordinator);
+
+    HttpResponse resp2 = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    StringFullResponseHolder holder2 = new StringFullResponseHolder(resp2, StandardCharsets.UTF_8);
+    holder2.addChunk("{\"druid.port\": \"8081\"}");
+    EasyMock.expect(
+        httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class))
+    ).andReturn(Futures.immediateFuture(holder2)).once();
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    final int[] projects = new int[]{0, 3};
+    final List<Object[]> projectedRows = propertiesTable.scan(dataContext, Collections.emptyList(), projects).toList();
+    Assert.assertEquals(1, projectedRows.size());
+    Assert.assertEquals(2, projectedRows.get(0).length);
+    Assert.assertEquals("localhost:8081", projectedRows.get(0)[0]);
+    Assert.assertEquals("druid.port", projectedRows.get(0)[1]);
+
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+  }
+
+  @Test
+  public void testPropertiesTable_withInterruptedException() throws Exception
+  {
+    SystemServerPropertiesTable propertiesTable = new SystemServerPropertiesTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+
+    mockAllNodeRolesWithCoordinator(coordinator);
+
+    @SuppressWarnings("unchecked")
+    ListenableFuture<StringFullResponseHolder> interruptingFuture = EasyMock.createMock(ListenableFuture.class);
+    EasyMock.expect(interruptingFuture.get()).andThrow(new InterruptedException("test interrupt"));
+    EasyMock.replay(interruptingFuture);
+
+    EasyMock.expect(
+        httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class))
+    ).andReturn(interruptingFuture).once();
+
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    DataContext dataContext = createDataContext(Users.SUPER);
+    RuntimeException ex = Assert.assertThrows(
+        RuntimeException.class,
+        () -> propertiesTable.scan(dataContext, Collections.emptyList(), null).toList()
+    );
+    Assert.assertTrue(ex.getMessage().contains("Interrupted"));
+    Assert.assertTrue(Thread.currentThread().isInterrupted());
+    Thread.interrupted();
+
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+  }
+
+  @Test
+  public void testPropertiesTable_exceptionWithNullMessage()
+  {
+    SystemServerPropertiesTable propertiesTable = new SystemServerPropertiesTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+
+    mockAllNodeRolesWithCoordinator(coordinator);
+
+    // Exception with no message — error_message should fall back to class simple name
+    EasyMock.expect(
+        httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class))
+    ).andThrow(new RuntimeException((String) null)).once();
+
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    DataContext dataContext = createDataContext(Users.SUPER);
+    final List<Object[]> rows = propertiesTable.scan(dataContext, Collections.emptyList(), null).toList();
+
+    Assert.assertEquals(1, rows.size());
+    Assert.assertEquals("RuntimeException", rows.get(0)[5]);
 
     EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
   }
@@ -2083,6 +2403,18 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(ImmutableList.copyOf(discoveryDruidNodes)).once();
     EasyMock.replay(druidNodeDiscovery);
     return druidNodeDiscovery;
+  }
+
+  private void mockAllNodeRolesWithCoordinator(DiscoveryDruidNode... coordinators)
+  {
+    mockNodeDiscovery(NodeRole.BROKER);
+    mockNodeDiscovery(NodeRole.ROUTER);
+    mockNodeDiscovery(NodeRole.HISTORICAL);
+    mockNodeDiscovery(NodeRole.OVERLORD);
+    mockNodeDiscovery(NodeRole.PEON);
+    mockNodeDiscovery(NodeRole.INDEXER);
+    mockNodeDiscovery(NodeRole.MIDDLE_MANAGER);
+    mockNodeDiscovery(NodeRole.COORDINATOR, coordinators);
   }
 
   /**
