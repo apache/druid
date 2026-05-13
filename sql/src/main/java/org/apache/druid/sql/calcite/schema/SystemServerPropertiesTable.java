@@ -140,7 +140,7 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
     SystemSchema.checkStateReadAccessForServers(authenticationResult, authorizerMapper);
 
     // Extract equality filters to skip fetching properties from non-matching servers.
-    final Map<Integer, Set<String>> columnFilters = extractColumnFilters(filters, SERVER_INDEX, SERVICE_NAME_INDEX);
+    final Map<Integer, Set<String>> columnFilters = extractColumnEqualityFilters(filters, SERVER_INDEX, SERVICE_NAME_INDEX);
     final Set<String> serverFilter = columnFilters.get(SERVER_INDEX);
     final Set<String> serviceNameFilter = columnFilters.get(SERVICE_NAME_INDEX);
 
@@ -183,7 +183,14 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
     return Linq4j.asEnumerable(rows);
   }
 
-  private static Map<Integer, Set<String>> extractColumnFilters(final List<RexNode> filters, final int... columnIndices)
+  /**
+   * Extracts simple equality filters ({@code column = 'literal'}) for the specified columns.
+   * Only handles top-level AND equalities; any other predicate (!=, LIKE, OR, functions) is
+   * ignored and left for Calcite to apply as a post-filter.
+   *
+   * @return map from column index to the set of literal values; absent key means no filter for that column
+   */
+  private static Map<Integer, Set<String>> extractColumnEqualityFilters(final List<RexNode> filters, final int... columnIndices)
   {
     final Map<Integer, Set<String>> result = new HashMap<>();
     for (final RexNode filter : filters) {
@@ -198,6 +205,10 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
     return result;
   }
 
+  /**
+   * Returns the string literal value if the node is a simple {@code column = 'literal'} (or reversed) equality
+   * on the given column index. Returns null for anything else — Calcite handles those as post-filters.
+   */
   @Nullable
   private static String extractEqualityOnColumn(final RexNode node, final int columnIndex)
   {
