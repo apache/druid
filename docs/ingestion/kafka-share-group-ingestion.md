@@ -267,7 +267,7 @@ bin/start-druid
 
 If you already have a Druid release binary and want to avoid a full source build, you can replace the kafka-indexing-service JAR in that distribution with the one built from this branch.
 
-> Caveat: The branch builds against `38.0.0-SNAPSHOT`. Druid does **not** guarantee extension ABI compatibility across major versions, so the overlay may fail at runtime against an older binary (37.x or earlier). Use the most recent stable Druid release available, and prefer Option A for a reliable demo.
+> Caveat: The branch builds against `38.0.0-SNAPSHOT`. Druid does **not** guarantee extension `ABI` compatibility across major versions, so the overlay may fail at runtime against an older binary (`37.x` or earlier). Use the most recent stable Druid release available, and prefer Option A for a reliable demo.
 
 ```bash
 cd /path/to/druid
