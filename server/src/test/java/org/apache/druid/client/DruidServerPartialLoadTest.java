@@ -19,7 +19,6 @@
 
 package org.apache.druid.client;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
@@ -28,6 +27,8 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
 
 /**
  * Tests {@link DruidServer}'s partial-load profile bookkeeping: profile-aware {@code currSize} accounting,
@@ -56,7 +57,7 @@ public class DruidServerPartialLoadTest
     return DataSegment
         .builder(SegmentId.of(dataSource, Intervals.of("2024-01-01/2024-02-01"), version, NoneShardSpec.instance()))
         .shardSpec(NoneShardSpec.instance())
-        .loadSpec(ImmutableMap.of("type", "local", "path", "/var/druid/segments/foo"))
+        .loadSpec(Map.of("type", "local", "path", "/var/druid/segments/foo"))
         .binaryVersion(9)
         .size(size)
         .build();
@@ -78,7 +79,7 @@ public class DruidServerPartialLoadTest
     DruidServer server = newServer();
     DataSegment segment = buildSegment("ds", "v1", 1000L);
     PartialLoadProfile profile = PartialLoadProfile.forLoaded(
-        ImmutableMap.of("type", "partialProjection", "fingerprint", FINGERPRINT),
+        Map.of("type", "partialProjection", "fingerprint", FINGERPRINT),
         FINGERPRINT,
         300L
     );
@@ -93,7 +94,7 @@ public class DruidServerPartialLoadTest
     DruidServer server = newServer();
     DataSegment segment = buildSegment("ds", "v1", 1000L);
     PartialLoadProfile profile = PartialLoadProfile.forLoaded(
-        ImmutableMap.of("type", "partialProjection", "fingerprint", FINGERPRINT),
+        Map.of("type", "partialProjection", "fingerprint", FINGERPRINT),
         FINGERPRINT,
         300L
     );
@@ -123,19 +124,19 @@ public class DruidServerPartialLoadTest
     // Simulates the historical re-announcing a segment after an additive reload swapped the wrapper / fingerprint.
     // Inventory state updates in place (no add/remove); currSize tracks the difference between the old and new
     // effective sizes.
-    final String FINGERPRINT_OLD = "v1:111111aaaa";
+    final String staleFingerprint = "v1:111111aaaa";
     DruidServer server = newServer();
     DataSegment segment = buildSegment("ds", "v1", 1000L);
     PartialLoadProfile oldProfile = PartialLoadProfile.forLoaded(
-        ImmutableMap.of("type", "partialProjection", "fingerprint", FINGERPRINT_OLD),
-        FINGERPRINT_OLD,
+        Map.of("type", "partialProjection", "fingerprint", staleFingerprint),
+        staleFingerprint,
         200L
     );
     server.addDataSegment(segment, oldProfile);
     Assertions.assertEquals(200L, server.getCurrSize());
 
     PartialLoadProfile newProfile = PartialLoadProfile.forLoaded(
-        ImmutableMap.of("type", "partialProjection", "fingerprint", FINGERPRINT),
+        Map.of("type", "partialProjection", "fingerprint", FINGERPRINT),
         FINGERPRINT,
         700L
     );
@@ -150,7 +151,7 @@ public class DruidServerPartialLoadTest
     DruidServer server = newServer();
     DataSegment segment = buildSegment("ds", "v1", 1000L);
     PartialLoadProfile profile = PartialLoadProfile.forLoaded(
-        ImmutableMap.of("type", "partialProjection", "fingerprint", FINGERPRINT),
+        Map.of("type", "partialProjection", "fingerprint", FINGERPRINT),
         FINGERPRINT,
         500L
     );
@@ -167,7 +168,7 @@ public class DruidServerPartialLoadTest
     DataSegment fullSegment = buildSegment("ds", "v1", 1000L);
     DataSegment partialSegment = buildSegment("ds", "v2", 5000L);
     PartialLoadProfile profile = PartialLoadProfile.forLoaded(
-        ImmutableMap.of("type", "partialProjection", "fingerprint", FINGERPRINT),
+        Map.of("type", "partialProjection", "fingerprint", FINGERPRINT),
         FINGERPRINT,
         500L
     );
