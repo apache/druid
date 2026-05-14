@@ -222,6 +222,26 @@ public class SpillOutputStreamTest
     }
   }
 
+  @Test(expected = NullPointerException.class)
+  public void testToByteArrayThrowsAfterDiskSwitch() throws IOException
+  {
+    try (SpillOutputStream out = makeStream(4)) {
+      out.write(new byte[]{1, 2, 3, 4, 5});
+      Assert.assertFalse(out.isInMemory());
+      out.toByteArray();
+    }
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void testGetFileThrowsWhenInMemory() throws IOException
+  {
+    try (SpillOutputStream out = makeStream(1024)) {
+      out.write(new byte[]{1, 2, 3});
+      Assert.assertTrue(out.isInMemory());
+      out.getFile();
+    }
+  }
+
   @Test(expected = TemporaryStorageFullException.class)
   public void testDiskStorageLimitEnforced() throws IOException
   {
