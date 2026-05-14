@@ -2847,15 +2847,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
         .andReturn(true)
         .times(1);
 
-    // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
-    // Since getOffsetFromStorageForPartition() is called per partition, all partitions can't be reset at the same time.
-    // Instead, subsequent partitions will be reset in the following supervisor runs.
+    // All unavailable partitions are collected in a single pass and reset together in one resetInternal() call.
     EasyMock
         .expect(
             indexerMetadataStorageCoordinator.resetDataSourceMetadata(
                 DATASOURCE,
                 new KinesisDataSourceMetadata(
-                    // Only one partition is reset in a single supervisor run.
                     new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of())
                 )
             )

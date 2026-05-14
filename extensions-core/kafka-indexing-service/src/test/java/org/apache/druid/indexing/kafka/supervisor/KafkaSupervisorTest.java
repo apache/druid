@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.curator.test.TestingCluster;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -50,7 +49,7 @@ import org.apache.druid.indexing.kafka.KafkaIndexTaskIOConfig;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskRunner;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
-import org.apache.druid.indexing.kafka.test.TestBroker;
+import org.apache.druid.indexing.kafka.test.EmbeddedKafkaBroker;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -122,7 +121,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -160,8 +158,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private static final Period TEST_HTTP_TIMEOUT = new Period("PT10S");
   private static final Period TEST_SHUTDOWN_TIMEOUT = new Period("PT80S");
 
-  private static TestingCluster zkServer;
-  private static TestBroker kafkaServer;
+  private static EmbeddedKafkaBroker kafkaServer;
   private static String kafkaHost;
   private static DataSchema dataSchema;
   private static int topicPostfix;
@@ -207,24 +204,21 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @BeforeClass
-  public static void setupClass() throws Exception
+  public static void setupClass()
   {
-    zkServer = new TestingCluster(1);
-    zkServer.start();
-
-    kafkaServer = new TestBroker(
-        zkServer.getConnectString(),
-        null,
-        1,
+    kafkaServer = new EmbeddedKafkaBroker(
         ImmutableMap.of(
-            "num.partitions",
+            "KAFKA_NUM_PARTITIONS",
             String.valueOf(NUM_PARTITIONS),
-            "auto.create.topics.enable",
-            String.valueOf(false)
+            "KAFKA_AUTO_CREATE_TOPICS_ENABLE",
+            String.valueOf(false),
+            // Kafka 4.x defaults log.message.timestamp.after.max.ms to 1h; addSomeEvents emits future timestamps.
+            "KAFKA_LOG_MESSAGE_TIMESTAMP_AFTER_MAX_MS",
+            String.valueOf(Long.MAX_VALUE)
         )
     );
     kafkaServer.start();
-    kafkaHost = StringUtils.format("localhost:%d", kafkaServer.getPort());
+    kafkaHost = kafkaServer.getBootstrapServerUrl();
 
     dataSchema = getDataSchema(DATASOURCE);
   }
@@ -258,13 +252,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @AfterClass
-  public static void tearDownClass() throws IOException
+  public static void tearDownClass()
   {
     kafkaServer.close();
     kafkaServer = null;
-
-    zkServer.stop();
-    zkServer = null;
   }
 
   @Test
@@ -3749,14 +3740,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
                     new SeekableStreamEndSequenceNumbers<>(topic, singlePartitionMap(topic, 1, -100L, 2, 200L))
                 )
             ).times(3);
-    // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
-    // Since getOffsetFromStorageForPartition() is called per partition, all partitions can't be reset at the same time.
-    // Instead, subsequent partitions will be reset in the following supervisor runs.
+    // All unavailable partitions are collected in a single pass and reset together in one resetInternal() call.
+    // Only partition 1 (-100L) is unavailable (below earliest=0); partition 2 (200L) is valid since
+    // Kafka only checks offset >= earliest.
     EasyMock.expect(
         indexerMetadataStorageCoordinator.resetDataSourceMetadata(
             DATASOURCE,
             new KafkaDataSourceMetadata(
-                // Only one partition is reset in a single supervisor run.
                 new SeekableStreamEndSequenceNumbers<>(topic, singlePartitionMap(topic, 2, 200L))
             )
         )

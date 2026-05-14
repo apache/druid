@@ -26,6 +26,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
@@ -69,6 +70,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
+import org.apache.druid.segment.AsyncCursorHolder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorFactory;
@@ -118,6 +120,14 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   private final Closer closer = Closer.create();
 
   private Cursor cursor;
+  /**
+   * In-flight {@link CursorFactory#makeCursorHolderAsync} handle for the current segment, when {@link #cursor} has not
+   * yet been derived. Registered on {@link #closer} as soon as it is created so the produced {@link CursorHolder} is
+   * always disposed regardless of where the underlying load is in its lifecycle. Cleared after the holder is consumed
+   * and ownership transitions to {@link #cursorCloser}.
+   */
+  @Nullable
+  private AsyncCursorHolder asyncCursorHolder;
   private ListenableFuture<DataServerQueryResult<Object[]>> dataServerQueryResultFuture;
   private Closeable cursorCloser;
   /**
@@ -297,21 +307,36 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentReferenceHolder segmentHolder) throws IOException
   {
     if (cursor == null) {
-      final Segment segment = mapSegment(segmentHolder, closer);
-      final CursorFactory cursorFactory = segment.as(CursorFactory.class);
-      if (cursorFactory == null) {
-        throw DruidException.defensive(
-            "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
+      if (asyncCursorHolder == null) {
+        final Segment segment = mapSegment(segmentHolder, closer);
+        final CursorFactory cursorFactory = segment.as(CursorFactory.class);
+        if (cursorFactory == null) {
+          throw DruidException.defensive(
+              "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
+          );
+        }
+
+        asyncCursorHolder = closer.register(
+            cursorFactory.makeCursorHolderAsync(
+                ScanQueryEngine.makeCursorBuildSpec(
+                    query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
+                    null
+                )
+            )
         );
       }
 
-      final CursorHolder nextCursorHolder =
-          cursorFactory.makeCursorHolder(
-              ScanQueryEngine.makeCursorBuildSpec(
-                  query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
-                  null
-              )
-          );
+      if (!asyncCursorHolder.isReady()) {
+        final SettableFuture<?> awaitFuture = SettableFuture.create();
+        asyncCursorHolder.addReadyCallback(() -> awaitFuture.set(null));
+        return ReturnOrAwait.awaitAllFutures(ImmutableList.of(awaitFuture));
+      }
+
+      // Transfer ownership of the holder out of the AsyncCursorHolder; setNextCursor manages the holder's lifecycle
+      // from here on. The wrapper stays registered on closer (close() is now a no-op since release was called) so
+      // we don't need to track it further.
+      final CursorHolder nextCursorHolder = asyncCursorHolder.release();
+      asyncCursorHolder = null;
 
       final Cursor nextCursor;
 

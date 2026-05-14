@@ -51,6 +51,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.ConstantExprEvalSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
@@ -1132,6 +1133,40 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
         inspector.visit("supplier", supplier);
       }
     };
+  }
+
+  @Test
+  public void test_now_selector_is_not_constant() throws InterruptedException
+  {
+    final Expr nowExpr = Parser.parse("now()", TestExprMacroTable.INSTANCE);
+
+    for (CursorFactory cursorFactory : CURSOR_FACTORIES) {
+      try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        Cursor cursor = cursorHolder.asCursor();
+        ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+
+        ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(factory, nowExpr);
+        Assert.assertFalse(
+            "now() must not be folded into a ConstantExprEvalSelector because its value changes over time",
+            selector instanceof ConstantExprEvalSelector
+        );
+
+        final long first = selector.getLong();
+        Thread.sleep(1);
+        cursor.advance();
+        final long second = selector.getLong();
+
+        Assert.assertTrue(
+            "now() must be monotonic across rows; got first=" + first + " second=" + second,
+            second >= first
+        );
+        Assert.assertNotEquals(
+            "now() must re-evaluate after the cursor advances; a ConstantExprEvalSelector would return the same value",
+            first,
+            second
+        );
+      }
+    }
   }
 
   private static <T> ColumnValueSelector<T> objectSelectorFromSupplier(
