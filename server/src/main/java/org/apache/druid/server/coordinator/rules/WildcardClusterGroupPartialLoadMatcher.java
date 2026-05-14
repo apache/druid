@@ -72,8 +72,8 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
   private final List<Map<String, String>> patterns;
   private final List<Map<String, String>> excludePatterns;
   private final VirtualColumns virtualColumns;
-  private final List<Map<String, CompiledGlob>> compiledPatterns;
-  private final List<Map<String, CompiledGlob>> compiledExcludePatterns;
+  private final List<Map<String, Globs.CompiledGlob>> compiledPatterns;
+  private final List<Map<String, Globs.CompiledGlob>> compiledExcludePatterns;
 
   @JsonCreator
   public WildcardClusterGroupPartialLoadMatcher(
@@ -192,7 +192,7 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
    * resolved to a clustering column via either direct name or operator-VC equivalence).
    */
   private List<Map<String, String>> resolveAll(
-      List<Map<String, CompiledGlob>> compiled,
+      List<Map<String, Globs.CompiledGlob>> compiled,
       RowSignature clusteringColumns,
       VirtualColumns segmentVcs
   )
@@ -201,7 +201,7 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
       return List.of();
     }
     final List<Map<String, String>> out = new ArrayList<>(compiled.size());
-    for (Map<String, CompiledGlob> pattern : compiled) {
+    for (Map<String, Globs.CompiledGlob> pattern : compiled) {
       out.add(resolvePattern(pattern.keySet(), clusteringColumns, segmentVcs));
     }
     return out;
@@ -253,7 +253,7 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
   private static boolean matchesAnyPattern(
       List<Object> tuple,
       RowSignature clusteringColumns,
-      List<Map<String, CompiledGlob>> compiledPatterns,
+      List<Map<String, Globs.CompiledGlob>> compiledPatterns,
       List<Map<String, String>> resolvedPatterns
   )
   {
@@ -272,15 +272,15 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
   private static boolean matchesPattern(
       List<Object> tuple,
       RowSignature clusteringColumns,
-      Map<String, CompiledGlob> pattern,
+      Map<String, Globs.CompiledGlob> pattern,
       Map<String, String> resolved
   )
   {
-    for (Map.Entry<String, CompiledGlob> entry : pattern.entrySet()) {
+    for (Map.Entry<String, Globs.CompiledGlob> entry : pattern.entrySet()) {
       final String resolvedColumn = resolved.get(entry.getKey());
       final int idx = clusteringColumns.indexOf(resolvedColumn);
       // resolved is guaranteed to map every patternKey to a real clustering column (else the pattern was skipped).
-      final CompiledGlob glob = entry.getValue();
+      final Globs.CompiledGlob glob = entry.getValue();
       if (glob.matchAny) {
         // Literal "*" — matches every value, including null.
         continue;
@@ -310,16 +310,16 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
     return List.copyOf(out);
   }
 
-  private static List<Map<String, CompiledGlob>> compileAll(List<Map<String, String>> patterns)
+  private static List<Map<String, Globs.CompiledGlob>> compileAll(List<Map<String, String>> patterns)
   {
     if (patterns.isEmpty()) {
       return List.of();
     }
-    final List<Map<String, CompiledGlob>> out = new ArrayList<>(patterns.size());
+    final List<Map<String, Globs.CompiledGlob>> out = new ArrayList<>(patterns.size());
     for (Map<String, String> pattern : patterns) {
-      final Map<String, CompiledGlob> compiled = CollectionUtils.newLinkedHashMapWithExpectedSize(pattern.size());
+      final Map<String, Globs.CompiledGlob> compiled = CollectionUtils.newLinkedHashMapWithExpectedSize(pattern.size());
       for (Map.Entry<String, String> entry : pattern.entrySet()) {
-        compiled.put(entry.getKey(), CompiledGlob.of(entry.getValue()));
+        compiled.put(entry.getKey(), Globs.compile(entry.getValue()));
       }
       out.add(Collections.unmodifiableMap(compiled));
     }
@@ -336,32 +336,5 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
               .map(DataSegment.virtualColumnInterner()::intern)
               .toList()
     );
-  }
-
-  /**
-   * Compiled per-column glob. The literal {@code "*"} short-circuits to a "match any value, including null" flag;
-   * any other glob compiles to a regex matched against the rendered tuple value (and never matches null).
-   */
-  private static final class CompiledGlob
-  {
-    static final CompiledGlob MATCH_ANY = new CompiledGlob(true, null);
-
-    final boolean matchAny;
-    @Nullable
-    final Pattern pattern;
-
-    private CompiledGlob(boolean matchAny, @Nullable Pattern pattern)
-    {
-      this.matchAny = matchAny;
-      this.pattern = pattern;
-    }
-
-    static CompiledGlob of(String glob)
-    {
-      if ("*".equals(glob)) {
-        return MATCH_ANY;
-      }
-      return new CompiledGlob(false, Pattern.compile(Globs.globToRegex(glob)));
-    }
   }
 }

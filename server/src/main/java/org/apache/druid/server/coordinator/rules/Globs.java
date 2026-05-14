@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.rules;
 
 import org.apache.druid.error.InvalidInput;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -37,7 +38,7 @@ import java.util.regex.Pattern;
  * </ul>
  * Other characters are literal; regex metacharacters in literal positions are escaped automatically.
  */
-final class Globs
+public final class Globs
 {
   private Globs()
   {
@@ -49,7 +50,7 @@ final class Globs
    *
    * @throws org.apache.druid.error.DruidException if {@code glob} ends with an unescaped backslash
    */
-  static String globToRegex(String glob)
+  public static String globToRegex(String glob)
   {
     final StringBuilder sb = new StringBuilder(glob.length() + 4);
     boolean escaping = false;
@@ -80,7 +81,7 @@ final class Globs
     return sb.toString();
   }
 
-  static List<Pattern> compileAll(List<String> globs)
+  public static List<Pattern> compileAll(List<String> globs)
   {
     if (globs.isEmpty()) {
       return List.of();
@@ -92,7 +93,7 @@ final class Globs
     return List.copyOf(compiled);
   }
 
-  static boolean matchesAny(String name, List<Pattern> patterns)
+  public static boolean matchesAny(String name, List<Pattern> patterns)
   {
     for (Pattern pattern : patterns) {
       if (pattern.matcher(name).matches()) {
@@ -100,6 +101,18 @@ final class Globs
       }
     }
     return false;
+  }
+
+  /**
+   * Compile a glob, special-casing the literal {@code "*"} to a {@link CompiledGlob#matchAny}
+   * marker that matches any value including null — mirrors the matcher's {@code CompiledGlob}.
+   */
+  static CompiledGlob compile(String glob)
+  {
+    if ("*".equals(glob)) {
+      return CompiledGlob.MATCH_ANY;
+    }
+    return new CompiledGlob(false, Pattern.compile(globToRegex(glob)));
   }
 
   private static void appendLiteral(StringBuilder sb, char c)
@@ -123,6 +136,25 @@ final class Globs
         break;
       default:
         sb.append(c);
+    }
+  }
+
+  /**
+   * Compiled, per-column glob. The literal {@code "*"} short-circuits to a "match any value, including null" flag;
+   * any other glob compiles to a regex matched against the rendered tuple value (and never matches null).
+   */
+  public static final class CompiledGlob
+  {
+    static final CompiledGlob MATCH_ANY = new CompiledGlob(true, null);
+
+    final boolean matchAny;
+    @Nullable
+    final Pattern pattern;
+
+    private CompiledGlob(boolean matchAny, @Nullable Pattern pattern)
+    {
+      this.matchAny = matchAny;
+      this.pattern = pattern;
     }
   }
 }
