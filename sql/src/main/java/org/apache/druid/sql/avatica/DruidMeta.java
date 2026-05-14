@@ -817,9 +817,6 @@ public class DruidMeta extends MetaImpl
   )
   {
     String remoteAddress = THREAD_LOCAL_REMOTE_ADDRESS.get();
-    if (remoteAddress != null) {
-      context.put("remoteAddress", remoteAddress);
-    }
 
     if (connectionCount.incrementAndGet() > config.getMaxConnections()) {
       // O(connections) but we don't expect this to happen often (it's a last-ditch effort to clear out
@@ -849,7 +846,7 @@ public class DruidMeta extends MetaImpl
 
     final DruidConnection putResult = connections.putIfAbsent(
         connectionId,
-        new DruidConnection(connectionId, config.getMaxStatementsPerConnection(), userSecret, context)
+        new DruidConnection(connectionId, config.getMaxStatementsPerConnection(), userSecret, context, remoteAddress)
     );
 
     if (putResult != null) {

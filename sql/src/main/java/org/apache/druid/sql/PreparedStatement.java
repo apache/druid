@@ -31,14 +31,25 @@ import java.util.List;
 public class PreparedStatement extends AbstractStatement
 {
   private final SqlQueryPlus originalRequest;
+  private final String remoteAddress;
 
   public PreparedStatement(
       final SqlToolbox lifecycleToolbox,
       final SqlQueryPlus queryPlus
   )
   {
+    this(lifecycleToolbox, queryPlus, null);
+  }
+
+  public PreparedStatement(
+      final SqlToolbox lifecycleToolbox,
+      final SqlQueryPlus queryPlus,
+      final String remoteAddress
+  )
+  {
     super(lifecycleToolbox, queryPlus, null);
     this.originalRequest = queryPlus;
+    this.remoteAddress = remoteAddress;
   }
 
   /**
@@ -88,11 +99,10 @@ public class PreparedStatement extends AbstractStatement
    */
   public DirectStatement execute(List<TypedValue> parameters)
   {
-    String remoteAddr = (String) originalRequest.context().get("remoteAddress");
     return new DirectStatement(
         sqlToolbox,
         originalRequest.freshCopy().withParameters(parameters),
-        remoteAddr
+        remoteAddress
     );
   }
 

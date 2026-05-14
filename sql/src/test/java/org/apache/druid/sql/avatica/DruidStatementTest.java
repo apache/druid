@@ -146,7 +146,8 @@ public class DruidStatementTest extends CalciteTestBase
         Collections.emptyMap(),
         Collections.emptyMap(),
         sqlStatementFactory,
-        new ResultFetcherFactory(AvaticaServerConfig.DEFAULT_FETCH_TIMEOUT_MS)
+        new ResultFetcherFactory(AvaticaServerConfig.DEFAULT_FETCH_TIMEOUT_MS),
+        null
     );
   }
 
