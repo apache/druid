@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 /**
@@ -74,5 +75,23 @@ public final class ShareGroupConsumerProperties
       }
     }
     return sanitized;
+  }
+
+  /**
+   * Removes unsupported keys from a fully-resolved {@link Properties} object in place.
+   * Use this after expanding {@code druid.dynamic.config.provider} so that values
+   * pulled from a secrets vault cannot reintroduce a forbidden key.
+   */
+  public static void sanitize(Properties properties)
+  {
+    for (String key : UNSUPPORTED_CONFIGS) {
+      if (properties.remove(key) != null) {
+        log.warn(
+            "Stripping unsupported consumer property [%s] for share-group consumer "
+            + "(see Kafka ShareConsumerConfig).",
+            key
+        );
+      }
+    }
   }
 }
