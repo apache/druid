@@ -39,7 +39,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.regex.Pattern;
 
 /**
  * Selects cluster groups whose clustering tuples match any of the configured per-column glob patterns, minus any

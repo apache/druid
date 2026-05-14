@@ -108,4 +108,37 @@ class GlobsTest
   {
     Assertions.assertFalse(Globs.matchesAny("anything", List.of()));
   }
+
+  @Test
+  void testCompileLiteralStarReturnsMatchAny()
+  {
+    // The literal "*" is special-cased to MATCH_ANY so callers can short-circuit a "matches any value, including
+    // null" branch without paying a regex match. Any other glob takes the regex path.
+    final Globs.CompiledGlob compiled = Globs.compile("*");
+    Assertions.assertSame(Globs.CompiledGlob.MATCH_ANY, compiled);
+    Assertions.assertTrue(compiled.matchAny);
+    Assertions.assertNull(compiled.pattern);
+  }
+
+  @Test
+  void testCompileGlobReturnsCompiledRegex()
+  {
+    final Globs.CompiledGlob compiled = Globs.compile("us-*");
+    Assertions.assertFalse(compiled.matchAny);
+    Assertions.assertNotNull(compiled.pattern);
+    Assertions.assertTrue(compiled.pattern.matcher("us-east-1").matches());
+    Assertions.assertFalse(compiled.pattern.matcher("eu-west").matches());
+  }
+
+  @Test
+  void testCompileLiteralNullStringHasNoSpecialTreatment()
+  {
+    // The string "null" goes through the regex path like any other literal glob, the helper does not give the
+    // literal-string "null" any special meaning
+    final Globs.CompiledGlob compiled = Globs.compile("null");
+    Assertions.assertFalse(compiled.matchAny);
+    Assertions.assertNotNull(compiled.pattern);
+    Assertions.assertTrue(compiled.pattern.matcher("null").matches());
+    Assertions.assertFalse(compiled.pattern.matcher("nullx").matches());
+  }
 }
