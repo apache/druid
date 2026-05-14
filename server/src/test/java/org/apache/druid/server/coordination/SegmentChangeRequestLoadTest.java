@@ -180,6 +180,86 @@ public class SegmentChangeRequestLoadTest
   }
 
   @Test
+  public void testForAnnouncementUnknownPartialTypeStillRecognizedByConvention()
+  {
+    // Any partial-load wire form (type starts with "partial", plus fingerprint + delegate at top level) gets the
+    // full-fallback treatment — the announcement layer doesn't need to know about specific subtypes. This is what
+    // makes future PartialLoadSpec subtypes work without touching this code.
+    Map<String, Object> wrapped = Map.of(
+        "type", "partialFutureScheme",
+        "delegate", Map.of("type", "local", "path", "/var/druid/segments/foo"),
+        "fingerprint", "v1:1111111111111111"
+    );
+    DataSegment segment = new DataSegment(
+        "ds",
+        Intervals.of("2024-01-01/2024-02-01"),
+        "v1",
+        wrapped,
+        List.of("d"),
+        List.of("m"),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        7777
+    );
+    SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
+    Assert.assertEquals("v1:1111111111111111", announcement.getFingerprint());
+    Assert.assertEquals(Long.valueOf(7777L), announcement.getLoadedBytes());
+  }
+
+  @Test
+  public void testForAnnouncementNonPartialTypeIgnoredEvenWithFingerprint()
+  {
+    // The type-prefix gate keeps non-partial LoadSpecs that happen to use a "fingerprint" key from being
+    // mis-classified as partial-load wrappers.
+    Map<String, Object> looksSuspicious = Map.of(
+        "type", "local",
+        "path", "/var/druid/segments/foo",
+        "fingerprint", "v1:notreallypartial",
+        "delegate", Map.of("ignored", "yes")
+    );
+    DataSegment segment = new DataSegment(
+        "ds",
+        Intervals.of("2024-01-01/2024-02-01"),
+        "v1",
+        looksSuspicious,
+        List.of("d"),
+        List.of("m"),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        100
+    );
+    SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
+    Assert.assertNull(announcement.getFingerprint());
+    Assert.assertNull(announcement.getLoadedBytes());
+  }
+
+  @Test
+  public void testForAnnouncementMalformedPartialTypeFallsThroughToPlainLoad()
+  {
+    // A partial-typed loadSpec missing the fingerprint contract should not stall the queue: announce as a plain
+    // load (the log.warn at the call site surfaces the bug).
+    Map<String, Object> malformed = Map.of(
+        "type", "partialProjection",
+        "delegate", Map.of("type", "local", "path", "/var/druid/segments/foo")
+        // no fingerprint
+    );
+    DataSegment segment = new DataSegment(
+        "ds",
+        Intervals.of("2024-01-01/2024-02-01"),
+        "v1",
+        malformed,
+        List.of("d"),
+        List.of("m"),
+        NoneShardSpec.instance(),
+        IndexIO.CURRENT_VERSION_ID,
+        100
+    );
+    SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
+    Assert.assertNull(announcement.getFingerprint());
+    Assert.assertNull(announcement.getLoadedBytes());
+  }
+
+  @Test
   public void testOldPayloadDeserializesWithoutPartialFields() throws Exception
   {
     // An old-version payload with no partial-load fields should deserialize cleanly; the partial fields are null.

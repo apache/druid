@@ -25,36 +25,28 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import org.apache.druid.utils.CollectionUtils;
 
-import javax.annotation.Nullable;
-import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 /**
- * A {@link LoadSpec} wrapper that carries partial-projection metadata from the coordinator to a historical alongside
- * the original backend-specific load spec. The wrapped {@code delegate} is held as a raw {@link Map} so that the
- * concrete backend type (e.g. {@code s3}, {@code local}, {@code hdfs}) is materialized only when needed; this avoids
- * pulling backend-specific dependencies onto every node that touches the wire form.
+ * A {@link PartialLoadSpec} that requests partial loading of a segment's projections. The base class carries the
+ * common {@code fingerprint} and {@code delegate} wire fields; this subtype adds the resolved projection names that
+ * the historical should range-read into the local segment.
  * <p>
- * Both {@link #loadSegment(File)} and {@link #openRangeReader()} delegate verbatim to the inner load spec. The
- * historical-side partial-load path inspects this wrapper at mount time to learn which projections to range-read and
- * the fingerprint identifying the request the coordinator made.
+ * The historical-side partial-load path inspects this wrapper at mount time. Until that path exists, the base
+ * class's default {@link #loadSegment} performs a full download via the inner delegate, and the announcement layer
+ * stamps the fingerprint + full size on the response so the coordinator's reconciler counts the replica as a
+ * satisfying full-fallback rather than re-queuing the load.
  */
 @JsonTypeName(PartialProjectionLoadSpec.TYPE)
-public class PartialProjectionLoadSpec implements LoadSpec
+public class PartialProjectionLoadSpec extends PartialLoadSpec
 {
   public static final String TYPE = "partialProjection";
 
-  private final Map<String, Object> delegate;
   private final List<String> projections;
-  private final String fingerprint;
-  private final Supplier<LoadSpec> materializedDelegateSupplier;
 
   @JsonCreator
   public PartialProjectionLoadSpec(
@@ -64,46 +56,18 @@ public class PartialProjectionLoadSpec implements LoadSpec
       @JacksonInject ObjectMapper jsonMapper
   )
   {
-    Preconditions.checkNotNull(jsonMapper, "jsonMapper");
-    this.delegate = Preconditions.checkNotNull(delegate, "delegate");
+    super(delegate, fingerprint, jsonMapper);
     Preconditions.checkArgument(
         !CollectionUtils.isNullOrEmpty(projections),
         "projections must not be null or empty"
     );
     this.projections = List.copyOf(projections);
-    this.fingerprint = Preconditions.checkNotNull(fingerprint, "fingerprint");
-    this.materializedDelegateSupplier = Suppliers.memoize(() -> jsonMapper.convertValue(delegate, LoadSpec.class));
-  }
-
-  @JsonProperty
-  public Map<String, Object> getDelegate()
-  {
-    return delegate;
   }
 
   @JsonProperty
   public List<String> getProjections()
   {
     return projections;
-  }
-
-  @JsonProperty
-  public String getFingerprint()
-  {
-    return fingerprint;
-  }
-
-  @Override
-  public LoadSpecResult loadSegment(File destDir) throws SegmentLoadingException
-  {
-    return materializedDelegateSupplier.get().loadSegment(destDir);
-  }
-
-  @Override
-  @Nullable
-  public SegmentRangeReader openRangeReader() throws IOException
-  {
-    return materializedDelegateSupplier.get().openRangeReader();
   }
 
   @Override
@@ -116,24 +80,24 @@ public class PartialProjectionLoadSpec implements LoadSpec
       return false;
     }
     PartialProjectionLoadSpec that = (PartialProjectionLoadSpec) o;
-    return Objects.equals(delegate, that.delegate)
+    return Objects.equals(getDelegate(), that.getDelegate())
         && Objects.equals(projections, that.projections)
-        && Objects.equals(fingerprint, that.fingerprint);
+        && Objects.equals(getFingerprint(), that.getFingerprint());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(delegate, projections, fingerprint);
+    return Objects.hash(getDelegate(), projections, getFingerprint());
   }
 
   @Override
   public String toString()
   {
     return "PartialProjectionLoadSpec{" +
-           "delegate=" + delegate +
+           "delegate=" + getDelegate() +
            ", projections=" + projections +
-           ", fingerprint=" + fingerprint +
+           ", fingerprint=" + getFingerprint() +
            '}';
   }
 }

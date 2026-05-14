@@ -48,6 +48,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.segment.loading.PartialLoadSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
@@ -593,13 +594,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
           druidServer.iterateAllSegments().forEach(segment -> toRemove.put(segment.getId(), segment));
 
           for (DataSegmentChangeRequest request : changes) {
-            if (request instanceof SegmentChangeRequestLoad) {
-              SegmentChangeRequestLoad loadRequest = (SegmentChangeRequestLoad) request;
+            if (request instanceof SegmentChangeRequestLoad loadRequest) {
               DataSegment segment = loadRequest.getSegment();
               toRemove.remove(segment.getId());
               addSegment(segment, partialLoadProfileFor(loadRequest), true);
-            } else if (request instanceof SegmentSchemasChangeRequest) {
-              runSegmentCallbacks(input -> input.segmentSchemasAnnounced(((SegmentSchemasChangeRequest) request).getSegmentSchemas()));
+            } else if (request instanceof SegmentSchemasChangeRequest changeRequest) {
+              runSegmentCallbacks(input -> input.segmentSchemasAnnounced((changeRequest).getSegmentSchemas()));
             } else {
               log.error(
                   "Server[%s] gave a non-load dataSegmentChangeRequest[%s]., Ignored.",
@@ -666,7 +666,20 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
     /**
      * Builds a {@link PartialLoadProfile} from a load announcement when the historical populated the partial-load
-     * fields ({@code fingerprint} + {@code loadedBytes}). Returns null for full-load announcements.
+     * wire fields ({@code fingerprint} + {@code loadedBytes}). Returns {@code null} for plain full-load
+     * announcements.
+     * <p>
+     * Picks between {@link PartialLoadProfile#forLoaded forLoaded} and
+     * {@link PartialLoadProfile#forFullFallback forFullFallback} based on what the historical actually realized:
+     * <ul>
+     *   <li>If {@code loadedBytes} is strictly less than the segment's full size <em>and</em> the announced segment
+     *       carries a {@link PartialLoadSpec} wrapper on its load spec, the historical honored the partial request —
+     *       preserve the wrapped load spec on the profile so per-replica observability (e.g.
+     *       {@link PartialLoadProfile#isFullFallback}) reports correctly.</li>
+     *   <li>Otherwise the historical either fell back to full or doesn't yet implement scheme-specific partial
+     *       loading; build a full-fallback profile (the wire fingerprint still satisfies the rule, so the
+     *       coordinator's reconciler counts it as matching without reload thrash).</li>
+     * </ul>
      */
     @Nullable
     private static PartialLoadProfile partialLoadProfileFor(SegmentChangeRequestLoad loadRequest)
@@ -676,9 +689,16 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       if (fingerprint == null || loadedBytes == null) {
         return null;
       }
-      // The wrapped LoadSpec is on the segment itself when a partial load was requested by the coordinator; we don't
-      // duplicate it on the inventory profile; the announcement uses the full-fallback factory which carries the
-      // fingerprint and the realized loadedBytes only.
+      final DataSegment segment = loadRequest.getSegment();
+      final Map<String, Object> loadSpec = segment.getLoadSpec();
+      if (loadedBytes < segment.getSize()
+          && loadSpec != null
+          && loadSpec.get("type") instanceof String
+          && ((String) loadSpec.get("type")).startsWith(PartialLoadSpec.TYPE_PREFIX)
+          && loadSpec.get("fingerprint") instanceof String
+          && loadSpec.get("delegate") instanceof Map) {
+        return PartialLoadProfile.forLoaded(loadSpec, fingerprint, loadedBytes);
+      }
       return PartialLoadProfile.forFullFallback(fingerprint, loadedBytes);
     }
 

@@ -399,15 +399,27 @@ public class ServerHolder implements Comparable<ServerHolder>
     return queuedSegments.size();
   }
 
+  /**
+   * Convenience that delegates to {@link #startOperation(SegmentAction, DataSegment, PartialLoadProfile)} with no
+   * partial-load profile, for the regular full-load / drop / move paths that don't carry one.
+   */
   public boolean startOperation(SegmentAction action, DataSegment segment)
   {
     return startOperation(action, segment, null);
   }
 
   /**
-   * Like {@link #startOperation(SegmentAction, DataSegment)}, but additionally records the {@link PartialLoadProfile}
-   * for the queued load so the reconciler can read it back via {@link #getInFlightProfile(DataSegment)} during the
-   * same coordinator run.
+   * Records the start of {@code action} on {@code segment} on this server for the current coordinator run.
+   * <p>
+   * If the segment already has a queued action, returns {@code false} and does nothing (the caller is expected to
+   * treat this as a no-op / collision). Otherwise: marks the segment as queued, increments the per-run assignment
+   * counter for load actions (so {@link #isLoadQueueFull()} converges), and updates projected segment counts and
+   * size accounting via {@link #addToQueuedSegments}.
+   * <p>
+   * When {@code profile} is non-null, the {@link PartialLoadProfile} is stashed so the partial-load reconciler can
+   * read the in-flight fingerprint back during the same coordinator run via {@link #getInFlightProfile(DataSegment)}.
+   * The profile is cleared on {@link #cancelOperation}; it stays put on success/failure of the queued action so the
+   * inventory's eventual announcement (with realized fingerprint and loadedBytes) is what overwrites it.
    */
   public boolean startOperation(SegmentAction action, DataSegment segment, @Nullable PartialLoadProfile profile)
   {

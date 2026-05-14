@@ -29,15 +29,25 @@ import java.util.Objects;
 
 /**
  * Classifies the servers in a tier by their relationship to a {@link PartialLoadProfile} request for a specific
- * segment. Used by the partial-load reconciler in {@link StrategicSegmentAssigner} to decide what to load, drop, or
- * cancel under the load-then-drop swap pattern.
+ * segment. This is a passive snapshot the partial-load reconciler reads back during a coordinator run, see
+ * {@link StrategicSegmentAssigner#updateReplicasInTierPartial} for the algorithm that consumes these buckets and
+ * decides what to load, drop, or cancel. Partial load variant of {@link SegmentStatusInTier}.
  * <p>
- * Per the additive-historical model: matching means the announced fingerprint equals the requested fingerprint. A
- * full-fallback profile (where the historical was asked to partial-load but couldn't, announcing
- * {@code wrappedLoadSpec=null} with the requested fingerprint) is also treated as matching, the rule was
- * satisfied even though the historical fell back to full.
+ * A partial-load rule resolves, per segment, to a {@link PartialLoadProfile} carrying a {@code wrappedLoadSpec}
+ * (scheme-specific request payload) and a {@code fingerprint} that uniquely identifies the request. The coordinator
+ * stamps the wrapped load spec onto the outbound segment; the historical loads (partially, or via full-fallback
+ * when it can't honor the scheme) and announces back with the wrapper's fingerprint plus realized {@code loadedBytes}.
+ * On the next coordinator run this class reads the announced profile per replica and decides "matching" (announced
+ * fingerprint equals the requested fingerprint; rule is satisfied for that replica) vs "stale" (any other state,
+ * including a non-profile regular full-load replica).
  * <p>
- * Replicas without any profile (regular full-load) are always classified as stale relative to a partial-load rule.
+ * As a last resort, when a stale replica has nowhere better to be replaced, this classifies the same server as a
+ * target for an "additive-historical" in-place replace: a partial-load request arriving at a server that's already
+ * (stale-)loaded fills in the missing parts in place rather than re-downloading from scratch. That's what makes
+ * {@link #getEligibleForAdditiveReload()} a safe fallback destination when the tier has no spare capacity. This
+ * option is the least preferred because the contract of an additive reload is to load only what is now needed and
+ * missing; it does not drop anything that is no longer needed, so the server can end up holding a larger amount of
+ * data than the current rule strictly requires.
  */
 public class PartialSegmentStatusInTier
 {
@@ -98,8 +108,9 @@ public class PartialSegmentStatusInTier
   }
 
   /**
-   * Servers that don't have the segment and can take a fresh load (preferred destinations for new replicas; empty
-   * slots, no in-place mutation needed).
+   * Servers that don't have the segment and can take a fresh load. See the algorithm doc on
+   * {@code StrategicSegmentAssigner.updateReplicasInTierPartial} for how this bucket is consumed relative to the
+   * other buckets.
    */
   public List<ServerHolder> getEligibleForFreshLoad()
   {
@@ -107,16 +118,28 @@ public class PartialSegmentStatusInTier
   }
 
   /**
-   * Stale-loaded servers that can take an additive reload request (same as {@link #getStaleLoaded()} once filtered for
-   * decommissioning / queue-full / pending-action, kept separate so the reconciler can prefer fresh-load destinations
-   * before falling back to in-place additive reload). The historical's additive load semantics make this the
-   * mitigation for the "no spare server" stuck state.
+   * Stale-loaded servers that can take an additive reload request; kept as a subset of {@link #getStaleLoaded()}
+   * filtered for decommissioning / load-queue-full, so the algorithm can target them as a fallback destination when
+   * no fresh-load slots are available. See {@code StrategicSegmentAssigner.updateReplicasInTierPartial}.
    */
   public List<ServerHolder> getEligibleForAdditiveReload()
   {
     return eligibleForAdditiveReload;
   }
 
+  /**
+   * Mechanical classification of one server against the request fingerprint. Branches are mutually exclusive in
+   * order: <b>loaded</b> ({@link ServerHolder#isServingSegment}: matching / stale, with stale optionally also added
+   * to {@link #eligibleForAdditiveReload}), <b>in-flight LOAD/REPLICATE</b> (matching / stale based on the peon's
+   * queued profile), <b>empty-and-loadable</b> ({@link #eligibleForFreshLoad}).
+   * <p>
+   * Servers with a queued {@link SegmentAction#DROP}, {@link SegmentAction#MOVE_TO}, or
+   * {@link SegmentAction#MOVE_FROM} fall through all branches by design, they're already accounted for in
+   * {@link SegmentReplicaCount} totals and {@link StrategicSegmentAssigner}'s cross-tier drop budget.
+   * The {@code isLoaded} branch is in particular gated by {@link ServerHolder#isServingSegment}, which requires
+   * <em>no</em> action queued, so stale-loaded servers added to {@link #eligibleForAdditiveReload} are guaranteed
+   * to be action-free at snapshot time.
+   */
   private void classify(ServerHolder server, DataSegment segment, String requestedFingerprint)
   {
     final SegmentAction action = server.getActionOnSegment(segment);
@@ -142,17 +165,19 @@ public class PartialSegmentStatusInTier
     } else if (action == null && server.canLoadSegment(segment)) {
       eligibleForFreshLoad.add(server);
     }
-    // Other actions (DROP, MOVE_TO, MOVE_FROM) are intentionally not classified here, they're handled by the
-    // existing replica-counting paths.
   }
 
   /**
-   * A stale-loaded server is reload-eligible iff it's not decommissioning, has no other action queued for the segment,
-   * and hasn't already exceeded its load-queue assignment budget for this run. Disk space is not checked here; the
-   * additive reload's marginal cost is at most {@code segment.size − alreadyLoadedSize}, and a strict disk check
-   * against the full segment size would over-conservatively block reloads on near-full servers that already host the
-   * stale replica. If the historical is too full to add the missing parts, the load will fail at the historical and
-   * report as failed; the reconciler retries next run.
+   * Filters a stale-loaded server for additive-reload eligibility: not decommissioning, and not over its per-run
+   * load-queue budget. The "no other action queued" requirement that you'd otherwise expect to find here is
+   * already satisfied implicitly, this is only called from the {@code isLoaded} branch of {@link #classify}, which
+   * requires {@link ServerHolder#isServingSegment} = true (loaded AND no queued action). Same-run dedup against
+   * subsequent re-queueing on the same server is enforced at {@link ServerHolder#startOperation}, not here.
+   * <p>
+   * Disk space is not checked: the additive reload's marginal cost is at most
+   * {@code segment.size − alreadyLoadedSize}, and a strict full-size disk check would over-conservatively block
+   * reloads on near-full servers that already host the stale replica. If the historical is too full to add the
+   * missing parts, the load fails at the historical and reports as failed; the reconciler retries next run.
    */
   private static boolean canReloadAdditively(ServerHolder server)
   {

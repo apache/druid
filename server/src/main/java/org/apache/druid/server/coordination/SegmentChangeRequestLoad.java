@@ -24,7 +24,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.loading.PartialProjectionLoadSpec;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.loading.PartialLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -40,13 +41,19 @@ import java.util.Objects;
  */
 public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
 {
+  private static final Logger log = new Logger(SegmentChangeRequestLoad.class);
+
   /**
-   * Builds a load announcement for a segment loaded on a historical. When the segment was loaded via a
-   * {@link PartialProjectionLoadSpec} wrapper (the coordinator stamped a partial-load request onto the outbound
-   * segment), the announcement carries the wrapper's fingerprint and {@link DataSegment#getSize()} as
-   * {@code loadedBytes}; a "full-fallback" advertisement that satisfies the coordinator's partial-load rule even
-   * though the historical did a regular full load via the inner delegate. Without this, the coordinator's reconciler
-   * would treat the replica as stale and re-queue the load indefinitely.
+   * Builds a load announcement for a segment loaded on a historical. Any {@link PartialLoadSpec} subtype (identified
+   * by the wire-form conventions documented on that class: a {@code type} starting with
+   * {@link PartialLoadSpec#TYPE_PREFIX}, plus top-level {@code fingerprint} and {@code delegate} fields) produces a
+   * "full-fallback" announcement: the wrapper's fingerprint and {@link DataSegment#getSize()} ride along as
+   * {@code loadedBytes}, satisfying the coordinator's partial-load rule even when the historical did a regular full
+   * load via the inner delegate. Without this, the coordinator's reconciler would treat the replica as stale and
+   * re-queue the load indefinitely.
+   * <p>
+   * Detection is convention-based (no subtype allowlist) so future {@link PartialLoadSpec} subtypes work
+   * automatically without touching this code.
    * <p>
    * For segments loaded without a partial-load wrapper (the common case), this returns a bare load request with no
    * fingerprint or loadedBytes, equivalent to {@link #SegmentChangeRequestLoad(DataSegment)}.
@@ -54,12 +61,29 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
   public static SegmentChangeRequestLoad forAnnouncement(DataSegment segment)
   {
     final Map<String, Object> loadSpec = segment.getLoadSpec();
-    if (loadSpec != null && PartialProjectionLoadSpec.TYPE.equals(loadSpec.get("type"))) {
-      final Object fingerprint = loadSpec.get("fingerprint");
-      if (fingerprint instanceof String) {
-        return new SegmentChangeRequestLoad(segment, (String) fingerprint, segment.getSize());
-      }
+    if (loadSpec == null) {
+      return new SegmentChangeRequestLoad(segment);
     }
+    final Object type = loadSpec.get("type");
+    if (!(type instanceof String stringType) || !stringType.startsWith(PartialLoadSpec.TYPE_PREFIX)) {
+      return new SegmentChangeRequestLoad(segment);
+    }
+    final Object fingerprint = loadSpec.get("fingerprint");
+    final Object delegate = loadSpec.get("delegate");
+    if (fingerprint instanceof String stringFingerprint && delegate instanceof Map) {
+      return new SegmentChangeRequestLoad(segment, stringFingerprint, segment.getSize());
+    }
+    // Type name says partial-load but the wire form is malformed, the PartialLoadSpec subtype's @JsonProperty
+    // contract guarantees both fields, so this is a bug. Log and fall through to a plain announcement to keep the
+    // queue moving.
+    log.warn(
+        "Partial-load wrapper for segment[%s] type[%s] is malformed (fingerprint[%s], delegate[%s]); "
+        + "announcing as a regular load.",
+        segment.getId(),
+        type,
+        fingerprint,
+        delegate
+    );
     return new SegmentChangeRequestLoad(segment);
   }
 

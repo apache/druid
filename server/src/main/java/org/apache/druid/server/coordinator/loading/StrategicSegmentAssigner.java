@@ -329,19 +329,46 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   }
 
   /**
-   * Per-tier reconciliation under the partial-load model. The flow is:
+   * Per-tier reconciliation under the partial-load model; partial load equivalent of
+   * {@link #updateReplicasInTier(DataSegment, String, int, int)}
+   *
+   * <h3>Algorithm</h3>
    * <ol>
-   *   <li>Compute matching count: matching-loaded + matching-in-flight − pending-move-drop.</li>
-   *   <li>If matching count is short of {@code requiredReplicas}, cancel stale-fingerprint in-flight loads to free
-   *       slots, then queue fresh partial-load requests on eligible servers (preferring empty servers, falling back
-   *       to additive reload on stale-loaded servers; the historical fills in missing parts in place).</li>
-   *   <li>If matching count exceeds requirement, drop the excess like the full-load surplus path.</li>
-   *   <li>Drop stale-loaded replicas only when the count of actually-loaded matching replicas already meets the
-   *       requirement; this preserves availability across the swap (stale replicas keep serving until matching
-   *       replicas have completed loading and announced).</li>
+   *   <li><b>Classify.</b> Build {@link PartialSegmentStatusInTier} for this tier; every server falls into at most
+   *       one of: matching-loaded, stale-loaded (optionally also eligible-for-additive-reload),
+   *       matching-in-flight, stale-in-flight, eligible-for-fresh-load, or unclassified (drop/move pending; see
+   *       {@link PartialSegmentStatusInTier#classify} for why). Matching means the announced fingerprint equals
+   *       this request's fingerprint; stale is anything else, including a non-profile regular full-load replica.</li>
+   *   <li><b>Compute matching count:</b> matching-loaded + matching-in-flight − pending-move-drop.</li>
+   *   <li><b>If matching count is short of {@code requiredReplicas}</b> (deficit):
+   *     <ol type="a">
+   *       <li>Cancel stale-in-flight loads to free their slots. Canceled servers become same-run fresh-load
+   *           destinations.</li>
+   *       <li>Queue fresh partial-load requests up to the deficit. Destination preference order, applied in
+   *           {@link #loadPartialReplicas}:
+   *           <ol>
+   *             <li>Empty servers (clean slate, no in-place mutation needed).</li>
+   *             <li>Servers whose stale-in-flight load we just canceled in (a), their slot is now free.</li>
+   *             <li>Stale-loaded servers eligible for additive reload (the historical fills in the missing parts in
+   *                 place). This is the fallback path that mitigates the "no spare server" stuck state.
+   *                 Same-run dedup is enforced by {@link ServerHolder#startOperation}, which rejects a second
+   *                 queue attempt on a server whose segment is already queued.</li>
+   *           </ol>
+   *       </li>
+   *     </ol>
+   *   </li>
+   *   <li><b>If matching count exceeds requirement</b> (surplus): drop the excess like the full-load surplus
+   *       path.</li>
+   *   <li><b>Drop stale-loaded replicas</b> only when the count of <em>actually-loaded</em> matching replicas
+   *       already meets the requirement. This preserves availability across the swap: stale replicas keep serving
+   *       until matching replicas have completed loading and announced, then get dropped. The
+   *       {@code maxReplicasToDrop} budget caps how many drops we queue per coordinator run to avoid drop
+   *       storms.</li>
    * </ol>
-   * Returns the total number of drop operations queued on this tier (matching surplus + stale), used to budget
-   * cross-tier drop pressure.
+   *
+   * <h3>Returns</h3>
+   * Total number of drop operations queued on this tier (matching surplus + stale), used to budget cross-tier drop
+   * pressure across subsequent tier reconciliations in the same run.
    */
   private int updateReplicasInTierPartial(
       DataSegment segment,
@@ -386,12 +413,12 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     // want them gone unconditionally so we don't realize a stale fingerprint nobody asked for. Canceled servers
     // become eligible for a fresh matching load later in this same run.
     final int matchingDeficit = requiredReplicas - matchingProjected;
-    final List<ServerHolder> cancelledStaleServers = new ArrayList<>();
+    final List<ServerHolder> canceledStaleServers = new ArrayList<>();
     if (matchingDeficit > 0 || requiredReplicas == 0) {
       final int toCancel = requiredReplicas == 0 ? status.getStaleInFlight().size() : matchingDeficit;
-      cancelLoadsOnServers(segment, status.getStaleInFlight(), toCancel, cancelledStaleServers);
-      if (!cancelledStaleServers.isEmpty()) {
-        incrementStat(Stats.Segments.PARTIAL_STALE_CANCELLED, segment, tier, cancelledStaleServers.size());
+      cancelLoadsOnServers(segment, status.getStaleInFlight(), toCancel, canceledStaleServers);
+      if (!canceledStaleServers.isEmpty()) {
+        incrementStat(Stats.Segments.PARTIAL_STALE_CANCELLED, segment, tier, canceledStaleServers.size());
       }
     }
 
@@ -399,7 +426,13 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     if (matchingDeficit > 0) {
       final int numLoadedReplicas = status.getMatchingLoaded().size() + status.getStaleLoaded().size();
       final int queued = loadPartialReplicas(
-          matchingDeficit, numLoadedReplicas, segment, tier, status, cancelledStaleServers, profile
+          matchingDeficit,
+          numLoadedReplicas,
+          segment,
+          tier,
+          status,
+          canceledStaleServers,
+          profile
       );
       if (queued > 0) {
         incrementStat(Stats.Segments.PARTIAL_ASSIGNED, segment, tier, queued);
@@ -410,11 +443,16 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     int dropBudget = maxReplicasToDrop;
 
     // Surplus matching: drop excess matching replicas. Same shape as the full-load surplus path.
+    // Note: cancellations of matching in-flight loads here are intentionally not emitted as a separate stat. Unlike
+    // the stale-in-flight cancellations above (a distinct "rule churn" event), these are a surplus-absorption
+    // mechanism: each canceled in-flight load just reduces how many physical drops we'd otherwise need to queue
+    // (see `surplus - canceledMatching.size()` below). The full-load path in `updateReplicasInTier` follows the same
+    // convention: canceled surplus loads aren't statted, only the resulting drops are.
     if (matchingProjected > requiredReplicas) {
       final int surplus = matchingProjected - requiredReplicas;
-      final List<ServerHolder> cancelledMatching = new ArrayList<>();
-      cancelLoadsOnServers(segment, status.getMatchingInFlight(), surplus, cancelledMatching);
-      final int numToDrop = Math.min(surplus - cancelledMatching.size(), dropBudget);
+      final List<ServerHolder> canceledMatching = new ArrayList<>();
+      cancelLoadsOnServers(segment, status.getMatchingInFlight(), surplus, canceledMatching);
+      final int numToDrop = Math.min(surplus - canceledMatching.size(), dropBudget);
       if (numToDrop > 0) {
         final int dropped = dropFromList(numToDrop, segment, status.getMatchingLoaded());
         incrementStat(Stats.Segments.DROPPED, segment, tier, dropped);
@@ -451,7 +489,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       DataSegment segment,
       String tier,
       PartialSegmentStatusInTier status,
-      List<ServerHolder> cancelledStaleServers,
+      List<ServerHolder> canceledStaleServers,
       PartialLoadProfile profile
   )
   {
@@ -463,11 +501,11 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
     final List<ServerHolder> destinations = new ArrayList<>(
         status.getEligibleForFreshLoad().size()
-        + cancelledStaleServers.size()
+        + canceledStaleServers.size()
         + status.getEligibleForAdditiveReload().size()
     );
     destinations.addAll(status.getEligibleForFreshLoad());
-    destinations.addAll(cancelledStaleServers);
+    destinations.addAll(canceledStaleServers);
     destinations.addAll(status.getEligibleForAdditiveReload());
 
     if (destinations.isEmpty()) {
@@ -492,7 +530,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   /**
    * Cancels up to {@code numToCancel} in-flight load operations across the given list of servers. Successfully
-   * canceled servers are appended to {@code cancelledOut} so the caller can re-target them as fresh-load
+   * canceled servers are appended to {@code canceledOut} so the caller can re-target them as fresh-load
    * destinations within the same run. Used both to release slots taken by stale-fingerprint in-flight loads and to
    * reduce a matching surplus.
    */
@@ -500,20 +538,20 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       DataSegment segment,
       List<ServerHolder> servers,
       int numToCancel,
-      List<ServerHolder> cancelledOut
+      List<ServerHolder> canceledOut
   )
   {
     if (numToCancel <= 0) {
       return;
     }
     for (ServerHolder server : servers) {
-      if (cancelledOut.size() >= numToCancel) {
+      if (canceledOut.size() >= numToCancel) {
         break;
       }
       // Try LOAD then REPLICATE; the queued action depends on whether this was a primary or a replica.
       if (server.cancelOperation(SegmentAction.LOAD, segment)
           || server.cancelOperation(SegmentAction.REPLICATE, segment)) {
-        cancelledOut.add(server);
+        canceledOut.add(server);
       }
     }
   }
@@ -585,13 +623,13 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     // Cancel drops and queue loads if the projected count is below the requirement
     if (projectedReplicas < requiredReplicas) {
       int replicaDeficit = requiredReplicas - projectedReplicas;
-      int cancelledDrops =
+      int canceledDrops =
           cancelOperations(SegmentAction.DROP, replicaDeficit, segment, segmentStatus);
 
-      // Cancelled drops can be counted as loaded replicas, thus reducing deficit
-      int numReplicasToLoad = replicaDeficit - cancelledDrops;
+      // Canceled drops can be counted as loaded replicas, thus reducing deficit
+      int numReplicasToLoad = replicaDeficit - canceledDrops;
       if (numReplicasToLoad > 0) {
-        int numLoadedReplicas = replicaCountOnTier.loadedNotDropping() + cancelledDrops;
+        int numLoadedReplicas = replicaCountOnTier.loadedNotDropping() + canceledDrops;
         int numLoadsQueued = loadReplicas(numReplicasToLoad, numLoadedReplicas, segment, tier, segmentStatus, null);
         incrementStat(Stats.Segments.ASSIGNED, segment, tier, numLoadsQueued);
       }
@@ -600,10 +638,10 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     // Cancel loads and queue drops if the projected count exceeds the requirement
     if (projectedReplicas > requiredReplicas) {
       int replicaSurplus = projectedReplicas - requiredReplicas;
-      int cancelledLoads =
+      int canceledLoads =
           cancelOperations(SegmentAction.LOAD, replicaSurplus, segment, segmentStatus);
 
-      int numReplicasToDrop = Math.min(replicaSurplus - cancelledLoads, maxReplicasToDrop);
+      int numReplicasToDrop = Math.min(replicaSurplus - canceledLoads, maxReplicasToDrop);
       if (numReplicasToDrop > 0) {
         int dropsQueuedOnTier = dropReplicas(numReplicasToDrop, segment, tier, segmentStatus);
         incrementStat(Stats.Segments.DROPPED, segment, tier, dropsQueuedOnTier);
@@ -900,11 +938,11 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return 0;
     }
 
-    int numCancelled = 0;
-    for (int i = 0; i < servers.size() && numCancelled < maxNumToCancel; ++i) {
-      numCancelled += servers.get(i).cancelOperation(action, segment) ? 1 : 0;
+    int numCanceled = 0;
+    for (int i = 0; i < servers.size() && numCanceled < maxNumToCancel; ++i) {
+      numCanceled += servers.get(i).cancelOperation(action, segment) ? 1 : 0;
     }
-    return numCancelled;
+    return numCanceled;
   }
 
   private void incrementSkipStat(CoordinatorStat stat, String reason, DataSegment segment, String tier)

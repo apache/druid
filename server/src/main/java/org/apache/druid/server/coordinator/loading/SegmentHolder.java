@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
@@ -43,6 +44,8 @@ import java.util.Objects;
  */
 public class SegmentHolder implements Comparable<SegmentHolder>
 {
+  private static final Logger log = new Logger(SegmentHolder.class);
+
   /**
    * Orders newest segments first (i.e. segments with most recent intervals).
    * <p>
@@ -121,6 +124,17 @@ public class SegmentHolder implements Comparable<SegmentHolder>
       // wrapper; identity (segment field) stays original so dedup in the load queue is unaffected.
       this.changeRequest = new SegmentChangeRequestLoad(segment.withLoadSpec(profile.wrappedLoadSpec()));
     } else {
+      if (profile != null) {
+        // Outbound profiles (forRequest / forLoaded) must always carry a non-null wrappedLoadSpec; only the inbound
+        // forFullFallback announcement uses the null sentinel, and those never reach this constructor. Log if it
+        // happens so the bug surfaces — we still proceed with a plain load request to avoid stalling the queue.
+        log.warn(
+            "Profile with null wrappedLoadSpec on outbound load for segment[%s], action[%s]; "
+            + "queuing as a regular load.",
+            segment.getId(),
+            action
+        );
+      }
       this.changeRequest = new SegmentChangeRequestLoad(segment);
     }
     if (callback != null) {
