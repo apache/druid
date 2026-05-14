@@ -207,12 +207,25 @@ echo "group.share.record.lock.duration.ms=30000" >> config/server.properties
 bin/kafka-server-start.sh config/server.properties
 ```
 
-### Step 2: Create topic and produce messages
+### Step 2: Create topic and configure the share group
 
 ```bash
 cd kafka_2.13-4.2.0
 
 bin/kafka-topics.sh --create --topic druid-share-test --partitions 4 --bootstrap-server localhost:9092
+
+# Set share-group reset to earliest so the task picks up records that already exist
+# in the topic. The default broker setting is 'latest', which would skip pre-existing
+# records and ingest zero rows even though the producer ran successfully.
+bin/kafka-configs.sh --bootstrap-server localhost:9092 --alter \
+  --entity-type groups --entity-name druid-demo-share-group \
+  --add-config share.auto.offset.reset=earliest
+```
+
+### Step 3: Produce sample messages
+
+```bash
+cd kafka_2.13-4.2.0
 
 bin/kafka-console-producer.sh --topic druid-share-test --bootstrap-server localhost:9092
 ```
@@ -227,7 +240,7 @@ Paste these JSON records:
 {"__time":"2025-06-01T04:00:00.000Z","item":"widget_e","value":320,"category":"electronics"}
 ```
 
-### Step 3: Build Druid and run it
+### Step 4: Build Druid and run it
 
 You can run the demo against either a freshly built Druid distribution or an existing stable Druid binary with the share-group JARs overlaid. Pick the one that matches your environment.
 
@@ -278,7 +291,7 @@ cp ~/.m2/repository/org/apache/kafka/kafka-clients/4.2.0/kafka-clients-4.2.0.jar
 bin/start-druid
 ```
 
-### Step 4: Submit task via Druid console
+### Step 5: Submit task via Druid console
 
 Open `http://localhost:8888`, go to the **Ingestion** tab, click **Submit JSON task**, and paste:
 
@@ -303,7 +316,7 @@ Open `http://localhost:8888`, go to the **Ingestion** tab, click **Submit JSON t
 }
 ```
 
-### Step 5: Query data
+### Step 6: Query data
 
 Go to the **Query** tab and run:
 
