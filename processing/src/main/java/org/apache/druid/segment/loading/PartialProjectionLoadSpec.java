@@ -46,6 +46,25 @@ public class PartialProjectionLoadSpec extends PartialLoadSpec
 {
   public static final String TYPE = "partialProjection";
 
+  /**
+   * Builds the raw wire-form {@link Map} representation of a {@link PartialProjectionLoadSpec} request. Used by the
+   * coordinator-side matcher (which doesn't instantiate the typed class because doing so would require plumbing an
+   * {@link ObjectMapper} through every matcher just to satisfy the constructor's lazy-delegate supplier).
+   */
+  public static Map<String, Object> wireForm(
+      Map<String, Object> delegate,
+      List<String> projections,
+      String fingerprint
+  )
+  {
+    return Map.of(
+        "type", TYPE,
+        "delegate", delegate,
+        "projections", projections,
+        "fingerprint", fingerprint
+    );
+  }
+
   private final List<String> projections;
 
   @JsonCreator
