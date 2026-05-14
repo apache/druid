@@ -264,12 +264,41 @@ public class DruidServer implements Comparable<DruidServer>
     return dataSource == null ? null : dataSource.getPartialLoadProfile(segmentId);
   }
 
-  public DruidServer addDataSegments(DruidServer server)
+  /**
+   * Updates the {@link PartialLoadProfile} attached to an already-present segment, used by the inventory layer when a
+   * historical re-announces a segment whose load spec has changed (e.g. an additive partial-load reload swapping the
+   * wrapper / fingerprint). The segment stays in the inventory at the same {@link SegmentId}; only the per-server
+   * profile and the {@link #currSize} accounting (which uses {@link DataSegmentAndLoadProfile#effectiveSizeOf}) are
+   * adjusted. {@link #totalSegments} is unchanged. No-op if the segment isn't currently present on this server.
+   *
+   * @return {@code true} if the entry was updated; {@code false} if the segment wasn't present on this server.
+   */
+  public boolean updateDataSegmentProfile(DataSegment segment, @Nullable PartialLoadProfile profile)
   {
-    // Preserve any partial-load profile attached to the source segment so currSize accounting and downstream
-    // reconciliation still see the correct loadedBytes / fingerprint.
-    server.iterateAllSegments().forEach(s -> addDataSegment(s, DataSegmentAndLoadProfile.profileOf(s)));
-    return this;
+    final boolean[] updated = {false};
+    dataSources.compute(
+        segment.getDataSource(),
+        (dataSourceName, dataSource) -> {
+          if (dataSource == null) {
+            return null;
+          }
+          final DataSegment existing = dataSource.getSegment(segment.getId());
+          if (existing == null) {
+            return dataSource;
+          }
+          final long oldEffectiveSize = DataSegmentAndLoadProfile.effectiveSizeOf(existing);
+          final long newEffectiveSize = (profile != null && profile.loadedBytes() != null)
+                                        ? profile.loadedBytes()
+                                        : segment.getSize();
+          // addSegment unconditionally overwrites (vs addSegmentIfAbsent in addDataSegment); we already know the
+          // entry exists, so this swaps the value for the same key.
+          dataSource.addSegment(segment, profile);
+          currSize.addAndGet(newEffectiveSize - oldEffectiveSize);
+          updated[0] = true;
+          return dataSource;
+        }
+    );
+    return updated[0];
   }
 
   @Nullable

@@ -27,11 +27,12 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -39,7 +40,13 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
 {
   private static final Logger log = new Logger(BatchDataSegmentAnnouncer.class);
 
-  private final Set<DataSegment> announcedSegments = ConcurrentHashMap.newKeySet();
+  /**
+   * Tracks the most recently announced {@link DataSegment} per {@link SegmentId} so that a re-announcement with a
+   * changed load spec (e.g. an additive partial-load reload that swaps the wrapper / fingerprint) emits a fresh
+   * {@link SegmentChangeRequestLoad} rather than being silently skipped. A no-op re-announcement (same id, same
+   * load spec) is still skipped to keep the delta sync quiet for ordinary heartbeat-style flows.
+   */
+  private final ConcurrentMap<SegmentId, DataSegment> announcedSegments = new ConcurrentHashMap<>();
 
   private final ChangeRequestHistory<DataSegmentChangeRequest> changes = new ChangeRequestHistory<>();
 
@@ -54,17 +61,21 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   @Override
   public void announceSegment(DataSegment segment)
   {
-    if (!announcedSegments.add(segment)) {
+    final DataSegment prev = announcedSegments.put(segment.getId(), segment);
+    if (prev != null && Objects.equals(prev.getLoadSpec(), segment.getLoadSpec())) {
       log.info("Skipping announcement of segment [%s]. Announcement exists already.", segment.getId());
       return;
     }
+    // First announcement for this id, or the load spec changed (additive reload swapped the wrapper). Emit a fresh
+    // load change request; the coordinator's inventory will recognize "already present, profile changed" and update
+    // its per-server profile in place without disturbing broker routing.
     changes.addChangeRequest(SegmentChangeRequestLoad.forAnnouncement(segment));
   }
 
   @Override
   public void unannounceSegment(DataSegment segment)
   {
-    if (!announcedSegments.remove(segment)) {
+    if (announcedSegments.remove(segment.getId()) == null) {
       log.warn("No announcement to remove for segment[%s]", segment.getId());
       return;
     }
@@ -76,10 +87,11 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   {
     List<DataSegmentChangeRequest> changesBatch = new ArrayList<>();
     for (DataSegment segment : segments) {
-      if (announcedSegments.add(segment)) {
-        changesBatch.add(SegmentChangeRequestLoad.forAnnouncement(segment));
-      } else {
+      final DataSegment prev = announcedSegments.put(segment.getId(), segment);
+      if (prev != null && Objects.equals(prev.getLoadSpec(), segment.getLoadSpec())) {
         log.info("Skipping announcement of segment [%s]. Announcement exists already.", segment.getId());
+      } else {
+        changesBatch.add(SegmentChangeRequestLoad.forAnnouncement(segment));
       }
     }
     if (!changesBatch.isEmpty()) {
@@ -127,7 +139,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   {
     if (counter.getCounter() < 0) {
       Iterable<DataSegmentChangeRequest> segments = Iterables.transform(
-          announcedSegments,
+          announcedSegments.values(),
           SegmentChangeRequestLoad::forAnnouncement
       );
 

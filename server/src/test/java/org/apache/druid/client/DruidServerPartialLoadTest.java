@@ -118,6 +118,48 @@ public class DruidServerPartialLoadTest
   }
 
   @Test
+  void testUpdateDataSegmentProfileSwapsFingerprintAndAdjustsCurrSize()
+  {
+    // Simulates the historical re-announcing a segment after an additive reload swapped the wrapper / fingerprint.
+    // Inventory state updates in place (no add/remove); currSize tracks the difference between the old and new
+    // effective sizes.
+    final String FINGERPRINT_OLD = "v1:111111aaaa";
+    DruidServer server = newServer();
+    DataSegment segment = buildSegment("ds", "v1", 1000L);
+    PartialLoadProfile oldProfile = PartialLoadProfile.forLoaded(
+        ImmutableMap.of("type", "partialProjection", "fingerprint", FINGERPRINT_OLD),
+        FINGERPRINT_OLD,
+        200L
+    );
+    server.addDataSegment(segment, oldProfile);
+    Assertions.assertEquals(200L, server.getCurrSize());
+
+    PartialLoadProfile newProfile = PartialLoadProfile.forLoaded(
+        ImmutableMap.of("type", "partialProjection", "fingerprint", FINGERPRINT),
+        FINGERPRINT,
+        700L
+    );
+    Assertions.assertTrue(server.updateDataSegmentProfile(segment, newProfile));
+    Assertions.assertEquals(700L, server.getCurrSize());
+    Assertions.assertEquals(newProfile, server.getPartialLoadProfile(segment.getId()));
+  }
+
+  @Test
+  void testUpdateDataSegmentProfileNoopWhenSegmentAbsent()
+  {
+    DruidServer server = newServer();
+    DataSegment segment = buildSegment("ds", "v1", 1000L);
+    PartialLoadProfile profile = PartialLoadProfile.forLoaded(
+        ImmutableMap.of("type", "partialProjection", "fingerprint", FINGERPRINT),
+        FINGERPRINT,
+        500L
+    );
+    Assertions.assertFalse(server.updateDataSegmentProfile(segment, profile));
+    Assertions.assertEquals(0L, server.getCurrSize());
+    Assertions.assertNull(server.getPartialLoadProfile(segment.getId()));
+  }
+
+  @Test
   void testMixedFullAndPartialReplicasAccount()
   {
     // Two segments on the same server: one full-loaded, one partial. currSize sums correctly.

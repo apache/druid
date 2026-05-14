@@ -71,6 +71,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -653,6 +654,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                 }
               }
           );
+        } else if (!Objects.equals(druidServer.getPartialLoadProfile(segment.getId()), profile)) {
+          // Already present, but the per-server partial-load profile changed (e.g. the historical re-announced after
+          // an additive reload swapped the wrapper / fingerprint). Update the inventory state in place; the segment
+          // is still on this server, only the profile metadata changed, so don't fire segmentAdded/segmentRemoved
+          // callbacks
+          druidServer.updateDataSegmentProfile(segment, profile);
         } else if (!fullSync) {
           // duplicates can happen when doing a full sync from a 'reset', so only warn for dupes on delta changes
           log.warn(
