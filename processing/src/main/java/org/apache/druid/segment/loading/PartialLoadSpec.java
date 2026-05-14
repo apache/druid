@@ -61,6 +61,35 @@ public abstract class PartialLoadSpec implements LoadSpec
    */
   public static final String TYPE_PREFIX = "partial";
 
+  /**
+   * Returns {@code true} if {@code loadSpec} matches the shape of the {@link PartialLoadSpec} subtype.
+   * Convention-based detection (no subtype allowlist): the {@code type} field must be a {@link String} starting with
+   * {@link #TYPE_PREFIX}, the {@code fingerprint} field must be a {@link String}, and the {@code delegate} field
+   * must be a {@link Map}. These properties are enforced by this base class's {@code @JsonProperty} getters, so any
+   * subtype satisfies them automatically.
+   */
+  public static boolean detectPartialLoadSpec(@Nullable Map<String, Object> loadSpec)
+  {
+    return loadSpec != null
+           && loadSpec.get("type") instanceof String typeString
+           && typeString.startsWith(TYPE_PREFIX)
+           && loadSpec.get("fingerprint") instanceof String
+           && loadSpec.get("delegate") instanceof Map;
+  }
+
+  /**
+   * Returns {@code true} if {@code loadSpec}'s {@code type} field claims partial-load semantics (starts with
+   * {@link #TYPE_PREFIX}), regardless of whether the remaining wire form is well-formed. Useful when callers want
+   * to distinguish "not a partial-load wrapper" from "claims to be partial but the {@code fingerprint} or
+   * {@code delegate} fields are missing or malformed" — the latter typically indicates a bug worth logging.
+   */
+  public static boolean hasPartialTypePrefix(@Nullable Map<String, Object> loadSpec)
+  {
+    return loadSpec != null
+           && loadSpec.get("type") instanceof String typeString
+           && typeString.startsWith(TYPE_PREFIX);
+  }
+
   private final Map<String, Object> delegate;
   private final String fingerprint;
   private final Supplier<LoadSpec> materializedDelegateSupplier;

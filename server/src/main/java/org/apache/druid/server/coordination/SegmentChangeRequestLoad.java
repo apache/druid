@@ -61,29 +61,22 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
   public static SegmentChangeRequestLoad forAnnouncement(DataSegment segment)
   {
     final Map<String, Object> loadSpec = segment.getLoadSpec();
-    if (loadSpec == null) {
-      return new SegmentChangeRequestLoad(segment);
+    if (PartialLoadSpec.detectPartialLoadSpec(loadSpec)) {
+      return new SegmentChangeRequestLoad(segment, (String) loadSpec.get("fingerprint"), segment.getSize());
     }
-    final Object type = loadSpec.get("type");
-    if (!(type instanceof String stringType) || !stringType.startsWith(PartialLoadSpec.TYPE_PREFIX)) {
-      return new SegmentChangeRequestLoad(segment);
+    if (PartialLoadSpec.hasPartialTypePrefix(loadSpec)) {
+      // Type name claims partial-load but the wire form is malformed, the PartialLoadSpec subtype's @JsonProperty
+      // contract guarantees both fields, so this is a bug. Log and fall through to a plain announcement to keep the
+      // queue moving.
+      log.warn(
+          "Partial-load wrapper for segment[%s] type[%s] is malformed (fingerprint[%s], delegate[%s]); "
+          + "announcing as a regular load.",
+          segment.getId(),
+          loadSpec.get("type"),
+          loadSpec.get("fingerprint"),
+          loadSpec.get("delegate")
+      );
     }
-    final Object fingerprint = loadSpec.get("fingerprint");
-    final Object delegate = loadSpec.get("delegate");
-    if (fingerprint instanceof String stringFingerprint && delegate instanceof Map) {
-      return new SegmentChangeRequestLoad(segment, stringFingerprint, segment.getSize());
-    }
-    // Type name says partial-load but the wire form is malformed, the PartialLoadSpec subtype's @JsonProperty
-    // contract guarantees both fields, so this is a bug. Log and fall through to a plain announcement to keep the
-    // queue moving.
-    log.warn(
-        "Partial-load wrapper for segment[%s] type[%s] is malformed (fingerprint[%s], delegate[%s]); "
-        + "announcing as a regular load.",
-        segment.getId(),
-        type,
-        fingerprint,
-        delegate
-    );
     return new SegmentChangeRequestLoad(segment);
   }
 

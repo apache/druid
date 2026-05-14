@@ -698,12 +698,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       }
       final DataSegment segment = loadRequest.getSegment();
       final Map<String, Object> loadSpec = segment.getLoadSpec();
-      if (loadedBytes < segment.getSize()
-          && loadSpec != null
-          && loadSpec.get("type") instanceof String
-          && ((String) loadSpec.get("type")).startsWith(PartialLoadSpec.TYPE_PREFIX)
-          && loadSpec.get("fingerprint") instanceof String
-          && loadSpec.get("delegate") instanceof Map) {
+      if (loadedBytes < segment.getSize() && PartialLoadSpec.detectPartialLoadSpec(loadSpec)) {
         return PartialLoadProfile.forLoaded(loadSpec, fingerprint, loadedBytes);
       }
       return PartialLoadProfile.forFullFallback(fingerprint, loadedBytes);
