@@ -718,6 +718,7 @@ druid.sql.planner.useApproximateTopN
 druid.sql.planner.useLexicographicTopN
 druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useNativeQueryExplain
+error_message
 error_msg
 exprs
 group_id
