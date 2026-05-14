@@ -140,7 +140,7 @@ public class KafkaShareGroupRecordSupplierTest
         supplier.poll(1000);
 
     Assert.assertEquals(1, result.size());
-    Assert.assertNull(result.get(0).getData());
+    Assert.assertTrue(result.get(0).getData().isEmpty());
   }
 
   @Test
@@ -276,7 +276,7 @@ public class KafkaShareGroupRecordSupplierTest
     Assert.assertEquals(1, result.size());
 
     final Map.Entry<KafkaTopicPartition, Optional<Exception>> entry = result.entrySet().iterator().next();
-    Assert.assertEquals("test-topic", entry.getKey().topic());
+    Assert.assertEquals(Optional.of("test-topic"), entry.getKey().topic());
     Assert.assertEquals(0, entry.getKey().partition());
     Assert.assertFalse(entry.getValue().isPresent());
   }
