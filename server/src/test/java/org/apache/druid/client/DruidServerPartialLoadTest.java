@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -52,17 +53,13 @@ public class DruidServerPartialLoadTest
 
   private static DataSegment buildSegment(String dataSource, String version, long size)
   {
-    return new DataSegment(
-        dataSource,
-        Intervals.of("2024-01-01/2024-02-01"),
-        version,
-        ImmutableMap.of("type", "local", "path", "/var/druid/segments/foo"),
-        null,
-        null,
-        NoneShardSpec.instance(),
-        9,
-        size
-    );
+    return DataSegment
+        .builder(SegmentId.of(dataSource, Intervals.of("2024-01-01/2024-02-01"), version, NoneShardSpec.instance()))
+        .shardSpec(NoneShardSpec.instance())
+        .loadSpec(ImmutableMap.of("type", "local", "path", "/var/druid/segments/foo"))
+        .binaryVersion(9)
+        .size(size)
+        .build();
   }
 
   @Test
