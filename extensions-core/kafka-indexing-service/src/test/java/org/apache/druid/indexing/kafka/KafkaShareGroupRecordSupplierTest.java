@@ -130,7 +130,7 @@ public class KafkaShareGroupRecordSupplierTest
   public void testPollWithNullValue()
   {
     final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
-        "test-topic", 0, 50L, "key".getBytes(), null
+        "test-topic", 0, 50L, "key".getBytes(StandardCharsets.UTF_8), null
     );
     final Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> recordMap = new HashMap<>();
     recordMap.put(new TopicPartition("test-topic", 0), List.of(record));
