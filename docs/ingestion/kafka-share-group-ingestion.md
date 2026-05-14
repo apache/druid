@@ -227,9 +227,13 @@ Paste these JSON records:
 {"__time":"2025-06-01T04:00:00.000Z","item":"widget_e","value":320,"category":"electronics"}
 ```
 
-### Step 3: Build Druid from source
+### Step 3: Build Druid and run it
 
-Build a full Druid distribution from this repository. This packages the share-group code natively, so no JAR overlay is required:
+You can run the demo against either a freshly built Druid distribution or an existing stable Druid binary with the share-group JARs overlaid. Pick the one that matches your environment.
+
+#### Option A: Build the full Druid distribution from source (recommended)
+
+Builds the full distribution from this repository so the share-group code is packaged natively, with no JAR overlay required:
 
 ```bash
 cd /path/to/druid
@@ -240,6 +244,36 @@ JAVA_HOME=$(/usr/libexec/java_home -v 17) \
 
 tar -xzf distribution/target/apache-druid-*-bin.tar.gz -C /tmp
 cd /tmp/apache-druid-*
+
+bin/start-druid
+```
+
+> Tip: For faster iteration, build only the `kafka-indexing-service` module with `mvn package -pl extensions-core/kafka-indexing-service -am -DskipTests -T1C` and overlay the resulting JAR onto the distribution from a previous full build (Option B steps below).
+
+#### Option B: Overlay the share-group JAR onto a downloaded Druid binary (faster, best-effort)
+
+If you already have a Druid release binary and want to avoid a full source build, you can replace the kafka-indexing-service JAR in that distribution with the one built from this branch.
+
+> Caveat: The branch builds against `38.0.0-SNAPSHOT`. Druid does **not** guarantee extension ABI compatibility across major versions, so the overlay may fail at runtime against an older binary (37.x or earlier). Use the most recent stable Druid release available, and prefer Option A for a reliable demo.
+
+```bash
+cd /path/to/druid
+JAVA_HOME=$(/usr/libexec/java_home -v 17) mvn package \
+  -pl extensions-core/kafka-indexing-service -am \
+  -Pskip-static-checks -DskipTests -T1C -q
+
+# Use the latest stable Druid release available; 37.0.0 is the example below.
+DRUID_VERSION=37.0.0
+cd /tmp
+curl -O "https://dlcdn.apache.org/druid/${DRUID_VERSION}/apache-druid-${DRUID_VERSION}-bin.tar.gz"
+tar -xzf "apache-druid-${DRUID_VERSION}-bin.tar.gz"
+cd "apache-druid-${DRUID_VERSION}"
+
+rm extensions/druid-kafka-indexing-service/*.jar
+cp /path/to/druid/extensions-core/kafka-indexing-service/target/druid-kafka-indexing-service-*.jar \
+   extensions/druid-kafka-indexing-service/
+cp ~/.m2/repository/org/apache/kafka/kafka-clients/4.2.0/kafka-clients-4.2.0.jar \
+   extensions/druid-kafka-indexing-service/
 
 bin/start-druid
 ```
