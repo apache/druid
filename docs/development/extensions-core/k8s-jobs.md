@@ -807,6 +807,116 @@ Ensure that when you are running task pods in another namespace, your task pods 
 
 Should you require the needed permissions for interacting across Kubernetes namespaces, you can specify a kubeconfig file, and provided the necessary permissions. You can then use the `KUBECONFIG` environment variable to allow your Overlord deployment to find your kubeconfig file. Refer to the [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) for more information.
 
+
+### Running tasks on multiple Kubernetes clusters
+
+You can configure the Kubernetes task runner to launch tasks across multiple Kubernetes clusters. This is useful when
+you want one Druid Overlord to schedule tasks into several Kubernetes clusters while keeping one Druid metadata store
+and one Druid ingestion control plane.
+
+To enable multi-cluster scheduling, set `druid.indexer.runner.type` to `multik8s` and configure at least one
+`druid.indexer.runner.clusters` entry. The multi-cluster runner uses the same task pod adapters, dynamic config,
+capacity, labels, annotations, shared informer mode, and pod template selection settings as the single-cluster
+Kubernetes task runner.
+
+```properties
+druid.indexer.runner.type=multik8s
+druid.indexer.task.encapsulatedTask=true
+
+druid.indexer.runner.capacity=20
+druid.indexer.runner.clusterSelector.type=leastTask
+
+druid.indexer.runner.clusters[0].name=cluster-a
+druid.indexer.runner.clusters[0].taskNamespace=druid-tasks-a
+druid.indexer.runner.clusters[0].kubeconfigPath=/etc/druid/kubeconfigs/cluster-a.yaml
+
+druid.indexer.runner.clusters[1].name=cluster-b
+druid.indexer.runner.clusters[1].taskNamespace=druid-tasks-b
+druid.indexer.runner.clusters[1].kubeconfigPath=/etc/druid/kubeconfigs/cluster-b.yaml
+```
+
+The runner creates one Kubernetes client and one underlying Kubernetes task runner per configured cluster. The
+configured `capacity` is a global limit for all clusters combined, not a per-cluster limit.
+
+If you use the custom template pod adapter and need an explicit job owner label, set `overlordIdentifier` to the same
+stable value for each cluster entry that belongs to the same Druid deployment:
+
+```properties
+druid.indexer.runner.clusters[0].overlordIdentifier=druid-overlord-prod
+druid.indexer.runner.clusters[1].overlordIdentifier=druid-overlord-prod
+```
+
+#### Cluster configuration
+
+Each `druid.indexer.runner.clusters[N]` entry supports the following properties:
+
+| Property | Possible Values | Description | Default | Required |
+| --- | --- | --- | --- | --- |
+| `name` | `String` | Human-readable name for the cluster. When set, Druid adds this value to task context tags as `k8s_cluster`. Use unique names so pod template selection and operational logs are unambiguous. | `null` | No |
+| `taskNamespace` | `String` | Kubernetes namespace where task pods and jobs run for this cluster. | - | Yes |
+| `kubeconfigPath` | `String` | Path to the kubeconfig file that Druid uses to connect to this cluster. If omitted, Druid uses the default Kubernetes client configuration available to the Overlord process. | `null` | No |
+| `overlordIdentifier` | Valid Kubernetes label value | Logical owner identifier for jobs created through the custom template pod adapter. Druid writes it to the `druid.overlord.namespace` Kubernetes job label and uses it when listing jobs, so an underlying runner only sees jobs with the same identifier. Set this when multiple Druid clusters or multiple configured runners may share the same Kubernetes task namespace. | `null` | No |
+| `disabled` | `boolean` | Prevents Druid from scheduling new tasks on this cluster. Druid still starts the underlying runner so it can monitor tasks that already exist in the cluster. At least one configured cluster must be enabled. | `false` | No |
+
+`overlordIdentifier` is a user-defined value. It is not the Kubernetes cluster name and does not need to match the
+Overlord service name. Treat it as a stable owner label for task jobs. Because Druid writes the value directly to a
+Kubernetes label, it must satisfy Kubernetes label value rules: at most 63 characters, beginning and ending with an
+alphanumeric character, with only alphanumeric characters, `-`, `_`, and `.` in between. You can usually omit it when
+each configured cluster uses a separate Kubernetes cluster or a separate `taskNamespace`. Configure it when jobs from
+different Druid deployments, or different multi-cluster runner entries, could otherwise appear in the same namespace
+with the same `druid.k8s.peons` label. For one Druid deployment spanning multiple Kubernetes clusters, use the same
+`overlordIdentifier` value for each cluster entry.
+
+#### Cluster selection
+
+The multi-cluster runner selects among enabled clusters using `druid.indexer.runner.clusterSelector.type`.
+
+| Value | Description |
+| --- | --- |
+| `roundrobin` | Selects enabled clusters in order. This is the default. |
+| `random` | Selects a random enabled cluster. |
+| `leastTask` | Selects from the enabled clusters with the fewest known tasks. If more than one cluster has the same count, Druid selects one of them randomly. |
+
+#### Pod template selection by cluster
+
+When a selected cluster has a configured `name`, Druid adds the cluster name to the task context tags as
+`k8s_cluster`. You can use this tag with the `selectorBased` [pod template selection](#pod-template-selection) strategy
+to choose different pod templates per Kubernetes cluster.
+
+```json
+{
+  "type": "default",
+  "podTemplateSelectStrategy": {
+    "type": "selectorBased",
+    "selectors": [
+      {
+        "selectionKey": "cluster-a-template",
+        "context.tags": { "k8s_cluster": ["cluster-a"] }
+      },
+      {
+        "selectionKey": "cluster-b-template",
+        "context.tags": { "k8s_cluster": ["cluster-b"] }
+      }
+    ]
+  }
+}
+```
+
+Configure the corresponding pod templates with the same `selectionKey` values:
+
+```properties
+druid.indexer.runner.k8s.podTemplate.base=/path/to/basePodSpec.yaml
+druid.indexer.runner.k8s.podTemplate.cluster-a-template=/path/to/cluster-a-podSpec.yaml
+druid.indexer.runner.k8s.podTemplate.cluster-b-template=/path/to/cluster-b-podSpec.yaml
+```
+
+#### Permissions
+
+The Overlord process must be able to read every configured kubeconfig file. Each kubeconfig must grant access to create,
+list, watch, get, and delete jobs and pods in that cluster's `taskNamespace`. If you enable
+`druid.indexer.runner.useK8sSharedInformers`, each configured cluster also starts shared informers against its
+`taskNamespace`.
+
 ### Properties
 | Property | Possible Values | Description | Default | Required |
 | --- | --- | --- | --- | --- |
@@ -833,6 +943,12 @@ Should you require the needed permissions for interacting across Kubernetes name
 | `druid.indexer.runner.logSaveTimeout` | `Duration` | The peon executing the ingestion task makes a best effort to persist the pod logs from `k8s` to persistent task log storage. The timeout ensures that `k8s` connection issues do not cause the pod to hang indefinitely thereby blocking Overlord operations. If the timeout occurs before the logs are saved, those logs will not be available in Druid. | `PT300S` | NO |
 | `druid.indexer.runner.useK8sSharedInformers` | `boolean` | Whether to use shared informers to watch for pod/job changes. This is more efficient on the Kubernetes API server, but may use more memory in the Overlord. | `false` | No |
 | `druid.indexer.runner.k8sSharedInformerResyncPeriod` | `Duration` | When using shared informers, controls how frequently the informers resync with the Kubernetes API server. This prevents change events from being missed, keeping the informer cache clean and accurate. | `PT300S` | No |
+| `druid.indexer.runner.clusterSelector.type` | `String` (`roundrobin`, `random`, `leastTask`) | Only applicable when `druid.indexer.runner.type` is `multik8s`. Strategy used to select which enabled Kubernetes cluster receives the next task. | `roundrobin` | No |
+| `druid.indexer.runner.clusters[N].name` | `String` | Only applicable when `druid.indexer.runner.type` is `multik8s`. Human-readable name for cluster `N`. When set, Druid adds this value to task context tags as `k8s_cluster`. | `null` | No |
+| `druid.indexer.runner.clusters[N].taskNamespace` | `String` | Only applicable when `druid.indexer.runner.type` is `multik8s`. Kubernetes namespace where task pods and jobs run for cluster `N`. | - | Yes |
+| `druid.indexer.runner.clusters[N].kubeconfigPath` | `String` | Only applicable when `druid.indexer.runner.type` is `multik8s`. Path to the kubeconfig file for cluster `N`. If omitted, Druid uses the default Kubernetes client configuration available to the Overlord process. | `null` | No |
+| `druid.indexer.runner.clusters[N].overlordIdentifier` | Valid Kubernetes label value | Only applicable when `druid.indexer.runner.type` is `multik8s`. Logical owner identifier for jobs created through the custom template pod adapter. Druid writes it to the `druid.overlord.namespace` Kubernetes job label and uses it when listing jobs. Use the same value for cluster entries that belong to the same Druid deployment. Set this when multiple Druid clusters or multiple configured runners may share the same Kubernetes task namespace. | `null` | No |
+| `druid.indexer.runner.clusters[N].disabled` | `boolean` | Only applicable when `druid.indexer.runner.type` is `multik8s`. Prevents Druid from scheduling new tasks on cluster `N` while continuing to monitor existing tasks there. | `false` | No |
 
 ### Metrics added
 
