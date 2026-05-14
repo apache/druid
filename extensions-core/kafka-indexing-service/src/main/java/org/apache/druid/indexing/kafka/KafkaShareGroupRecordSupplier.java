@@ -251,6 +251,7 @@ public class KafkaShareGroupRecordSupplier
 
     final Properties props = new Properties();
     KafkaRecordSupplier.addConsumerPropertiesFromConfig(props, sortingMapper, sanitized);
+    ShareGroupConsumerProperties.sanitize(props);
     props.setProperty("group.id", groupId);
     props.setProperty("share.acknowledgement.mode", "explicit");
 
