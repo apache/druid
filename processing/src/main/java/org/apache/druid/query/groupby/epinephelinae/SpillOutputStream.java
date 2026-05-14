@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import javax.annotation.Nullable;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -36,6 +38,7 @@ public class SpillOutputStream extends OutputStream
 
   private final LimitedTemporaryStorage temporaryStorage;
   private final long threshold;
+  @Nullable
   private ByteArrayOutputStream memoryBuffer;
   private LimitedTemporaryStorage.LimitedOutputStream fileOut;
   private boolean thresholdExceeded;
