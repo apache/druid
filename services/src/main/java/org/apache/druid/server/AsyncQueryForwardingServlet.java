@@ -44,6 +44,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -435,9 +436,6 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       Request proxyRequest
   )
   {
-    proxyRequest.timeout(httpClientConfig.getReadTimeout().getMillis(), TimeUnit.MILLISECONDS);
-    proxyRequest.idleTimeout(httpClientConfig.getReadTimeout().getMillis(), TimeUnit.MILLISECONDS);
-
     byte[] avaticaQuery = (byte[]) clientRequest.getAttribute(AVATICA_QUERY_ATTRIBUTE);
     if (avaticaQuery != null) {
       proxyRequest.body(new BytesRequestContent(avaticaQuery));
@@ -450,6 +448,10 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     } else if (sqlQuery != null) {
       setProxyRequestContent(proxyRequest, clientRequest, sqlQuery);
     }
+
+    final long proxyTimeoutMillis = resolveProxyTimeoutMillis(query, sqlQuery);
+    proxyRequest.timeout(proxyTimeoutMillis, TimeUnit.MILLISECONDS);
+    proxyRequest.idleTimeout(proxyTimeoutMillis, TimeUnit.MILLISECONDS);
 
     // Since we can't see the request object on the remote side, we can't check whether the remote side actually
     // performed an authorization check here, so always set this to true for the proxy servlet.
@@ -478,6 +480,48 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         proxyResponse,
         proxyRequest
     );
+  }
+
+  /**
+   * Resolves the proxy request timeout as min(query timeout, druid.router.http.readTimeout).
+   * Falls back to readTimeout when no per-query timeout is set or the value is unusable
+   * (Avatica requests, missing/invalid context value, or {@link QueryContexts#NO_TIMEOUT}).
+   */
+  @VisibleForTesting
+  long resolveProxyTimeoutMillis(@Nullable Query<?> query, @Nullable SqlQuery sqlQuery)
+  {
+    final long readTimeoutMillis = httpClientConfig.getReadTimeout().getMillis();
+    final Long queryTimeoutMillis;
+    if (query != null) {
+      long t = query.context().getTimeout(QueryContexts.NO_TIMEOUT);
+      queryTimeoutMillis = t > 0 ? t : null;
+    } else if (sqlQuery != null) {
+      queryTimeoutMillis = extractSqlTimeoutMillis(sqlQuery);
+    } else {
+      queryTimeoutMillis = null;
+    }
+    return queryTimeoutMillis == null ? readTimeoutMillis : Math.min(queryTimeoutMillis, readTimeoutMillis);
+  }
+
+  @Nullable
+  private static Long extractSqlTimeoutMillis(SqlQuery sqlQuery)
+  {
+    Object raw = sqlQuery.getContext().get(QueryContexts.TIMEOUT_KEY);
+    if (raw == null) {
+      return null;
+    }
+    try {
+      final long t;
+      if (raw instanceof Number) {
+        t = ((Number) raw).longValue();
+      } else {
+        t = Long.parseLong(raw.toString());
+      }
+      return t > 0 ? t : null;
+    }
+    catch (NumberFormatException ignored) {
+      return null;
+    }
   }
 
   private void setProxyRequestContent(Request proxyRequest, HttpServletRequest clientRequest, Object content)

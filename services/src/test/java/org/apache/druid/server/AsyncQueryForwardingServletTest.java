@@ -1206,6 +1206,118 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     return mapper.readValue(json, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
   }
 
+  @Test
+  public void testResolveProxyTimeoutMillis()
+  {
+    final long readTimeoutMillis = 900_000L;
+    final DruidHttpClientConfig httpClientConfig = Mockito.mock(DruidHttpClientConfig.class);
+    Mockito.when(httpClientConfig.getReadTimeout()).thenReturn(org.joda.time.Duration.millis(readTimeoutMillis));
+
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        TestHelper.makeJsonMapper(),
+        TestHelper.makeSmileMapper(),
+        null,
+        null,
+        httpClientConfig,
+        NoopServiceEmitter.instance(),
+        NoopRequestLogger.instance(),
+        new DefaultGenericQueryMetricsFactory(),
+        new AuthenticatorMapper(ImmutableMap.of()),
+        new Properties(),
+        new ServerConfig()
+    );
+
+    // No query, no sqlQuery -> readTimeout
+    Assert.assertEquals(readTimeoutMillis, servlet.resolveProxyTimeoutMillis(null, null));
+
+    // Native query with shorter timeout -> query timeout wins
+    final TimeseriesQuery shortQuery = Druids.newTimeseriesQueryBuilder()
+                                             .dataSource("test")
+                                             .intervals("2000/3000")
+                                             .granularity(Granularities.ALL)
+                                             .context(ImmutableMap.of("timeout", 30_000))
+                                             .build();
+    Assert.assertEquals(30_000L, servlet.resolveProxyTimeoutMillis(shortQuery, null));
+
+    // Native query with longer timeout -> readTimeout wins
+    final TimeseriesQuery longQuery = Druids.newTimeseriesQueryBuilder()
+                                            .dataSource("test")
+                                            .intervals("2000/3000")
+                                            .granularity(Granularities.ALL)
+                                            .context(ImmutableMap.of("timeout", 1_800_000))
+                                            .build();
+    Assert.assertEquals(readTimeoutMillis, servlet.resolveProxyTimeoutMillis(longQuery, null));
+
+    // Native query with no timeout context -> readTimeout
+    final TimeseriesQuery noTimeoutQuery = Druids.newTimeseriesQueryBuilder()
+                                                 .dataSource("test")
+                                                 .intervals("2000/3000")
+                                                 .granularity(Granularities.ALL)
+                                                 .build();
+    Assert.assertEquals(readTimeoutMillis, servlet.resolveProxyTimeoutMillis(noTimeoutQuery, null));
+
+    // SQL query with shorter timeout (Number) -> query timeout wins
+    final SqlQuery shortSql = new SqlQuery(
+        "SELECT 1",
+        ResultFormat.OBJECT,
+        false,
+        false,
+        false,
+        ImmutableMap.of("timeout", 45_000),
+        null
+    );
+    Assert.assertEquals(45_000L, servlet.resolveProxyTimeoutMillis(null, shortSql));
+
+    // SQL query with timeout as String -> parsed
+    final SqlQuery stringSql = new SqlQuery(
+        "SELECT 1",
+        ResultFormat.OBJECT,
+        false,
+        false,
+        false,
+        ImmutableMap.of("timeout", "60000"),
+        null
+    );
+    Assert.assertEquals(60_000L, servlet.resolveProxyTimeoutMillis(null, stringSql));
+
+    // SQL query with longer timeout -> readTimeout wins
+    final SqlQuery longSql = new SqlQuery(
+        "SELECT 1",
+        ResultFormat.OBJECT,
+        false,
+        false,
+        false,
+        ImmutableMap.of("timeout", 1_800_000),
+        null
+    );
+    Assert.assertEquals(readTimeoutMillis, servlet.resolveProxyTimeoutMillis(null, longSql));
+
+    // SQL query with invalid timeout -> readTimeout
+    final SqlQuery invalidSql = new SqlQuery(
+        "SELECT 1",
+        ResultFormat.OBJECT,
+        false,
+        false,
+        false,
+        ImmutableMap.of("timeout", "not-a-number"),
+        null
+    );
+    Assert.assertEquals(readTimeoutMillis, servlet.resolveProxyTimeoutMillis(null, invalidSql));
+
+    // SQL query with no context -> readTimeout
+    final SqlQuery noCtxSql = new SqlQuery(
+        "SELECT 1",
+        ResultFormat.OBJECT,
+        false,
+        false,
+        false,
+        ImmutableMap.of(),
+        null
+    );
+    Assert.assertEquals(readTimeoutMillis, servlet.resolveProxyTimeoutMillis(null, noCtxSql));
+  }
+
   private static class TestServer implements org.apache.druid.client.selector.Server
   {
 
