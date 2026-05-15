@@ -29,6 +29,7 @@ import javax.validation.constraints.NotNull;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -60,6 +61,13 @@ public class TieredBrokerConfig
       new PriorityTieredBrokerSelectorStrategy(0, 1)
   );
 
+  /**
+   * If non-empty, the router only routes to brokers whose deploymentGroup is in this set.
+   * Empty/null means no filtering. A broker with no deploymentGroup tag matches only when this is empty.
+   */
+  @JsonProperty
+  private Set<String> acceptableDeploymentGroups = null;
+
   // tier, <bard, numThreads>
   public LinkedHashMap<String, String> getTierToBrokerMap()
   {
@@ -88,5 +96,10 @@ public class TieredBrokerConfig
   public List<TieredBrokerSelectorStrategy> getStrategies()
   {
     return ImmutableList.copyOf(strategies);
+  }
+
+  public Set<String> getAcceptableDeploymentGroups()
+  {
+    return acceptableDeploymentGroups;
   }
 }

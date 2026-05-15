@@ -28,6 +28,7 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
@@ -289,6 +290,9 @@ public class UnloadUnusedSegmentsTest
     EasyMock.expect(druidServer.getTier()).andReturn(tier).anyTimes();
     EasyMock.expect(druidServer.getCurrSize()).andReturn(currentSize).anyTimes();
     EasyMock.expect(druidServer.getMaxSize()).andReturn(maxSize).anyTimes();
+    EasyMock.expect(druidServer.getMetadata())
+            .andReturn(new DruidServerMetadata(name, name, null, maxSize, null, serverType, tier, 0, null))
+            .anyTimes();
     ImmutableDruidServerTests.expectSegments(druidServer, segments);
     EasyMock.expect(druidServer.getHost()).andReturn(name).anyTimes();
     EasyMock.expect(druidServer.getType()).andReturn(serverType).anyTimes();

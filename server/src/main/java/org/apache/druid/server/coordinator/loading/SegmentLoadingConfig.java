@@ -42,6 +42,7 @@ public class SegmentLoadingConfig
   private final boolean useRoundRobinSegmentAssignment;
 
   private final Map<String, Set<String>> historicalTierAliases;
+  private final Set<String> coordinatingVersions;
 
   /**
    * Creates a new SegmentLoadingConfig with recomputed coordinator config values
@@ -67,7 +68,8 @@ public class SegmentLoadingConfig
           60,
           true,
           numBalancerThreads,
-          dynamicConfig.getHistoricalTierAliases()
+          dynamicConfig.getHistoricalTierAliases(),
+          dynamicConfig.getCoordinatingVersions()
       );
     } else {
       // Use the configured values
@@ -77,7 +79,8 @@ public class SegmentLoadingConfig
           dynamicConfig.getReplicantLifetime(),
           dynamicConfig.isUseRoundRobinSegmentAssignment(),
           dynamicConfig.getBalancerComputeThreads(),
-          dynamicConfig.getHistoricalTierAliases()
+          dynamicConfig.getHistoricalTierAliases(),
+          dynamicConfig.getCoordinatingVersions()
       );
     }
   }
@@ -88,7 +91,8 @@ public class SegmentLoadingConfig
       int maxLifetimeInLoadQueue,
       boolean useRoundRobinSegmentAssignment,
       int balancerComputeThreads,
-      Map<String, Set<String>> historicalTierAliases
+      Map<String, Set<String>> historicalTierAliases,
+      Set<String> coordinatingVersions
   )
   {
     this.maxSegmentsInLoadQueue = maxSegmentsInLoadQueue;
@@ -97,6 +101,7 @@ public class SegmentLoadingConfig
     this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
     this.balancerComputeThreads = balancerComputeThreads;
     this.historicalTierAliases = historicalTierAliases;
+    this.coordinatingVersions = coordinatingVersions;
   }
 
   public int getMaxSegmentsInLoadQueue()
@@ -127,5 +132,10 @@ public class SegmentLoadingConfig
   public Map<String, Set<String>> getHistoricalTierAliases()
   {
     return historicalTierAliases;
+  }
+
+  public Set<String> getCoordinatingVersions()
+  {
+    return coordinatingVersions;
   }
 }

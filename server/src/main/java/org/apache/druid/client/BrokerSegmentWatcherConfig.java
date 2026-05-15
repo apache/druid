@@ -42,6 +42,22 @@ public class BrokerSegmentWatcherConfig
   @JsonProperty
   private boolean awaitInitializationOnStart = true;
 
+  /**
+   * If non-empty, only servers whose deploymentGroup is in this set are watched.
+   * Realtime servers (peons / indexers) bypass this filter unless
+   * {@link #strictRealtimeDeploymentGroupFilter} is true.
+   */
+  @JsonProperty
+  private Set<String> watchedDeploymentGroups = null;
+
+  /**
+   * When true, the deploymentGroup filter is applied to realtime servers as well as historicals.
+   * Default false: realtime servers are always watched so red/black brokers can both query in-flight
+   * data during a rollover. Set true only for strict isolation (e.g. testing a realtime ingest change).
+   */
+  @JsonProperty
+  private boolean strictRealtimeDeploymentGroupFilter = false;
+
   public Set<String> getWatchedTiers()
   {
     return watchedTiers;
@@ -65,5 +81,15 @@ public class BrokerSegmentWatcherConfig
   public boolean isAwaitInitializationOnStart()
   {
     return awaitInitializationOnStart;
+  }
+
+  public Set<String> getWatchedDeploymentGroups()
+  {
+    return watchedDeploymentGroups;
+  }
+
+  public boolean isStrictRealtimeDeploymentGroupFilter()
+  {
+    return strictRealtimeDeploymentGroupFilter;
   }
 }

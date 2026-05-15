@@ -48,12 +48,25 @@ import java.util.Set;
 public class RoundRobinServerSelector
 {
   private final Map<String, CircularServerList> tierToServers = new HashMap<>();
+  private final Map<String, Map<String, CircularServerList>> tierGroupToServers = new HashMap<>();
 
-  public RoundRobinServerSelector(DruidCluster cluster)
+  public RoundRobinServerSelector(DruidCluster cluster, Set<String> coordinatingVersions)
   {
     cluster.getManagedHistoricals().forEach(
         (tier, servers) -> tierToServers.put(tier, new CircularServerList(servers))
     );
+
+    if (!coordinatingVersions.isEmpty()) {
+      cluster.getManagedHistoricals().keySet().forEach(tier -> {
+        for (String group : coordinatingVersions) {
+          final var groupServers = cluster.getManagedHistoricalsByTierAndGroup(tier, group);
+          if (!groupServers.isEmpty()) {
+            tierGroupToServers.computeIfAbsent(tier, t -> new HashMap<>())
+                              .put(group, new CircularServerList(groupServers));
+          }
+        }
+      });
+    }
   }
 
   /**
@@ -68,6 +81,20 @@ public class RoundRobinServerSelector
     }
 
     return new EligibleServerIterator(segment, iterator);
+  }
+
+  /**
+   * Returns an iterator over servers in the given tier and deployment group that are eligible to
+   * load the given segment.
+   */
+  public Iterator<ServerHolder> getServersInTierAndGroupToLoadSegment(String tier, String group, DataSegment segment)
+  {
+    final Map<String, CircularServerList> groupMap = tierGroupToServers.get(tier);
+    if (groupMap == null) {
+      return Collections.emptyIterator();
+    }
+    final CircularServerList list = groupMap.get(group);
+    return list == null ? Collections.emptyIterator() : new EligibleServerIterator(segment, list);
   }
 
   /**

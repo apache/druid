@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
@@ -99,6 +100,16 @@ public class DruidNode
   @JsonProperty
   private Map<String, String> labels;
 
+  /**
+   * Operator-set tag identifying which deployment group this node belongs to (e.g. red/black for R/B upgrades).
+   * Used by version-aware query routing on the broker and router. Null means "no group" and matches everywhere.
+   * Omitted from JSON when null so older consumers see unchanged output.
+   */
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  private String deploymentGroup;
+
   public DruidNode(
       String serviceName,
       String host,
@@ -109,7 +120,22 @@ public class DruidNode
       boolean enableTlsPort
   )
   {
-    this(serviceName, host, bindOnHost, plaintextPort, null, tlsPort, enablePlaintextPort, enableTlsPort, null);
+    this(serviceName, host, bindOnHost, plaintextPort, null, tlsPort, enablePlaintextPort, enableTlsPort, null, null);
+  }
+
+  public DruidNode(
+      String serviceName,
+      String host,
+      boolean bindOnHost,
+      Integer plaintextPort,
+      Integer port,
+      Integer tlsPort,
+      Boolean enablePlaintextPort,
+      boolean enableTlsPort,
+      @Nullable Map<String, String> labels
+  )
+  {
+    this(serviceName, host, bindOnHost, plaintextPort, port, tlsPort, enablePlaintextPort, enableTlsPort, labels, null);
   }
 
   /**
@@ -138,7 +164,8 @@ public class DruidNode
       @JacksonInject @Named("tlsServicePort") @JsonProperty("tlsPort") Integer tlsPort,
       @JsonProperty("enablePlaintextPort") Boolean enablePlaintextPort,
       @JsonProperty("enableTlsPort") boolean enableTlsPort,
-      @JsonProperty("labels") @Nullable Map<String, String> labels
+      @JsonProperty("labels") @Nullable Map<String, String> labels,
+      @JsonProperty("deploymentGroup") @Nullable String deploymentGroup
   )
   {
     init(
@@ -149,7 +176,8 @@ public class DruidNode
         tlsPort,
         enablePlaintextPort == null || enablePlaintextPort.booleanValue(),
         enableTlsPort,
-        labels
+        labels,
+        deploymentGroup
     );
   }
 
@@ -161,7 +189,8 @@ public class DruidNode
       Integer tlsPort,
       boolean enablePlaintextPort,
       boolean enableTlsPort,
-      Map<String, String> labels
+      Map<String, String> labels,
+      @Nullable String deploymentGroup
   )
   {
     Preconditions.checkNotNull(serviceName);
@@ -222,6 +251,13 @@ public class DruidNode
     this.host = host;
     this.bindOnHost = bindOnHost;
     this.labels = labels;
+    this.deploymentGroup = deploymentGroup;
+  }
+
+  @Nullable
+  public String getDeploymentGroup()
+  {
+    return deploymentGroup;
   }
 
   @Nullable
@@ -277,7 +313,18 @@ public class DruidNode
 
   public DruidNode withService(String service)
   {
-    return new DruidNode(service, host, bindOnHost, plaintextPort, tlsPort, enablePlaintextPort, enableTlsPort);
+    return new DruidNode(
+        service,
+        host,
+        bindOnHost,
+        plaintextPort,
+        null,
+        tlsPort,
+        enablePlaintextPort,
+        enableTlsPort,
+        labels,
+        deploymentGroup
+    );
   }
 
   public String getServiceScheme()
@@ -360,13 +407,14 @@ public class DruidNode
            enableTlsPort == druidNode.enableTlsPort &&
            Objects.equals(serviceName, druidNode.serviceName) &&
            Objects.equals(host, druidNode.host) &&
-           Objects.equals(labels, druidNode.labels);
+           Objects.equals(labels, druidNode.labels) &&
+           Objects.equals(deploymentGroup, druidNode.deploymentGroup);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(serviceName, host, port, plaintextPort, enablePlaintextPort, tlsPort, enableTlsPort, labels);
+    return Objects.hash(serviceName, host, port, plaintextPort, enablePlaintextPort, tlsPort, enableTlsPort, labels, deploymentGroup);
   }
 
   @Override
@@ -382,6 +430,7 @@ public class DruidNode
            ", tlsPort=" + tlsPort +
            ", enableTlsPort=" + enableTlsPort +
            ", labels=" + labels +
+           ", deploymentGroup='" + deploymentGroup + '\'' +
            '}';
   }
 }

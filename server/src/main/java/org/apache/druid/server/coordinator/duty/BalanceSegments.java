@@ -31,6 +31,9 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
 
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -60,9 +63,27 @@ public class BalanceSegments implements CoordinatorDuty
       return params;
     }
 
-    params.getDruidCluster().getManagedHistoricals().forEach(
-        (tier, servers) -> new TierSegmentBalancer(tier, servers, maxSegmentsToMove, params).run()
-    );
+    final Set<String> coordinatingVersions = params.getCoordinatorDynamicConfig().getCoordinatingVersions();
+    params.getDruidCluster().getManagedHistoricals().forEach((tier, servers) -> {
+      if (coordinatingVersions.isEmpty()) {
+        new TierSegmentBalancer(tier, servers, maxSegmentsToMove, params).run();
+      } else {
+        // Partition tier servers by deployment group so segments never move across groups.
+        // Servers with no deploymentGroup form their own partition keyed under the empty string.
+        final Map<String, Set<ServerHolder>> serversByGroup = partitionByDeploymentGroup(servers);
+        int remainingGroups = serversByGroup.size();
+        int remainingSegmentsToMove = maxSegmentsToMove;
+        for (final Set<ServerHolder> groupServers : serversByGroup.values()) {
+          final int groupMaxSegmentsToMove =
+              (remainingSegmentsToMove + remainingGroups - 1) / remainingGroups;
+          if (groupMaxSegmentsToMove > 0) {
+            new TierSegmentBalancer(tier, groupServers, groupMaxSegmentsToMove, params).run();
+            remainingSegmentsToMove -= groupMaxSegmentsToMove;
+          }
+          --remainingGroups;
+        }
+      }
+    });
 
     CoordinatorRunStats runStats = params.getCoordinatorStats();
     params.getBalancerStrategy()
@@ -123,4 +144,13 @@ public class BalanceSegments implements CoordinatorDuty
     return Pair.of(numHistoricals, numSegments);
   }
 
+  private static Map<String, Set<ServerHolder>> partitionByDeploymentGroup(Set<ServerHolder> servers)
+  {
+    final Map<String, Set<ServerHolder>> byGroup = new LinkedHashMap<>();
+    for (final ServerHolder server : servers) {
+      final String group = server.getServer().getMetadata().getDeploymentGroup();
+      byGroup.computeIfAbsent(group == null ? "" : group, g -> new LinkedHashSet<>()).add(server);
+    }
+    return byGroup;
+  }
 }

@@ -87,7 +87,8 @@ public class StorageNodeModule implements Module
         config.getStorageSize(),
         serverTypeConfig.getServerType(),
         config.getTier(),
-        config.getPriority()
+        config.getPriority(),
+        node.getDeploymentGroup()
     );
   }
 

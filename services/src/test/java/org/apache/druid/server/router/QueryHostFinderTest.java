@@ -72,11 +72,6 @@ public class QueryHostFinderTest
         return 0;
       }
     };
-
-    EasyMock.expect(brokerSelector.select(EasyMock.anyObject(Query.class))).andReturn(
-        Pair.of("service", server)
-    );
-    EasyMock.replay(brokerSelector);
   }
 
   @After
@@ -88,21 +83,68 @@ public class QueryHostFinderTest
   @Test
   public void testFindServer()
   {
-    QueryHostFinder queryRunner = new QueryHostFinder(
+    EasyMock.expect(brokerSelector.select(EasyMock.anyObject(Query.class))).andReturn(
+        Pair.of("service", server)
+    );
+    EasyMock.replay(brokerSelector);
+
+    final Server server = newQueryHostFinder().findServer(newQuery());
+
+    Assert.assertEquals("foo", server.getHost());
+  }
+
+  @Test
+  public void testFindServerUsesBackupWhenDeploymentGroupFilterIsDisabled()
+  {
+    EasyMock.expect(brokerSelector.select(EasyMock.anyObject(Query.class))).andReturn(
+        Pair.of("service", server)
+    );
+    EasyMock.expect(brokerSelector.select(EasyMock.anyObject(Query.class))).andReturn(
+        Pair.of("service", null)
+    );
+    EasyMock.expect(brokerSelector.isDeploymentGroupFilterEnabled()).andReturn(false);
+    EasyMock.replay(brokerSelector);
+
+    final QueryHostFinder queryHostFinder = newQueryHostFinder();
+
+    Assert.assertSame(server, queryHostFinder.findServer(newQuery()));
+    Assert.assertSame(server, queryHostFinder.findServer(newQuery()));
+  }
+
+  @Test
+  public void testFindServerSkipsBackupWhenDeploymentGroupFilterIsEnabled()
+  {
+    EasyMock.expect(brokerSelector.select(EasyMock.anyObject(Query.class))).andReturn(
+        Pair.of("service", server)
+    );
+    EasyMock.expect(brokerSelector.select(EasyMock.anyObject(Query.class))).andReturn(
+        Pair.of("service", null)
+    );
+    EasyMock.expect(brokerSelector.isDeploymentGroupFilterEnabled()).andReturn(true);
+    EasyMock.replay(brokerSelector);
+
+    final QueryHostFinder queryHostFinder = newQueryHostFinder();
+
+    Assert.assertSame(server, queryHostFinder.findServer(newQuery()));
+    Assert.assertNull(queryHostFinder.findServer(newQuery()));
+  }
+
+  private QueryHostFinder newQueryHostFinder()
+  {
+    return new QueryHostFinder(
         brokerSelector,
         new RendezvousHashAvaticaConnectionBalancer()
     );
+  }
 
-    Server server = queryRunner.findServer(
-        new TimeBoundaryQuery(
-            new TableDataSource("test"),
-            new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-08-31/2011-09-01"))),
-            null,
-            null,
-            null
-        )
+  private Query<?> newQuery()
+  {
+    return new TimeBoundaryQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-08-31/2011-09-01"))),
+        null,
+        null,
+        null
     );
-
-    Assert.assertEquals("foo", server.getHost());
   }
 }

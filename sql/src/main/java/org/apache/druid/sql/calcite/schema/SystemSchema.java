@@ -196,6 +196,7 @@ public class SystemSchema extends AbstractSchema
       .add("labels", ColumnType.STRING)
       .add("available_processors", ColumnType.LONG)
       .add("total_memory", ColumnType.LONG)
+      .add("deployment_group", ColumnType.STRING)
       .build();
 
   static final RowSignature SERVER_SEGMENTS_SIGNATURE = RowSignature
@@ -701,7 +702,8 @@ public class SystemSchema extends AbstractSchema
           node.getBuildRevision(),
           node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
           (long) discoveryDruidNode.getAvailableProcessors(),
-          discoveryDruidNode.getTotalMemory()
+          discoveryDruidNode.getTotalMemory(),
+          node.getDeploymentGroup()
       };
     }
 
@@ -730,7 +732,8 @@ public class SystemSchema extends AbstractSchema
           node.getBuildRevision(),
           node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
           (long) discoveryDruidNode.getAvailableProcessors(),
-          discoveryDruidNode.getTotalMemory()
+          discoveryDruidNode.getTotalMemory(),
+          node.getDeploymentGroup()
       };
     }
 
@@ -771,7 +774,8 @@ public class SystemSchema extends AbstractSchema
           node.getBuildRevision(),
           node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
           (long) discoveryDruidNode.getAvailableProcessors(),
-          discoveryDruidNode.getTotalMemory()
+          discoveryDruidNode.getTotalMemory(),
+          node.getDeploymentGroup()
       };
     }
 
