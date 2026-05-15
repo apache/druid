@@ -86,6 +86,21 @@ jobs:
           echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -c-8)" >> $GITHUB_ENV
           ./.github/scripts/collect_jvm_diagnostics &
 
+      - name: Pre-pull Testcontainers images for unit tests
+        if: ${{ contains(inputs.script, 'run_unit-tests') }}
+        run: |
+          set -eu
+          for image in apache/kafka:4.2.0 postgres:16-alpine minio/minio:latest; do
+            for attempt in 1 2 3; do
+              if docker pull --quiet "$image"; then
+                break
+              fi
+              echo "::warning ::docker pull $image failed (attempt $attempt); retrying in 10s"
+              sleep 10
+            done
+          done
+        timeout-minutes: 5
+
       - name: 'Execute: ${{ inputs.script }}'
         run: ${{ inputs.script }}
         timeout-minutes: 60
