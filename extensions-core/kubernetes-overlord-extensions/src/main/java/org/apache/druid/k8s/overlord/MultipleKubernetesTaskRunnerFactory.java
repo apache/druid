@@ -121,69 +121,146 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
       throw new IllegalArgumentException("At least one task runner must be enabled");
     }
 
-    final int totalCapacity = new KubernetesTaskRunnerEffectiveConfig(this.runnerConfig, this.dynamicConfigSupplier).getCapacity();
-    final AutoscalableThreadPoolExecutor sharedExecutor = new AutoscalableThreadPoolExecutor(totalCapacity, this.configManager);
-
+    final String adapter = getAdapterType();
+    final boolean requiresOverlordPodSource = requiresOverlordPodSource(adapter);
+    final String overlordPodSourceNamespace = requiresOverlordPodSource
+                                              ? getOverlordPodSourceNamespace(enabledClusters)
+                                              : null;
+    DruidKubernetesClient overlordPodSourceClient = null;
+    AutoscalableThreadPoolExecutor sharedExecutor = null;
     final List<MultipleKubernetesTaskRunnerDelegate> taskRunners = new ArrayList<>();
-    for (MultipleKubernetesTaskRunnerConfig.KubernetesCluster kubernetesCluster : this.runnerConfig.getClusters()) {
 
-      final KubernetesTaskRunnerStaticConfig clusterConfig = getPerClusterConfiguration(kubernetesCluster);
-      final KubernetesTaskRunnerEffectiveConfig effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(
-          clusterConfig,
-          this.dynamicConfigSupplier
-      );
+    try {
+      overlordPodSourceClient = requiresOverlordPodSource
+                                ? createOverlordPodSourceClient(overlordPodSourceNamespace)
+                                : null;
+      final int totalCapacity = new KubernetesTaskRunnerEffectiveConfig(this.runnerConfig, this.dynamicConfigSupplier)
+          .getCapacity();
+      sharedExecutor = new AutoscalableThreadPoolExecutor(totalCapacity, this.configManager);
 
-      final DruidKubernetesClient client = createClientForCluster(kubernetesCluster, clusterConfig);
-      final TaskAdapter clusterTaskAdapter = buildTaskAdapter(client, effectiveConfig);
-      final boolean useOverlordNamespace = PodTemplateTaskAdapter.TYPE.equals(clusterTaskAdapter.getAdapterType());
-      final DruidKubernetesCachingClient cachingClient = effectiveConfig.isUseK8sSharedInformers()
-                                                         ? createCachingClient(client, effectiveConfig)
-                                                         : null;
+      for (MultipleKubernetesTaskRunnerConfig.KubernetesCluster kubernetesCluster : this.runnerConfig.getClusters()) {
+        DruidKubernetesClient client = null;
+        DruidKubernetesCachingClient cachingClient = null;
+        boolean delegateCreated = false;
 
-      final KubernetesPeonClient peonClient = createPeonClient(
-          client,
-          cachingClient,
-          effectiveConfig,
-          useOverlordNamespace
-      );
+        try {
+          final KubernetesTaskRunnerStaticConfig clusterConfig = getPerClusterConfiguration(kubernetesCluster);
+          final KubernetesTaskRunnerEffectiveConfig effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(
+              clusterConfig,
+              this.dynamicConfigSupplier
+          );
 
-      final KubernetesTaskRunner clusterRunner = new KubernetesTaskRunner(
-          clusterTaskAdapter,
-          effectiveConfig,
-          peonClient,
-          httpClient,
-          new KubernetesPeonLifecycleFactory(
-              peonClient,
-              taskLogs,
-              smileMapper,
-              effectiveConfig.getLogSaveTimeout().toStandardDuration().getMillis()
-          ),
-          emitter,
-          sharedExecutor,
-          configManager
-      );
-
-      taskRunners.add(
-          new MultipleKubernetesTaskRunnerDelegate(
-              clusterRunner,
-              kubernetesCluster.getName(),
-              kubernetesCluster.isDisabled(),
+          client = createClientForCluster(kubernetesCluster, clusterConfig);
+          final TaskAdapter clusterTaskAdapter = buildTaskAdapter(
+              adapter,
               client,
-              cachingClient
-          )
+              overlordPodSourceClient,
+              overlordPodSourceNamespace,
+              effectiveConfig
+          );
+          final boolean useOverlordNamespace = PodTemplateTaskAdapter.TYPE.equals(clusterTaskAdapter.getAdapterType());
+          cachingClient = effectiveConfig.isUseK8sSharedInformers()
+                          ? createCachingClient(client, effectiveConfig)
+                          : null;
+
+          final KubernetesPeonClient peonClient = createPeonClient(
+              client,
+              cachingClient,
+              effectiveConfig,
+              useOverlordNamespace
+          );
+
+          final KubernetesTaskRunner clusterRunner = new KubernetesTaskRunner(
+              clusterTaskAdapter,
+              effectiveConfig,
+              peonClient,
+              httpClient,
+              new KubernetesPeonLifecycleFactory(
+                  peonClient,
+                  taskLogs,
+                  smileMapper,
+                  effectiveConfig.getLogSaveTimeout().toStandardDuration().getMillis()
+              ),
+              emitter,
+              sharedExecutor,
+              configManager
+          );
+
+          taskRunners.add(
+              new MultipleKubernetesTaskRunnerDelegate(
+                  clusterRunner,
+                  kubernetesCluster.getName(),
+                  kubernetesCluster.isDisabled(),
+                  client,
+                  cachingClient
+              )
+          );
+          delegateCreated = true;
+        }
+        catch (RuntimeException e) {
+          if (!delegateCreated) {
+            closeCachingClient(e, cachingClient);
+            closeKubernetesClient(e, client);
+          }
+          throw e;
+        }
+      }
+
+      this.runner = new MultipleKubernetesTaskRunner(
+          new KubernetesTaskRunnerEffectiveConfig(
+              this.runnerConfig,
+              this.dynamicConfigSupplier
+          ),
+          runnerConfig.getClusterSelector(),
+          taskRunners,
+          sharedExecutor,
+          overlordPodSourceClient
       );
+      return this.runner;
+    }
+    catch (RuntimeException e) {
+      for (MultipleKubernetesTaskRunnerDelegate taskRunner : taskRunners) {
+        try {
+          taskRunner.close();
+        }
+        catch (Exception closeException) {
+          e.addSuppressed(closeException);
+        }
+      }
+      if (sharedExecutor != null) {
+        sharedExecutor.shutdownNow();
+      }
+      closeKubernetesClient(e, overlordPodSourceClient);
+      throw e;
+    }
+  }
+
+  private void closeCachingClient(RuntimeException e, @Nullable DruidKubernetesCachingClient cachingClient)
+  {
+    if (cachingClient == null) {
+      return;
     }
 
-    this.runner = new MultipleKubernetesTaskRunner(
-        new KubernetesTaskRunnerEffectiveConfig(
-            this.runnerConfig,
-            this.dynamicConfigSupplier
-        ),
-        runnerConfig.getClusterSelector(),
-        taskRunners,
-        sharedExecutor
-    );
-    return this.runner;
+    try {
+      cachingClient.stop();
+    }
+    catch (Exception closeException) {
+      e.addSuppressed(closeException);
+    }
+  }
+
+  private void closeKubernetesClient(RuntimeException e, @Nullable DruidKubernetesClient client)
+  {
+    if (client == null) {
+      return;
+    }
+
+    try {
+      client.getClient().close();
+    }
+    catch (Exception closeException) {
+      e.addSuppressed(closeException);
+    }
   }
 
   @Override
@@ -211,6 +288,17 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
 
     config.setNamespace(clusterConfig.getNamespace());
 
+    return new DruidKubernetesClient(httpClientFactory, config);
+  }
+
+  protected DruidKubernetesClient createOverlordPodSourceClient(String overlordPodSourceNamespace)
+  {
+    final Config config = new ConfigBuilder().build();
+    if (runnerConfig.isDisableClientProxy()) {
+      config.setHttpsProxy(null);
+      config.setHttpProxy(null);
+    }
+    config.setNamespace(overlordPodSourceNamespace);
     return new DruidKubernetesClient(httpClientFactory, config);
   }
 
@@ -253,17 +341,13 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
   }
 
   private TaskAdapter buildTaskAdapter(
+      @Nullable String adapter,
       DruidKubernetesClient client,
+      @Nullable DruidKubernetesClient overlordPodSourceClient,
+      @Nullable String overlordPodSourceNamespace,
       KubernetesTaskRunnerEffectiveConfig effectiveConfig
   )
   {
-    final String adapter = properties.getProperty(String.format(
-        Locale.ROOT,
-        "%s.%s.adapter.type",
-        IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX,
-        KubernetesTaskRunnerFactory.TYPE_NAME
-    ));
-
     if (adapter != null
         && !MultiContainerTaskAdapter.TYPE.equals(adapter)
         && effectiveConfig.isSidecarSupport()) {
@@ -276,6 +360,8 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
 
     if (MultiContainerTaskAdapter.TYPE.equals(adapter) || effectiveConfig.isSidecarSupport()) {
       return new MultiContainerTaskAdapter(
+          overlordPodSourceClient,
+          overlordPodSourceNamespace,
           client,
           effectiveConfig,
           taskConfig,
@@ -295,6 +381,8 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
       );
     } else {
       return new SingleContainerTaskAdapter(
+          overlordPodSourceClient,
+          overlordPodSourceNamespace,
           client,
           effectiveConfig,
           taskConfig,
@@ -304,6 +392,51 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
           taskLogs
       );
     }
+  }
+
+  private String getAdapterType()
+  {
+    return properties.getProperty(String.format(
+        Locale.ROOT,
+        "%s.%s.adapter.type",
+        IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX,
+        KubernetesTaskRunnerFactory.TYPE_NAME
+    ));
+  }
+
+  private boolean requiresOverlordPodSource(@Nullable String adapter)
+  {
+    return !PodTemplateTaskAdapter.TYPE.equals(adapter);
+  }
+
+  private String getOverlordPodSourceNamespace(
+      List<MultipleKubernetesTaskRunnerConfig.KubernetesCluster> enabledClusters
+  )
+  {
+    final String overlordNamespace = runnerConfig.getOverlordNamespace();
+    if (overlordNamespace != null && !overlordNamespace.trim().isEmpty()) {
+      return overlordNamespace;
+    }
+
+    final String namespace = runnerConfig.getNamespace();
+    if (namespace != null && !namespace.trim().isEmpty()) {
+      return namespace;
+    }
+
+    if (enabledClusters.size() == 1) {
+      final MultipleKubernetesTaskRunnerConfig.KubernetesCluster cluster = enabledClusters.get(0);
+      if (cluster.getKubeconfigPath() == null || cluster.getKubeconfigPath().trim().isEmpty()) {
+        return cluster.getTaskNamespace();
+      }
+    }
+
+    throw new IAE(
+        "Pod adapter [%s] requires the local Overlord pod namespace for multik8s. Set either "
+        + "[druid.indexer.runner.overlordNamespace] or [druid.indexer.runner.namespace], or set "
+        + "[druid.indexer.runner.k8s.adapter.type=%s].",
+        getAdapterType() == null ? SingleContainerTaskAdapter.TYPE : getAdapterType(),
+        PodTemplateTaskAdapter.TYPE
+    );
   }
 
   private KubernetesTaskRunnerStaticConfig getPerClusterConfiguration(

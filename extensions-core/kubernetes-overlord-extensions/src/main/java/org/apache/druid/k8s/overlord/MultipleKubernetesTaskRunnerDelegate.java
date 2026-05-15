@@ -79,6 +79,12 @@ public class MultipleKubernetesTaskRunnerDelegate implements Closeable
     return k8sCluster;
   }
 
+  @VisibleForTesting
+  DruidKubernetesClient getKubernetesClient()
+  {
+    return kubernetesClient;
+  }
+
   @Override
   public void close()
   {

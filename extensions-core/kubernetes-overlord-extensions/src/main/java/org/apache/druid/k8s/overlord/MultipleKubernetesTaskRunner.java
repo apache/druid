@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 
@@ -127,6 +128,8 @@ public class MultipleKubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final List<MultipleKubernetesTaskRunnerDelegate> taskRunners;
   private final KubernetesTaskRunnerConfig config;
   private final ThreadPoolExecutor executor;
+  @Nullable
+  private final DruidKubernetesClient overlordPodSourceClient;
   private final Object schedulerLock = new Object();
 
   /**
@@ -154,6 +157,17 @@ public class MultipleKubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       ThreadPoolExecutor executor
   )
   {
+    this(config, clusterSelector, taskRunners, executor, null);
+  }
+
+  public MultipleKubernetesTaskRunner(
+      KubernetesTaskRunnerConfig config,
+      KubernetesClusterSelector clusterSelector,
+      List<MultipleKubernetesTaskRunnerDelegate> taskRunners,
+      ThreadPoolExecutor executor,
+      @Nullable DruidKubernetesClient overlordPodSourceClient
+  )
+  {
     Preconditions.checkState(
         !taskRunners.stream().allMatch(MultipleKubernetesTaskRunnerDelegate::isDisabled),
         "At least one task runner must be enabled"
@@ -163,6 +177,7 @@ public class MultipleKubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     this.clusterSelector = clusterSelector;
     this.taskRunners = taskRunners;
     this.executor = executor;
+    this.overlordPodSourceClient = overlordPodSourceClient;
   }
 
   @VisibleForTesting
@@ -205,6 +220,16 @@ public class MultipleKubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     // Shutdown shared executor if present
     if (executor != null) {
       executor.shutdownNow();
+    }
+
+    if (overlordPodSourceClient != null) {
+      try {
+        log.info("Stopping Overlord pod source Kubernetes client...");
+        overlordPodSourceClient.getClient().close();
+      }
+      catch (Exception e) {
+        log.warn(e, "Error while closing Overlord pod source Kubernetes client");
+      }
     }
 
     log.info("MultipleKubernetesTaskRunner stopped.");
