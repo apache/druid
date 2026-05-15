@@ -50,7 +50,7 @@ import java.util.TreeSet;
  * If the operator supplies {@link #getVirtualColumns()}, a pattern key may also reference one of those virtual
  * columns. At match time, the matcher resolves such a key to a clustering column on the segment via
  * {@link VirtualColumns#findEquivalent(VirtualColumns.Node)} between the matchers VCs and the segment's clustering
- * VCs (carried on {@link ClusterGroupTuples#getVirtualColumns()}). This lets operators author portable rules, they
+ * VCs (carried on {@link ClusterGroupTuples#virtualColumns()}). This lets operators author portable rules, they
  * write their preferred VC name and expression, and the matcher resolves to whatever name the segment happens to use
  * for the equivalent clustering VC.
  * <p>
@@ -132,9 +132,9 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
     if (clusterGroups == null) {
       return Collections.emptyList();
     }
-    final RowSignature clusteringColumns = clusterGroups.getClusteringColumns();
-    final VirtualColumns segmentVcs = clusterGroups.getVirtualColumns();
-    final List<List<Object>> tuples = clusterGroups.getTuples();
+    final RowSignature clusteringColumns = clusterGroups.clusteringColumns();
+    final VirtualColumns segmentVcs = clusterGroups.virtualColumns();
+    final List<List<Object>> tuples = clusterGroups.tuples();
 
     // Per-pattern resolution: which clustering column does each pattern key map to? Resolution is segment-scoped
     // (depends only on the segment's clustering signature + VCs), so compute it once up front and reuse it across

@@ -444,6 +444,6 @@ class WildcardClusterGroupPartialLoadMatcherTest
     for (String t : lowerTenants) {
       tuples.add(Collections.singletonList(t));
     }
-    return segmentWithGroups(new ClusterGroupTuples(clusteringColumns, tuples, lowerTenantVcs("tenant_lower")));
+    return segmentWithGroups(new ClusterGroupTuples(clusteringColumns, lowerTenantVcs("tenant_lower"), tuples));
   }
 }

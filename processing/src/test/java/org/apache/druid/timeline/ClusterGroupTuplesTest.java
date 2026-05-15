@@ -93,14 +93,14 @@ class ClusterGroupTuplesTest
   void testConstructorAllowsEmptyTuples()
   {
     final ClusterGroupTuples groups = new ClusterGroupTuples(tenantRegion(), List.of());
-    Assertions.assertTrue(groups.getTuples().isEmpty());
+    Assertions.assertTrue(groups.tuples().isEmpty());
   }
 
   @Test
   void testConstructorAllowsNullTuplesList()
   {
     final ClusterGroupTuples groups = new ClusterGroupTuples(tenantRegion(), null);
-    Assertions.assertTrue(groups.getTuples().isEmpty());
+    Assertions.assertTrue(groups.tuples().isEmpty());
   }
 
   @Test
@@ -166,11 +166,11 @@ class ClusterGroupTuplesTest
             Arrays.asList(null, null)
         )
     );
-    Assertions.assertEquals(3, groups.getTuples().size());
-    Assertions.assertNull(groups.getTuples().get(0).get(0));
-    Assertions.assertNull(groups.getTuples().get(1).get(1));
-    Assertions.assertNull(groups.getTuples().get(2).get(0));
-    Assertions.assertNull(groups.getTuples().get(2).get(1));
+    Assertions.assertEquals(3, groups.tuples().size());
+    Assertions.assertNull(groups.tuples().get(0).get(0));
+    Assertions.assertNull(groups.tuples().get(1).get(1));
+    Assertions.assertNull(groups.tuples().get(2).get(0));
+    Assertions.assertNull(groups.tuples().get(2).get(1));
   }
 
   @Test
@@ -195,8 +195,8 @@ class ClusterGroupTuplesTest
         tenantPriority(),
         List.of(List.of("acme", Integer.valueOf(5)))
     );
-    Assertions.assertEquals(Long.class, groups.getTuples().get(0).get(1).getClass());
-    Assertions.assertEquals(5L, groups.getTuples().get(0).get(1));
+    Assertions.assertEquals(Long.class, groups.tuples().get(0).get(1).getClass());
+    Assertions.assertEquals(5L, groups.tuples().get(0).get(1));
   }
 
   @Test
@@ -219,8 +219,8 @@ class ClusterGroupTuplesTest
   {
     final RowSignature sig = RowSignature.builder().add("temp", ColumnType.FLOAT).build();
     final ClusterGroupTuples groups = new ClusterGroupTuples(sig, List.of(List.of((Object) Double.valueOf(98.6))));
-    Assertions.assertEquals(Float.class, groups.getTuples().get(0).get(0).getClass());
-    Assertions.assertEquals(98.6f, (Float) groups.getTuples().get(0).get(0), 0.0001f);
+    Assertions.assertEquals(Float.class, groups.tuples().get(0).get(0).getClass());
+    Assertions.assertEquals(98.6f, (Float) groups.tuples().get(0).get(0), 0.0001f);
   }
 
   @Test
@@ -255,7 +255,7 @@ class ClusterGroupTuplesTest
   {
     final RowSignature sig = RowSignature.builder().add("v", ColumnType.STRING).build();
     final ClusterGroupTuples groups = new ClusterGroupTuples(sig, List.of(List.of((Object) Long.valueOf(7))));
-    Assertions.assertEquals("7", groups.getTuples().get(0).get(0));
+    Assertions.assertEquals("7", groups.tuples().get(0).get(0));
   }
 
   @Test
@@ -270,8 +270,8 @@ class ClusterGroupTuplesTest
     final ClusterGroupTuples back = MAPPER.readValue(json, ClusterGroupTuples.class);
     Assertions.assertEquals(groups, back);
     // Round-tripped tuples must end up with the same canonical types as the in-memory original.
-    Assertions.assertEquals(Long.class, back.getTuples().get(0).get(1).getClass());
-    Assertions.assertEquals(Long.class, back.getTuples().get(1).get(1).getClass());
+    Assertions.assertEquals(Long.class, back.tuples().get(0).get(1).getClass());
+    Assertions.assertEquals(Long.class, back.tuples().get(1).get(1).getClass());
   }
 
   @Test
@@ -283,11 +283,11 @@ class ClusterGroupTuplesTest
     );
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> groups.getTuples().add(List.of("globex", "us-east-1"))
+        () -> groups.tuples().add(List.of("globex", "us-east-1"))
     );
     Assertions.assertThrows(
         UnsupportedOperationException.class,
-        () -> groups.getTuples().get(0).set(0, "hijacked")
+        () -> groups.tuples().get(0).set(0, "hijacked")
     );
   }
 
@@ -295,7 +295,7 @@ class ClusterGroupTuplesTest
   void testVirtualColumnsDefaultEmpty()
   {
     final ClusterGroupTuples groups = new ClusterGroupTuples(tenantRegion(), List.of());
-    Assertions.assertSame(VirtualColumns.EMPTY, groups.getVirtualColumns());
+    Assertions.assertSame(VirtualColumns.EMPTY, groups.virtualColumns());
   }
 
   @Test
@@ -303,10 +303,10 @@ class ClusterGroupTuplesTest
   {
     final ClusterGroupTuples groups = new ClusterGroupTuples(
         RowSignature.builder().add("tenant_lower", ColumnType.STRING).build(),
-        List.of(List.of("acme")),
-        VIRTUAL_COLUMNS
+        VIRTUAL_COLUMNS,
+        List.of(List.of("acme"))
     );
-    Assertions.assertNotNull(groups.getVirtualColumns().getVirtualColumn("tenant_lower"));
+    Assertions.assertNotNull(groups.virtualColumns().getVirtualColumn("tenant_lower"));
   }
 
   @Test
@@ -314,8 +314,8 @@ class ClusterGroupTuplesTest
   {
     final ClusterGroupTuples original = new ClusterGroupTuples(
         RowSignature.builder().add("tenant_lower", ColumnType.STRING).build(),
-        List.of(List.of("acme")),
-        VIRTUAL_COLUMNS
+        VIRTUAL_COLUMNS,
+        List.of(List.of("acme"))
     );
     // Round-trip needs an injectable ExprMacroTable for ExpressionVirtualColumn deserialization.
     final ObjectMapper mapper = new DefaultObjectMapper();
@@ -344,17 +344,17 @@ class ClusterGroupTuplesTest
     // shared interner on DataSegment, so identical clustering VCs dedupe across segments held in memory.
     final ClusterGroupTuples a = new ClusterGroupTuples(
         RowSignature.builder().add("tenant_lower", ColumnType.STRING).build(),
-        List.of(List.of("acme")),
-        VIRTUAL_COLUMNS
+        VIRTUAL_COLUMNS,
+        List.of(List.of("acme"))
     );
     final ClusterGroupTuples b = new ClusterGroupTuples(
         RowSignature.builder().add("tenant_lower", ColumnType.STRING).build(),
-        List.of(List.of("globex")),
-        VIRTUAL_COLUMNS
+        VIRTUAL_COLUMNS,
+        List.of(List.of("globex"))
     );
     Assertions.assertSame(
-        a.getVirtualColumns().getVirtualColumns()[0],
-        b.getVirtualColumns().getVirtualColumns()[0]
+        a.virtualColumns().getVirtualColumns()[0],
+        b.virtualColumns().getVirtualColumns()[0]
     );
   }
 }
