@@ -25,37 +25,43 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import org.apache.druid.utils.CollectionUtils;
 
-import javax.annotation.Nullable;
-import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 /**
- * A {@link LoadSpec} wrapper that carries partial-cluster-group metadata from the coordinator to a historical
- * alongside the original backend-specific load spec. The wrapped {@code delegate} is held as a raw {@link Map} so
- * that the concrete backend type (e.g. {@code s3}, {@code local}, {@code hdfs}) is materialized only when needed;
- * this avoids pulling backend-specific dependencies onto every node that touches the wire form.
- * <p>
- * Both {@link #loadSegment(File)} and {@link #openRangeReader()} delegate verbatim to the inner load spec. The
- * historical-side partial-load path inspects this wrapper at mount time to learn which cluster-group indices (into
- * the segment's {@code clusterGroups.tuples} list) to range-read and the fingerprint identifying the request the
- * coordinator made.
+ * A {@link PartialLoadSpec} that requests partial loading of a clustered segment's cluster groups. The base class
+ * carries the common {@code fingerprint} and {@code delegate} wire fields; this subtype adds the resolved
+ * {@code clusterGroupIndices} (positions into {@link org.apache.druid.timeline.ClusterGroupTuples#getTuples()}) that
+ * the historical should range-read into the local segment.
  */
 @JsonTypeName(PartialClusterGroupLoadSpec.TYPE)
-public class PartialClusterGroupLoadSpec implements LoadSpec
+public class PartialClusterGroupLoadSpec extends PartialLoadSpec
 {
   public static final String TYPE = "partialClusterGroup";
 
-  private final Map<String, Object> delegate;
+  /**
+   * Builds the raw wire-form {@link Map} representation of a {@link PartialClusterGroupLoadSpec} request. Used by the
+   * coordinator-side matcher (which doesn't instantiate the typed class because doing so would require plumbing an
+   * {@link ObjectMapper} through every matcher just to satisfy the constructor's lazy-delegate supplier).
+   */
+  public static Map<String, Object> wireForm(
+      Map<String, Object> delegate,
+      List<Integer> clusterGroupIndices,
+      String fingerprint
+  )
+  {
+    return Map.of(
+        "type", TYPE,
+        "delegate", delegate,
+        "clusterGroupIndices", clusterGroupIndices,
+        "fingerprint", fingerprint
+    );
+  }
+
   private final List<Integer> clusterGroupIndices;
-  private final String fingerprint;
-  private final Supplier<LoadSpec> materializedDelegateSupplier;
 
   @JsonCreator
   public PartialClusterGroupLoadSpec(
@@ -65,46 +71,18 @@ public class PartialClusterGroupLoadSpec implements LoadSpec
       @JacksonInject ObjectMapper jsonMapper
   )
   {
-    Preconditions.checkNotNull(jsonMapper, "jsonMapper");
-    this.delegate = Preconditions.checkNotNull(delegate, "delegate");
+    super(delegate, fingerprint, jsonMapper);
     Preconditions.checkArgument(
         !CollectionUtils.isNullOrEmpty(clusterGroupIndices),
         "clusterGroupIndices must not be null or empty"
     );
     this.clusterGroupIndices = List.copyOf(clusterGroupIndices);
-    this.fingerprint = Preconditions.checkNotNull(fingerprint, "fingerprint");
-    this.materializedDelegateSupplier = Suppliers.memoize(() -> jsonMapper.convertValue(delegate, LoadSpec.class));
-  }
-
-  @JsonProperty
-  public Map<String, Object> getDelegate()
-  {
-    return delegate;
   }
 
   @JsonProperty
   public List<Integer> getClusterGroupIndices()
   {
     return clusterGroupIndices;
-  }
-
-  @JsonProperty
-  public String getFingerprint()
-  {
-    return fingerprint;
-  }
-
-  @Override
-  public LoadSpecResult loadSegment(File destDir) throws SegmentLoadingException
-  {
-    return materializedDelegateSupplier.get().loadSegment(destDir);
-  }
-
-  @Override
-  @Nullable
-  public SegmentRangeReader openRangeReader() throws IOException
-  {
-    return materializedDelegateSupplier.get().openRangeReader();
   }
 
   @Override
@@ -117,24 +95,24 @@ public class PartialClusterGroupLoadSpec implements LoadSpec
       return false;
     }
     PartialClusterGroupLoadSpec that = (PartialClusterGroupLoadSpec) o;
-    return Objects.equals(delegate, that.delegate)
+    return Objects.equals(getDelegate(), that.getDelegate())
         && Objects.equals(clusterGroupIndices, that.clusterGroupIndices)
-        && Objects.equals(fingerprint, that.fingerprint);
+        && Objects.equals(getFingerprint(), that.getFingerprint());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(delegate, clusterGroupIndices, fingerprint);
+    return Objects.hash(getDelegate(), clusterGroupIndices, getFingerprint());
   }
 
   @Override
   public String toString()
   {
     return "PartialClusterGroupLoadSpec{" +
-           "delegate=" + delegate +
+           "delegate=" + getDelegate() +
            ", clusterGroupIndices=" + clusterGroupIndices +
-           ", fingerprint=" + fingerprint +
+           ", fingerprint=" + getFingerprint() +
            '}';
   }
 }

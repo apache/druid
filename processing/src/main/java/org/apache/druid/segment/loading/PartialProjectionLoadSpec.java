@@ -35,11 +35,6 @@ import java.util.Objects;
  * A {@link PartialLoadSpec} that requests partial loading of a segment's projections. The base class carries the
  * common {@code fingerprint} and {@code delegate} wire fields; this subtype adds the resolved projection names that
  * the historical should range-read into the local segment.
- * <p>
- * The historical-side partial-load path inspects this wrapper at mount time. Until that path exists, the base
- * class's default {@link #loadSegment} performs a full download via the inner delegate, and the announcement layer
- * stamps the fingerprint + full size on the response so the coordinator's reconciler counts the replica as a
- * satisfying full-fallback rather than re-queuing the load.
  */
 @JsonTypeName(PartialProjectionLoadSpec.TYPE)
 public class PartialProjectionLoadSpec extends PartialLoadSpec

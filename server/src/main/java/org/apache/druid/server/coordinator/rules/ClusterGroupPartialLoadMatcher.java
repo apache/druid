@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.rules;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
+import org.apache.druid.segment.loading.PartialClusterGroupLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -41,7 +42,6 @@ import java.util.Map;
  */
 public abstract class ClusterGroupPartialLoadMatcher implements PartialLoadMatcher
 {
-  static final String LOAD_SPEC_TYPE = "partialClusterGroup";
   static final String FINGERPRINT_VERSION = "v1";
 
   /**
@@ -63,13 +63,7 @@ public abstract class ClusterGroupPartialLoadMatcher implements PartialLoadMatch
       return null;
     }
     final String fingerprint = computeFingerprint(resolved);
-    final Map<String, Object> wrapped = Map.of(
-        "type", LOAD_SPEC_TYPE,
-        "delegate", baseLoadSpec,
-        "clusterGroupIndices", resolved,
-        "fingerprint", fingerprint
-    );
-    return new MatchResult(wrapped, fingerprint);
+    return new MatchResult(PartialClusterGroupLoadSpec.wireForm(baseLoadSpec, resolved, fingerprint), fingerprint);
   }
 
   static String computeFingerprint(List<Integer> sortedDedupedIndices)
