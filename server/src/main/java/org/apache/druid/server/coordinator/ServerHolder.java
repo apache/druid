@@ -145,19 +145,25 @@ public class ServerHolder implements Comparable<ServerHolder>
       AtomicInteger loadingReplicaCount
   )
   {
-    for (DataSegment segment : server.iterateAllSegments()) {
+    final Set<DataSegment> loadedSegments = Set.copyOf(server.iterateAllSegments());
+
+    for (DataSegment segment : loadedSegments) {
       projectedSegmentCounts.addSegment(segment);
     }
 
+    // Make a single atomic call to the peon to get all segments still in queue
     final List<SegmentHolder> expiredSegments = new ArrayList<>();
-    for (SegmentHolder holder : peon.getSegmentsInQueue()) {
+    for (SegmentHolder holder : peon.getSegmentsInQueue(loadedSegments)) {
       int runsInQueue = holder.incrementAndGetRunsInQueue();
       if (runsInQueue > maxLifetimeInQueue) {
         expiredSegments.add(holder);
       }
 
       final SegmentAction action = holder.getAction();
-      addToQueuedSegments(holder.getSegment(), simplify(action));
+      addToQueuedSegments(
+          holder.getSegment(),
+          action == SegmentAction.MOVE_FROM ? SegmentAction.MOVE_FROM : simplify(action)
+      );
 
       if (action == SegmentAction.MOVE_TO) {
         movingSegmentCount.incrementAndGet();
@@ -165,10 +171,6 @@ public class ServerHolder implements Comparable<ServerHolder>
       if (action == SegmentAction.REPLICATE) {
         loadingReplicaCount.incrementAndGet();
       }
-    }
-
-    for (DataSegment segment : peon.getSegmentsMarkedToDrop()) {
-      addToQueuedSegments(segment, SegmentAction.MOVE_FROM);
     }
 
     if (!expiredSegments.isEmpty()) {
