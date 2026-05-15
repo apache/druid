@@ -47,7 +47,7 @@ public class PreparedStatement extends AbstractStatement
       final String remoteAddress
   )
   {
-    super(lifecycleToolbox, queryPlus, null);
+    super(lifecycleToolbox, queryPlus, remoteAddress);
     this.originalRequest = queryPlus;
     this.remoteAddress = remoteAddress;
   }

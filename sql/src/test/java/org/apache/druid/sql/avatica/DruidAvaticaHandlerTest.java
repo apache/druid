@@ -2006,6 +2006,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
   /**
    * Test that remote address is captured for prepared statements.
+   * Both the prepare-phase and execute-phase log entries must carry the address —
+   * DruidJdbcPreparedStatement.close() emits the prepare-phase reporter, so a
+   * missing address there would leak an empty remoteAddress dimension to metrics.
    */
   @Test
   public void testRemoteAddressInPreparedStatement() throws SQLException
@@ -2017,20 +2020,21 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       stmt.executeQuery();
     }
 
-    Assert.assertTrue(
+    Assert.assertFalse(
         "Should have at least one log entry",
-        testRequestLogger.getSqlQueryLogs().size() >= 1
+        testRequestLogger.getSqlQueryLogs().isEmpty()
     );
 
-    // Check that at least one log entry (the actual query execution) has a remote address
-    boolean hasRemoteAddress = false;
     for (RequestLogLine logLine : testRequestLogger.getSqlQueryLogs()) {
       String remoteAddress = logLine.getRemoteAddr();
-      if (remoteAddress != null && remoteAddress.length() > 0) {
-        hasRemoteAddress = true;
-        break;
-      }
+      Assert.assertNotNull(
+          "Every prepared-statement log entry must carry a remote address",
+          remoteAddress
+      );
+      Assert.assertFalse(
+          "Every prepared-statement log entry must carry a non-empty remote address",
+          remoteAddress.isEmpty()
+      );
     }
-    Assert.assertTrue("At least one log entry should have a remote address", hasRemoteAddress);
   }
 }
