@@ -27,11 +27,13 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CollectionUtils;
 import org.apache.kafka.common.TopicPartition;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Map;
 
@@ -41,7 +43,8 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
 
   @JsonCreator
   public KafkaDataSourceMetadata(
-      @JsonProperty("partitions") SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> kafkaPartitions
+      @JsonProperty("partitions") SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> kafkaPartitions,
+      @JsonProperty("boundedStreamConfig") @Nullable BoundedStreamConfig boundedStreamConfig
   )
   {
     super(kafkaPartitions == null
@@ -60,7 +63,16 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
                 ((SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>) kafkaPartitions).getTopic(),
                 kafkaPartitions.getPartitionSequenceNumberMap(),
                 ((SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>) kafkaPartitions).getPartitionOffsetMap()
-            ));
+            ),
+        boundedStreamConfig);
+  }
+
+  // Backward compatibility constructor
+  public KafkaDataSourceMetadata(
+      SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> kafkaPartitions
+  )
+  {
+    this(kafkaPartitions, null);
   }
 
   @Override
@@ -81,7 +93,7 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
       SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> seekableStreamSequenceNumbers
   )
   {
-    return new KafkaDataSourceMetadata(seekableStreamSequenceNumbers);
+    return new KafkaDataSourceMetadata(seekableStreamSequenceNumbers, getBoundedStreamConfig());
   }
 
   @Override

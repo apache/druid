@@ -207,6 +207,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // task groups have nothing but closed partitions in their assignments.
     final ImmutableMap<PartitionIdType, SequenceOffsetType> unfilteredStartingSequencesForSequenceName;
 
+    // End sequences for bounded mode - null for streaming mode
+    @Nullable
+    final ImmutableMap<PartitionIdType, SequenceOffsetType> endSequences;
+
     final ConcurrentHashMap<String, TaskData> tasks = new ConcurrentHashMap<>();
     final ConcurrentHashMap<String, Integer> taskIdToServerPriority = new ConcurrentHashMap<>();
     final DateTime minimumMessageTime;
@@ -231,6 +235,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           groupId,
           startingSequences,
           unfilteredStartingSequencesForSequenceName,
+          null, // endSequences - null for streaming mode
           minimumMessageTime,
           maximumMessageTime,
           exclusiveStartSequenceNumberPartitions,
@@ -250,6 +255,37 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         int groupId,
         ImmutableMap<PartitionIdType, SequenceOffsetType> startingSequences,
         @Nullable ImmutableMap<PartitionIdType, SequenceOffsetType> unfilteredStartingSequencesForSequenceName,
+        @Nullable ImmutableMap<PartitionIdType, SequenceOffsetType> endSequences,
+        @Nullable DateTime minimumMessageTime,
+        @Nullable DateTime maximumMessageTime,
+        @Nullable Set<PartitionIdType> exclusiveStartSequenceNumberPartitions
+    )
+    {
+      this(
+          groupId,
+          startingSequences,
+          unfilteredStartingSequencesForSequenceName,
+          endSequences,
+          minimumMessageTime,
+          maximumMessageTime,
+          exclusiveStartSequenceNumberPartitions,
+          generateSequenceName(
+              unfilteredStartingSequencesForSequenceName == null
+              ? startingSequences
+              : unfilteredStartingSequencesForSequenceName,
+              minimumMessageTime,
+              maximumMessageTime,
+              spec.getDataSchema(),
+              taskTuningConfig
+          )
+      );
+    }
+
+    TaskGroup(
+        int groupId,
+        ImmutableMap<PartitionIdType, SequenceOffsetType> startingSequences,
+        @Nullable ImmutableMap<PartitionIdType, SequenceOffsetType> unfilteredStartingSequencesForSequenceName,
+        @Nullable ImmutableMap<PartitionIdType, SequenceOffsetType> endSequences,
         DateTime minimumMessageTime,
         DateTime maximumMessageTime,
         Set<PartitionIdType> exclusiveStartSequenceNumberPartitions,
@@ -261,6 +297,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       this.unfilteredStartingSequencesForSequenceName = unfilteredStartingSequencesForSequenceName == null
                                                         ? startingSequences
                                                         : unfilteredStartingSequencesForSequenceName;
+      this.endSequences = endSequences;
       this.minimumMessageTime = minimumMessageTime;
       this.maximumMessageTime = maximumMessageTime;
       this.checkpointSequences.put(0, startingSequences);
@@ -1386,6 +1423,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       try {
         recordSupplier = setupRecordSupplier();
 
+        // Initialize bounded partitions BEFORE first run
+        if (ioConfig.isBounded()) {
+          initializeBoundedPartitionGroups();
+        }
+
         exec.submit(
             () -> {
               try {
@@ -1856,6 +1898,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public void runInternal()
   {
     try {
+      if (isBoundedWorkComplete()) {
+        handleBoundedCompletion();
+        return;
+      }
       possiblyRegisterListener();
 
       stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CONNECTING_TO_STREAM);
@@ -1990,6 +2036,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       activelyReadingTaskGroups.clear();
       partitionGroups.clear();
       partitionOffsets.clear();
+      if (ioConfig.isBounded()) {
+        initializeBoundedPartitionGroups();
+        stateManager.maybeSetState(SupervisorStateManager.BasicState.RUNNING);
+      }
     } else {
       if (!checkSourceMetadataMatch(dataSourceMetadata)) {
         throw new IAE(
@@ -2093,9 +2143,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   /**
    * Reset offsets with the data source metadata. If checkpoints exist, the resulting stored offsets will be a union of
    * existing checkpointed offsets and provided offsets; any checkpointed offsets not specified in the metadata will be
-   * preserved as-is. If checkpoints don't exist, the provided reset datasource metdadata will be inserted into
+   * preserved as-is. If checkpoints don't exist, the provided reset datasource metadata will be inserted into
    * the metadata storage. Once the offsets are reset, any active tasks serving the partition offsets will be restarted.
-   * @param dataSourceMetadata Required reset data source metdata. Assumed that the metadata is validated.
+   * @param dataSourceMetadata Required reset data source metadata. Assumed that the metadata is validated.
    */
   public void resetOffsetsInternal(@Nonnull final DataSourceMetadata dataSourceMetadata)
   {
@@ -2387,6 +2437,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                   log.info("Creating a new task group for taskGroupId[%d]", taskGroupId);
                                   // We reassign the task's original base sequence name (from the existing task) to the
                                   // task group so that the replica segment allocations are the same.
+
+                                  // Extract end sequences from task IOConfig if present (for bounded mode)
+                                  ImmutableMap<PartitionIdType, SequenceOffsetType> endSequences = null;
+                                  if (seekableStreamIndexTask.getIOConfig().getEndSequenceNumbers() != null) {
+                                    endSequences = ImmutableMap.copyOf(
+                                        seekableStreamIndexTask.getIOConfig()
+                                                               .getEndSequenceNumbers()
+                                                               .getPartitionSequenceNumberMap()
+                                    );
+                                  }
+
                                   return new TaskGroup(
                                       taskGroupId,
                                       ImmutableMap.copyOf(
@@ -2395,6 +2456,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                                                  .getPartitionSequenceNumberMap()
                                       ),
                                       null,
+                                      endSequences,
                                       seekableStreamIndexTask.getIOConfig().getMinimumMessageTime(),
                                       seekableStreamIndexTask.getIOConfig().getMaximumMessageTime(),
                                       seekableStreamIndexTask.getIOConfig()
@@ -3034,6 +3096,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private boolean updatePartitionDataFromStream()
   {
+    // In bounded mode, partitionGroups is already initialized from config
+    // Skip partition discovery to prevent recreating tasks
+    if (ioConfig.isBounded()) {
+      log.debug("Bounded mode: skipping partition discovery from stream");
+      return true;
+    }
+
     List<PartitionIdType> previousPartitionIds = new ArrayList<>(partitionIds);
     Set<PartitionIdType> partitionIdsFromSupplier;
     recordSupplierLock.lock();
@@ -3208,6 +3277,59 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   protected Map<PartitionIdType, SequenceOffsetType> getLatestSequencesFromStream()
   {
     return new HashMap<>();
+  }
+
+  /**
+   * Converts a map with string keys from BoundedStreamConfig to a properly typed map.
+   * The BoundedStreamConfig uses Map<?, ?> which Jackson deserializes as Map<String, Object>.
+   * This method converts string keys to partition IDs and offset values to the appropriate types.
+   *
+   * @param rawMap the raw map from BoundedStreamConfig
+   * @return a map with properly typed partition IDs and sequence offsets
+   */
+  private Map<PartitionIdType, SequenceOffsetType> convertBoundedConfigMap(Map<?, ?> rawMap)
+  {
+    Map<PartitionIdType, SequenceOffsetType> result = new HashMap<>();
+    for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
+      PartitionIdType partition = createPartitionIdFromString(entry.getKey().toString());
+      SequenceOffsetType offset = createSequenceOffsetFromObject(entry.getValue());
+      result.put(partition, offset);
+    }
+    return result;
+  }
+
+  /**
+   * Initialize partitionGroups from bounded config instead of from stream discovery.
+   * This prevents the supervisor from trying to recreate tasks as they complete.
+   * Only called when in bounded mode during supervisor startup.
+   */
+  private void initializeBoundedPartitionGroups()
+  {
+    if (!ioConfig.isBounded()) {
+      return;
+    }
+
+    BoundedStreamConfig boundedConfig = ioConfig.getBoundedStreamConfig();
+    Map<PartitionIdType, SequenceOffsetType> configuredPartitions =
+        convertBoundedConfigMap(boundedConfig.getStartSequenceNumbers());
+
+    for (PartitionIdType partition : configuredPartitions.keySet()) {
+      int taskGroupId = getTaskGroupIdForPartition(partition);
+
+      partitionGroups.computeIfAbsent(taskGroupId, k -> new HashSet<>()).add(partition);
+      partitionIds.add(partition);
+      partitionOffsets.put(partition, getNotSetMarker());
+
+      log.info("Bounded mode: initialized partition[%s] in taskGroup[%d]", partition, taskGroupId);
+    }
+
+    assignRecordSupplierToPartitionIds();
+
+    log.info(
+        "Bounded mode: initialized [%d] partitions in [%d] task groups",
+        configuredPartitions.size(),
+        partitionGroups.size()
+    );
   }
 
   private void assignRecordSupplierToPartitionIds()
@@ -4107,6 +4229,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final Map<Integer, TaskGroup> newTaskGroups = new HashMap<>();
     for (Integer groupId : partitionGroups.keySet()) {
       if (!activelyReadingTaskGroups.containsKey(groupId)) {
+
+        // In bounded mode, check if task group has completed before recreating
+        if (ioConfig.isBounded() && hasTaskGroupReachedBoundedEnd(groupId)) {
+          log.debug(
+              "Bounded taskGroup[%d] has reached end offsets, skipping recreation",
+              groupId
+          );
+          continue; // Skip creating new task group
+        }
+
         log.info("Creating new taskGroup[%d] for partitions[%s].", groupId, partitionGroups.get(groupId));
         final DateTime minimumMessageTime;
         if (ioConfig.getLateMessageRejectionStartDateTime().isPresent()) {
@@ -4173,12 +4305,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               .collect(Collectors.toSet());
         }
 
+        // NEW: Extract end offsets for bounded mode
+        ImmutableMap<PartitionIdType, SequenceOffsetType> endOffsets = null;
+        if (ioConfig.isBounded()) {
+          endOffsets = ImmutableMap.copyOf(getEndOffsetsForGroup(groupId));
+        }
+
+        log.info(
+            "Initializing taskGroup[%d] with startingOffsets[%s] and endOffsets[%s]",
+            groupId,
+            simpleStartingOffsets,
+            endOffsets
+        );
         newTaskGroups.put(
             groupId,
             new TaskGroup(
                 groupId,
                 simpleStartingOffsets,
                 simpleUnfilteredStartingOffsets,
+                endOffsets,
                 minimumMessageTime,
                 maximumMessageTime,
                 exclusiveStartSequenceNumberPartitions
@@ -4270,7 +4415,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Map<PartitionIdType, SequenceOffsetType> partitionsToReset
   )
   {
+    // Existing logic for both streaming and bounded mode
     ImmutableMap.Builder<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> builder = ImmutableMap.builder();
+    final DataSourceMetadata dataSourceMetadata = retrieveDataSourceMetadata();
+    final BoundedStreamConfig metadataBoundedConfig = getBoundedConfigFromMetadata(dataSourceMetadata);
+
     for (PartitionIdType partitionId : partitionGroups.get(groupId)) {
       SequenceOffsetType sequence = partitionOffsets.get(partitionId);
 
@@ -4285,6 +4434,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage = getOffsetFromStorageForPartition(
             partitionId,
             metadataOffsets,
+            metadataBoundedConfig,
             partitionsToReset
         );
 
@@ -4294,6 +4444,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
     return builder.build();
+  }
+
+  /**
+   * Extracts BoundedStreamConfig from DataSourceMetadata if available.
+   */
+  @Nullable
+  private BoundedStreamConfig getBoundedConfigFromMetadata(@Nullable DataSourceMetadata metadata)
+  {
+    if (metadata instanceof SeekableStreamDataSourceMetadata) {
+      return ((SeekableStreamDataSourceMetadata<?, ?>) metadata).getBoundedStreamConfig();
+    }
+    return null;
   }
 
   /**
@@ -4309,11 +4471,32 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private OrderedSequenceNumber<SequenceOffsetType> getOffsetFromStorageForPartition(
       PartitionIdType partition,
       final Map<PartitionIdType, SequenceOffsetType> metadataOffsets,
+      @Nullable final BoundedStreamConfig metadataBoundedConfig,
       final Map<PartitionIdType, SequenceOffsetType> partitionsToReset
   )
   {
     SequenceOffsetType sequence = metadataOffsets.get(partition);
     if (sequence != null) {
+      // In bounded mode, check if the metadata's bounded config matches the current supervisor's config
+      if (ioConfig.isBounded()) {
+        BoundedStreamConfig currentBoundedConfig = ioConfig.getBoundedStreamConfig();
+
+        // If configs don't match (or metadata has no config), throw exception
+        if (!currentBoundedConfig.equals(metadataBoundedConfig)) {
+          throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                              .ofCategory(DruidException.Category.INVALID_INPUT)
+                              .build(
+                                  "Bounded supervisor detected existing metadata from a different run. "
+                                  + "Metadata bounded config [%s] does not match current config [%s]. "
+                                  + "To start a new bounded ingestion, either: "
+                                  + "(1) use the supervisor reset API to clear existing metadata, or "
+                                  + "(2) use a different supervisor ID.",
+                                  metadataBoundedConfig,
+                                  currentBoundedConfig
+                              );
+        }
+      }
+
       log.debug("Getting sequence [%s] from metadata storage for partition [%s]", sequence, partition);
       if (!taskTuningConfig.isSkipSequenceNumberAvailabilityCheck()) {
         if (!checkOffsetAvailability(partition, sequence)) {
@@ -4334,6 +4517,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
       return makeSequenceNumber(sequence, useExclusiveStartSequenceNumberForNonFirstSequence());
     } else {
+      // NEW: In bounded mode, if no checkpoint exists (task failed before first checkpoint),
+      // fall back to bounded start offset
+      if (ioConfig.isBounded()) {
+        BoundedStreamConfig boundedConfig = ioConfig.getBoundedStreamConfig();
+        Map<PartitionIdType, SequenceOffsetType> startOffsets =
+            convertBoundedConfigMap(boundedConfig.getStartSequenceNumbers());
+        SequenceOffsetType startOffset = startOffsets.get(partition);
+        if (startOffset != null) {
+          log.info(
+              "Bounded mode: no checkpoint found for partition[%s], using configured start offset[%s]",
+              partition,
+              startOffset
+          );
+          return makeSequenceNumber(startOffset, false);
+        }
+      }
+
       boolean useEarliestSequenceNumber = ioConfig.isUseEarliestSequenceNumber();
       if (subsequentlyDiscoveredPartitions.contains(partition)) {
         log.info(
@@ -4377,6 +4577,177 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return Collections.emptyMap();
   }
 
+  /**
+   * Check if all partitions in a task group have reached their bounded end offsets.
+   * Used to determine if the task group completed successfully vs failed midway.
+   *
+   * @param groupId The task group ID to check
+   * @return true if all partitions in the group have reached their end offsets, false otherwise
+   */
+  private boolean hasTaskGroupReachedBoundedEnd(int groupId)
+  {
+    Set<PartitionIdType> partitionsInGroup = partitionGroups.get(groupId);
+    if (partitionsInGroup == null || partitionsInGroup.isEmpty()) {
+      return false;
+    }
+    BoundedStreamConfig boundedConfig = ioConfig.getBoundedStreamConfig();
+    Map<PartitionIdType, SequenceOffsetType> startOffsets =
+        convertBoundedConfigMap(boundedConfig.getStartSequenceNumbers());
+    Map<PartitionIdType, SequenceOffsetType> endOffsets =
+        convertBoundedConfigMap(boundedConfig.getEndSequenceNumbers());
+
+    // Check if all partitions have empty ranges.
+    // Reversed ranges (start > end) return false so createNewTasks() runs and the task IO config
+    // rejects the invalid range with a clear error, making the supervisor UNHEALTHY.
+    // For exclusive end offsets (Kafka): start == end is a legitimate empty range.
+    // For inclusive end offsets (Kinesis): start == end is one record, not empty.
+    boolean allPartitionsEmptyRange = true;
+    for (PartitionIdType partition : partitionsInGroup) {
+      SequenceOffsetType start = startOffsets.get(partition);
+      SequenceOffsetType end = endOffsets.get(partition);
+
+      boolean startBeyondEnd = isOffsetAtOrBeyond(start, end) && !start.equals(end);
+      if (startBeyondEnd) {
+        return false;
+      }
+
+      boolean isEmpty = isEndOffsetExclusive() && start.equals(end);
+      if (!isEmpty) {
+        allPartitionsEmptyRange = false;
+        break;
+      }
+    }
+
+    if (allPartitionsEmptyRange) {
+      log.warn(
+          "TaskGroup[%d] has empty range for all partitions (start == end). "
+          + "No work to do, marking as complete. Start: %s, End: %s",
+          groupId,
+          startOffsets,
+          endOffsets
+      );
+      return true;
+    }
+
+    // Offsets from a prior bounded run with a different config must not count as completion evidence.
+    BoundedStreamConfig metadataBoundedConfig = getBoundedConfigFromMetadata(retrieveDataSourceMetadata());
+    if (!boundedConfig.equals(metadataBoundedConfig)) {
+      return false;
+    }
+    Map<PartitionIdType, SequenceOffsetType> currentOffsets = getOffsetsFromMetadataStorage();
+
+    log.info(
+        "Bounded mode: checking completion for taskGroup[%d]. Current offsets from metadata: %s, End offsets: %s",
+        groupId,
+        currentOffsets,
+        endOffsets
+    );
+
+    if (currentOffsets == null || currentOffsets.isEmpty()) {
+      log.debug("No checkpointed offsets found, taskGroup[%d] has not completed", groupId);
+      return false; // No progress yet, task hasn't completed
+    }
+
+    // Check if ALL partitions in this group have reached their end offsets
+    for (PartitionIdType partition : partitionsInGroup) {
+      SequenceOffsetType endOffset = endOffsets.get(partition);
+      SequenceOffsetType currentOffset = currentOffsets.get(partition);
+
+      if (currentOffset == null) {
+        log.debug(
+            "Partition[%s] in taskGroup[%d] has no checkpointed offset, not complete",
+            partition,
+            groupId
+        );
+        return false; // Partition hasn't started processing
+      }
+
+      if (!isOffsetAtOrBeyond(currentOffset, endOffset)) {
+        log.debug(
+            "Partition[%s] in taskGroup[%d] at offset[%s], has not reached end[%s]",
+            partition,
+            groupId,
+            currentOffset,
+            endOffset
+        );
+        return false; // This partition hasn't reached its end
+      }
+    }
+
+    log.info(
+        "All partitions in taskGroup[%d] have reached their end offsets",
+        groupId
+    );
+    return true; // All partitions have reached their end offsets
+  }
+
+  /**
+   * Get end offsets for all partitions in a task group from bounded config.
+   */
+  private Map<PartitionIdType, SequenceOffsetType> getEndOffsetsForGroup(int groupId)
+  {
+    BoundedStreamConfig boundedConfig = ioConfig.getBoundedStreamConfig();
+    Map<PartitionIdType, SequenceOffsetType> endOffsets =
+        convertBoundedConfigMap(boundedConfig.getEndSequenceNumbers());
+    Set<PartitionIdType> partitionsInGroup = partitionGroups.get(groupId);
+
+    if (partitionsInGroup == null) {
+      return Collections.emptyMap();
+    }
+
+    return partitionsInGroup.stream()
+        .filter(endOffsets::containsKey)
+        .collect(Collectors.toMap(
+            p -> p,
+            endOffsets::get
+        ));
+  }
+
+  /**
+   * For bounded supervisors, we determine completion by checking if new tasks would be created.
+   * In {@link #createNewTasks()}, bounded mode checks {@link #hasTaskGroupReachedBoundedEnd(int)} before creating tasks.
+   * If that returns true (offsets reached), no new tasks are created.
+   * So completion is: no active tasks, no pending tasks, and {@link #createNewTasks()} chose not to create any.
+   *
+   * @return true if all bounded work is complete, false otherwise
+   */
+  private boolean isBoundedWorkComplete()
+  {
+    if (!ioConfig.isBounded()) {
+      return false;
+    }
+
+    // Check if task groups are empty (no tasks active or pending)
+    boolean noActiveTasks = activelyReadingTaskGroups.isEmpty();
+    boolean noPendingTasks = pendingCompletionTaskGroups.values().stream().allMatch(List::isEmpty);
+
+    if (!noActiveTasks || !noPendingTasks) {
+      return false;
+    }
+    // If hasTaskGroupReachedBoundedEnd() returns false for any group, createNewTasks()
+    // will create tasks next iteration, so we're not complete.
+    for (Integer groupId : partitionGroups.keySet()) {
+      if (!hasTaskGroupReachedBoundedEnd(groupId)) {
+        log.debug("TaskGroup[%d] has not reached bounded end, tasks will be recreated", groupId);
+        return false;
+      }
+    }
+
+    log.info("All bounded tasks completed for supervisor[%s]", supervisorId);
+    return true;
+  }
+
+  /**
+   * Handle bounded processing completion by shutting down the supervisor.
+   * At this point, all task groups are already empty (verified by isBoundedWorkComplete),
+   * so we just need to mark the supervisor as completed.
+   */
+  private void handleBoundedCompletion()
+  {
+    log.info("Bounded processing complete for supervisor[%s]. Marking as COMPLETED.", supervisorId);
+    stateManager.maybeSetState(SupervisorStateManager.BasicState.COMPLETED);
+  }
+
   protected DataSourceMetadata retrieveDataSourceMetadata()
   {
     return indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(supervisorId);
@@ -4412,9 +4783,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     TaskGroup group = activelyReadingTaskGroups.get(groupId);
     Map<PartitionIdType, SequenceOffsetType> startPartitions = group.startingSequences;
     Map<PartitionIdType, SequenceOffsetType> endPartitions = new HashMap<>();
-    for (PartitionIdType partition : startPartitions.keySet()) {
-      endPartitions.put(partition, getEndOfPartitionMarker());
+
+    if (group.endSequences != null && !group.endSequences.isEmpty()) {
+      // Bounded mode: use explicit end offsets from task group
+      endPartitions.putAll(group.endSequences);
+      log.info("Creating bounded tasks for taskGroup[%d] with endOffsets: %s", groupId, group.endSequences);
+    } else {
+      // Streaming mode: use exclusive end (effectively no end)
+      for (PartitionIdType partition : startPartitions.keySet()) {
+        endPartitions.put(partition, getEndOfPartitionMarker());
+      }
     }
+
     Set<PartitionIdType> exclusiveStartSequenceNumberPartitions = activelyReadingTaskGroups
         .get(groupId)
         .exclusiveStartSequenceNumberPartitions;
@@ -4762,6 +5142,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       RowIngestionMetersFactory rowIngestionMetersFactory,
       @Nullable List<Integer> serverPrioritiesToAssign
   ) throws JsonProcessingException;
+
+  /**
+   * Converts a string representation of a partition ID to the typed partition ID.
+   * Used for deserializing bounded stream config where partition keys come as strings.
+   *
+   * @param partitionIdString string representation of partition ID
+   * @return typed partition ID
+   */
+  protected abstract PartitionIdType createPartitionIdFromString(String partitionIdString);
+
+  /**
+   * Converts an object (typically Number) to the typed sequence offset.
+   * Used for deserializing bounded stream config where offset values may come as Integer, Long, String, etc.
+   * Jackson may deserialize numeric values as Integer if they fit, but implementations like Kafka need Long.
+   *
+   * @param offsetObj the offset object from deserialization
+   * @return typed sequence offset
+   */
+  protected abstract SequenceOffsetType createSequenceOffsetFromObject(Object offsetObj);
 
   /**
    * calculates the taskgroup id that the given partition belongs to.
@@ -5121,9 +5520,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   protected abstract boolean isShardExpirationMarker(SequenceOffsetType seqNum);
 
   /**
+   * Compares if current offset has reached or exceeded the target offset.
+   * Used to determine if a bounded task group has completed successfully.
+   *
+   * @param current Current offset from metadata storage
+   * @param target Target end offset from bounded config
+   * @return true if current >= target
+   */
+  protected abstract boolean isOffsetAtOrBeyond(SequenceOffsetType current, SequenceOffsetType target);
+
+  /**
    * Returns true if the start sequence number should be exclusive for the non-first sequences for the whole partition.
    * For example, in Kinesis, the start offsets are inclusive for the first sequence, but exclusive for following
    * sequences. In Kafka, start offsets are always inclusive.
    */
   protected abstract boolean useExclusiveStartSequenceNumberForNonFirstSequence();
+
+  /**
+   * Returns true if end offsets are exclusive (like Kafka), false if inclusive (like Kinesis).
+   * Used for bounded mode to correctly detect empty ranges: start == end is empty only if exclusive.
+   */
+  protected abstract boolean isEndOffsetExclusive();
 }

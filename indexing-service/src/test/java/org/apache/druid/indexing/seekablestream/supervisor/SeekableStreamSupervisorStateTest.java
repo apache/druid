@@ -702,6 +702,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         new IdleConfig(true, 200L),
         null,
+        null,
         null
     )
     {
@@ -809,6 +810,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
+        null,
         null,
         null
     )
@@ -1110,6 +1112,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         new IdleConfig(true, 200L),
         null,
+        null,
         null
     ) {};
 
@@ -1329,6 +1332,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         new IdleConfig(true, 200L),
         stopTaskCount,
+        null,
         null
     )
     {
@@ -1564,6 +1568,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
+        null,
         null,
         null
     )
@@ -2614,6 +2619,30 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       {
         return new LagStats(0, 0, 0);
       }
+
+      @Override
+      protected boolean isEndOffsetExclusive()
+      {
+        return true;
+      }
+
+      @Override
+      protected boolean isOffsetAtOrBeyond(String current, String target)
+      {
+        return Long.parseLong(current) >= Long.parseLong(target);
+      }
+
+      @Override
+      protected String createPartitionIdFromString(String partitionIdString)
+      {
+        return partitionIdString;
+      }
+
+      @Override
+      protected String createSequenceOffsetFromObject(Object offsetObj)
+      {
+        return offsetObj.toString();
+      }
     };
     supervisor.scheduleReporting(executorService);
     EasyMock.verify(executorService, spec);
@@ -2722,6 +2751,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -2788,6 +2818,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         1, // ensure this is overridden
+        null,
         null
     )
     {
@@ -3106,7 +3137,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
-        serverPriorityToReplicas
+        serverPriorityToReplicas,
+        null
     )
     {
     };
@@ -3292,7 +3324,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           minimumMessageTime,
           maximumMessageTime,
           ioConfig.getInputFormat(),
-          ioConfig.getTaskDuration().getStandardMinutes()
+          ioConfig.getTaskDuration().getStandardMinutes(),
+          null
       )
       {
       };
@@ -3445,6 +3478,30 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     {
       return false;
     }
+
+    @Override
+    protected boolean isEndOffsetExclusive()
+    {
+      return true;
+    }
+
+    @Override
+    protected boolean isOffsetAtOrBeyond(String current, String target)
+    {
+      return Long.parseLong(current) >= Long.parseLong(target);
+    }
+
+    @Override
+    protected String createPartitionIdFromString(String partitionIdString)
+    {
+      return partitionIdString;
+    }
+
+    @Override
+    protected String createSequenceOffsetFromObject(Object offsetObj)
+    {
+      return offsetObj.toString();
+    }
   }
 
   private class TestSeekableStreamSupervisor extends BaseTestSeekableStreamSupervisor
@@ -3585,6 +3642,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           this::emitNoticesQueueSize
       );
     }
+
+    @Override
+    protected boolean isEndOffsetExclusive()
+    {
+      return true;
+    }
   }
 
   private static class TestTaskRunnerWorkItem extends TaskRunnerWorkItem
@@ -3673,7 +3736,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             minimumMessageTime,
             maximumMessageTime,
             ioConfig.getInputFormat(),
-            ioConfig.getTaskDuration().getStandardMinutes()
+            ioConfig.getTaskDuration().getStandardMinutes(),
+            null
     )
     {
     };
