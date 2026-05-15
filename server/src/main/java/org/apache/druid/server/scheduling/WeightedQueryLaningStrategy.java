@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.server.QueryLaningStrategy;
+import org.apache.druid.server.QueryScheduler;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -89,6 +90,14 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
     Preconditions.checkArgument(
         lanes != null && !lanes.isEmpty(),
         "At least one lane must be defined"
+    );
+    Preconditions.checkArgument(
+        lanes.keySet().stream().noneMatch(QueryScheduler.TOTAL::equals),
+        "Lane cannot be named 'total'"
+    );
+    Preconditions.checkArgument(
+        lanes.keySet().stream().noneMatch("default"::equals),
+        "Lane cannot be named 'default'"
     );
 
     this.segmentCountThreshold = segmentCountThreshold == null ? DEFAULT_SEGMENT_THRESHOLD : segmentCountThreshold;
