@@ -126,8 +126,8 @@ class GlobsTest
     final Globs.CompiledGlob compiled = Globs.compile("us-*");
     Assertions.assertFalse(compiled.matchAny);
     Assertions.assertNotNull(compiled.pattern);
-    Assertions.assertTrue(compiled.pattern.matcher("us-east-1").matches());
-    Assertions.assertFalse(compiled.pattern.matcher("eu-west").matches());
+    Assertions.assertTrue(compiled.matches("us-east-1"));
+    Assertions.assertFalse(compiled.matches("eu-west"));
   }
 
   @Test
@@ -138,7 +138,7 @@ class GlobsTest
     final Globs.CompiledGlob compiled = Globs.compile("null");
     Assertions.assertFalse(compiled.matchAny);
     Assertions.assertNotNull(compiled.pattern);
-    Assertions.assertTrue(compiled.pattern.matcher("null").matches());
-    Assertions.assertFalse(compiled.pattern.matcher("nullx").matches());
+    Assertions.assertTrue(compiled.matches("null"));
+    Assertions.assertFalse(compiled.matches("nullx"));
   }
 }

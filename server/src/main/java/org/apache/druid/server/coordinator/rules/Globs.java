@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.rules;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 
 import javax.annotation.Nullable;
@@ -145,7 +146,7 @@ public final class Globs
    */
   public static final class CompiledGlob
   {
-    static final CompiledGlob MATCH_ANY = new CompiledGlob(true, null);
+    public static final CompiledGlob MATCH_ANY = new CompiledGlob(true, null);
 
     final boolean matchAny;
     @Nullable
@@ -153,8 +154,29 @@ public final class Globs
 
     private CompiledGlob(boolean matchAny, @Nullable Pattern pattern)
     {
+      if (matchAny) {
+        DruidException.conditionalDefensive(pattern == null, "matchAny=true must not carry a pattern");
+      } else {
+        DruidException.conditionalDefensive(pattern != null, "pattern must be non-null when matchAny=false");
+      }
       this.matchAny = matchAny;
       this.pattern = pattern;
+    }
+
+    public boolean matches(@Nullable String value)
+    {
+      if (matchAny) {
+        return true;
+      }
+      if (value == null) {
+        return false;
+      }
+      return pattern.matcher(value).matches();
+    }
+
+    public boolean isMatchAny()
+    {
+      return matchAny;
     }
   }
 }

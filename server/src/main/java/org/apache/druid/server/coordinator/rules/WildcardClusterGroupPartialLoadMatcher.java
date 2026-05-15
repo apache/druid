@@ -280,8 +280,8 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
       final int idx = clusteringColumns.indexOf(resolvedColumn);
       // resolved is guaranteed to map every patternKey to a real clustering column (else the pattern was skipped).
       final Globs.CompiledGlob glob = entry.getValue();
-      if (glob.matchAny) {
-        // Literal "*" — matches every value, including null.
+      if (glob.isMatchAny()) {
+        // Literal "*" matches every value, including null.
         continue;
       }
       final Object value = tuple.get(idx);
@@ -289,7 +289,7 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
         // Any non-"*" glob cannot match a null clustering value.
         return false;
       }
-      if (!glob.pattern.matcher(value.toString()).matches()) {
+      if (!glob.matches(value.toString())) {
         return false;
       }
     }
