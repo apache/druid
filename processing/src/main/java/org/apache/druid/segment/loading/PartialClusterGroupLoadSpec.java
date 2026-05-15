@@ -32,56 +32,57 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * A {@link PartialLoadSpec} that requests partial loading of a segment's projections. The base class carries the
- * common {@code fingerprint} and {@code delegate} wire fields; this subtype adds the resolved projection names that
+ * A {@link PartialLoadSpec} that requests partial loading of a clustered segment's cluster groups. The base class
+ * carries the common {@code fingerprint} and {@code delegate} wire fields; this subtype adds the resolved
+ * {@code clusterGroupIndices} (positions into {@link org.apache.druid.timeline.ClusterGroupTuples#getTuples()}) that
  * the historical should range-read into the local segment.
  */
-@JsonTypeName(PartialProjectionLoadSpec.TYPE)
-public class PartialProjectionLoadSpec extends PartialLoadSpec
+@JsonTypeName(PartialClusterGroupLoadSpec.TYPE)
+public class PartialClusterGroupLoadSpec extends PartialLoadSpec
 {
-  public static final String TYPE = "partialProjection";
+  public static final String TYPE = "partialClusterGroup";
 
   /**
-   * Builds the raw wire-form {@link Map} representation of a {@link PartialProjectionLoadSpec} request. Used by the
+   * Builds the raw wire-form {@link Map} representation of a {@link PartialClusterGroupLoadSpec} request. Used by the
    * coordinator-side matcher (which doesn't instantiate the typed class because doing so would require plumbing an
    * {@link ObjectMapper} through every matcher just to satisfy the constructor's lazy-delegate supplier).
    */
   public static Map<String, Object> wireForm(
       Map<String, Object> delegate,
-      List<String> projections,
+      List<Integer> clusterGroupIndices,
       String fingerprint
   )
   {
     return Map.of(
         "type", TYPE,
         "delegate", delegate,
-        "projections", projections,
+        "clusterGroupIndices", clusterGroupIndices,
         "fingerprint", fingerprint
     );
   }
 
-  private final List<String> projections;
+  private final List<Integer> clusterGroupIndices;
 
   @JsonCreator
-  public PartialProjectionLoadSpec(
+  public PartialClusterGroupLoadSpec(
       @JsonProperty("delegate") Map<String, Object> delegate,
-      @JsonProperty("projections") List<String> projections,
+      @JsonProperty("clusterGroupIndices") List<Integer> clusterGroupIndices,
       @JsonProperty("fingerprint") String fingerprint,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
     super(delegate, fingerprint, jsonMapper);
     Preconditions.checkArgument(
-        !CollectionUtils.isNullOrEmpty(projections),
-        "projections must not be null or empty"
+        !CollectionUtils.isNullOrEmpty(clusterGroupIndices),
+        "clusterGroupIndices must not be null or empty"
     );
-    this.projections = List.copyOf(projections);
+    this.clusterGroupIndices = List.copyOf(clusterGroupIndices);
   }
 
   @JsonProperty
-  public List<String> getProjections()
+  public List<Integer> getClusterGroupIndices()
   {
-    return projections;
+    return clusterGroupIndices;
   }
 
   @Override
@@ -93,24 +94,24 @@ public class PartialProjectionLoadSpec extends PartialLoadSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    PartialProjectionLoadSpec that = (PartialProjectionLoadSpec) o;
+    PartialClusterGroupLoadSpec that = (PartialClusterGroupLoadSpec) o;
     return Objects.equals(getDelegate(), that.getDelegate())
-        && Objects.equals(projections, that.projections)
+        && Objects.equals(clusterGroupIndices, that.clusterGroupIndices)
         && Objects.equals(getFingerprint(), that.getFingerprint());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(getDelegate(), projections, getFingerprint());
+    return Objects.hash(getDelegate(), clusterGroupIndices, getFingerprint());
   }
 
   @Override
   public String toString()
   {
-    return "PartialProjectionLoadSpec{" +
+    return "PartialClusterGroupLoadSpec{" +
            "delegate=" + getDelegate() +
-           ", projections=" + projections +
+           ", clusterGroupIndices=" + clusterGroupIndices +
            ", fingerprint=" + getFingerprint() +
            '}';
   }

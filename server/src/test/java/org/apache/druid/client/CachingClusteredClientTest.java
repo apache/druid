@@ -2761,6 +2761,7 @@ public class CachingClusteredClientTest
             null,
             null,
             null,
+            null,
             NoneShardSpec.instance(),
             null,
             -1,
