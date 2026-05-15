@@ -42,7 +42,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -84,10 +83,6 @@ public class KubernetesTaskExecutionConfigResourceTest
         new TaskTypePodTemplateSelectStrategy(), 10
     );
 
-    EasyMock.expect(configManager.watch(
-        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        KubernetesTaskRunnerDynamicConfig.class
-    )).andReturn(new AtomicReference<>(null));
     expectAuditInfoRequest();
     EasyMock.expect(configManager.set(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
@@ -113,10 +108,6 @@ public class KubernetesTaskExecutionConfigResourceTest
         new TaskTypePodTemplateSelectStrategy(), 10
     );
 
-    EasyMock.expect(configManager.watch(
-        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        KubernetesTaskRunnerDynamicConfig.class
-    )).andReturn(new AtomicReference<>(null));
     expectAuditInfoRequest();
     EasyMock.expect(configManager.set(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
@@ -132,22 +123,23 @@ public class KubernetesTaskExecutionConfigResourceTest
   @Test
   public void setExecutionConfig_MergeUsesCurrentCapacityWhenRequestCapacityNull()
   {
+    PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
+    KubernetesTaskRunnerDynamicConfig currentDynamic = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 5);
+    KubernetesTaskRunnerEffectiveConfig effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(
+        new KubernetesTaskRunnerStaticConfig(),
+        Suppliers.ofInstance(currentDynamic)
+    );
+
     KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
         configManager,
         auditManager,
-        DEFAULT_CONFIG
+        effectiveConfig
     );
 
-    PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
-    KubernetesTaskRunnerDynamicConfig currentDynamic = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 5);
     PodTemplateSelectStrategy requestStrategy = new TaskTypePodTemplateSelectStrategy();
     KubernetesTaskRunnerDynamicConfig requestConfig = new DefaultKubernetesTaskRunnerDynamicConfig(requestStrategy, null);
     KubernetesTaskRunnerDynamicConfig expectedMergedConfig = new DefaultKubernetesTaskRunnerDynamicConfig(requestStrategy, 5);
 
-    EasyMock.expect(configManager.watch(
-        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        KubernetesTaskRunnerDynamicConfig.class
-    )).andReturn(new AtomicReference<>(currentDynamic));
     expectAuditInfoRequest();
     EasyMock.expect(configManager.set(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
@@ -163,21 +155,22 @@ public class KubernetesTaskExecutionConfigResourceTest
   @Test
   public void setExecutionConfig_MergeUsesCurrentStrategyWhenRequestStrategyNull()
   {
+    PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
+    KubernetesTaskRunnerDynamicConfig currentDynamic = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 2);
+    KubernetesTaskRunnerEffectiveConfig effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(
+        new KubernetesTaskRunnerStaticConfig(),
+        Suppliers.ofInstance(currentDynamic)
+    );
+
     KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
         configManager,
         auditManager,
-        DEFAULT_CONFIG
+        effectiveConfig
     );
 
-    PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
-    KubernetesTaskRunnerDynamicConfig currentDynamic = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 2);
     KubernetesTaskRunnerDynamicConfig requestConfig = new DefaultKubernetesTaskRunnerDynamicConfig(null, 7);
     KubernetesTaskRunnerDynamicConfig expectedMergedConfig = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 7);
 
-    EasyMock.expect(configManager.watch(
-        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        KubernetesTaskRunnerDynamicConfig.class
-    )).andReturn(new AtomicReference<>(currentDynamic));
     expectAuditInfoRequest();
     EasyMock.expect(configManager.set(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
@@ -193,21 +186,22 @@ public class KubernetesTaskExecutionConfigResourceTest
   @Test
   public void setExecutionConfig_MergeUsesCurrentWhenBothRequestFieldsNull()
   {
+    PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
+    KubernetesTaskRunnerDynamicConfig currentDynamic = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 9);
+    KubernetesTaskRunnerEffectiveConfig effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(
+        new KubernetesTaskRunnerStaticConfig(),
+        Suppliers.ofInstance(currentDynamic)
+    );
+
     KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
         configManager,
         auditManager,
-        DEFAULT_CONFIG
+        effectiveConfig
     );
 
-    PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
-    KubernetesTaskRunnerDynamicConfig currentDynamic = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 9);
     KubernetesTaskRunnerDynamicConfig requestConfig = new DefaultKubernetesTaskRunnerDynamicConfig(null, null);
     KubernetesTaskRunnerDynamicConfig expectedMergedConfig = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 9);
 
-    EasyMock.expect(configManager.watch(
-        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        KubernetesTaskRunnerDynamicConfig.class
-    )).andReturn(new AtomicReference<>(currentDynamic));
     expectAuditInfoRequest();
     EasyMock.expect(configManager.set(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
@@ -240,10 +234,6 @@ public class KubernetesTaskExecutionConfigResourceTest
         null
     );
 
-    EasyMock.expect(configManager.watch(
-        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        KubernetesTaskRunnerDynamicConfig.class
-    )).andReturn(new AtomicReference<>(null));
     expectAuditInfoRequest();
     EasyMock.expect(configManager.set(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
@@ -273,35 +263,6 @@ public class KubernetesTaskExecutionConfigResourceTest
     KubernetesTaskRunnerDynamicConfig returnedConfig = (KubernetesTaskRunnerDynamicConfig) result.getEntity();
     assertNotNull(returnedConfig);
     assertEquals(DEFAULT_DYNAMIC_CONFIG, returnedConfig);
-  }
-
-  @Test
-  public void getExecutionConfig_ReturnsEffectiveConfig()
-  {
-    KubernetesTaskRunnerEffectiveConfig effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(
-        KubernetesTaskRunnerConfig.builder()
-                                  .withCapacity(10)
-                                  .build(),
-        Suppliers.ofInstance(
-            new DefaultKubernetesTaskRunnerDynamicConfig(
-                new TaskTypePodTemplateSelectStrategy(),
-                null
-            )
-        )
-    );
-    EasyMock.replay(configManager, auditManager);
-
-    KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
-        configManager,
-        auditManager,
-        effectiveConfig
-    );
-
-    Response result = testedResource.getExecutionConfig();
-    assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
-
-    KubernetesTaskRunnerDynamicConfig returnedConfig = (KubernetesTaskRunnerDynamicConfig) result.getEntity();
-    assertEquals(new DefaultKubernetesTaskRunnerDynamicConfig(new TaskTypePodTemplateSelectStrategy(), 10), returnedConfig);
   }
 
   @Test

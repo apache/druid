@@ -44,7 +44,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Resource that manages Kubernetes-specific execution configurations for running tasks.
@@ -59,7 +58,6 @@ public class KubernetesTaskExecutionConfigResource
   private final JacksonConfigManager configManager;
   private final AuditManager auditManager;
   private final KubernetesTaskRunnerEffectiveConfig effectiveConfig;
-  private AtomicReference<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef = null;
 
   @Inject
   public KubernetesTaskExecutionConfigResource(
@@ -88,11 +86,11 @@ public class KubernetesTaskExecutionConfigResource
       @Context final HttpServletRequest req
   )
   {
-    KubernetesTaskRunnerDynamicConfig currentConfig = getPersistedDynamicConfig();
+    final KubernetesTaskRunnerDynamicConfig persistedDynamicConfig = effectiveConfig.getDynamicConfig();
     KubernetesTaskRunnerDynamicConfig mergedConfig = dynamicConfig;
 
-    if (currentConfig != null) {
-      mergedConfig = currentConfig.merge(dynamicConfig);
+    if (persistedDynamicConfig != null) {
+      mergedConfig = persistedDynamicConfig.merge(dynamicConfig);
     }
 
     final ConfigManager.SetResult setResult = configManager.set(
@@ -159,22 +157,14 @@ public class KubernetesTaskExecutionConfigResource
   @ResourceFilters(ConfigResourceFilter.class)
   public Response getExecutionConfig()
   {
-    return Response.ok(getCurrentConfiguration()).build();
+    return Response.ok(getEffectiveConfig()).build();
   }
 
-  private KubernetesTaskRunnerDynamicConfig getCurrentConfiguration()
+  private KubernetesTaskRunnerDynamicConfig getEffectiveConfig()
   {
     return new DefaultKubernetesTaskRunnerDynamicConfig(
         effectiveConfig.getPodTemplateSelectStrategy(),
         effectiveConfig.getCapacity()
     );
-  }
-
-  private KubernetesTaskRunnerDynamicConfig getPersistedDynamicConfig()
-  {
-    if (dynamicConfigRef == null) {
-      dynamicConfigRef = configManager.watch(KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, KubernetesTaskRunnerDynamicConfig.class);
-    }
-    return dynamicConfigRef.get();
   }
 }
