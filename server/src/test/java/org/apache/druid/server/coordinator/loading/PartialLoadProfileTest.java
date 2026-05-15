@@ -135,4 +135,31 @@ public class PartialLoadProfileTest
                   .usingGetClass()
                   .verify();
   }
+
+  @Test
+  public void testInterningSharesReferenceForEquivalentProfiles()
+  {
+    // Two semantically-identical forLoaded calls (same wrappedLoadSpec contents, same fingerprint, same loadedBytes)
+    // should resolve to the same instance via the static interner. This is the win that lets multiple replicas of the
+    // same partial load share the heavy wrappedLoadSpec map by reference.
+    Map<String, Object> a = new HashMap<>(WRAPPED);
+    Map<String, Object> b = new HashMap<>(WRAPPED);
+    PartialLoadProfile pa = PartialLoadProfile.forLoaded(a, FINGERPRINT, 12345L);
+    PartialLoadProfile pb = PartialLoadProfile.forLoaded(b, FINGERPRINT, 12345L);
+    Assertions.assertSame(pa, pb);
+
+    // Different loadedBytes ⇒ different profile, no sharing.
+    PartialLoadProfile pc = PartialLoadProfile.forLoaded(WRAPPED, FINGERPRINT, 99999L);
+    Assertions.assertNotSame(pa, pc);
+
+    // Different fingerprint ⇒ different profile, no sharing.
+    PartialLoadProfile pd = PartialLoadProfile.forLoaded(WRAPPED, "v1:differentfingerprint", 12345L);
+    Assertions.assertNotSame(pa, pd);
+
+    // Full-fallback variants intern independently of forLoaded variants.
+    PartialLoadProfile fb1 = PartialLoadProfile.forFullFallback(FINGERPRINT, 12345L);
+    PartialLoadProfile fb2 = PartialLoadProfile.forFullFallback(FINGERPRINT, 12345L);
+    Assertions.assertSame(fb1, fb2);
+    Assertions.assertNotSame(pa, fb1);
+  }
 }
