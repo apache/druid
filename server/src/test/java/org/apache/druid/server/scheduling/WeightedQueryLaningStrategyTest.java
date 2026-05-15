@@ -201,6 +201,36 @@ public class WeightedQueryLaningStrategyTest
   }
 
   @Test
+  public void testValidation_reservedLaneNameTotal()
+  {
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new WeightedQueryLaningStrategy(
+            null,
+            null,
+            10,
+            null,
+            Map.of("total", new WeightedQueryLaningStrategy.LaneConfig(1, 30))
+        )
+    );
+  }
+
+  @Test
+  public void testValidation_reservedLaneNameDefault()
+  {
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new WeightedQueryLaningStrategy(
+            null,
+            null,
+            10,
+            null,
+            Map.of("default", new WeightedQueryLaningStrategy.LaneConfig(1, 30))
+        )
+    );
+  }
+
+  @Test
   public void testLaneConfig_invalidMinScore()
   {
     Assert.assertThrows(
