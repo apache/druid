@@ -26,6 +26,7 @@ import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.sync.CatalogClient;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
@@ -112,7 +113,7 @@ public class CatalogCompactionTest extends EmbeddedClusterTestBase
 
     // Create a catalog compaction config
     CatalogDataSourceCompactionConfig compactionConfig =
-        new CatalogDataSourceCompactionConfig(dataSource, null, Period.ZERO, null, null, null, null);
+        new CatalogDataSourceCompactionConfig(dataSource, CompactionEngine.NATIVE, Period.ZERO, null, null, null, null);
 
     final CompactionSupervisorSpec compactionSupervisor
         = new CompactionSupervisorSpec(compactionConfig, false, null);
@@ -123,6 +124,7 @@ public class CatalogCompactionTest extends EmbeddedClusterTestBase
         event -> event.hasMetricName("task/run/time")
                       .hasDimension(DruidMetrics.TASK_TYPE, "compact")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasDimension(DruidMetrics.TASK_STATUS, "SUCCESS")
     );
 
     // Verify that segments are now compacted to MONTH granularity

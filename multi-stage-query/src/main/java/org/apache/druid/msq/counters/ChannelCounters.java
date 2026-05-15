@@ -27,6 +27,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 
@@ -62,11 +63,23 @@ public class ChannelCounters implements QueryCounter
   @GuardedBy("this")
   private final LongList loadBytes = new LongArrayList();
 
+  /**
+   * Segment load time. Stored here in nanos, snapshotted in millis.
+   */
   @GuardedBy("this")
   private final LongList loadTime = new LongArrayList();
 
+  /**
+   * Segment load waiting time. Stored here in nanos, snapshotted in millis.
+   */
   @GuardedBy("this")
   private final LongList loadWait = new LongArrayList();
+
+  @GuardedBy("this")
+  private final LongList queries = new LongArrayList();
+
+  @GuardedBy("this")
+  private final LongList totalQueries = new LongArrayList();
 
   public void incrementRowCount()
   {
@@ -99,8 +112,8 @@ public class ChannelCounters implements QueryCounter
       addLoad(
           NO_PARTITION,
           loadResult.getLoadSizeBytes(),
-          TimeUnit.NANOSECONDS.toMillis(loadResult.getLoadTimeNanos()),
-          TimeUnit.NANOSECONDS.toMillis(loadResult.getWaitTimeNanos()),
+          loadResult.getLoadTimeNanos(),
+          loadResult.getWaitTimeNanos(),
           1
       );
     }
@@ -117,11 +130,34 @@ public class ChannelCounters implements QueryCounter
     add(partitionNumber, rac.numRows(), numBytes, 1, 0);
   }
 
-  public ChannelCounters setTotalFiles(final long nFiles)
+  public ChannelCounters addTotalFiles(final long nFiles)
   {
     synchronized (this) {
       ensureCapacityForPartition(NO_PARTITION);
-      totalFiles.set(NO_PARTITION, nFiles);
+      totalFiles.set(NO_PARTITION, totalFiles.getLong(NO_PARTITION) + nFiles);
+      return this;
+    }
+  }
+
+  /**
+   * Increment the number of queries made via {@link DataServerQueryHandler}.
+   */
+  public void incrementQueries()
+  {
+    synchronized (this) {
+      ensureCapacityForPartition(NO_PARTITION);
+      queries.set(NO_PARTITION, queries.getLong(NO_PARTITION) + 1);
+    }
+  }
+
+  /**
+   * Total expected number of queries to be made via {@link DataServerQueryHandler}.
+   */
+  public ChannelCounters addTotalQueries(final long n)
+  {
+    synchronized (this) {
+      ensureCapacityForPartition(NO_PARTITION);
+      totalQueries.set(NO_PARTITION, totalQueries.getLong(NO_PARTITION) + n);
       return this;
     }
   }
@@ -182,6 +218,14 @@ public class ChannelCounters implements QueryCounter
     while (partitionNumber >= totalFiles.size()) {
       totalFiles.add(0);
     }
+
+    while (partitionNumber >= queries.size()) {
+      queries.add(0);
+    }
+
+    while (partitionNumber >= totalQueries.size()) {
+      totalQueries.add(0);
+    }
   }
 
   @GuardedBy("this")
@@ -217,6 +261,8 @@ public class ChannelCounters implements QueryCounter
     final long[] loadTimeArray;
     final long[] loadWaitArray;
     final long[] loadFilesArray;
+    final long[] queriesArray;
+    final long[] totalQueriesArray;
 
     synchronized (this) {
       rowsArray = listToArray(rows);
@@ -228,6 +274,8 @@ public class ChannelCounters implements QueryCounter
       loadTimeArray = listToArray(loadTime);
       loadWaitArray = listToArray(loadWait);
       loadFilesArray = listToArray(loadFiles);
+      queriesArray = listToArray(queries);
+      totalQueriesArray = listToArray(totalQueries);
     }
 
     if (rowsArray == null
@@ -239,9 +287,25 @@ public class ChannelCounters implements QueryCounter
         && loadTimeArray == null
         && loadWaitArray == null
         && loadFilesArray == null
+        && queriesArray == null
+        && totalQueriesArray == null
     ) {
       return null;
     } else {
+      if (loadTimeArray != null) {
+        // Stored as nanoseconds, snapshotted as milliseconds.
+        for (int i = 0; i < loadTimeArray.length; i++) {
+          loadTimeArray[i] = TimeUnit.NANOSECONDS.toMillis(loadTimeArray[i]);
+        }
+      }
+
+      if (loadWaitArray != null) {
+        // Stored as nanoseconds, snapshotted as milliseconds.
+        for (int i = 0; i < loadWaitArray.length; i++) {
+          loadWaitArray[i] = TimeUnit.NANOSECONDS.toMillis(loadWaitArray[i]);
+        }
+      }
+
       return new Snapshot(
           rowsArray,
           bytesArray,
@@ -251,7 +315,9 @@ public class ChannelCounters implements QueryCounter
           loadBytesArray,
           loadTimeArray,
           loadWaitArray,
-          loadFilesArray
+          loadFilesArray,
+          queriesArray,
+          totalQueriesArray
       );
     }
   }
@@ -287,6 +353,8 @@ public class ChannelCounters implements QueryCounter
     private final long[] loadTime;
     private final long[] loadWait;
     private final long[] loadFiles;
+    private final long[] queries;
+    private final long[] totalQueries;
 
     @JsonCreator
     public Snapshot(
@@ -298,7 +366,9 @@ public class ChannelCounters implements QueryCounter
         @Nullable @JsonProperty("loadBytes") final long[] loadBytes,
         @Nullable @JsonProperty("loadTime") final long[] loadTime,
         @Nullable @JsonProperty("loadWait") final long[] loadWait,
-        @Nullable @JsonProperty("loadFiles") final long[] loadFiles
+        @Nullable @JsonProperty("loadFiles") final long[] loadFiles,
+        @Nullable @JsonProperty("queries") final long[] queries,
+        @Nullable @JsonProperty("totalQueries") final long[] totalQueries
     )
     {
       this.rows = rows;
@@ -310,6 +380,8 @@ public class ChannelCounters implements QueryCounter
       this.loadTime = loadTime;
       this.loadWait = loadWait;
       this.loadFiles = loadFiles;
+      this.queries = queries;
+      this.totalQueries = totalQueries;
     }
 
     @JsonProperty
@@ -375,6 +447,20 @@ public class ChannelCounters implements QueryCounter
       return loadFiles;
     }
 
+    @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public long[] getQueries()
+    {
+      return queries;
+    }
+
+    @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public long[] getTotalQueries()
+    {
+      return totalQueries;
+    }
+
     @Override
     public boolean equals(Object o)
     {
@@ -393,7 +479,9 @@ public class ChannelCounters implements QueryCounter
              && Arrays.equals(loadBytes, snapshot.loadBytes)
              && Arrays.equals(loadTime, snapshot.loadTime)
              && Arrays.equals(loadWait, snapshot.loadWait)
-             && Arrays.equals(loadFiles, snapshot.loadFiles);
+             && Arrays.equals(loadFiles, snapshot.loadFiles)
+             && Arrays.equals(queries, snapshot.queries)
+             && Arrays.equals(totalQueries, snapshot.totalQueries);
     }
 
     @Override
@@ -408,6 +496,8 @@ public class ChannelCounters implements QueryCounter
       result = 31 * result + Arrays.hashCode(loadTime);
       result = 31 * result + Arrays.hashCode(loadWait);
       result = 31 * result + Arrays.hashCode(loadFiles);
+      result = 31 * result + Arrays.hashCode(queries);
+      result = 31 * result + Arrays.hashCode(totalQueries);
       return result;
     }
 
@@ -424,6 +514,8 @@ public class ChannelCounters implements QueryCounter
              ", loadTime=" + Arrays.toString(loadTime) +
              ", loadWait=" + Arrays.toString(loadWait) +
              ", loadFiles=" + Arrays.toString(loadFiles) +
+             ", queries=" + Arrays.toString(queries) +
+             ", totalQueries=" + Arrays.toString(totalQueries) +
              '}';
     }
   }

@@ -24,7 +24,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.msq.indexing.processor.SegmentGeneratorStageProcessor;
+import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -77,4 +79,14 @@ public interface StageProcessor<R, ExtraInfoType>
    */
   @SuppressWarnings("rawtypes")
   ExtraInfoHolder makeExtraInfoHolder(@Nullable ExtraInfoType extra);
+
+  /**
+   * Produces an optional {@link SegmentPruner}, which can used for best-effort pruning of {@link DataSegment} objects
+   * by processors which deal with them
+   */
+  @Nullable
+  default SegmentPruner getPruner(InputSpec inputSpec, int inputNumber)
+  {
+    return null;
+  }
 }

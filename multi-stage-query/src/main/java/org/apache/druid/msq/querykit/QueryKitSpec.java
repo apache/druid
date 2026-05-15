@@ -19,45 +19,29 @@
 
 package org.apache.druid.msq.querykit;
 
-import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.kernel.QueryDefinition;
-import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.query.Query;
 
 /**
- * Collection of parameters for {@link QueryKit#makeQueryDefinition}.
+ * Container for {@link QueryKit} plus the queryId that we want to build.
  */
 public class QueryKitSpec
 {
   private final QueryKit<Query<?>> queryKit;
   private final String queryId;
-  private final int maxLeafWorkerCount;
-  private final int maxNonLeafWorkerCount;
-  private final int targetPartitionsPerWorker;
 
   /**
-   * @param queryKit                  kit that is used to translate native subqueries; i.e.,
-   *                                  {@link org.apache.druid.query.QueryDataSource}. Typically a {@link MultiQueryKit}.
-   * @param queryId                   queryId of the resulting {@link QueryDefinition}
-   * @param maxLeafWorkerCount        maximum number of workers for leaf stages: becomes
-   *                                  {@link StageDefinition#getMaxWorkerCount()}
-   * @param maxNonLeafWorkerCount     maximum number of workers for non-leaf stages: becomes
-   *                                  {@link StageDefinition#getMaxWorkerCount()}
-   * @param targetPartitionsPerWorker preferred number of partitions per worker for subqueries
+   * @param queryKit              kit that is used to translate native subqueries; i.e.,
+   *                              {@link org.apache.druid.query.QueryDataSource}. Typically a {@link MultiQueryKit}.
+   * @param queryId               queryId of the resulting {@link QueryDefinition}
    */
   public QueryKitSpec(
       QueryKit<Query<?>> queryKit,
-      String queryId,
-      int maxLeafWorkerCount,
-      int maxNonLeafWorkerCount,
-      int targetPartitionsPerWorker
+      String queryId
   )
   {
     this.queryId = queryId;
     this.queryKit = queryKit;
-    this.maxLeafWorkerCount = maxLeafWorkerCount;
-    this.maxNonLeafWorkerCount = maxNonLeafWorkerCount;
-    this.targetPartitionsPerWorker = targetPartitionsPerWorker;
   }
 
   /**
@@ -74,29 +58,5 @@ public class QueryKitSpec
   public String getQueryId()
   {
     return queryId;
-  }
-
-  /**
-   * Maximum number of workers for leaf stages. See {@link InputSpecs#hasLeafInputs}.
-   */
-  public int getMaxLeafWorkerCount()
-  {
-    return maxLeafWorkerCount;
-  }
-
-  /**
-   * Maximum number of workers for non-leaf stages. See {@link InputSpecs#hasLeafInputs}.
-   */
-  public int getMaxNonLeafWorkerCount()
-  {
-    return maxNonLeafWorkerCount;
-  }
-
-  /**
-   * Number of partitions to generate during a shuffle.
-   */
-  public int getNumPartitionsForShuffle()
-  {
-    return maxNonLeafWorkerCount * targetPartitionsPerWorker;
   }
 }

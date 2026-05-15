@@ -71,7 +71,7 @@ public class InputSourceSampler
   private static final DataSchema DEFAULT_DATA_SCHEMA =
       DataSchema.builder()
                 .withDataSource(SAMPLER_DATA_SOURCE)
-                .withTimestamp(new TimestampSpec(null, null, null))
+                .withTimestamp(TimestampSpec.DEFAULT)
                 .withDimensions(DimensionsSpec.builder().build())
                 .build();
 

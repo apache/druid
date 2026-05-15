@@ -19,6 +19,8 @@
 
 package org.apache.druid.msq.test;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
@@ -27,6 +29,7 @@ import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
+import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerRunRef;
@@ -42,20 +45,28 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MSQTestWorkerClient implements WorkerClient
 {
-  private static final long WORKER_WAIT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(10);
+  private static final long WORKER_WAIT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(30);
 
   protected final Map<String, WorkerRunRef> inMemoryWorkers;
+  private final ObjectMapper objectMapper;
+  private final boolean closeWorkersOnClose;
   private final AtomicBoolean closed = new AtomicBoolean();
 
-  public MSQTestWorkerClient(Map<String, WorkerRunRef> inMemoryWorkers)
+  public MSQTestWorkerClient(
+      Map<String, WorkerRunRef> inMemoryWorkers,
+      ObjectMapper objectMapper,
+      boolean closeWorkersOnClose
+  )
   {
     this.inMemoryWorkers = inMemoryWorkers;
+    this.objectMapper = objectMapper;
+    this.closeWorkersOnClose = closeWorkersOnClose;
   }
 
   @Override
   public ListenableFuture<Void> postWorkOrder(String workerTaskId, WorkOrder workOrder)
   {
-    getWorkerFor(workerTaskId).postWorkOrder(workOrder);
+    getWorkerFor(workerTaskId).postWorkOrder(roundTripSerdeWorkOrder(workOrder));
     return Futures.immediateFuture(null);
   }
 
@@ -186,8 +197,18 @@ public class MSQTestWorkerClient implements WorkerClient
   @Override
   public void close()
   {
-    if (closed.compareAndSet(false, true)) {
+    if (closed.compareAndSet(false, true) && closeWorkersOnClose) {
       inMemoryWorkers.forEach((k, v) -> v.cancel());
     }
+  }
+
+  /**
+   * Using {@link #objectMapper}, convert work order to work order. This ensures that any {@link JacksonInject} fields
+   * present on {@link StageProcessor} are populated. In production, this happens naturally because work orders are
+   * generally sent over HTTP.
+   */
+  private WorkOrder roundTripSerdeWorkOrder(final WorkOrder workOrder)
+  {
+    return objectMapper.convertValue(workOrder, WorkOrder.class);
   }
 }

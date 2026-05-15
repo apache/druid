@@ -119,7 +119,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   private ProtoTestEventWrapper.ProtoTestEvent getTestEvent()
   {
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
-    return ProtobufInputRowParserTest.buildFlatData(dateTime);
+    return ProtobufInputFormatTest.buildFlatData(dateTime);
   }
 
 

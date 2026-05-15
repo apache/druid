@@ -130,7 +130,7 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
             .schema(
                 new IncrementalIndexSchema.Builder()
                     .withRollup(false)
-                    .withTimestampSpec(new TimestampSpec("timestamp", null, null))
+                    .withTimestampSpec(TimestampSpec.DEFAULT)
                     .withDimensionsSpec(new DimensionsSpec(dimensions))
                     .build()
             )

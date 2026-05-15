@@ -35,8 +35,8 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -79,7 +79,7 @@ public class SearchQueryQueryToolChestTest extends InitializedNullHandlingTest
 
     Result<SearchResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result, fromCacheResult);
+    Assertions.assertEquals(result, fromCacheResult);
   }
 
   @Test
@@ -94,9 +94,7 @@ public class SearchQueryQueryToolChestTest extends InitializedNullHandlingTest
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
         ImmutableList.of(Druids.DIMENSION_IDENTITY.apply("v0")),
         VirtualColumns.create(
-            ImmutableList.of(
-                new ExpressionVirtualColumn("v0", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
-            )
+            new ExpressionVirtualColumn("v0", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
         ),
         new FragmentSearchQuerySpec(ImmutableList.of("a", "b")),
         null,
@@ -111,9 +109,7 @@ public class SearchQueryQueryToolChestTest extends InitializedNullHandlingTest
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
         ImmutableList.of(Druids.DIMENSION_IDENTITY.apply("v0")),
         VirtualColumns.create(
-            ImmutableList.of(
-                new ExpressionVirtualColumn("v0", "concat(dim2, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
-            )
+            new ExpressionVirtualColumn("v0", "concat(dim2, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
         ),
         new FragmentSearchQuerySpec(ImmutableList.of("a", "b")),
         null,
@@ -128,31 +124,29 @@ public class SearchQueryQueryToolChestTest extends InitializedNullHandlingTest
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
         ImmutableList.of(Druids.DIMENSION_IDENTITY.apply("v0")),
         VirtualColumns.create(
-            ImmutableList.of(
-                new ExpressionVirtualColumn("v0", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
-            )
+            new ExpressionVirtualColumn("v0", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
         ),
         new FragmentSearchQuerySpec(ImmutableList.of("a", "b")),
         null,
         null
     );
 
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         toolChest.getCacheStrategy(query1).computeCacheKey(query1),
         toolChest.getCacheStrategy(query1).computeCacheKey(query1)
     );
 
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         toolChest.getCacheStrategy(query2).computeCacheKey(query2),
         toolChest.getCacheStrategy(query2).computeCacheKey(query2)
     );
 
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         toolChest.getCacheStrategy(query1).computeCacheKey(query1),
         toolChest.getCacheStrategy(query3).computeCacheKey(query3)
     );
 
-    Assert.assertFalse(
+    Assertions.assertFalse(
         Arrays.equals(
             toolChest.getCacheStrategy(query1).computeCacheKey(query1),
             toolChest.getCacheStrategy(query2).computeCacheKey(query2)

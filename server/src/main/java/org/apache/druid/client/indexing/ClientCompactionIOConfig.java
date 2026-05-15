@@ -35,12 +35,12 @@ public class ClientCompactionIOConfig
 {
   private static final String TYPE = "compact";
 
-  private final ClientCompactionIntervalSpec inputSpec;
+  private final ClientCompactionInputSpec inputSpec;
   private final boolean dropExisting;
 
   @JsonCreator
   public ClientCompactionIOConfig(
-      @JsonProperty("inputSpec") ClientCompactionIntervalSpec inputSpec,
+      @JsonProperty("inputSpec") ClientCompactionInputSpec inputSpec,
       @JsonProperty("dropExisting") @Nullable Boolean dropExisting
   )
   {
@@ -55,7 +55,7 @@ public class ClientCompactionIOConfig
   }
 
   @JsonProperty
-  public ClientCompactionIntervalSpec getInputSpec()
+  public ClientCompactionInputSpec getInputSpec()
   {
     return inputSpec;
   }

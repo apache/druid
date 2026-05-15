@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -44,7 +45,7 @@ import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.filter.DimFilterUtils;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -96,14 +97,14 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
   }
 
   @Override
-  public List<InputSlice> sliceStatic(InputSpec inputSpec, int maxNumSlices)
+  public List<InputSlice> sliceStatic(InputSpec inputSpec, @Nullable SegmentPruner segmentPruner, int maxNumSlices)
   {
     final TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
 
     final List<WeightedInputInstance> prunedPublishedSegments = new ArrayList<>();
     final List<DataSegmentWithInterval> prunedServedSegments = new ArrayList<>();
 
-    for (DataSegmentWithInterval dataSegmentWithInterval : getPrunedSegmentSet(tableInputSpec)) {
+    for (DataSegmentWithInterval dataSegmentWithInterval : getPrunedSegmentSet(tableInputSpec, segmentPruner)) {
       if (dataSegmentWithInterval.segment instanceof DataSegmentWithLocation) {
         prunedServedSegments.add(dataSegmentWithInterval);
       } else {
@@ -125,6 +126,7 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
   @Override
   public List<InputSlice> sliceDynamic(
       InputSpec inputSpec,
+      @Nullable SegmentPruner segmentPruner,
       int maxNumSlices,
       int maxFilesPerSlice,
       long maxBytesPerSlice
@@ -135,7 +137,7 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
     final List<WeightedInputInstance> prunedSegments = new ArrayList<>();
     final List<DataSegmentWithInterval> prunedServedSegments = new ArrayList<>();
 
-    for (DataSegmentWithInterval dataSegmentWithInterval : getPrunedSegmentSet(tableInputSpec)) {
+    for (DataSegmentWithInterval dataSegmentWithInterval : getPrunedSegmentSet(tableInputSpec, segmentPruner)) {
       if (dataSegmentWithInterval.segment instanceof DataSegmentWithLocation) {
         prunedServedSegments.add(dataSegmentWithInterval);
       } else {
@@ -157,7 +159,10 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
     return makeSlices(tableInputSpec, assignments);
   }
 
-  private Set<DataSegmentWithInterval> getPrunedSegmentSet(final TableInputSpec tableInputSpec)
+  private Collection<DataSegmentWithInterval> getPrunedSegmentSet(
+      final TableInputSpec tableInputSpec,
+      @Nullable final SegmentPruner segmentPruner
+  )
   {
     final TimelineLookup<String, DataSegment> timeline =
         getTimeline(tableInputSpec.getDataSource(), tableInputSpec.getIntervals());
@@ -182,13 +187,10 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
                                              .map(segment -> new DataSegmentWithInterval(segment, holder.getInterval()))
                         ).iterator();
 
-      return DimFilterUtils.filterShards(
-          tableInputSpec.getFilter(),
-          tableInputSpec.getFilterFields(),
-          () -> dataSegmentIterator,
-          segment -> segment.getSegment().getShardSpec(),
-          new HashMap<>()
-      );
+      if (segmentPruner == null) {
+        return ImmutableSet.copyOf(dataSegmentIterator);
+      }
+      return segmentPruner.prune(() -> dataSegmentIterator, DataSegmentWithInterval::getSegment);
     }
   }
 

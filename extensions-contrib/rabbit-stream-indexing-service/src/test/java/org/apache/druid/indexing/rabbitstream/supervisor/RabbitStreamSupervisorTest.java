@@ -42,6 +42,7 @@ import org.apache.druid.indexing.rabbitstream.RabbitStreamRecordSupplier;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -66,6 +67,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class RabbitStreamSupervisorTest extends EasyMockSupport
 {
@@ -211,7 +213,9 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod, // latemessagerejection
         earlyMessageRejectionPeriod, // early message rejection
         null, // latemessagerejectionstartdatetime
-        1
+        1,
+        null,
+        null
     );
     RabbitStreamIndexTaskClientFactory clientFactory = new RabbitStreamIndexTaskClientFactory(null,
         OBJECT_MAPPER);
@@ -276,7 +280,9 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         null, // latemessagerejection
         null, // early message rejection
         null, // latemessagerejectionstartdatetime
-        1
+        1,
+        null,
+        null
     );
     RabbitStreamIndexTaskClientFactory clientFactory = new RabbitStreamIndexTaskClientFactory(null,
         OBJECT_MAPPER);
@@ -418,7 +424,9 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
             null, // latemessagerejection
             null, // early message rejection
             null, // latemessagerejectionstartdatetime
-            1
+            1,
+            null,
+            null
         )
     );
 
@@ -457,5 +465,99 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
     EasyMock.replay(differentTaskType);
 
     Assert.assertFalse(supervisor.doesTaskMatchSupervisor(differentTaskType));
+  }
+
+  @Test
+  public void testBoundedModeCreateTasksWithCorrectOffsets()
+  {
+    Map<String, Object> startOffsets = ImmutableMap.of(
+        "queue-0", 100,
+        "queue-1", 200
+    );
+    Map<String, Object> endOffsets = ImmutableMap.of(
+        "queue-0", 500,
+        "queue-1", 600
+    );
+
+    final RabbitStreamSupervisorIOConfig rabbitSupervisorIOConfig = new RabbitStreamSupervisorIOConfig(
+        STREAM,
+        URI,
+        INPUT_FORMAT,
+        1,
+        1,
+        new Period("PT30S"),
+        null,
+        null,
+        null,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        1000,
+        null,
+        new BoundedStreamConfig(startOffsets, endOffsets)
+    );
+
+    Assert.assertTrue(rabbitSupervisorIOConfig.isBounded());
+
+    final RabbitStreamIndexTaskClientFactory taskClientFactory = new RabbitStreamIndexTaskClientFactory(null, OBJECT_MAPPER);
+    final RabbitStreamSupervisorSpec spec = new RabbitStreamSupervisorSpec(
+        null,
+        null,
+        dataSchema,
+        tuningConfig,
+        rabbitSupervisorIOConfig,
+        null,
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        OBJECT_MAPPER,
+        new NoopServiceEmitter(),
+        new DruidMonitorSchedulerConfig(),
+        rowIngestionMetersFactory,
+        new SupervisorStateManagerConfig()
+    );
+
+    supervisor = new RabbitStreamSupervisor(
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        OBJECT_MAPPER,
+        spec,
+        rowIngestionMetersFactory
+    );
+
+    // Test type conversion methods
+    String queueName = supervisor.createPartitionIdFromString("queue-0");
+    Assert.assertEquals("queue-0", queueName);
+
+    Long offset = supervisor.createSequenceOffsetFromObject(100);
+    Assert.assertEquals(Long.valueOf(100L), offset);
+
+    offset = supervisor.createSequenceOffsetFromObject("200");
+    Assert.assertEquals(Long.valueOf(200L), offset);
+
+    // Test isOffsetAtOrBeyond
+    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(500L, 100L));
+    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(100L, 100L));
+    Assert.assertFalse(supervisor.isOffsetAtOrBeyond(50L, 100L));
+  }
+
+  @Test
+  public void testCreateSequenceOffsetFromObject_invalidType()
+  {
+    supervisor = getDefaultSupervisor();
+
+    Exception e = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> supervisor.createSequenceOffsetFromObject(new Object())
+    );
+    Assert.assertTrue(e.getMessage().contains("Cannot convert"));
   }
 }

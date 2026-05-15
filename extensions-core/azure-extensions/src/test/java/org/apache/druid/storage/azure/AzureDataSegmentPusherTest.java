@@ -38,7 +38,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -303,30 +302,6 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     assertEquals(azurePath, MapUtils.getString(loadSpec, "blobPath"));
 
     verifyAll();
-  }
-
-  @Test
-  public void getPathForHadoopWithPrefixTest()
-  {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
-    String hadoopPath = pusher.getPathForHadoop();
-    assertEquals("wasbs://container@account.blob.core.windows.net/prefix/", hadoopPath);
-  }
-
-  @Test
-  public void getPathForHadoopWithoutPrefixTest()
-  {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithoutPrefix);
-    String hadoopPath = pusher.getPathForHadoop();
-    assertEquals("wasbs://container@account.blob.core.windows.net/", hadoopPath);
-  }
-
-  @Test
-  public void test_getAllowedPropertyPrefixesForHadoop_returnsExpcetedPropertyPrefixes()
-  {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
-    List<String> actualPropertyPrefixes = pusher.getAllowedPropertyPrefixesForHadoop();
-    assertEquals(AzureDataSegmentPusher.ALLOWED_PROPERTY_PREFIXES_FOR_HADOOP, actualPropertyPrefixes);
   }
 
   @Test

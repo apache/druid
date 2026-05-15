@@ -20,10 +20,16 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import com.google.common.collect.Lists;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
@@ -123,63 +129,40 @@ public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlin
 
   private MapBasedRow ingestAndQuery(InputStream inputDataStream) throws Exception
   {
-    String ingestionAgg = FixedBucketsHistogramAggregator.TYPE_NAME;
+    List<AggregatorFactory> metricSpec = List.of(
+        new FixedBucketsHistogramAggregatorFactory(
+            "index_fbh", "index", 200, 0, 200,
+            FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, null
+        )
+    );
 
-    String metricSpec = "[{"
-                        + "\"type\": \"" + ingestionAgg + "\","
-                        + "\"name\": \"index_fbh\","
-                        + "\"numBuckets\": 200,"
-                        + "\"lowerLimit\": 0,"
-                        + "\"upperLimit\": 200,"
-                        + "\"outlierHandlingMode\": \"overflow\","
-                        + "\"fieldName\": \"index\""
-                        + "}]";
-
-    String parseSpec = "{"
-                       + "\"type\" : \"string\","
-                       + "\"parseSpec\" : {"
-                       + "    \"format\" : \"tsv\","
-                       + "    \"timestampSpec\" : {"
-                       + "        \"column\" : \"timestamp\","
-                       + "        \"format\" : \"auto\""
-                       + "},"
-                       + "    \"dimensionsSpec\" : {"
-                       + "        \"dimensions\": [],"
-                       + "        \"dimensionExclusions\" : [],"
-                       + "        \"spatialDimensions\" : []"
-                       + "    },"
-                       + "    \"columns\": [\"timestamp\", \"market\", \"quality\", \"placement\", \"placementish\", \"index\"]"
-                       + "  }"
-                       + "}";
-
-    String query = "{"
-                   + "\"queryType\": \"groupBy\","
-                   + "\"dataSource\": \"test_datasource\","
-                   + "\"granularity\": \"ALL\","
-                   + "\"dimensions\": [],"
-                   + "\"aggregations\": ["
-                   + "  {"
-                   + "   \"type\": \"fixedBucketsHistogram\","
-                   + "   \"name\": \"index_fbh\","
-                   + "   \"fieldName\": \"index_fbh\","
-                   + "   \"numBuckets\": 200,"
-                   + "   \"lowerLimit\": 0,"
-                   + "   \"upperLimit\": 200,"
-                   + "   \"outlierHandlingMode\": \"overflow\","
-                   + "   \"finalizeAsBase64Binary\": true"
-                   + "  }"
-                   + "],"
-                   + "\"postAggregations\": ["
-                   + "  { \"type\": \"min\", \"name\": \"index_min\", \"fieldName\": \"index_fbh\"},"
-                   + "  { \"type\": \"max\", \"name\": \"index_max\", \"fieldName\": \"index_fbh\"},"
-                   + "  { \"type\": \"quantile\", \"name\": \"index_quantile\", \"fieldName\": \"index_fbh\", \"probability\" : 0.99 }"
-                   + "],"
-                   + "\"intervals\": [ \"1970/2050\" ]"
-                   + "}";
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource("test_datasource")
+                                     .setGranularity(Granularities.ALL)
+                                     .setInterval("1970/2050")
+                                     .setAggregatorSpecs(
+                                         new FixedBucketsHistogramAggregatorFactory(
+                                             "index_fbh", "index_fbh", 200, 0, 200,
+                                             FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, true
+                                         )
+                                     )
+                                     .setPostAggregatorSpecs(
+                                         new MinPostAggregator("index_min", "index_fbh"),
+                                         new MaxPostAggregator("index_max", "index_fbh"),
+                                         new QuantilePostAggregator("index_quantile", "index_fbh", 0.99f)
+                                     )
+                                     .build();
 
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         inputDataStream,
-        parseSpec,
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "auto", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of())),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "market", "quality", "placement", "placementish", "index")
+        ),
         metricSpec,
         0,
         Granularities.NONE,
@@ -187,6 +170,6 @@ public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlin
         query
     );
 
-    return seq.toList().get(0).toMapBasedRow((GroupByQuery) helper.readQuery(query));
+    return seq.toList().get(0).toMapBasedRow(query);
   }
 }

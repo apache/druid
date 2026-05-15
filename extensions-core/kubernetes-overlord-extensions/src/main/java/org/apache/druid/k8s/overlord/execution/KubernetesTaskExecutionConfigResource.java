@@ -44,6 +44,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Resource that manages Kubernetes-specific execution configurations for running tasks.
@@ -58,6 +59,7 @@ public class KubernetesTaskExecutionConfigResource
   private final JacksonConfigManager configManager;
   private final AuditManager auditManager;
   private final KubernetesTaskRunnerEffectiveConfig effectiveConfig;
+  private AtomicReference<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef = null;
 
   @Inject
   public KubernetesTaskExecutionConfigResource(
@@ -86,8 +88,12 @@ public class KubernetesTaskExecutionConfigResource
       @Context final HttpServletRequest req
   )
   {
-    KubernetesTaskRunnerDynamicConfig currentConfig = getCurrentConfiguration();
-    KubernetesTaskRunnerDynamicConfig mergedConfig = currentConfig.merge(dynamicConfig);
+    KubernetesTaskRunnerDynamicConfig currentConfig = getPersistedDynamicConfig();
+    KubernetesTaskRunnerDynamicConfig mergedConfig = dynamicConfig;
+
+    if (currentConfig != null) {
+      mergedConfig = currentConfig.merge(dynamicConfig);
+    }
 
     final ConfigManager.SetResult setResult = configManager.set(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
@@ -162,5 +168,13 @@ public class KubernetesTaskExecutionConfigResource
         effectiveConfig.getPodTemplateSelectStrategy(),
         effectiveConfig.getCapacity()
     );
+  }
+
+  private KubernetesTaskRunnerDynamicConfig getPersistedDynamicConfig()
+  {
+    if (dynamicConfigRef == null) {
+      dynamicConfigRef = configManager.watch(KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, KubernetesTaskRunnerDynamicConfig.class);
+    }
+    return dynamicConfigRef.get();
   }
 }

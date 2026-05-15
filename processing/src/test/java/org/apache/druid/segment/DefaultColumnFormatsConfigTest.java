@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DefaultColumnFormatsConfigTest
 {
@@ -34,23 +34,24 @@ public class DefaultColumnFormatsConfigTest
   @Test
   public void testDefaultsSerde() throws JsonProcessingException
   {
-    DefaultColumnFormatConfig defaultColumnFormatConfig = new DefaultColumnFormatConfig(null, null, null);
+    DefaultColumnFormatConfig defaultColumnFormatConfig = new DefaultColumnFormatConfig(null, null, null, null);
     String there = MAPPER.writeValueAsString(defaultColumnFormatConfig);
     DefaultColumnFormatConfig andBack = MAPPER.readValue(there, DefaultColumnFormatConfig.class);
-    Assert.assertEquals(defaultColumnFormatConfig, andBack);
-    Assert.assertNull(andBack.getNestedColumnFormatVersion());
-    Assert.assertNull(andBack.getStringMultiValueHandlingMode());
+    Assertions.assertEquals(defaultColumnFormatConfig, andBack);
+    Assertions.assertNull(andBack.getNestedColumnFormatVersion());
+    Assertions.assertNull(andBack.getStringMultiValueHandlingMode());
   }
 
   @Test
   public void testDefaultsSerdeOverride() throws JsonProcessingException
   {
-    DefaultColumnFormatConfig defaultColumnFormatConfig = new DefaultColumnFormatConfig("ARRAY", 5, null);
+    DefaultColumnFormatConfig defaultColumnFormatConfig = new DefaultColumnFormatConfig("ARRAY", 5, null, null);
     String there = MAPPER.writeValueAsString(defaultColumnFormatConfig);
     DefaultColumnFormatConfig andBack = MAPPER.readValue(there, DefaultColumnFormatConfig.class);
-    Assert.assertEquals(defaultColumnFormatConfig, andBack);
-    Assert.assertEquals(5, (int) andBack.getNestedColumnFormatVersion());
-    Assert.assertEquals(DimensionSchema.MultiValueHandling.ARRAY.toString(), andBack.getStringMultiValueHandlingMode());
+    Assertions.assertEquals(defaultColumnFormatConfig, andBack);
+    Assertions.assertEquals(5, (int) andBack.getNestedColumnFormatVersion());
+    Assertions.assertEquals(DimensionSchema.MultiValueHandling.ARRAY.toString(), andBack.getStringMultiValueHandlingMode());
+    Assertions.assertNull(andBack.getMaxStringLength());
   }
 
   @Test

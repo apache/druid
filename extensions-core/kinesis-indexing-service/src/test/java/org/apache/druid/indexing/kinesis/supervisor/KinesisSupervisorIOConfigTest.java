@@ -132,4 +132,76 @@ public class KinesisSupervisorIOConfigTest
     mapper.readValue(jsonStr, KinesisSupervisorIOConfig.class);
   }
 
+  @Test
+  public void testBoundedModeSerdeWithStringOffsets() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"type\": \"kinesis\",\n"
+                     + "  \"stream\": \"my-stream\",\n"
+                     + "  \"boundedStreamConfig\": {\n"
+                     + "    \"startSequenceNumbers\": {\"shardId-000000000000\": \"49590338271490256608559692538361571095921575989136588898\", \"shardId-000000000001\": \"49590338271512257353759162668991891722121171891717232706\"},\n"
+                     + "    \"endSequenceNumbers\": {\"shardId-000000000000\": \"49590338271534258098958632799622211348320767794297876514\", \"shardId-000000000001\": \"49590338271556258844158102930252531974520363696878520322\"}\n"
+                     + "  }\n"
+                     + "}";
+
+    KinesisSupervisorIOConfig config = mapper.readValue(jsonStr, KinesisSupervisorIOConfig.class);
+
+    Assert.assertTrue(config.isBounded());
+    Assert.assertNotNull(config.getBoundedStreamConfig());
+    Assert.assertEquals(2, config.getBoundedStreamConfig().getStartSequenceNumbers().size());
+    Assert.assertEquals(2, config.getBoundedStreamConfig().getEndSequenceNumbers().size());
+  }
+
+  @Test
+  public void testBoundedModeSerdeWithNumericOffsets() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"type\": \"kinesis\",\n"
+                     + "  \"stream\": \"my-stream\",\n"
+                     + "  \"boundedStreamConfig\": {\n"
+                     + "    \"startSequenceNumbers\": {\"shardId-000000000000\": 100, \"shardId-000000000001\": 200},\n"
+                     + "    \"endSequenceNumbers\": {\"shardId-000000000000\": 500, \"shardId-000000000001\": 600}\n"
+                     + "  }\n"
+                     + "}";
+
+    KinesisSupervisorIOConfig config = mapper.readValue(jsonStr, KinesisSupervisorIOConfig.class);
+
+    Assert.assertTrue(config.isBounded());
+    Assert.assertNotNull(config.getBoundedStreamConfig());
+    Assert.assertEquals(2, config.getBoundedStreamConfig().getStartSequenceNumbers().size());
+    Assert.assertEquals(2, config.getBoundedStreamConfig().getEndSequenceNumbers().size());
+  }
+
+  @Test
+  public void testBoundedModeSerdeWithMixedOffsets() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"type\": \"kinesis\",\n"
+                     + "  \"stream\": \"my-stream\",\n"
+                     + "  \"boundedStreamConfig\": {\n"
+                     + "    \"startSequenceNumbers\": {\"shardId-000000000000\": \"49590338271490256608559692538361571095921575989136588898\", \"shardId-000000000001\": 200},\n"
+                     + "    \"endSequenceNumbers\": {\"shardId-000000000000\": 500, \"shardId-000000000001\": \"49590338271556258844158102930252531974520363696878520322\"}\n"
+                     + "  }\n"
+                     + "}";
+
+    KinesisSupervisorIOConfig config = mapper.readValue(jsonStr, KinesisSupervisorIOConfig.class);
+
+    Assert.assertTrue(config.isBounded());
+    Assert.assertNotNull(config.getBoundedStreamConfig());
+  }
+
+  @Test
+  public void testUnboundedModeByDefault() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"type\": \"kinesis\",\n"
+                     + "  \"stream\": \"my-stream\"\n"
+                     + "}";
+
+    KinesisSupervisorIOConfig config = mapper.readValue(jsonStr, KinesisSupervisorIOConfig.class);
+
+    Assert.assertFalse(config.isBounded());
+    Assert.assertNull(config.getBoundedStreamConfig());
+  }
+
 }

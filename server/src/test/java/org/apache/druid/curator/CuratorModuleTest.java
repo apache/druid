@@ -39,18 +39,16 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.ExpectedSystemExit;
 
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public final class CuratorModuleTest
 {
   private static final String CURATOR_CONNECTION_TIMEOUT_MS_KEY =
       CuratorConfig.CONFIG_PREFIX + "." + CuratorConfig.CONNECTION_TIMEOUT_MS;
-
-  @Rule
-  public final ExpectedSystemExit exit = ExpectedSystemExit.none();
 
   @Rule
   public final LoggerCaptureRule logger = new LoggerCaptureRule(CuratorModule.class);
@@ -74,12 +72,12 @@ public final class CuratorModuleTest
   @Test(timeout = 60_000L)
   public void exitsJvmWhenMaxRetriesExceeded() throws Exception
   {
+    CountDownLatch exitCalled = new CountDownLatch(1);
     Properties props = new Properties();
     props.setProperty(CURATOR_CONNECTION_TIMEOUT_MS_KEY, "0");
-    Injector injector = newInjector(props);
+    Injector injector = newInjector(props, exitCalled::countDown);
 
     logger.clearLogEvents();
-    exit.expectSystemExitWithStatus(1);
 
     // This will result in a curator unhandled error since the connection timeout is 0 and retries are disabled
     CuratorFramework curatorFramework = createCuratorFramework(injector, 0);
@@ -100,6 +98,8 @@ public final class CuratorModuleTest
                                        .equals("Unhandled error in Curator, stopping server.")
                      )
     );
+
+    Assert.assertTrue("System.exit was not called within timeout", exitCalled.await(10, TimeUnit.SECONDS));
   }
 
   @Ignore("Verifies changes in https://github.com/apache/druid/pull/8458, but overkill for regular testing")
@@ -109,7 +109,7 @@ public final class CuratorModuleTest
     Properties props = new Properties();
     String deprecatedPropName = CuratorConfig.CONFIG_PREFIX + ".terminateDruidProcessOnConnectFail";
     props.setProperty(deprecatedPropName, "true");
-    Injector injector = newInjector(props);
+    Injector injector = newInjector(props, () -> {});
 
     try {
       injector.getInstance(CuratorFramework.class);
@@ -119,12 +119,12 @@ public final class CuratorModuleTest
     }
   }
 
-  private Injector newInjector(final Properties props)
+  private Injector newInjector(final Properties props, final Runnable exitAction)
   {
     return new StartupInjectorBuilder()
         .add(
             new LifecycleModule(),
-            new CuratorModule(false),
+            new CuratorModule(false, exitAction),
             binder -> binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class),
             binder -> binder.bind(Properties.class).toInstance(props)
         )

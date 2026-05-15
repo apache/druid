@@ -355,8 +355,8 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
             null,
             "\"AQEJAwQBzJP/////////fw==\"",
             "\"AQEJAwgBzJP/////////fwIAAAAAAAAAjFnadZuMrkg6WYAWZ8t1NgAAAAAAACBAAAAAAAAANkA=\"",
-            "\"AQEJAwgBzJP/////////fwIAAAAAAAAAjFnadZuMrkg6WYAWZ8t1NgAAAAAAACBAAAAAAAAANkA=\"",
-            }
+            "\"AQEJAwgBzJP/////////fwIAAAAAAAAAjFnadZuMrkg6WYAWZ8t1NgAAAAAAACBAAAAAAAAANkA=\""
+        }
     );
 
     testQuery(

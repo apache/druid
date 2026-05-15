@@ -171,7 +171,7 @@ See [Multi-value dimensions](multi-value-dimensions.md) for more details.
 
 The current TopN algorithm is an approximate algorithm. The top 1000 local results from each segment are returned for merging to determine the global topN. As such, the topN algorithm is approximate in both rank and results. Approximate results *ONLY APPLY WHEN THERE ARE MORE THAN 1000 DIM VALUES*. A topN over a dimension with fewer than 1000 unique dimension values can be considered accurate in rank and accurate in aggregates.
 
-The threshold can be modified from its default 1000 via the server parameter `druid.query.topN.minTopNThreshold`, which needs a restart of the servers to take effect, or via `minTopNThreshold` in the query context, which takes effect per query.
+The threshold can be modified from its default 1000 via `minTopNThreshold` in the query context, which takes effect per query.
 
 If you are wanting the top 100 of a high cardinality, uniformly distributed dimension ordered by some low-cardinality, uniformly distributed dimension, you are potentially going to get aggregates back that are missing data.
 

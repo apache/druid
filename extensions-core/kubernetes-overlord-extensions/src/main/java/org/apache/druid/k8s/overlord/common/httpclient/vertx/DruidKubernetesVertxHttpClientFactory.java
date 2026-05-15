@@ -19,31 +19,55 @@
 
 package org.apache.druid.k8s.overlord.common.httpclient.vertx;
 
-import io.fabric8.kubernetes.client.vertx.VertxHttpClientBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.client.vertx.VertxHttpClientFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.file.FileSystemOptions;
 import io.vertx.core.spi.resolver.ResolverProvider;
+import io.vertx.ext.web.client.WebClientOptions;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.common.httpclient.DruidKubernetesHttpClientFactory;
 
 /**
  * Similar to {@link VertxHttpClientFactory} but allows us to override thread pool configurations.
  */
-public class DruidKubernetesVertxHttpClientFactory implements DruidKubernetesHttpClientFactory
+public class DruidKubernetesVertxHttpClientFactory extends VertxHttpClientFactory implements DruidKubernetesHttpClientFactory
 {
   public static final String TYPE_NAME = "vertx";
-  private final Vertx vertx;
 
-  public DruidKubernetesVertxHttpClientFactory(final DruidKubernetesVertxHttpClientConfig httpClientConfig)
+  private static final Logger LOG = new Logger(DruidKubernetesVertxHttpClientFactory.class);
+
+  private final DruidKubernetesVertxHttpClientConfig httpClientConfig;
+  private final ObjectMapper objectMapper;
+
+  public DruidKubernetesVertxHttpClientFactory(
+      DruidKubernetesVertxHttpClientConfig httpClientConfig,
+      ObjectMapper objectMapper
+  )
   {
-    this.vertx = createVertxInstance(httpClientConfig);
+    super(createVertxInstance(httpClientConfig));
+    this.httpClientConfig = httpClientConfig;
+    this.objectMapper = objectMapper;
   }
 
   @Override
-  public VertxHttpClientBuilder<DruidKubernetesVertxHttpClientFactory> newBuilder()
+  protected void additionalConfig(WebClientOptions options)
   {
-    return new VertxHttpClientBuilder<>(this, vertx);
+    if (!httpClientConfig.getWebClientOptions().isEmpty()) {
+      try {
+        LOG.info("Applying additional WebClientOptions from configuration: %s", httpClientConfig.getWebClientOptions());
+        objectMapper.updateValue(options, httpClientConfig.getWebClientOptions());
+      }
+      catch (Exception e) {
+        throw new RuntimeException(
+            "Failed to apply webClientOptions to WebClientOptions. "
+            + "Check that all property names and values are valid. "
+            + "Properties provided: " + httpClientConfig.getWebClientOptions(),
+            e
+        );
+      }
+    }
   }
 
   /**

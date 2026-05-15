@@ -31,7 +31,8 @@ public enum Dimension
   DUTY_GROUP("dutyGroup"),
   DESCRIPTION("description"),
   SERVER("server"),
-  SUPERVISOR_ID("supervisorId");
+  SUPERVISOR_ID("supervisorId"),
+  CONFIG_TYPE("configType");
 
   private final String reportedName;
 

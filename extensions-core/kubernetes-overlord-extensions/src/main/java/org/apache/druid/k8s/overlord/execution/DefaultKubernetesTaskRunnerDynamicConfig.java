@@ -104,7 +104,7 @@ public class DefaultKubernetesTaskRunnerDynamicConfig implements KubernetesTaskR
   {
     return "DefaultKubernetesTaskRunnerDynamicConfig{" +
            "podTemplateSelectStrategy=" + podTemplateSelectStrategy +
-           "capacity=" + capacity +
+           ", capacity=" + capacity +
            '}';
   }
 }

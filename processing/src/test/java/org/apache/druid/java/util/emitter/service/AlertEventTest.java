@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.emitter.service.AlertEvent.Severity;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -40,7 +40,7 @@ public class AlertEventTest
                                    .addData("something2", "b")
                                    .build("test", "localhost");
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<String, Object>builder()
             .put("feed", "alerts")
             .put("timestamp", event.getCreatedTime().toString())
@@ -63,7 +63,7 @@ public class AlertEventTest
                                    .addData("something2", "b")
                                    .build("test", "localhost");
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<String, Object>builder()
             .put("feed", "alerts")
             .put("timestamp", event.getCreatedTime().toString())
@@ -86,7 +86,7 @@ public class AlertEventTest
                                    .addData("something2", "b")
                                    .build("test", "localhost");
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<String, Object>builder()
             .put("feed", "alerts")
             .put("timestamp", event.getCreatedTime().toString())
@@ -109,7 +109,7 @@ public class AlertEventTest
                                    .addData("something2", "b")
                                    .build("test", "localhost");
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<String, Object>builder()
             .put("feed", "alerts")
             .put("timestamp", event.getCreatedTime().toString())
@@ -131,27 +131,27 @@ public class AlertEventTest
     final String desc = "some description";
     final Map<String, Object> data = ImmutableMap.<String, Object>builder().put("a", "1").put("b", "2").build();
     for (Severity severity : new Severity[]{Severity.ANOMALY, Severity.COMPONENT_FAILURE, Severity.SERVICE_FAILURE}) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           contents(new AlertEvent(service, host, desc, data)),
           contents(new AlertEvent(service, host, Severity.COMPONENT_FAILURE, desc, data))
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           contents(new AlertEvent(service, host, desc)),
           contents(new AlertEvent(service, host, Severity.COMPONENT_FAILURE, desc, ImmutableMap.of()))
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           contents(AlertBuilder.create(desc).addData("a", "1").addData("b", "2").build(service, host)),
           contents(new AlertEvent(service, host, Severity.COMPONENT_FAILURE, desc, data))
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           contents(AlertBuilder.create(desc).addData(data).build(service, host)),
           contents(new AlertEvent(service, host, Severity.COMPONENT_FAILURE, desc, data))
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           contents(AlertBuilder.create(desc)
                                .severity(severity)
                                .addData("a", "1")
@@ -160,7 +160,7 @@ public class AlertEventTest
           contents(new AlertEvent(service, host, severity, desc, data))
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           contents(AlertBuilder.create(desc).severity(severity).addData(data).build(service, host)),
           contents(new AlertEvent(service, host, severity, desc, data))
       );
@@ -170,11 +170,11 @@ public class AlertEventTest
   @Test
   public void test_deserializeSeverityFromString()
   {
-    Assert.assertEquals(AlertEvent.Severity.ANOMALY, AlertEvent.Severity.fromString("anomaly"));
-    Assert.assertEquals(AlertEvent.Severity.DEPRECATED, AlertEvent.Severity.fromString("deprecated"));
-    Assert.assertEquals(AlertEvent.Severity.COMPONENT_FAILURE, AlertEvent.Severity.fromString("component-failure"));
-    Assert.assertEquals(AlertEvent.Severity.SERVICE_FAILURE, AlertEvent.Severity.fromString("service-failure"));
-    Assert.assertThrows(
+    Assertions.assertEquals(AlertEvent.Severity.ANOMALY, AlertEvent.Severity.fromString("anomaly"));
+    Assertions.assertEquals(AlertEvent.Severity.DEPRECATED, AlertEvent.Severity.fromString("deprecated"));
+    Assertions.assertEquals(AlertEvent.Severity.COMPONENT_FAILURE, AlertEvent.Severity.fromString("component-failure"));
+    Assertions.assertEquals(AlertEvent.Severity.SERVICE_FAILURE, AlertEvent.Severity.fromString("service-failure"));
+    Assertions.assertThrows(
         DruidException.class,
         () -> AlertEvent.Severity.fromString("unknown")
     );

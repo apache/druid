@@ -25,8 +25,8 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,30 +37,30 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class MergeIntIteratorTest
 {
-  @Test(expected = NoSuchElementException.class)
+  @Test
   public void testNoIterators()
   {
     IntIterator it = IntIteratorUtils.mergeAscending(Collections.emptyList());
-    assertEmpty(it);
+    Assertions.assertThrows(NoSuchElementException.class, () -> assertEmpty(it));
   }
 
-  @Test(expected = NoSuchElementException.class)
+  @Test
   public void testMergeEmptyIterators()
   {
     IntIterator it = IntIteratorUtils.mergeAscending(Arrays.asList(
         IntIterators.EMPTY_ITERATOR,
         IntIterators.EMPTY_ITERATOR
     ));
-    assertEmpty(it);
+    Assertions.assertThrows(NoSuchElementException.class, () -> assertEmpty(it));
   }
 
   private static void assertEmpty(IntIterator it)
   {
-    Assert.assertFalse(it.hasNext());
+    Assertions.assertFalse(it.hasNext());
     try {
       //noinspection deprecation
       it.next();
-      Assert.fail("expected NoSuchElementException on it.next() after it.hasNext() = false");
+      Assertions.fail("expected NoSuchElementException on it.next() after it.hasNext() = false");
     }
     catch (NoSuchElementException ignore) {
       // expected
@@ -133,7 +133,7 @@ public class MergeIntIteratorTest
     for (; it.hasNext(); ) {
       int current = it.nextInt();
       if (prev > current) {
-        Assert.fail("not ascending: " + prev + ", then " + current);
+        Assertions.fail("not ascending: " + prev + ", then " + current);
       }
       prev = current;
     }

@@ -19,46 +19,46 @@
 
 package org.apache.druid.segment.incremental;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class InputRowFilterResultTest
 {
   @Test
   public void testOrdinalValues()
   {
-    Assert.assertEquals(0, InputRowFilterResult.ACCEPTED.ordinal());
-    Assert.assertEquals(1, InputRowFilterResult.NULL_OR_EMPTY_RECORD.ordinal());
-    Assert.assertEquals(2, InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.ordinal());
-    Assert.assertEquals(3, InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.ordinal());
-    Assert.assertEquals(4, InputRowFilterResult.CUSTOM_FILTER.ordinal());
+    Assertions.assertEquals(0, InputRowFilterResult.ACCEPTED.ordinal());
+    Assertions.assertEquals(1, InputRowFilterResult.NULL_OR_EMPTY_RECORD.ordinal());
+    Assertions.assertEquals(2, InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.ordinal());
+    Assertions.assertEquals(3, InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.ordinal());
+    Assertions.assertEquals(4, InputRowFilterResult.CUSTOM_FILTER.ordinal());
   }
 
   @Test
   public void testMetricValues()
   {
-    Assert.assertEquals("accepted", InputRowFilterResult.ACCEPTED.getReason());
-    Assert.assertEquals("null", InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason());
-    Assert.assertEquals("beforeMinimumMessageTime", InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason());
-    Assert.assertEquals("afterMaximumMessageTime", InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.getReason());
-    Assert.assertEquals("filtered", InputRowFilterResult.CUSTOM_FILTER.getReason());
+    Assertions.assertEquals("accepted", InputRowFilterResult.ACCEPTED.getReason());
+    Assertions.assertEquals("null", InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason());
+    Assertions.assertEquals("beforeMinimumMessageTime", InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason());
+    Assertions.assertEquals("afterMaximumMessageTime", InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.getReason());
+    Assertions.assertEquals("filtered", InputRowFilterResult.CUSTOM_FILTER.getReason());
   }
 
   @Test
   public void testEnumCardinality()
   {
-    Assert.assertEquals(6, InputRowFilterResult.values().length);
+    Assertions.assertEquals(6, InputRowFilterResult.values().length);
   }
 
   @Test
   public void testIsRejected()
   {
-    Assert.assertFalse(InputRowFilterResult.ACCEPTED.isRejected());
-    Assert.assertTrue(InputRowFilterResult.NULL_OR_EMPTY_RECORD.isRejected());
-    Assert.assertTrue(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.isRejected());
-    Assert.assertTrue(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.isRejected());
-    Assert.assertTrue(InputRowFilterResult.CUSTOM_FILTER.isRejected());
-    Assert.assertTrue(InputRowFilterResult.UNKNOWN.isRejected());
+    Assertions.assertFalse(InputRowFilterResult.ACCEPTED.isRejected());
+    Assertions.assertTrue(InputRowFilterResult.NULL_OR_EMPTY_RECORD.isRejected());
+    Assertions.assertTrue(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.isRejected());
+    Assertions.assertTrue(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.isRejected());
+    Assertions.assertTrue(InputRowFilterResult.CUSTOM_FILTER.isRejected());
+    Assertions.assertTrue(InputRowFilterResult.UNKNOWN.isRejected());
   }
 }
 

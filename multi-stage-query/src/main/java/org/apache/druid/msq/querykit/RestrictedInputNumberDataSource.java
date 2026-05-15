@@ -25,10 +25,12 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.LeafDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.SegmentMapFunction;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
@@ -99,6 +101,13 @@ public class RestrictedInputNumberDataSource extends LeafDataSource
   public SegmentMapFunction createSegmentMapFunction(Query query)
   {
     return SegmentMapFunction.IDENTITY.thenMap(segment -> new RestrictedSegment(segment, policy));
+  }
+
+  @Nullable
+  @Override
+  public SegmentPruner createSegmentPruner()
+  {
+    return policy.createSegmentPruner();
   }
 
   @Override

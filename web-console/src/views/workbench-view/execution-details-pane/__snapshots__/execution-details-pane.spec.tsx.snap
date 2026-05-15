@@ -42,7 +42,7 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
     className="execution-details-pane-general"
   >
     <p>
-      General info for 
+      General info for execution ID: 
       <Blueprint5.Tag
         active={false}
         fill={false}
@@ -352,6 +352,7 @@ FROM TABLE(
   )
 ) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
+          "sqlQueryId": undefined,
           "stages": Stages {
             "counters": {
               "0": {
@@ -722,6 +723,16 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
               "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
             },
           ],
+          "workers": {
+            "0": [
+              {
+                "durationMs": -1,
+                "pendingMs": -1,
+                "state": "FAILED",
+                "workerId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
+              },
+            ],
+          },
         }
       }
     />
@@ -984,6 +995,7 @@ FROM TABLE(
   )
 ) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
+          "sqlQueryId": undefined,
           "stages": Stages {
             "counters": {
               "0": {
@@ -1354,6 +1366,16 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
               "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
             },
           ],
+          "workers": {
+            "0": [
+              {
+                "durationMs": -1,
+                "pendingMs": -1,
+                "state": "FAILED",
+                "workerId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
+              },
+            ],
+          },
         }
       }
       goToTask={[Function]}
@@ -1661,6 +1683,7 @@ FROM TABLE(
   )
 ) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
+        "sqlQueryId": undefined,
         "stages": Stages {
           "counters": {
             "0": {
@@ -2031,6 +2054,16 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
             "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
           },
         ],
+        "workers": {
+          "0": [
+            {
+              "durationMs": -1,
+              "pendingMs": -1,
+              "state": "FAILED",
+              "workerId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
+            },
+          ],
+        },
       }
     }
   />

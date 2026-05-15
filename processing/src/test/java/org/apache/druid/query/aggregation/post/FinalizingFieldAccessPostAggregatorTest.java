@@ -23,6 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -35,6 +40,8 @@ import org.apache.druid.query.aggregation.CountAggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -208,47 +215,41 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
         )
     ) {
 
-      String metricSpec = "[{\"type\": \"hyperUnique\", \"name\": \"hll_market\", \"fieldName\": \"market\"},"
-                          + "{\"type\": \"hyperUnique\", \"name\": \"hll_quality\", \"fieldName\": \"quality\"}]";
+      List<AggregatorFactory> metricSpec = List.of(
+          new HyperUniquesAggregatorFactory("hll_market", "market"),
+          new HyperUniquesAggregatorFactory("hll_quality", "quality")
+      );
 
-      String parseSpec = "{"
-                         + "\"type\" : \"string\","
-                         + "\"parseSpec\" : {"
-                         + "    \"format\" : \"tsv\","
-                         + "    \"timestampSpec\" : {"
-                         + "        \"column\" : \"timestamp\","
-                         + "        \"format\" : \"auto\""
-                         + "},"
-                         + "    \"dimensionsSpec\" : {"
-                         + "        \"dimensions\": [],"
-                         + "        \"dimensionExclusions\" : [],"
-                         + "        \"spatialDimensions\" : []"
-                         + "    },"
-                         + "    \"columns\": [\"timestamp\", \"market\", \"quality\", \"placement\", \"placementish\", \"index\"]"
-                         + "  }"
-                         + "}";
-
-      String query = "{"
-                     + "\"queryType\": \"groupBy\","
-                     + "\"dataSource\": \"test_datasource\","
-                     + "\"granularity\": \"ALL\","
-                     + "\"dimensions\": [],"
-                     + "\"aggregations\": ["
-                     + "  { \"type\": \"hyperUnique\", \"name\": \"hll_market\", \"fieldName\": \"hll_market\" },"
-                     + "  { \"type\": \"hyperUnique\", \"name\": \"hll_quality\", \"fieldName\": \"hll_quality\" }"
-                     + "],"
-                     + "\"postAggregations\": ["
-                     + "  { \"type\": \"arithmetic\", \"name\": \"uniq_add\", \"fn\": \"+\", \"fields\":["
-                     + "    { \"type\": \"finalizingFieldAccess\", \"name\": \"uniq_market\", \"fieldName\": \"hll_market\" },"
-                     + "    { \"type\": \"finalizingFieldAccess\", \"name\": \"uniq_quality\", \"fieldName\": \"hll_quality\" }]"
-                     + "  }"
-                     + "],"
-                     + "\"intervals\": [ \"1970/2050\" ]"
-                     + "}";
+      GroupByQuery query = GroupByQuery.builder()
+                                       .setDataSource("test_datasource")
+                                       .setGranularity(Granularities.ALL)
+                                       .setInterval("1970/2050")
+                                       .setAggregatorSpecs(
+                                           new HyperUniquesAggregatorFactory("hll_market", "hll_market"),
+                                           new HyperUniquesAggregatorFactory("hll_quality", "hll_quality")
+                                       )
+                                       .setPostAggregatorSpecs(
+                                           new ArithmeticPostAggregator(
+                                               "uniq_add",
+                                               "+",
+                                               List.of(
+                                                   new FinalizingFieldAccessPostAggregator("uniq_market", "hll_market"),
+                                                   new FinalizingFieldAccessPostAggregator("uniq_quality", "hll_quality")
+                                               )
+                                           )
+                                       )
+                                       .build();
 
       Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
           new File(this.getClass().getClassLoader().getResource("druid.sample.tsv").getFile()),
-          parseSpec,
+          new InputRowSchema(
+              TimestampSpec.DEFAULT,
+              DimensionsSpec.EMPTY,
+              ColumnsFilter.all()
+          ),
+          DelimitedInputFormat.forColumns(
+              List.of("timestamp", "market", "quality", "placement", "placementish", "index")
+          ),
           metricSpec,
           0,
           Granularities.NONE,

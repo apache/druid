@@ -49,18 +49,6 @@ public class ShuffleDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public String getPathForHadoop(String dataSource)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public String getPathForHadoop()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException
   {
     return intermediaryDataManager.addSegment(supervisorTaskId, subTaskId, segment, file);

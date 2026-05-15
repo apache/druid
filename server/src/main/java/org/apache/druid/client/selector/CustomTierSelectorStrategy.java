@@ -30,7 +30,10 @@ import java.util.Map;
  */
 public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
+  public static final String TYPE = "custom";
+
   private final Comparator<Integer> comparator;
+  private final CustomTierSelectorStrategyConfig config;
 
   @JsonCreator
   public CustomTierSelectorStrategy(
@@ -39,6 +42,7 @@ public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
   )
   {
     super(serverSelectorStrategy);
+    this.config = config;
 
     final Map<Integer, Integer> lookup = new HashMap<>();
     int pos = 0;
@@ -48,18 +52,23 @@ public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
     }
 
     // Tiers with priorities explicitly specified in the custom priority list config always have higher priority than
-    // those not and those not specified fall back to use highest priority strategy among themselves
+    // those not and those not specified fall back to use the highest priority strategy among themselves
     this.comparator = (p1, p2) -> {
-      if (lookup.containsKey(p1) && lookup.containsKey(p2)) {
-        return Integer.compare(lookup.get(p1), lookup.get(p2));
-      } else if (lookup.containsKey(p1)) {
-        return -1;
-      } else if (lookup.containsKey(p2)) {
-        return 1;
-      } else {
-        // Fall back to use highest priority strategy
-        return Integer.compare(p2, p1);
+      final Integer rank1 = lookup.get(p1);
+      final Integer rank2 = lookup.get(p2);
+
+      if (rank1 != null && rank2 != null) {
+        return Integer.compare(rank1, rank2);
       }
+      if (rank1 != null) {
+        return -1;
+      }
+      if (rank2 != null) {
+        return 1;
+      }
+
+      // Fall back to highest priority first
+      return Integer.compare(p2, p1);
     };
   }
 
@@ -67,5 +76,18 @@ public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
   public Comparator<Integer> getComparator()
   {
     return comparator;
+  }
+
+  public CustomTierSelectorStrategyConfig getConfig()
+  {
+    return config;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "CustomTierSelectorStrategy{" +
+           "config=" + config +
+           '}';
   }
 }

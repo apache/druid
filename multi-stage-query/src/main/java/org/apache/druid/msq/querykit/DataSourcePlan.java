@@ -31,8 +31,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.InputSpec;
-import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
 import org.apache.druid.msq.input.inline.InlineInputSpec;
 import org.apache.druid.msq.input.lookup.LookupInputSpec;
@@ -57,8 +57,6 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
-import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.planning.JoinDataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -79,7 +77,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -137,9 +134,6 @@ public class DataSourcePlan
    * @param dataSource       datasource to plan
    * @param querySegmentSpec intervals for mandatory pruning. Must be {@link MultipleIntervalSegmentSpec}. The returned
    *                         plan is guaranteed to be filtered to this interval.
-   * @param filter           filter for best-effort pruning. The returned plan may or may not be filtered to this
-   *                         filter. Query processing must still apply the filter to generated correct results.
-   * @param filterFields     which fields from the filter to consider for pruning, or null to consider all fields.
    * @param minStageNumber   starting stage number for subqueries
    * @param broadcast        whether the plan should broadcast data for this datasource
    */
@@ -148,38 +142,21 @@ public class DataSourcePlan
       final QueryContext queryContext,
       final DataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
-      @Nullable DimFilter filter,
-      @Nullable Set<String> filterFields,
       final int minStageNumber,
       final boolean broadcast
   )
   {
-    if (!queryContext.isSecondaryPartitionPruningEnabled()) {
-      // Clear filter, we don't want to prune today.
-      filter = null;
-      filterFields = null;
-    }
-
-    if (filter != null && filterFields == null) {
-      // Ensure filterFields is nonnull if filter is nonnull. Helps for other forXYZ methods, so they don't need to
-      // deal with the case where filter is nonnull but filterFields is null.
-      filterFields = filter.getRequiredColumns();
-    }
 
     if (dataSource instanceof TableDataSource) {
       return forTable(
           (TableDataSource) dataSource,
           querySegmentSpec,
-          filter,
-          filterFields,
           broadcast
       );
     } else if (dataSource instanceof RestrictedDataSource) {
       return forRestricted(
           (RestrictedDataSource) dataSource,
           querySegmentSpec,
-          filter,
-          filterFields,
           broadcast
       );
     } else if (dataSource instanceof ExternalDataSource) {
@@ -222,8 +199,6 @@ public class DataSourcePlan
           queryContext,
           (UnionDataSource) dataSource,
           querySegmentSpec,
-          filter,
-          filterFields,
           minStageNumber,
           broadcast
       );
@@ -242,8 +217,6 @@ public class DataSourcePlan
               queryContext,
               joinDataSource,
               querySegmentSpec,
-              filter,
-              filterFields,
               minStageNumber,
               broadcast
           );
@@ -294,14 +267,13 @@ public class DataSourcePlan
   /**
    * Figure for {@link StageDefinition#getMaxWorkerCount()} that should be used when processing.
    */
-  public int getMaxWorkerCount(final QueryKitSpec queryKitSpec)
+  public int getMaxWorkerCount()
   {
     if (isSingleWorker()) {
       return 1;
-    } else if (InputSpecs.hasLeafInputs(inputSpecs, broadcastInputs)) {
-      return queryKitSpec.getMaxLeafWorkerCount();
     } else {
-      return queryKitSpec.getMaxNonLeafWorkerCount();
+      // Use MAX_WORKERS as a high upper bound; capped at runtime by QueryDefinition.withRuntimeBounds.
+      return Limits.MAX_WORKERS;
     }
   }
 
@@ -369,8 +341,6 @@ public class DataSourcePlan
   private static DataSourcePlan forTable(
       final TableDataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
-      @Nullable final DimFilter filter,
-      @Nullable final Set<String> filterFields,
       final boolean broadcast
   )
   {
@@ -385,7 +355,7 @@ public class DataSourcePlan
     List<Interval> intervals = querySegmentSpec.getIntervals();
     return new DataSourcePlan(
         (broadcast && dataSource.isGlobal()) ? dataSource : new InputNumberDataSource(0),
-        List.of(new TableInputSpec(dataSource.getName(), intervals, segments, filter, filterFields)),
+        List.of(new TableInputSpec(dataSource.getName(), intervals, segments)),
         broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
         null
     );
@@ -394,15 +364,13 @@ public class DataSourcePlan
   private static DataSourcePlan forRestricted(
       final RestrictedDataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
-      @Nullable final DimFilter filter,
-      @Nullable final Set<String> filterFields,
       final boolean broadcast
   )
   {
     DataSource restricted = (broadcast && dataSource.isGlobal())
                             ? dataSource
                             : new RestrictedInputNumberDataSource(0, dataSource.getPolicy());
-    return forTable(dataSource.getBase(), querySegmentSpec, filter, filterFields, broadcast).withDataSource(restricted);
+    return forTable(dataSource.getBase(), querySegmentSpec, broadcast).withDataSource(restricted);
   }
 
   private static DataSourcePlan forExternal(
@@ -462,7 +430,7 @@ public class DataSourcePlan
         // Subqueries ignore SQL_INSERT_SEGMENT_GRANULARITY, even if set in the context. It's only used for the
         // outermost query, and setting it for the subquery makes us erroneously add bucketing where it doesn't belong.
         dataSource.getQuery().withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY),
-        ShuffleSpecFactories.globalSortWithMaxPartitionCount(queryKitSpec.getNumPartitionsForShuffle()),
+        ShuffleSpecFactories.globalSortWithTargetPartitions(),
         minStageNumber
     );
 
@@ -490,8 +458,6 @@ public class DataSourcePlan
         queryContext,
         dataSource.getBase(),
         querySegmentSpec,
-        null,
-        null,
         minStageNumber,
         broadcast
     );
@@ -527,8 +493,6 @@ public class DataSourcePlan
         queryContext,
         dataSource.getBase(),
         querySegmentSpec,
-        null,
-        null,
         minStageNumber,
         broadcast
     );
@@ -557,8 +521,6 @@ public class DataSourcePlan
       final QueryContext queryContext,
       final UnionDataSource unionDataSource,
       final QuerySegmentSpec querySegmentSpec,
-      @Nullable DimFilter filter,
-      @Nullable Set<String> filterFields,
       final int minStageNumber,
       final boolean broadcast
   )
@@ -577,8 +539,6 @@ public class DataSourcePlan
           queryContext,
           child,
           querySegmentSpec,
-          filter,
-          filterFields,
           Math.max(minStageNumber, subqueryDefBuilder.getNextStageNumber()),
           broadcast
       );
@@ -606,8 +566,6 @@ public class DataSourcePlan
       final QueryContext queryContext,
       final JoinDataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
-      @Nullable final DimFilter filter,
-      @Nullable final Set<String> filterFields,
       final int minStageNumber,
       final boolean broadcast
   )
@@ -620,8 +578,6 @@ public class DataSourcePlan
         queryContext,
         analysis.getBaseDataSource(),
         querySegmentSpec,
-        filter,
-        filter == null ? null : DimFilterUtils.onlyBaseFields(filterFields, analysis::isBaseColumn),
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
         broadcast
     );
@@ -638,8 +594,6 @@ public class DataSourcePlan
           queryContext,
           clause.getDataSource(),
           new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY),
-          null, // Don't push down query filters for right-hand side: needs some work to ensure it works properly.
-          null,
           Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
           true // Always broadcast right-hand side of the join.
       );
@@ -714,10 +668,10 @@ public class DataSourcePlan
         ((StageInputSpec) Iterables.getOnlyElement(leftPlan.getInputSpecs())).getStageNumber()
     );
 
-    final int hashPartitionCount = queryKitSpec.getNumPartitionsForShuffle();
     final List<KeyColumn> leftPartitionKey = partitionKeys.get(0);
-    leftBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(leftPartitionKey, 0), hashPartitionCount));
+    leftBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(leftPartitionKey, 0), 1, true));
     leftBuilder.signature(QueryKitUtils.sortableSignature(leftBuilder.getSignature(), leftPartitionKey));
+    leftBuilder.maxWorkerCount(Limits.MAX_WORKERS);
 
     // Build up the right stage.
     final StageDefinitionBuilder rightBuilder = subQueryDefBuilder.getStageBuilder(
@@ -725,8 +679,9 @@ public class DataSourcePlan
     );
 
     final List<KeyColumn> rightPartitionKey = partitionKeys.get(1);
-    rightBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(rightPartitionKey, 0), hashPartitionCount));
+    rightBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(rightPartitionKey, 0), 1, true));
     rightBuilder.signature(QueryKitUtils.sortableSignature(rightBuilder.getSignature(), rightPartitionKey));
+    rightBuilder.maxWorkerCount(Limits.MAX_WORKERS);
 
     // Compute join signature.
     final RowSignature.Builder joinSignatureBuilder = RowSignature.builder();
@@ -753,7 +708,7 @@ public class DataSourcePlan
                                Iterables.getOnlyElement(rightPlan.getInputSpecs())
                            )
                        )
-                       .maxWorkerCount(queryKitSpec.getMaxNonLeafWorkerCount())
+                       .maxWorkerCount(Limits.MAX_WORKERS)
                        .signature(joinSignatureBuilder.build())
                        .processor(
                            new SortMergeJoinStageProcessor(
@@ -805,9 +760,7 @@ public class DataSourcePlan
    * Verify that the provided {@link QuerySegmentSpec} is a {@link MultipleIntervalSegmentSpec} with
    * interval {@link Intervals#ETERNITY}. If not, throw an {@link UnsupportedOperationException}.
    * <p>
-   * We don't need to support this for anything that is not {@link DataSourceAnalysis#isTableBased()}, because
-   * the SQL layer avoids "intervals" in other cases. See
-   * {@link org.apache.druid.sql.calcite.rel.DruidQuery#canUseIntervalFiltering(DataSource)}.
+   * See {@link org.apache.druid.sql.calcite.rel.DruidQuery#canUseIntervalFiltering(DataSource)}.
    */
   private static void checkQuerySegmentSpecIsEternity(
       final DataSource dataSource,

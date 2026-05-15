@@ -36,6 +36,7 @@ import org.apache.druid.msq.counters.CpuCounter;
 import org.apache.druid.msq.counters.CpuCounters;
 import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
+import org.apache.druid.msq.counters.StorageCounters;
 import org.apache.druid.msq.counters.SuperSorterProgressTrackerCounter;
 import org.apache.druid.msq.counters.WarningCounters;
 import org.apache.druid.msq.indexing.IndexerControllerContextFactory;
@@ -47,6 +48,7 @@ import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
 import org.apache.druid.msq.indexing.error.ColumnTypeNotSupportedFault;
+import org.apache.druid.msq.indexing.error.DruidExceptionFault;
 import org.apache.druid.msq.indexing.error.DurableStorageConfigurationFault;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
@@ -130,6 +132,7 @@ public class MSQIndexingModule implements DruidModule
       CannotParseExternalDataFault.class,
       ColumnTypeNotSupportedFault.class,
       ColumnNameRestrictedFault.class,
+      DruidExceptionFault.class,
       DurableStorageConfigurationFault.class,
       InsertCannotAllocateSegmentFault.class,
       InsertCannotBeEmptyFault.class,
@@ -196,6 +199,7 @@ public class MSQIndexingModule implements DruidModule
         SuperSorterProgressTrackerCounter.Snapshot.class,
         WarningCounters.Snapshot.class,
         SegmentGenerationProgressCounter.Snapshot.class,
+        StorageCounters.Snapshot.class,
         CpuCounters.Snapshot.class,
         CpuCounter.Snapshot.class,
         NilQueryCounterSnapshot.class,

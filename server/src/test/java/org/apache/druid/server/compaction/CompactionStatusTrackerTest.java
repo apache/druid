@@ -48,7 +48,7 @@ public class CompactionStatusTrackerTest
   public void testGetLatestTaskStatusForSubmittedTask()
   {
     final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null, CompactionStatus.running(""));
     statusTracker.onTaskSubmitted("task1", candidateSegments);
 
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
@@ -59,7 +59,7 @@ public class CompactionStatusTrackerTest
   public void testGetLatestTaskStatusForSuccessfulTask()
   {
     final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null, CompactionStatus.running(""));
     statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 
@@ -71,7 +71,7 @@ public class CompactionStatusTrackerTest
   public void testGetLatestTaskStatusForFailedTask()
   {
     final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null, CompactionStatus.running(""));
     statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.failure("task1", "some failure"));
 
@@ -84,7 +84,7 @@ public class CompactionStatusTrackerTest
   public void testGetLatestTaskStatusForRepeatedlyFailingTask()
   {
     final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null, CompactionStatus.running(""));
 
     statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.failure("task1", "some failure"));
@@ -106,7 +106,7 @@ public class CompactionStatusTrackerTest
   {
     final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
     final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null, CompactionStatus.running(""));
 
     // Verify that interval is originally eligible for compaction
     CompactionStatus status

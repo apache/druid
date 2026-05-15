@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -84,7 +85,9 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   protected EmbeddedIndexer indexer = new EmbeddedIndexer()
       .setServerMemory(300_000_000)
       .addProperty("druid.worker.capacity", "2")
-      .addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
+      .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
+      // Use separate task log files because here, we're actually testing TaskLogStreamer.
+      .addProperty("druid.worker.useSeparateTaskLogFiles", "true");
 
   /**
    * Broker with a short metadata refresh period.
@@ -110,9 +113,11 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                 LatchableEmitterModule.class,
                 PostgreSQLMetadataStorageModule.class
             )
+            .useDefaultTimeoutForLatchableEmitter(20)
             .addResource(new PostgreSQLMetadataResource())
             .addResource(new MinIOStorageResource())
             .addResource(kafkaServer)
+            .addCommonProperty("druid.manager.segments.useIncrementalCache", "always")
             .addCommonProperty("druid.emitter", "http")
             .addCommonProperty("druid.emitter.http.recipientBaseUrl", eventCollector.getMetricsUrl())
             .addCommonProperty("druid.emitter.http.flushMillis", "500")
@@ -185,6 +190,9 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasService("druid/broker")
     );
+
+    waitForNextCoordinatorCacheSync();
+    waitForNextBrokerCacheSync();
 
     cluster.callApi().verifySqlQuery("SELECT * FROM sys.segments WHERE datasource='%s'", dataSource, "");
 
@@ -294,7 +302,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(kafkaSupervisorSpec)
     );
-    Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
+    validateSupervisorUpdateResponse(startSupervisorResult, supervisorId);
 
     waitForSegmentsToBeQueryable(1);
 
@@ -363,7 +371,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   {
     return MoreResources.Supervisor.KAFKA_JSON
         .get()
-        .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", null, null)))
+        .withDataSchema(schema -> schema.withTimestamp(TimestampSpec.DEFAULT))
         .withIoConfig(
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())
@@ -401,6 +409,37 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                       .hasService("druid/broker")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(numSegments)
+    );
+    eventCollector.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT)
+                      .hasService("druid/broker")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
+    waitForNextCoordinatorCacheSync();
+    eventCollector.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/metadataCache/sync/time")
+                      .hasService("druid/broker")
+    );
+  }
+
+  protected void validateSupervisorUpdateResponse(Map<String, String> startSupervisorResult, String supervisorId)
+  {
+    Assertions.assertEquals(Map.of("id", supervisorId, "restarted", "true"), startSupervisorResult);
+  }
+
+  protected void waitForNextCoordinatorCacheSync()
+  {
+    eventCollector.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/metadataCache/sync/time")
+                      .hasService("druid/coordinator")
+    );
+  }
+
+  protected void waitForNextBrokerCacheSync()
+  {
+    eventCollector.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/metadataCache/sync/time")
+                      .hasService("druid/broker")
     );
   }
 

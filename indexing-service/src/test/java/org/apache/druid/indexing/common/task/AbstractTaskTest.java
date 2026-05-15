@@ -298,13 +298,6 @@ public class AbstractTaskTest
   }
 
   @Test
-  public void testBatchIOConfigHadoop()
-  {
-    AbstractTask.IngestionMode ingestionMode = AbstractTask.IngestionMode.fromString("HADOOP");
-    Assert.assertEquals(AbstractTask.IngestionMode.HADOOP, ingestionMode);
-  }
-
-  @Test
   public void testBatchIOConfigNone()
   {
     AbstractTask.IngestionMode ingestionMode = AbstractTask.IngestionMode.fromString("NONE");

@@ -26,13 +26,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wnameless.json.flattener.JsonFlattener;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JSONParseSpec;
-import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.apache.druid.java.util.common.parsers.Parser;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,35 +49,19 @@ public class FlattenJSONBenchmarkUtil
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
   }
 
-  public Parser getFlatParser()
+  public JsonInputFormat getFlatFormat()
   {
-    JSONParseSpec spec = new JSONParseSpec(
-        new TimestampSpec("ts", "iso", null),
-        DimensionsSpec.EMPTY,
-        null,
-        null,
-        null
-    );
-    return spec.makeParser();
+    return new JsonInputFormat(null, null, null, null, null);
   }
 
-  public Parser getFieldDiscoveryParser()
+  public JsonInputFormat getFieldDiscoveryFormat()
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
     JSONPathSpec flattenSpec = new JSONPathSpec(true, fields);
-
-    JSONParseSpec spec = new JSONParseSpec(
-        new TimestampSpec("ts", "iso", null),
-        DimensionsSpec.EMPTY,
-        flattenSpec,
-        null,
-        null
-    );
-
-    return spec.makeParser();
+    return new JsonInputFormat(flattenSpec, null, null, null, null);
   }
 
-  public Parser getNestedParser()
+  public JsonInputFormat getNestedFormat()
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
     fields.add(JSONPathFieldSpec.createRootField("ts"));
@@ -113,18 +94,10 @@ public class FlattenJSONBenchmarkUtil
     fields.add(JSONPathFieldSpec.createNestedField("e4.e4.m4", "$.e4.e4.m4"));
 
     JSONPathSpec flattenSpec = new JSONPathSpec(true, fields);
-    JSONParseSpec spec = new JSONParseSpec(
-        new TimestampSpec("ts", "iso", null),
-        DimensionsSpec.EMPTY,
-        flattenSpec,
-        null,
-        null
-    );
-
-    return spec.makeParser();
+    return new JsonInputFormat(flattenSpec, null, null, null, null);
   }
 
-  public Parser getForcedPathParser()
+  public JsonInputFormat getForcedPathFormat()
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
     fields.add(JSONPathFieldSpec.createNestedField("ts", "$['ts']"));
@@ -157,18 +130,10 @@ public class FlattenJSONBenchmarkUtil
     fields.add(JSONPathFieldSpec.createNestedField("e4.e4.m4", "$['e4.e4.m4']"));
 
     JSONPathSpec flattenSpec = new JSONPathSpec(false, fields);
-    JSONParseSpec spec = new JSONParseSpec(
-        new TimestampSpec("ts", "iso", null),
-        DimensionsSpec.EMPTY,
-        flattenSpec,
-        null,
-        null
-    );
-
-    return spec.makeParser();
+    return new JsonInputFormat(flattenSpec, null, null, null, null);
   }
 
-  public Parser getJqParser()
+  public JsonInputFormat getJqFormat()
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
     fields.add(JSONPathFieldSpec.createRootField("ts"));
@@ -199,18 +164,10 @@ public class FlattenJSONBenchmarkUtil
     fields.add(JSONPathFieldSpec.createJqField("e4.e4.m4", ".e4.e4.m4"));
 
     JSONPathSpec flattenSpec = new JSONPathSpec(true, fields);
-    JSONParseSpec spec = new JSONParseSpec(
-        new TimestampSpec("ts", "iso", null),
-        DimensionsSpec.EMPTY,
-        flattenSpec,
-        null,
-        null
-    );
-
-    return spec.makeParser();
+    return new JsonInputFormat(flattenSpec, null, null, null, null);
   }
 
-  public Parser getTreeJqParser()
+  public JsonInputFormat getTreeJqFormat()
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
     fields.add(JSONPathFieldSpec.createRootField("ts"));
@@ -230,19 +187,10 @@ public class FlattenJSONBenchmarkUtil
     fields.add(JSONPathFieldSpec.createJqField("e3.m4", ".e3.m4"));
 
     JSONPathSpec flattenSpec = new JSONPathSpec(false, fields);
-    JSONParseSpec spec = new JSONParseSpec(
-        new TimestampSpec("ts", "iso", null),
-        DimensionsSpec.EMPTY,
-        flattenSpec,
-        null,
-        null
-    );
-
-    return spec.makeParser();
+    return new JsonInputFormat(flattenSpec, null, null, null, null);
   }
 
-
-  public Parser getTreeTreeParser()
+  public JsonInputFormat getTreeTreeFormat()
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
     fields.add(JSONPathFieldSpec.createRootField("ts"));
@@ -262,15 +210,7 @@ public class FlattenJSONBenchmarkUtil
     fields.add(JSONPathFieldSpec.createTreeField("e3.m4", Arrays.asList("e3", "m4")));
 
     JSONPathSpec flattenSpec = new JSONPathSpec(false, fields);
-    JSONParseSpec spec = new JSONParseSpec(
-        new TimestampSpec("ts", "iso", null),
-        DimensionsSpec.EMPTY,
-        flattenSpec,
-        null,
-        null
-    );
-
-    return spec.makeParser();
+    return new JsonInputFormat(flattenSpec, null, null, null, null);
   }
 
   public String generateFlatEvent() throws Exception

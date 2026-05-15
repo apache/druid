@@ -195,7 +195,6 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
           //NOTE: cacheData is temporarily set to false and we get data directly from ZK on each event.
           //this is a workaround to solve curator's out-of-order events problem
           //https://issues.apache.org/jira/browse/CURATOR-191
-          // This is also done in CuratorInventoryManager.
           .withCacheData(true)
           .withCompressed(true)
           .withExecutorService(cacheExecutor)

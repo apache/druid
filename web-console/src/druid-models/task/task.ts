@@ -79,6 +79,7 @@ export interface MsqTaskPayloadResponse {
 
 export interface WorkerState {
   workerId: string;
+  workerDesc?: string;
   state: string;
   durationMs: number;
   pendingMs: number;

@@ -23,19 +23,13 @@ sidebar_label: Kerberized HDFS deep storage
   ~ under the License.
   -->
 
-:::caution[Deprecated]
 
-Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion).
-
-:::
-
-
-## Hadoop Setup
+## Setup
 
 Following are the configurations files required to be copied over to Druid conf folders:
 
-1. For HDFS as a deep storage, hdfs-site.xml, core-site.xml
-2. For ingestion, mapred-site.xml, yarn-site.xml
+1. hdfs-site.xml
+2. core-site.xml
 
 ### HDFS Folders and permissions
 
@@ -71,15 +65,6 @@ druid.storage.storageDirectory=/druid/segments
 # OR
 # druid.storage.storageDirectory=/apps/druid/segments
 
-#
-# Indexing service logs
-#
-
-# For HDFS:
-druid.indexer.logs.type=hdfs
-druid.indexer.logs.directory=/druid/indexing-logs
-# OR
-# druid.storage.storageDirectory=/apps/druid/indexing-logs
 ```
 
 Note: Comment out Local storage and S3 Storage parameters in the file
@@ -92,23 +77,12 @@ Also include hdfs-storage core extension to `conf/druid/_common/common.runtime.p
 #
 
 druid.extensions.directory=dist/druid/extensions
-druid.extensions.hadoopDependenciesDir=dist/druid/hadoop-dependencies
 druid.extensions.loadList=["mysql-metadata-storage", "druid-hdfs-storage", "druid-kerberos"]
 ```
 
-### Hadoop Jars
-
-Ensure that Druid has necessary jars to support the Hadoop version.
-
-Find the hadoop version using command, `hadoop version`
-
-In case there is other software used with hadoop, like `WanDisco`, ensure that
-1. the necessary libraries are available
-2. add the requisite extensions to `druid.extensions.loadlist` in `conf/druid/_common/common.runtime.properties`
-
 ### Kerberos setup
 
-Create a headless keytab which would have access to the druid data and index.
+Create a headless keytab which would have access to the druid data.
 
 Edit conf/druid/_common/common.runtime.properties and add the following properties:
 

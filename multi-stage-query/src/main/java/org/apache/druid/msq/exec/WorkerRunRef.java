@@ -41,9 +41,22 @@ public class WorkerRunRef
   @GuardedBy("this")
   private Worker worker;
 
+  /**
+   * Future returned by {@link #run(Worker, ListeningExecutorService)}.
+   */
   @GuardedBy("this")
   private ListenableFuture<?> workerRunFuture;
 
+  /**
+   * Thread running the worker. Set inside the {@link #run} runnable, used by {@link #cancel()} to interrupt
+   * the worker thread directly.
+   */
+  @GuardedBy("this")
+  private Thread workerThread;
+
+  /**
+   * Flag that is set by {@link #cancel()}.
+   */
   @GuardedBy("this")
   private boolean canceled;
 
@@ -64,8 +77,13 @@ public class WorkerRunRef
 
     this.worker = worker;
 
-    return workerRunFuture = exec.submit(() -> {
+    this.workerRunFuture = exec.submit(() -> {
       final String originalThreadName = Thread.currentThread().getName();
+
+      synchronized (this) {
+        workerThread = Thread.currentThread();
+      }
+
       try {
         Thread.currentThread().setName(StringUtils.format("%s[%s]", originalThreadName, worker.id()));
         worker.run();
@@ -78,9 +96,20 @@ public class WorkerRunRef
         }
       }
       finally {
+        synchronized (this) {
+          workerThread = null;
+          // Clear any interrupt delivered during or after worker.run().
+          //noinspection ResultOfMethodCallIgnored
+          Thread.interrupted();
+        }
+
         Thread.currentThread().setName(originalThreadName);
       }
     });
+
+    // Must not cancel the above future, otherwise listeners with cleanup actions may fire before the worker
+    // has fully stopped. Cancellation is done by calling cancel() on the WorkerRunRef itself.
+    return Futures.nonCancellationPropagating(workerRunFuture);
   }
 
   public synchronized Worker worker()
@@ -109,29 +138,32 @@ public class WorkerRunRef
       return;
     }
 
-    // Interrupt the worker's run future, so the run() thread stops executing.
-    if (workerRunFuture != null) {
-      workerRunFuture.cancel(true);
-    }
-
-    // Also directly signal the run() thread to stop. Ideally this shouldn't be necessary, since the
-    // interrupt should be enough. But, in case there are any code paths that erroneously swallow
-    // InterruptedException, this provides a failsafe cancellation mechanism.
+    // Directly signal the worker to stop.
     worker.stop();
+
+    // Interrupt the worker as a failsafe, in case the worker is blocked on something.
+    if (workerThread != null) {
+      workerThread.interrupt();
+    }
   }
 
   /**
    * Wait for the worker run to finish. Does not throw exceptions from the future, even if the worker
    * ended exceptionally.
    */
-  public synchronized void awaitStop()
+  public void awaitStop()
   {
-    if (workerRunFuture == null) {
+    final ListenableFuture<?> future;
+    synchronized (this) {
+      future = workerRunFuture;
+    }
+
+    if (future == null) {
       throw DruidException.defensive("Not running");
     }
 
     try {
-      workerRunFuture.get();
+      future.get();
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();

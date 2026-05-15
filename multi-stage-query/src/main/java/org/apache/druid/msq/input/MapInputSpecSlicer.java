@@ -21,7 +21,9 @@ package org.apache.druid.msq.input;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.filter.SegmentPruner;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -44,20 +46,21 @@ public class MapInputSpecSlicer implements InputSpecSlicer
   }
 
   @Override
-  public List<InputSlice> sliceStatic(InputSpec inputSpec, int maxNumSlices)
+  public List<InputSlice> sliceStatic(InputSpec inputSpec, @Nullable SegmentPruner segmentPruner, int maxNumSlices)
   {
-    return getSlicer(inputSpec.getClass()).sliceStatic(inputSpec, maxNumSlices);
+    return getSlicer(inputSpec.getClass()).sliceStatic(inputSpec, segmentPruner, maxNumSlices);
   }
 
   @Override
   public List<InputSlice> sliceDynamic(
       InputSpec inputSpec,
+      @Nullable SegmentPruner segmentPruner,
       int maxNumSlices,
       int maxFilesPerSlice,
       long maxBytesPerSlice
   )
   {
-    return getSlicer(inputSpec.getClass()).sliceDynamic(inputSpec, maxNumSlices, maxFilesPerSlice, maxBytesPerSlice);
+    return getSlicer(inputSpec.getClass()).sliceDynamic(inputSpec, segmentPruner, maxNumSlices, maxFilesPerSlice, maxBytesPerSlice);
   }
 
   private InputSpecSlicer getSlicer(final Class<? extends InputSpec> clazz)

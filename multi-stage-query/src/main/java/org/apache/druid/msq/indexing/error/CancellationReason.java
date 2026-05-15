@@ -20,6 +20,7 @@
 package org.apache.druid.msq.indexing.error;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.error.DruidException;
 
 /**
  * Enum denoting the reason for query cancellation.
@@ -27,27 +28,39 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 public enum CancellationReason
 {
   /**
-   * Query was cancaled due to the task shutting down.
+   * Query was canceled due to the task shutting down.
    */
-  TASK_SHUTDOWN("Task shutdown"),
+  TASK_SHUTDOWN("Query canceled due to task shutdown", DruidException.Category.CANCELED),
   /**
-   * Query was cancaled due to a request from the user.
+   * Query was canceled due to a request from the user.
    */
-  USER_REQUEST("User request"),
+  USER_REQUEST("Query canceled", DruidException.Category.CANCELED),
   /**
    * Query was canceled due to exceeding the configured query timeout.
    */
-  QUERY_TIMEOUT("Query timeout"),
+  QUERY_TIMEOUT("Query timed out", DruidException.Category.TIMEOUT),
   /**
    * Query was canceled due to an unknown reason.
    */
-  UNKNOWN("Unknown");
+  UNKNOWN("Query interrupted", DruidException.Category.CANCELED);
 
-  private final String reason;
+  private final String message;
+  private final DruidException.Category category;
 
-  CancellationReason(String reason)
+  CancellationReason(final String message, final DruidException.Category category)
   {
-    this.reason = reason;
+    this.message = message;
+    this.category = category;
+  }
+
+  public String getMessage()
+  {
+    return message;
+  }
+
+  public DruidException.Category getCategory()
+  {
+    return category;
   }
 
   @JsonCreator
@@ -66,6 +79,6 @@ public enum CancellationReason
   @Override
   public String toString()
   {
-    return reason;
+    return message;
   }
 }

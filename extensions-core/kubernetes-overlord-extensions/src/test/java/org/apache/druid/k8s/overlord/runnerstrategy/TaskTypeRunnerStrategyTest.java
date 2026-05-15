@@ -23,14 +23,14 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerFactory;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class TaskTypeRunnerStrategyTest extends EasyMockSupport
 {
   @Mock
@@ -45,19 +45,21 @@ public class TaskTypeRunnerStrategyTest extends EasyMockSupport
     EasyMock.expect(task.getType()).andReturn("compact");
     EasyMock.expectLastCall().once();
     replayAll();
-    Assert.assertEquals(RunnerStrategy.WORKER_NAME, runnerStrategy.getRunnerTypeForTask(task).getType());
-    Assert.assertEquals(KubernetesTaskRunnerFactory.TYPE_NAME, runnerStrategy.getRunnerTypeForTask(task).getType());
+    Assertions.assertEquals(RunnerStrategy.WORKER_NAME, runnerStrategy.getRunnerTypeForTask(task).getType());
+    Assertions.assertEquals(KubernetesTaskRunnerFactory.TYPE_NAME, runnerStrategy.getRunnerTypeForTask(task).getType());
     verifyAll();
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void test_invalidOverridesConfig_shouldThrowException()
   {
-    new TaskTypeRunnerStrategy(
-        "k8s",
-        ImmutableMap.of(
-            "index_kafka",
-            "non_exist_runner"
+    Assertions.assertThrows(IllegalArgumentException.class, () ->
+        new TaskTypeRunnerStrategy(
+            "k8s",
+            ImmutableMap.of(
+                "index_kafka",
+                "non_exist_runner"
+            )
         )
     );
   }

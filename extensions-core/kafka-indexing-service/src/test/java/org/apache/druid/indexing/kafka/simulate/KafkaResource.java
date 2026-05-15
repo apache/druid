@@ -20,18 +20,23 @@
 package org.apache.druid.indexing.kafka.simulate;
 
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
+import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.TestcontainerResource;
+import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.CreatePartitionsResult;
 import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.testcontainers.kafka.KafkaContainer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +49,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * {@link #KAFKA_IMAGE} can be overriden via system property to use a different Kafka Docker image.
  * </p>
  */
-public class KafkaResource extends TestcontainerResource<KafkaContainer>
+public class KafkaResource extends StreamIngestResource<KafkaContainer>
 {
   /**
    * Kafka Docker image used in embedded tests. The image name is
@@ -52,7 +57,7 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
    * defaults to {@code apache/kafka}. Environments that cannot run that
    * image should set the system property to {@code apache/kafka-native}.
    */
-  private static final String KAFKA_IMAGE = System.getProperty("druid.testing.kafka.image", "apache/kafka:4.1.1");
+  private static final String KAFKA_IMAGE = System.getProperty("druid.testing.kafka.image", "apache/kafka:4.2.0");
 
   private EmbeddedDruidCluster cluster;
 
@@ -77,6 +82,38 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     };
   }
 
+  @Override
+  public void onStarted(EmbeddedDruidCluster cluster)
+  {
+    cluster.addExtension(KafkaIndexTaskModule.class);
+  }
+
+  @Override
+  public void publishRecordsToTopic(String topic, List<byte[]> records)
+  {
+    publishRecordsToTopic(topic, records, null);
+  }
+
+  @Override
+  public void publishRecordsToTopicWithoutTransaction(String topic, List<byte[]> records)
+  {
+    ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
+    for (byte[] record : records) {
+      producerRecords.add(new ProducerRecord<>(topic, record));
+    }
+    produceRecordsWithoutTransaction(producerRecords);
+  }
+
+  @Override
+  public void publishRecordsToTopic(String topic, List<byte[]> records, Map<String, Object> properties)
+  {
+    ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
+    for (byte[] record : records) {
+      producerRecords.add(new ProducerRecord<>(topic, record));
+    }
+    produceRecordsToTopic(producerRecords, properties);
+  }
+
   public String getBootstrapServerUrl()
   {
     ensureRunning();
@@ -90,6 +127,7 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     return props;
   }
 
+  @Override
   public void createTopicWithPartitions(String topicName, int numPartitions)
   {
     try (Admin admin = newAdminClient()) {
@@ -112,6 +150,7 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     }
   }
 
+  @Override
   public void deleteTopic(String topicName)
   {
     try (Admin admin = newAdminClient()) {
@@ -127,6 +166,7 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
    * already exist. This method waits until the increase in the partition count
    * has started (but not necessarily finished).
    */
+  @Override
   public void increasePartitionsInTopic(String topic, int newPartitionCount)
   {
     try (Admin admin = newAdminClient()) {
@@ -203,6 +243,41 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
   public Admin newAdminClient()
   {
     return Admin.create(commonClientProperties());
+  }
+
+  /**
+   * Returns the current end offsets for all partitions in the specified topic.
+   * The returned map has partition IDs as String keys and end offsets as Long values.
+   */
+  public Map<String, Long> getPartitionOffsets(String topicName)
+  {
+    Map<String, Long> offsets = new HashMap<>();
+
+    // Add required deserializer config
+    Map<String, Object> props = new HashMap<>(consumerProperties());
+    props.put("key.deserializer", ByteArrayDeserializer.class.getName());
+    props.put("value.deserializer", ByteArrayDeserializer.class.getName());
+
+    try (KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(props)) {
+      // Get all partitions for the topic
+      List<TopicPartition> partitions = new ArrayList<>();
+      consumer.partitionsFor(topicName).forEach(
+          partitionInfo -> partitions.add(new TopicPartition(topicName, partitionInfo.partition()))
+      );
+
+      // Get end offsets for all partitions
+      Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitions);
+
+      // Convert to String keys
+      for (Map.Entry<TopicPartition, Long> entry : endOffsets.entrySet()) {
+        offsets.put(String.valueOf(entry.getKey().partition()), entry.getValue());
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
+    return offsets;
   }
 
   @Override

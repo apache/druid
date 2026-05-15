@@ -155,7 +155,7 @@ Sample specs:
              "protocol" : "http",
              "disableChunkedEncoding" : true,
              "enablePathStyleAccess" : true,
-             "forceGlobalBucketAccessEnabled" : false
+             "crossRegionAccessEnabled" : false
          },
          "proxyConfig": {
              "host" : "proxy-s3.aws.com",

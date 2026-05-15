@@ -48,6 +48,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.std.BasicStageProcessor;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
+import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
@@ -55,7 +56,6 @@ import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.input.stage.StageInputSlice;
-import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.segment.column.RowSignature;
@@ -321,7 +321,7 @@ public class SortMergeJoinStageProcessor extends BasicStageProcessor
    * first provided {@link InputSlice}.
    *
    * "Missing" partitions -- which occur when one slice has no data for a given partition -- are replaced with
-   * {@link ReadableInput} based on {@link ReadableNilFrameChannel}, with no {@link StagePartition}.
+   * {@link ReadableInput} based on {@link ReadableNilFrameChannel}.
    *
    * @throws IllegalStateException if any slices are not {@link StageInputSlice} or {@link NilInputSlice}
    */
@@ -334,6 +334,7 @@ public class SortMergeJoinStageProcessor extends BasicStageProcessor
 
     // Partition number -> Input number -> Input channel
     final Int2ObjectMap<List<ReadableInput>> retVal = new Int2ObjectRBTreeMap<>();
+    final StandardPartitionReader partitionReader = new StandardPartitionReader(context);
 
     for (int inputNumber = 0; inputNumber < slices.size(); inputNumber++) {
       final InputSlice slice = slices.get(inputNumber);
@@ -352,7 +353,7 @@ public class SortMergeJoinStageProcessor extends BasicStageProcessor
         final ReadablePartitions partitions = ((StageInputSlice) slice).getPartitions();
         for (final ReadablePartition partition : partitions) {
           retVal.computeIfAbsent(partition.getPartitionNumber(), ignored -> Arrays.asList(new ReadableInput[slices.size()]))
-                .set(inputNumber, QueryKitUtils.readPartition(context, partition));
+                .set(inputNumber, QueryKitUtils.readPartition(partitionReader, partition));
         }
       } else if (!(slice instanceof NilInputSlice)) {
         throw DruidException.defensive("Slice[%s] is not a 'stage' or 'nil' slice", slice);
@@ -368,7 +369,8 @@ public class SortMergeJoinStageProcessor extends BasicStageProcessor
               ReadableInput.channel(
                   ReadableNilFrameChannel.INSTANCE,
                   frameReadersByInputNumber.get(inputNumber),
-                  null
+                  ReadableInput.NO_STAGE,
+                  ReadableInput.NO_PARTITION
               )
           );
         }

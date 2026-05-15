@@ -149,31 +149,47 @@ public class SegmentManager
       SegmentMapFunction segmentMapFunction
   )
   {
-    final ArrayList<SegmentReference> segmentReferences = new ArrayList<>();
-    final ArrayList<SegmentDescriptor> missingSegments = new ArrayList<>();
-    final ArrayList<DataSegmentAndDescriptor> loadableSegments = new ArrayList<>();
-    for (DataSegmentAndDescriptor segment : segments) {
-      final DataSegment dataSegment = segment.getDataSegment();
-      if (dataSegment == null) {
-        missingSegments.add(segment.getDescriptor());
-        continue;
+    // Closer to collect everything that needs to be cleaned up in the event of failure. If we make it
+    // out of this function, closing the segment references is the caller's responsibility.
+    final Closer safetyNet = Closer.create();
+    try {
+      final ArrayList<SegmentReference> segmentReferences = new ArrayList<>();
+      final ArrayList<SegmentDescriptor> missingSegments = new ArrayList<>();
+      final ArrayList<DataSegmentAndDescriptor> loadableSegments = new ArrayList<>();
+      for (final DataSegmentAndDescriptor segment : segments) {
+        final DataSegment dataSegment = segment.getDataSegment();
+        if (dataSegment == null) {
+          missingSegments.add(segment.getDescriptor());
+          continue;
+        }
+        final Optional<Segment> ref = acquireCachedSegment(dataSegment);
+        if (ref.isPresent()) {
+          try {
+            final Optional<Segment> mapped = segmentMapFunction.apply(ref).map(safetyNet::register);
+            segmentReferences.add(
+                new SegmentReference(
+                    segment.getDescriptor(),
+                    mapped,
+                    null
+                )
+            );
+          }
+          catch (Throwable t) {
+            // If applying the mapFn failed, attach the base segment to the closer and rethrow
+            ref.ifPresent(safetyNet::register);
+            throw t;
+          }
+        } else if (canLoadSegmentOnDemand(dataSegment)) {
+          loadableSegments.add(segment);
+        } else {
+          missingSegments.add(segment.getDescriptor());
+        }
       }
-      Optional<Segment> ref = acquireCachedSegment(dataSegment);
-      if (ref.isPresent()) {
-        segmentReferences.add(
-            new SegmentReference(
-                segment.getDescriptor(),
-                segmentMapFunction.apply(ref),
-                null
-            )
-        );
-      } else if (canLoadSegmentOnDemand(dataSegment)) {
-        loadableSegments.add(segment);
-      } else {
-        missingSegments.add(segment.getDescriptor());
-      }
+      return new LeafSegmentsBundle(segmentReferences, loadableSegments, missingSegments);
     }
-    return new LeafSegmentsBundle(segmentReferences, loadableSegments, missingSegments);
+    catch (Throwable t) {
+      throw CloseableUtils.closeAndWrapInCatch(t, safetyNet);
+    }
   }
 
   /**
@@ -182,9 +198,17 @@ public class SegmentManager
    * download a {@link DataSegment} if it is not already present in {@link #cacheManager}, use
    * {@link #acquireSegment(DataSegment)} instead.
    */
+  public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
+  {
+    return cacheManager.acquireCachedSegment(segmentId);
+  }
+
+  /**
+   * Convenience overload of {@link #acquireCachedSegment(SegmentId)} that accepts a {@link DataSegment}.
+   */
   public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
   {
-    return cacheManager.acquireCachedSegment(dataSegment);
+    return acquireCachedSegment(dataSegment.getId());
   }
 
   /**
@@ -311,7 +335,7 @@ public class SegmentManager
             );
 
             long numOfRows = 0;
-            final Optional<Segment> loadedSegment = cacheManager.acquireCachedSegment(dataSegment);
+            final Optional<Segment> loadedSegment = cacheManager.acquireCachedSegment(dataSegment.getId());
             if (loadedSegment.isPresent()) {
               final Segment segment = loadedSegment.get();
               final IndexedTable table = segment.as(IndexedTable.class);
@@ -378,7 +402,7 @@ public class SegmentManager
 
             if (oldSegmentRef != null) {
               try (final Closer closer = Closer.create()) {
-                final Optional<Segment> oldSegment = cacheManager.acquireCachedSegment(oldSegmentRef);
+                final Optional<Segment> oldSegment = cacheManager.acquireCachedSegment(oldSegmentRef.getId());
                 long numberOfRows = oldSegment.map(segment -> {
                   closer.register(segment);
                   final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);

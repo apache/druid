@@ -78,7 +78,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
                          .filter(
                              entry -> {
                                final JsonNode val = entry.getValue();
-                               // If the keepNullValues is set on the JSONParseSpec then null values should not be filtered out
+                               // If the keepNullValues is set on the JsonInputFormat then null values should not be filtered out
                                return !(val.isObject() || (!keepNullValues && val.isNull()) || (val.isArray() && !isFlatList(val)));
                              }
                          )

@@ -82,7 +82,7 @@ public class ExternalInputSpecSlicerTest
   {
     Assert.assertEquals(
         ImmutableList.of(unsplittableSlice("foo", "bar", "baz")),
-        slicer.sliceStatic(unsplittableSpec("foo", "bar", "baz"), 2)
+        slicer.sliceStatic(unsplittableSpec("foo", "bar", "baz"), null, 2)
     );
   }
 
@@ -91,7 +91,7 @@ public class ExternalInputSpecSlicerTest
   {
     Assert.assertEquals(
         ImmutableList.of(unsplittableSlice()),
-        slicer.sliceStatic(unsplittableSpec(), 2)
+        slicer.sliceStatic(unsplittableSpec(), null, 2)
     );
   }
 
@@ -103,7 +103,7 @@ public class ExternalInputSpecSlicerTest
             splittableSlice("foo", "baz"),
             splittableSlice("bar")
         ),
-        slicer.sliceStatic(splittableSpec("foo", "bar", "baz"), 2)
+        slicer.sliceStatic(splittableSpec("foo", "bar", "baz"), null, 2)
     );
   }
 
@@ -116,7 +116,7 @@ public class ExternalInputSpecSlicerTest
             splittableSlice("bar"),
             splittableSlice("baz")
         ),
-        slicer.sliceStatic(splittableSpec("foo", "bar", "baz"), 5)
+        slicer.sliceStatic(splittableSpec("foo", "bar", "baz"), null, 5)
     );
   }
 
@@ -125,7 +125,7 @@ public class ExternalInputSpecSlicerTest
   {
     Assert.assertEquals(
         ImmutableList.of(),
-        slicer.sliceStatic(splittableSpec(), 2)
+        slicer.sliceStatic(splittableSpec(), null, 2)
     );
   }
 
@@ -137,7 +137,7 @@ public class ExternalInputSpecSlicerTest
             splittableSlice("foo", "baz"),
             splittableSlice("bar")
         ),
-        slicer.sliceStatic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), 2)
+        slicer.sliceStatic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), null, 2)
     );
   }
 
@@ -148,7 +148,7 @@ public class ExternalInputSpecSlicerTest
         ImmutableList.of(
             unsplittableSlice("foo", "bar", "baz")
         ),
-        slicer.sliceDynamic(unsplittableSpec("foo", "bar", "baz"), 100, 1, 1)
+        slicer.sliceDynamic(unsplittableSpec("foo", "bar", "baz"), null, 100, 1, 1)
     );
   }
 
@@ -159,7 +159,7 @@ public class ExternalInputSpecSlicerTest
         ImmutableList.of(
             splittableSlice("foo", "bar", "baz")
         ),
-        slicer.sliceDynamic(splittableSpec("foo", "bar", "baz"), 100, 5, Long.MAX_VALUE)
+        slicer.sliceDynamic(splittableSpec("foo", "bar", "baz"), null, 100, 5, Long.MAX_VALUE)
     );
   }
 
@@ -171,7 +171,7 @@ public class ExternalInputSpecSlicerTest
             splittableSlice("foo", "bar"),
             splittableSlice("baz")
         ),
-        slicer.sliceDynamic(splittableSpec("foo", "bar", "baz"), 100, 2, Long.MAX_VALUE)
+        slicer.sliceDynamic(splittableSpec("foo", "bar", "baz"), null, 100, 2, Long.MAX_VALUE)
     );
   }
 
@@ -183,7 +183,7 @@ public class ExternalInputSpecSlicerTest
             splittableSlice("foo", "bar"),
             splittableSlice("baz")
         ),
-        slicer.sliceDynamic(splittableSpec("foo", "bar", "baz"), 100, 5, 7)
+        slicer.sliceDynamic(splittableSpec("foo", "bar", "baz"), null, 100, 5, 7)
     );
   }
 
@@ -196,7 +196,7 @@ public class ExternalInputSpecSlicerTest
             splittableSlice("bar.gz"),
             splittableSlice("baz.gz")
         ),
-        slicer.sliceDynamic(splittableSpec("foo.gz", "bar.gz", "baz.gz"), 100, 5, 7)
+        slicer.sliceDynamic(splittableSpec("foo.gz", "bar.gz", "baz.gz"), null, 100, 5, 7)
     );
   }
 
@@ -209,7 +209,7 @@ public class ExternalInputSpecSlicerTest
             splittableSlice("bar"),
             splittableSlice("baz")
         ),
-        slicer.sliceDynamic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), 100, 5, 7)
+        slicer.sliceDynamic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), null, 100, 5, 7)
     );
   }
 
@@ -221,7 +221,7 @@ public class ExternalInputSpecSlicerTest
             splittableSlice("foo", "baz"),
             splittableSlice("bar")
         ),
-        slicer.sliceDynamic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), 2, 2, Long.MAX_VALUE)
+        slicer.sliceDynamic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), null, 2, 2, Long.MAX_VALUE)
     );
   }
 
@@ -232,7 +232,7 @@ public class ExternalInputSpecSlicerTest
         ImmutableList.of(
             splittableSlice("foo", "bar", "baz")
         ),
-        slicer.sliceDynamic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), 1, 5, Long.MAX_VALUE)
+        slicer.sliceDynamic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), null, 1, 5, Long.MAX_VALUE)
     );
   }
 

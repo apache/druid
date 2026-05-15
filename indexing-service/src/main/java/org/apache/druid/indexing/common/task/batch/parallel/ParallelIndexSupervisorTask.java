@@ -59,6 +59,7 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
+import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -1220,7 +1221,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       // segment metrics:
       emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());
       emitMetric(toolbox.getEmitter(), "ingest/segments/count", newSegments.size());
-
+      emitMetric(toolbox.getEmitter(), "ingest/rows/published", IndexTaskUtils.getTotalRowCount(newSegments));
     } else {
       throw new ISE("Failed to publish segments");
     }
@@ -1835,6 +1836,15 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   @Override
   public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
+    try {
+      toolbox.getDataSegmentKiller().killRecursively(
+          DeepStorageIntermediaryDataManager.retrieveShuffleDataStoragePath(getId())
+      );
+    }
+    catch (IOException e) {
+      LOG.warn(e, "Failed recursive deep storage cleanup for intermediary path for task[%s]", getId());
+    }
+
     if (!isCompactionTask) {
       super.cleanUp(toolbox, taskStatus);
     }

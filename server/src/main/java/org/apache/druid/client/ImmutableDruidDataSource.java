@@ -26,15 +26,20 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 
 /**
  * An immutable collection of metadata of segments ({@link DataSegment} objects), belonging to a particular data
- * source.
+ * source. Like {@link DruidDataSource}, partial-load segments are stored as {@link DataSegmentAndLoadProfile} (a
+ * {@link DataSegment} subclass); full-load segments are stored as bare {@code DataSegment} so the common case pays no
+ * per-segment wrapper overhead.
  *
  * @see DruidDataSource - a mutable counterpart of this class
  */
@@ -49,12 +54,18 @@ public class ImmutableDruidDataSource
    * Concurrency: idToSegments argument might be a {@link java.util.concurrent.ConcurrentMap} that is being updated
    * concurrently while this constructor is executed.
    */
-  public ImmutableDruidDataSource(String name, Map<String, String> properties, Map<SegmentId, DataSegment> idToSegments)
+  public ImmutableDruidDataSource(
+      String name,
+      Map<String, String> properties,
+      Map<SegmentId, DataSegment> idToSegments
+  )
   {
     this.name = Preconditions.checkNotNull(name);
     this.properties = ImmutableMap.copyOf(properties);
     this.idToSegments = ImmutableSortedMap.copyOf(idToSegments);
-    this.totalSizeOfSegments = idToSegments.values().stream().mapToLong(DataSegment::getSize).sum();
+    this.totalSizeOfSegments = this.idToSegments.values().stream()
+                                                .mapToLong(DataSegmentAndLoadProfile::effectiveSizeOf)
+                                                .sum();
   }
 
   @JsonCreator
@@ -70,6 +81,7 @@ public class ImmutableDruidDataSource
     final ImmutableSortedMap.Builder<SegmentId, DataSegment> idToSegmentsBuilder = ImmutableSortedMap.naturalOrder();
     long totalSizeOfSegments = 0;
     for (DataSegment segment : segments) {
+      // JSON deserialization carries no partial-load profile state; segments are stored bare.
       idToSegmentsBuilder.put(segment.getId(), segment);
       totalSizeOfSegments += segment.getSize();
     }
@@ -92,17 +104,31 @@ public class ImmutableDruidDataSource
   @JsonProperty
   public Collection<DataSegment> getSegments()
   {
-    return idToSegments.values();
+    return Collections.unmodifiableCollection(idToSegments.values());
   }
 
   @JsonIgnore
+  @Nullable
   public DataSegment getSegment(SegmentId segmentId)
   {
     return idToSegments.get(segmentId);
   }
 
   /**
-   * Returns the sum of the {@link DataSegment#getSize() sizes} of all segments in this ImmutableDruidDataSource.
+   * Returns the partial-load profile for the given segment, or {@code null} if the segment was loaded as a regular
+   * full-load (no partial-load metadata announced) or is not present in this data source.
+   */
+  @JsonIgnore
+  @Nullable
+  public PartialLoadProfile getPartialLoadProfile(SegmentId segmentId)
+  {
+    return DataSegmentAndLoadProfile.profileOf(idToSegments.get(segmentId));
+  }
+
+  /**
+   * Returns the sum of {@link DataSegmentAndLoadProfile#effectiveSizeOf effective sizes} of all segments in this
+   * ImmutableDruidDataSource, i.e. {@code loadedBytes} for partial replicas and {@link DataSegment#getSize()} for
+   * full-load replicas.
    */
   @JsonIgnore
   public long getTotalSizeOfSegments()

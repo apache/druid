@@ -1,7 +1,0 @@
-client_tls/
-docker/docker_ip
-docker/tls/root.key
-docker/tls/root.pem
-docker/tls/untrusted_root.key
-docker/tls/untrusted_root.pem
-gen-scripts/

@@ -42,6 +42,15 @@ import java.util.function.Supplier;
 public class FrameReaderUtils
 {
   /**
+   * Columns that are used to directly select row memory through a {@link ColumnSelectorFactory}.
+   */
+  public static final List<String> ROW_MEMORY_COLUMNS = List.of(
+      FrameColumnSelectorFactory.FRAME_TYPE_COLUMN,
+      FrameColumnSelectorFactory.ROW_SIGNATURE_COLUMN,
+      FrameColumnSelectorFactory.ROW_MEMORY_COLUMN
+  );
+
+  /**
    * Returns a ByteBuffer containing data from the provided {@link Memory}. The ByteBuffer is always newly
    * created, so it is OK to change its position, limit, etc. However, it may point directly to the backing memory
    * of the {@link Memory} object, so it is not OK to write to its contents.
@@ -287,13 +296,7 @@ public class FrameReaderUtils
    */
   private static boolean mayBeAbleToSelectRowMemory(final ColumnSelectorFactory columnSelectorFactory)
   {
-    final List<String> requiredColumns = List.of(
-        FrameColumnSelectorFactory.FRAME_TYPE_COLUMN,
-        FrameColumnSelectorFactory.ROW_SIGNATURE_COLUMN,
-        FrameColumnSelectorFactory.ROW_MEMORY_COLUMN
-    );
-
-    for (final String columnName : requiredColumns) {
+    for (final String columnName : ROW_MEMORY_COLUMNS) {
       if (columnSelectorFactory.getColumnCapabilities(columnName) == null) {
         return false;
       }

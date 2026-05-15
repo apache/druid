@@ -45,7 +45,6 @@ import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
@@ -55,7 +54,6 @@ import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.indexer.HadoopIndexTaskModule;
 import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -79,7 +77,6 @@ import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
@@ -183,12 +180,8 @@ public class CliIndexer extends ServerRunnable
             LifecycleModule.register(binder, Server.class, RemoteChatHandler.class);
 
             binder.bind(SegmentManager.class).in(LazySingleton.class);
-            binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
             Jerseys.addResource(binder, HistoricalResource.class);
 
-            if (isZkEnabled) {
-              LifecycleModule.register(binder, ZkCoordinator.class);
-            }
             LifecycleModule.register(binder, SegmentCacheBootstrapper.class);
 
             bindAnnouncer(
@@ -247,7 +240,6 @@ public class CliIndexer extends ServerRunnable
         new IndexingServiceTaskLogsModule(properties),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
-        new HadoopIndexTaskModule(),
         new QueryablePeonModule(),
         new CliIndexerServerModule(properties),
         new LookupModule(),

@@ -19,12 +19,18 @@
 
 package org.apache.druid.segment.transform;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -43,14 +49,84 @@ public class CompactionTransformSpecTest
   public void testSerde() throws IOException
   {
     final CompactionTransformSpec expected = new CompactionTransformSpec(
-        new SelectorDimFilter("dim1", "foo", null)
+        new SelectorDimFilter("dim1", "foo", null),
+        VirtualColumns.create(
+            new ExpressionVirtualColumn(
+                "isRobotFiltered",
+                "concat(isRobot, '_filtered')",
+                ColumnType.STRING,
+                ExprMacroTable.nil()
+            )
+        )
     );
     final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
+    );
     final byte[] json = mapper.writeValueAsBytes(expected);
     final CompactionTransformSpec fromJson = (CompactionTransformSpec) mapper.readValue(
         json,
         CompactionTransformSpec.class
     );
-    Assert.assertEquals(expected, fromJson);
+    Assertions.assertEquals(expected, fromJson);
+  }
+
+  @Test
+  public void testSerde_emptyVirtualColumns_notSerializedForFingerprintConsistency() throws IOException
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+
+    // Spec with VirtualColumns.EMPTY (new code path)
+    final CompactionTransformSpec withEmpty = new CompactionTransformSpec(
+        new SelectorDimFilter("dim1", "foo", null),
+        VirtualColumns.EMPTY
+    );
+
+    // Spec with null (old code path before VirtualColumns support)
+    final CompactionTransformSpec withNull = new CompactionTransformSpec(
+        new SelectorDimFilter("dim1", "foo", null),
+        null
+    );
+
+    // Serialize both
+    final String jsonWithEmpty = mapper.writeValueAsString(withEmpty);
+    final String jsonWithNull = mapper.writeValueAsString(withNull);
+
+    // Both should produce identical JSON (no virtualColumns field)
+    // This ensures fingerprint consistency: old segments (no VC) match new segments (EMPTY VC)
+    Assertions.assertEquals(
+        jsonWithNull,
+        jsonWithEmpty,
+        "VirtualColumns.EMPTY should serialize identically to null for fingerprint consistency"
+    );
+
+    // Verify virtualColumns field is not present in either JSON
+    Assertions.assertFalse(
+        jsonWithEmpty.contains("virtualColumns"),
+        "virtualColumns field should not appear in JSON when empty"
+    );
+    Assertions.assertFalse(
+        jsonWithNull.contains("virtualColumns"),
+        "virtualColumns field should not appear in JSON when null"
+    );
+  }
+
+  @Test
+  public void testSerde_emptyVirtualColumns_deserializesToEmptyNotNull() throws IOException
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+
+    // JSON without virtualColumns field (like old data)
+    final String jsonWithoutField = "{\"filter\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"foo\"}}";
+
+    final CompactionTransformSpec deserialized = mapper.readValue(
+        jsonWithoutField,
+        CompactionTransformSpec.class
+    );
+
+    // Should deserialize to VirtualColumns.EMPTY, not null
+    Assertions.assertNotNull(deserialized.getVirtualColumns(), "virtualColumns should not be null after deserialization");
+    Assertions.assertEquals(VirtualColumns.EMPTY, deserialized.getVirtualColumns(), "virtualColumns should be EMPTY");
+    Assertions.assertTrue(deserialized.getVirtualColumns().isEmpty(), "virtualColumns should be empty");
   }
 }

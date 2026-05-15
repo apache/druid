@@ -59,6 +59,7 @@ import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.ServiceAnnouncementState;
 import org.apache.druid.server.initialization.CuratorDiscoveryConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
@@ -162,6 +163,8 @@ public class DiscoveryModule implements Module
     JsonConfigProvider.bind(binder, "druid.discovery.curator", CuratorDiscoveryConfig.class);
 
     binder.bind(CuratorServiceAnnouncer.class).in(LazySingleton.class);
+
+    binder.bind(ServiceAnnouncementState.class).in(LazySingleton.class);
 
     // Build the binder so that it will at a minimum inject an empty set.
     DruidBinders.discoveryAnnouncementBinder(binder);

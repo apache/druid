@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.ClusterTestingModule;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorReportPayload;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
@@ -33,7 +34,8 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.testing.cluster.overlord.FaultyLagAggregator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.indexing.KafkaTestBase;
+import org.apache.druid.testing.embedded.StreamIngestResource;
+import org.apache.druid.testing.embedded.indexing.StreamIndexTestBase;
 import org.hamcrest.Matchers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Period;
@@ -51,8 +53,16 @@ import java.util.Map;
  * Future tests can try to leverage the cluster testing config to verify cluster
  * scalability and stability.
  */
-public class FaultyClusterTest extends KafkaTestBase
+public class FaultyClusterTest extends StreamIndexTestBase
 {
+  private final KafkaResource kafkaServer = new KafkaResource();
+
+  @Override
+  protected StreamIngestResource<?> getStreamIngestResource()
+  {
+    return kafkaServer;
+  }
+
   @Override
   protected EmbeddedDruidCluster createCluster()
   {
@@ -74,7 +84,7 @@ public class FaultyClusterTest extends KafkaTestBase
     // Set up the topic and supervisor
     final String topic = IdUtils.getRandomId();
     kafkaServer.createTopicWithPartitions(topic, 1);
-    final KafkaSupervisorSpec supervisorSpec = createSupervisor()
+    final KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(kafkaServer)
         .withIoConfig(io -> io.withTaskCount(1))
         .withContext(taskContext)
         .withId("supe_" + dataSource)
@@ -107,7 +117,7 @@ public class FaultyClusterTest extends KafkaTestBase
     kafkaServer.createTopicWithPartitions(topic, 2);
 
     final int lagMultiplier = 1_000_000;
-    final KafkaSupervisorSpec supervisorSpec = createSupervisor()
+    final KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(kafkaServer)
         .withIoConfig(
             io -> io
                 .withTaskCount(2)

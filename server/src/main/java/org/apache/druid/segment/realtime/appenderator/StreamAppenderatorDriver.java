@@ -341,7 +341,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                 ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
                 segmentsAndCommitMetadata.getSegmentSchemaMapping(),
                 segmentsAndCommitMetadata.getUpgradedSegments()
-            )
+            ).withWasPublished(segmentsAndCommitMetadata.wasPublished())
         );
       }
 
@@ -385,7 +385,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                                 ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
                                 segmentsAndCommitMetadata.getSegmentSchemaMapping(),
                                 segmentsAndCommitMetadata.getUpgradedSegments()
-                            )
+                            ).withWasPublished(segmentsAndCommitMetadata.wasPublished())
                         );
                       }
                     }

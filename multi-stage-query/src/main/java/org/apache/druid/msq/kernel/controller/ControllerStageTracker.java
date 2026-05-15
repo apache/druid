@@ -904,6 +904,18 @@ class ControllerStageTracker
       );
     }
 
+    // When stages sort during shuffle and don't need to gather statistics, they should transition to POST_READING
+    // when all workers are done reading input. "Results complete" implies that input is done being read, so check
+    // here if we should transition. (In most cases the worker will call "setDoneReadingInputForWorker" first, but
+    // it can go straight to "setResultsCompleteForWorker" if it finishes reading inputs very quickly and can
+    // fully buffer its outputs.)
+    if (phase == ControllerStagePhase.READING_INPUT
+        && !stageDef.mustGatherResultKeyStatistics()
+        && stageDef.doesSortDuringShuffle()
+        && allWorkersDoneReadingInput()) {
+      transitionTo(ControllerStagePhase.POST_READING);
+    }
+
     if (allResultsPresent()) {
       transitionTo(ControllerStagePhase.RESULTS_READY);
       return true;

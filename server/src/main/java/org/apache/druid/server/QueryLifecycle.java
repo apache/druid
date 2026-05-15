@@ -34,10 +34,10 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
@@ -49,6 +49,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.server.broker.PerSegmentTimeoutConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -63,8 +64,10 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -96,9 +99,11 @@ public class QueryLifecycle
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
-  private final DefaultQueryConfig defaultQueryConfig;
+  private final QueryConfigProvider queryConfigProvider;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
+  private final List<QueryBlocklistRule> queryBlocklist;
+  private final Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig;
   private final long startMs;
   private final long startNs;
 
@@ -118,9 +123,11 @@ public class QueryLifecycle
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final AuthorizerMapper authorizerMapper,
-      final DefaultQueryConfig defaultQueryConfig,
+      final QueryConfigProvider queryConfigProvider,
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
+      final List<QueryBlocklistRule> queryBlocklist,
+      final Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig,
       final long startMs,
       final long startNs
   )
@@ -131,9 +138,11 @@ public class QueryLifecycle
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
-    this.defaultQueryConfig = defaultQueryConfig;
+    this.queryConfigProvider = queryConfigProvider;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
+    this.queryBlocklist = queryBlocklist;
+    this.perSegmentTimeoutConfig = perSegmentTimeoutConfig;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -212,13 +221,50 @@ public class QueryLifecycle
       queryId = UUID.randomUUID().toString();
     }
 
-    Map<String, Object> mergedUserAndConfigContext = QueryContexts.override(
-        defaultQueryConfig.getContext(),
-        baseQuery.getContext()
-    );
-    mergedUserAndConfigContext.put(BaseQuery.QUERY_ID, queryId);
-    this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext);
+    // Start with system defaults, apply per-datasource override, then user context wins
+    Map<String, Object> contextWithDefaults = new HashMap<>(queryConfigProvider.getContext());
+    applyPerDatasourcePerSegmentTimeout(baseQuery, contextWithDefaults, queryId);
+    Map<String, Object> finalContext = QueryContexts.override(contextWithDefaults, baseQuery.getContext());
+    finalContext.put(BaseQuery.QUERY_ID, queryId);
+
+    this.baseQuery = baseQuery.withOverriddenContext(finalContext);
     this.toolChest = conglomerate.getToolChest(this.baseQuery);
+  }
+
+  /**
+   * If a per-datasource per-segment timeout is configured, injects it into the context defaults.
+   * User context (applied later via {@link QueryContexts#override}) will override this if set explicitly.
+   * In monitorOnly mode, logs the configured timeout but does not inject it.
+   *
+   * For queries involving multiple datasources (e.g., joins or unions), the timeout from the first matching datasource is applied
+   * since getTableNames() returns a Set, the match order is non-deterministic.
+   */
+  private void applyPerDatasourcePerSegmentTimeout(
+      final Query<?> query,
+      final Map<String, Object> contextWithDefaults,
+      final String queryId
+  )
+  {
+    if (perSegmentTimeoutConfig.isEmpty()) {
+      return;
+    }
+
+    for (String tableName : query.getDataSource().getTableNames()) {
+      PerSegmentTimeoutConfig dsConfig = perSegmentTimeoutConfig.get(tableName);
+      if (dsConfig != null) {
+        if (dsConfig.isMonitorOnly()) {
+          log.debug(
+              "Per-segment timeout [%d ms] configured for datasource [%s] in monitorOnly mode (not enforced) for query [%s].",
+              dsConfig.getPerSegmentTimeoutMs(),
+              tableName,
+              queryId
+          );
+        } else {
+          contextWithDefaults.put(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, dsConfig.getPerSegmentTimeoutMs());
+        }
+        return;
+      }
+    }
   }
 
   /**
@@ -310,6 +356,31 @@ public class QueryLifecycle
     }
   }
 
+  /**
+   * Checks if the query matches any blocklist rules. If a rule matches, throws a DruidException.
+   * Rules are evaluated in order, and the first match wins.
+   *
+   * @throws DruidException if the query is blocklisted
+   */
+  private void checkQueryBlocklist()
+  {
+    if (queryBlocklist == null || queryBlocklist.isEmpty()) {
+      return;
+    }
+
+    for (QueryBlocklistRule rule : queryBlocklist) {
+      if (rule.matches(this.baseQuery)) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.FORBIDDEN)
+                            .build(
+                                "Query[%s] blocked by rule[%s]",
+                                this.baseQuery.getId(),
+                                rule.getRuleName()
+                            );
+      }
+    }
+  }
+
   private AuthorizationResult doAuthorize(
       final AuthenticationResult authenticationResult,
       final AuthorizationResult authorizationResult
@@ -322,6 +393,10 @@ public class QueryLifecycle
       // Not authorized; go straight to Jail, do not pass Go.
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {
+      // Check blocklist while in AUTHORIZING state, before transitioning to AUTHORIZED
+      // This ensures the exception is properly handled as an authorization failure
+      checkQueryBlocklist();
+
       transition(State.AUTHORIZING, State.AUTHORIZED);
       this.baseQuery = this.baseQuery.withDataSource(baseQuery.getDataSource()
                                                               .withPolicies(

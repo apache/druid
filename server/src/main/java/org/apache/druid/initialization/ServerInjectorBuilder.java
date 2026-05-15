@@ -73,21 +73,6 @@ public class ServerInjectorBuilder
         .build();
   }
 
-  /**
-   * Needed for Hadoop indexing that needs server-like Injector but can't run jetty 12
-   */
-  public static Injector makeServerInjectorWithoutJettyModules(
-      final Injector baseInjector,
-      final Set<NodeRole> nodeRoles,
-      final Iterable<? extends Module> modules
-  )
-  {
-    return new ServerInjectorBuilder(baseInjector)
-        .nodeRoles(nodeRoles)
-        .serviceModules(modules)
-        .buildWithoutJettyModules();
-  }
-
   public ServerInjectorBuilder(Injector baseInjector)
   {
     this.baseInjector = baseInjector;
@@ -107,19 +92,6 @@ public class ServerInjectorBuilder
 
   public Injector build()
   {
-    return this.build(true);
-  }
-
-  /**
-   * Needed for Hadoop indexing that needs server-like Injector but can't run jetty 12
-   */
-  public Injector buildWithoutJettyModules()
-  {
-    return this.build(false);
-  }
-
-  private Injector build(boolean withJettyModules)
-  {
     Preconditions.checkNotNull(baseInjector);
     Preconditions.checkNotNull(nodeRoles);
 
@@ -131,12 +103,7 @@ public class ServerInjectorBuilder
     // Create the core set of modules shared by all services.
     // Here and below, the modules are filtered by the load modules list and
     // the set of roles which this server provides.
-    CoreInjectorBuilder coreBuilder;
-    if (withJettyModules) {
-      coreBuilder = new CoreInjectorBuilder(childInjector, nodeRoles).forServer();
-    } else {
-      coreBuilder = new CoreInjectorBuilder(childInjector, nodeRoles).forServerWithoutJetty();
-    }
+    CoreInjectorBuilder coreBuilder = new CoreInjectorBuilder(childInjector, nodeRoles).forServer();
 
     // Override with the per-service modules.
     ServiceInjectorBuilder serviceBuilder = (ServiceInjectorBuilder) new ServiceInjectorBuilder(coreBuilder).addAll(

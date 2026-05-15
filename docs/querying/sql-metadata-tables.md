@@ -237,6 +237,7 @@ Servers table lists all discovered servers in the cluster.
 |is_leader|BIGINT|1 if the server is currently the 'leader' (for services which have the concept of leadership), otherwise 0 if the server is not the leader, or null if the server type does not have the concept of leadership|
 |start_time|STRING|Timestamp in ISO8601 format when the server was announced in the cluster|
 |version|VARCHAR|Druid version running on the server|
+|build_revision|VARCHAR|The git commit of the build that produced the server binary|
 |labels|VARCHAR|Labels for the server configured using the property [`druid.labels`](../configuration/index.md)|
 |available_processors|BIGINT|Total number of CPU processors available to the server|
 |total_memory|BIGINT|Total memory in bytes available to the server|
@@ -321,7 +322,7 @@ SELECT * FROM sys.supervisors WHERE healthy=0;
 
 ### SERVER_PROPERTIES table
 
-The `server_properties` table exposes the runtime properties configured on for each Druid server. Each row represents a single property key-value pair associated with a specific server.
+The `server_properties` table exposes the runtime properties configured on each Druid server. Each row represents a single property key-value pair associated with a specific server. This table supports filter and projection pushdown for efficient querying. If a server is unreachable, the table still returns a row for that server with the `error_message` column populated instead of failing the entire query.
 
 |Column|Type|Notes|
 |------|-----|-----|
@@ -330,6 +331,7 @@ The `server_properties` table exposes the runtime properties configured on for e
 |node_roles|VARCHAR|Comma-separated list of roles that the server performs. For example, `[coordinator,overlord]` if the server functions as both a Coordinator and an Overlord.|
 |property|VARCHAR|Name of the property|
 |value|VARCHAR|Value of the property|
+|error_message|VARCHAR|Describes why properties could not be retrieved from the server (e.g., connection refused, HTTP error). Null when properties were fetched successfully.|
 
 For example, to retrieve properties for a specific server, use the query
 

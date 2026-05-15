@@ -21,9 +21,9 @@ package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -120,17 +120,13 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
   private static final SegmentId SEGMENT_ID = SegmentId.dummy("segmentId");
   private static final Interval INTERVAL = Intervals.of("2011-01-13T00:00:00.000Z/2011-01-22T00:00:00.001Z");
 
-  private static final InputRowParser<Map<String, Object>> ROW_PARSER = new MapInputRowParser(
-      new JSONParseSpec(
-          new TimestampSpec(TIME_COLUMN, "auto", null),
-          DimensionsSpec.builder()
-                        .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)))
-                        .setDimensionExclusions(ImmutableList.of(DIM_FLOAT_NAME))
-                        .build(),
-          null,
-          null,
-          null
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIME_COLUMN, "auto", null),
+      DimensionsSpec.builder()
+                    .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)))
+                    .setDimensionExclusions(ImmutableList.of(DIM_FLOAT_NAME))
+                    .build(),
+      ColumnsFilter.all()
   );
 
   private QueryableIndex index;
@@ -329,7 +325,13 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
     System.setProperty(ColumnHolder.DOUBLE_STORAGE_TYPE_PROPERTY, storeDoubleAsFloat);
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(DateTimes.of("2011-01-13T00:00:00.000Z").getMillis())
-        .withDimensionsSpec(ROW_PARSER)
+        .withTimestampSpec(new TimestampSpec(TIME_COLUMN, "auto", null))
+        .withDimensionsSpec(
+            DimensionsSpec.builder()
+                          .setDimensions(DimensionsSpec.getDefaultSchemas(List.of(DIM_NAME)))
+                          .setDimensionExclusions(List.of(DIM_FLOAT_NAME))
+                          .build()
+        )
         .withMetrics(
             new DoubleSumAggregatorFactory(DIM_FLOAT_NAME, DIM_FLOAT_NAME)
         )
@@ -342,7 +344,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
 
 
     getStreamOfEvents().forEach(o -> {
-      index.add(ROW_PARSER.parseBatch((Map<String, Object>) o).get(0));
+      index.add(MapInputRowParser.parse(SCHEMA, (Map<String, Object>) o));
     });
 
     if (oldValue == null) {

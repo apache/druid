@@ -39,6 +39,7 @@ import org.apache.druid.msq.exec.ExtraInfoHolder;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
+import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.stage.StageInputSlice;
@@ -141,7 +142,8 @@ public class ExportResultsStageProcessor implements StageProcessor<List<String>,
     }
 
     final ChannelCounters channelCounter = context.counters().channel(CounterNames.outputChannel());
-    final Sequence<ReadableInput> readableInputs = QueryKitUtils.readPartitions(context, slice.getPartitions());
+    final Sequence<ReadableInput> readableInputs =
+        QueryKitUtils.readPartitions(new StandardPartitionReader(context), slice.getPartitions());
 
     final Sequence<FrameProcessor<Object>> processors = readableInputs.map(
         readableInput -> new ExportResultsFrameProcessor(
@@ -154,12 +156,12 @@ public class ExportResultsStageProcessor implements StageProcessor<List<String>,
             getExportFilePath(
                 queryId,
                 context.workOrder().getWorkerNumber(),
-                readableInput.getStagePartition().getPartitionNumber(),
+                readableInput.getPartitionNumber(),
                 exportFormat
             ),
             columnMappings,
             resultsContext,
-            readableInput.getStagePartition().getPartitionNumber()
+            readableInput.getPartitionNumber()
         )
     );
 

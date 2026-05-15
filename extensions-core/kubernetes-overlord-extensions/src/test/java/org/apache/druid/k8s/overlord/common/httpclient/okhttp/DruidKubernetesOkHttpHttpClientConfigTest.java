@@ -21,8 +21,8 @@ package org.apache.druid.k8s.overlord.common.httpclient.okhttp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -39,10 +39,10 @@ public class DruidKubernetesOkHttpHttpClientConfigTest
         DruidKubernetesOkHttpHttpClientConfig.class
     );
 
-    Assert.assertFalse(config.isUseCustomDispatcherExecutor());
-    Assert.assertEquals(50, config.getCoreWorkerThreads());
-    Assert.assertEquals(50, config.getMaxWorkerThreads());
-    Assert.assertEquals(60L, config.getWorkerThreadKeepAliveTime());
+    Assertions.assertFalse(config.isUseCustomDispatcherExecutor());
+    Assertions.assertEquals(50, config.getCoreWorkerThreads());
+    Assertions.assertEquals(50, config.getMaxWorkerThreads());
+    Assertions.assertEquals(60L, config.getWorkerThreadKeepAliveTime());
 
     String serialized = OBJECT_MAPPER.writeValueAsString(config);
     DruidKubernetesOkHttpHttpClientConfig deserialized = OBJECT_MAPPER.readValue(
@@ -50,10 +50,10 @@ public class DruidKubernetesOkHttpHttpClientConfigTest
         DruidKubernetesOkHttpHttpClientConfig.class
     );
 
-    Assert.assertEquals(config.isUseCustomDispatcherExecutor(), deserialized.isUseCustomDispatcherExecutor());
-    Assert.assertEquals(config.getCoreWorkerThreads(), deserialized.getCoreWorkerThreads());
-    Assert.assertEquals(config.getMaxWorkerThreads(), deserialized.getMaxWorkerThreads());
-    Assert.assertEquals(config.getWorkerThreadKeepAliveTime(), deserialized.getWorkerThreadKeepAliveTime());
+    Assertions.assertEquals(config.isUseCustomDispatcherExecutor(), deserialized.isUseCustomDispatcherExecutor());
+    Assertions.assertEquals(config.getCoreWorkerThreads(), deserialized.getCoreWorkerThreads());
+    Assertions.assertEquals(config.getMaxWorkerThreads(), deserialized.getMaxWorkerThreads());
+    Assertions.assertEquals(config.getWorkerThreadKeepAliveTime(), deserialized.getWorkerThreadKeepAliveTime());
   }
 
   @Test
@@ -71,10 +71,10 @@ public class DruidKubernetesOkHttpHttpClientConfigTest
         DruidKubernetesOkHttpHttpClientConfig.class
     );
 
-    Assert.assertFalse(config.isUseCustomDispatcherExecutor());
-    Assert.assertEquals(30, config.getCoreWorkerThreads());
-    Assert.assertEquals(99, config.getMaxWorkerThreads());
-    Assert.assertEquals(120L, config.getWorkerThreadKeepAliveTime());
+    Assertions.assertFalse(config.isUseCustomDispatcherExecutor());
+    Assertions.assertEquals(30, config.getCoreWorkerThreads());
+    Assertions.assertEquals(99, config.getMaxWorkerThreads());
+    Assertions.assertEquals(120L, config.getWorkerThreadKeepAliveTime());
 
     String serialized = OBJECT_MAPPER.writeValueAsString(config);
     DruidKubernetesOkHttpHttpClientConfig deserialized = OBJECT_MAPPER.readValue(
@@ -82,10 +82,10 @@ public class DruidKubernetesOkHttpHttpClientConfigTest
         DruidKubernetesOkHttpHttpClientConfig.class
     );
 
-    Assert.assertEquals(config.isUseCustomDispatcherExecutor(), deserialized.isUseCustomDispatcherExecutor());
-    Assert.assertEquals(config.getCoreWorkerThreads(), deserialized.getCoreWorkerThreads());
-    Assert.assertEquals(config.getMaxWorkerThreads(), deserialized.getMaxWorkerThreads());
-    Assert.assertEquals(config.getWorkerThreadKeepAliveTime(), deserialized.getWorkerThreadKeepAliveTime());
+    Assertions.assertEquals(config.isUseCustomDispatcherExecutor(), deserialized.isUseCustomDispatcherExecutor());
+    Assertions.assertEquals(config.getCoreWorkerThreads(), deserialized.getCoreWorkerThreads());
+    Assertions.assertEquals(config.getMaxWorkerThreads(), deserialized.getMaxWorkerThreads());
+    Assertions.assertEquals(config.getWorkerThreadKeepAliveTime(), deserialized.getWorkerThreadKeepAliveTime());
   }
 
   @Test
@@ -103,10 +103,10 @@ public class DruidKubernetesOkHttpHttpClientConfigTest
         DruidKubernetesOkHttpHttpClientConfig.class
     );
 
-    Assert.assertTrue(config.isUseCustomDispatcherExecutor());
-    Assert.assertEquals(40, config.getCoreWorkerThreads());
-    Assert.assertEquals(40, config.getMaxWorkerThreads());
-    Assert.assertEquals(90L, config.getWorkerThreadKeepAliveTime());
+    Assertions.assertTrue(config.isUseCustomDispatcherExecutor());
+    Assertions.assertEquals(40, config.getCoreWorkerThreads());
+    Assertions.assertEquals(40, config.getMaxWorkerThreads());
+    Assertions.assertEquals(90L, config.getWorkerThreadKeepAliveTime());
 
     String serialized = OBJECT_MAPPER.writeValueAsString(config);
     DruidKubernetesOkHttpHttpClientConfig deserialized = OBJECT_MAPPER.readValue(
@@ -114,10 +114,10 @@ public class DruidKubernetesOkHttpHttpClientConfigTest
         DruidKubernetesOkHttpHttpClientConfig.class
     );
 
-    Assert.assertEquals(config.isUseCustomDispatcherExecutor(), deserialized.isUseCustomDispatcherExecutor());
-    Assert.assertEquals(config.getCoreWorkerThreads(), deserialized.getCoreWorkerThreads());
-    Assert.assertEquals(config.getMaxWorkerThreads(), deserialized.getMaxWorkerThreads());
-    Assert.assertEquals(config.getWorkerThreadKeepAliveTime(), deserialized.getWorkerThreadKeepAliveTime());
+    Assertions.assertEquals(config.isUseCustomDispatcherExecutor(), deserialized.isUseCustomDispatcherExecutor());
+    Assertions.assertEquals(config.getCoreWorkerThreads(), deserialized.getCoreWorkerThreads());
+    Assertions.assertEquals(config.getMaxWorkerThreads(), deserialized.getMaxWorkerThreads());
+    Assertions.assertEquals(config.getWorkerThreadKeepAliveTime(), deserialized.getWorkerThreadKeepAliveTime());
   }
 
   @Test
@@ -125,7 +125,7 @@ public class DruidKubernetesOkHttpHttpClientConfigTest
   {
     DruidKubernetesOkHttpHttpClientConfig config = new DruidKubernetesOkHttpHttpClientConfig();
 
-    Assert.assertEquals(50, config.getMaxWorkerThreads());
+    Assertions.assertEquals(50, config.getMaxWorkerThreads());
   }
 
   @Test
@@ -141,8 +141,8 @@ public class DruidKubernetesOkHttpHttpClientConfigTest
         DruidKubernetesOkHttpHttpClientConfig.class
     );
 
-    Assert.assertEquals(30, config.getCoreWorkerThreads());
-    Assert.assertEquals(100, config.getMaxWorkerThreads());
+    Assertions.assertEquals(30, config.getCoreWorkerThreads());
+    Assertions.assertEquals(100, config.getMaxWorkerThreads());
   }
 
   @Test
@@ -158,7 +158,7 @@ public class DruidKubernetesOkHttpHttpClientConfigTest
         DruidKubernetesOkHttpHttpClientConfig.class
     );
 
-    Assert.assertEquals(30, config.getCoreWorkerThreads());
-    Assert.assertEquals(30, config.getMaxWorkerThreads());
+    Assertions.assertEquals(30, config.getCoreWorkerThreads());
+    Assertions.assertEquals(30, config.getMaxWorkerThreads());
   }
 }

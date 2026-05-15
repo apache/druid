@@ -22,7 +22,10 @@ package org.apache.druid.query.policy;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.guice.annotations.UnstableApi;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.segment.CursorBuildSpec;
+
+import javax.annotation.Nullable;
 
 /**
  * Extensible interface for a granular-level (e.x. row filter) restriction on read-table access. Implementations must be
@@ -47,4 +50,13 @@ public interface Policy
    */
   CursorBuildSpec visit(CursorBuildSpec spec);
 
+  /**
+   * @return a {@link SegmentPruner} which can be used to skip processing entire segments if it is possible to determine
+   * if the policy restricts access.
+   */
+  @Nullable
+  default SegmentPruner createSegmentPruner()
+  {
+    return null;
+  }
 }

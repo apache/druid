@@ -22,8 +22,8 @@ package org.apache.druid.k8s.discovery;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class K8sDiscoveryConfigTest
 {
@@ -74,6 +74,6 @@ public class K8sDiscoveryConfigTest
         K8sDiscoveryConfig.class
     );
 
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 }

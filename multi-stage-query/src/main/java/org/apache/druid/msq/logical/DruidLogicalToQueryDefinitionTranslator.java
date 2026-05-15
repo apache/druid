@@ -122,12 +122,14 @@ public class DruidLogicalToQueryDefinitionTranslator
       DruidSort sort = (DruidSort) stack.getNode();
       List<OrderByColumnSpec> orderBySpecs = DruidQuery.buildOrderByColumnSpecs(inputStage.getLogicalRowSignature(), sort);
       List<KeyColumn> keyColumns = Lists.transform(orderBySpecs, KeyColumn::fromOrderByColumnSpec);
-      SortStage sortStage = new SortStage(inputStage, keyColumns);
 
       if (sort.hasLimitOrOffset()) {
-        return new OffsetLimitStage(sortStage, sort.getOffsetLimit());
+        return new OffsetLimitStage(
+            new SortStage(inputStage, keyColumns, sort.getOffsetLimit()),
+            sort.getOffsetLimit()
+        );
       } else {
-        return sortStage;
+        return new SortStage(inputStage, keyColumns, null);
       }
     }
     if (stack.getNode() instanceof DruidUnnest) {

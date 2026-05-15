@@ -152,6 +152,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
     final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
         temporaryFolder.newFolder(),
         1024 * 1024,
+        100000,
         perQueryStats
     );
     final ListeningExecutorService service = MoreExecutors.listeningDecorator(exec);
@@ -178,6 +179,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
           4,
           parallelCombineThreads,
           mergeThreadLocal,
+          1024 * 1024L,
           perQueryStats
       );
       closer.register(grouper);
@@ -244,7 +246,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
           1024,
           0.7f,
           1,
-          new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024, perQueryStats),
+          new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024, 100000, perQueryStats),
           new DefaultObjectMapper(),
           concurrencyHint,
           null,
@@ -256,6 +258,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
           4,
           parallelCombineThreads,
           mergeThreadLocal,
+          1024 * 1024L,
           perQueryStats
       );
       closer.register(grouper);

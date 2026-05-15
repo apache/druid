@@ -19,16 +19,16 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.net.URI;
-import java.util.Date;
+import java.time.Instant;
 import java.util.regex.Pattern;
 
 public class S3TimestampVersionedDataFinderTest
@@ -41,23 +41,23 @@ public class S3TimestampVersionedDataFinderTest
     String keyPrefix = "prefix/dir/0";
     ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
-    S3ObjectSummary object0 = new S3ObjectSummary(), object1 = new S3ObjectSummary();
+    S3Object object0 = S3Object.builder()
+        .key(keyPrefix + "/renames-0.gz")
+        .lastModified(Instant.ofEpochMilli(0))
+        .size(10L)
+        .build();
 
-    object0.setBucketName(bucket);
-    object0.setKey(keyPrefix + "/renames-0.gz");
-    object0.setLastModified(new Date(0));
-    object0.setSize(10);
+    S3Object object1 = S3Object.builder()
+        .key(keyPrefix + "/renames-1.gz")
+        .lastModified(Instant.ofEpochMilli(1))
+        .size(10L)
+        .build();
 
-    object1.setBucketName(bucket);
-    object1.setKey(keyPrefix + "/renames-1.gz");
-    object1.setLastModified(new Date(1));
-    object1.setSize(10);
-
-    final ListObjectsV2Result result = new ListObjectsV2Result();
-    result.getObjectSummaries().add(object0);
-    result.getObjectSummaries().add(object1);
-    result.setKeyCount(2);
-    result.setTruncated(false);
+    final ListObjectsV2Response result = ListObjectsV2Response.builder()
+        .contents(object0, object1)
+        .keyCount(2)
+        .isTruncated(false)
+        .build();
 
     EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
             .andReturn(result)
@@ -73,7 +73,7 @@ public class S3TimestampVersionedDataFinderTest
 
     EasyMock.verify(s3Client);
 
-    URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object1.getKey()));
+    URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object1.key()));
 
     Assert.assertEquals(expected, latest);
   }
@@ -85,9 +85,10 @@ public class S3TimestampVersionedDataFinderTest
     String keyPrefix = "prefix/dir/0";
     ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
-    final ListObjectsV2Result result = new ListObjectsV2Result();
-    result.setKeyCount(0);
-    result.setTruncated(false);
+    final ListObjectsV2Response result = ListObjectsV2Response.builder()
+        .keyCount(0)
+        .isTruncated(false)
+        .build();
 
     EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
             .andReturn(result)
@@ -113,17 +114,17 @@ public class S3TimestampVersionedDataFinderTest
     String keyPrefix = "prefix/dir/0";
     ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
-    S3ObjectSummary object0 = new S3ObjectSummary();
+    S3Object object0 = S3Object.builder()
+        .key(keyPrefix + "/renames-0.gz")
+        .lastModified(Instant.ofEpochMilli(0))
+        .size(10L)
+        .build();
 
-    object0.setBucketName(bucket);
-    object0.setKey(keyPrefix + "/renames-0.gz");
-    object0.setLastModified(new Date(0));
-    object0.setSize(10);
-
-    final ListObjectsV2Result result = new ListObjectsV2Result();
-    result.getObjectSummaries().add(object0);
-    result.setKeyCount(1);
-    result.setTruncated(false);
+    final ListObjectsV2Response result = ListObjectsV2Response.builder()
+        .contents(object0)
+        .keyCount(1)
+        .isTruncated(false)
+        .build();
 
     EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
             .andReturn(result)
@@ -139,7 +140,7 @@ public class S3TimestampVersionedDataFinderTest
 
     EasyMock.verify(s3Client);
 
-    URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object0.getKey()));
+    URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object0.key()));
 
     Assert.assertEquals(expected, latest);
   }
@@ -151,17 +152,17 @@ public class S3TimestampVersionedDataFinderTest
     String keyPrefix = "prefix/dir/0";
     ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
-    S3ObjectSummary object0 = new S3ObjectSummary();
+    S3Object object0 = S3Object.builder()
+        .key(keyPrefix + "/renames-0.gz")
+        .lastModified(Instant.ofEpochMilli(0))
+        .size(10L)
+        .build();
 
-    object0.setBucketName(bucket);
-    object0.setKey(keyPrefix + "/renames-0.gz");
-    object0.setLastModified(new Date(0));
-    object0.setSize(10);
-
-    final ListObjectsV2Result result = new ListObjectsV2Result();
-    result.getObjectSummaries().add(object0);
-    result.setKeyCount(1);
-    result.setTruncated(false);
+    final ListObjectsV2Response result = ListObjectsV2Response.builder()
+        .contents(object0)
+        .keyCount(1)
+        .isTruncated(false)
+        .build();
 
     EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
             .andReturn(result)
@@ -170,11 +171,11 @@ public class S3TimestampVersionedDataFinderTest
 
     EasyMock.replay(s3Client);
 
-    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, object0.getKey())), null);
+    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, object0.key())), null);
 
     EasyMock.verify(s3Client);
 
-    URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object0.getKey()));
+    URI expected = URI.create(StringUtils.format("s3://%s/%s", bucket, object0.key()));
 
     Assert.assertEquals(expected, latest);
   }

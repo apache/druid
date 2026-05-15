@@ -19,15 +19,6 @@
 
 package org.apache.druid.storage.s3.output;
 
-import com.amazonaws.ClientConfigurationFactory;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.internal.StaticCredentialsProvider;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.CreateBucketRequest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -35,6 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,11 +37,20 @@ import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -73,14 +74,21 @@ public class S3StorageConnectorTest
   public static File temporaryFolder;
   private ServerSideEncryptingAmazonS3 s3Client;
 
-  private StorageConnector storageConnector;
+  private S3StorageConnector storageConnector;
 
   @BeforeEach
   public void setup() throws IOException
   {
     s3Client = MinioUtil.createS3Client(MINIO);
-    if (!s3Client.getAmazonS3().doesBucketExistV2(BUCKET)) {
-      s3Client.getAmazonS3().createBucket(new CreateBucketRequest(BUCKET));
+    try {
+      s3Client.getS3Client().headBucket(builder -> builder.bucket(BUCKET));
+    }
+    catch (S3Exception e) {
+      if (e.statusCode() == 404) {
+        s3Client.getS3Client().createBucket(CreateBucketRequest.builder().bucket(BUCKET).build());
+      } else {
+        throw e;
+      }
     }
 
     S3OutputConfig s3OutputConfig = new S3OutputConfig(
@@ -145,9 +153,9 @@ public class S3StorageConnectorTest
         IOException.class,
         () -> unauthorizedStorageConnector.pathExists(TEST_FILE)
     );
-    Assertions.assertEquals(AmazonS3Exception.class, e2.getCause().getClass());
-    AmazonS3Exception amazonS3Exception = (AmazonS3Exception) e2.getCause();
-    Assertions.assertEquals(403, amazonS3Exception.getStatusCode());
+    Assertions.assertEquals(S3Exception.class, e2.getCause().getClass());
+    S3Exception s3Exception = (S3Exception) e2.getCause();
+    Assertions.assertEquals(403, s3Exception.statusCode());
   }
 
   @Test
@@ -186,6 +194,67 @@ public class S3StorageConnectorTest
     try (InputStream inputStream = storageConnector.readRange("readWrite2", 0, 0)) {
       byte[] bytes = inputStream.readAllBytes();
       Assertions.assertEquals("", new String(bytes, StandardCharsets.UTF_8));
+    }
+  }
+
+  @Test
+  public void testBuildInputParams_setsStartEndAndRangeHeader() throws IOException
+  {
+    final String path = "rangeParams";
+    final String data = "abcdefghijklmnopqrstuvwxyz";
+
+    try (OutputStream outputStream = storageConnector.write(path)) {
+      outputStream.write(data.getBytes(StandardCharsets.UTF_8));
+    }
+
+    final long start = 10;
+    final long size = 5;
+
+    ChunkingStorageConnectorParameters<GetObjectRequest.Builder> params = storageConnector.buildInputParams(path, start, size);
+
+    Assertions.assertEquals(start, params.getStart());
+    Assertions.assertEquals(start + size, params.getEnd());
+    Assertions.assertEquals(JOINER.join(PREFIX, path), params.getCloudStoragePath());
+
+    final GetObjectRequest request = params.getObjectSupplier().getObject(params.getStart(), params.getEnd()).build();
+    Assertions.assertEquals(BUCKET, request.bucket());
+    Assertions.assertEquals(JOINER.join(PREFIX, path), request.key());
+    Assertions.assertEquals("bytes=10-14", request.range());
+  }
+
+  @Test
+  public void testBuildInputParams_usesMetadataToSetEnd() throws IOException
+  {
+    final String path = "rangeMetadata";
+    final String data = "0123456789";
+
+    try (OutputStream outputStream = storageConnector.write(path)) {
+      outputStream.write(data.getBytes(StandardCharsets.UTF_8));
+    }
+
+    ChunkingStorageConnectorParameters<GetObjectRequest.Builder> params = storageConnector.buildInputParams(path);
+    Assertions.assertEquals(0, params.getStart());
+    Assertions.assertEquals(data.length(), params.getEnd());
+  }
+
+  @Test
+  public void testObjectOpenFunction_openWithOffsetShiftsStartAndKeepsEnd() throws IOException
+  {
+    final String path = "rangeOffset";
+    final String data = "abcdefghijklmnopqrstuvwxyz";
+
+    try (OutputStream outputStream = storageConnector.write(path)) {
+      outputStream.write(data.getBytes(StandardCharsets.UTF_8));
+    }
+
+    // Range: bytes=10-19 (exclusive end is 20).
+    ChunkingStorageConnectorParameters<GetObjectRequest.Builder> params = storageConnector.buildInputParams(path, 10, 10);
+    final GetObjectRequest.Builder requestBuilder = params.getObjectSupplier().getObject(params.getStart(), params.getEnd());
+
+    // Offset by 5 bytes -> bytes=15-19.
+    try (InputStream inputStream = params.getObjectOpenFunction().open(requestBuilder, 5)) {
+      byte[] bytes = inputStream.readAllBytes();
+      Assertions.assertEquals(data.substring(15, 20), new String(bytes, StandardCharsets.UTF_8));
     }
   }
 
@@ -282,7 +351,7 @@ public class S3StorageConnectorTest
       return createContainer(null);
     }
 
-    public static MinIOContainer createContainer(AWSCredentials credentials)
+    public static MinIOContainer createContainer(AwsCredentials credentials)
     {
       MinIOContainer container = new MinIOContainer(DockerImageName.parse("minio/minio:latest"));
 
@@ -291,8 +360,8 @@ public class S3StorageConnectorTest
       container.withEnv("MINIO_DOMAIN", "localhost");
 
       if (credentials != null) {
-        container.withUserName(credentials.getAWSAccessKeyId());
-        container.withPassword(credentials.getAWSSecretKey());
+        container.withUserName(credentials.accessKeyId());
+        container.withPassword(credentials.secretAccessKey());
       }
 
       return container;
@@ -300,41 +369,31 @@ public class S3StorageConnectorTest
 
     public static ServerSideEncryptingAmazonS3 createS3Client(MinIOContainer container)
     {
-      final AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3Client
-          .builder()
-          .withEndpointConfiguration(
-              new AwsClientBuilder.EndpointConfiguration(
-                  container.getS3URL(),
-                  "us-east-1"
-              )
-          )
-          .withCredentials(new StaticCredentialsProvider(
-              new BasicAWSCredentials(container.getUserName(), container.getPassword())))
-          .withClientConfiguration(new ClientConfigurationFactory().getConfig())
-          .withPathStyleAccessEnabled(true); // OSX won't resolve subdomains
+      final S3Client s3Client = S3Client.builder()
+          .endpointOverride(URI.create(container.getS3URL()))
+          .region(Region.US_EAST_1)
+          .credentialsProvider(StaticCredentialsProvider.create(
+              AwsBasicCredentials.create(container.getUserName(), container.getPassword())))
+          .forcePathStyle(true) // OSX won't resolve subdomains
+          .build();
 
       return ServerSideEncryptingAmazonS3.builder()
-                                         .setAmazonS3ClientBuilder(amazonS3ClientBuilder)
+                                         .setS3ClientSupplier(() -> s3Client)
                                          .build();
     }
 
     public static ServerSideEncryptingAmazonS3 createUnauthorizedS3Client(MinIOContainer container)
     {
-      final AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3Client
-          .builder()
-          .withEndpointConfiguration(
-              new AwsClientBuilder.EndpointConfiguration(
-                  container.getS3URL(),
-                  "us-east-1"
-              )
-          )
-          .withCredentials(new StaticCredentialsProvider(
-              new BasicAWSCredentials(container.getUserName(), "wrong")))
-          .withClientConfiguration(new ClientConfigurationFactory().getConfig())
-          .withPathStyleAccessEnabled(true); // OSX won't resolve subdomains
+      final S3Client s3Client = S3Client.builder()
+          .endpointOverride(URI.create(container.getS3URL()))
+          .region(Region.US_EAST_1)
+          .credentialsProvider(StaticCredentialsProvider.create(
+              AwsBasicCredentials.create(container.getUserName(), "wrong")))
+          .forcePathStyle(true) // OSX won't resolve subdomains
+          .build();
 
       return ServerSideEncryptingAmazonS3.builder()
-                                         .setAmazonS3ClientBuilder(amazonS3ClientBuilder)
+                                         .setS3ClientSupplier(() -> s3Client)
                                          .build();
     }
   }

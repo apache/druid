@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,7 +39,6 @@ public class WeightedCostFunctionTest
                                       .enableTaskAutoScaler(true)
                                       .lagWeight(0.3)
                                       .idleWeight(0.7)
-                                      .defaultProcessingRate(1000.0)
                                       .build();
   }
 
@@ -67,7 +67,6 @@ public class WeightedCostFunctionTest
                                                                        .enableTaskAutoScaler(true)
                                                                        .lagWeight(1.0)
                                                                        .idleWeight(0.0)
-                                                                       .defaultProcessingRate(100.0)
                                                                        .build();
 
     CostMetrics metrics = createMetrics(200000.0, 10, 200, 0.3);
@@ -94,13 +93,12 @@ public class WeightedCostFunctionTest
                                                                        .enableTaskAutoScaler(true)
                                                                        .lagWeight(1.0)
                                                                        .idleWeight(0.0)
-                                                                       .defaultProcessingRate(1000.0)
                                                                        .build();
 
     // aggregateLag = 100000 * 100 = 10,000,000; lagPerPartition = 100,000
     CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.3);
     double aggregateLag = 100000.0 * 100;
-    double amplification = 1.0 + 0.2 * Math.log(aggregateLag / 100);
+    double amplification = 1.0 + WeightedCostFunction.LAG_AMPLIFICATION_MULTIPLIER * Math.log(aggregateLag / 100);
 
     double costCurrent = costFunction.computeCost(metrics, 10, lagOnlyConfig).totalCost();
     Assert.assertEquals("Cost of current tasks", aggregateLag * amplification / (10 * 1000.0), costCurrent, 0.1);
@@ -138,7 +136,6 @@ public class WeightedCostFunctionTest
                                                                  .enableTaskAutoScaler(true)
                                                                  .lagWeight(1.0)
                                                                  .idleWeight(0.0)
-                                                                 .defaultProcessingRate(1000.0)
                                                                  .build();
 
     CostBasedAutoScalerConfig idleOnly = CostBasedAutoScalerConfig.builder()
@@ -147,7 +144,6 @@ public class WeightedCostFunctionTest
                                                                   .enableTaskAutoScaler(true)
                                                                   .lagWeight(0.0)
                                                                   .idleWeight(1.0)
-                                                                  .defaultProcessingRate(1000.0)
                                                                   .build();
 
     CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.1);
@@ -161,20 +157,26 @@ public class WeightedCostFunctionTest
   }
 
   @Test
-  public void testNoProcessingRateFavorsCurrentTaskCount()
+  public void testZeroProcessingRateUsesDefaultRate()
   {
-    // When the processing rate is unavailable (0), the cost function should favor
-    // maintaining the current task count, rather to scale up decisions with incomplete data.
+    // When the processing rate is zero, the cost function uses a default rate and tries to recover lag
     int currentTaskCount = 10;
-    CostMetrics metricsNoRate = createMetricsWithRate(50000.0, currentTaskCount, 100, 0.3, 0.0);
+    CostMetrics metricsNoRate = createMetricsWithRate(50000.0, currentTaskCount, 100, 1.0, 0.0);
 
+    final CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig
+        .builder()
+        .taskCountMin(1)
+        .taskCountMax(100)
+        .idleWeight(0)
+        .lagWeight(1)
+        .build();
     double costAtCurrent = costFunction.computeCost(metricsNoRate, currentTaskCount, config).totalCost();
     double costScaleUp = costFunction.computeCost(metricsNoRate, currentTaskCount + 5, config).totalCost();
     double costScaleDown = costFunction.computeCost(metricsNoRate, currentTaskCount - 5, config).totalCost();
 
     Assert.assertTrue(
         "Cost at current should be less than cost for scale up",
-        costAtCurrent < costScaleUp
+        costAtCurrent > costScaleUp
     );
     Assert.assertTrue(
         "Cost at current should be less than cost for scale down",
@@ -183,59 +185,41 @@ public class WeightedCostFunctionTest
   }
 
   @Test
-  public void testNoProcessingRateDeviationPenaltyIsSymmetric()
+  public void testNegativeProcessingRate_throwsDefensiveException()
   {
-    // Deviation penalty should be symmetric around current task count
-    int currentTaskCount = 10;
-    CostMetrics metricsNoRate = createMetricsWithRate(50000.0, currentTaskCount, 100, 0.5, 0.0);
-
-    // Use lag-only config to isolate the lag recovery time component
-    CostBasedAutoScalerConfig lagOnlyConfig = CostBasedAutoScalerConfig.builder()
-                                                                       .taskCountMax(100)
-                                                                       .taskCountMin(1)
-                                                                       .enableTaskAutoScaler(true)
-                                                                       .lagWeight(1.0)
-                                                                       .idleWeight(0.0)
-                                                                       .defaultProcessingRate(1000.0)
-                                                                       .build();
-
-    double costUp5 = costFunction.computeCost(metricsNoRate, currentTaskCount + 5, lagOnlyConfig).totalCost();
-    double costDown5 = costFunction.computeCost(metricsNoRate, currentTaskCount - 5, lagOnlyConfig).totalCost();
-
-    Assert.assertEquals(
-        "Lag cost for +5 and -5 deviation should be equal",
-        costUp5,
-        costDown5,
-        0.001
+    final CostMetrics metrics = createMetricsWithRate(50000.0, 1, 100, 0.5, -1);
+    Assert.assertThrows(
+        DruidException.class,
+        () -> costFunction.computeCost(metrics, 2, config)
     );
   }
 
   @Test
-  public void testIdleCostMonotonicWithTaskCount()
+  public void testIdleCostIsUShapedAroundIdealRatio()
   {
-    // Test that idle cost increases monotonically with task count.
-    // With fixed load, adding more tasks means each task has less work, so idle increases.
+    // U-shaped cost: minimum near IDEAL_IDLE_RATIO=0.25, higher on both sides.
+    // Current: 10 tasks with 25% idle (already at ideal).
     CostBasedAutoScalerConfig idleOnlyConfig = CostBasedAutoScalerConfig.builder()
                                                                         .taskCountMax(100)
                                                                         .taskCountMin(1)
                                                                         .enableTaskAutoScaler(true)
                                                                         .lagWeight(0.0)
                                                                         .idleWeight(1.0)
-                                                                        .defaultProcessingRate(1000.0)
                                                                         .build();
 
-    // Current: 10 tasks with 40% idle (60% busy)
-    CostMetrics metrics = createMetrics(0.0, 10, 100, 0.4);
+    CostMetrics metrics = createMetrics(0.0, 10, 100, 0.25);
 
-    double costAt5 = costFunction.computeCost(metrics, 5, idleOnlyConfig).totalCost();
-    double costAt10 = costFunction.computeCost(metrics, 10, idleOnlyConfig).totalCost();
-    double costAt15 = costFunction.computeCost(metrics, 15, idleOnlyConfig).totalCost();
-    double costAt20 = costFunction.computeCost(metrics, 20, idleOnlyConfig).totalCost();
+    // At current (idle=0.25=ideal): baseline cost only, penalty=0
+    double costAtIdeal = costFunction.computeCost(metrics, 10, idleOnlyConfig).totalCost();
 
-    // Monotonically increasing idle cost as tasks increase
-    Assert.assertTrue("cost(5) < cost(10)", costAt5 < costAt10);
-    Assert.assertTrue("cost(10) < cost(15)", costAt10 < costAt15);
-    Assert.assertTrue("cost(15) < cost(20)", costAt15 < costAt20);
+    // Scale down → predicted idle falls below ideal → under-provisioning penalty
+    double costScaleDown = costFunction.computeCost(metrics, 5, idleOnlyConfig).totalCost();
+
+    // Scale up → predicted idle rises above ideal → over-provisioning penalty
+    double costScaleUp = costFunction.computeCost(metrics, 20, idleOnlyConfig).totalCost();
+
+    Assert.assertTrue("scale-down costs more than ideal", costScaleDown > costAtIdeal);
+    Assert.assertTrue("scale-up costs more than ideal", costScaleUp > costAtIdeal);
   }
 
   @Test
@@ -247,7 +231,6 @@ public class WeightedCostFunctionTest
                                                                         .enableTaskAutoScaler(true)
                                                                         .lagWeight(0.0)
                                                                         .idleWeight(1.0)
-                                                                        .defaultProcessingRate(1000.0)
                                                                         .build();
 
     // Extreme scale-down: 10 tasks → 2 tasks with 40% idle
@@ -256,8 +239,10 @@ public class WeightedCostFunctionTest
     CostMetrics metrics = createMetrics(0.0, 10, 100, 0.4);
     double costAt2 = costFunction.computeCost(metrics, 2, idleOnlyConfig).totalCost();
 
-    // idlenessCost = taskCount * 0.0 (clamped) = 0
-    Assert.assertEquals("Idle cost should be 0 when predicted idle is clamped to 0", 0.0, costAt2, 0.0001);
+    // idle = 0: max under-provisioning penalty; cost = taskCount * (IDEAL + UNDER_PENALTY)
+    double expectedAt2 = 2 * (WeightedCostFunction.IDEAL_IDLE_RATIO + WeightedCostFunction.UNDER_PROVISIONING_PENALTY);
+    Assert.assertEquals("Idle cost at clamped-to-zero idle ratio should reflect full under-provisioning penalty",
+                        expectedAt2, costAt2, 0.0001);
 
     // Extreme scale-up shouldn't exceed 1.0 for idle ratio
     // 10 tasks → 100 tasks with 10% idle
@@ -277,7 +262,6 @@ public class WeightedCostFunctionTest
                                                                         .enableTaskAutoScaler(true)
                                                                         .lagWeight(0.0)
                                                                         .idleWeight(1.0)
-                                                                        .defaultProcessingRate(1000.0)
                                                                         .build();
 
     // Negative idle ratio indicates missing data → should default to 0.5
@@ -286,11 +270,13 @@ public class WeightedCostFunctionTest
     double cost10 = costFunction.computeCost(missingIdleData, 10, idleOnlyConfig).totalCost();
     double cost20 = costFunction.computeCost(missingIdleData, 20, idleOnlyConfig).totalCost();
 
-    // With missing data, predicted idle = 0.5 for all task counts
-    // idlenessCost at 10 = 10 * 0.5 = 5
-    // idlenessCost at 20 = 20 * 0.5 = 10
-    Assert.assertEquals("Cost at 10 tasks with missing idle data", 10 * 0.5, cost10, 0.0001);
-    Assert.assertEquals("Cost at 20 tasks with missing idle data", 20 * 0.5, cost20, 0.0001);
+    // With missing data, predicted idle = 0.5 for all task counts regardless of proposed count.
+    // U-shaped cost at idle=0.5: idle > IDEAL(0.25), norm=(0.5-0.25)/0.75=1/3, penalty=1*(1/3)^2=1/9
+    double expectedCostPerTask = WeightedCostFunction.IDEAL_IDLE_RATIO
+                                 + WeightedCostFunction.OVER_PROVISIONING_PENALTY * (1.0 / 3.0) * (1.0 / 3.0);
+    Assert.assertEquals("Cost at 10 tasks with missing idle data", 10 * expectedCostPerTask, cost10, 0.0001);
+    Assert.assertEquals("Cost at 20 tasks with missing idle data", 20 * expectedCostPerTask, cost20, 0.0001);
+    Assert.assertEquals("Cost scales linearly with task count at fixed idle ratio", 2 * cost10, cost20, 0.0001);
   }
 
   @Test
@@ -302,7 +288,6 @@ public class WeightedCostFunctionTest
                                                                  .enableTaskAutoScaler(true)
                                                                  .lagWeight(1.0)
                                                                  .idleWeight(0.0)
-                                                                 .defaultProcessingRate(1000.0)
                                                                  .build();
 
     int currentTaskCount = 10;
@@ -317,7 +302,7 @@ public class WeightedCostFunctionTest
 
     double aggregateLag = 150.0 * partitionCount;
     double lagPerPartition = aggregateLag / partitionCount;
-    double amplification = 1.0 + 0.2 * Math.log(lagPerPartition);
+    double amplification = 1.0 + WeightedCostFunction.LAG_AMPLIFICATION_MULTIPLIER * Math.log(lagPerPartition);
     double expected = aggregateLag * amplification / (proposedTaskCount * 1000.0);
 
     Assert.assertEquals("Lag amplification should increase lag recovery time", expected, costWithAmp, 0.0001);
@@ -333,7 +318,6 @@ public class WeightedCostFunctionTest
                                                                  .enableTaskAutoScaler(true)
                                                                  .lagWeight(1.0)
                                                                  .idleWeight(0.0)
-                                                                 .defaultProcessingRate(1000.0)
                                                                  .build();
 
     int currentTaskCount = 10;
@@ -358,6 +342,51 @@ public class WeightedCostFunctionTest
     );
   }
 
+
+  @Test
+  public void testUShapedIdleCostFormula()
+  {
+    int n = 10;
+
+    // At ideal ratio: penalty = 0, cost = n * IDEAL_IDLE_RATIO
+    Assert.assertEquals(
+        n * WeightedCostFunction.IDEAL_IDLE_RATIO,
+        costFunction.uShapedIdleCost(WeightedCostFunction.IDEAL_IDLE_RATIO, n),
+        1e-9
+    );
+
+    // At idle = 0 (fully under-provisioned): norm = 1, penalty = UNDER_PROVISIONING_PENALTY
+    Assert.assertEquals(
+        n * (WeightedCostFunction.IDEAL_IDLE_RATIO + WeightedCostFunction.UNDER_PROVISIONING_PENALTY),
+        costFunction.uShapedIdleCost(0.0, n),
+        1e-9
+    );
+
+    // At idle = 1 (fully over-provisioned): norm = 1, penalty = OVER_PROVISIONING_PENALTY
+    Assert.assertEquals(
+        n * (WeightedCostFunction.IDEAL_IDLE_RATIO + WeightedCostFunction.OVER_PROVISIONING_PENALTY),
+        costFunction.uShapedIdleCost(1.0, n),
+        1e-9
+    );
+
+    // Both extremes exceed the ideal cost
+    double idealCost = costFunction.uShapedIdleCost(WeightedCostFunction.IDEAL_IDLE_RATIO, n);
+    Assert.assertTrue("idle=0 costs more than ideal", costFunction.uShapedIdleCost(0.0, n) > idealCost);
+    Assert.assertTrue("idle=1 costs more than ideal", costFunction.uShapedIdleCost(1.0, n) > idealCost);
+
+    // Under-provisioning is penalized more than over-provisioning (UNDER > OVER)
+    Assert.assertTrue(
+        "under-provisioning penalty exceeds over-provisioning penalty",
+        costFunction.uShapedIdleCost(0.0, n) > costFunction.uShapedIdleCost(1.0, n)
+    );
+
+    // Cost scales linearly with task count at any fixed idle ratio
+    Assert.assertEquals(
+        2 * costFunction.uShapedIdleCost(0.5, n),
+        costFunction.uShapedIdleCost(0.5, 2 * n),
+        1e-9
+    );
+  }
 
   private CostMetrics createMetrics(
       double avgPartitionLag,

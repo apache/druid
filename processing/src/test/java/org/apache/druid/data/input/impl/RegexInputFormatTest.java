@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.utils.CompressionUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Map;
@@ -52,9 +52,9 @@ public class RegexInputFormatTest
     final byte[] json = mapper.writeValueAsBytes(expected);
     final RegexInputFormat fromJson = (RegexInputFormat) mapper.readValue(json, InputFormat.class);
 
-    Assert.assertEquals(expected.getPattern(), fromJson.getPattern());
-    Assert.assertEquals(expected.getListDelimiter(), fromJson.getListDelimiter());
-    Assert.assertEquals(expected.getColumns(), fromJson.getColumns());
+    Assertions.assertEquals(expected.getPattern(), fromJson.getPattern());
+    Assertions.assertEquals(expected.getListDelimiter(), fromJson.getListDelimiter());
+    Assertions.assertEquals(expected.getColumns(), fromJson.getColumns());
   }
 
   @Test
@@ -68,7 +68,7 @@ public class RegexInputFormatTest
 
     final byte[] json = mapper.writeValueAsBytes(expected);
     final Map<String, Object> map = mapper.readValue(json, Map.class);
-    Assert.assertFalse(map.containsKey("compiledPattern"));
+    Assertions.assertFalse(map.containsKey("compiledPattern"));
   }
 
   @Test
@@ -80,7 +80,7 @@ public class RegexInputFormatTest
         ImmutableList.of("col1", "col2", "col3")
     );
     final long unweightedSize = 100L;
-    Assert.assertEquals(unweightedSize, format.getWeightedSize("file.txt", unweightedSize));
+    Assertions.assertEquals(unweightedSize, format.getWeightedSize("file.txt", unweightedSize));
   }
   @Test
   public void test_getWeightedSize_withGzCompression()
@@ -91,7 +91,7 @@ public class RegexInputFormatTest
         ImmutableList.of("col1", "col2", "col3")
     );
     final long unweightedSize = 100L;
-    Assert.assertEquals(
+    Assertions.assertEquals(
         unweightedSize * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR,
         format.getWeightedSize("file.txt.gz", unweightedSize)
     );

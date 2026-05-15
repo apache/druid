@@ -53,9 +53,11 @@ import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -88,7 +90,7 @@ public class VirtualColumns implements Cacheable
   }
 
   @JsonCreator
-  public static VirtualColumns create(@Nullable List<VirtualColumn> virtualColumns)
+  public static VirtualColumns create(@Nullable Collection<VirtualColumn> virtualColumns)
   {
     if (virtualColumns == null || virtualColumns.isEmpty()) {
       return EMPTY;
@@ -137,6 +139,8 @@ public class VirtualColumns implements Cacheable
   private final List<String> virtualColumnNames;
   // For equivalence
   private final Supplier<Map<VirtualColumn.EquivalenceKey, VirtualColumn>> equivalence;
+  // For getNode
+  private final Supplier<Map<String, Node>> dependencyNodes;
 
   // For getVirtualColumn:
   private final Map<String, VirtualColumn> withDotSupport;
@@ -169,6 +173,31 @@ public class VirtualColumns implements Cacheable
       }
       return equiv;
     });
+    this.dependencyNodes = Suppliers.memoize(() -> {
+      final Map<String, Node> nodes = Maps.newHashMapWithExpectedSize(virtualColumns.size());
+      for (VirtualColumn vc : virtualColumns) {
+        buildNode(vc, nodes);
+      }
+      return nodes;
+    });
+  }
+
+  private Node buildNode(VirtualColumn vc, Map<String, Node> nodes)
+  {
+    final Node existing = nodes.get(vc.getOutputName());
+    if (existing != null) {
+      return existing;
+    }
+    final List<Node> deps = new ArrayList<>();
+    for (String required : vc.requiredColumns()) {
+      final VirtualColumn dep = getVirtualColumn(required);
+      if (dep != null) {
+        deps.add(buildNode(dep, nodes));
+      }
+    }
+    final Node node = new Node(vc, deps.isEmpty() ? List.of() : List.copyOf(deps));
+    nodes.put(vc.getOutputName(), node);
+    return node;
   }
 
   /**
@@ -198,13 +227,62 @@ public class VirtualColumns implements Cacheable
   }
 
   /**
-   * Check if a virtual column is already defined which is the same as some other virtual column, ignoring output name,
-   * returning that virtual column if it exists, or null if there is no equivalent virtual column.
+   * Returns the {@link Node} for the given virtual column name, providing access to the virtual
+   * column and all of its transitive virtual column dependencies within this instance. Returns null if the
+   * column is not a virtual column in this instance.
    */
   @Nullable
-  public VirtualColumn findEquivalent(VirtualColumn virtualColumn)
+  public Node getNode(String columnName)
   {
-    return equivalence.get().get(virtualColumn.getEquivalanceKey());
+    final VirtualColumn vc = getVirtualColumn(columnName);
+    if (vc == null) {
+      return null;
+    }
+    return dependencyNodes.get().get(vc.getOutputName());
+  }
+
+  /**
+   * Check if {@link #virtualColumns} contains a virtual column which is equivalent to the virtual column in the
+   * supplied {@link Node}, ignoring output name, returning it if it exists or null if there is no
+   * equivalent virtual column.
+   * <p>
+   * If the virtual column has virtual column dependencies (indicated by non-empty {@link Node#getDependencies()}),
+   * this method will attempt to locate equivalent entries in {@link #virtualColumns} to build a map of equivalent
+   * output names. Then, we rewrite the inputs of the other virtual column using
+   * {@link VirtualColumn#rewriteRequiredColumns(Map)} so that differently named inputs are normalized prior to testing
+   * for equivalence.
+   */
+  @Nullable
+  public VirtualColumn findEquivalent(Node otherNode)
+  {
+    // check to see if the virtual column refers to other virtual columns to see if we need to normalize it
+    // by rewriting its inputs first to refer to the equivalent virtual columns
+    final Map<String, String> equivalenceRewriteMap = new HashMap<>();
+    for (Node dep : otherNode.getDependencies()) {
+      final VirtualColumn equivalentDependent = findEquivalent(dep);
+      if (equivalentDependent != null) {
+        equivalenceRewriteMap.put(dep.getVirtualColumn().getOutputName(), equivalentDependent.getOutputName());
+      } else {
+        // missing an equivalent dependent, that means we cannot be equivalent so just bail early
+        return null;
+      }
+    }
+
+    final VirtualColumn otherVirtualColumn = otherNode.getVirtualColumn();
+    if (!equivalenceRewriteMap.isEmpty() && !otherVirtualColumn.supportsRequiredRewrite()) {
+      // cannot safely check for equivalence if the rewrite map is not empty and rewrites are not supported
+      return null;
+    }
+
+    final VirtualColumn toCheckForEquivalence;
+    // rewrite if needed
+    if (equivalenceRewriteMap.isEmpty()) {
+      toCheckForEquivalence = otherVirtualColumn;
+    } else {
+      toCheckForEquivalence = otherVirtualColumn.rewriteRequiredColumns(equivalenceRewriteMap);
+    }
+
+    return equivalence.get().get(toCheckForEquivalence.getEquivalanceKey());
   }
 
   /**
@@ -521,6 +599,58 @@ public class VirtualColumns implements Cacheable
   public String toString()
   {
     return virtualColumns.toString();
+  }
+
+  /**
+   * A node in the virtual column dependency tree, capturing a {@link VirtualColumn} and all of its transitive
+   * virtual column dependencies within a {@link VirtualColumns} instance. Leaf virtual columns (those whose
+   * {@link VirtualColumn#requiredColumns()} contain no other virtual columns) have an empty {@link #getDependencies()}
+   * list.
+   *
+   * @see VirtualColumns#getNode(String)
+   */
+  public static final class Node
+  {
+    private final VirtualColumn virtualColumn;
+    private final List<Node> dependencies;
+
+    private Node(VirtualColumn virtualColumn, List<Node> dependencies)
+    {
+      this.virtualColumn = virtualColumn;
+      this.dependencies = dependencies;
+    }
+
+    public VirtualColumn getVirtualColumn()
+    {
+      return virtualColumn;
+    }
+
+    /**
+     * The virtual column nodes that this virtual column directly depends on, containing only dependencies
+     * that are themselves virtual columns. An empty list does not imply {@link VirtualColumn#requiredColumns()}
+     * is empty, as physical column inputs are not represented here.
+     */
+    public List<Node> getDependencies()
+    {
+      return dependencies;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      Node that = (Node) o;
+      return Objects.equals(virtualColumn, that.virtualColumn) &&
+             Objects.equals(dependencies, that.dependencies);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(virtualColumn, dependencies);
+    }
   }
 
   /**

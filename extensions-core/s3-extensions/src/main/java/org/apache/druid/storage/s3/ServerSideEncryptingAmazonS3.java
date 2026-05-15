@@ -19,75 +19,96 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.SdkClientException;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
-import com.amazonaws.services.s3.model.AccessControlList;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.CopyObjectResult;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.services.s3.model.UploadPartResult;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
-import com.amazonaws.services.s3.transfer.Upload;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
+import software.amazon.awssdk.services.s3.model.GetBucketAclResponse;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.Grant;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.model.FileUpload;
+import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
+import javax.annotation.Nullable;
 import java.io.File;
+import java.io.InputStream;
+import java.util.function.Supplier;
 
 /**
- * {@link AmazonS3} wrapper with {@link ServerSideEncryption}. Every {@link AmazonS3#putObject},
- * {@link AmazonS3#copyObject}, {@link AmazonS3#getObject}, and {@link AmazonS3#getObjectMetadata},
- * {@link AmazonS3#initiateMultipartUpload}, @{@link AmazonS3#uploadPart} methods should be
- * wrapped using ServerSideEncryption.
+ * {@link S3Client} wrapper with {@link ServerSideEncryption}. Every putObject,
+ * copyObject, getObject, and headObject, createMultipartUpload, uploadPart methods
+ * should be wrapped using ServerSideEncryption.
  * <p>
- * Additional methods can be added to this class if needed, but subclassing AmazonS3Client is discouraged to reduce
- * human mistakes like some methods are not encoded properly.
+ * AWS SDK v2 uses immutable request objects with builders, so the decorator
+ * pattern works with builders rather than modifying requests in place.
  */
 public class ServerSideEncryptingAmazonS3
 {
+  private static final Logger log = new Logger(ServerSideEncryptingAmazonS3.class);
+
   public static Builder builder()
   {
     return new Builder();
   }
 
-  private final AmazonS3 amazonS3;
+  private final S3Client s3Client;
   private final ServerSideEncryption serverSideEncryption;
-  private final TransferManager transferManager;
+  @Nullable
+  private final S3TransferManager transferManager;
+  @Nullable
+  private final S3AsyncClient s3AsyncClient;
 
-  public ServerSideEncryptingAmazonS3(AmazonS3 amazonS3, ServerSideEncryption serverSideEncryption, S3TransferConfig transferConfig)
+  public ServerSideEncryptingAmazonS3(
+      S3Client s3Client,
+      @Nullable S3AsyncClient s3AsyncClient,
+      ServerSideEncryption serverSideEncryption,
+      S3TransferConfig transferConfig
+  )
   {
-    this.amazonS3 = amazonS3;
+    this.s3Client = s3Client;
+    this.s3AsyncClient = s3AsyncClient;
     this.serverSideEncryption = serverSideEncryption;
-    if (transferConfig.isUseTransferManager()) {
-      this.transferManager = TransferManagerBuilder.standard()
-          .withS3Client(amazonS3)
-          .withMinimumUploadPartSize(transferConfig.getMinimumUploadPartSize())
-          .withMultipartUploadThreshold(transferConfig.getMultipartUploadThreshold())
+
+    if (transferConfig != null && transferConfig.isUseTransferManager() && s3AsyncClient != null) {
+      log.info("Initializing S3TransferManager with async client for multipart uploads");
+      this.transferManager = S3TransferManager.builder()
+          .s3Client(s3AsyncClient)
           .build();
     } else {
+      if (transferConfig != null && transferConfig.isUseTransferManager() && s3AsyncClient == null) {
+        log.warn("TransferManager requested but no async client provided, falling back to sync uploads");
+      }
       this.transferManager = null;
     }
   }
 
-  public AmazonS3 getAmazonS3()
+  public S3Client getS3Client()
   {
-    return amazonS3;
+    return s3Client;
   }
 
   public boolean doesObjectExist(String bucket, String objectName)
@@ -97,8 +118,8 @@ public class ServerSideEncryptingAmazonS3
       getObjectMetadata(bucket, objectName);
       return true;
     }
-    catch (AmazonS3Exception e) {
-      if (e.getStatusCode() == 404) {
+    catch (S3Exception e) {
+      if (e.statusCode() == 404) {
         // Object not found.
         return false;
       } else {
@@ -108,102 +129,167 @@ public class ServerSideEncryptingAmazonS3
     }
   }
 
-  public ListObjectsV2Result listObjectsV2(ListObjectsV2Request request)
+  public ListObjectsV2Response listObjectsV2(ListObjectsV2Request request)
   {
-    return amazonS3.listObjectsV2(request);
+    return s3Client.listObjectsV2(request);
   }
 
-  public AccessControlList getBucketAcl(String bucket)
+  public GetBucketAclResponse getBucketAcl(String bucket)
   {
-    return amazonS3.getBucketAcl(bucket);
+    return s3Client.getBucketAcl(builder -> builder.bucket(bucket));
   }
 
-  public ObjectMetadata getObjectMetadata(String bucket, String key)
+  public HeadObjectResponse getObjectMetadata(String bucket, String key)
   {
-    final GetObjectMetadataRequest getObjectMetadataRequest = serverSideEncryption.decorate(
-        new GetObjectMetadataRequest(bucket, key)
-    );
-    return amazonS3.getObjectMetadata(getObjectMetadataRequest);
+    HeadObjectRequest.Builder requestBuilder = HeadObjectRequest.builder()
+        .bucket(bucket)
+        .key(key);
+    HeadObjectRequest request = serverSideEncryption.decorate(requestBuilder).build();
+    return s3Client.headObject(request);
   }
 
-  public S3Object getObject(String bucket, String key)
+  public ResponseInputStream<GetObjectResponse> getObject(String bucket, String key)
   {
-    return getObject(new GetObjectRequest(bucket, key));
+    GetObjectRequest.Builder requestBuilder = GetObjectRequest.builder()
+        .bucket(bucket)
+        .key(key);
+    return getObject(requestBuilder);
   }
 
-  public S3Object getObject(GetObjectRequest request)
+  public ResponseInputStream<GetObjectResponse> getObject(GetObjectRequest.Builder requestBuilder)
   {
-    return amazonS3.getObject(serverSideEncryption.decorate(request));
+    GetObjectRequest request = serverSideEncryption.decorate(requestBuilder).build();
+    return s3Client.getObject(request);
   }
 
-  public PutObjectResult putObject(String bucket, String key, File file)
+  public PutObjectResponse putObject(String bucket, String key, File file)
   {
-    return putObject(new PutObjectRequest(bucket, key, file));
+    PutObjectRequest.Builder requestBuilder = PutObjectRequest.builder()
+        .bucket(bucket)
+        .key(key);
+    return putObject(requestBuilder, RequestBody.fromFile(file));
   }
 
-  public PutObjectResult putObject(PutObjectRequest request)
+  public PutObjectResponse putObject(PutObjectRequest.Builder requestBuilder, RequestBody requestBody)
   {
-    return amazonS3.putObject(serverSideEncryption.decorate(request));
+    PutObjectRequest request = serverSideEncryption.decorate(requestBuilder).build();
+    return s3Client.putObject(request, requestBody);
   }
 
-  public CopyObjectResult copyObject(CopyObjectRequest request)
+  public PutObjectResponse putObject(String bucket, String key, InputStream inputStream, long contentLength)
   {
-    return amazonS3.copyObject(serverSideEncryption.decorate(request));
+    PutObjectRequest.Builder requestBuilder = PutObjectRequest.builder()
+        .bucket(bucket)
+        .key(key)
+        .contentLength(contentLength);
+    return putObject(requestBuilder, RequestBody.fromInputStream(inputStream, contentLength));
+  }
+
+  public CopyObjectResponse copyObject(CopyObjectRequest.Builder requestBuilder)
+  {
+    CopyObjectRequest request = serverSideEncryption.decorate(requestBuilder).build();
+    return s3Client.copyObject(request);
   }
 
   public void deleteObject(String bucket, String key)
   {
-    amazonS3.deleteObject(bucket, key);
+    DeleteObjectRequest request = DeleteObjectRequest.builder()
+        .bucket(bucket)
+        .key(key)
+        .build();
+    s3Client.deleteObject(request);
   }
 
-  public void deleteObjects(DeleteObjectsRequest request)
+  public DeleteObjectsResponse deleteObjects(DeleteObjectsRequest request)
   {
-    amazonS3.deleteObjects(request);
+    return s3Client.deleteObjects(request);
   }
 
-
-  public InitiateMultipartUploadResult initiateMultipartUpload(InitiateMultipartUploadRequest request)
+  public CreateMultipartUploadResponse createMultipartUpload(CreateMultipartUploadRequest.Builder requestBuilder)
       throws SdkClientException
   {
-    return amazonS3.initiateMultipartUpload(serverSideEncryption.decorate(request));
+    CreateMultipartUploadRequest request = serverSideEncryption.decorate(requestBuilder).build();
+    return s3Client.createMultipartUpload(request);
   }
 
-  public UploadPartResult uploadPart(UploadPartRequest request)
+  public UploadPartResponse uploadPart(UploadPartRequest.Builder requestBuilder, RequestBody requestBody)
       throws SdkClientException
   {
-    return amazonS3.uploadPart(serverSideEncryption.decorate(request));
+    UploadPartRequest request = serverSideEncryption.decorate(requestBuilder).build();
+    return s3Client.uploadPart(request, requestBody);
   }
 
-  public void cancelMultiPartUpload(AbortMultipartUploadRequest request)
+  public void abortMultipartUpload(AbortMultipartUploadRequest request)
       throws SdkClientException
   {
-    amazonS3.abortMultipartUpload(request);
+    s3Client.abortMultipartUpload(request);
   }
 
-  public CompleteMultipartUploadResult completeMultipartUpload(CompleteMultipartUploadRequest request)
+  public CompleteMultipartUploadResponse completeMultipartUpload(CompleteMultipartUploadRequest request)
       throws SdkClientException
   {
-    return amazonS3.completeMultipartUpload(request);
+    return s3Client.completeMultipartUpload(request);
   }
 
-  public void upload(PutObjectRequest request) throws InterruptedException
+  /**
+   * Upload a file to S3, optionally using the transfer manager for large files.
+   *
+   * @param bucket    the S3 bucket
+   * @param key       the S3 key
+   * @param file      the file to upload
+   * @param aclGrant  optional ACL grant to apply (may be null)
+   */
+  public void upload(String bucket, String key, File file, @Nullable Grant aclGrant)
   {
     if (transferManager == null) {
-      putObject(request);
+      PutObjectRequest.Builder requestBuilder = PutObjectRequest.builder()
+          .bucket(bucket)
+          .key(key);
+      if (aclGrant != null) {
+        final String headerValue = S3Utils.grantFullControlHeaderValue(aclGrant);
+        if (headerValue != null) {
+          requestBuilder.grantFullControl(headerValue);
+        }
+      }
+      putObject(requestBuilder, RequestBody.fromFile(file));
     } else {
-      Upload transfer = transferManager.upload(serverSideEncryption.decorate(request));
-      transfer.waitForCompletion();
+      PutObjectRequest.Builder requestBuilder = PutObjectRequest.builder()
+          .bucket(bucket)
+          .key(key);
+      if (aclGrant != null) {
+        final String headerValue = S3Utils.grantFullControlHeaderValue(aclGrant);
+        if (headerValue != null) {
+          requestBuilder.grantFullControl(headerValue);
+        }
+      }
+      PutObjectRequest decoratedRequest = serverSideEncryption.decorate(requestBuilder).build();
+
+      UploadFileRequest uploadFileRequest = UploadFileRequest.builder()
+          .putObjectRequest(decoratedRequest)
+          .source(file)
+          .build();
+
+      FileUpload fileUpload = transferManager.uploadFile(uploadFileRequest);
+      fileUpload.completionFuture().join();
     }
   }
 
   public static class Builder
   {
-    private AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3Client.builder();
+    private Supplier<S3Client> s3ClientSupplier;
+    @Nullable
+    private Supplier<S3AsyncClient> s3AsyncClientSupplier;
     private S3StorageConfig s3StorageConfig = new S3StorageConfig(new NoopServerSideEncryption(), null);
 
-    public Builder setAmazonS3ClientBuilder(AmazonS3ClientBuilder amazonS3ClientBuilder)
+    public Builder setS3ClientSupplier(Supplier<S3Client> s3ClientSupplier)
     {
-      this.amazonS3ClientBuilder = amazonS3ClientBuilder;
+      this.s3ClientSupplier = s3ClientSupplier;
+      return this;
+    }
+
+    public Builder setS3AsyncClientSupplier(@Nullable Supplier<S3AsyncClient> s3AsyncClientSupplier)
+    {
+      this.s3AsyncClientSupplier = s3AsyncClientSupplier;
       return this;
     }
 
@@ -213,11 +299,6 @@ public class ServerSideEncryptingAmazonS3
       return this;
     }
 
-    public AmazonS3ClientBuilder getAmazonS3ClientBuilder()
-    {
-      return this.amazonS3ClientBuilder;
-    }
-
     public S3StorageConfig getS3StorageConfig()
     {
       return this.s3StorageConfig;
@@ -225,22 +306,37 @@ public class ServerSideEncryptingAmazonS3
 
     public ServerSideEncryptingAmazonS3 build()
     {
-      if (amazonS3ClientBuilder == null) {
-        throw new ISE("AmazonS3ClientBuilder cannot be null!");
+      if (s3ClientSupplier == null) {
+        throw new ISE("S3Client supplier cannot be null!");
       }
       if (s3StorageConfig == null) {
         throw new ISE("S3StorageConfig cannot be null!");
       }
 
-      AmazonS3 amazonS3Client;
+      S3Client s3Client;
       try {
-        amazonS3Client = S3Utils.retryS3Operation(() -> amazonS3ClientBuilder.build());
+        s3Client = S3Utils.retryS3Operation(s3ClientSupplier::get);
       }
       catch (Exception e) {
         throw new RuntimeException(e);
       }
 
-      return new ServerSideEncryptingAmazonS3(amazonS3Client, s3StorageConfig.getServerSideEncryption(), s3StorageConfig.getS3TransferConfig());
+      S3AsyncClient s3AsyncClient = null;
+      if (s3AsyncClientSupplier != null) {
+        try {
+          s3AsyncClient = S3Utils.retryS3Operation(s3AsyncClientSupplier::get);
+        }
+        catch (Exception e) {
+          log.warn(e, "Failed to create S3AsyncClient, falling back to sync uploads");
+        }
+      }
+
+      return new ServerSideEncryptingAmazonS3(
+          s3Client,
+          s3AsyncClient,
+          s3StorageConfig.getServerSideEncryption(),
+          s3StorageConfig.getS3TransferConfig()
+      );
     }
   }
 }

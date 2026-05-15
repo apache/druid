@@ -21,8 +21,8 @@ package org.apache.druid.timeline.partition;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.timeline.VersionedIntervalTimelineTestBase;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.stream.IntStream;
 
@@ -56,7 +56,7 @@ public class AtomicUpdateGroupTest
         )
     );
 
-    Assert.assertEquals(AtomicUpdateGroup.copy(original), original);
+    Assertions.assertEquals(AtomicUpdateGroup.copy(original), original);
   }
 
   @Test

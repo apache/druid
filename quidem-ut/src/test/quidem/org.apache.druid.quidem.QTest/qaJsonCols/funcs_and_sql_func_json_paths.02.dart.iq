@@ -732,7 +732,7 @@ WHERE json_paths(c1) = json_paths(c2);
 SELECT count(*) c
 FROM test_json_cols t1
 INNER JOIN test_json_cols t2 ON json_paths(t1.c1)=json_paths(t2.c1);
-QueryUnsupportedException
+Joining against ARRAY columns is not supported
 !error
 
 #-------------------------------------------------------------------------
@@ -741,7 +741,7 @@ QueryUnsupportedException
 SELECT count(*) c
 FROM test_json_cols t1
 LEFT JOIN test_json_cols t2 ON json_paths(t1.c1)=json_paths(t2.c1);
-QueryUnsupportedException
+Joining against ARRAY columns is not supported
 !error
 
 #-------------------------------------------------------------------------
@@ -751,7 +751,7 @@ SELECT count(*) c
 FROM test_json_cols t1,
      test_json_cols t2
 WHERE json_paths(t1.c1)=json_paths(t2.c1);
-QueryUnsupportedException
+Joining against ARRAY columns is not supported
 !error
 
 #-------------------------------------------------------------------------

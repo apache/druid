@@ -48,6 +48,7 @@ import org.apache.druid.indexing.common.tasklogs.ConsoleLoggingEnforcementConfig
 import org.apache.druid.indexing.common.tasklogs.LogUtils;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
@@ -61,6 +62,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
+import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
 import org.apache.druid.tasklogs.TaskLogPusher;
@@ -361,8 +363,17 @@ public class ForkingTaskRunner
                         command.addSystemProperty("druid.task.executor.enableTlsPort", node.isEnableTlsPort());
                         command.addSystemProperty("log4j2.configurationFactory", ConsoleLoggingEnforcementConfigurationFactory.class.getName());
 
+
+                        if (task instanceof SeekableStreamIndexTask) {
+                          final Integer serverPriority = ((SeekableStreamIndexTask) task).getServerPriority();
+                          if (serverPriority != null) {
+                            command.addSystemProperty("druid.server.priority", serverPriority);
+                          }
+                        }
+
                         command.addSystemProperty("druid.indexer.task.baseTaskDir", storageSlot.getDirectory().getAbsolutePath());
                         command.addSystemProperty("druid.indexer.task.tmpStorageBytesPerTask", storageSlot.getNumBytes());
+                        command.addSystemProperty(MetricsModule.PROPERTY_PEON_MANAGED, true);
 
                         command.add("org.apache.druid.cli.Main");
                         command.add("internal");
@@ -378,7 +389,7 @@ public class ForkingTaskRunner
                         // If the task type is queryable, we need to load broadcast segments on the peon, used for
                         // join queries. This is replaced by --loadBroadcastDatasourceMode option, but is preserved here
                         // for backwards compatibility and can be removed in a future release.
-                        if (task.supportsQueries()) {
+                        if (task.getBroadcastDatasourceLoadingSpec().getMode().needsBroadcastSegments()) {
                           command.add("--loadBroadcastSegments");
                           command.add("true");
                         }

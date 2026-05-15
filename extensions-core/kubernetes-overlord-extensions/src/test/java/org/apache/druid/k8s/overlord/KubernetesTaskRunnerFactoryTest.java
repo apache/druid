@@ -37,9 +37,9 @@ import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.EasyMock;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -55,7 +55,7 @@ public class KubernetesTaskRunnerFactoryTest
   private TaskAdapter taskAdapter;
   @Mock private ConfigManager configManager;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     objectMapper = new TestUtils().getTestObjectMapper();
@@ -67,7 +67,7 @@ public class KubernetesTaskRunnerFactoryTest
     Config config = new ConfigBuilder().build();
 
     druidKubernetesClient =
-        new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig()), config);
+        new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig(), new ObjectMapper()), config);
     druidKubernetesCachingClient = null;
     taskAdapter = new TestTaskAdapter();
     kubernetesTaskRunnerConfig = new KubernetesTaskRunnerEffectiveConfig(kubernetesTaskRunnerStaticConfig, () -> null);
@@ -93,7 +93,7 @@ public class KubernetesTaskRunnerFactoryTest
     KubernetesTaskRunner expectedRunner = factory.build();
     KubernetesTaskRunner actualRunner = factory.get();
 
-    Assert.assertEquals(expectedRunner, actualRunner);
+    Assertions.assertEquals(expectedRunner, actualRunner);
   }
 
   static class TestTaskAdapter implements TaskAdapter

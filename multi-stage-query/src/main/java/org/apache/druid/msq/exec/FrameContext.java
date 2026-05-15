@@ -22,7 +22,6 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.msq.kernel.WorkOrder;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
@@ -48,8 +47,6 @@ public interface FrameContext extends Closeable
   PolicyEnforcer policyEnforcer();
 
   SegmentWrangler segmentWrangler();
-
-  GroupingEngine groupingEngine();
 
   RowIngestionMeters rowIngestionMeters();
 
@@ -87,6 +84,17 @@ public interface FrameContext extends Closeable
 
   IndexMerger indexMerger();
 
+  /**
+   * Acquire processing buffers sized for {@code requestedSlices} concurrent processors. Must be called exactly
+   * once for stages that use processing buffers, before any call to {@link #processingBuffers()}. Stages that
+   * don't use processing buffers must not call this method.
+   */
+  void acquireProcessingBuffers(int requestedSlices);
+
+  /**
+   * Returns the {@link ProcessingBuffers} previously acquired via {@link #acquireProcessingBuffers}. Throws if
+   * not yet acquired.
+   */
   ProcessingBuffers processingBuffers();
 
   WorkerMemoryParameters memoryParameters();

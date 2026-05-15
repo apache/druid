@@ -88,8 +88,6 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
-        originalQuery.getFilter(),
-        null,
         minStageNumber,
         false
     );
@@ -163,7 +161,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
                        .broadcastInputs(dataSourcePlan.getBroadcastInputs())
                        .shuffleSpec(scanShuffleSpec)
                        .signature(signatureToUse)
-                       .maxWorkerCount(dataSourcePlan.getMaxWorkerCount(queryKitSpec))
+                       .maxWorkerCount(dataSourcePlan.getMaxWorkerCount())
                        .processor(new ScanQueryStageProcessor(queryToRun))
     );
 

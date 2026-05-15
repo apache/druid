@@ -149,7 +149,7 @@ public class SegmentLoadDropHandlerTest
 
     // Make sure the scheduled runnable that "deletes" segment files has been executed.
     // Because another addSegment() call is executed, which removes the segment from segmentsToDelete field in
-    // ZkCoordinator, the scheduled runnable will not actually delete segment files.
+    // SegmentLoadDropHandler, the scheduled runnable will not actually delete segment files.
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
@@ -159,7 +159,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(ImmutableList.of(segment), segmentAnnouncer.getObservedSegments());
     Assert.assertFalse(
         "segment files shouldn't be deleted",
-        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment)
+        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment.getId())
     );
   }
 
@@ -197,7 +197,7 @@ public class SegmentLoadDropHandlerTest
 
     // Make sure the scheduled runnable that "deletes" segment files has been executed.
     // Because another addSegment() call is executed, which removes the segment from segmentsToDelete field in
-    // ZkCoordinator, the scheduled runnable will not actually delete segment files.
+    // SegmentLoadDropHandler, the scheduled runnable will not actually delete segment files.
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
@@ -210,7 +210,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertTrue(segmentAnnouncer.getObservedSegments().contains(segment));
     Assert.assertFalse(
         "segment files shouldn't be deleted",
-        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment)
+        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment.getId())
     );
   }
 

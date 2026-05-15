@@ -28,28 +28,27 @@ import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerEffectiveConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class KubernetesTaskExecutionConfigResourceTest
 {
-  private JacksonConfigManager configManager;
-  private AuditManager auditManager;
-  private HttpServletRequest req;
   private static final KubernetesTaskRunnerEffectiveConfig DEFAULT_CONFIG = new KubernetesTaskRunnerEffectiveConfig(
       new KubernetesTaskRunnerStaticConfig(),
       null
@@ -60,7 +59,11 @@ public class KubernetesTaskExecutionConfigResourceTest
           DEFAULT_CONFIG.getCapacity()
       );
 
-  @Before
+  private JacksonConfigManager configManager;
+  private AuditManager auditManager;
+  private HttpServletRequest req;
+
+  @BeforeEach
   public void setUp()
   {
     configManager = EasyMock.createMock(JacksonConfigManager.class);
@@ -81,18 +84,14 @@ public class KubernetesTaskExecutionConfigResourceTest
         new TaskTypePodTemplateSelectStrategy(), 10
     );
 
-    KubernetesTaskRunnerDynamicConfig expectedMerged = new DefaultKubernetesTaskRunnerDynamicConfig(
-        new TaskTypePodTemplateSelectStrategy(), 10
-    );
-
-    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn("127.0.0.1").anyTimes();
-    EasyMock.replay(req);
+    EasyMock.expect(configManager.watch(
+        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
+        KubernetesTaskRunnerDynamicConfig.class
+    )).andReturn(new AtomicReference<>(null));
+    expectAuditInfoRequest();
     EasyMock.expect(configManager.set(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        expectedMerged,
+        inputConfig,
         AuthorizationUtils.buildAuditInfo(req)
     )).andReturn(ConfigManager.SetResult.ok());
     EasyMock.replay(configManager, auditManager);
@@ -114,18 +113,14 @@ public class KubernetesTaskExecutionConfigResourceTest
         new TaskTypePodTemplateSelectStrategy(), 10
     );
 
-    KubernetesTaskRunnerDynamicConfig expectedMerged = new DefaultKubernetesTaskRunnerDynamicConfig(
-        new TaskTypePodTemplateSelectStrategy(), 10
-    );
-
-    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn("127.0.0.1").anyTimes();
-    EasyMock.replay(req);
+    EasyMock.expect(configManager.watch(
+        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
+        KubernetesTaskRunnerDynamicConfig.class
+    )).andReturn(new AtomicReference<>(null));
+    expectAuditInfoRequest();
     EasyMock.expect(configManager.set(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        expectedMerged,
+        inputConfig,
         AuthorizationUtils.buildAuditInfo(req)
     )).andReturn(ConfigManager.SetResult.failure(new RuntimeException()));
     EasyMock.replay(configManager, auditManager);
@@ -137,37 +132,28 @@ public class KubernetesTaskExecutionConfigResourceTest
   @Test
   public void setExecutionConfig_MergeUsesCurrentCapacityWhenRequestCapacityNull()
   {
-    PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
-    KubernetesTaskRunnerDynamicConfig currentDynamic = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 5);
-    KubernetesTaskRunnerEffectiveConfig effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(
-        new KubernetesTaskRunnerStaticConfig(),
-        Suppliers.ofInstance(currentDynamic)
-    );
-
     KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
         configManager,
         auditManager,
-        effectiveConfig
+        DEFAULT_CONFIG
     );
 
+    PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
+    KubernetesTaskRunnerDynamicConfig currentDynamic = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 5);
     PodTemplateSelectStrategy requestStrategy = new TaskTypePodTemplateSelectStrategy();
     KubernetesTaskRunnerDynamicConfig requestConfig = new DefaultKubernetesTaskRunnerDynamicConfig(requestStrategy, null);
-
-    // Effective current: (TaskType, 5). Request: (TaskType, null). Merged: (TaskType, 5).
     KubernetesTaskRunnerDynamicConfig expectedMergedConfig = new DefaultKubernetesTaskRunnerDynamicConfig(requestStrategy, 5);
 
-    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn("127.0.0.1").anyTimes();
-    EasyMock.replay(req);
-
+    EasyMock.expect(configManager.watch(
+        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
+        KubernetesTaskRunnerDynamicConfig.class
+    )).andReturn(new AtomicReference<>(currentDynamic));
+    expectAuditInfoRequest();
     EasyMock.expect(configManager.set(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
         expectedMergedConfig,
         AuthorizationUtils.buildAuditInfo(req)
     )).andReturn(ConfigManager.SetResult.ok());
-
     EasyMock.replay(configManager, auditManager);
 
     Response result = testedResource.setExecutionConfig(requestConfig, req);
@@ -177,36 +163,27 @@ public class KubernetesTaskExecutionConfigResourceTest
   @Test
   public void setExecutionConfig_MergeUsesCurrentStrategyWhenRequestStrategyNull()
   {
-    PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
-    KubernetesTaskRunnerDynamicConfig currentDynamic = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 2);
-    KubernetesTaskRunnerEffectiveConfig effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(
-        new KubernetesTaskRunnerStaticConfig(),
-        Suppliers.ofInstance(currentDynamic)
-    );
-
     KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
         configManager,
         auditManager,
-        effectiveConfig
+        DEFAULT_CONFIG
     );
 
+    PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
+    KubernetesTaskRunnerDynamicConfig currentDynamic = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 2);
     KubernetesTaskRunnerDynamicConfig requestConfig = new DefaultKubernetesTaskRunnerDynamicConfig(null, 7);
-
-    // Effective current: (TaskType, 2). Request: (null, 7). Merged: (TaskType, 7).
     KubernetesTaskRunnerDynamicConfig expectedMergedConfig = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 7);
 
-    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn("127.0.0.1").anyTimes();
-    EasyMock.replay(req);
-
+    EasyMock.expect(configManager.watch(
+        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
+        KubernetesTaskRunnerDynamicConfig.class
+    )).andReturn(new AtomicReference<>(currentDynamic));
+    expectAuditInfoRequest();
     EasyMock.expect(configManager.set(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
         expectedMergedConfig,
         AuthorizationUtils.buildAuditInfo(req)
     )).andReturn(ConfigManager.SetResult.ok());
-
     EasyMock.replay(configManager, auditManager);
 
     Response result = testedResource.setExecutionConfig(requestConfig, req);
@@ -216,36 +193,63 @@ public class KubernetesTaskExecutionConfigResourceTest
   @Test
   public void setExecutionConfig_MergeUsesCurrentWhenBothRequestFieldsNull()
   {
-    PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
-    KubernetesTaskRunnerDynamicConfig currentDynamic = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 9);
-    KubernetesTaskRunnerEffectiveConfig effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(
-        new KubernetesTaskRunnerStaticConfig(),
-        Suppliers.ofInstance(currentDynamic)
+    KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
+        configManager,
+        auditManager,
+        DEFAULT_CONFIG
     );
 
+    PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
+    KubernetesTaskRunnerDynamicConfig currentDynamic = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 9);
+    KubernetesTaskRunnerDynamicConfig requestConfig = new DefaultKubernetesTaskRunnerDynamicConfig(null, null);
+    KubernetesTaskRunnerDynamicConfig expectedMergedConfig = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 9);
+
+    EasyMock.expect(configManager.watch(
+        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
+        KubernetesTaskRunnerDynamicConfig.class
+    )).andReturn(new AtomicReference<>(currentDynamic));
+    expectAuditInfoRequest();
+    EasyMock.expect(configManager.set(
+        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
+        expectedMergedConfig,
+        AuthorizationUtils.buildAuditInfo(req)
+    )).andReturn(ConfigManager.SetResult.ok());
+    EasyMock.replay(configManager, auditManager);
+
+    Response result = testedResource.setExecutionConfig(requestConfig, req);
+    assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
+  }
+
+  @Test
+  public void setExecutionConfig_DoesNotPersistStaticFallbackValues()
+  {
+    KubernetesTaskRunnerEffectiveConfig effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(
+        KubernetesTaskRunnerConfig.builder()
+                                  .withCapacity(10)
+                                  .build(),
+        null
+    );
     KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
         configManager,
         auditManager,
         effectiveConfig
     );
 
-    KubernetesTaskRunnerDynamicConfig requestConfig = new DefaultKubernetesTaskRunnerDynamicConfig(null, null);
+    KubernetesTaskRunnerDynamicConfig requestConfig = new DefaultKubernetesTaskRunnerDynamicConfig(
+        new TaskTypePodTemplateSelectStrategy(),
+        null
+    );
 
-    // Effective current: (TaskType, 9). Request: (null, null). Merged: (TaskType, 9).
-    KubernetesTaskRunnerDynamicConfig expectedMergedConfig = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 9);
-
-    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn("127.0.0.1").anyTimes();
-    EasyMock.replay(req);
-
+    EasyMock.expect(configManager.watch(
+        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
+        KubernetesTaskRunnerDynamicConfig.class
+    )).andReturn(new AtomicReference<>(null));
+    expectAuditInfoRequest();
     EasyMock.expect(configManager.set(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        expectedMergedConfig,
+        requestConfig,
         AuthorizationUtils.buildAuditInfo(req)
     )).andReturn(ConfigManager.SetResult.ok());
-
     EasyMock.replay(configManager, auditManager);
 
     Response result = testedResource.setExecutionConfig(requestConfig, req);
@@ -269,6 +273,35 @@ public class KubernetesTaskExecutionConfigResourceTest
     KubernetesTaskRunnerDynamicConfig returnedConfig = (KubernetesTaskRunnerDynamicConfig) result.getEntity();
     assertNotNull(returnedConfig);
     assertEquals(DEFAULT_DYNAMIC_CONFIG, returnedConfig);
+  }
+
+  @Test
+  public void getExecutionConfig_ReturnsEffectiveConfig()
+  {
+    KubernetesTaskRunnerEffectiveConfig effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(
+        KubernetesTaskRunnerConfig.builder()
+                                  .withCapacity(10)
+                                  .build(),
+        Suppliers.ofInstance(
+            new DefaultKubernetesTaskRunnerDynamicConfig(
+                new TaskTypePodTemplateSelectStrategy(),
+                null
+            )
+        )
+    );
+    EasyMock.replay(configManager, auditManager);
+
+    KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
+        configManager,
+        auditManager,
+        effectiveConfig
+    );
+
+    Response result = testedResource.getExecutionConfig();
+    assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
+
+    KubernetesTaskRunnerDynamicConfig returnedConfig = (KubernetesTaskRunnerDynamicConfig) result.getEntity();
+    assertEquals(new DefaultKubernetesTaskRunnerDynamicConfig(new TaskTypePodTemplateSelectStrategy(), 10), returnedConfig);
   }
 
   @Test
@@ -309,7 +342,6 @@ public class KubernetesTaskExecutionConfigResourceTest
     Interval interval = Intervals.of(intervalStr);
     List<AuditEntry> intervalFiltered = ImmutableList.of(entry2, entry1);
 
-    // Query by count: returns the last 2 entries
     auditManager = EasyMock.createMock(AuditManager.class);
     EasyMock.expect(auditManager.fetchAuditHistory(configKey, configKey, 2)).andReturn(lastTwo);
     EasyMock.replay(configManager, auditManager);
@@ -326,7 +358,6 @@ public class KubernetesTaskExecutionConfigResourceTest
     assertEquals(lastTwo, resultEntries);
     EasyMock.verify(auditManager);
 
-    // Query by interval: returns entries within the interval
     EasyMock.reset(configManager, auditManager);
     EasyMock.expect(auditManager.fetchAuditHistory(configKey, configKey, interval)).andReturn(intervalFiltered);
     EasyMock.replay(configManager, auditManager);
@@ -343,7 +374,6 @@ public class KubernetesTaskExecutionConfigResourceTest
     assertEquals(intervalFiltered, resultEntries);
     EasyMock.verify(auditManager);
 
-    // Both interval and count provided: interval takes precedence
     EasyMock.reset(configManager, auditManager);
     EasyMock.expect(auditManager.fetchAuditHistory(configKey, configKey, interval)).andReturn(intervalFiltered);
     EasyMock.replay(configManager, auditManager);
@@ -358,7 +388,6 @@ public class KubernetesTaskExecutionConfigResourceTest
     assertEquals(intervalFiltered, result.getEntity());
     EasyMock.verify(auditManager);
 
-    // Neither interval nor count: falls through to interval-based fetch with null
     EasyMock.reset(configManager, auditManager);
     EasyMock.expect(auditManager.fetchAuditHistory(configKey, configKey, null)).andReturn(fullHistory);
     EasyMock.replay(configManager, auditManager);
@@ -375,7 +404,6 @@ public class KubernetesTaskExecutionConfigResourceTest
     assertEquals(fullHistory, resultEntries);
     EasyMock.verify(auditManager);
 
-    // Invalid count: returns BAD_REQUEST with an error message
     EasyMock.reset(configManager, auditManager);
     EasyMock.expect(auditManager.fetchAuditHistory(configKey, configKey, -1))
             .andThrow(new IllegalArgumentException("count must be positive"));
@@ -391,5 +419,14 @@ public class KubernetesTaskExecutionConfigResourceTest
     Map<String, Object> errorEntity = (Map<String, Object>) result.getEntity();
     assertEquals("count must be positive", errorEntity.get("error"));
     EasyMock.verify(auditManager);
+  }
+
+  private void expectAuditInfoRequest()
+  {
+    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn(null).anyTimes();
+    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn(null).anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(null).anyTimes();
+    EasyMock.expect(req.getRemoteAddr()).andReturn("127.0.0.1").anyTimes();
+    EasyMock.replay(req);
   }
 }

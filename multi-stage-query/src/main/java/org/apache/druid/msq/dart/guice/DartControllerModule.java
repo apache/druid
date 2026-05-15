@@ -21,8 +21,10 @@ package org.apache.druid.msq.dart.guice;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.Multibinder;
@@ -34,9 +36,12 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.DartResourcePermissionMapper;
 import org.apache.druid.msq.dart.controller.ControllerMessageListener;
+import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
@@ -49,6 +54,7 @@ import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -81,6 +87,10 @@ public class DartControllerModule implements DruidModule
     {
       JsonConfigProvider.bind(binder, DartModules.DART_PROPERTY_BASE + ".controller", DartControllerConfig.class);
       JsonConfigProvider.bind(binder, DartModules.DART_PROPERTY_BASE + ".query", DefaultQueryConfig.class, Dart.class);
+      // Dart uses its own static DefaultQueryConfig rather than BrokerViewOfBrokerConfig because
+      // DartSqlEngine.initContextMap() manages context merging independently for Dart queries.
+      binder.bind(Key.get(QueryConfigProvider.class, Dart.class))
+            .to(Key.get(DefaultQueryConfig.class, Dart.class));
 
       LifecycleModule.register(binder, DartSqlClients.class);
       LifecycleModule.register(binder, DartMessageRelays.class);
@@ -119,6 +129,22 @@ public class DartControllerModule implements DruidModule
     )
     {
       return new DartMessageRelays(discoveryProvider, messageRelayFactory);
+    }
+
+    @Provides
+    @Dart
+    @ManageLifecycle
+    public ControllerThreadPool makeControllerThreadPool(DartControllerConfig dartControllerConfig)
+    {
+      return new ControllerThreadPool(
+          MoreExecutors.listeningDecorator(
+              Execs.multiThreaded(
+                  dartControllerConfig.getConcurrentQueries(),
+                  "dart-controller-%s"
+              )
+          ),
+          ScheduledExecutors.fixed(1, "dart-controller-timeout-%s")
+      );
     }
   }
 

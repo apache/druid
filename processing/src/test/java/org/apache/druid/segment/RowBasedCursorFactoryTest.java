@@ -432,13 +432,11 @@ public class RowBasedCursorFactoryTest
                                                      .setFilter(new SelectorDimFilter("vc", "2", null).toFilter())
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
-                                                             ImmutableList.of(
-                                                                 new ExpressionVirtualColumn(
-                                                                     "vc",
-                                                                     "\"LONG\" + 1",
-                                                                     ColumnType.LONG,
-                                                                     ExprMacroTable.nil()
-                                                                 )
+                                                             new ExpressionVirtualColumn(
+                                                                 "vc",
+                                                                 "\"LONG\" + 1",
+                                                                 ColumnType.LONG,
+                                                                 ExprMacroTable.nil()
                                                              )
                                                          )
                                                      )

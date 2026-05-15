@@ -21,6 +21,7 @@ package org.apache.druid.storage.hdfs;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -34,6 +35,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
@@ -200,6 +202,170 @@ public class HdfsDataSegmentKillerTest
 
     // Should do nothing.
     killer.kill(getSegmentWithPath(new Path("/xxx/", "index.zip").toString()));
+  }
+
+  @Test
+  public void testKillRecursive_forWhenConstructedPathReturnsNull() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final FileSystem fs = FileSystem.get(config);
+    try {
+      final HdfsDataSegmentKiller killerWithStorage = new HdfsDataSegmentKiller(
+          config,
+          new HdfsDataSegmentPusherConfig()
+          {
+            @Override
+            public String getStorageDirectory()
+            {
+              return testRoot.getAbsolutePath();
+            }
+          }
+      );
+
+      final Path workspaceRoot = new Path(testRoot.getAbsolutePath(), "workspace");
+      final Path nested = new Path(workspaceRoot, "evil");
+      Assert.assertTrue(fs.mkdirs(nested));
+      fs.createNewFile(new Path(nested, "probe"));
+
+      final Path stagingRun = new Path(new Path(testRoot.getAbsolutePath(), "staging"), "some_run_id");
+      Assert.assertTrue(fs.mkdirs(stagingRun));
+
+      killerWithStorage.killRecursively(null);
+      killerWithStorage.killRecursively("");
+      killerWithStorage.killRecursively("/absolute/under/root");
+      killerWithStorage.killRecursively("path\\with\\backslashes");
+      killerWithStorage.killRecursively("workspace/../evil");
+      killerWithStorage.killRecursively("only/../dots");
+      killerWithStorage.killRecursively("..");
+      killerWithStorage.killRecursively("workspace//evil");
+      killerWithStorage.killRecursively("workspace/evil/");
+
+      Assert.assertTrue("workspace/evil should survive null constructHdfsDeletePath cases", fs.exists(nested));
+      Assert.assertTrue(fs.exists(stagingRun));
+
+      final HdfsDataSegmentKiller killerNoStorage = new HdfsDataSegmentKiller(
+          config,
+          new HdfsDataSegmentPusherConfig()
+          {
+            @Override
+            public String getStorageDirectory()
+            {
+              return "";
+            }
+          }
+      );
+      killerNoStorage.killRecursively("staging/some_run_id");
+      Assert.assertTrue("paths must not be deleted when storage directory is unset", fs.exists(stagingRun));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillRecursively_missingDirectoryIsNoOp() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return testRoot.getAbsolutePath();
+          }
+        }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    try {
+      killer.killRecursively("staging/no_such_directory");
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
+  public void testKillRecursively() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    Configuration config = new Configuration();
+    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return testRoot.getAbsolutePath();
+          }
+        }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    try {
+      Path parentDir = new Path(testRoot.getAbsolutePath(), "export");
+      Path taskDir = new Path(new Path(parentDir, "run_a"), "leaf");
+      Assert.assertTrue(fs.mkdirs(taskDir.getParent()));
+      fs.createNewFile(taskDir);
+
+      killer.killRecursively("export/run_a");
+
+      Assert.assertFalse(fs.exists(new Path(parentDir, "run_a")));
+      Assert.assertTrue(fs.exists(parentDir));
+      Assert.assertTrue(fs.delete(parentDir, true));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  /**
+   * {@link HdfsDataSegmentPusher#pushToPath} replaces {@code ':'} with {@code '_'} in
+   * storage suffixes; cleanup applies the same normalization to the relative directory path.
+   */
+  @Test
+  public void testKillRecursively_pathWithColonsMatchesHdfsPusherLayout() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    Configuration config = new Configuration();
+    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return testRoot.getAbsolutePath();
+          }
+        }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    try {
+      final String relativePathWithColons =
+          "batch/index_parallel_opa_affiliate_ams_key_metric_hourly_ph_live_hflgnacd_2026-03-23T10:09:40.697Z";
+      final String onDiskRelativePath = relativePathWithColons.replace(':', '_');
+      Path batchRoot = new Path(testRoot.getAbsolutePath(), "batch");
+      Path taskDir = new Path(
+          testRoot.getAbsolutePath() + Path.SEPARATOR + onDiskRelativePath + Path.SEPARATOR + "leaf"
+      );
+      Assert.assertTrue(fs.mkdirs(taskDir.getParent()));
+      fs.createNewFile(taskDir);
+
+      killer.killRecursively(relativePathWithColons);
+
+      Assert.assertFalse(fs.exists(new Path(testRoot.getAbsolutePath() + Path.SEPARATOR + onDiskRelativePath)));
+      Assert.assertTrue(fs.exists(batchRoot));
+      Assert.assertTrue(fs.delete(batchRoot, true));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
   }
 
   @Test

@@ -20,6 +20,7 @@
 package org.apache.druid.msq.logical;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
@@ -100,6 +101,7 @@ public class StageMaker
     sdb.signature(frameProcessorStage.getLogicalRowSignature());
     sdb.processor(stageProcessor);
     sdb.shuffleSpec(MixShuffleSpec.instance());
+    sdb.maxWorkerCount(maxWorkerCountFor(frameProcessorStage));
     return sdb;
   }
 
@@ -110,6 +112,7 @@ public class StageMaker
     sdb.signature(stage.getRowSignature());
     sdb.processor(makeScanStageProcessor(VirtualColumns.EMPTY, stage.getRowSignature(), null));
     sdb.shuffleSpec(stage.buildShuffleSpec());
+    sdb.maxWorkerCount(maxWorkerCountFor(stage));
     return sdb;
   }
 
@@ -162,5 +165,13 @@ public class StageMaker
   public StageProcessor<?, ?> makeSegmentMapProcessor(RowSignature signature, DataSource dataSource)
   {
     return ScanQueryStageProcessor.makeSegmentMapFnProcessor(signature, dataSource);
+  }
+
+  /**
+   * Returns the {@code maxWorkerCount} to use for a given {@link LogicalStage}.
+   */
+  private static int maxWorkerCountFor(LogicalStage stage)
+  {
+    return stage.isSingleWorker() ? 1 : Limits.MAX_WORKERS;
   }
 }

@@ -28,7 +28,9 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 
 public class IndexTaskUtils
 {
@@ -101,5 +103,20 @@ public class IndexTaskUtils
     } else {
       toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/failure", 1));
     }
+  }
+
+  /**
+   * Gets total row count of the given segments. Legacy segments do not have the
+   * row count populated in the metadata and thus do not contribute to the row
+   * count.
+   */
+  public static long getTotalRowCount(Collection<DataSegment> segments)
+  {
+    return segments
+        .stream()
+        .map(DataSegment::getTotalRows)
+        .filter(Objects::nonNull)
+        .mapToLong(Integer::longValue)
+        .sum();
   }
 }

@@ -22,11 +22,13 @@ package org.apache.druid.segment.file;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.projections.ProjectionMetadata;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -74,11 +76,24 @@ public class SegmentFileMetadata
   )
   {
     this.containers = containers;
-    this.files = files;
+    this.files = internKeys(files);
     this.interval = interval;
-    this.columnDescriptors = columnDescriptors;
+    this.columnDescriptors = internKeys(columnDescriptors);
     this.projections = projections;
     this.bitmapEncoding = bitmapEncoding;
+  }
+
+  @Nullable
+  private static <V> Map<String, V> internKeys(@Nullable Map<String, V> map)
+  {
+    if (map == null) {
+      return null;
+    }
+    final Map<String, V> interned = new HashMap<>();
+    for (Map.Entry<String, V> entry : map.entrySet()) {
+      interned.put(SmooshedFileMapper.STRING_INTERNER.intern(entry.getKey()), entry.getValue());
+    }
+    return interned;
   }
 
   @JsonProperty
@@ -93,6 +108,15 @@ public class SegmentFileMetadata
     return files;
   }
 
+  /**
+   * The segment's declared interval (the bucket-aligned time range it covers), as supplied by the writer at build
+   * time and serialized as an ISO-8601 interval string. May be wider than the actual data's time range, the start
+   * typically reflects the schema's bucket minimum (e.g. start-of-day for a daily-granularity segment) and the end
+   * is rounded up to the next query-granularity bucket boundary after the latest row. For exact, data-derived
+   * bounds (e.g. for time-boundary queries) use {@link ProjectionMetadata#getMinTime} / {@link
+   * ProjectionMetadata#getMaxTime} on the entries in {@link #projections}, which are populated by newer writers and
+   * reflect the true per-projection min/max {@code __time} across all rows.
+   */
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getInterval()

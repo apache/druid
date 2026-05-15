@@ -414,7 +414,7 @@ public class CliPeonTest
           null,
           DataSchema.builder()
               .withDataSource(datasource)
-              .withTimestamp(new TimestampSpec(null, null, null))
+              .withTimestamp(TimestampSpec.DEFAULT)
               .withDimensions(new DimensionsSpec(Collections.emptyList()))
               .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), Collections.emptyList()))
               .build(),
@@ -437,7 +437,7 @@ public class CliPeonTest
     )
     {
 
-      super(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId);
+      super(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId, null);
     }
 
     @Override
@@ -478,7 +478,8 @@ public class CliPeonTest
           DateTimes.nowUtc().minusDays(2),
           DateTimes.nowUtc(),
           new CsvInputFormat(null, null, true, null, 0, null),
-          Duration.standardHours(2).getStandardMinutes()
+          Duration.standardHours(2).getStandardMinutes(),
+          null
       );
     }
   }

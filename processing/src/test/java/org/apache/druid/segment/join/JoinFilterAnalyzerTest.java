@@ -378,13 +378,11 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "v1",
-                "concat('virtual-column-', \"channel\")",
-                ColumnType.STRING,
-                TestExprMacroTable.INSTANCE
-            )
+        new ExpressionVirtualColumn(
+            "v1",
+            "concat('virtual-column-', \"channel\")",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
         )
     );
 
@@ -448,13 +446,11 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     // a selector filter on an ExpressionVirtualColumn
     Filter originalFilter = new SelectorFilter("v0", "VIRGINIA");
     VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "v0",
-                "upper(\"r1.regionName\")",
-                ColumnType.STRING,
-                TestExprMacroTable.INSTANCE
-            )
+        new ExpressionVirtualColumn(
+            "v0",
+            "upper(\"r1.regionName\")",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
         )
     );
 
@@ -514,19 +510,17 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     final VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "v0",
-                "concat('virtual-column-', \"channel\")",
-                ColumnType.STRING,
-                TestExprMacroTable.INSTANCE
-            ),
-            new ExpressionVirtualColumn(
-                "v1",
-                "upper(\"r1.regionName\")",
-                ColumnType.STRING,
-                TestExprMacroTable.INSTANCE
-            )
+        new ExpressionVirtualColumn(
+            "v0",
+            "concat('virtual-column-', \"channel\")",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
+        ),
+        new ExpressionVirtualColumn(
+            "v1",
+            "upper(\"r1.regionName\")",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
         )
     );
 

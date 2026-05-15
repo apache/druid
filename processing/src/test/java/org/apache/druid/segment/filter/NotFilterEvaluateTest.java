@@ -20,13 +20,10 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
@@ -47,21 +44,19 @@ import java.util.Map;
 public class NotFilterEvaluateTest extends BaseFilterTest
 {
   private static final String TIMESTAMP_COLUMN = "timestamp";
-
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          DimensionsSpec.EMPTY
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
+      DimensionsSpec.EMPTY,
+      ColumnsFilter.all()
   );
 
-  private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.of("dim0", "0")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "1")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "2")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "3")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "4")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "5")).get(0)
+  private static final List<InputRow> ROWS = List.of(
+      makeMapRow(SCHEMA, Map.of("dim0", "0")),
+      makeMapRow(SCHEMA, Map.of("dim0", "1")),
+      makeMapRow(SCHEMA, Map.of("dim0", "2")),
+      makeMapRow(SCHEMA, Map.of("dim0", "3")),
+      makeMapRow(SCHEMA, Map.of("dim0", "4")),
+      makeMapRow(SCHEMA, Map.of("dim0", "5"))
   );
 
   public NotFilterEvaluateTest(
@@ -86,19 +81,19 @@ public class NotFilterEvaluateTest extends BaseFilterTest
   {
     assertFilterMatches(
         new NotDimFilter(new SelectorDimFilter("dim0", null, null)),
-        ImmutableList.of("0", "1", "2", "3", "4", "5")
+        List.of("0", "1", "2", "3", "4", "5")
     );
     assertFilterMatches(
         new NotDimFilter(new SelectorDimFilter("dim0", "", null)),
-        ImmutableList.of("0", "1", "2", "3", "4", "5")
+        List.of("0", "1", "2", "3", "4", "5")
     );
     assertFilterMatches(
         new NotDimFilter(new SelectorDimFilter("dim0", "0", null)),
-        ImmutableList.of("1", "2", "3", "4", "5")
+        List.of("1", "2", "3", "4", "5")
     );
     assertFilterMatches(
         new NotDimFilter(new SelectorDimFilter("dim0", "1", null)),
-        ImmutableList.of("0", "2", "3", "4", "5")
+        List.of("0", "2", "3", "4", "5")
     );
   }
 }

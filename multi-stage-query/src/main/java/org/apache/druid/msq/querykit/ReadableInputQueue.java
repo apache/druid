@@ -33,8 +33,6 @@ import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.input.LoadableSegment;
 import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.input.stage.ReadablePartition;
-import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
@@ -99,19 +97,16 @@ public class ReadableInputQueue implements Closeable
   @GuardedBy("this")
   private final Set<ListenableFuture<ReadableInput>> pendingNextInputs = Sets.newIdentityHashSet();
 
-  private final String queryId;
   private final StandardPartitionReader partitionReader;
   private final int loadahead;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   public ReadableInputQueue(
-      final String queryId,
       final StandardPartitionReader partitionReader,
       final List<PhysicalInputSlice> slices,
       final int loadahead
   )
   {
-    this.queryId = queryId;
     this.partitionReader = partitionReader;
     this.loadahead = loadahead;
 
@@ -242,10 +237,8 @@ public class ReadableInputQueue implements Closeable
           ReadableInput.channel(
               channel,
               partitionReader.frameReader(readablePartition.getStageNumber()),
-              new StagePartition(
-                  new StageId(queryId, readablePartition.getStageNumber()),
-                  readablePartition.getPartitionNumber()
-              )
+              readablePartition.getStageNumber(),
+              readablePartition.getPartitionNumber()
           )
       );
     }

@@ -21,8 +21,8 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class EventMapTest
 {
@@ -40,7 +40,7 @@ public class EventMapTest
                                  .put("x0", "x0")
                                  .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "{\"k1\":\"v1\",\"k2\":\"v2\",\"k3\":\"v3\",\"k4\":\"v4\",\"k5\":\"v5\",\"k0\":\"v0\",\"a0\":\"a0\",\"x0\":\"x0\"}",
         new DefaultObjectMapper().writeValueAsString(map)
     );

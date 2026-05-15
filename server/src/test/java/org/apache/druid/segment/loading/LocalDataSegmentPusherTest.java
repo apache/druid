@@ -267,28 +267,4 @@ public class LocalDataSegmentPusherTest
     configZip.storageDirectory.setWritable(false);
     localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment, false);
   }
-
-  @Test
-  public void testPathForHadoopAbsolute()
-  {
-    configZip.storageDirectory = new File("/druid");
-
-    // If this test fails because the path is returned as "file:/druid/", this can happen
-    // when a /druid directory exists on the local filesystem.
-    Assert.assertEquals(
-        "file:/druid",
-        new LocalDataSegmentPusher(configZip).getPathForHadoop()
-    );
-  }
-
-  @Test
-  public void testPathForHadoopRelative()
-  {
-    configZip.storageDirectory = new File("druid");
-
-    Assert.assertEquals(
-        StringUtils.format("file:%s/druid", System.getProperty("user.dir")),
-        new LocalDataSegmentPusher(configZip).getPathForHadoop()
-    );
-  }
 }

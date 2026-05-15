@@ -65,6 +65,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningCon
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
@@ -428,8 +429,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     replayAll();
 
     int taskCountInit = supervisor.getIoConfig().getTaskCount();
-    // when enable autoScaler the init taskCount will be equal to taskCountMin
-    Assert.assertEquals(1, taskCountInit);
+    Assert.assertEquals(2, taskCountInit);
     supervisor.getIoConfig().setTaskCount(2);
 
     supervisor.start();
@@ -468,7 +468,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null,
+        null
     );
     KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, OBJECT_MAPPER);
     KinesisSupervisor supervisor = new KinesisSupervisor(
@@ -533,7 +535,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null,
+        null
     );
 
     AutoScalerConfig autoscalerConfigNull = kinesisSupervisorIOConfigWithNullAutoScalerConfig.getAutoScalerConfig();
@@ -560,7 +564,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
-        false
+        false,
+        null,
+        null
     );
 
     AutoScalerConfig autoscalerConfig = kinesisSupervisorIOConfigWithEmptyAutoScalerConfig.getAutoScalerConfig();
@@ -2826,7 +2832,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
                 new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "100", SHARD_ID2, "200"))
             )
         )
-        .times(2);
+        .times(3);
 
     // Since shard 2 was in metadata before but is not in the list of shards returned by the record supplier,
     // it gets deleted from metadata (it is an expired shard)
@@ -2845,15 +2851,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
         .andReturn(true)
         .times(1);
 
-    // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
-    // Since getOffsetFromStorageForPartition() is called per partition, all partitions can't be reset at the same time.
-    // Instead, subsequent partitions will be reset in the following supervisor runs.
+    // All unavailable partitions are collected in a single pass and reset together in one resetInternal() call.
     EasyMock
         .expect(
             indexerMetadataStorageCoordinator.resetDataSourceMetadata(
                 DATASOURCE,
                 new KinesisDataSourceMetadata(
-                    // Only one partition is reset in a single supervisor run.
                     new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of())
                 )
             )
@@ -3306,10 +3309,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
     EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
     EasyMock.expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
-    EasyMock.expect(
-        indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(new KinesisDataSourceMetadata(
-        null)
-    ).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
+            .andReturn(new KinesisDataSourceMetadata(null))
+            .anyTimes();
     EasyMock.expect(taskClient.getStatusAsync("id1"))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING));
     EasyMock.expect(taskClient.getStatusAsync("id2"))
@@ -3458,10 +3460,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
     EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
     EasyMock.expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
-    EasyMock.expect(
-        indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(new KinesisDataSourceMetadata(
-        null)
-    ).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
+            .andReturn(new KinesisDataSourceMetadata(null))
+            .anyTimes();
 
     replayAll();
 
@@ -3738,7 +3739,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -3747,7 +3749,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     EasyMock.expect(taskClient.getMovingAveragesAsync("task1")).andReturn(Futures.immediateFuture(ImmutableMap.of(
@@ -3977,7 +3980,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         minMessageTime,
         maxMessageTime,
         ImmutableSet.of("id1", "id2", "id3", "id4"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     DataSchema modifiedDataSchema = getDataSchema("some other datasource");
@@ -4215,7 +4219,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            false
+            false,
+            null,
+            null
         ),
         null,
         null,
@@ -4724,6 +4730,198 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertFalse(supervisor.doesTaskMatchSupervisor(differentTaskType));
   }
 
+  @Test
+  public void testBoundedModeCreateTasksWithCorrectOffsets()
+  {
+    Map<String, Object> startOffsets = ImmutableMap.of(
+        "shardId-000000000000", "49590338271490256608559692538361571095921575989136588898",
+        "shardId-000000000001", "49590338271512257353759162668991891722121171891717232706"
+    );
+    Map<String, Object> endOffsets = ImmutableMap.of(
+        "shardId-000000000000", "49590338271534258098958632799622211348320767794297876514",
+        "shardId-000000000001", "49590338271556258844158102930252531974520363696878520322"
+    );
+    final KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+        STREAM,
+        INPUT_FORMAT,
+        "awsEndpoint",
+        null,
+        1,
+        1,
+        new Period("PT30S"),
+        null,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        0,
+        null,
+        null,
+        null,
+        true,
+        null,
+        new BoundedStreamConfig(startOffsets, endOffsets)
+    );
+
+    Assert.assertTrue(kinesisSupervisorIOConfig.isBounded());
+
+    final KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(null, null);
+    final KinesisSupervisorSpec spec = new KinesisSupervisorSpec(
+        null,
+        null,
+        dataSchema,
+        KinesisSupervisorTuningConfig.defaultConfig(),
+        kinesisSupervisorIOConfig,
+        null,
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        OBJECT_MAPPER,
+        new NoopServiceEmitter(),
+        new DruidMonitorSchedulerConfig(),
+        rowIngestionMetersFactory,
+        null,
+        new SupervisorStateManagerConfig()
+    );
+
+    supervisor = new TestableKinesisSupervisor(
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        OBJECT_MAPPER,
+        spec,
+        rowIngestionMetersFactory
+    );
+
+    // Test type conversion methods
+    String shardId = supervisor.createPartitionIdFromString("shardId-000000000000");
+    Assert.assertEquals("shardId-000000000000", shardId);
+
+    String offset = supervisor.createSequenceOffsetFromObject("49590338271490256608559692538361571095921575989136588898");
+    Assert.assertEquals("49590338271490256608559692538361571095921575989136588898", offset);
+
+    offset = supervisor.createSequenceOffsetFromObject(100);
+    Assert.assertEquals("100", offset);
+
+    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(
+        "49590338271512257353759162668991891722121171891717232706",
+        "49590338271490256608559692538361571095921575989136588898"
+    ));
+    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(
+        "49590338271490256608559692538361571095921575989136588898",
+        "49590338271490256608559692538361571095921575989136588898"
+    ));
+    Assert.assertFalse(supervisor.isOffsetAtOrBeyond(
+        "49590338271490256608559692538361571095921575989136588898",
+        "49590338271512257353759162668991891722121171891717232706"
+    ));
+  }
+
+  @Test
+  public void testIsOffsetAtOrBeyond_specialMarkerIsAtOrBeyondNumeric()
+  {
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+
+    // Special markers like EOS are treated as max sequence numbers by KinesisSequenceNumber,
+    // so they are considered at or beyond any numeric offset.
+    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(KinesisSequenceNumber.END_OF_SHARD_MARKER, "12345"));
+  }
+
+  @Test
+  public void testBoundedMode_singleRecordRange_notEmpty()
+  {
+    // Kinesis has inclusive end offsets, so start == end represents ONE record, not an empty range
+    String singleOffset = "49590338271490256608559692538361571095921575989136588898";
+    Map<String, Object> startOffsets = ImmutableMap.of(SHARD_ID0, singleOffset);
+    Map<String, Object> endOffsets = ImmutableMap.of(SHARD_ID0, singleOffset);
+
+    final KinesisSupervisorIOConfig ioConfig = new KinesisSupervisorIOConfig(
+        STREAM,
+        INPUT_FORMAT,
+        "awsEndpoint",
+        null,
+        1,
+        1,
+        new Period("PT1H"),
+        null,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        0,
+        null,
+        null,
+        null,
+        true,
+        null,
+        new BoundedStreamConfig(startOffsets, endOffsets)
+    );
+
+    final KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(null, null);
+    final KinesisSupervisorSpec spec = new KinesisSupervisorSpec(
+        null,
+        null,
+        dataSchema,
+        KinesisSupervisorTuningConfig.defaultConfig(),
+        ioConfig,
+        null,
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        OBJECT_MAPPER,
+        new NoopServiceEmitter(),
+        new DruidMonitorSchedulerConfig(),
+        rowIngestionMetersFactory,
+        null,
+        new SupervisorStateManagerConfig()
+    );
+
+    supervisor = new TestableKinesisSupervisor(
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        OBJECT_MAPPER,
+        spec,
+        rowIngestionMetersFactory
+    );
+
+    // Kinesis uses inclusive end offsets
+    Assert.assertFalse("Kinesis should have inclusive end offsets", supervisor.isEndOffsetExclusive());
+
+    // Verify that start == end is treated correctly based on offset semantics
+    // For inclusive offsets: start == end means ONE record (not empty)
+    // For exclusive offsets: start == end means ZERO records (empty)
+    String start = singleOffset;
+    String end = singleOffset;
+
+    // start >= end is true (they're equal)
+    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(start, end));
+
+    // But for Kinesis (inclusive), this is NOT an empty range
+    // The empty range check should be: isOffsetAtOrBeyond(start, end) && !start.equals(end)
+    // Which evaluates to: true && false = false (NOT empty)
+    boolean isAtOrBeyond = supervisor.isOffsetAtOrBeyond(start, end);
+    boolean isEqual = start.equals(end);
+    boolean shouldBeEmpty = isAtOrBeyond && !isEqual;
+
+    Assert.assertFalse(
+        "For Kinesis with inclusive end offsets, start == end should NOT be considered an empty range",
+        shouldBeEmpty
+    );
+  }
+
   private List<Task> testShardMergePhaseOne() throws Exception
   {
     supervisorRecordSupplier.assign(EasyMock.anyObject());
@@ -5179,7 +5377,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null,
+        null
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5321,7 +5521,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
          autoScalerConfig,
-        false
+        false,
+        null,
+        null
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5407,7 +5609,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null,
+        null
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5495,7 +5699,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null,
+        null
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5646,6 +5852,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         ),
         Collections.emptyMap(),
         false,
+        null,
         null
     );
   }

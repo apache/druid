@@ -110,7 +110,7 @@ public abstract class IcebergCatalog
 
       Expression detectedResidual = null;
       for (FileScanTask task : tasks) {
-        dataFilePaths.add(task.file().path().toString());
+        dataFilePaths.add(task.file().location());
 
         // Check for residual filters
         if (detectedResidual == null) {

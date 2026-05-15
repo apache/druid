@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.common;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class StringEncodingDefaultUTF16LEJsonIncludeFilterTest
 {
@@ -31,7 +31,7 @@ public class StringEncodingDefaultUTF16LEJsonIncludeFilterTest
   @SuppressWarnings({"SimplifiableAssertion", "EqualsBetweenInconvertibleTypes"})
   public void testFilter()
   {
-    Assert.assertTrue(filter.equals(StringEncoding.UTF16LE));
-    Assert.assertFalse(filter.equals(StringEncoding.UTF8));
+    Assertions.assertTrue(filter.equals(StringEncoding.UTF16LE));
+    Assertions.assertFalse(filter.equals(StringEncoding.UTF8));
   }
 }

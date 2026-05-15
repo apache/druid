@@ -26,20 +26,13 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 public class QueryDataSourceTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private final TimeseriesQuery queryOnTable =
       Druids.newTimeseriesQueryBuilder()
             .dataSource("foo")
@@ -70,25 +63,25 @@ public class QueryDataSourceTest
   @Test
   public void test_getTableNames_table()
   {
-    Assert.assertEquals(Collections.singleton("foo"), queryOnTableDataSource.getTableNames());
+    Assertions.assertEquals(Collections.singleton("foo"), queryOnTableDataSource.getTableNames());
   }
 
   @Test
   public void test_getTableNames_lookup()
   {
-    Assert.assertEquals(Collections.emptySet(), queryOnLookupDataSource.getTableNames());
+    Assertions.assertEquals(Collections.emptySet(), queryOnLookupDataSource.getTableNames());
   }
 
   @Test
   public void test_getChildren_table()
   {
-    Assert.assertEquals(Collections.singletonList(new TableDataSource("foo")), queryOnTableDataSource.getChildren());
+    Assertions.assertEquals(Collections.singletonList(new TableDataSource("foo")), queryOnTableDataSource.getChildren());
   }
 
   @Test
   public void test_getChildren_lookup()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.singletonList(new LookupDataSource("lookyloo")),
         queryOnLookupDataSource.getChildren()
     );
@@ -97,48 +90,49 @@ public class QueryDataSourceTest
   @Test
   public void test_isCacheable_table()
   {
-    Assert.assertFalse(queryOnTableDataSource.isCacheable(true));
-    Assert.assertFalse(queryOnTableDataSource.isCacheable(false));
+    Assertions.assertFalse(queryOnTableDataSource.isCacheable(true));
+    Assertions.assertFalse(queryOnTableDataSource.isCacheable(false));
   }
 
   @Test
   public void test_isCacheable_lookup()
   {
-    Assert.assertFalse(queryOnLookupDataSource.isCacheable(true));
-    Assert.assertFalse(queryOnLookupDataSource.isCacheable(false));
+    Assertions.assertFalse(queryOnLookupDataSource.isCacheable(true));
+    Assertions.assertFalse(queryOnLookupDataSource.isCacheable(false));
   }
 
   @Test
   public void test_isProcessable_table()
   {
-    Assert.assertFalse(queryOnTableDataSource.isProcessable());
+    Assertions.assertFalse(queryOnTableDataSource.isProcessable());
   }
 
   @Test
   public void test_isProcessable_lookup()
   {
-    Assert.assertFalse(queryOnLookupDataSource.isProcessable());
+    Assertions.assertFalse(queryOnLookupDataSource.isProcessable());
   }
 
   @Test
   public void test_isGlobal_table()
   {
-    Assert.assertFalse(queryOnTableDataSource.isGlobal());
+    Assertions.assertFalse(queryOnTableDataSource.isGlobal());
   }
 
   @Test
   public void test_isGlobal_lookup()
   {
-    Assert.assertFalse(queryOnLookupDataSource.isGlobal());
+    Assertions.assertFalse(queryOnLookupDataSource.isGlobal());
   }
 
   @Test
   public void test_withChildren_empty()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Must have exactly one child");
-
-    final DataSource ignored = queryOnLookupDataSource.withChildren(Collections.emptyList());
+    IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> queryOnLookupDataSource.withChildren(Collections.emptyList())
+    );
+    Assertions.assertTrue(e.getMessage().contains("Must have exactly one child"));
   }
 
   @Test
@@ -149,7 +143,7 @@ public class QueryDataSourceTest
     final QueryDataSource transformed =
         (QueryDataSource) queryOnLookupDataSource.withChildren(Collections.singletonList(barTable));
 
-    Assert.assertEquals(barTable, transformed.getQuery().getDataSource());
+    Assertions.assertEquals(barTable, transformed.getQuery().getDataSource());
   }
 
   @Test
@@ -167,14 +161,14 @@ public class QueryDataSourceTest
         DataSource.class
     );
 
-    Assert.assertEquals(queryOnTableDataSource, deserialized);
+    Assertions.assertEquals(queryOnTableDataSource, deserialized);
   }
 
   @Test
   public void test_withSegmentMapFunction()
   {
-    assertThrows(DruidException.class, () -> queryDataSource.createSegmentMapFunction(groupByQuery));
-    assertThrows(DruidException.class, () -> queryOnTableDataSource.createSegmentMapFunction(groupByQuery));
+    Assertions.assertThrows(DruidException.class, () -> queryDataSource.createSegmentMapFunction(groupByQuery));
+    Assertions.assertThrows(DruidException.class, () -> queryOnTableDataSource.createSegmentMapFunction(groupByQuery));
   }
 
 

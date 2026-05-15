@@ -35,7 +35,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ '17', '21' ]
+        jdk: [ '21', '25' ]
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/packaging-check.sh

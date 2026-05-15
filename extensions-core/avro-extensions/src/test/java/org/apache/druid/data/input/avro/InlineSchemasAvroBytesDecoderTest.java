@@ -27,7 +27,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumWriter;
-import org.apache.druid.data.input.AvroStreamInputRowParserTest;
+import org.apache.druid.data.input.AvroStreamInputFormatTest;
 import org.apache.druid.data.input.SomeAvroDatum;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -89,7 +89,7 @@ public class InlineSchemasAvroBytesDecoderTest
   @Test
   public void testParse() throws Exception
   {
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -111,7 +111,7 @@ public class InlineSchemasAvroBytesDecoderTest
   @Test
   public void testParseInvalidVersion() throws Exception
   {
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -134,7 +134,7 @@ public class InlineSchemasAvroBytesDecoderTest
   @Test
   public void testParseInvalidSchemaId() throws Exception
   {
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -158,7 +158,7 @@ public class InlineSchemasAvroBytesDecoderTest
   @Test
   public void testParseInvalidData() throws Exception
   {
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();

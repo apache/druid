@@ -29,9 +29,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -50,6 +47,7 @@ import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
@@ -62,9 +60,12 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
+import org.apache.druid.indexing.common.actions.MarkSegmentToUpgradeAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskActionTestKit;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
@@ -73,6 +74,7 @@ import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.NativeCompactionRunner.PartitionConfigurationManager;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -97,6 +99,8 @@ import org.apache.druid.query.aggregation.firstlast.first.FloatFirstAggregatorFa
 import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -145,6 +149,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
@@ -184,7 +189,7 @@ public class CompactionTaskTest
   private static final String TIMESTAMP_COLUMN = "timestamp";
   private static final String MIXED_TYPE_COLUMN = "string_to_double";
   private static final Interval COMPACTION_INTERVAL = Intervals.of("2017-01-01/2017-07-01");
-  private static final List<Interval> SEGMENT_INTERVALS = ImmutableList.of(
+  private static final List<Interval> SEGMENT_INTERVALS = List.of(
       Intervals.of("2017-01-01/2017-02-01"),
       Intervals.of("2017-02-01/2017-03-01"),
       Intervals.of("2017-03-01/2017-04-01"),
@@ -269,7 +274,7 @@ public class CompactionTaskTest
               DATA_SOURCE,
               SEGMENT_INTERVALS.get(i),
               "version_" + i,
-              ImmutableMap.of(),
+              Map.of(),
               findDimensions(i, SEGMENT_INTERVALS.get(i)),
               AGGREGATORS.stream().map(AggregatorFactory::getName).collect(Collectors.toList()),
               new NumberedShardSpec(0, 1),
@@ -297,7 +302,7 @@ public class CompactionTaskTest
     );
     GuiceInjectableValues injectableValues = new GuiceInjectableValues(
         GuiceInjectors.makeStartupInjectorWithModules(
-            ImmutableList.of(
+            List.of(
                 binder -> {
                   binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
                   binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
@@ -356,6 +361,9 @@ public class CompactionTaskTest
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
+
+  @Rule
+  public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
 
   private StubServiceEmitter emitter;
 
@@ -430,7 +438,7 @@ public class CompactionTaskTest
   public void testCreateCompactionTaskWithTransformSpec()
   {
     CompactionTransformSpec transformSpec =
-        new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null));
+        new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null), null);
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory
@@ -518,7 +526,7 @@ public class CompactionTaskTest
             new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS))
         )
         .tuningConfig(createTuningConfig())
-        .context(ImmutableMap.of("testKey", "testContext"))
+        .context(Map.of("testKey", "testContext"))
         .build();
 
     final byte[] bytes = OBJECT_MAPPER.writeValueAsBytes(task);
@@ -536,7 +544,7 @@ public class CompactionTaskTest
     final CompactionTask task = builder
         .segments(SEGMENTS)
         .tuningConfig(createTuningConfig())
-        .context(ImmutableMap.of("testKey", "testContext"))
+        .context(Map.of("testKey", "testContext"))
         .build();
 
     final byte[] bytes = OBJECT_MAPPER.writeValueAsBytes(task);
@@ -556,7 +564,7 @@ public class CompactionTaskTest
         .segments(SEGMENTS)
         .dimensionsSpec(
             new DimensionsSpec(
-                ImmutableList.of(
+                List.of(
                     new StringDimensionSchema("dim1"),
                     new StringDimensionSchema("dim2"),
                     new StringDimensionSchema("dim3")
@@ -564,7 +572,7 @@ public class CompactionTaskTest
             )
         )
         .tuningConfig(createTuningConfig())
-        .context(ImmutableMap.of("testKey", "testVal"))
+        .context(Map.of("testKey", "testVal"))
         .build();
 
     final byte[] bytes = OBJECT_MAPPER.writeValueAsBytes(task);
@@ -673,7 +681,7 @@ public class CompactionTaskTest
             new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS))
         )
         .tuningConfig(createTuningConfig())
-        .context(ImmutableMap.of("testKey", "testContext"))
+        .context(Map.of("testKey", "testContext"))
         .build();
 
     Assert.assertTrue(task.getInputSourceResources().isEmpty());
@@ -781,13 +789,13 @@ public class CompactionTaskTest
     expectedException.expectMessage(
         "No segments found for compaction. Please check that datasource name and interval are correct."
     );
-    provider.checkSegments(LockGranularity.TIME_CHUNK, ImmutableList.of());
+    provider.checkSegments(LockGranularity.TIME_CHUNK, List.of());
   }
 
   @Test
   public void testCreateIngestionSchema() throws IOException
   {
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -801,7 +809,7 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(TUNING_CONFIG),
@@ -850,7 +858,7 @@ public class CompactionTaskTest
         .withMaxNumConcurrentSubTasks(10)
         .build();
 
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -864,7 +872,7 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(tuningConfig),
@@ -914,7 +922,7 @@ public class CompactionTaskTest
         .withPushTimeout(5000L)
         .build();
 
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -928,7 +936,7 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(tuningConfig),
@@ -979,7 +987,7 @@ public class CompactionTaskTest
         .withMaxNumConcurrentSubTasks(10)
         .build();
 
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -993,7 +1001,7 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(tuningConfig),
@@ -1051,7 +1059,7 @@ public class CompactionTaskTest
         )
     );
 
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1065,7 +1073,7 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(TUNING_CONFIG),
@@ -1103,7 +1111,7 @@ public class CompactionTaskTest
         new DoubleMaxAggregatorFactory("custom_double_max", "agg_4")
     };
 
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1117,7 +1125,7 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(TUNING_CONFIG),
@@ -1148,7 +1156,7 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchemaWithCustomSegments() throws IOException
   {
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1162,7 +1170,7 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(TUNING_CONFIG),
@@ -1200,7 +1208,7 @@ public class CompactionTaskTest
     Collections.sort(segments);
     // Remove one segment in the middle
     segments.remove(segments.size() / 2);
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
@@ -1214,7 +1222,7 @@ public class CompactionTaskTest
     );
 
     NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(TUNING_CONFIG),
@@ -1231,11 +1239,10 @@ public class CompactionTaskTest
 
     final TestIndexIO indexIO = (TestIndexIO) toolbox.getIndexIO();
     indexIO.removeMetadata(Iterables.getFirst(indexIO.getQueryableIndexMap().keySet(), null));
-    final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         null,
         null,
         null,
@@ -1246,7 +1253,7 @@ public class CompactionTaskTest
     );
 
     NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(TUNING_CONFIG),
@@ -1275,7 +1282,7 @@ public class CompactionTaskTest
   @Test
   public void testSegmentGranularityAndNullQueryGranularity() throws IOException
   {
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1289,14 +1296,14 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(TUNING_CONFIG),
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory
     );
-    final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
+    final List<DimensionsSpec> expectedDimensionsSpec = List.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
     );
 
@@ -1321,7 +1328,7 @@ public class CompactionTaskTest
   @Test
   public void testQueryGranularityAndNullSegmentGranularity() throws IOException
   {
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1334,7 +1341,7 @@ public class CompactionTaskTest
         false
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(TUNING_CONFIG),
@@ -1364,7 +1371,7 @@ public class CompactionTaskTest
   @Test
   public void testQueryGranularityAndSegmentGranularityNonNull() throws IOException
   {
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1382,7 +1389,7 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(TUNING_CONFIG),
@@ -1391,7 +1398,7 @@ public class CompactionTaskTest
     );
 
 
-    final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
+    final List<DimensionsSpec> expectedDimensionsSpec = List.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
     );
 
@@ -1417,7 +1424,7 @@ public class CompactionTaskTest
   @Test
   public void testNullGranularitySpec() throws IOException
   {
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1431,7 +1438,7 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(TUNING_CONFIG),
@@ -1464,7 +1471,7 @@ public class CompactionTaskTest
   public void testGranularitySpecWithNullQueryGranularityAndNullSegmentGranularity()
       throws IOException
   {
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1478,7 +1485,7 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(TUNING_CONFIG),
@@ -1511,7 +1518,7 @@ public class CompactionTaskTest
   public void testGranularitySpecWithNotNullRollup()
       throws IOException
   {
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1525,7 +1532,7 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(TUNING_CONFIG),
@@ -1543,7 +1550,7 @@ public class CompactionTaskTest
   public void testGranularitySpecWithNullRollup()
       throws IOException
   {
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1557,7 +1564,7 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
+        inputSchemas,
         toolbox,
         new CompactionIOConfig(null, false, null),
         new PartitionConfigurationManager(TUNING_CONFIG),
@@ -1577,7 +1584,7 @@ public class CompactionTaskTest
   public void testMultiValuedDimensionsProcessing()
       throws IOException
   {
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
@@ -1589,7 +1596,7 @@ public class CompactionTaskTest
         METRIC_BUILDER,
         true
     );
-    for (DataSchema dataSchema : dataSchemasForIntervals.values()) {
+    for (DataSchema dataSchema : inputSchemas.values()) {
       Assert.assertTrue(dataSchema instanceof CombinedDataSchema);
       Assert.assertTrue(((CombinedDataSchema) dataSchema).getMultiValuedDimensions().isEmpty());
     }
@@ -1624,7 +1631,7 @@ public class CompactionTaskTest
                                                 new DimensionRangePartitionsSpec(
                                                     3,
                                                     null,
-                                                    ImmutableList.of(
+                                                    List.of(
                                                         "string_dim_1"),
                                                     false
                                                 ))
@@ -1645,7 +1652,7 @@ public class CompactionTaskTest
     builder.granularitySpec(new ClientCompactionTaskGranularitySpec(null, null, true));
 
     DimensionSchema stringDim = new StringDimensionSchema("string_dim_1", null, null);
-    builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
+    builder.dimensionsSpec(new DimensionsSpec(List.of(stringDim)));
     final CompactionTask compactionTask = builder.build();
     // A string dimension with rollup=true should need MVD info
     Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
@@ -1668,12 +1675,12 @@ public class CompactionTaskTest
                                                 new DimensionRangePartitionsSpec(
                                                     3,
                                                     null,
-                                                    ImmutableList.of(
+                                                    List.of(
                                                         stringDim.getName()),
                                                     false
                                                 ))
                                             .build());
-    builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
+    builder.dimensionsSpec(new DimensionsSpec(List.of(stringDim)));
     CompactionTask compactionTask = builder.build();
     Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
   }
@@ -1700,7 +1707,7 @@ public class CompactionTaskTest
                                                 )
                                             )
                                             .build());
-    builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
+    builder.dimensionsSpec(new DimensionsSpec(List.of(stringDim)));
     CompactionTask compactionTask = builder.build();
     Assert.assertFalse(compactionTask.identifyMultiValuedDimensions());
   }
@@ -1725,7 +1732,7 @@ public class CompactionTaskTest
   @Test
   public void testChooseFinestGranularityNone()
   {
-    List<Granularity> input = ImmutableList.of(
+    List<Granularity> input = List.of(
         Granularities.DAY,
         Granularities.SECOND,
         Granularities.MINUTE,
@@ -1773,7 +1780,7 @@ public class CompactionTaskTest
     );
     final CompactionTask task = builder
         .interval(Intervals.of("2000-01-01/2000-01-02"))
-        .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
+        .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null), null))
         .build();
     Assert.assertEquals(LookupLoadingSpec.ALL, task.getLookupLoadingSpec());
   }
@@ -1790,7 +1797,7 @@ public class CompactionTaskTest
 
   private static List<DimensionsSpec> getExpectedDimensionsSpecForAutoGeneration()
   {
-    return ImmutableList.of(
+    return List.of(
         new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double", DimensionSchema.MultiValueHandling.ARRAY, null))),
         new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double", DimensionSchema.MultiValueHandling.ARRAY, null))),
         new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double", DimensionSchema.MultiValueHandling.ARRAY, null))),
@@ -1953,7 +1960,7 @@ public class CompactionTaskTest
         List<Interval> intervals
     )
     {
-      return Futures.immediateFuture(ImmutableList.copyOf(segmentMap.keySet()));
+      return Futures.immediateFuture(List.copyOf(segmentMap.keySet()));
     }
   }
 
@@ -1972,11 +1979,16 @@ public class CompactionTaskTest
       }
 
       @Override
-      public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
+      public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
       {
-        return Optional.of(
-            new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId())
-        );
+        for (Map.Entry<DataSegment, File> entry : segments.entrySet()) {
+          if (entry.getKey().getId().equals(segmentId)) {
+            return Optional.of(
+                new QueryableIndexSegment(indexIO.loadIndex(entry.getValue()), segmentId)
+            );
+          }
+        }
+        return Optional.empty();
       }
 
       @Override
@@ -2025,6 +2037,236 @@ public class CompactionTaskTest
         .build();
   }
 
+  @Test
+  public void testMinorCompactionChecksIfSegmentsToCompactIsEmpty()
+  {
+    Assert.assertThrows(
+        DruidException.class,
+        () -> new MinorCompactionInputSpec(COMPACTION_INTERVAL, List.of())
+    );
+  }
+
+  @Test
+  public void testMinorCompactionShouldAlwaysUseReplaceIngestionMode()
+  {
+    final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
+    final String version = "2024-11-17T23:49:06.823Z";
+    final DataSegment segment = createSegmentWithPartition(testInterval, version, 1);
+
+    final MinorCompactionInputSpec minorSpec = new MinorCompactionInputSpec(
+        testInterval,
+        List.of(segment.toDescriptor())
+    );
+
+    Assert.assertThrows(
+        DruidException.class,
+        // Setting dropExisting == false disables REPLACE mode.
+        () -> new Builder(DATA_SOURCE, segmentCacheManagerFactory)
+            .inputSpec(minorSpec, false)
+            .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true)).build()
+    );
+  }
+
+  @Test
+  public void testMinorCompactionUsesTimeChunkLockWithConcurrentLocks() throws Exception
+  {
+    final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
+    final List<DataSegment> segments = List.of(
+        createSegmentWithPartition(testInterval, "v1", 0),
+        createSegmentWithPartition(testInterval, "v1", 1)
+    );
+    final MinorCompactionInputSpec spec = new MinorCompactionInputSpec(
+        testInterval,
+        segments.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+    );
+
+    final CompactionTask task = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
+        .inputSpec(spec, true)
+        .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
+        .build();
+
+    taskActionTestKit.getTaskLockbox().add(task);
+    final TaskActionClient taskActionClient = new LocalTaskActionClient(
+        task,
+        taskActionTestKit.getTaskActionToolbox()
+    );
+    // Use a client that returns segments for RetrieveUsedSegmentsAction - wrap to inject segments
+    final TaskActionClient segmentAwareClient = new TaskActionClient()
+    {
+      @Override
+      public <RetType> RetType submit(TaskAction<RetType> action) throws IOException
+      {
+        if (action instanceof RetrieveUsedSegmentsAction) {
+          @SuppressWarnings("unchecked")
+          RetType retVal = (RetType) segments;
+          return retVal;
+        }
+        return taskActionClient.submit(action);
+      }
+    };
+
+    task.determineLockGranularityAndTryLock(segmentAwareClient, List.of(testInterval));
+    Assert.assertEquals(LockGranularity.TIME_CHUNK, task.getTaskLockHelper().getLockGranularityToUse());
+  }
+
+  @Test
+  public void testNativeMinorCompactionSubtaskUsesTimeChunkLock() throws Exception
+  {
+    final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
+    final List<DataSegment> segments = List.of(
+        createSegmentWithPartition(testInterval, "v1", 0),
+        createSegmentWithPartition(testInterval, "v1", 1)
+    );
+    final MinorCompactionInputSpec spec = new MinorCompactionInputSpec(
+        testInterval,
+        segments.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+    );
+
+    final CompactionTask compactionTask = new Builder(DATA_SOURCE, segmentCacheManagerFactory)
+        .inputSpec(spec, true)
+        .context(Map.of(Tasks.USE_CONCURRENT_LOCKS, true))
+        .build();
+
+    final NativeCompactionRunner runner = new NativeCompactionRunner(segmentCacheManagerFactory);
+    final Map<String, Object> subtaskContext = runner.createContextForSubtask(compactionTask);
+
+    final DataSchema dataSchema = DataSchema.builder()
+        .withDataSource(DATA_SOURCE)
+        .withTimestamp(new TimestampSpec(TIMESTAMP_COLUMN, null, null))
+        .withDimensions(
+            new DimensionsSpec(List.of(new StringDimensionSchema("dim1"), new StringDimensionSchema("dim2")))
+        )
+        .withGranularity(
+            new UniformGranularitySpec(Granularities.DAY, Granularities.HOUR, false, List.of(testInterval))
+        )
+        .build();
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
+        Map.of(new MultipleIntervalSegmentSpec(List.of(testInterval)), dataSchema),
+        toolbox,
+        new CompactionIOConfig(spec, false, null),
+        new PartitionConfigurationManager(null),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
+    );
+
+    final ParallelIndexSupervisorTask subtask = new ParallelIndexSupervisorTask(
+        "test_subtask",
+        "test_group",
+        null,
+        ingestionSpecs.get(0),
+        "base_0",
+        subtaskContext,
+        true
+    );
+
+    taskActionTestKit.getTaskLockbox().add(subtask);
+    final TaskActionClient taskActionClient = new LocalTaskActionClient(
+        subtask,
+        taskActionTestKit.getTaskActionToolbox()
+    );
+    final TaskActionClient segmentAwareClient = new TaskActionClient()
+    {
+      @Override
+      public <RetType> RetType submit(TaskAction<RetType> action) throws IOException
+      {
+        if (action instanceof RetrieveUsedSegmentsAction) {
+          @SuppressWarnings("unchecked")
+          RetType retVal = (RetType) segments;
+          return retVal;
+        }
+        return taskActionClient.submit(action);
+      }
+    };
+    subtask.determineLockGranularityAndTryLock(segmentAwareClient, List.of(testInterval));
+
+    Assert.assertEquals(
+        LockGranularity.TIME_CHUNK,
+        subtask.getTaskLockHelper().getLockGranularityToUse()
+    );
+  }
+
+  @Test
+  public void testSegmentProviderCheckSegmentsAllowsSubsetForTimeChunk() throws Exception
+  {
+    final Interval testInterval = Intervals.of("2024-11-18T00:00:00.000Z/2024-11-25T00:00:00.000Z");
+    final List<DataSegment> allSegments = List.of(
+        createSegmentWithPartition(testInterval, "v1", 0),
+        createSegmentWithPartition(testInterval, "v1", 1),
+        createSegmentWithPartition(testInterval, "v1", 2)
+    );
+    final MinorCompactionInputSpec spec = new MinorCompactionInputSpec(
+        testInterval,
+        List.of(allSegments.get(0).toDescriptor(), allSegments.get(1).toDescriptor())
+    );
+
+    final SegmentProvider provider = new SegmentProvider(DATA_SOURCE, spec);
+    final TestTaskActionClient client = new TestTaskActionClient(allSegments);
+    provider.findSegments(client);
+
+    // Should not throw: specified segments (0,1) exist; segment 2 is not in spec but is in interval (will be upgraded)
+    provider.checkSegments(LockGranularity.TIME_CHUNK, allSegments);
+  }
+
+  @Test
+  public void testDruidInputSourceReceivesSegmentIdsForMinorCompaction()
+  {
+    final Interval interval = Intervals.of("2024-01-01/2024-01-02");
+    final List<DataSegment> segments = List.of(
+        createSegmentWithPartition(interval, "v1", 0),
+        createSegmentWithPartition(interval, "v1", 1)
+    );
+    final MinorCompactionInputSpec spec = new MinorCompactionInputSpec(
+        interval,
+        segments.stream().map(DataSegment::toDescriptor).collect(Collectors.toList())
+    );
+
+    final DataSchema dataSchema = DataSchema.builder()
+        .withDataSource(DATA_SOURCE)
+        .withTimestamp(new TimestampSpec(TIMESTAMP_COLUMN, null, null))
+        .withDimensions(
+            new DimensionsSpec(
+                List.of(
+                    new StringDimensionSchema("dim1"),
+                    new StringDimensionSchema("dim2")
+                )
+            )
+        )
+        .withGranularity(
+            new UniformGranularitySpec(
+                Granularities.DAY,
+                Granularities.HOUR,
+                false,
+                List.of(interval)
+            )
+        )
+        .build();
+
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
+        Map.of(new MultipleIntervalSegmentSpec(List.of(interval)), dataSchema),
+        toolbox,
+        new CompactionIOConfig(spec, false, null),
+        new PartitionConfigurationManager(null),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory
+    );
+
+    Assert.assertEquals(1, ingestionSpecs.size());
+    final InputSource inputSource = ingestionSpecs.get(0).getIOConfig().getInputSource();
+    Assert.assertTrue(inputSource instanceof DruidInputSource);
+    final DruidInputSource druidInputSource = (DruidInputSource) inputSource;
+    Assert.assertNotNull(druidInputSource.getSegmentIds());
+    Assert.assertEquals(2, druidInputSource.getSegmentIds().size());
+  }
+
+  private DataSegment createSegmentWithPartition(Interval interval, String version, int partitionNum)
+  {
+    return DataSegment.builder(SegmentId.of(DATA_SOURCE, interval, version, partitionNum))
+        .shardSpec(new NumberedShardSpec(partitionNum, 0))
+        .size(100)
+        .build();
+  }
+
   private static class TestTaskActionClient implements TaskActionClient
   {
     private final List<DataSegment> segments;
@@ -2038,10 +2280,13 @@ public class CompactionTaskTest
     @Override
     public <RetType> RetType submit(TaskAction<RetType> taskAction)
     {
-      if (!(taskAction instanceof RetrieveUsedSegmentsAction)) {
-        throw new ISE("action[%s] is not supported", taskAction);
+      if (taskAction instanceof RetrieveUsedSegmentsAction) {
+        return (RetType) segments;
       }
-      return (RetType) segments;
+      if (taskAction instanceof MarkSegmentToUpgradeAction) {
+        return (RetType) Integer.valueOf(0);
+      }
+      throw new ISE("action[%s] is not supported", taskAction);
     }
   }
 
@@ -2214,7 +2459,7 @@ public class CompactionTaskTest
     @Override
     public TaskStatus runCompactionTasks(
         CompactionTask compactionTask,
-        Map<Interval, DataSchema> intervalDataSchemaMap,
+        Map<QuerySegmentSpec, DataSchema> inputSchemas,
         TaskToolbox taskToolbox
     )
     {
@@ -2230,7 +2475,7 @@ public class CompactionTaskTest
     @Override
     public CompactionConfigValidationResult validateCompactionTask(
         CompactionTask compactionTask,
-        Map<Interval, DataSchema> intervalToDataSchemaMap
+        Map<QuerySegmentSpec, DataSchema> inputSchemas
     )
     {
       return null;
@@ -2308,7 +2553,7 @@ public class CompactionTaskTest
     @Override
     public Set<ResourceAction> getInputSourceResources()
     {
-      return ImmutableSet.of();
+      return Set.of();
     }
 
     @JsonProperty

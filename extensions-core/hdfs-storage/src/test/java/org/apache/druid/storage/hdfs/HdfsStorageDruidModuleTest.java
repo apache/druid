@@ -28,6 +28,8 @@ import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.inputsource.hdfs.HdfsInputSourceConfig;
+import org.apache.druid.java.util.emitter.core.NoopEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.junit.Assert;
 import org.junit.Test;
@@ -85,6 +87,7 @@ public class HdfsStorageDruidModuleTest
               binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
               binder.bind(JsonConfigurator.class).in(LazySingleton.class);
               binder.bind(Properties.class).toInstance(props);
+              binder.bind(ServiceEmitter.class).toInstance(new ServiceEmitter("test", "localhost", new NoopEmitter()));
             },
             new HdfsStorageDruidModule()
         )

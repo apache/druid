@@ -306,7 +306,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
         null,
         DataSchema.builder()
           .withDataSource(datasource)
-          .withTimestamp(new TimestampSpec(null, null, null))
+          .withTimestamp(TimestampSpec.DEFAULT)
           .withDimensions(new DimensionsSpec(Collections.emptyList()))
           .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), Collections.emptyList()))
           .build(),

@@ -34,7 +34,7 @@ public class CostMetrics
   private final double pollIdleRatio;
   private final long taskDurationSeconds;
   private final double avgProcessingRate;
-  private double aggregateLag;
+  private final double aggregateLag;
 
   public CostMetrics(
       double avgPartitionLag,

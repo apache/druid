@@ -20,26 +20,26 @@
 package org.apache.druid.java.util.metrics;
 
 import org.hyperic.sigar.Sigar;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class SigarLoadTest
 {
   private static final String CPU_ARCH = System.getProperty("os.arch");
 
-  @Before
+  @BeforeEach
   public void before()
   {
     // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
-    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
+    Assumptions.assumeFalse("aarch64".equals(CPU_ARCH));
   }
 
   @Test
   public void testSigarLoad()
   {
     Sigar sigar = SigarUtil.getSigar();
-    Assert.assertTrue(sigar.getPid() > 0);
+    Assertions.assertTrue(sigar.getPid() > 0);
   }
 }

@@ -19,35 +19,33 @@
 
 package org.apache.druid.java.util.metrics;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupV2Discoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 public class CgroupV2DiskMonitorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  Path tempDir;
   private File procDir;
   private File cgroupDir;
   private File statFile;
   private CgroupDiscoverer discoverer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = temporaryFolder.newFolder();
-    procDir = temporaryFolder.newFolder();
+    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroupDir");
+    procDir = FileUtils.createTempDirInLocation(tempDir, "procDir");
     discoverer = new ProcCgroupV2Discoverer(procDir.toPath());
     TestUtils.setUpCgroupsV2(procDir, cgroupDir);
 
@@ -60,16 +58,16 @@ public class CgroupV2DiskMonitorTest
   {
     final CgroupV2DiskMonitor monitor = new CgroupV2DiskMonitor(discoverer);
     final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
-    Assert.assertTrue(monitor.doMonitor(emitter));
-    Assert.assertEquals(0, emitter.getNumEmittedEvents());
+    Assertions.assertTrue(monitor.doMonitor(emitter));
+    Assertions.assertEquals(0, emitter.getNumEmittedEvents());
 
     emitter.flush();
 
     TestUtils.copyOrReplaceResource("/cgroupv2/io.stat-2", statFile);
 
-    Assert.assertTrue(monitor.doMonitor(emitter));
-    Assert.assertEquals(4, emitter.getNumEmittedEvents());
-    Assert.assertTrue(
+    Assertions.assertTrue(monitor.doMonitor(emitter));
+    Assertions.assertEquals(4, emitter.getNumEmittedEvents());
+    Assertions.assertTrue(
         emitter
             .getEvents()
             .stream()

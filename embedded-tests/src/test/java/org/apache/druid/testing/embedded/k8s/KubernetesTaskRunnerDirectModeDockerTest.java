@@ -19,10 +19,13 @@
 
 package org.apache.druid.testing.embedded.k8s;
 
+import org.junit.jupiter.api.Disabled;
+
 /**
  * Runs ingestion tests using direct K8s API interaction (default mode).
  * Each task makes direct API calls to the Kubernetes API server.
  */
+@Disabled("requires charts.datainfra.io chart, see https://github.com/apache/druid/pull/19047")
 public class KubernetesTaskRunnerDirectModeDockerTest extends BaseKubernetesTaskRunnerDockerTest
 {
   @Override

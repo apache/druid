@@ -20,8 +20,8 @@
 package org.apache.druid.query.extraction;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -32,18 +32,18 @@ public class UpperExtractionFnTest
   @Test
   public void testApply()
   {
-    Assert.assertEquals("UPPER", extractionFn.apply("uPpeR"));
-    Assert.assertEquals("", extractionFn.apply(""));
-    Assert.assertNull(extractionFn.apply(null));
-    Assert.assertNull(extractionFn.apply((Object) null));
-    Assert.assertEquals("1", extractionFn.apply(1));
+    Assertions.assertEquals("UPPER", extractionFn.apply("uPpeR"));
+    Assertions.assertEquals("", extractionFn.apply(""));
+    Assertions.assertNull(extractionFn.apply(null));
+    Assertions.assertNull(extractionFn.apply((Object) null));
+    Assertions.assertEquals("1", extractionFn.apply(1));
   }
 
   @Test
   public void testGetCacheKey()
   {
-    Assert.assertArrayEquals(extractionFn.getCacheKey(), extractionFn.getCacheKey());
-    Assert.assertFalse(Arrays.equals(extractionFn.getCacheKey(), new LowerExtractionFn(null).getCacheKey()));
+    Assertions.assertArrayEquals(extractionFn.getCacheKey(), extractionFn.getCacheKey());
+    Assertions.assertFalse(Arrays.equals(extractionFn.getCacheKey(), new LowerExtractionFn(null).getCacheKey()));
   }
 
   @Test
