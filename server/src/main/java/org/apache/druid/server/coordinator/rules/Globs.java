@@ -105,10 +105,10 @@ public final class Globs
   }
 
   /**
-   * Compile a glob, special-casing the literal {@code "*"} to a {@link CompiledGlob#matchAny}
-   * marker that matches any value including null — mirrors the matcher's {@code CompiledGlob}.
+   * Compile a glob, special-casing the literal {@code "*"} to a {@link CompiledGlob#matchAny} marker that matches any
+   * value including null
    */
-  static CompiledGlob compile(String glob)
+  public static CompiledGlob compile(String glob)
   {
     if ("*".equals(glob)) {
       return CompiledGlob.MATCH_ANY;
