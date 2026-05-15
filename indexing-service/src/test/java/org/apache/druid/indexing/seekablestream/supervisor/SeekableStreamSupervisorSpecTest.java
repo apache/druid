@@ -39,6 +39,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.NoopTaskAu
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.MetadataSupervisorManager;
@@ -787,6 +788,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -844,6 +846,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, null),
+        null,
         null,
         null
     )
@@ -1469,6 +1472,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
           null,
           null,
           null,
+          null,
           null
       )
       {
@@ -1488,6 +1492,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
           null,
           mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class),
           LagAggregator.DEFAULT,
+          null,
           null,
           null,
           null,
@@ -1541,6 +1546,76 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     autoScalerConfig.put("scaleOutStep", 2);
     autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
     return autoScalerConfig;
+  }
+
+  @Test
+  public void testBoundedStreamSupervisorSpec_runsWithBoundedConfig()
+  {
+    EmittingLogger.registerEmitter(emitter);
+
+    Map<String, Object> startOffsets = ImmutableMap.of("0", 0L);
+    Map<String, Object> endOffsets = ImmutableMap.of("0", 100L);
+    BoundedStreamConfig boundedConfig = new BoundedStreamConfig(startOffsets, endOffsets);
+
+    SeekableStreamSupervisorIOConfig boundedIoConfig = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
+        1,
+        1,
+        new Period("PT1H"),
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        LagAggregator.DEFAULT,
+        null,
+        null,
+        null,
+        null,
+        boundedConfig
+    )
+    {
+    };
+
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(boundedIoConfig).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.replay(spec);
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(boundedIoConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
+    EasyMock.replay(ingestionSchema);
+
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.replay(taskMaster);
+
+    EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(EasyMock.anyString())).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.replay(taskStorage);
+
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(EasyMock.anyString())).andReturn(null).anyTimes();
+    EasyMock.replay(indexerMetadataStorageCoordinator);
+
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(1);
+
+    supervisor.start();
+    supervisor.runInternal();
+
+    // Verify bounded config is properly set
+    Assert.assertTrue(supervisor.getIoConfig().isBounded());
+    Assert.assertNotNull(supervisor.getIoConfig().getBoundedStreamConfig());
+    Assert.assertEquals(startOffsets, supervisor.getIoConfig().getBoundedStreamConfig().getStartSequenceNumbers());
+    Assert.assertEquals(endOffsets, supervisor.getIoConfig().getBoundedStreamConfig().getEndSequenceNumbers());
   }
 
 }

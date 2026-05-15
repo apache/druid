@@ -298,12 +298,8 @@ public class SegmentListerResource
     }
 
     SegmentLoaderConfig config = loadDropRequestHandler.getSegmentLoaderConfig();
-    // supportsPartialLoad is hard-coded false until the historical-side load handler actually honors the
-    // partial-load LoadSpec wrapper and announces the realized fingerprint and loadedBytes back. Until then, the
-    // wire format and coordinator routing exist but the historical performs a regular full load on any request, so
-    // advertising the capability would lie to the coordinator and cause it to thrash partial-load assignments.
     SegmentLoadingCapabilities capabilitiesResponse =
-        new SegmentLoadingCapabilities(config.getNumLoadingThreads(), config.getNumBootstrapThreads(), false);
+        new SegmentLoadingCapabilities(config.getNumLoadingThreads(), config.getNumBootstrapThreads());
 
     return Response.status(Response.Status.OK).entity(capabilitiesResponse).build();
   }

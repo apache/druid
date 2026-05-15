@@ -164,7 +164,8 @@ public abstract class SeekableStreamSupervisorTestBase
           minimumMessageTime,
           maximumMessageTime,
           ioConfig.getInputFormat(),
-          ioConfig.getTaskDuration().getStandardMinutes()
+          ioConfig.getTaskDuration().getStandardMinutes(),
+          null
       )
       {
       };
@@ -301,6 +302,12 @@ public abstract class SeekableStreamSupervisorTestBase
     {
       return false;
     }
+
+    @Override
+    protected boolean isEndOffsetExclusive()
+    {
+      return true;
+    }
   }
 
   class TestSeekableStreamSupervisor extends BaseTestSeekableStreamSupervisor
@@ -328,6 +335,24 @@ public abstract class SeekableStreamSupervisorTestBase
     public int getPartitionCount()
     {
       return partitionNumbers;
+    }
+
+    @Override
+    protected boolean isOffsetAtOrBeyond(String current, String target)
+    {
+      return Long.parseLong(current) >= Long.parseLong(target);
+    }
+
+    @Override
+    protected String createPartitionIdFromString(String partitionIdString)
+    {
+      return partitionIdString;
+    }
+
+    @Override
+    protected String createSequenceOffsetFromObject(Object offsetObj)
+    {
+      return offsetObj.toString();
     }
   }
 
@@ -538,6 +563,7 @@ public abstract class SeekableStreamSupervisorTestBase
         null,
         autoScalerConfig,
         LagAggregator.DEFAULT,
+        null,
         null,
         null,
         null,
