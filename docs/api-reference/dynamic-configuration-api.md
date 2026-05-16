@@ -371,6 +371,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 {
   "queryBlocklist": [
     {
+      "type": "default",
       "ruleName": "block-expensive-scans",
       "dataSources": ["large_table"],
       "queryTypes": ["scan"]
@@ -440,11 +441,13 @@ curl -X POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/broker/config" \
 -d '{
   "queryBlocklist": [
     {
+      "type": "default",
       "ruleName": "block-expensive-scans",
       "dataSources": ["large_table", "huge_dataset"],
       "queryTypes": ["scan"]
     },
     {
+      "type": "default",
       "ruleName": "block-debug-queries",
       "contextMatches": {
         "debug": "true"
@@ -481,11 +484,13 @@ X-Druid-Comment: Add query blocklist rules and set default context
 {
   "queryBlocklist": [
     {
+      "type": "default",
       "ruleName": "block-expensive-scans",
       "dataSources": ["large_table", "huge_dataset"],
       "queryTypes": ["scan"]
     },
     {
+      "type": "default",
       "ruleName": "block-debug-queries",
       "contextMatches": {
         "debug": "true"
@@ -529,14 +534,33 @@ The following table shows the dynamic configuration properties for the Broker.
 
 Query blocklist rules allow you to block specific queries based on datasource, query type, and/or query context parameters. This feature is useful for preventing expensive or problematic queries from impacting cluster performance.
 
-Each rule in the `queryBlocklist` array is a JSON object with the following properties:
+Each rule in the `queryBlocklist` array is a JSON object. The `type` field selects the rule implementation. If omitted, it defaults to `"default"`.
+
+##### `default` type
+
+The built-in rule type. Blocks queries by matching on datasource, query type, and/or query context parameters.
 
 |Property|Description|Required|Default|
 |--------|-----------|--------|-------|
+|`type`|Rule type identifier. Not required — rules without a `"type"` field are treated as `"default"` for backwards compatibility with existing configurations.|No|`"default"`|
 |`ruleName`|Unique name identifying this blocklist rule. Used in error messages when queries are blocked.|Yes|N/A|
 |`dataSources`|List of datasource names to match. A query matches if it references any datasource in this list.|No|Matches all datasources|
 |`queryTypes`|List of query types to match (e.g., `scan`, `timeseries`, `groupBy`, `topN`). A query matches if its type is in this list.|No|Matches all query types|
 |`contextMatches`|Map of query context parameter key-value pairs to match. A query matches if all specified context parameters match the provided values (case-sensitive string comparison).|No|Matches all contexts|
+
+##### Custom types (extensions)
+
+Extensions can register additional rule types by adding Jackson subtypes to the `QueryBlocklistRule` interface. A custom rule is selected by setting `"type"` to its registered name:
+
+```json
+{
+  "type": "myCustomRule",
+  "ruleName": "rate-limit-heavy-users",
+  ...
+}
+```
+
+If a rule references a type whose extension is not loaded, deserialization fails with an error rather than silently falling back to the default type.
 
 **Rule matching behavior:**
 
@@ -545,6 +569,8 @@ Each rule in the `queryBlocklist` array is a JSON object with the following prop
 - For context matching: if a rule specifies context parameters, queries with missing or null values for those keys will not match
 - At least one criterion must be specified per rule to prevent accidentally blocking all queries
 - A query is blocked if it matches ANY rule in the blocklist (OR logic between rules)
+
+> **Note:** The `"type"` field is not required for `"default"` rules (existing configs without it continue to work), but including it explicitly is recommended for clarity.
 
 **Error response:**
 
@@ -676,7 +702,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
       "comment": "Add query blocklist rules",
       "ip": "127.0.0.1"
     },
-    "payload": "{\"queryBlocklist\":[{\"ruleName\":\"block-expensive-scans\",\"dataSources\":[\"large_table\"],\"queryTypes\":[\"scan\"]}],\"queryContext\":{\"priority\":0,\"timeout\":300000},\"perSegmentTimeoutConfig\":{\"large_table\":{\"perSegmentTimeoutMs\":10000,\"monitorOnly\":false}}}",
+    "payload": "{\"queryBlocklist\":[{\"type\":\"default\",\"ruleName\":\"block-expensive-scans\",\"dataSources\":[\"large_table\"],\"queryTypes\":[\"scan\"]}],\"queryContext\":{\"priority\":0,\"timeout\":300000},\"perSegmentTimeoutConfig\":{\"large_table\":{\"perSegmentTimeoutMs\":10000,\"monitorOnly\":false}}}",
     "auditTime": "2024-03-06T12:00:00.000Z"
   }
 ]
