@@ -534,7 +534,9 @@ The following table shows the dynamic configuration properties for the Broker.
 
 Query blocklist rules allow you to block specific queries based on datasource, query type, and/or query context parameters. This feature is useful for preventing expensive or problematic queries from impacting cluster performance.
 
-Each rule in the `queryBlocklist` array is a JSON object. The `type` field selects the rule implementation. If omitted, it defaults to `"default"`.
+Each rule in the `queryBlocklist` array is a JSON object. The `type` field selects the rule implementation. If omitted, it defaults to `"default"`. A query is blocked if it matches ANY rule in the blocklist (OR logic between rules).
+
+> **Note:** The `"type"` field is not required for `"default"` rules (existing configs without it continue to work), but including it explicitly is recommended for clarity.
 
 ##### `default` type
 
@@ -548,6 +550,13 @@ The built-in rule type. Blocks queries by matching on datasource, query type, an
 |`queryTypes`|List of query types to match (e.g., `scan`, `timeseries`, `groupBy`, `topN`). A query matches if its type is in this list.|No|Matches all query types|
 |`contextMatches`|Map of query context parameter key-value pairs to match. A query matches if all specified context parameters match the provided values (case-sensitive string comparison).|No|Matches all contexts|
 
+**Matching behavior:**
+
+- A query must match ALL specified criteria within a rule (AND logic) to be blocked by that rule
+- If any criterion is omitted, empty, or null, it matches everything (e.g., omitting `queryTypes` or setting it to null matches all query types)
+- For context matching: if a rule specifies context parameters, queries with missing or null values for those keys will not match
+- At least one criterion must be specified per rule to prevent accidentally blocking all queries
+
 ##### Custom types (extensions)
 
 Extensions can register additional rule types by adding Jackson subtypes to the `QueryBlocklistRule` interface. A custom rule is selected by setting `"type"` to its registered name:
@@ -560,17 +569,7 @@ Extensions can register additional rule types by adding Jackson subtypes to the 
 }
 ```
 
-If a rule references a type whose extension is not loaded, deserialization fails with an error rather than silently falling back to the default type.
-
-**Rule matching behavior:**
-
-- A query must match ALL specified criteria within a rule (AND logic) to be blocked by that rule
-- If any criterion is omitted, empty or null, it matches everything (e.g., omitting `queryTypes` or setting it to null matches all query types)
-- For context matching: if a rule specifies context parameters, queries with missing or null values for those keys will not match
-- At least one criterion must be specified per rule to prevent accidentally blocking all queries
-- A query is blocked if it matches ANY rule in the blocklist (OR logic between rules)
-
-> **Note:** The `"type"` field is not required for `"default"` rules (existing configs without it continue to work), but including it explicitly is recommended for clarity.
+Custom types define their own matching semantics — they may use different criteria and logic than the `default` type described above. If a rule references a type whose extension is not loaded, deserialization fails with an error rather than silently falling back to the default type.
 
 **Error response:**
 
