@@ -88,7 +88,10 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       Comparators.intervalsByStartThenEnd()
   );
   // true interval -> version -> timelineEntry
-  private final Map<Interval, TreeMap<VersionType, TimelineEntry>> allTimelineEntries = new HashMap<>();
+  // NavigableMap so the private remove() can range-scan for overlapping intervals instead of a full O(N) pass.
+  private final NavigableMap<Interval, TreeMap<VersionType, TimelineEntry>> allTimelineEntries = new TreeMap<>(
+      Comparators.intervalsByStartThenEnd()
+  );
   private final AtomicInteger numObjects = new AtomicInteger();
 
   private final Comparator<? super VersionType> versionComparator;
@@ -118,7 +121,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
                .iterator();
   }
 
-  public Map<Interval, TreeMap<VersionType, TimelineEntry>> getAllTimelineEntries()
+  public NavigableMap<Interval, TreeMap<VersionType, TimelineEntry>> getAllTimelineEntries()
   {
     return allTimelineEntries;
   }
@@ -715,7 +718,11 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   {
     timeline.remove(interval);
 
-    for (Entry<Interval, TreeMap<VersionType, TimelineEntry>> versionEntry : allTimelineEntries.entrySet()) {
+    // Use headMap to skip entries whose start >= interval.end (those can never overlap), then filter for actual overlap.
+    // Reduces the scan to O(M) where M is the # of intervals with start < interval.end.
+    final Interval headBound = new Interval(interval.getEnd(), interval.getEnd());
+    for (Entry<Interval, TreeMap<VersionType, TimelineEntry>> versionEntry :
+        allTimelineEntries.headMap(headBound, false).entrySet()) {
       if (versionEntry.getKey().overlap(interval) != null) {
         if (incompleteOk) {
           add(timeline, versionEntry.getKey(), versionEntry.getValue().lastEntry().getValue());
@@ -747,8 +754,27 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       timeline = completePartitionsTimeline;
     }
 
-    for (Entry<Interval, TimelineEntry> entry : timeline.entrySet()) {
+    // Both completePartitionsTimeline and incompletePartitionsTimeline contain non-overlapping adjusted intervals
+    // sorted by (start, end). To find entries overlapping [interval.start, interval.end) we only need to scan
+    // the range [floorKey(interval.start), first key with start >= interval.end). The floor handles the one
+    // entry that may have started before interval.start but still extends into the query window.
+    final Interval searchStart = new Interval(interval.getStart(), DateTimes.MAX);
+    Interval startKey = timeline.floorKey(searchStart);
+    if (startKey == null) {
+      // No entry starts at or before interval.start; begin from the first entry in the map.
+      startKey = timeline.isEmpty() ? null : timeline.firstKey();
+    }
+    if (startKey == null) {
+      return retVal;
+    }
+
+    for (Entry<Interval, TimelineEntry> entry : timeline.tailMap(startKey, true).entrySet()) {
       Interval timelineInterval = entry.getKey();
+      // All entries from here forward start at or after startKey.start. Once we reach an entry whose
+      // start is at or past the query end, there can be no more overlaps.
+      if (timelineInterval.getStartMillis() >= interval.getEndMillis()) {
+        break;
+      }
       TimelineEntry val = entry.getValue();
 
       // exclude empty partition holders (i.e. tombstones) since they do not add value
