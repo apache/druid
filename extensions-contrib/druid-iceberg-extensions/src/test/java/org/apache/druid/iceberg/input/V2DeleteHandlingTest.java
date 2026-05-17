@@ -477,4 +477,97 @@ public class V2DeleteHandlingTest
     Assert.assertEquals("order_id=2 deleted in dataFile1 only", 1, countTwo);
     Assert.assertEquals("order_id=3 deleted in dataFile2 only", 1, countThree);
   }
+
+  @Test
+  public void testEqualityDeleteWithNullValueMatchesNullRows() throws IOException
+  {
+    final Schema schemaWithOptional = new Schema(
+        Types.NestedField.required(1, "order_id", Types.IntegerType.get()),
+        Types.NestedField.optional(2, "product", Types.StringType.get())
+    );
+
+    final TableIdentifier tableId = TableIdentifier.of(Namespace.of(NAMESPACE), TABLE_NAME);
+    final Table table = testCatalog.retrieveCatalog().createTable(
+        tableId,
+        schemaWithOptional,
+        PartitionSpec.unpartitioned(),
+        ImmutableMap.of("format-version", "2")
+    );
+
+    final GenericRecord r1 = GenericRecord.create(schemaWithOptional);
+    r1.setField("order_id", 1);
+    r1.setField("product", "Widget");
+
+    final GenericRecord r2 = GenericRecord.create(schemaWithOptional);
+    r2.setField("order_id", 2);
+    r2.setField("product", null);
+
+    final GenericRecord r3 = GenericRecord.create(schemaWithOptional);
+    r3.setField("order_id", 3);
+    r3.setField("product", "Gadget");
+
+    final String dataPath = table.location() + "/data/" + UUID.randomUUID() + ".parquet";
+    final OutputFile dataOut = table.io().newOutputFile(dataPath);
+    final DataWriter<GenericRecord> dataWriter = Parquet.writeData(dataOut)
+                                                       .schema(schemaWithOptional)
+                                                       .createWriterFunc(GenericParquetWriter::create)
+                                                       .overwrite()
+                                                       .withSpec(PartitionSpec.unpartitioned())
+                                                       .build();
+    try {
+      dataWriter.write(r1);
+      dataWriter.write(r2);
+      dataWriter.write(r3);
+    }
+    finally {
+      dataWriter.close();
+    }
+    table.newAppend().appendFile(dataWriter.toDataFile()).commit();
+
+    final Schema deleteSchema = new Schema(Types.NestedField.optional(2, "product", Types.StringType.get()));
+    final String deletePath = table.location() + "/data/" + UUID.randomUUID() + "-eq-delete.parquet";
+    final OutputFile deleteOut = table.io().newOutputFile(deletePath);
+    final EqualityDeleteWriter<GenericRecord> eqWriter = Parquet.writeDeletes(deleteOut)
+                                                                .forTable(table)
+                                                                .rowSchema(deleteSchema)
+                                                                .createWriterFunc(GenericParquetWriter::create)
+                                                                .overwrite()
+                                                                .equalityFieldIds(2)
+                                                                .buildEqualityWriter();
+    try {
+      final GenericRecord deleteRecord = GenericRecord.create(deleteSchema);
+      deleteRecord.setField("product", null);
+      eqWriter.write(deleteRecord);
+    }
+    finally {
+      eqWriter.close();
+    }
+    table.newRowDelta().addDeletes(eqWriter.toDeleteFile()).commit();
+
+    final InputRowSchema schemaForRead = new InputRowSchema(
+        new TimestampSpec("order_id", "auto", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("order_id", "product"))),
+        ColumnsFilter.all(),
+        ImmutableSet.of()
+    );
+
+    final IcebergInputSource inputSource = new IcebergInputSource(
+        TABLE_NAME,
+        NAMESPACE,
+        null,
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        null
+    );
+
+    final InputSourceReader reader = inputSource.reader(schemaForRead, null, temporaryFolder.newFolder());
+    final List<InputRow> rows = readAll(reader);
+
+    Assert.assertEquals("Row with product=null should be deleted", 2, rows.size());
+    for (final InputRow row : rows) {
+      final String orderId = row.getDimension("order_id").get(0);
+      Assert.assertNotEquals("order_id=2 (product=null) must be deleted", "2", orderId);
+    }
+  }
 }
