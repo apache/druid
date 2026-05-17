@@ -231,36 +231,66 @@ public class ShareGroupIndexTaskRunner
         );
     toolbox.addMonitor(metricsMonitor);
 
-    boolean appenderatorClosedNormally = false;
     try (final AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> recordSupplier =
              supplierFactory.apply(ioConfig)) {
       activeSupplier.set(recordSupplier);
-      recordSupplier.subscribe(Collections.singleton(ioConfig.getTopic()));
+      return runLoop(driver, appenderator, recordSupplier, chunkReader, ioConfig, tuningConfig, toolbox);
+    }
+    finally {
+      activeSupplier.set(null);
+      try {
+        toolbox.removeMonitor(metricsMonitor);
+      }
+      catch (Exception e) {
+        log.warn(e, "Exception removing TaskRealtimeMetricsMonitor; continuing teardown.");
+      }
+      try {
+        driver.close();
+      }
+      catch (Exception e) {
+        log.warn(e, "Exception closing StreamAppenderatorDriver; continuing teardown.");
+      }
+    }
+  }
 
-      driver.startJob(segmentId -> true);
+  @VisibleForTesting
+  TaskStatus runLoop(
+      StreamAppenderatorDriver driver,
+      Appenderator appenderator,
+      AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> recordSupplier,
+      StreamChunkReader chunkReader,
+      ShareGroupIndexTaskIOConfig ioConfig,
+      KafkaIndexTaskTuningConfig tuningConfig,
+      TaskToolbox toolbox
+  ) throws Exception
+  {
+    recordSupplier.subscribe(Collections.singleton(ioConfig.getTopic()));
+    driver.startJob(segmentId -> true);
 
-      // Share groups manage delivery state on the broker; the Committer is a
-      // no-op placeholder required by the appenderator driver contract.
-      final Supplier<Committer> committerSupplier = () -> new Committer()
+    // Share groups manage delivery state on the broker; the Committer is a
+    // no-op placeholder required by the appenderator driver contract.
+    final Supplier<Committer> committerSupplier = () -> new Committer()
+    {
+      @Override
+      public Object getMetadata()
       {
-        @Override
-        public Object getMetadata()
-        {
-          return ImmutableMap.of("type", "share_group");
-        }
+        return ImmutableMap.of("type", "share_group");
+      }
 
-        @Override
-        public void run()
-        {
-        }
-      };
+      @Override
+      public void run()
+      {
+      }
+    };
 
-      log.info("Starting share group ingestion loop for topic[%s], group[%s].",
-               ioConfig.getTopic(), ioConfig.getGroupId());
+    log.info("Starting share group ingestion loop for topic[%s], group[%s].",
+             ioConfig.getTopic(), ioConfig.getGroupId());
 
-      long totalRowsIngested = 0;
-      boolean lockTimeoutLogged = false;
+    long totalRowsIngested = 0;
+    boolean lockTimeoutLogged = false;
+    boolean appenderatorClosedNormally = false;
 
+    try {
       while (!task.isStopRequested()) {
 
         final List<OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> records;
@@ -313,7 +343,7 @@ public class ShareGroupIndexTaskRunner
               throw new ISE(
                   "Could not allocate segment for row with timestamp[%s]",
                   row.getTimestamp()
-              );
+            );
             }
 
             totalRowsIngested++;
@@ -403,25 +433,11 @@ public class ShareGroupIndexTaskRunner
       }
 
       driver.persist(committerSupplier.get());
-
       log.info("Share group ingestion complete. Total rows ingested: %d", totalRowsIngested);
       appenderator.close();
       appenderatorClosedNormally = true;
     }
     finally {
-      activeSupplier.set(null);
-      try {
-        toolbox.removeMonitor(metricsMonitor);
-      }
-      catch (Exception e) {
-        log.warn(e, "Exception removing TaskRealtimeMetricsMonitor; continuing teardown.");
-      }
-      try {
-        driver.close();
-      }
-      catch (Exception e) {
-        log.warn(e, "Exception closing StreamAppenderatorDriver; continuing teardown.");
-      }
       if (!appenderatorClosedNormally) {
         try {
           appenderator.closeNow();
