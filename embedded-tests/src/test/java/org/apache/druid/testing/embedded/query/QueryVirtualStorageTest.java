@@ -67,7 +67,7 @@ import java.util.concurrent.ThreadLocalRandom;
 class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 {
   // size of wiki segments, adjust this if segment size changes for some reason
-  private static final long SIZE_BYTES = 3777834L;
+  private static final long SIZE_BYTES = 3728433L;
   private static final long CACHE_SIZE = HumanReadableBytes.parse("1MiB");
   private static final long MAX_SIZE = HumanReadableBytes.parse("100MiB");
 

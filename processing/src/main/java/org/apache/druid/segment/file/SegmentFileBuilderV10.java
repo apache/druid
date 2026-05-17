@@ -80,9 +80,14 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
 {
   private static final Logger LOG = new Logger(SegmentFileBuilderV10.class);
 
+  /**
+   * Default compression for the V10 metadata header
+   */
+  public static final CompressionStrategy DEFAULT_METADATA_COMPRESSION = CompressionStrategy.ZSTD;
+
   public static SegmentFileBuilderV10 create(ObjectMapper jsonMapper, File baseDir)
   {
-    return create(jsonMapper, baseDir, CompressionStrategy.NONE);
+    return create(jsonMapper, baseDir, DEFAULT_METADATA_COMPRESSION);
   }
 
   public static SegmentFileBuilderV10 create(ObjectMapper jsonMapper, File baseDir, CompressionStrategy metaCompression)
