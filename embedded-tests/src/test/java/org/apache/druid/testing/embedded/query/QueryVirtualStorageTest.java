@@ -307,7 +307,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   void testQuerySysTables()
   {
     final String query = "SELECT curr_size, max_size, storage_size FROM sys.servers WHERE tier IS NOT NULL AND server_type = 'historical'";
-    final String resultString =  cluster.callApi().runSql(query);
+    final String resultString = cluster.callApi().runSql(query);
     final String[] split = resultString.split(",");
     Assertions.assertTrue(Long.parseLong(split[0]) <= SIZE_BYTES);
     Assertions.assertEquals(MAX_SIZE, Long.parseLong(split[1]));
