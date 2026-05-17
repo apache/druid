@@ -269,26 +269,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
         final List<DeleteFileInfo> deleteFileInfos = new ArrayList<>();
 
         for (final DeleteFile deleteFile : task.deletes()) {
-          final FileContent content = deleteFile.content();
-          final DeleteFileInfo.ContentType contentType;
-          final List<Integer> equalityFieldIds;
-          switch (content) {
-            case EQUALITY_DELETES:
-              contentType = DeleteFileInfo.ContentType.EQUALITY;
-              equalityFieldIds = deleteFile.equalityFieldIds();
-              break;
-            case POSITION_DELETES:
-              contentType = DeleteFileInfo.ContentType.POSITION;
-              equalityFieldIds = Collections.emptyList();
-              break;
-            default:
-              throw new UOE(
-                  "Iceberg delete file content [%s] is not supported. Only EQUALITY_DELETES and POSITION_DELETES are supported. "
-                  + "Deletion vectors (Iceberg v3) are not yet implemented in druid-iceberg-extensions.",
-                  content
-              );
-          }
-          deleteFileInfos.add(new DeleteFileInfo(deleteFile.location(), contentType, equalityFieldIds));
+          deleteFileInfos.add(toDeleteFileInfo(deleteFile));
         }
 
         v2TaskInputSources.add(new IcebergFileTaskInputSource(
@@ -327,6 +308,31 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
    * iterating through tasks sequentially. Each task's reader is opened lazily
    * and closed before opening the next.
    */
+  static DeleteFileInfo toDeleteFileInfo(final DeleteFile deleteFile)
+  {
+    final FileContent content = deleteFile.content();
+    switch (content) {
+      case EQUALITY_DELETES:
+        return new DeleteFileInfo(
+            deleteFile.location(),
+            DeleteFileInfo.ContentType.EQUALITY,
+            deleteFile.equalityFieldIds()
+        );
+      case POSITION_DELETES:
+        return new DeleteFileInfo(
+            deleteFile.location(),
+            DeleteFileInfo.ContentType.POSITION,
+            Collections.emptyList()
+        );
+      default:
+        throw new UOE(
+            "Iceberg delete file content [%s] is not supported. Only EQUALITY_DELETES and POSITION_DELETES are supported. "
+            + "Deletion vectors (Iceberg v3) are not yet implemented in druid-iceberg-extensions.",
+            content
+        );
+    }
+  }
+
   private static class CompositeInputSourceReader implements InputSourceReader
   {
     private final List<IcebergFileTaskInputSource> taskSources;
