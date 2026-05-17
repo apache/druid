@@ -95,6 +95,7 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
         .addServer(new EmbeddedHistorical());
   }
 
+  @Override
   @BeforeAll
   public void setup()
   {
@@ -102,6 +103,7 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
     icebergCatalog.createNamespace(ICEBERG_NAMESPACE);
   }
 
+  @Override
   @AfterAll
   public void tearDown()
   {
