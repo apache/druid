@@ -328,7 +328,9 @@ public class KafkaShareGroupRecordSupplierTest
   {
     final String topic = "test-topic";
     final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
-        topic, 0, 100L,
+        topic,
+        0,
+        100L,
         "key".getBytes(StandardCharsets.UTF_8),
         "value".getBytes(StandardCharsets.UTF_8)
     );
