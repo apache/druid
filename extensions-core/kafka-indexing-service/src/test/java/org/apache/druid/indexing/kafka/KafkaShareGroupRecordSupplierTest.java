@@ -324,6 +324,31 @@ public class KafkaShareGroupRecordSupplierTest
   }
 
   @Test
+  public void testAcknowledgeTwoArgOverloadDefaultsToAccept() throws Exception
+  {
+    final String topic = "test-topic";
+    final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
+        topic, 0, 100L,
+        "key".getBytes(StandardCharsets.UTF_8),
+        "value".getBytes(StandardCharsets.UTF_8)
+    );
+    final Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> recordMap = new HashMap<>();
+    recordMap.put(new TopicPartition(topic, 0), List.of(record));
+    when(mockConsumer.poll(any(Duration.class))).thenReturn(new ConsumerRecords<>(recordMap));
+
+    supplier.poll(1000L);
+    supplier.acknowledge(new KafkaTopicPartition(true, topic, 0), 100L);
+
+    verify(mockConsumer).acknowledge(record, org.apache.kafka.clients.consumer.AcknowledgeType.ACCEPT);
+  }
+
+  @Test
+  public void testGetPartitionIdsReturnsEmptySet()
+  {
+    Assert.assertEquals(Set.of(), supplier.getPartitionIds("any-stream"));
+  }
+
+  @Test
   public void testAcquisitionLockTimeoutMsEmpty()
   {
     Mockito.when(mockConsumer.acquisitionLockTimeoutMs()).thenReturn(Optional.empty());
