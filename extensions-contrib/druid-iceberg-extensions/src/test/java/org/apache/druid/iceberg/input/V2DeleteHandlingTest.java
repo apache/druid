@@ -33,7 +33,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSourceFactory;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.DeleteFile;
@@ -686,7 +686,6 @@ public class V2DeleteHandlingTest
     writePositionalDeleteFor(table, dataFile1, 1L);
 
     final IcebergInputSource inputSource = newIcebergInputSource();
-    inputSource.createSplits(null, null).count();
 
     final InputSplit<List<String>> splitForFile1 = new InputSplit<>(Collections.singletonList(dataFile1.location()));
     final InputSource picked = inputSource.withSplit(splitForFile1);
@@ -707,10 +706,9 @@ public class V2DeleteHandlingTest
     writePositionalDeleteFor(table, dataFile, 0L);
 
     final IcebergInputSource inputSource = newIcebergInputSource();
-    inputSource.createSplits(null, null).count();
 
     final InputSplit<List<String>> bogus = new InputSplit<>(Collections.singletonList("/does/not/exist.parquet"));
-    Assert.assertThrows(UOE.class, () -> inputSource.withSplit(bogus));
+    Assert.assertThrows(ISE.class, () -> inputSource.withSplit(bogus));
   }
 
   @Test
@@ -722,7 +720,6 @@ public class V2DeleteHandlingTest
     writePositionalDeleteFor(table, dataFile, 0L);
 
     final IcebergInputSource inputSource = newIcebergInputSource();
-    inputSource.createSplits(null, null).count();
 
     Assert.assertSame(FilePerSplitHintSpec.INSTANCE, inputSource.getSplitHintSpecOrDefault(null));
   }
