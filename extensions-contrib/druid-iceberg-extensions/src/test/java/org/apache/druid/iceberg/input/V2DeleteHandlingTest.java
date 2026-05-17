@@ -400,4 +400,81 @@ public class V2DeleteHandlingTest
     final DeleteFile posDeleteFile = posDeleteWriter.toDeleteFile();
     table.newRowDelta().addDeletes(posDeleteFile).commit();
   }
+
+  @Test
+  public void testPositionalDeleteFileScopedToMatchingDataFile() throws IOException
+  {
+    final Table table = createBaseTable();
+    final DataFile dataFile1 = writeDataFile(table);
+    final DataFile dataFile2 = writeDataFile(table);
+    table.newAppend().appendFile(dataFile1).appendFile(dataFile2).commit();
+
+    final String deletePath = table.location() + "/data/" + UUID.randomUUID() + "-pos-delete.parquet";
+    final OutputFile deleteOutputFile = table.io().newOutputFile(deletePath);
+
+    final PositionDeleteWriter<GenericRecord> posDeleteWriter = Parquet.writeDeletes(deleteOutputFile)
+                                                                      .forTable(table)
+                                                                      .createWriterFunc(GenericParquetWriter::create)
+                                                                      .rowSchema(tableSchema)
+                                                                      .overwrite()
+                                                                      .buildPositionWriter();
+    try {
+      final PositionDelete<GenericRecord> d1 = PositionDelete.create();
+      final GenericRecord row1 = GenericRecord.create(tableSchema);
+      row1.setField("order_id", 2);
+      row1.setField("product", "Gadget");
+      row1.setField("amount", 20.0);
+      d1.set(dataFile1.location(), 1L, row1);
+      posDeleteWriter.write(d1);
+
+      final PositionDelete<GenericRecord> d2 = PositionDelete.create();
+      final GenericRecord row2 = GenericRecord.create(tableSchema);
+      row2.setField("order_id", 3);
+      row2.setField("product", "Doohickey");
+      row2.setField("amount", 30.0);
+      d2.set(dataFile2.location(), 2L, row2);
+      posDeleteWriter.write(d2);
+    }
+    finally {
+      posDeleteWriter.close();
+    }
+
+    table.newRowDelta().addDeletes(posDeleteWriter.toDeleteFile()).commit();
+
+    final IcebergInputSource inputSource = new IcebergInputSource(
+        TABLE_NAME,
+        NAMESPACE,
+        null,
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        null
+    );
+
+    final InputSourceReader reader = inputSource.reader(inputRowSchema, null, temporaryFolder.newFolder());
+    final List<InputRow> rows = readAll(reader);
+
+    Assert.assertEquals(4, rows.size());
+
+    final List<String> orderIds = new ArrayList<>();
+    for (final InputRow row : rows) {
+      orderIds.add(row.getDimension("order_id").get(0));
+    }
+
+    int countOne = 0;
+    int countTwo = 0;
+    int countThree = 0;
+    for (final String id : orderIds) {
+      if ("1".equals(id)) {
+        countOne++;
+      } else if ("2".equals(id)) {
+        countTwo++;
+      } else if ("3".equals(id)) {
+        countThree++;
+      }
+    }
+    Assert.assertEquals("order_id=1 appears in both data files, neither deleted", 2, countOne);
+    Assert.assertEquals("order_id=2 deleted in dataFile1 only", 1, countTwo);
+    Assert.assertEquals("order_id=3 deleted in dataFile2 only", 1, countThree);
+  }
 }
