@@ -36,6 +36,7 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.iceberg.DeleteFile;
@@ -268,15 +269,26 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
         final List<DeleteFileInfo> deleteFileInfos = new ArrayList<>();
 
         for (final DeleteFile deleteFile : task.deletes()) {
-          deleteFileInfos.add(new DeleteFileInfo(
-              deleteFile.location(),
-              deleteFile.content() == FileContent.EQUALITY_DELETES
-                  ? DeleteFileInfo.ContentType.EQUALITY
-                  : DeleteFileInfo.ContentType.POSITION,
-              deleteFile.content() == FileContent.EQUALITY_DELETES
-                  ? deleteFile.equalityFieldIds()
-                  : Collections.emptyList()
-          ));
+          final FileContent content = deleteFile.content();
+          final DeleteFileInfo.ContentType contentType;
+          final List<Integer> equalityFieldIds;
+          switch (content) {
+            case EQUALITY_DELETES:
+              contentType = DeleteFileInfo.ContentType.EQUALITY;
+              equalityFieldIds = deleteFile.equalityFieldIds();
+              break;
+            case POSITION_DELETES:
+              contentType = DeleteFileInfo.ContentType.POSITION;
+              equalityFieldIds = Collections.emptyList();
+              break;
+            default:
+              throw new UOE(
+                  "Iceberg delete file content [%s] is not supported. Only EQUALITY_DELETES and POSITION_DELETES are supported. "
+                  + "Deletion vectors (Iceberg v3) are not yet implemented in druid-iceberg-extensions.",
+                  content
+              );
+          }
+          deleteFileInfos.add(new DeleteFileInfo(deleteFile.location(), contentType, equalityFieldIds));
         }
 
         v2TaskInputSources.add(new IcebergFileTaskInputSource(
