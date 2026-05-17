@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Properties;
 
 public class ShareGroupConsumerPropertiesTest
 {
@@ -86,6 +87,42 @@ public class ShareGroupConsumerPropertiesTest
   public void testSanitizeOnEmptyMap()
   {
     Assert.assertTrue(ShareGroupConsumerProperties.sanitize(ImmutableMap.of()).isEmpty());
+  }
+
+  @Test
+  public void testSanitizePropertiesRemovesUnsupportedKeysInPlace()
+  {
+    final Properties props = new Properties();
+    props.setProperty("bootstrap.servers", "broker:9092");
+    props.setProperty("enable.auto.commit", "true");
+    props.setProperty("auto.offset.reset", "earliest");
+    props.setProperty("group.instance.id", "test-instance");
+    props.setProperty("isolation.level", "read_committed");
+    props.setProperty("session.timeout.ms", "30000");
+
+    ShareGroupConsumerProperties.sanitize(props);
+
+    Assert.assertEquals("broker:9092", props.getProperty("bootstrap.servers"));
+    for (String key : ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS) {
+      Assert.assertFalse(
+          "expected unsupported key removed: " + key,
+          props.containsKey(key)
+      );
+    }
+  }
+
+  @Test
+  public void testSanitizePropertiesIsNoopWhenAllKeysAllowed()
+  {
+    final Properties props = new Properties();
+    props.setProperty("bootstrap.servers", "broker:9092");
+    props.setProperty("client.id", "share-group-client");
+
+    ShareGroupConsumerProperties.sanitize(props);
+
+    Assert.assertEquals(2, props.size());
+    Assert.assertEquals("broker:9092", props.getProperty("bootstrap.servers"));
+    Assert.assertEquals("share-group-client", props.getProperty("client.id"));
   }
 
   @Test
