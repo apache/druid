@@ -570,4 +570,104 @@ public class V2DeleteHandlingTest
       Assert.assertNotEquals("order_id=2 (product=null) must be deleted", "2", orderId);
     }
   }
+
+  @Test
+  public void testPartitionedTableEqualityDeleteScopedToPartition() throws IOException
+  {
+    final PartitionSpec spec = PartitionSpec.builderFor(tableSchema).identity("product").build();
+
+    final TableIdentifier tableId = TableIdentifier.of(Namespace.of(NAMESPACE), TABLE_NAME);
+    final Table table = testCatalog.retrieveCatalog().createTable(
+        tableId,
+        tableSchema,
+        spec,
+        ImmutableMap.of("format-version", "2")
+    );
+
+    final DataFile widgetFile = writePartitionedDataFile(table, spec, "Widget", 1, 10.0);
+    final DataFile gadgetFile = writePartitionedDataFile(table, spec, "Gadget", 2, 20.0);
+    table.newAppend().appendFile(widgetFile).appendFile(gadgetFile).commit();
+
+    final Schema deleteSchema = new Schema(
+        Types.NestedField.required(1, "order_id", Types.IntegerType.get())
+    );
+    final org.apache.iceberg.PartitionKey widgetKey = new org.apache.iceberg.PartitionKey(spec, tableSchema);
+    final GenericRecord widgetRowForKey = GenericRecord.create(tableSchema);
+    widgetRowForKey.setField("order_id", 1);
+    widgetRowForKey.setField("product", "Widget");
+    widgetRowForKey.setField("amount", 10.0);
+    widgetKey.partition(widgetRowForKey);
+
+    final String deletePath = table.location() + "/data/" + UUID.randomUUID() + "-eq-delete.parquet";
+    final OutputFile deleteOut = table.io().newOutputFile(deletePath);
+    final EqualityDeleteWriter<GenericRecord> eqWriter = Parquet.writeDeletes(deleteOut)
+                                                                .forTable(table)
+                                                                .rowSchema(deleteSchema)
+                                                                .createWriterFunc(GenericParquetWriter::create)
+                                                                .overwrite()
+                                                                .withPartition(widgetKey)
+                                                                .equalityFieldIds(1)
+                                                                .buildEqualityWriter();
+    try {
+      final GenericRecord deleteRecord = GenericRecord.create(deleteSchema);
+      deleteRecord.setField("order_id", 1);
+      eqWriter.write(deleteRecord);
+    }
+    finally {
+      eqWriter.close();
+    }
+    table.newRowDelta().addDeletes(eqWriter.toDeleteFile()).commit();
+
+    final IcebergInputSource inputSource = new IcebergInputSource(
+        TABLE_NAME,
+        NAMESPACE,
+        null,
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        null
+    );
+
+    final InputSourceReader reader = inputSource.reader(inputRowSchema, null, temporaryFolder.newFolder());
+    final List<InputRow> rows = readAll(reader);
+
+    Assert.assertEquals("Only Widget partition row deleted; Gadget partition unaffected", 1, rows.size());
+    Assert.assertEquals("2", rows.get(0).getDimension("order_id").get(0));
+    Assert.assertEquals("Gadget", rows.get(0).getDimension("product").get(0));
+  }
+
+  private DataFile writePartitionedDataFile(
+      final Table table,
+      final PartitionSpec spec,
+      final String product,
+      final int orderId,
+      final double amount
+  ) throws IOException
+  {
+    final GenericRecord rec = GenericRecord.create(tableSchema);
+    rec.setField("order_id", orderId);
+    rec.setField("product", product);
+    rec.setField("amount", amount);
+
+    final org.apache.iceberg.PartitionKey key = new org.apache.iceberg.PartitionKey(spec, tableSchema);
+    key.partition(rec);
+
+    final String filepath = table.location() + "/data/" + product + "/" + UUID.randomUUID() + ".parquet";
+    final OutputFile outputFile = table.io().newOutputFile(filepath);
+
+    final DataWriter<GenericRecord> writer = Parquet.writeData(outputFile)
+                                                    .schema(tableSchema)
+                                                    .createWriterFunc(GenericParquetWriter::create)
+                                                    .overwrite()
+                                                    .withSpec(spec)
+                                                    .withPartition(key)
+                                                    .build();
+    try {
+      writer.write(rec);
+    }
+    finally {
+      writer.close();
+    }
+    return writer.toDataFile();
+  }
 }
