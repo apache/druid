@@ -223,7 +223,7 @@ public class ShareGroupIndexTaskRunnerTest
     Assert.assertTrue(status.isSuccess());
   }
 
-  private StreamAppenderatorDriver mockDriver() throws Exception
+  private StreamAppenderatorDriver mockDriver()
   {
     final StreamAppenderatorDriver driver = Mockito.mock(StreamAppenderatorDriver.class);
     final SegmentsAndCommitMetadata published = Mockito.mock(SegmentsAndCommitMetadata.class);
