@@ -40,7 +40,9 @@ import org.joda.time.DateTime;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /*
  * Druid wrapper for an iceberg catalog.
@@ -165,12 +167,22 @@ public abstract class IcebergCatalog
     private final Table table;
     private final List<FileScanTask> fileScanTasks;
     private final boolean hasDeleteFiles;
+    private final String fileIOImpl;
+    private final Map<String, String> fileIOProperties;
 
-    FileScanResult(final Table table, final List<FileScanTask> fileScanTasks, final boolean hasDeleteFiles)
+    FileScanResult(
+        final Table table,
+        final List<FileScanTask> fileScanTasks,
+        final boolean hasDeleteFiles,
+        final String fileIOImpl,
+        final Map<String, String> fileIOProperties
+    )
     {
       this.table = table;
       this.fileScanTasks = fileScanTasks;
       this.hasDeleteFiles = hasDeleteFiles;
+      this.fileIOImpl = fileIOImpl;
+      this.fileIOProperties = fileIOProperties;
     }
 
     public Table getTable()
@@ -186,6 +198,16 @@ public abstract class IcebergCatalog
     public boolean hasDeleteFiles()
     {
       return hasDeleteFiles;
+    }
+
+    public String getFileIOImpl()
+    {
+      return fileIOImpl;
+    }
+
+    public Map<String, String> getFileIOProperties()
+    {
+      return fileIOProperties;
     }
   }
 
@@ -286,7 +308,9 @@ public abstract class IcebergCatalog
           hasDeleteFiles
       );
 
-      return new FileScanResult(table, fileScanTasks, hasDeleteFiles);
+      final String fileIOImpl = table.io().getClass().getName();
+      final Map<String, String> fileIOProperties = new HashMap<>(table.io().properties());
+      return new FileScanResult(table, fileScanTasks, hasDeleteFiles, fileIOImpl, fileIOProperties);
     }
     catch (DruidException e) {
       throw e;
