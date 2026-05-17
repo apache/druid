@@ -186,6 +186,9 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   @Override
   public InputSource withSplit(InputSplit<List<String>> inputSplit)
   {
+    if (!isLoaded) {
+      retrieveIcebergDatafiles();
+    }
     if (v2TaskInputSources != null) {
       final String dataFilePath = inputSplit.get().get(0);
       for (final IcebergFileTaskInputSource task : v2TaskInputSources) {
@@ -193,7 +196,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
           return task;
         }
       }
-      throw new UOE("No v2 IcebergFileTaskInputSource found for data file path [%s]", dataFilePath);
+      throw new ISE("No v2 IcebergFileTaskInputSource found for data file path [%s]", dataFilePath);
     }
     return getDelegateInputSource().withSplit(inputSplit);
   }
@@ -201,6 +204,9 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   @Override
   public SplitHintSpec getSplitHintSpecOrDefault(@Nullable SplitHintSpec splitHintSpec)
   {
+    if (!isLoaded) {
+      retrieveIcebergDatafiles();
+    }
     if (v2TaskInputSources != null) {
       return splitHintSpec == null ? FilePerSplitHintSpec.INSTANCE : splitHintSpec;
     }
