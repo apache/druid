@@ -97,8 +97,9 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
 
   @Override
   @BeforeAll
-  public void setup()
+  public void setup() throws Exception
   {
+    super.setup();
     msqApis = new EmbeddedMSQApis(cluster, overlord);
     icebergCatalog.createNamespace(ICEBERG_NAMESPACE);
   }
@@ -112,6 +113,7 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
     dropTableSafely("mixed_delete_test");
     dropTableSafely("no_delete_test");
     icebergCatalog.dropNamespace(ICEBERG_NAMESPACE);
+    super.tearDown();
   }
 
   @Test
