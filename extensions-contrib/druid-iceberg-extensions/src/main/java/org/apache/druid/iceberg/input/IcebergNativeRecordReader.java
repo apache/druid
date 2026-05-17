@@ -29,17 +29,20 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.iceberg.CatalogUtil;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.SchemaParser;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.data.parquet.GenericParquetReaders;
-import org.apache.iceberg.hadoop.HadoopInputFile;
+import org.apache.iceberg.hadoop.HadoopFileIO;
 import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.io.DeleteSchemaUtil;
+import org.apache.iceberg.io.FileIO;
 import org.apache.iceberg.io.InputFile;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.iceberg.types.Types;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -77,13 +80,16 @@ public class IcebergNativeRecordReader implements InputSourceReader
   private final InputSourceFactory warehouseSource;
   private final InputRowSchema inputRowSchema;
   private final Configuration hadoopConf;
+  private final FileIO fileIO;
 
   public IcebergNativeRecordReader(
       final String dataFilePath,
       final List<DeleteFileInfo> deleteFiles,
       final String tableSchemaJson,
       final InputSourceFactory warehouseSource,
-      final InputRowSchema inputRowSchema
+      final InputRowSchema inputRowSchema,
+      @Nullable final String fileIOImpl,
+      @Nullable final Map<String, String> fileIOProperties
   )
   {
     this.dataFilePath = dataFilePath;
@@ -92,6 +98,20 @@ public class IcebergNativeRecordReader implements InputSourceReader
     this.warehouseSource = warehouseSource;
     this.inputRowSchema = inputRowSchema;
     this.hadoopConf = new Configuration();
+    this.fileIO = buildFileIO(fileIOImpl, fileIOProperties, hadoopConf);
+  }
+
+  private static FileIO buildFileIO(
+      @Nullable final String fileIOImpl,
+      @Nullable final Map<String, String> fileIOProperties,
+      final Configuration hadoopConf
+  )
+  {
+    final Map<String, String> props = fileIOProperties == null ? Collections.emptyMap() : fileIOProperties;
+    if (fileIOImpl == null || fileIOImpl.isEmpty()) {
+      return new HadoopFileIO(hadoopConf);
+    }
+    return CatalogUtil.loadFileIO(fileIOImpl, props, hadoopConf);
   }
 
   @Override
@@ -106,7 +126,7 @@ public class IcebergNativeRecordReader implements InputSourceReader
     final List<EqualityDeleteSet> equalityDeleteSets = collectEqualityDeletes(tableSchema);
 
     // Step 3: Stream data file with delete application
-    final InputFile dataInputFile = HadoopInputFile.fromLocation(dataFilePath, hadoopConf);
+    final InputFile dataInputFile = fileIO.newInputFile(dataFilePath);
     final CloseableIterable<Record> records = Parquet.read(dataInputFile)
                                                      .project(tableSchema)
                                                      .createReaderFunc(
@@ -209,7 +229,7 @@ public class IcebergNativeRecordReader implements InputSourceReader
         continue;
       }
 
-      final InputFile deleteInputFile = HadoopInputFile.fromLocation(deleteFileInfo.getPath(), hadoopConf);
+      final InputFile deleteInputFile = fileIO.newInputFile(deleteFileInfo.getPath());
 
       try (CloseableIterable<Record> deleteRecords = Parquet.read(deleteInputFile)
                                                             .project(posDeleteSchema)
@@ -265,7 +285,7 @@ public class IcebergNativeRecordReader implements InputSourceReader
       }
 
       final Schema deleteSchema = new Schema(equalityFields);
-      final InputFile deleteInputFile = HadoopInputFile.fromLocation(deleteFileInfo.getPath(), hadoopConf);
+      final InputFile deleteInputFile = fileIO.newInputFile(deleteFileInfo.getPath());
 
       final Set<List<Object>> deletedKeys = new HashSet<>();
       try (CloseableIterable<Record> deleteRecords = Parquet.read(deleteInputFile)

@@ -29,7 +29,9 @@ import org.apache.druid.data.input.InputSourceReader;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A non-splittable {@link InputSource} representing a single Iceberg v2 data file
@@ -53,19 +55,25 @@ public class IcebergFileTaskInputSource implements InputSource
   private final List<DeleteFileInfo> deleteFiles;
   private final String tableSchemaJson;
   private final InputSourceFactory warehouseSource;
+  private final String fileIOImpl;
+  private final Map<String, String> fileIOProperties;
 
   @JsonCreator
   public IcebergFileTaskInputSource(
       @JsonProperty("dataFilePath") final String dataFilePath,
       @JsonProperty("deleteFiles") final List<DeleteFileInfo> deleteFiles,
       @JsonProperty("tableSchemaJson") final String tableSchemaJson,
-      @JsonProperty("warehouseSource") final InputSourceFactory warehouseSource
+      @JsonProperty("warehouseSource") final InputSourceFactory warehouseSource,
+      @JsonProperty("fileIOImpl") @Nullable final String fileIOImpl,
+      @JsonProperty("fileIOProperties") @Nullable final Map<String, String> fileIOProperties
   )
   {
     this.dataFilePath = dataFilePath;
     this.deleteFiles = deleteFiles;
     this.tableSchemaJson = tableSchemaJson;
     this.warehouseSource = warehouseSource;
+    this.fileIOImpl = fileIOImpl;
+    this.fileIOProperties = fileIOProperties == null ? Collections.emptyMap() : fileIOProperties;
   }
 
   @JsonProperty
@@ -90,6 +98,19 @@ public class IcebergFileTaskInputSource implements InputSource
   public InputSourceFactory getWarehouseSource()
   {
     return warehouseSource;
+  }
+
+  @JsonProperty
+  @Nullable
+  public String getFileIOImpl()
+  {
+    return fileIOImpl;
+  }
+
+  @JsonProperty
+  public Map<String, String> getFileIOProperties()
+  {
+    return fileIOProperties;
   }
 
   @Override
@@ -117,7 +138,9 @@ public class IcebergFileTaskInputSource implements InputSource
         deleteFiles,
         tableSchemaJson,
         warehouseSource,
-        inputRowSchema
+        inputRowSchema,
+        fileIOImpl,
+        fileIOProperties
     );
   }
 }
