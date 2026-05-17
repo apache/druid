@@ -179,7 +179,6 @@ In addition to the standard ingestion metrics (`ingest/events/processed`, `inges
 
 ## Limitations (current release)
 
-- Single-threaded ingestion per task; a future enhancement may add a background `RENEW` thread to extend the broker lock for long-running batches.
 - No supervisor integration; tasks are submitted manually via the Overlord API. A `KafkaShareGroupSupervisor` is planned as a future enhancement.
 - No deduplication cache (at-least-once).
 - Delivery order within a partition is not guaranteed.
