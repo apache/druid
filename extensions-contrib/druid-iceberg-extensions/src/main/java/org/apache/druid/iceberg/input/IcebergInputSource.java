@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.data.input.FilePerSplitHintSpec;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -36,6 +37,7 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -162,6 +164,10 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     if (!isLoaded) {
       retrieveIcebergDatafiles();
     }
+    if (v2TaskInputSources != null) {
+      return v2TaskInputSources.stream()
+                               .map(task -> new InputSplit<>(Collections.singletonList(task.getDataFilePath())));
+    }
     return getDelegateInputSource().createSplits(inputFormat, splitHintSpec);
   }
 
@@ -171,18 +177,33 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     if (!isLoaded) {
       retrieveIcebergDatafiles();
     }
+    if (v2TaskInputSources != null) {
+      return v2TaskInputSources.size();
+    }
     return getDelegateInputSource().estimateNumSplits(inputFormat, splitHintSpec);
   }
 
   @Override
   public InputSource withSplit(InputSplit<List<String>> inputSplit)
   {
+    if (v2TaskInputSources != null) {
+      final String dataFilePath = inputSplit.get().get(0);
+      for (final IcebergFileTaskInputSource task : v2TaskInputSources) {
+        if (dataFilePath.equals(task.getDataFilePath())) {
+          return task;
+        }
+      }
+      throw new UOE("No v2 IcebergFileTaskInputSource found for data file path [%s]", dataFilePath);
+    }
     return getDelegateInputSource().withSplit(inputSplit);
   }
 
   @Override
   public SplitHintSpec getSplitHintSpecOrDefault(@Nullable SplitHintSpec splitHintSpec)
   {
+    if (v2TaskInputSources != null) {
+      return splitHintSpec == null ? FilePerSplitHintSpec.INSTANCE : splitHintSpec;
+    }
     return getDelegateInputSource().getSplitHintSpecOrDefault(splitHintSpec);
   }
 
@@ -496,7 +517,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     @Override
     public InputSource withSplit(InputSplit split)
     {
-      return null;
+      throw new ISE("withSplit called on EmptyInputSource; createSplits returns no splits so this is unreachable in valid flow");
     }
   }
 }

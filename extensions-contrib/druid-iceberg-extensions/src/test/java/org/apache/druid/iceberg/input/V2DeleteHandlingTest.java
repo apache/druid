@@ -23,13 +23,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.FilePerSplitHintSpec;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSourceFactory;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.DeleteFile;
@@ -57,9 +61,11 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Tests for automatic Iceberg v2 delete file detection and application.
@@ -634,6 +640,130 @@ public class V2DeleteHandlingTest
     Assert.assertEquals("Only Widget partition row deleted; Gadget partition unaffected", 1, rows.size());
     Assert.assertEquals("2", rows.get(0).getDimension("order_id").get(0));
     Assert.assertEquals("Gadget", rows.get(0).getDimension("product").get(0));
+  }
+
+  @Test
+  public void testV2CreateSplitsReturnsOneSplitPerDataFile() throws IOException
+  {
+    final Table table = createBaseTable();
+    final DataFile dataFile1 = writeDataFile(table);
+    final DataFile dataFile2 = writeDataFile(table);
+    final DataFile dataFile3 = writeDataFile(table);
+    table.newAppend().appendFile(dataFile1).appendFile(dataFile2).appendFile(dataFile3).commit();
+
+    writePositionalDeleteFor(table, dataFile1, 0L);
+
+    final IcebergInputSource inputSource = newIcebergInputSource();
+    final List<InputSplit<List<String>>> splits = inputSource.createSplits(null, null).collect(Collectors.toList());
+
+    Assert.assertEquals("expected one split per data file", 3, splits.size());
+    final List<String> splitPaths = splits.stream().map(s -> s.get().get(0)).collect(Collectors.toList());
+    Assert.assertTrue(splitPaths.contains(dataFile1.location()));
+    Assert.assertTrue(splitPaths.contains(dataFile2.location()));
+    Assert.assertTrue(splitPaths.contains(dataFile3.location()));
+  }
+
+  @Test
+  public void testV2EstimateNumSplitsMatchesDataFileCount() throws IOException
+  {
+    final Table table = createBaseTable();
+    final DataFile dataFile1 = writeDataFile(table);
+    final DataFile dataFile2 = writeDataFile(table);
+    table.newAppend().appendFile(dataFile1).appendFile(dataFile2).commit();
+    writePositionalDeleteFor(table, dataFile1, 0L);
+
+    final IcebergInputSource inputSource = newIcebergInputSource();
+    Assert.assertEquals(2, inputSource.estimateNumSplits(null, null));
+  }
+
+  @Test
+  public void testV2WithSplitReturnsTaskInputSourceForMatchingDataFile() throws IOException
+  {
+    final Table table = createBaseTable();
+    final DataFile dataFile1 = writeDataFile(table);
+    final DataFile dataFile2 = writeDataFile(table);
+    table.newAppend().appendFile(dataFile1).appendFile(dataFile2).commit();
+    writePositionalDeleteFor(table, dataFile1, 1L);
+
+    final IcebergInputSource inputSource = newIcebergInputSource();
+    inputSource.createSplits(null, null).count();
+
+    final InputSplit<List<String>> splitForFile1 = new InputSplit<>(Collections.singletonList(dataFile1.location()));
+    final InputSource picked = inputSource.withSplit(splitForFile1);
+
+    Assert.assertTrue(picked instanceof IcebergFileTaskInputSource);
+    Assert.assertEquals(dataFile1.location(), ((IcebergFileTaskInputSource) picked).getDataFilePath());
+
+    final List<InputRow> rows = readAll(picked.reader(inputRowSchema, null, temporaryFolder.newFolder()));
+    Assert.assertEquals("dataFile1 has 3 rows minus 1 positional delete", 2, rows.size());
+  }
+
+  @Test
+  public void testV2WithSplitThrowsForUnknownDataFile() throws IOException
+  {
+    final Table table = createBaseTable();
+    final DataFile dataFile = writeDataFile(table);
+    table.newAppend().appendFile(dataFile).commit();
+    writePositionalDeleteFor(table, dataFile, 0L);
+
+    final IcebergInputSource inputSource = newIcebergInputSource();
+    inputSource.createSplits(null, null).count();
+
+    final InputSplit<List<String>> bogus = new InputSplit<>(Collections.singletonList("/does/not/exist.parquet"));
+    Assert.assertThrows(UOE.class, () -> inputSource.withSplit(bogus));
+  }
+
+  @Test
+  public void testV2GetSplitHintSpecOrDefaultIsFilePerSplit() throws IOException
+  {
+    final Table table = createBaseTable();
+    final DataFile dataFile = writeDataFile(table);
+    table.newAppend().appendFile(dataFile).commit();
+    writePositionalDeleteFor(table, dataFile, 0L);
+
+    final IcebergInputSource inputSource = newIcebergInputSource();
+    inputSource.createSplits(null, null).count();
+
+    Assert.assertSame(FilePerSplitHintSpec.INSTANCE, inputSource.getSplitHintSpecOrDefault(null));
+  }
+
+  private IcebergInputSource newIcebergInputSource()
+  {
+    return new IcebergInputSource(
+        TABLE_NAME,
+        NAMESPACE,
+        null,
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        null
+    );
+  }
+
+  private void writePositionalDeleteFor(final Table table, final DataFile dataFile, final long position)
+      throws IOException
+  {
+    final String deletePath = table.location() + "/data/" + UUID.randomUUID() + "-pos-delete.parquet";
+    final OutputFile deleteOut = table.io().newOutputFile(deletePath);
+    final PositionDeleteWriter<GenericRecord> writer = Parquet.writeDeletes(deleteOut)
+                                                              .forTable(table)
+                                                              .createWriterFunc(GenericParquetWriter::create)
+                                                              .rowSchema(tableSchema)
+                                                              .overwrite()
+                                                              .buildPositionWriter();
+    try {
+      final PositionDelete<GenericRecord> d = PositionDelete.create();
+      final GenericRecord row = GenericRecord.create(tableSchema);
+      row.setField("order_id", 0);
+      row.setField("product", "any");
+      row.setField("amount", 0.0);
+      d.set(dataFile.location(), position, row);
+      writer.write(d);
+    }
+    finally {
+      writer.close();
+    }
+    table.newRowDelta().addDeletes(writer.toDeleteFile()).commit();
   }
 
   private DataFile writePartitionedDataFile(
