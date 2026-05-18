@@ -3539,6 +3539,101 @@ when the supervisor's tasks restart, they resume reading from `{"0": 100, "1": 1
   ```
 </details>
 
+### Reset offsets and start a backfill supervisor
+
+Resets the supervisor to the latest available stream offsets and starts a new bounded backfill supervisor to ingest the data in the skipped range.
+
+This endpoint is useful when a supervisor has fallen behind and you want to catch it up to the latest offsets without losing the skipped data. The main supervisor resumes ingesting from the latest offsets, while the backfill supervisor processes the range from the previously checkpointed offsets up to the latest offsets at the time of the reset.
+
+The following requirements must be met before calling this endpoint:
+
+- The supervisor must be a `SeekableStreamSupervisor`.
+- The supervisor's `useEarliestSequenceNumber` property must be `false`.
+- The supervisor context must have `useConcurrentLocks` set to `true` to allow the backfill supervisor's tasks to write concurrently with the main supervisor's tasks.
+- The supervisor must be in a `RUNNING` state so that it can query the latest offsets from the stream.
+
+The backfill supervisor has the same configuration as the source supervisor except for its ID, which takes the form `{supervisorId}_backfill_{randomSuffix}`, and its `boundedStreamConfig`, which is set to the skipped offset range. If `backfillTaskCount` is specified, it overrides the `taskCount` for the backfill supervisor only.
+
+#### URL
+
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/resetOffsetsAndBackfill`
+
+#### Query parameters
+
+| Parameter | Type | Description | Default |
+|---------|---------|---------|---------|
+| `backfillTaskCount` | Integer | Number of parallel tasks for the backfill supervisor. If not specified, inherits `taskCount` from the source supervisor. | None |
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="5" label="200 SUCCESS">
+
+
+*Successfully reset and started backfill supervisor*
+
+</TabItem>
+<TabItem value="6" label="400 BAD REQUEST">
+
+
+*Supervisor does not meet requirements (wrong type, `useEarliestSequenceNumber` is true, `useConcurrentLocks` not enabled, or supervisor not RUNNING)*
+
+</TabItem>
+<TabItem value="7" label="404 NOT FOUND">
+
+
+*Invalid supervisor ID*
+
+</TabItem>
+<TabItem value="8" label="500 SERVER ERROR">
+
+
+*Failed to retrieve stream offsets or serialize the backfill spec*
+
+</TabItem>
+</Tabs>
+
+---
+
+#### Sample request
+
+The following example resets a supervisor named `social_media` and starts a backfill supervisor with 2 tasks.
+
+<Tabs>
+
+<TabItem value="9" label="cURL">
+
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/resetOffsetsAndBackfill?backfillTaskCount=2"
+```
+
+</TabItem>
+<TabItem value="10" label="HTTP">
+
+
+```HTTP
+POST /druid/indexer/v1/supervisor/social_media/resetOffsetsAndBackfill?backfillTaskCount=2 HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
+
+  ```json
+{
+    "id": "social_media",
+    "backfillSupervisorId": "social_media_backfill_abcdefgh"
+}
+  ```
+</details>
+
 ### Terminate a supervisor
 
 Terminates a supervisor and its associated indexing tasks, triggering the publishing of their segments. When you terminate a supervisor, Druid places a tombstone marker in the metadata store to prevent reloading on restart.

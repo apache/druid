@@ -640,6 +640,45 @@ public class SupervisorResource
     );
   }
 
+  @POST
+  @Path("/{id}/resetOffsetsAndBackfill")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response resetOffsetsAndBackfill(
+      @PathParam("id") final String id,
+      @QueryParam("backfillTaskCount") @Nullable final Integer backfillTaskCount
+  )
+  {
+    return handleResetAndBackfill(id, backfillTaskCount);
+  }
+
+  private Response handleResetAndBackfill(final String id, @Nullable final Integer backfillTaskCount)
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          if (!manager.getSupervisorIds().contains(id)) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
+                           .build();
+          }
+          try {
+            Map<String, Object> result = manager.resetSupervisorAndBackfill(id, backfillTaskCount);
+            return Response.ok(result).build();
+          }
+          catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity(ImmutableMap.of("error", e.getMessage()))
+                           .build();
+          }
+          catch (Exception e) {
+            return Response.serverError()
+                           .entity(ImmutableMap.of("error", e.getMessage()))
+                           .build();
+          }
+        }
+    );
+  }
+
   private Response asLeaderWithSupervisorManager(Function<SupervisorManager, Response> f)
   {
     Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();
