@@ -124,12 +124,14 @@ public class WorkerResourceTest
   {
     Worker theWorker = JSON_MAPPER.readValue(cf.getData().forPath(ANNOUNCEMENT_PATH), Worker.class);
     Assert.assertEquals("v1", theWorker.getVersion());
+    Assert.assertFalse(theWorker.isDisabled());
 
     Response res = workerResource.doDisable();
     Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
 
     theWorker = JSON_MAPPER.readValue(cf.getData().forPath(ANNOUNCEMENT_PATH), Worker.class);
     Assert.assertTrue(theWorker.getVersion().isEmpty());
+    Assert.assertTrue(theWorker.isDisabled());
   }
 
   @Test
@@ -140,11 +142,13 @@ public class WorkerResourceTest
     Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
     Worker theWorker = JSON_MAPPER.readValue(cf.getData().forPath(ANNOUNCEMENT_PATH), Worker.class);
     Assert.assertTrue(theWorker.getVersion().isEmpty());
+    Assert.assertTrue(theWorker.isDisabled());
 
     // Enable the worker
     res = workerResource.doEnable();
     Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
     theWorker = JSON_MAPPER.readValue(cf.getData().forPath(ANNOUNCEMENT_PATH), Worker.class);
     Assert.assertEquals("v1", theWorker.getVersion());
+    Assert.assertFalse(theWorker.isDisabled());
   }
 }
