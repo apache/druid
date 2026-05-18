@@ -57,6 +57,8 @@ public class IcebergFileTaskInputSource implements InputSource
   private final InputSourceFactory warehouseSource;
   private final String fileIOImpl;
   private final Map<String, String> fileIOProperties;
+  // TODO https://github.com/apache/druid/issues/19472: extend to ORC/AVRO once iceberg-orc/iceberg-avro deps are added
+  private final String fileFormat;
 
   @JsonCreator
   public IcebergFileTaskInputSource(
@@ -65,7 +67,8 @@ public class IcebergFileTaskInputSource implements InputSource
       @JsonProperty("tableSchemaJson") final String tableSchemaJson,
       @JsonProperty("warehouseSource") final InputSourceFactory warehouseSource,
       @JsonProperty("fileIOImpl") @Nullable final String fileIOImpl,
-      @JsonProperty("fileIOProperties") @Nullable final Map<String, String> fileIOProperties
+      @JsonProperty("fileIOProperties") @Nullable final Map<String, String> fileIOProperties,
+      @JsonProperty("fileFormat") @Nullable final String fileFormat
   )
   {
     this.dataFilePath = dataFilePath;
@@ -74,6 +77,7 @@ public class IcebergFileTaskInputSource implements InputSource
     this.warehouseSource = warehouseSource;
     this.fileIOImpl = fileIOImpl;
     this.fileIOProperties = fileIOProperties == null ? Collections.emptyMap() : fileIOProperties;
+    this.fileFormat = fileFormat != null ? fileFormat : "PARQUET";
   }
 
   @JsonProperty
@@ -113,6 +117,12 @@ public class IcebergFileTaskInputSource implements InputSource
     return fileIOProperties;
   }
 
+  @JsonProperty
+  public String getFileFormat()
+  {
+    return fileFormat;
+  }
+
   @Override
   public boolean isSplittable()
   {
@@ -140,7 +150,8 @@ public class IcebergFileTaskInputSource implements InputSource
         warehouseSource,
         inputRowSchema,
         fileIOImpl,
-        fileIOProperties
+        fileIOProperties,
+        fileFormat
     );
   }
 }
