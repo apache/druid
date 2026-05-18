@@ -20,6 +20,7 @@
 package org.apache.druid.iceberg.input;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergFilter;
@@ -28,6 +29,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.iceberg.FileScanTask;
+import org.apache.iceberg.Table;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
@@ -35,27 +37,28 @@ import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.expressions.Expression;
 import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.io.CloseableIterable;
+import org.apache.iceberg.types.Types;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /*
  * Druid wrapper for an iceberg catalog.
  * The configured catalog is used to load the specified iceberg table and retrieve the underlying live data files upto the latest snapshot.
- * This does not perform any projections on the table yet, therefore all the underlying columns will be retrieved from the data files.
+ * This applies column projections to read only required columns from the data files, reducing data transfer and memory usage.
  */
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = InputFormat.TYPE_PROPERTY)
-public abstract class IcebergCatalog
-{
+public abstract class IcebergCatalog {
   public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
   private static final Logger log = new Logger(IcebergCatalog.class);
 
   public abstract Catalog retrieveCatalog();
 
-  public boolean isCaseSensitive()
-  {
+  public boolean isCaseSensitive() {
     return true;
   }
 
@@ -68,16 +71,17 @@ public abstract class IcebergCatalog
    * @param snapshotTime       Datetime that will be used to fetch the most recent snapshot as of this time
    * @param residualFilterMode Controls how residual filters are handled. When filtering on non-partition
    *                           columns, residual rows may be returned that need row-level filtering.
+   * @param columnsFilter      Column filter used to project the table scan. If null, all columns are read.
    * @return a list of data file paths
    */
   public List<String> extractSnapshotDataFiles(
-      String tableNamespace,
-      String tableName,
-      IcebergFilter icebergFilter,
-      DateTime snapshotTime,
-      ResidualFilterMode residualFilterMode
-  )
-  {
+          String tableNamespace,
+          String tableName,
+          IcebergFilter icebergFilter,
+          DateTime snapshotTime,
+          ResidualFilterMode residualFilterMode,
+          @Nullable ColumnsFilter columnsFilter
+  ) {
     Catalog catalog = retrieveCatalog();
     Namespace namespace = Namespace.of(tableNamespace);
     String tableIdentifier = tableNamespace + "." + tableName;
@@ -88,15 +92,27 @@ public abstract class IcebergCatalog
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
       TableIdentifier icebergTableIdentifier = catalog.listTables(namespace).stream()
-                                                      .filter(tableId -> tableId.toString().equals(tableIdentifier))
-                                                      .findFirst()
-                                                      .orElseThrow(() -> new IAE(
-                                                          " Couldn't retrieve table identifier for '%s'. Please verify that the table exists in the given catalog",
-                                                          tableIdentifier
-                                                      ));
+              .filter(tableId -> tableId.toString().equals(tableIdentifier))
+              .findFirst()
+              .orElseThrow(() -> new IAE(
+                      " Couldn't retrieve table identifier for '%s'. Please verify that the table exists in the given catalog",
+                      tableIdentifier
+              ));
 
       long start = System.currentTimeMillis();
-      TableScan tableScan = catalog.loadTable(icebergTableIdentifier).newScan();
+      Table table = catalog.loadTable(icebergTableIdentifier);
+      TableScan tableScan = table.newScan();
+
+      if (columnsFilter != null) {
+        List<String> projectedColumns = table
+            .schema()
+            .columns()
+            .stream()
+            .map(Types.NestedField::name)
+            .filter(columnsFilter::apply)
+            .collect(Collectors.toList());
+        tableScan = tableScan.select(new ArrayList<>(projectedColumns));
+      }
 
       if (icebergFilter != null) {
         tableScan = icebergFilter.filter(tableScan);
@@ -124,17 +140,17 @@ public abstract class IcebergCatalog
       // Handle residual filter based on mode
       if (detectedResidual != null) {
         String message = StringUtils.format(
-            "Iceberg filter produced residual expression that requires row-level filtering. "
-            + "This typically means the filter is on a non-partition column. "
-            + "Residual rows may be ingested unless filtered by transformSpec. "
-            + "Residual filter: [%s]",
-            detectedResidual
+                "Iceberg filter produced residual expression that requires row-level filtering. "
+                        + "This typically means the filter is on a non-partition column. "
+                        + "Residual rows may be ingested unless filtered by transformSpec. "
+                        + "Residual filter: [%s]",
+                detectedResidual
         );
 
         if (residualFilterMode == ResidualFilterMode.FAIL) {
           throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
-                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                              .build(message);
+                  .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                  .build(message);
         }
         log.warn(message);
       }
