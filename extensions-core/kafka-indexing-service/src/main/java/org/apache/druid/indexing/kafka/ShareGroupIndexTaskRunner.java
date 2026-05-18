@@ -275,9 +275,6 @@ public class ShareGroupIndexTaskRunner
       TaskToolbox toolbox
   ) throws Exception
   {
-    recordSupplier.subscribe(Collections.singleton(ioConfig.getTopic()));
-    driver.startJob(segmentId -> true);
-
     // Share groups manage delivery state on the broker; the Committer is a
     // no-op placeholder required by the appenderator driver contract.
     final Supplier<Committer> committerSupplier = () -> new Committer()
@@ -302,6 +299,8 @@ public class ShareGroupIndexTaskRunner
     boolean appenderatorClosedNormally = false;
 
     try {
+      recordSupplier.subscribe(Collections.singleton(ioConfig.getTopic()));
+      driver.startJob(segmentId -> true);
       while (!task.isStopRequested()) {
 
         final List<OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> records;
