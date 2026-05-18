@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnDescriptor;
+import org.apache.druid.segment.column.ValueType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -49,8 +51,7 @@ class SegmentFileBuilderV10Test
   @Test
   void testOneContainerPerProjection() throws IOException
   {
-    final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = newBaseDir();
 
     // matches the production usage pattern in IndexMergerV10: call startFileGroup then write that projection's
     // columns, then move on to the next projection.
@@ -83,8 +84,7 @@ class SegmentFileBuilderV10Test
   @Test
   void testProjectionNameWithSlashRoutesCorrectly() throws IOException
   {
-    final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = newBaseDir();
 
     final String slashyProjection = "nested/projection";
     final int colCount = 3;
@@ -128,10 +128,156 @@ class SegmentFileBuilderV10Test
   }
 
   @Test
+  void testAddWithoutGroupPrefixThrowsWhenGroupActive() throws IOException
+  {
+    final File baseDir = newBaseDir();
+
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
+      builder.startFileGroup("projA");
+      final File tmp = new File(tempDir, "no-prefix.bin");
+      Files.write(Ints.toByteArray(1), tmp);
+      // file name doesn't start with "projA/", so add must throw
+      Assertions.assertThrows(RuntimeException.class, () -> builder.add("wrong/col0", tmp));
+    }
+  }
+
+  @Test
+  void testAddWithChannelWithoutGroupPrefixThrowsWhenGroupActive() throws IOException
+  {
+    final File baseDir = newBaseDir();
+
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
+      builder.startFileGroup("projA");
+      Assertions.assertThrows(RuntimeException.class, () -> builder.addWithChannel("wrong/col0", 4));
+    }
+  }
+
+  @Test
+  void testAddColumnWithoutGroupPrefixThrowsWhenGroupActive() throws IOException
+  {
+    final File baseDir = newBaseDir();
+
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
+      builder.startFileGroup("projA");
+      Assertions.assertThrows(
+          RuntimeException.class,
+          () -> builder.addColumn("wrong_no_prefix", new ColumnDescriptor.Builder()
+              .setValueType(ValueType.LONG)
+              .build())
+      );
+    }
+  }
+
+  @Test
+  void testAddWithoutPrefixIsAllowedWhenNoGroupActive() throws IOException
+  {
+    final File baseDir = newBaseDir();
+
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
+      // never call startFileGroup; bare names are fine
+      final File tmp = new File(tempDir, "bare.bin");
+      Files.write(Ints.toByteArray(1), tmp);
+      builder.add("col0", tmp);
+    }
+    // success: no exception
+  }
+
+  @Test
+  void testContainerMetadataCarriesFileGroup() throws IOException
+  {
+    final File baseDir = newBaseDir();
+
+    final String[] projections = {"__base", "projA", "projB"};
+    final int colCount = 2;
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
+      for (String projection : projections) {
+        builder.startFileGroup(projection);
+        for (int col = 0; col < colCount; col++) {
+          final String name = projection + "/col" + col;
+          final File tmpFile = new File(tempDir, StringUtils.format("%s-%s.bin", projection, col));
+          Files.write(Ints.toByteArray(name.hashCode()), tmpFile);
+          builder.add(name, tmpFile);
+        }
+      }
+    }
+
+    final File segmentFile = new File(baseDir, IndexIO.V10_FILE_NAME);
+    try (SegmentFileMapperV10 mapper = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER)) {
+      final SegmentFileMetadata metadata = mapper.getSegmentFileMetadata();
+      Assertions.assertEquals(projections.length, metadata.getContainers().size());
+
+      // Each container's fileGroup must equal the group active when it was written. Build the expected list by
+      // walking the files: each container holds files from exactly one group, so the first file's group prefix is
+      // authoritative.
+      for (int ci = 0; ci < metadata.getContainers().size(); ci++) {
+        final int containerIdx = ci;
+        final String expectedGroup = metadata.getFiles().entrySet().stream()
+            .filter(e -> e.getValue().getContainer() == containerIdx)
+            .map(e -> e.getKey().substring(0, e.getKey().indexOf('/')))
+            .findFirst()
+            .orElseThrow();
+        Assertions.assertEquals(
+            expectedGroup,
+            metadata.getContainers().get(ci).getFileGroup(),
+            "container " + ci + " fileGroup mismatch"
+        );
+      }
+    }
+  }
+
+  @Test
+  void testContainerWrittenWithoutStartFileGroupHasNullFileGroup() throws IOException
+  {
+    final File baseDir = newBaseDir();
+
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
+      // never call startFileGroup; the single container should carry fileGroup == null
+      for (int col = 0; col < 3; col++) {
+        final String name = "col" + col;
+        final File tmpFile = new File(tempDir, StringUtils.format("nogroup-%s.bin", col));
+        Files.write(Ints.toByteArray(name.hashCode()), tmpFile);
+        builder.add(name, tmpFile);
+      }
+    }
+
+    final File segmentFile = new File(baseDir, IndexIO.V10_FILE_NAME);
+    try (SegmentFileMapperV10 mapper = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER)) {
+      final SegmentFileMetadata metadata = mapper.getSegmentFileMetadata();
+      Assertions.assertEquals(1, metadata.getContainers().size());
+      Assertions.assertNull(metadata.getContainers().get(0).getFileGroup());
+    }
+  }
+
+  @Test
+  void testStartFileGroupNullClearsCurrentGroup() throws IOException
+  {
+    final File baseDir = newBaseDir();
+
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
+      builder.startFileGroup("first");
+      final File firstFile = new File(tempDir, "first.bin");
+      Files.write(Ints.toByteArray(1), firstFile);
+      builder.add("first/a", firstFile);
+
+      builder.startFileGroup(null);
+      final File noGroupFile = new File(tempDir, "ng.bin");
+      Files.write(Ints.toByteArray(2), noGroupFile);
+      builder.add("ng/a", noGroupFile);
+    }
+
+    final File segmentFile = new File(baseDir, IndexIO.V10_FILE_NAME);
+    try (SegmentFileMapperV10 mapper = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER)) {
+      final SegmentFileMetadata metadata = mapper.getSegmentFileMetadata();
+      Assertions.assertEquals(2, metadata.getContainers().size());
+      Assertions.assertEquals("first", metadata.getContainers().get(0).getFileGroup());
+      Assertions.assertNull(metadata.getContainers().get(1).getFileGroup());
+    }
+  }
+
+  @Test
   void testStartFileGroupWhileWriterInUseThrows() throws IOException
   {
-    final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = newBaseDir();
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       builder.startFileGroup("__base");
@@ -146,8 +292,7 @@ class SegmentFileBuilderV10Test
   void testExternalBuilderAlsoSplitsContainersByProjection() throws IOException
   {
     final String externalName = "external.segment";
-    final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = newBaseDir();
 
     final String[] mainProjections = {"__base", "projA", "projB"};
     final String[] externalProjections = {"extProjX", "extProjY"};
@@ -219,8 +364,7 @@ class SegmentFileBuilderV10Test
     // merged back in at outer-close. Main and external each drive this independently, and since they share baseDir,
     // their delegate file names must not collide.
     final String externalName = "external.segment";
-    final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = newBaseDir();
 
     final byte[] outerBytes = new byte[]{1, 2, 3, 4};
     final byte[] nestedBytes = new byte[]{5, 6, 7, 8};
@@ -261,8 +405,7 @@ class SegmentFileBuilderV10Test
     // while file group "groupA" was active; even if the caller switches to "groupB" before finally closing the nested
     // channel, the delegated bytes must still land in groupA's container, not groupB's. Otherwise the grouping breaks,
     // and files from other groups end up in the same container.
-    final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = newBaseDir();
 
     final byte[] outerBytes = new byte[]{1, 2, 3, 4};
     final byte[] nestedBytes = new byte[]{5, 6, 7, 8};
@@ -310,8 +453,7 @@ class SegmentFileBuilderV10Test
   @Test
   void testUnprefixedFilesShareSingleContainer() throws IOException
   {
-    final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = newBaseDir();
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int i = 0; i < 5; ++i) {
@@ -334,6 +476,13 @@ class SegmentFileBuilderV10Test
     final byte[] got = new byte[expected.length];
     actual.get(got);
     Assertions.assertArrayEquals(expected, got);
+  }
+
+  private File newBaseDir() throws IOException
+  {
+    final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
+    FileUtils.mkdirp(baseDir);
+    return baseDir;
   }
 
   private static void assertNoContainerMixesProjections(SegmentFileMetadata metadata)
