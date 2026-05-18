@@ -107,16 +107,7 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
     );
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
-    final long deadlineMs = System.currentTimeMillis() + 30_000L;
-    while (System.currentTimeMillis() < deadlineMs) {
-      try {
-        cluster.callApi().verifySqlQuery("SELECT COUNT(*) FROM %s", dataSource, String.valueOf(numRecords));
-        break;
-      }
-      catch (AssertionError ignored) {
-        Thread.sleep(500);
-      }
-    }
+    assertRowCountEventually(numRecords);
 
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(task.getId()));
     cluster.callApi().waitForTaskToFinish(task.getId(), overlord.latchableEmitter());
@@ -140,12 +131,9 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
     Assertions.assertEquals(task.getId(), payloadResponse.getTask());
 
     final JsonNode payloadJson = mapper.valueToTree(payloadResponse.getPayload());
-    Assertions.assertEquals("share_group_index", payloadJson.path("type").asText());
-    Assertions.assertEquals(topic, payloadJson.path("spec").path("ioConfig").path("topic").asText());
-    Assertions.assertEquals(
-        "roundtrip-group",
-        payloadJson.path("spec").path("ioConfig").path("groupId").asText()
-    );
+    Assertions.assertEquals("index_kafka_share_group", payloadJson.path("type").asText());
+    Assertions.assertEquals(topic, payloadJson.path("ioConfig").path("topic").asText());
+    Assertions.assertEquals("roundtrip-group", payloadJson.path("ioConfig").path("groupId").asText());
 
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(task.getId()));
     cluster.callApi().waitForTaskToFinish(task.getId(), overlord.latchableEmitter());
@@ -155,9 +143,11 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
   public void test_jsonSubmit_missingRequiredField_isRejected()
   {
     final String malformedJson =
-        "{\"type\":\"share_group_index\","
-        + "\"spec\":{\"dataSchema\":{\"dataSource\":\"" + dataSource + "\"},"
-        + "\"ioConfig\":{}}}";
+        "{\"type\":\"index_kafka_share_group\","
+        + "\"dataSchema\":{\"dataSource\":\"" + dataSource + "\","
+        + "\"timestampSpec\":{\"column\":\"__time\",\"format\":\"auto\"},"
+        + "\"dimensionsSpec\":{}},"
+        + "\"ioConfig\":{\"type\":\"kafka_share_group\"}}";
 
     final Exception ex = Assertions.assertThrows(
         Exception.class,
@@ -177,7 +167,14 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
         topic,
         groupId,
         consumerProps,
-        new CsvInputFormat(List.of(COL_TIMESTAMP, COL_ITEM, COL_VALUE), null, null, false, 0, false),
+        new CsvInputFormat(
+            List.of(COL_TIMESTAMP, COL_ITEM, COL_VALUE),
+            null,
+            null,
+            false,
+            0,
+            false
+        ),
         null
     );
     final DataSchema dataSchema = DataSchema.builder()
@@ -230,6 +227,31 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
         null,
         mapper
     );
+  }
+
+  private void assertRowCountEventually(long expected)
+  {
+    final String expectedStr = String.valueOf(expected);
+    final long deadlineMillis = System.currentTimeMillis() + 30_000L;
+    String last = null;
+    while (System.currentTimeMillis() < deadlineMillis) {
+      try {
+        last = cluster.runSql("SELECT COUNT(*) FROM %s", dataSource);
+        if (expectedStr.equals(last)) {
+          return;
+        }
+      }
+      catch (Exception ignored) {
+      }
+      try {
+        Thread.sleep(250L);
+      }
+      catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
+        break;
+      }
+    }
+    Assertions.fail("Expected row count [" + expectedStr + "] but last result was [" + last + "]");
   }
 
   private List<byte[]> generateRecords(int count)

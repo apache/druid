@@ -231,13 +231,24 @@ public class ShareGroupIndexTaskRunner
         );
     toolbox.addMonitor(metricsMonitor);
 
+    boolean runLoopCompleted = false;
     try (final AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> recordSupplier =
              supplierFactory.apply(ioConfig)) {
       activeSupplier.set(recordSupplier);
-      return runLoop(driver, appenderator, recordSupplier, chunkReader, ioConfig, tuningConfig, toolbox);
+      final TaskStatus status = runLoop(driver, appenderator, recordSupplier, chunkReader, ioConfig, tuningConfig, toolbox);
+      runLoopCompleted = true;
+      return status;
     }
     finally {
       activeSupplier.set(null);
+      if (!runLoopCompleted) {
+        try {
+          appenderator.closeNow();
+        }
+        catch (Exception e) {
+          log.warn(e, "Exception during emergency closeNow() of Appenderator in run(); continuing teardown.");
+        }
+      }
       try {
         toolbox.removeMonitor(metricsMonitor);
       }
