@@ -65,6 +65,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -164,6 +165,33 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Assertions.assertNotNull(runner.tasks);
     Assertions.assertEquals(1, runner.tasks.size());
+  }
+
+  @Test
+  public void test_stop_doesNotShutDownSharedExecutor()
+  {
+    final ThreadPoolExecutor sharedExecutor = new ThreadPoolExecutor(
+        1,
+        1,
+        0L,
+        TimeUnit.MILLISECONDS,
+        new LinkedBlockingQueue<>()
+    );
+    final KubernetesTaskRunner sharedExecutorRunner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter,
+        sharedExecutor,
+        configManager
+    );
+
+    sharedExecutorRunner.stop();
+
+    Assertions.assertFalse(sharedExecutor.isShutdown());
+    sharedExecutor.shutdownNow();
   }
 
   @Test
