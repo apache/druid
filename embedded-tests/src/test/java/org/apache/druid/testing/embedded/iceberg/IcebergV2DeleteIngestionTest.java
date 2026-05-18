@@ -276,7 +276,7 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
 
     final DataWriter<GenericRecord> writer = Parquet.writeData(file)
                                                     .schema(TABLE_SCHEMA)
-                                                    .createWriterFunc(GenericParquetWriter::buildWriter)
+                                                    .createWriterFunc(GenericParquetWriter::create)
                                                     .overwrite()
                                                     .withSpec(table.spec())
                                                     .build();
@@ -313,7 +313,7 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
     final EqualityDeleteWriter<GenericRecord> writer = Parquet.writeDeletes(outputFile)
                                                              .forTable(table)
                                                              .rowSchema(deleteSchema)
-                                                             .createWriterFunc(GenericParquetWriter::buildWriter)
+                                                             .createWriterFunc(GenericParquetWriter::create)
                                                              .overwrite()
                                                              .equalityFieldIds(equalityFieldId)
                                                              .buildEqualityWriter();
@@ -336,7 +336,7 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
 
     final PositionDeleteWriter<GenericRecord> writer = Parquet.writeDeletes(outputFile)
                                                              .forTable(table)
-                                                             .createWriterFunc(GenericParquetWriter::buildWriter)
+                                                             .createWriterFunc(GenericParquetWriter::create)
                                                              .rowSchema(TABLE_SCHEMA)
                                                              .overwrite()
                                                              .buildPositionWriter();
