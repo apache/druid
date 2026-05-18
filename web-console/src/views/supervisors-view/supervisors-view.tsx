@@ -1030,7 +1030,11 @@ export class SupervisorsView extends React.PureComponent<
               status[value]?.payload;
             if (oneOf(original.type, 'kafka', 'kinesis', 'rabbit')) {
               const aggregateLag = supervisorStatusPayload?.aggregateLag;
-              return isNumberLike(aggregateLag) ? formatInteger(aggregateLag) : null;
+              return isNumberLike(aggregateLag) ? (
+                <span data-tooltip="Aggregate lag across all tasks">{`Lag: ${formatInteger(
+                  aggregateLag,
+                )}`}</span>
+              ) : null;
             } else {
               return null;
             }
