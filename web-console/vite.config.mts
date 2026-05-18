@@ -50,7 +50,6 @@ export default defineConfig(({ mode }) => {
         input: 'src/entry.tsx',
         output: {
           entryFileNames: `web-console-${version}.js`,
-          // @ts-expect-error -- Rolldown option, not in Rollup types
           codeSplitting: false,
           assetFileNames: (assetInfo) => {
             if (/\.(woff2?|ttf|eot)$/.test(assetInfo.name || '')) {
