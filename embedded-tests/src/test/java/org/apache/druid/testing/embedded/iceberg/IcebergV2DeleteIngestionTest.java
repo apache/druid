@@ -274,22 +274,23 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
     final String filepath = table.location() + "/data/" + UUID.randomUUID() + ".parquet";
     final OutputFile file = table.io().newOutputFile(filepath);
 
-    try (DataWriter<GenericRecord> writer = Parquet.writeData(file)
-                                                   .schema(TABLE_SCHEMA)
-                                                   .createWriterFunc(GenericParquetWriter::buildWriter)
-                                                   .overwrite()
-                                                   .withSpec(table.spec())
-                                                   .build()) {
+    final DataWriter<GenericRecord> writer = Parquet.writeData(file)
+                                                    .schema(TABLE_SCHEMA)
+                                                    .createWriterFunc(GenericParquetWriter::buildWriter)
+                                                    .overwrite()
+                                                    .withSpec(table.spec())
+                                                    .build();
+    try (DataWriter<GenericRecord> w = writer) {
       for (final ImmutableMap<String, Object> row : rows) {
         final GenericRecord record = GenericRecord.create(TABLE_SCHEMA);
         record.set(0, row.get("event_time"));
         record.set(1, row.get("order_id"));
         record.set(2, row.get("product"));
         record.set(3, row.get("amount"));
-        writer.write(record);
+        w.write(record);
       }
-      return writer.toDataFile();
     }
+    return writer.toDataFile();
   }
 
   private GenericRecord eqDeleteRow(final Schema deleteSchema, final int orderId)
@@ -309,18 +310,19 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
     final String deletePath = table.location() + "/data/" + UUID.randomUUID() + "-eq-delete.parquet";
     final OutputFile outputFile = table.io().newOutputFile(deletePath);
 
-    try (EqualityDeleteWriter<GenericRecord> writer = Parquet.writeDeletes(outputFile)
-                                                            .forTable(table)
-                                                            .rowSchema(deleteSchema)
-                                                            .createWriterFunc(GenericParquetWriter::buildWriter)
-                                                            .overwrite()
-                                                            .equalityFieldIds(equalityFieldId)
-                                                            .buildEqualityWriter()) {
+    final EqualityDeleteWriter<GenericRecord> writer = Parquet.writeDeletes(outputFile)
+                                                             .forTable(table)
+                                                             .rowSchema(deleteSchema)
+                                                             .createWriterFunc(GenericParquetWriter::buildWriter)
+                                                             .overwrite()
+                                                             .equalityFieldIds(equalityFieldId)
+                                                             .buildEqualityWriter();
+    try (EqualityDeleteWriter<GenericRecord> w = writer) {
       for (final GenericRecord row : deleteRows) {
-        writer.write(row);
+        w.write(row);
       }
-      return writer.toDeleteFile();
     }
+    return writer.toDeleteFile();
   }
 
   private DeleteFile writePositionalDeleteFile(
@@ -332,17 +334,18 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
     final String deletePath = table.location() + "/data/" + UUID.randomUUID() + "-pos-delete.parquet";
     final OutputFile outputFile = table.io().newOutputFile(deletePath);
 
-    try (PositionDeleteWriter<GenericRecord> writer = Parquet.writeDeletes(outputFile)
-                                                            .forTable(table)
-                                                            .createWriterFunc(GenericParquetWriter::buildWriter)
-                                                            .rowSchema(TABLE_SCHEMA)
-                                                            .overwrite()
-                                                            .buildPositionWriter()) {
+    final PositionDeleteWriter<GenericRecord> writer = Parquet.writeDeletes(outputFile)
+                                                             .forTable(table)
+                                                             .createWriterFunc(GenericParquetWriter::buildWriter)
+                                                             .rowSchema(TABLE_SCHEMA)
+                                                             .overwrite()
+                                                             .buildPositionWriter();
+    try (PositionDeleteWriter<GenericRecord> w = writer) {
       final PositionDelete<GenericRecord> posDelete = PositionDelete.create();
       posDelete.set(dataFilePath, position, null);
-      writer.write(posDelete);
-      return writer.toDeleteFile();
+      w.write(posDelete);
     }
+    return writer.toDeleteFile();
   }
 
   private void ingestAndVerify(
