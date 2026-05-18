@@ -67,8 +67,8 @@ import java.util.Set;
  *   <li>Stream data file: for each record, skip if position-deleted or equality-deleted</li>
  * </ol>
  *
- * All reads use Iceberg's Parquet reader with {@link GenericParquetReaders} for
- * schema-aware reading. Files are accessed via Hadoop {@link Configuration}.
+ * Only Parquet file format is supported. ORC and Avro require additional dependencies;
+ * see TODO https://github.com/apache/druid/issues/19472.
  */
 public class IcebergNativeRecordReader implements InputSourceReader
 {
@@ -81,6 +81,7 @@ public class IcebergNativeRecordReader implements InputSourceReader
   private final InputRowSchema inputRowSchema;
   private final Configuration hadoopConf;
   private final FileIO fileIO;
+  private final String fileFormat;
 
   public IcebergNativeRecordReader(
       final String dataFilePath,
@@ -89,7 +90,8 @@ public class IcebergNativeRecordReader implements InputSourceReader
       final InputSourceFactory warehouseSource,
       final InputRowSchema inputRowSchema,
       @Nullable final String fileIOImpl,
-      @Nullable final Map<String, String> fileIOProperties
+      @Nullable final Map<String, String> fileIOProperties,
+      final String fileFormat
   )
   {
     this.dataFilePath = dataFilePath;
@@ -99,6 +101,17 @@ public class IcebergNativeRecordReader implements InputSourceReader
     this.inputRowSchema = inputRowSchema;
     this.hadoopConf = new Configuration();
     this.fileIO = buildFileIO(fileIOImpl, fileIOProperties, hadoopConf);
+    this.fileFormat = fileFormat;
+  }
+
+  private void requireParquet(final String filePath)
+  {
+    if (!"PARQUET".equalsIgnoreCase(fileFormat)) {
+      throw new UnsupportedOperationException(
+          "Iceberg file format [" + fileFormat + "] is not supported for file [" + filePath
+          + "]. Only PARQUET is currently supported. See https://github.com/apache/druid/issues/19472"
+      );
+    }
   }
 
   private static FileIO buildFileIO(
@@ -126,6 +139,7 @@ public class IcebergNativeRecordReader implements InputSourceReader
     final List<EqualityDeleteSet> equalityDeleteSets = collectEqualityDeletes(tableSchema);
 
     // Step 3: Stream data file with delete application
+    requireParquet(dataFilePath);
     final InputFile dataInputFile = fileIO.newInputFile(dataFilePath);
     final CloseableIterable<Record> records = Parquet.read(dataInputFile)
                                                      .project(tableSchema)
@@ -230,7 +244,7 @@ public class IcebergNativeRecordReader implements InputSourceReader
       }
 
       final InputFile deleteInputFile = fileIO.newInputFile(deleteFileInfo.getPath());
-
+      requireParquet(deleteFileInfo.getPath());
       try (CloseableIterable<Record> deleteRecords = Parquet.read(deleteInputFile)
                                                             .project(posDeleteSchema)
                                                             .createReaderFunc(
@@ -286,7 +300,7 @@ public class IcebergNativeRecordReader implements InputSourceReader
 
       final Schema deleteSchema = new Schema(equalityFields);
       final InputFile deleteInputFile = fileIO.newInputFile(deleteFileInfo.getPath());
-
+      requireParquet(deleteFileInfo.getPath());
       final Set<List<Object>> deletedKeys = new HashSet<>();
       try (CloseableIterable<Record> deleteRecords = Parquet.read(deleteInputFile)
                                                             .project(deleteSchema)
