@@ -654,6 +654,11 @@ public class SupervisorResource
 
   private Response handleResetAndBackfill(final String id, @Nullable final Integer backfillTaskCount)
   {
+    if (backfillTaskCount != null && backfillTaskCount < 1) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.of("error", "backfillTaskCount must be a positive integer"))
+                     .build();
+    }
     return asLeaderWithSupervisorManager(
         manager -> {
           if (!manager.getSupervisorIds().contains(id)) {

@@ -1440,6 +1440,30 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
     resetAll();
 
+    // 400 - invalid backfillTaskCount (zero)
+    replayAll();
+
+    response = supervisorResource.resetOffsetsAndBackfill("my-id", 0);
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "backfillTaskCount must be a positive integer"),
+        response.getEntity()
+    );
+    verifyAll();
+    resetAll();
+
+    // 400 - invalid backfillTaskCount (negative)
+    replayAll();
+
+    response = supervisorResource.resetOffsetsAndBackfill("my-id", -1);
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "backfillTaskCount must be a positive integer"),
+        response.getEntity()
+    );
+    verifyAll();
+    resetAll();
+
     // 503 - no supervisor manager (not leader)
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
