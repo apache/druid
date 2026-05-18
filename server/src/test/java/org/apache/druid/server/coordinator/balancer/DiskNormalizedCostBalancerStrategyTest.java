@@ -305,6 +305,63 @@ public class DiskNormalizedCostBalancerStrategyTest
   }
 
   @Test
+  public void testNearFullServerIsNotChosenForNewSegmentLoad()
+  {
+    final long maxSize = 10_000_000L;
+    // A: 95% full, 5 same-DS DAY segments -> raw cost = 10 * K (low, few co-located segs)
+    final ServerHolder nearFull = buildServer("A", maxSize, 9_500_000L, 0, 5);
+    // B: 70% full, 20 same-DS DAY segments -> raw cost = 40 * K (higher, more co-located)
+    final ServerHolder partial = buildServer("B", maxSize, 7_000_000L, 100, 20);
+
+    final DataSegment newSegment = getSegment(1000);
+    final List<ServerHolder> servers = new ArrayList<>();
+    servers.add(nearFull);
+    servers.add(partial);
+
+    // CostBalancerStrategy picks A because raw cost 10K < 40K.
+    Assert.assertEquals(
+        "Pure CostBalancerStrategy must pick the near-full server (lower raw cost)",
+        "A",
+        newCostStrategy().findServersToLoadSegment(newSegment, servers).next().getServer().getName()
+    );
+
+    // DiskNormalized: A_norm = 10K / 0.05 = 200K, B_norm = 40K / 0.30 = 133K -> B wins.
+    Assert.assertEquals(
+        "DiskNormalized must prefer the emptier server despite its higher raw cost",
+        "B",
+        newDiskNormalizedStrategy().findServersToLoadSegment(newSegment, servers).next().getServer().getName()
+    );
+  }
+
+  @Test
+  public void testNearFullServerIsNotChosenAsMoveDestination()
+  {
+    final long maxSize = 10_000_000L;
+    // SOURCE: 70% full, 20 same-DS DAY segments; segmentToMove is one of them.
+    final ServerHolder source = buildServer("SOURCE", maxSize, 7_000_000L, 0, 20);
+    // DEST: 95% full, 5 same-DS DAY segments -> raw cost 10K < SOURCE's 38K.
+    final ServerHolder nearFullDest = buildServer("DEST", maxSize, 9_500_000L, 100, 5);
+
+    final DataSegment segmentToMove = getSegment(0);
+    final List<ServerHolder> servers = new ArrayList<>();
+    servers.add(source);
+    servers.add(nearFullDest);
+
+    // CostBalancerStrategy: DEST raw cost (10K) < SOURCE raw cost (38K) -> recommends the move.
+    final ServerHolder costResult =
+        newCostStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers);
+    Assert.assertNotNull("CostBalancerStrategy must recommend moving to the near-full DEST", costResult);
+    Assert.assertEquals("DEST", costResult.getServer().getName());
+
+    // DiskNormalized: DEST_norm = 10K / 0.05 = 200K > SOURCE_norm = 38K / 0.30 * 0.95 ≈ 120K.
+    // Near-full DEST is too expensive after normalization -> no move.
+    Assert.assertNull(
+        "DiskNormalized must block the move to the near-full server",
+        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers)
+    );
+  }
+
+  @Test
   public void testRejectsInvalidThreshold()
   {
     try {
