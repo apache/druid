@@ -1380,6 +1380,100 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
+  public void testResetOffsetsAndBackfill()
+  {
+    // 200 - success
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(ImmutableSet.of("my-id"));
+    EasyMock.expect(supervisorManager.resetSupervisorAndBackfill("my-id", null))
+            .andReturn(ImmutableMap.of("id", "my-id", "backfillSupervisorId", "my-id_backfill_abcdefgh"));
+    replayAll();
+
+    Response response = supervisorResource.resetOffsetsAndBackfill("my-id", null);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("id", "my-id", "backfillSupervisorId", "my-id_backfill_abcdefgh"),
+        response.getEntity()
+    );
+    verifyAll();
+    resetAll();
+
+    // 404 - supervisor does not exist
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(ImmutableSet.of());
+    replayAll();
+
+    response = supervisorResource.resetOffsetsAndBackfill("my-id", null);
+    Assert.assertEquals(404, response.getStatus());
+    verifyAll();
+    resetAll();
+
+    // 400 - IAE (e.g. supervisor not running)
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(ImmutableSet.of("my-id"));
+    EasyMock.expect(supervisorManager.resetSupervisorAndBackfill("my-id", null))
+            .andThrow(new IllegalArgumentException("Supervisor[my-id] must be in a RUNNING state"));
+    replayAll();
+
+    response = supervisorResource.resetOffsetsAndBackfill("my-id", null);
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "Supervisor[my-id] must be in a RUNNING state"),
+        response.getEntity()
+    );
+    verifyAll();
+    resetAll();
+
+    // 500 - ISE (e.g. failed to retrieve offsets)
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(ImmutableSet.of("my-id"));
+    EasyMock.expect(supervisorManager.resetSupervisorAndBackfill("my-id", null))
+            .andThrow(new IllegalStateException("Failed to get latest offsets from stream"));
+    replayAll();
+
+    response = supervisorResource.resetOffsetsAndBackfill("my-id", null);
+    Assert.assertEquals(500, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "Failed to get latest offsets from stream"),
+        response.getEntity()
+    );
+    verifyAll();
+    resetAll();
+
+    // 400 - invalid backfillTaskCount (zero)
+    replayAll();
+
+    response = supervisorResource.resetOffsetsAndBackfill("my-id", 0);
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "backfillTaskCount must be a positive integer"),
+        response.getEntity()
+    );
+    verifyAll();
+    resetAll();
+
+    // 400 - invalid backfillTaskCount (negative)
+    replayAll();
+
+    response = supervisorResource.resetOffsetsAndBackfill("my-id", -1);
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "backfillTaskCount must be a positive integer"),
+        response.getEntity()
+    );
+    verifyAll();
+    resetAll();
+
+    // 503 - no supervisor manager (not leader)
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
+    replayAll();
+
+    response = supervisorResource.resetOffsetsAndBackfill("my-id", null);
+    Assert.assertEquals(503, response.getStatus());
+    verifyAll();
+  }
+
+  @Test
   public void testNoopSupervisorSpecSerde() throws Exception
   {
     ObjectMapper mapper = new ObjectMapper();

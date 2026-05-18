@@ -21,11 +21,14 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
@@ -35,8 +38,11 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -391,6 +397,117 @@ public class SupervisorManager implements SupervisorStatsProvider
       autoscaler.reset();
     }
     return true;
+  }
+
+  /**
+   * Resets a supervisor to the latest stream offsets and starts a bounded backfill supervisor to
+   * process the skipped range from the previously checkpointed offsets up to the latest offsets.
+   *
+   * @param id               supervisor ID
+   * @param backfillTaskCount number of tasks for the backfill supervisor, or null to inherit from the source spec
+   * @return map with {@code "id"} (the original supervisor ID) and {@code "backfillSupervisorId"}
+   * @throws IllegalArgumentException if the supervisor is not a {@link SeekableStreamSupervisor},
+   *                                  if {@code useEarliestSequenceNumber} is true,
+   *                                  if {@code useConcurrentLocks} is not set to true in the supervisor context,
+   *                                  or if the supervisor is not in a RUNNING state
+   * @throws IllegalStateException    if the latest or checkpointed offsets cannot be retrieved,
+   *                                  or if the backfill spec cannot be serialized
+   */
+  public Map<String, Object> resetSupervisorAndBackfill(String id, @Nullable Integer backfillTaskCount)
+  {
+    Preconditions.checkState(started, "SupervisorManager not started");
+    Preconditions.checkNotNull(id, "id");
+
+    Pair<Supervisor, SupervisorSpec> supervisorPair = supervisors.get(id);
+    if (!(supervisorPair.lhs instanceof SeekableStreamSupervisor)) {
+      throw new IAE("Supervisor[%s] is not a SeekableStreamSupervisor", id);
+    }
+    SeekableStreamSupervisor streamSupervisor = (SeekableStreamSupervisor) supervisorPair.lhs;
+    SeekableStreamSupervisorSpec streamSpec = (SeekableStreamSupervisorSpec) supervisorPair.rhs;
+
+    // Verify useEarliestOffset is false
+    if (streamSupervisor.getIoConfig().isUseEarliestSequenceNumber()) {
+      throw new IAE("Reset with skipped offsets is not supported when useEarliestOffset is true.");
+    }
+
+    // Verify useConcurrentLocks is enabled
+    final Map<String, Object> context = streamSpec.getContext();
+    if (context == null || !Boolean.TRUE.equals(context.get("useConcurrentLocks"))) {
+      throw new IAE(
+          "Backfill tasks require 'useConcurrentLocks' to be set to true in the supervisor context to allow concurrent writes with the main supervisor tasks"
+      );
+    }
+
+    // We need an active recordSupplier to query the latest offsets from the stream
+    if (supervisorPair.lhs.getState() != SupervisorStateManager.BasicState.RUNNING) {
+      throw new IAE("Supervisor[%s] must be in a RUNNING state to perform a reset and backfill", id);
+    }
+
+    log.info("Capturing latest offsets from stream for supervisor[%s]", id);
+    streamSupervisor.updatePartitionLagFromStream();
+    Map<?, ?> endOffsets = streamSupervisor.getLatestSequencesFromStream();
+
+    log.info("Capturing checkpointed offsets for supervisor[%s]", id);
+    Map<?, ?> startOffsets = streamSupervisor.getOffsetsFromMetadataStorage();
+
+    // Validate that we successfully retrieved offsets
+    if (endOffsets == null || endOffsets.isEmpty()) {
+      throw new ISE("Skipping reset: Failed to get latest offsets from stream for supervisor[%s]", id);
+    }
+    if (startOffsets == null || startOffsets.isEmpty()) {
+      throw new ISE("Skipping reset: Failed to get checkpointed offsets for supervisor[%s]", id);
+    }
+
+    log.info("Resetting supervisor[%s] metadata to latest offsets", id);
+    DataSourceMetadata resetMetadata = streamSupervisor.createDataSourceMetaDataForReset(
+        streamSupervisor.getIoConfig().getStream(),
+        endOffsets
+    );
+
+    streamSupervisor.resetOffsets(resetMetadata);
+
+    // Reset autoscaler if present
+    SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
+    if (autoscaler != null) {
+      autoscaler.reset();
+    }
+
+    String backfillSupervisorId = IdUtils.getRandomIdWithPrefix(id + "_backfill");
+
+    try {
+      Map<String, Object> normalizedStartOffsets = jsonMapper.readValue(jsonMapper.writeValueAsString(startOffsets), Map.class);
+      Map<String, Object> normalizedEndOffsets = jsonMapper.readValue(jsonMapper.writeValueAsString(endOffsets), Map.class);
+      BoundedStreamConfig boundedStreamConfig = new BoundedStreamConfig(normalizedStartOffsets, normalizedEndOffsets);
+      SupervisorSpec backfillSpec = createBackfillSpec(streamSpec, backfillSupervisorId, boundedStreamConfig, backfillTaskCount);
+      createOrUpdateAndStartSupervisor(backfillSpec);
+    }
+    catch (JsonProcessingException e) {
+      throw new ISE(e, "Failed to create backfill supervisor spec for supervisor[%s]", id);
+    }
+
+    log.info("Started backfill supervisor[%s] for supervisor[%s]", backfillSupervisorId, id);
+
+    return ImmutableMap.of(
+        "id", id,
+        "backfillSupervisorId", backfillSupervisorId
+    );
+  }
+
+  SupervisorSpec createBackfillSpec(
+      SeekableStreamSupervisorSpec sourceSpec,
+      String backfillSupervisorId,
+      BoundedStreamConfig boundedStreamConfig,
+      @Nullable Integer backfillTaskCount
+  ) throws JsonProcessingException
+  {
+    ObjectNode specNode = jsonMapper.valueToTree(sourceSpec);
+    specNode.put("id", backfillSupervisorId);
+    ObjectNode ioConfigNode = (ObjectNode) specNode.path("spec").path("ioConfig");
+    ioConfigNode.set("boundedStreamConfig", jsonMapper.valueToTree(boundedStreamConfig));
+    if (backfillTaskCount != null) {
+      ioConfigNode.put("taskCount", backfillTaskCount);
+    }
+    return jsonMapper.treeToValue(specNode, SupervisorSpec.class);
   }
 
   public boolean checkPointDataSourceMetadata(
