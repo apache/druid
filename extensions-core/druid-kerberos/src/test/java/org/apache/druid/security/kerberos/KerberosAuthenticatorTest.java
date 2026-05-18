@@ -21,6 +21,8 @@ package org.apache.druid.security.kerberos;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.hadoop.security.authentication.server.AuthenticationToken;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -97,5 +99,27 @@ public class KerberosAuthenticatorTest
         "Exception message should mention 'is not set'",
         exception.getMessage().contains("is not set")
     );
+  }
+
+  @Test
+  public void testCreateAuthenticationResultUsesShortName()
+  {
+    KerberosAuthenticator authenticator = new KerberosAuthenticator(
+        TEST_SERVER_PRINCIPAL,
+        TEST_SERVER_KEYTAB,
+        TEST_AUTH_TO_LOCAL,
+        TEST_COOKIE_SECRET,
+        TEST_AUTHORIZER_NAME,
+        TEST_NAME,
+        createTestNode()
+    );
+
+    AuthenticationToken token = new AuthenticationToken("druid", "druid@EXAMPLE.COM", "kerberos");
+
+    AuthenticationResult result = authenticator.createAuthenticationResult(token);
+
+    Assert.assertEquals("druid", result.getIdentity());
+    Assert.assertEquals(TEST_AUTHORIZER_NAME, result.getAuthorizerName());
+    Assert.assertEquals(TEST_NAME, result.getAuthenticatedBy());
   }
 }
