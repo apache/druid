@@ -228,14 +228,42 @@ public class Grouping
     // Remove literal dimensions that did not appear in the projection. This is useful for queries
     // like "SELECT COUNT(*) FROM tbl GROUP BY 'dummy'" which some tools can generate, and for which we don't
     // actually want to include a dimension 'dummy'.
+    //
+    // However, non-literal dimensions (column references) used in any GROUPING SET should not be dropped,
+    // even if they are not in the projection. This ensures correct NULL value formatting.
+    // See: https://github.com/apache/druid/issues/13204
     final ImmutableBitSet aggregateProjectBits = RelOptUtil.InputFinder.bits(project.getProjects(), null);
     final int[] newDimIndexes = new int[dimensions.size()];
     boolean droppedDimensions = false;
 
+    // Collect all dimension indices referenced in any non-empty subtotal, but only when the subtotals
+    // spec has real effect (i.e. multiple grouping sets). A plain GROUP BY with a single group produces
+    // subtotals = [[0, 1, ...]] which has no effect and must not prevent literal dimensions from being dropped.
+    // See: https://github.com/apache/druid/issues/13204
+    final Set<Integer> dimensionsInSubtotals = new HashSet<>();
+    if (subtotals.hasEffect(dimensions.stream()
+                                      .map(DimensionExpression::toDimensionSpec)
+                                      .collect(Collectors.toList()))) {
+      for (IntList subtotal : subtotals.getSubtotals()) {
+        if (!subtotal.isEmpty()) {
+          for (int dimIndex : subtotal) {
+            dimensionsInSubtotals.add(dimIndex);
+          }
+        }
+      }
+    }
+
     for (int i = 0; i < dimensions.size(); i++) {
       final DimensionExpression dimension = dimensions.get(i);
-      if (plannerContext.parseExpression(dimension.getDruidExpression().getExpression()).isLiteral()
-          && !aggregateProjectBits.get(i)) {
+      final boolean isLiteral = plannerContext.parseExpression(
+          dimension.getDruidExpression().getExpression()
+      ).isLiteral();
+      final boolean isUsedInSubtotals = dimensionsInSubtotals.contains(i);
+
+      // Drop if it's a literal AND not in projection AND not used in any grouping set.
+      // Non-literal dimensions referenced in a GROUPING SET must be preserved so that
+      // subtotals which omit them correctly emit null.
+      if (isLiteral && !aggregateProjectBits.get(i) && !isUsedInSubtotals) {
         droppedDimensions = true;
         newDimIndexes[i] = -1;
       } else {
