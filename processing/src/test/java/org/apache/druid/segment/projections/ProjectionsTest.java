@@ -547,6 +547,44 @@ class ProjectionsTest
     Assertions.assertEquals(expected, projectionMatch);
   }
 
+  private static RowSignature sig(String name, ColumnType type)
+  {
+    return RowSignature.builder().add(name, type).build();
+  }
+
+  @Test
+  void testGetClusterGroupSegmentInternalFileName()
+  {
+    // Smoosh layout: __base$<id0>_<id1>...<idK>/<col>. The IDs encode the group's clustering identity via the
+    // summary's per-column dictionaries.
+    Assertions.assertEquals(
+        "__base$0/tenant",
+        Projections.getClusterGroupSegmentInternalFileName(List.of(0), "tenant")
+    );
+    Assertions.assertEquals(
+        "__base$5/__time",
+        Projections.getClusterGroupSegmentInternalFileName(List.of(5), "__time")
+    );
+    Assertions.assertEquals(
+        "__base$0_1_3/__time",
+        Projections.getClusterGroupSegmentInternalFileName(List.of(0, 1, 3), "__time")
+    );
+    Assertions.assertEquals("__base$42/", Projections.getClusterGroupSegmentInternalFilePrefix(List.of(42)));
+    Assertions.assertEquals("__base$1_2/", Projections.getClusterGroupSegmentInternalFilePrefix(List.of(1, 2)));
+  }
+
+  @Test
+  void testIsAllowedClusteringType()
+  {
+    Assertions.assertTrue(Projections.isAllowedClusteringType(ColumnType.STRING));
+    Assertions.assertTrue(Projections.isAllowedClusteringType(ColumnType.LONG));
+    Assertions.assertTrue(Projections.isAllowedClusteringType(ColumnType.DOUBLE));
+    Assertions.assertTrue(Projections.isAllowedClusteringType(ColumnType.FLOAT));
+    Assertions.assertFalse(Projections.isAllowedClusteringType(null));
+    Assertions.assertFalse(Projections.isAllowedClusteringType(ColumnType.STRING_ARRAY));
+    Assertions.assertFalse(Projections.isAllowedClusteringType(ColumnType.UNKNOWN_COMPLEX));
+  }
+
   private static class RowSignatureChecker implements Projections.PhysicalColumnChecker
   {
     private final RowSignature rowSignature;
