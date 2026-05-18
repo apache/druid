@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Icon, Intent, Menu, MenuItem, Popover, Position, Tag } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuItem, Popover, Position, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import * as JSONBig from 'json-bigint-native';
 import memoize from 'memoize-one';
@@ -102,7 +102,7 @@ const SUPERVISOR_TABLE_COLUMNS: TableColumnSelectorColumn[] = [
   'Status',
   'Configured tasks',
   { text: 'Running tasks', label: 'status API' },
-  { text: 'Aggregate lag', label: 'status API' },
+  { text: 'Details', label: 'status API' },
   { text: 'Stats', label: 'stats API' },
   { text: 'Recent errors', label: 'status API' },
 ];
@@ -302,7 +302,9 @@ export class SupervisorsView extends React.PureComponent<
             '  "type",',
             '  "source",',
             `  CASE WHEN "suspended" = 0 THEN "detailed_state" ELSE 'SUSPENDED' END AS "detailed_state",`,
-            visibleColumns.shown('Configured tasks') ? '  "spec",' : undefined,
+            visibleColumns.shown('Configured tasks') || visibleColumns.shown('Details')
+              ? '  "spec",'
+              : undefined,
             '  "suspended" = 1 AS "suspended"',
             'FROM "sys"."supervisors")',
             'SELECT *',
@@ -382,7 +384,7 @@ export class SupervisorsView extends React.PureComponent<
         }
 
         if (capabilities.hasOverlordAccess()) {
-          if (visibleColumns.shown('Running tasks', 'Aggregate lag', 'Recent errors')) {
+          if (visibleColumns.shown('Running tasks', 'Details', 'Recent errors')) {
             auxiliaryQueries.push(
               ...supervisors.map(
                 (supervisor): AuxiliaryQueryFn<SupervisorsWithAuxiliaryInfo> =>
@@ -526,7 +528,7 @@ export class SupervisorsView extends React.PureComponent<
     const { goToView, goToStreamingDataLoader } = this.props;
 
     const actions: BasicAction[] = [];
-    if (oneOf(type, 'kafka', 'kinesis')) {
+    if (oneOf(type, 'kafka', 'kinesis', 'rabbit')) {
       actions.push(
         {
           icon: IconNames.MULTI_SELECT,
@@ -955,20 +957,23 @@ export class SupervisorsView extends React.PureComponent<
             if (!value) return null;
             const taskCount = deepGet(value, 'spec.ioConfig.taskCount');
             const replicas = deepGet(value, 'spec.ioConfig.replicas');
-            if (typeof taskCount !== 'number' || typeof replicas !== 'number') return null;
-            return (
-              <div>
-                <div>{formatInteger(taskCount * replicas)}</div>
-                <div className="detail-line">
-                  {replicas === 1
-                    ? '(no replication)'
-                    : `(${pluralIfNeeded(taskCount, 'task')} × ${pluralIfNeeded(
-                        replicas,
-                        'replica',
-                      )})`}
+            if (typeof taskCount === 'number' && typeof replicas === 'number') {
+              return (
+                <div>
+                  <div>{formatInteger(taskCount * replicas)}</div>
+                  <div className="detail-line">
+                    {replicas === 1
+                      ? '(no replication)'
+                      : `(${pluralIfNeeded(taskCount, 'task')} × ${pluralIfNeeded(
+                          replicas,
+                          'replica',
+                        )})`}
+                  </div>
                 </div>
-              </div>
-            );
+              );
+            }
+
+            return null;
           },
           show: visibleColumns.shown('Configured tasks'),
         },
@@ -1011,17 +1016,24 @@ export class SupervisorsView extends React.PureComponent<
           show: visibleColumns.shown('Running tasks'),
         },
         {
-          Header: 'Aggregate lag',
+          Header: 'Details',
+          id: 'details',
           accessor: 'supervisor_id',
-          width: 200,
+          width: 250,
           filterable: false,
           sortable: false,
           className: 'padded',
-          show: visibleColumns.shown('Aggregate lag'),
-          Cell: ({ value }) => {
+          show: visibleColumns.shown('Details'),
+          Cell: ({ value, original }) => {
             const status = useContext(StatusContext);
-            const aggregateLag = status[value]?.payload?.aggregateLag;
-            return isNumberLike(aggregateLag) ? formatInteger(aggregateLag) : null;
+            const supervisorStatusPayload: SupervisorStatus['payload'] | undefined =
+              status[value]?.payload;
+            if (oneOf(original.type, 'kafka', 'kinesis', 'rabbit')) {
+              const aggregateLag = supervisorStatusPayload?.aggregateLag;
+              return isNumberLike(aggregateLag) ? formatInteger(aggregateLag) : null;
+            } else {
+              return null;
+            }
           },
         },
         {
@@ -1102,6 +1114,7 @@ export class SupervisorsView extends React.PureComponent<
         },
         {
           Header: 'Recent errors',
+          id: 'recent_errors',
           accessor: 'supervisor_id',
           width: 150,
           filterable: false,
@@ -1162,11 +1175,6 @@ export class SupervisorsView extends React.PureComponent<
               }}
             />
           )}
-          <MenuItem
-            icon={IconNames.MANUALLY_ENTERED_DATA}
-            text="Submit JSON supervisor"
-            onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
-          />
           <MenuItem
             icon={IconNames.PLAY}
             text="Resume all supervisors"
@@ -1288,6 +1296,20 @@ export class SupervisorsView extends React.PureComponent<
               this.supervisorQueryManager.rerunLastQuery(auto);
             }}
           />
+          <Popover
+            position={Position.BOTTOM_LEFT}
+            content={
+              <Menu>
+                <MenuItem
+                  icon={IconNames.MANUALLY_ENTERED_DATA}
+                  text="Submit JSON supervisor"
+                  onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
+                />
+              </Menu>
+            }
+          >
+            <Button icon={IconNames.PLUS} text="Create" />
+          </Popover>
           {this.renderBulkSupervisorActions()}
           <TableColumnSelector
             columns={SUPERVISOR_TABLE_COLUMNS}
