@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.iceberg.FileScanTask;
+import org.apache.iceberg.Table;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
@@ -37,8 +38,11 @@ import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.io.CloseableIterable;
 import org.joda.time.DateTime;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /*
  * Druid wrapper for an iceberg catalog.
@@ -152,5 +156,170 @@ public abstract class IcebergCatalog
       Thread.currentThread().setContextClassLoader(currCtxClassloader);
     }
     return dataFilePaths;
+  }
+
+  /**
+   * Result container for a file scan that preserves the Table reference and
+   * individual FileScanTasks with their associated delete files.
+   */
+  public static class FileScanResult
+  {
+    private final Table table;
+    private final List<FileScanTask> fileScanTasks;
+    private final boolean hasDeleteFiles;
+    private final String fileIOImpl;
+    private final Map<String, String> fileIOProperties;
+
+    FileScanResult(
+        final Table table,
+        final List<FileScanTask> fileScanTasks,
+        final boolean hasDeleteFiles,
+        final String fileIOImpl,
+        final Map<String, String> fileIOProperties
+    )
+    {
+      this.table = table;
+      this.fileScanTasks = fileScanTasks;
+      this.hasDeleteFiles = hasDeleteFiles;
+      this.fileIOImpl = fileIOImpl;
+      this.fileIOProperties = fileIOProperties;
+    }
+
+    public Table getTable()
+    {
+      return table;
+    }
+
+    public List<FileScanTask> getFileScanTasks()
+    {
+      return fileScanTasks;
+    }
+
+    public boolean hasDeleteFiles()
+    {
+      return hasDeleteFiles;
+    }
+
+    public String getFileIOImpl()
+    {
+      return fileIOImpl;
+    }
+
+    public Map<String, String> getFileIOProperties()
+    {
+      return fileIOProperties;
+    }
+  }
+
+  /**
+   * Scan the iceberg table and return FileScanTasks with their delete file metadata intact.
+   * This is used when v2 delete handling is enabled, allowing the caller to apply deletes
+   * via Iceberg's native reader stack rather than just extracting raw file paths.
+   *
+   * @param tableNamespace     The catalog namespace under which the table is defined
+   * @param tableName          The iceberg table name
+   * @param icebergFilter      The iceberg filter to apply for partition pruning
+   * @param snapshotTime       Datetime for snapshot time-travel (null for latest)
+   * @param residualFilterMode Controls how residual filters are handled
+   * @return a FileScanResult containing the table, tasks, and delete file presence flag
+   */
+  public FileScanResult extractFileScanTasks(
+      final String tableNamespace,
+      final String tableName,
+      final IcebergFilter icebergFilter,
+      final DateTime snapshotTime,
+      final ResidualFilterMode residualFilterMode
+  )
+  {
+    final Catalog catalog = retrieveCatalog();
+    final Namespace namespace = Namespace.of(tableNamespace);
+    final String tableIdentifier = tableNamespace + "." + tableName;
+
+    final ClassLoader currCtxClassloader = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      final TableIdentifier icebergTableIdentifier = catalog.listTables(namespace).stream()
+                                                            .filter(tableId -> tableId.toString().equals(tableIdentifier))
+                                                            .findFirst()
+                                                            .orElseThrow(() -> new IAE(
+                                                                " Couldn't retrieve table identifier for '%s'. "
+                                                                + "Please verify that the table exists in the given catalog",
+                                                                tableIdentifier
+                                                            ));
+
+      final long start = System.currentTimeMillis();
+      final Table table = catalog.loadTable(icebergTableIdentifier);
+      TableScan tableScan = table.newScan();
+
+      if (icebergFilter != null) {
+        tableScan = icebergFilter.filter(tableScan);
+      }
+      if (snapshotTime != null) {
+        tableScan = tableScan.asOfTime(snapshotTime.getMillis());
+      }
+      tableScan = tableScan.caseSensitive(isCaseSensitive());
+
+      final List<FileScanTask> fileScanTasks = new ArrayList<>();
+      boolean hasDeleteFiles = false;
+      Expression detectedResidual = null;
+
+      try (CloseableIterable<FileScanTask> tasks = tableScan.planFiles()) {
+        for (final FileScanTask task : tasks) {
+          fileScanTasks.add(task);
+
+          if (!hasDeleteFiles && !task.deletes().isEmpty()) {
+            hasDeleteFiles = true;
+          }
+
+          if (detectedResidual == null) {
+            final Expression residual = task.residual();
+            if (residual != null && !residual.equals(Expressions.alwaysTrue())) {
+              detectedResidual = residual;
+            }
+          }
+        }
+      }
+      catch (IOException e) {
+        throw new RE(e, "Failed to plan files for iceberg table [%s]", tableIdentifier);
+      }
+
+      if (detectedResidual != null) {
+        final String message = StringUtils.format(
+            "Iceberg filter produced residual expression that requires row-level filtering. "
+            + "This typically means the filter is on a non-partition column. "
+            + "Residual rows may be ingested unless filtered by transformSpec. "
+            + "Residual filter: [%s]",
+            detectedResidual
+        );
+
+        if (residualFilterMode == ResidualFilterMode.FAIL) {
+          throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                              .build(message);
+        }
+        log.warn(message);
+      }
+
+      final long duration = System.currentTimeMillis() - start;
+      log.info(
+          "File scan task extraction took [%d ms] for [%d] tasks, hasDeleteFiles=[%s]",
+          duration,
+          fileScanTasks.size(),
+          hasDeleteFiles
+      );
+
+      final String fileIOImpl = table.io().getClass().getName();
+      final Map<String, String> fileIOProperties = new HashMap<>(table.io().properties());
+      return new FileScanResult(table, fileScanTasks, hasDeleteFiles, fileIOImpl, fileIOProperties);
+    }
+    catch (DruidException e) {
+      throw e;
+    }
+    catch (Exception e) {
+      throw new RE(e, "Failed to load iceberg table with identifier [%s]", tableIdentifier);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxClassloader);
+    }
   }
 }
