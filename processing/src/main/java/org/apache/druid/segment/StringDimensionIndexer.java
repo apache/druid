@@ -108,7 +108,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
     if (columnFormatSpec != null) {
       return new StringDictionaryEncodedColumnFormat(
           hasMultipleValues,
-          false,
+          dimLookup.getIdForNull() != DimensionDictionary.ABSENT_VALUE_ID,
           hasBitmapIndexes,
           hasSpatialIndexes,
           columnFormatSpec
