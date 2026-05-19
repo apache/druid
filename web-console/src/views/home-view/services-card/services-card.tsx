@@ -67,6 +67,7 @@ export const ServicesCard = React.memo(function ServicesCard(props: ServicesCard
           : [];
 
         return {
+          broker: services.filter((s: any) => s.type === 'broker').length,
           historical: services.filter((s: any) => s.type === 'historical').length,
           middle_manager: middleManager.length,
           peon: services.filter((s: any) => s.type === 'indexer-executor').length,
