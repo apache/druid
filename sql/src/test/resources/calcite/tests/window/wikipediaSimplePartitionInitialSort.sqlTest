@@ -24,8 +24,8 @@ expectedOperators:
     processor:
       type: "composing"
       processors:
-        - { "type": "first", "inputColumn": "a0", "outputColumn": "w1" }
-        - { "type": "last", "inputColumn": "a0", "outputColumn": "w2" }
+        - { "type": "first", "inputColumn": "a0", "outputColumn": "w1", "frame": { "type": "rows" } }
+        - { "type": "last", "inputColumn": "a0", "outputColumn": "w2", "frame": { "type": "rows" } }
         - { "type": "percentile", "outputColumn": "w3", "numBuckets": 3 }
         - type: "framedAgg"
           frame: { type: "rows" }
