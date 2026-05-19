@@ -2650,3 +2650,15 @@ nginx
 
 - ../docs/development/extensions-core/s3.md
 NIO
+
+- ../docs/ingestion/kafka-share-group-ingestion.md
+KIP
+KIP-932
+appenderator
+isPersistRequired
+ACK
+rebalancing
+deduplication
+Testcontainers
+30-60s
+E2E

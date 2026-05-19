@@ -41,9 +41,13 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Abstraction for parsing stream data which internally uses {@link org.apache.druid.data.input.InputEntityReader}.
+ * Parses one stream record's worth of {@link ByteEntity} chunks into zero-or-more
+ * {@link InputRow}s, honouring the configured {@link InputRowFilter},
+ * {@link RowIngestionMeters}, and {@link ParseExceptionHandler}. Public so it
+ * can be reused by stream-ingestion implementations outside the
+ * {@code seekablestream} package.
  */
-class StreamChunkReader<RecordType extends ByteEntity>
+public class StreamChunkReader<RecordType extends ByteEntity>
 {
   private final SettableByteEntityReader<RecordType> byteEntityReader;
   private final InputRowFilter rowFilter;
@@ -53,7 +57,7 @@ class StreamChunkReader<RecordType extends ByteEntity>
   /**
    * Either parser or inputFormat shouldn't be null.
    */
-  StreamChunkReader(
+  public StreamChunkReader(
       InputFormat inputFormat,
       InputRowSchema inputRowSchema,
       TransformSpec transformSpec,
@@ -89,7 +93,8 @@ class StreamChunkReader<RecordType extends ByteEntity>
     this.parseExceptionHandler = parseExceptionHandler;
   }
 
-  List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard) throws IOException
+  public List<InputRow> parse(@Nullable List<? extends RecordType> streamChunk, boolean isEndOfShard)
+      throws IOException
   {
     if (streamChunk == null || streamChunk.isEmpty()) {
       if (!isEndOfShard) {
