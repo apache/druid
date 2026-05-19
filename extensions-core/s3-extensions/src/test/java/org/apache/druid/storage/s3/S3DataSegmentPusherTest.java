@@ -33,10 +33,8 @@ import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.TemporaryFolder;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
-import software.amazon.awssdk.services.s3.model.GetBucketAclResponse;
 import software.amazon.awssdk.services.s3.model.Grant;
 import software.amazon.awssdk.services.s3.model.Grantee;
-import software.amazon.awssdk.services.s3.model.Owner;
 import software.amazon.awssdk.services.s3.model.Permission;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.Type;
@@ -96,23 +94,11 @@ public class S3DataSegmentPusherTest
   {
     ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
-    Owner owner = Owner.builder()
-        .id("ownerId")
-        .displayName("owner")
-        .build();
-    Grantee grantee = Grantee.builder()
-        .id(owner.id())
-        .type(Type.CANONICAL_USER)
-        .build();
     Grant grant = Grant.builder()
-        .grantee(grantee)
+        .grantee(Grantee.builder().id("ownerId").type(Type.CANONICAL_USER).build())
         .permission(Permission.FULL_CONTROL)
         .build();
-    final GetBucketAclResponse aclResponse = GetBucketAclResponse.builder()
-        .owner(owner)
-        .grants(grant)
-        .build();
-    EasyMock.expect(s3Client.getBucketAcl(EasyMock.eq("bucket"))).andReturn(aclResponse).once();
+    EasyMock.expect(s3Client.getBucketOwnerGrant(EasyMock.eq("bucket"))).andReturn(grant).once();
 
     s3Client.upload(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.anyObject(Grant.class));
     EasyMock.expectLastCall().once();
@@ -136,23 +122,11 @@ public class S3DataSegmentPusherTest
   {
     ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
-    Owner owner = Owner.builder()
-        .id("ownerId")
-        .displayName("owner")
-        .build();
-    Grantee grantee = Grantee.builder()
-        .id(owner.id())
-        .type(Type.CANONICAL_USER)
-        .build();
     Grant grant = Grant.builder()
-        .grantee(grantee)
+        .grantee(Grantee.builder().id("ownerId").type(Type.CANONICAL_USER).build())
         .permission(Permission.FULL_CONTROL)
         .build();
-    final GetBucketAclResponse aclResponse = GetBucketAclResponse.builder()
-        .owner(owner)
-        .grants(grant)
-        .build();
-    EasyMock.expect(s3Client.getBucketAcl(EasyMock.eq("bucket"))).andReturn(aclResponse).once();
+    EasyMock.expect(s3Client.getBucketOwnerGrant(EasyMock.eq("bucket"))).andReturn(grant).once();
 
     s3Client.upload(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.anyObject(Grant.class));
     EasyMock.expectLastCall().once();
@@ -174,23 +148,11 @@ public class S3DataSegmentPusherTest
         .statusCode(400)
         .build();
 
-    Owner owner = Owner.builder()
-        .id("ownerId")
-        .displayName("owner")
-        .build();
-    Grantee grantee = Grantee.builder()
-        .id(owner.id())
-        .type(Type.CANONICAL_USER)
-        .build();
     Grant grant = Grant.builder()
-        .grantee(grantee)
+        .grantee(Grantee.builder().id("ownerId").type(Type.CANONICAL_USER).build())
         .permission(Permission.FULL_CONTROL)
         .build();
-    final GetBucketAclResponse aclResponse = GetBucketAclResponse.builder()
-        .owner(owner)
-        .grants(grant)
-        .build();
-    EasyMock.expect(s3Client.getBucketAcl(EasyMock.eq("bucket"))).andReturn(aclResponse).once();
+    EasyMock.expect(s3Client.getBucketOwnerGrant(EasyMock.eq("bucket"))).andReturn(grant).once();
 
     s3Client.upload(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.anyObject(Grant.class));
     EasyMock.expectLastCall().andThrow(e).once();
