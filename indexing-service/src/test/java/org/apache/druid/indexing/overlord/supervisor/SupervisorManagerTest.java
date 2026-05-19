@@ -1139,10 +1139,45 @@ public class SupervisorManagerTest extends EasyMockSupport
     );
     EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
 
-    // useConcurrentLocks not set → IAE
+    // useConcurrentLocks not set (null context) → IAE
     EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
     EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
     EasyMock.expect(streamSpec.getContext()).andReturn(null).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetSupervisorAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // useConcurrentLocks=false → IAE
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", false)).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetSupervisorAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // useConcurrentLocks="true" (string) → accepted, fails at next guard (not RUNNING)
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", "true")).once();
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.SUSPENDED).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetSupervisorAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // taskLockType=APPEND → accepted, fails at next guard (not RUNNING)
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("taskLockType", "APPEND")).once();
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.SUSPENDED).once();
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
     Assert.assertThrows(
         IllegalArgumentException.class,

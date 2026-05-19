@@ -135,33 +135,8 @@ public class SupervisorManager implements SupervisorStatsProvider
       final Supervisor supervisor = entry.getValue().lhs;
       final SupervisorSpec supervisorSpec = entry.getValue().rhs;
 
-      boolean hasAppendLock = Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
-      if (supervisorSpec instanceof SeekableStreamSupervisorSpec) {
-        SeekableStreamSupervisorSpec seekableStreamSupervisorSpec = (SeekableStreamSupervisorSpec) supervisorSpec;
-        Map<String, Object> context = seekableStreamSupervisorSpec.getContext();
-        if (context != null) {
-          Boolean useConcurrentLocks = QueryContexts.getAsBoolean(
-              Tasks.USE_CONCURRENT_LOCKS,
-              context.get(Tasks.USE_CONCURRENT_LOCKS)
-          );
-          if (useConcurrentLocks == null) {
-            TaskLockType taskLockType = QueryContexts.getAsEnum(
-                Tasks.TASK_LOCK_TYPE,
-                context.get(Tasks.TASK_LOCK_TYPE),
-                TaskLockType.class
-            );
-            if (taskLockType == null) {
-              hasAppendLock = Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
-            } else if (taskLockType == TaskLockType.APPEND) {
-              hasAppendLock = true;
-            } else {
-              hasAppendLock = false;
-            }
-          } else {
-            hasAppendLock = useConcurrentLocks;
-          }
-        }
-      }
+      boolean hasAppendLock = supervisorSpec instanceof SeekableStreamSupervisorSpec
+                              && specHasConcurrentLocks((SeekableStreamSupervisorSpec) supervisorSpec);
 
       if (supervisor instanceof SeekableStreamSupervisor
           && !supervisorSpec.isSuspended()
@@ -430,9 +405,7 @@ public class SupervisorManager implements SupervisorStatsProvider
       throw new IAE("Reset with skipped offsets is not supported when useEarliestOffset is true.");
     }
 
-    // Verify useConcurrentLocks is enabled
-    final Map<String, Object> context = streamSpec.getContext();
-    if (context == null || !Boolean.TRUE.equals(context.get("useConcurrentLocks"))) {
+    if (!specHasConcurrentLocks(streamSpec)) {
       throw new IAE(
           "Backfill tasks require 'useConcurrentLocks' to be set to true in the supervisor context to allow concurrent writes with the main supervisor tasks"
       );
@@ -747,5 +720,30 @@ public class SupervisorManager implements SupervisorStatsProvider
       Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
       return supervisor == null ? null : supervisor.rhs;
     }
+  }
+
+  /**
+   * Returns true if the spec's context enables concurrent (append) locks, accepting both
+   * {@code useConcurrentLocks: true} (or any truthy string) and {@code taskLockType: APPEND}.
+   */
+  private static boolean specHasConcurrentLocks(SeekableStreamSupervisorSpec spec)
+  {
+    Map<String, Object> context = spec.getContext();
+    if (context == null) {
+      return false;
+    }
+    Boolean useConcurrentLocks = QueryContexts.getAsBoolean(
+        Tasks.USE_CONCURRENT_LOCKS,
+        context.get(Tasks.USE_CONCURRENT_LOCKS)
+    );
+    if (useConcurrentLocks != null) {
+      return useConcurrentLocks;
+    }
+    TaskLockType taskLockType = QueryContexts.getAsEnum(
+        Tasks.TASK_LOCK_TYPE,
+        context.get(Tasks.TASK_LOCK_TYPE),
+        TaskLockType.class
+    );
+    return taskLockType == TaskLockType.APPEND;
   }
 }
