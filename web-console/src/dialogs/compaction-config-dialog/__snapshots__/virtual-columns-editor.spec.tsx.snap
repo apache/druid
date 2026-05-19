@@ -1,0 +1,184 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`VirtualColumnsEditor matches snapshot with no virtual columns 1`] = `
+<Blueprint5.Dialog
+  canOutsideClickClose={false}
+  className="virtual-columns-editor"
+  isOpen={true}
+  onClose={[Function]}
+  title="Edit virtual columns"
+>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
+  <div
+    className="content"
+  >
+    <div
+      className="vc-list"
+    >
+      <Blueprint5.Button
+        icon="plus"
+        minimal={true}
+        onClick={[Function]}
+      >
+        Add virtual column
+      </Blueprint5.Button>
+    </div>
+  </div>
+  <div
+    className="bp5-dialog-footer"
+  >
+    <div
+      className="bp5-dialog-footer-actions"
+    >
+      <Blueprint5.Button
+        onClick={[Function]}
+        text="Close"
+      />
+      <Blueprint5.Button
+        disabled={false}
+        intent="primary"
+        onClick={[Function]}
+        text="Save"
+      />
+    </div>
+  </div>
+</Blueprint5.Dialog>
+`;
+
+exports[`VirtualColumnsEditor matches snapshot with virtual columns 1`] = `
+<Blueprint5.Dialog
+  canOutsideClickClose={false}
+  className="virtual-columns-editor"
+  isOpen={true}
+  onClose={[Function]}
+  title="Edit virtual columns"
+>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
+  <div
+    className="content"
+  >
+    <div
+      className="vc-list"
+    >
+      <Blueprint5.Card
+        className="vc-card"
+        elevation={1}
+        interactive={false}
+      >
+        <div
+          className="vc-card-header"
+        >
+          <Blueprint5.Button
+            icon="caret-down"
+            minimal={true}
+            onClick={[Function]}
+            small={true}
+          />
+          <span
+            className="vc-card-name"
+          >
+            city_and_country
+          </span>
+          <div
+            className="spacer"
+          />
+          <Blueprint5.Button
+            icon="trash"
+            intent="danger"
+            minimal={true}
+            onClick={[Function]}
+            small={true}
+          />
+        </div>
+        <Blueprint5.Collapse
+          component="div"
+          isOpen={true}
+          keepChildrenMounted={false}
+          transitionDuration={200}
+        >
+          <div
+            className="vc-card-form"
+          >
+            <AutoForm
+              fields={
+                [
+                  {
+                    "info": <p>
+                      Output name of the virtual column.
+                    </p>,
+                    "name": "name",
+                    "required": true,
+                    "type": "string",
+                  },
+                  {
+                    "info": <p>
+                      Druid expression that computes the virtual column value.
+                    </p>,
+                    "name": "expression",
+                    "required": true,
+                    "type": "string",
+                  },
+                  {
+                    "info": <p>
+                      Output type of the expression result.
+                    </p>,
+                    "name": "outputType",
+                    "suggestions": [
+                      "STRING",
+                      "LONG",
+                      "FLOAT",
+                      "DOUBLE",
+                      "COMPLEX",
+                    ],
+                    "type": "string",
+                  },
+                ]
+              }
+              model={
+                {
+                  "expression": "concat(cityName, ':', countryName)",
+                  "name": "city_and_country",
+                  "outputType": "STRING",
+                  "type": "expression",
+                }
+              }
+              onChange={[Function]}
+            />
+          </div>
+        </Blueprint5.Collapse>
+      </Blueprint5.Card>
+      <Blueprint5.Button
+        icon="plus"
+        minimal={true}
+        onClick={[Function]}
+      >
+        Add virtual column
+      </Blueprint5.Button>
+    </div>
+  </div>
+  <div
+    className="bp5-dialog-footer"
+  >
+    <div
+      className="bp5-dialog-footer-actions"
+    >
+      <Blueprint5.Button
+        onClick={[Function]}
+        text="Close"
+      />
+      <Blueprint5.Button
+        disabled={false}
+        intent="primary"
+        onClick={[Function]}
+        text="Save"
+      />
+    </div>
+  </div>
+</Blueprint5.Dialog>
+`;

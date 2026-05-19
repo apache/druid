@@ -316,6 +316,7 @@ export interface DatasourcesViewState {
   datasourcesAndDefaultRulesState: QueryState<DatasourcesAndDefaultRules>;
 
   showUnused: boolean;
+  useSupervisors: boolean;
   retentionDialogOpenOn?: RetentionDialogOpenOn;
   compactionDialogOpenOn?: CompactionConfigDialogOpenOn;
   datasourceToMarkAsUnusedAllSegmentsIn?: string;
@@ -420,6 +421,7 @@ GROUP BY 1, 2`;
       datasourcesAndDefaultRulesState: QueryState.INIT,
 
       showUnused: false,
+      useSupervisors: false,
       useUnuseAction: 'unuse',
       useUnuseInterval: '',
       showForceCompact: false,
@@ -627,6 +629,18 @@ GROUP BY 1, 2`;
                 compactionStatusesResp.data.latestStatus || [],
                 c => c.dataSource,
               );
+
+              // Check if supervisor-based compaction is enabled
+              try {
+                const supervisorEnabledResp = await Api.instance.get<boolean>(
+                  '/druid/indexer/v1/compaction/isSupervisorEnabled',
+                  { signal },
+                );
+                this.setState({ useSupervisors: Boolean(supervisorEnabledResp.data) });
+              } catch {
+                // If the endpoint is not available, default to false
+                this.setState({ useSupervisors: false });
+              }
 
               return {
                 ...datasourcesAndDefaultRules,
@@ -1146,7 +1160,7 @@ GROUP BY 1, 2`;
   }
 
   private renderCompactionConfigDialog() {
-    const { datasourcesAndDefaultRulesState, compactionDialogOpenOn } = this.state;
+    const { datasourcesAndDefaultRulesState, compactionDialogOpenOn, useSupervisors } = this.state;
     if (!compactionDialogOpenOn || !datasourcesAndDefaultRulesState.data) return;
 
     return (
@@ -1156,6 +1170,7 @@ GROUP BY 1, 2`;
         onClose={() => this.setState({ compactionDialogOpenOn: undefined })}
         onSave={this.saveCompaction}
         onDelete={this.deleteCompaction}
+        useSupervisors={useSupervisors}
       />
     );
   }

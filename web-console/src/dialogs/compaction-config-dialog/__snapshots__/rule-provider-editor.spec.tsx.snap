@@ -1,0 +1,823 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`RuleProviderEditor matches snapshot with empty provider 1`] = `
+<Blueprint5.Dialog
+  canOutsideClickClose={false}
+  className="rule-provider-editor"
+  isOpen={true}
+  onClose={[Function]}
+  title="Edit rule provider"
+>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
+  <div
+    className="content"
+  >
+    <div
+      className="rule-sections"
+    >
+      <RuleSection
+        description="Control segment granularity and partitioning as data ages. Non-additive: only one applies per interval."
+        fields={
+          [
+            {
+              "info": <p>
+                Unique identifier for this rule.
+              </p>,
+              "name": "id",
+              "required": true,
+              "type": "string",
+            },
+            {
+              "info": <p>
+                ISO 8601 period defining the age threshold. The rule applies to data older than the current time minus this period.
+              </p>,
+              "name": "olderThan",
+              "required": true,
+              "suggestions": [
+                "P1D",
+                "P7D",
+                "P30D",
+                "P90D",
+                "P180D",
+                "P365D",
+              ],
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Human-readable description of this rule.
+              </p>,
+              "name": "description",
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Time granularity for segment buckets.
+              </p>,
+              "name": "segmentGranularity",
+              "required": true,
+              "suggestions": [
+                "MINUTE",
+                "FIFTEEN_MINUTE",
+                "HOUR",
+                "DAY",
+                "MONTH",
+                "QUARTER",
+                "YEAR",
+              ],
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Use 
+                <ForwardRef>
+                  dynamic
+                </ForwardRef>
+                 for best-effort rollup or 
+                <ForwardRef>
+                  range
+                </ForwardRef>
+                 for range-based partitioning.
+              </p>,
+              "label": "Partitioning type",
+              "name": "partitionsSpec.type",
+              "suggestions": [
+                "dynamic",
+                "range",
+              ],
+              "type": "string",
+            },
+            {
+              "defaultValue": 5000000,
+              "defined": [Function],
+              "info": <React.Fragment>
+                Determines how many rows are in each segment.
+              </React.Fragment>,
+              "label": "Max rows per segment",
+              "name": "partitionsSpec.maxRowsPerSegment",
+              "type": "number",
+            },
+            {
+              "defined": [Function],
+              "info": <p>
+                The dimensions to partition on.
+              </p>,
+              "label": "Partition dimensions",
+              "name": "partitionsSpec.partitionDimensions",
+              "required": true,
+              "type": "string-array",
+            },
+            {
+              "defined": [Function],
+              "info": <p>
+                Target number of rows per segment for range partitioning.
+              </p>,
+              "label": "Target rows per segment",
+              "name": "partitionsSpec.targetRowsPerSegment",
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            {
+              "customDialog": [Function],
+              "customSummary": [Function],
+              "defined": [Function],
+              "info": <p>
+                Virtual columns for partitioning by nested or derived fields.
+              </p>,
+              "name": "virtualColumns",
+              "type": "custom",
+            },
+          ]
+        }
+        onChange={[Function]}
+        onNewRule={[Function]}
+        rules={[]}
+        title="Partitioning rules"
+      />
+      <RuleSection
+        description="Specify rows to remove during compaction. Additive: multiple rules can combine."
+        fields={
+          [
+            {
+              "info": <p>
+                Unique identifier for this rule.
+              </p>,
+              "name": "id",
+              "required": true,
+              "type": "string",
+            },
+            {
+              "info": <p>
+                ISO 8601 period defining the age threshold. The rule applies to data older than the current time minus this period.
+              </p>,
+              "name": "olderThan",
+              "required": true,
+              "suggestions": [
+                "P1D",
+                "P7D",
+                "P30D",
+                "P90D",
+                "P180D",
+                "P365D",
+              ],
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Human-readable description of this rule.
+              </p>,
+              "name": "description",
+              "type": "string",
+            },
+            {
+              "info": <p>
+                A Druid filter matching rows to 
+                <strong>
+                  delete
+                </strong>
+                . The compacted data retains rows that do not match this filter. Multiple deletion rules combine as
+                 
+                <ForwardRef>
+                  NOT(A OR B OR C)
+                </ForwardRef>
+                .
+              </p>,
+              "name": "deleteWhere",
+              "required": true,
+              "type": "json",
+            },
+            {
+              "hideInMore": true,
+              "info": <p>
+                Virtual columns for filtering on nested or derived fields.
+              </p>,
+              "name": "virtualColumns",
+              "type": "json",
+            },
+          ]
+        }
+        onChange={[Function]}
+        onNewRule={[Function]}
+        rules={[]}
+        title="Deletion rules"
+      />
+      <RuleSection
+        description="Control compression and encoding settings. Non-additive: only one applies per interval."
+        fields={
+          [
+            {
+              "info": <p>
+                Unique identifier for this rule.
+              </p>,
+              "name": "id",
+              "required": true,
+              "type": "string",
+            },
+            {
+              "info": <p>
+                ISO 8601 period defining the age threshold. The rule applies to data older than the current time minus this period.
+              </p>,
+              "name": "olderThan",
+              "required": true,
+              "suggestions": [
+                "P1D",
+                "P7D",
+                "P30D",
+                "P90D",
+                "P180D",
+                "P365D",
+              ],
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Human-readable description of this rule.
+              </p>,
+              "name": "description",
+              "type": "string",
+            },
+            {
+              "info": <p>
+                An IndexSpec object defining bitmap type, metric compression, and other encoding settings for compacted segments.
+              </p>,
+              "name": "indexSpec",
+              "required": true,
+              "type": "json",
+            },
+          ]
+        }
+        onChange={[Function]}
+        onNewRule={[Function]}
+        rules={[]}
+        title="Index spec rules"
+      />
+      <RuleSection
+        description="Control dimensions, metrics, query granularity, rollup, and projections. Non-additive: only one applies per interval."
+        fields={
+          [
+            {
+              "info": <p>
+                Unique identifier for this rule.
+              </p>,
+              "name": "id",
+              "required": true,
+              "type": "string",
+            },
+            {
+              "info": <p>
+                ISO 8601 period defining the age threshold. The rule applies to data older than the current time minus this period.
+              </p>,
+              "name": "olderThan",
+              "required": true,
+              "suggestions": [
+                "P1D",
+                "P7D",
+                "P30D",
+                "P90D",
+                "P180D",
+                "P365D",
+              ],
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Human-readable description of this rule.
+              </p>,
+              "name": "description",
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Query granularity for the compacted segments. Leave unset to preserve existing granularity.
+              </p>,
+              "name": "queryGranularity",
+              "placeholder": "(unset)",
+              "suggestions": [
+                "MINUTE",
+                "FIFTEEN_MINUTE",
+                "HOUR",
+                "DAY",
+                "MONTH",
+                "QUARTER",
+                "YEAR",
+              ],
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Whether to enable rollup. Set to 
+                <ForwardRef>
+                  true
+                </ForwardRef>
+                 only when 
+                <ForwardRef>
+                  metricsSpec
+                </ForwardRef>
+                 is defined.
+              </p>,
+              "name": "rollup",
+              "type": "boolean",
+            },
+            {
+              "info": <React.Fragment>
+                <p>
+                  Array of aggregator factories for rollup metrics. Example:
+                </p>
+                <pre>
+                  [
+  {
+    "type": "longSum",
+    "name": "added",
+    "fieldName": "added"
+  },
+  {
+    "type": "longSum",
+    "name": "deleted",
+    "fieldName": "deleted"
+  }
+]
+                </pre>
+              </React.Fragment>,
+              "name": "metricsSpec",
+              "type": "json",
+            },
+            {
+              "info": <React.Fragment>
+                <p>
+                  Dimensions config for the compacted segments. Example:
+                </p>
+                <pre>
+                  {
+  "dimensions": [
+    "page",
+    { "type": "string", "name": "channel" }
+  ]
+}
+                </pre>
+              </React.Fragment>,
+              "name": "dimensionsSpec",
+              "type": "json",
+            },
+            {
+              "hideInMore": true,
+              "info": <p>
+                List of aggregate projections.
+              </p>,
+              "name": "projections",
+              "type": "json",
+            },
+          ]
+        }
+        onChange={[Function]}
+        onNewRule={[Function]}
+        rules={[]}
+        title="Data schema rules"
+      />
+    </div>
+  </div>
+  <div
+    className="bp5-dialog-footer"
+  >
+    <div
+      className="bp5-dialog-footer-actions"
+    >
+      <Blueprint5.Button
+        onClick={[Function]}
+        text="Close"
+      />
+      <Blueprint5.Button
+        disabled={false}
+        intent="primary"
+        onClick={[Function]}
+        text="Save"
+      />
+    </div>
+  </div>
+</Blueprint5.Dialog>
+`;
+
+exports[`RuleProviderEditor matches snapshot with rules 1`] = `
+<Blueprint5.Dialog
+  canOutsideClickClose={false}
+  className="rule-provider-editor"
+  isOpen={true}
+  onClose={[Function]}
+  title="Edit rule provider"
+>
+  <Memo(FormJsonSelector)
+    onChange={[Function]}
+    tab="form"
+  />
+  <div
+    className="content"
+  >
+    <div
+      className="rule-sections"
+    >
+      <RuleSection
+        description="Control segment granularity and partitioning as data ages. Non-additive: only one applies per interval."
+        fields={
+          [
+            {
+              "info": <p>
+                Unique identifier for this rule.
+              </p>,
+              "name": "id",
+              "required": true,
+              "type": "string",
+            },
+            {
+              "info": <p>
+                ISO 8601 period defining the age threshold. The rule applies to data older than the current time minus this period.
+              </p>,
+              "name": "olderThan",
+              "required": true,
+              "suggestions": [
+                "P1D",
+                "P7D",
+                "P30D",
+                "P90D",
+                "P180D",
+                "P365D",
+              ],
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Human-readable description of this rule.
+              </p>,
+              "name": "description",
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Time granularity for segment buckets.
+              </p>,
+              "name": "segmentGranularity",
+              "required": true,
+              "suggestions": [
+                "MINUTE",
+                "FIFTEEN_MINUTE",
+                "HOUR",
+                "DAY",
+                "MONTH",
+                "QUARTER",
+                "YEAR",
+              ],
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Use 
+                <ForwardRef>
+                  dynamic
+                </ForwardRef>
+                 for best-effort rollup or 
+                <ForwardRef>
+                  range
+                </ForwardRef>
+                 for range-based partitioning.
+              </p>,
+              "label": "Partitioning type",
+              "name": "partitionsSpec.type",
+              "suggestions": [
+                "dynamic",
+                "range",
+              ],
+              "type": "string",
+            },
+            {
+              "defaultValue": 5000000,
+              "defined": [Function],
+              "info": <React.Fragment>
+                Determines how many rows are in each segment.
+              </React.Fragment>,
+              "label": "Max rows per segment",
+              "name": "partitionsSpec.maxRowsPerSegment",
+              "type": "number",
+            },
+            {
+              "defined": [Function],
+              "info": <p>
+                The dimensions to partition on.
+              </p>,
+              "label": "Partition dimensions",
+              "name": "partitionsSpec.partitionDimensions",
+              "required": true,
+              "type": "string-array",
+            },
+            {
+              "defined": [Function],
+              "info": <p>
+                Target number of rows per segment for range partitioning.
+              </p>,
+              "label": "Target rows per segment",
+              "name": "partitionsSpec.targetRowsPerSegment",
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            {
+              "customDialog": [Function],
+              "customSummary": [Function],
+              "defined": [Function],
+              "info": <p>
+                Virtual columns for partitioning by nested or derived fields.
+              </p>,
+              "name": "virtualColumns",
+              "type": "custom",
+            },
+          ]
+        }
+        onChange={[Function]}
+        onNewRule={[Function]}
+        rules={
+          [
+            {
+              "id": "daily-30d",
+              "olderThan": "P30D",
+              "partitionsSpec": {
+                "maxRowsPerSegment": 5000000,
+                "type": "dynamic",
+              },
+              "segmentGranularity": "DAY",
+            },
+          ]
+        }
+        title="Partitioning rules"
+      />
+      <RuleSection
+        description="Specify rows to remove during compaction. Additive: multiple rules can combine."
+        fields={
+          [
+            {
+              "info": <p>
+                Unique identifier for this rule.
+              </p>,
+              "name": "id",
+              "required": true,
+              "type": "string",
+            },
+            {
+              "info": <p>
+                ISO 8601 period defining the age threshold. The rule applies to data older than the current time minus this period.
+              </p>,
+              "name": "olderThan",
+              "required": true,
+              "suggestions": [
+                "P1D",
+                "P7D",
+                "P30D",
+                "P90D",
+                "P180D",
+                "P365D",
+              ],
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Human-readable description of this rule.
+              </p>,
+              "name": "description",
+              "type": "string",
+            },
+            {
+              "info": <p>
+                A Druid filter matching rows to 
+                <strong>
+                  delete
+                </strong>
+                . The compacted data retains rows that do not match this filter. Multiple deletion rules combine as
+                 
+                <ForwardRef>
+                  NOT(A OR B OR C)
+                </ForwardRef>
+                .
+              </p>,
+              "name": "deleteWhere",
+              "required": true,
+              "type": "json",
+            },
+            {
+              "hideInMore": true,
+              "info": <p>
+                Virtual columns for filtering on nested or derived fields.
+              </p>,
+              "name": "virtualColumns",
+              "type": "json",
+            },
+          ]
+        }
+        onChange={[Function]}
+        onNewRule={[Function]}
+        rules={
+          [
+            {
+              "deleteWhere": {
+                "column": "isRobot",
+                "matchValue": "true",
+                "type": "equals",
+              },
+              "id": "remove-bots",
+              "olderThan": "P90D",
+            },
+          ]
+        }
+        title="Deletion rules"
+      />
+      <RuleSection
+        description="Control compression and encoding settings. Non-additive: only one applies per interval."
+        fields={
+          [
+            {
+              "info": <p>
+                Unique identifier for this rule.
+              </p>,
+              "name": "id",
+              "required": true,
+              "type": "string",
+            },
+            {
+              "info": <p>
+                ISO 8601 period defining the age threshold. The rule applies to data older than the current time minus this period.
+              </p>,
+              "name": "olderThan",
+              "required": true,
+              "suggestions": [
+                "P1D",
+                "P7D",
+                "P30D",
+                "P90D",
+                "P180D",
+                "P365D",
+              ],
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Human-readable description of this rule.
+              </p>,
+              "name": "description",
+              "type": "string",
+            },
+            {
+              "info": <p>
+                An IndexSpec object defining bitmap type, metric compression, and other encoding settings for compacted segments.
+              </p>,
+              "name": "indexSpec",
+              "required": true,
+              "type": "json",
+            },
+          ]
+        }
+        onChange={[Function]}
+        onNewRule={[Function]}
+        rules={[]}
+        title="Index spec rules"
+      />
+      <RuleSection
+        description="Control dimensions, metrics, query granularity, rollup, and projections. Non-additive: only one applies per interval."
+        fields={
+          [
+            {
+              "info": <p>
+                Unique identifier for this rule.
+              </p>,
+              "name": "id",
+              "required": true,
+              "type": "string",
+            },
+            {
+              "info": <p>
+                ISO 8601 period defining the age threshold. The rule applies to data older than the current time minus this period.
+              </p>,
+              "name": "olderThan",
+              "required": true,
+              "suggestions": [
+                "P1D",
+                "P7D",
+                "P30D",
+                "P90D",
+                "P180D",
+                "P365D",
+              ],
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Human-readable description of this rule.
+              </p>,
+              "name": "description",
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Query granularity for the compacted segments. Leave unset to preserve existing granularity.
+              </p>,
+              "name": "queryGranularity",
+              "placeholder": "(unset)",
+              "suggestions": [
+                "MINUTE",
+                "FIFTEEN_MINUTE",
+                "HOUR",
+                "DAY",
+                "MONTH",
+                "QUARTER",
+                "YEAR",
+              ],
+              "type": "string",
+            },
+            {
+              "info": <p>
+                Whether to enable rollup. Set to 
+                <ForwardRef>
+                  true
+                </ForwardRef>
+                 only when 
+                <ForwardRef>
+                  metricsSpec
+                </ForwardRef>
+                 is defined.
+              </p>,
+              "name": "rollup",
+              "type": "boolean",
+            },
+            {
+              "info": <React.Fragment>
+                <p>
+                  Array of aggregator factories for rollup metrics. Example:
+                </p>
+                <pre>
+                  [
+  {
+    "type": "longSum",
+    "name": "added",
+    "fieldName": "added"
+  },
+  {
+    "type": "longSum",
+    "name": "deleted",
+    "fieldName": "deleted"
+  }
+]
+                </pre>
+              </React.Fragment>,
+              "name": "metricsSpec",
+              "type": "json",
+            },
+            {
+              "info": <React.Fragment>
+                <p>
+                  Dimensions config for the compacted segments. Example:
+                </p>
+                <pre>
+                  {
+  "dimensions": [
+    "page",
+    { "type": "string", "name": "channel" }
+  ]
+}
+                </pre>
+              </React.Fragment>,
+              "name": "dimensionsSpec",
+              "type": "json",
+            },
+            {
+              "hideInMore": true,
+              "info": <p>
+                List of aggregate projections.
+              </p>,
+              "name": "projections",
+              "type": "json",
+            },
+          ]
+        }
+        onChange={[Function]}
+        onNewRule={[Function]}
+        rules={[]}
+        title="Data schema rules"
+      />
+    </div>
+  </div>
+  <div
+    className="bp5-dialog-footer"
+  >
+    <div
+      className="bp5-dialog-footer-actions"
+    >
+      <Blueprint5.Button
+        onClick={[Function]}
+        text="Close"
+      />
+      <Blueprint5.Button
+        disabled={false}
+        intent="primary"
+        onClick={[Function]}
+        text="Save"
+      />
+    </div>
+  </div>
+</Blueprint5.Dialog>
+`;
