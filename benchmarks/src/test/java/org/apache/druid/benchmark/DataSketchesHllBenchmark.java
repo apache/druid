@@ -68,11 +68,27 @@ public class DataSketchesHllBenchmark
 
   private final ByteBuffer buf = ByteBuffer.allocateDirect(aggregatorFactory.getMaxIntermediateSize());
 
+  private static final int MERGE_LG_K = 12;
+  private static final int MERGE_NUM_VALUES = (1 << MERGE_LG_K) * 8;
+
   private BufferAggregator aggregator;
+
+  private byte[] mergeSketchBytes1;
+  private byte[] mergeSketchBytes2;
+  private HllSketchHolder mergeHolder1;
+  private HllSketchHolder mergeHolder2;
 
   @Setup(Level.Trial)
   public void setUp()
   {
+    HllSketch s1 = new HllSketch(MERGE_LG_K);
+    HllSketch s2 = new HllSketch(MERGE_LG_K);
+    for (int i = 0; i < MERGE_NUM_VALUES; i++) {
+      s1.update(i);
+      s2.update(MERGE_NUM_VALUES + i);
+    }
+    mergeSketchBytes1 = s1.toCompactByteArray();
+    mergeSketchBytes2 = s2.toCompactByteArray();
     aggregator = aggregatorFactory.factorizeBuffered(
         new ColumnSelectorFactory()
         {
@@ -125,32 +141,21 @@ public class DataSketchesHllBenchmark
     return aggregatorFactory.deserialize(((HllSketch) aggregator.get(buf, 0)).toCompactByteArray());
   }
 
-  @Benchmark
-  public HllSketchHolder mergeUnionHolders()
+  @Setup(Level.Invocation)
+  public void setUpMerge()
   {
-    final int lgK = 12;
-    final int numValue = (1 << lgK) * 8;
-
-    HllSketch s1 = new HllSketch(lgK);
-    HllSketch s2 = new HllSketch(lgK);
-    for (int i = 0; i < numValue; i++) {
-      s1.update(i);
-      s2.update(numValue + i);
-    }
-    byte[] mergeSketchBytes1 = s1.toCompactByteArray();
-    byte[] mergeSketchBytes2 = s2.toCompactByteArray();
-
-    HllSketchHolder mergeHolder1;
-    HllSketchHolder mergeHolder2;
-
-    Union u1 = new Union(lgK);
+    Union u1 = new Union(MERGE_LG_K);
     u1.update(HllSketch.heapify(mergeSketchBytes1));
     mergeHolder1 = HllSketchHolder.of(u1);
 
-    Union u2 = new Union(lgK);
+    Union u2 = new Union(MERGE_LG_K);
     u2.update(HllSketch.heapify(mergeSketchBytes2));
     mergeHolder2 = HllSketchHolder.of(u2);
+  }
 
+  @Benchmark
+  public HllSketchHolder mergeUnionHolders()
+  {
     return mergeHolder1.merge(mergeHolder2);
   }
 }
