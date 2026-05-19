@@ -458,20 +458,6 @@ public class SupervisorManager implements SupervisorStatsProvider
       throw new ISE("Skipping reset: Failed to get checkpointed offsets for supervisor[%s]", id);
     }
 
-    log.info("Resetting supervisor[%s] metadata to latest offsets", id);
-    DataSourceMetadata resetMetadata = streamSupervisor.createDataSourceMetaDataForReset(
-        streamSupervisor.getIoConfig().getStream(),
-        endOffsets
-    );
-
-    streamSupervisor.resetOffsets(resetMetadata);
-
-    // Reset autoscaler if present
-    SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
-    if (autoscaler != null) {
-      autoscaler.reset();
-    }
-
     String backfillSupervisorId = IdUtils.getRandomIdWithPrefix(id + "_backfill");
 
     try {
@@ -486,6 +472,20 @@ public class SupervisorManager implements SupervisorStatsProvider
     }
 
     log.info("Started backfill supervisor[%s] for supervisor[%s]", backfillSupervisorId, id);
+
+    log.info("Resetting supervisor[%s] metadata to latest offsets", id);
+    DataSourceMetadata resetMetadata = streamSupervisor.createDataSourceMetaDataForReset(
+        streamSupervisor.getIoConfig().getStream(),
+        endOffsets
+    );
+
+    streamSupervisor.resetOffsets(resetMetadata);
+
+    // Reset autoscaler if present
+    SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
+    if (autoscaler != null) {
+      autoscaler.reset();
+    }
 
     return ImmutableMap.of(
         "id", id,
