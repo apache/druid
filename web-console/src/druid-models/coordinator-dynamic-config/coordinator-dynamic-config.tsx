@@ -45,6 +45,11 @@ export interface CoordinatorDynamicConfig {
   debugDimensions?: any;
 }
 
+export function serverCountSummary(v: any): string {
+  if (!v || !Array.isArray(v) || v.length === 0) return 'None';
+  return `${v.length} server${v.length !== 1 ? 's' : ''}`;
+}
+
 export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[] = [
   {
     name: 'pauseCoordination',
@@ -147,7 +152,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
 
   {
     name: 'decommissioningNodes',
-    type: 'string-array',
+    type: 'custom',
     emptyValue: [],
     info: (
       <>
@@ -157,6 +162,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         <Code>maxSegmentsToMove</Code>.
       </>
     ),
+    customSummary: serverCountSummary,
   },
   {
     name: 'killDataSourceWhitelist',
@@ -248,7 +254,8 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
   },
   {
     name: 'turboLoadingNodes',
-    type: 'string-array',
+    type: 'custom',
+    emptyValue: [],
     experimental: true,
     info: (
       <>
@@ -265,6 +272,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         </p>
       </>
     ),
+    customSummary: serverCountSummary,
   },
   {
     name: 'historicalTierAliases',
