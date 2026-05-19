@@ -41,6 +41,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.segment.transform.BaseTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -106,7 +107,7 @@ public class IndexBuilder
   @Nullable
   private InputFormat inputFormat = null;
   @Nullable
-  private TransformSpec transformSpec = null;
+  private BaseTransformSpec transformSpec = null;
   @Nullable
   private File inputSourceTmpDir = null;
 
@@ -185,7 +186,7 @@ public class IndexBuilder
     return this;
   }
 
-  public IndexBuilder transform(TransformSpec transformSpec)
+  public IndexBuilder transform(BaseTransformSpec transformSpec)
   {
     this.transformSpec = transformSpec;
     return this;
@@ -201,7 +202,7 @@ public class IndexBuilder
       InputSource inputSource,
       InputFormat inputFormat,
       InputRowSchema rowSchema,
-      TransformSpec transformSpec,
+      BaseTransformSpec transformSpec,
       File tmp
   )
       throws IOException
@@ -330,7 +331,7 @@ public class IndexBuilder
       Preconditions.checkNotNull(inputFormat, "inputFormat");
       Preconditions.checkNotNull(inputSourceTmpDir, "inputSourceTmpDir");
 
-      TransformSpec transformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
+      BaseTransformSpec transformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
       InputRowSchema rowSchema = new InputRowSchema(schema.getTimestampSpec(), schema.getDimensionsSpec(), null);
       InputSourceReader reader = inputSource.reader(rowSchema, inputFormat, inputSourceTmpDir);
       InputSourceReader transformingReader = transformer.decorate(reader);
@@ -475,14 +476,14 @@ public class IndexBuilder
       IncrementalIndexSchema schema,
       InputSource inputSource,
       InputFormat inputFormat,
-      @Nullable TransformSpec transformSpec,
+      @Nullable BaseTransformSpec transformSpec,
       File inputSourceTmpDir)
   {
     Preconditions.checkNotNull(schema, "schema");
     Preconditions.checkNotNull(inputSource, "inputSource");
     Preconditions.checkNotNull(inputFormat, "inputFormat");
     Preconditions.checkNotNull(inputSourceTmpDir, "inputSourceTmpDir");
-    TransformSpec transformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
+    BaseTransformSpec transformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
     InputRowSchema rowSchema = new InputRowSchema(schema.getTimestampSpec(), schema.getDimensionsSpec(), null);
     InputSourceReader reader = inputSource.reader(rowSchema, inputFormat, inputSourceTmpDir);
     InputSourceReader transformingReader = transformer.decorate(reader);

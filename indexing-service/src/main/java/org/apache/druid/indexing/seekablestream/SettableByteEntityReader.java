@@ -28,7 +28,7 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.transform.BaseTransformSpec;
 import org.apache.druid.segment.transform.TransformingInputEntityReader;
 
 import java.io.File;
@@ -46,7 +46,7 @@ class SettableByteEntityReader<T extends ByteEntity> implements InputEntityReade
   SettableByteEntityReader(
       InputFormat inputFormat,
       InputRowSchema inputRowSchema,
-      TransformSpec transformSpec,
+      BaseTransformSpec transformSpec,
       File indexingTmpDir
   )
   {
