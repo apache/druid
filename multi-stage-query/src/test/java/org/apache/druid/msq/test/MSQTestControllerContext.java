@@ -168,6 +168,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
         serviceEmitter,
         Mockito.mock(CoordinatorClient.class)
     );
+    Mockito.when(coordinatorClient.withRetryPolicy(ArgumentMatchers.any())).thenReturn(coordinatorClient);
     Mockito.when(coordinatorClient.fetchServerViewSegments(
                      ArgumentMatchers.anyString(),
                      ArgumentMatchers.any()
