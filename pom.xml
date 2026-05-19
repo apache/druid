@@ -96,10 +96,10 @@
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.2.22</dropwizard.metrics.version>
-        <errorprone.version>2.41.0</errorprone.version>
+        <errorprone.version>2.45.0</errorprone.version>
         <fabric8.version>7.6.0</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
-        <guava.version>32.1.3-jre</guava.version>
+        <guava.version>33.1.0-jre</guava.version>
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>2.2</hamcrest.version>
         <iceberg.core.version>1.10.0</iceberg.core.version>
@@ -113,7 +113,7 @@
         <netty3.version>3.10.6.Final</netty3.version>
         <netty4.version>4.2.12.Final</netty4.version>
         <postgresql.version>42.7.2</postgresql.version>
-        <protobuf.version>3.25.8</protobuf.version>
+        <protobuf.version>4.33.2</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <slf4j.version>2.0.17</slf4j.version>
         <jna.version>5.18.1</jna.version>
@@ -129,15 +129,15 @@
         <jacoco.version>0.8.14</jacoco.version>
         <testcontainers.version>2.0.3</testcontainers.version>
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
-        <httpclient.version>4.5.13</httpclient.version>
+        <httpclient.version>4.5.14</httpclient.version>
         <okhttp.version>5.3.2</okhttp.version>
         <kubernetes.client.version>25.0.0-legacy</kubernetes.client.version>
         <zookeeper.version>3.8.6</zookeeper.version>
-        <checkerframework.version>3.48.1</checkerframework.version>
-        <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
-        <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
+        <checkerframework.version>3.49.0</checkerframework.version>
+        <com.google.apis.client.version>2.9.0</com.google.apis.client.version>
+        <com.google.http.client.apis.version>2.1.0</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
-        <com.google.cloud.storage.version>2.29.1</com.google.cloud.storage.version>
+        <com.google.cloud.storage.version>2.64.1</com.google.cloud.storage.version>
         <jdk.strong.encapsulation.argLine>
             <!-- Strong encapsulation parameters -->
             <!-- When updating this list, update all four locations: -->
@@ -345,6 +345,13 @@
               <groupId>com.github.seancfoley</groupId>
               <artifactId>ipaddress</artifactId>
               <version>5.3.4</version>
+          </dependency>
+          <dependency>
+              <groupId>io.grpc</groupId>
+              <artifactId>grpc-bom</artifactId>
+              <version>1.80.0</version>
+              <type>pom</type>
+              <scope>import</scope>
           </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -644,6 +651,11 @@
                 <groupId>org.apache.hive</groupId>
                 <artifactId>hive-storage-api</artifactId>
                 <version>2.8.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.auto.value</groupId>
+                <artifactId>auto-value-annotations</artifactId>
+                <version>1.11.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
@@ -1182,6 +1194,16 @@
                 <version>${codehaus.jackson.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>animal-sniffer-annotations</artifactId>
+                <version>1.26</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.woodstox</groupId>
+                <artifactId>stax2-api</artifactId>
+                <version>4.2.2</version>
+            </dependency>
+            <dependency>
                 <groupId>javax.servlet</groupId>
                 <artifactId>javax.servlet-api</artifactId>
                 <version>4.0.1</version>
@@ -1417,6 +1439,11 @@
             </dependency>
             <dependency>
                 <groupId>com.google.http-client</groupId>
+                <artifactId>google-http-client-gson</artifactId>
+                <version>2.1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client-jackson2</artifactId>
                 <version>${com.google.http.client.apis.version}</version>
                 <exclusions>
@@ -1433,7 +1460,7 @@
             <dependency>
                 <groupId>com.google.j2objc</groupId>
                 <artifactId>j2objc-annotations</artifactId>
-                <version>2.8</version>
+                <version>3.1</version>
             </dependency>
             <dependency>
                 <groupId>io.github.resilience4j</groupId>
@@ -1584,6 +1611,11 @@
                         <artifactId>jaxb-api</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.woodstox</groupId>
+                <artifactId>woodstox-core</artifactId>
+                <version>7.0.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
