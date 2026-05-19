@@ -3546,6 +3546,18 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     {
       return state;
     }
+
+    /**
+     * The shared record-supplier mock in this test returns a single-partition stream, which would
+     * otherwise cause the supervisor's partition-count ceiling in DynamicAllocationTasksNotice to
+     * clamp every cooldown-test scale down to 1. Report a large partition count so the cooldown
+     * tests can exercise bounds at the autoscaler-config level only.
+     */
+    @Override
+    public int getPartitionCount()
+    {
+      return 1_000;
+    }
   }
 
   private class TestEmittingTestSeekableStreamSupervisor extends BaseTestSeekableStreamSupervisor
@@ -4030,6 +4042,125 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     assertScaleSkipped(events.get(1), 1, "Scale cooldown not elapsed yet");
   }
 
+  @Test
+  public void testDynamicAllocationClampsDesiredAboveMaxToMax()
+  {
+    // Scaler returns 20, but taskCountMax=10. Supervisor must clamp and scale to 10.
+    final StubServiceEmitter scalingEmitter =
+        setupSupervisorForAutoScalingTest(0L, 0L, 3, 1, 10);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> 20, () -> {}, scalingEmitter);
+
+    // Task count is clamped to max (10), not the scaler's desired (20).
+    Assert.assertEquals(10, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertEquals(1, events.size());
+    // The emitted metric value reflects the scaler's unclamped desired (the operator hint), not
+    // the clamped value the supervisor actually applied.
+    assertScaledToTaskCount(events.get(0), 20);
+  }
+
+  @Test
+  public void testDynamicAllocationClampsDesiredBelowMinToMin()
+  {
+    // Scaler returns 1, but taskCountMin=3. Supervisor must clamp and scale to 3.
+    final StubServiceEmitter scalingEmitter =
+        setupSupervisorForAutoScalingTest(0L, 0L, 5, 3, 10);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, scalingEmitter);
+
+    Assert.assertEquals(3, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertEquals(1, events.size());
+    assertScaledToTaskCount(events.get(0), 1);
+  }
+
+  @Test
+  public void testDynamicAllocationEmitsAlreadyAtMaxWhenCurrentIsAtMaxAndDesiredAboveMax()
+  {
+    // Current (10) is already at configured max (10). Scaler wants 15 (above max). Supervisor
+    // clamps to 10 which equals current -> emits "Already at max task count" skip reason.
+    final StubServiceEmitter scalingEmitter =
+        setupSupervisorForAutoScalingTest(0L, 0L, 10, 1, 10);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> 15, () -> {}, scalingEmitter);
+
+    Assert.assertEquals("Task count must not change when at max", 10, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertEquals(1, events.size());
+    assertScaleSkipped(events.get(0), 15, "Already at max task count");
+  }
+
+  @Test
+  public void testDynamicAllocationEmitsAlreadyAtMinWhenCurrentIsAtMinAndDesiredBelowMin()
+  {
+    // Current (3) is already at configured min (3). Scaler wants 1 (below min). Supervisor clamps
+    // to 3 which equals current -> emits "Already at min task count" skip reason.
+    final StubServiceEmitter scalingEmitter =
+        setupSupervisorForAutoScalingTest(0L, 0L, 3, 3, 10);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, scalingEmitter);
+
+    Assert.assertEquals("Task count must not change when at min", 3, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertEquals(1, events.size());
+    assertScaleSkipped(events.get(0), 1, "Already at min task count");
+  }
+
+  @Test
+  public void testDynamicAllocationEmitsNothingWhenDesiredEqualsCurrent()
+  {
+    // No skip metric in the steady-state no-op (avoid emitting on every tick).
+    final StubServiceEmitter scalingEmitter =
+        setupSupervisorForAutoScalingTest(0L, 0L, 5, 1, 10);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
+
+    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertTrue("No metric should be emitted in the steady-state no-op case", events.isEmpty());
+  }
+
+  @Test
+  public void testDynamicAllocationEmitsPathologicalSkipReasonWhenScalerReturnsNonPositive()
+  {
+    // Scaler contract: a non-positive return means "I could not compute a useful answer".
+    // Supervisor must not scale and must emit a skip reason surfacing the scaler's failure.
+    final StubServiceEmitter scalingEmitter =
+        setupSupervisorForAutoScalingTest(0L, 0L, 5, 1, 10);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> -1, () -> {}, scalingEmitter);
+
+    Assert.assertEquals("Task count must not change on pathological return", 5, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertEquals(1, events.size());
+    assertScaleSkipped(events.get(0), -1, "Auto-scaler failed to compute a task count");
+  }
+
   /**
    * Asserts that a required-tasks emission represents an scale event: it carries the standard
    * supervisor/datasource/stream dims, no scalingSkipReason dim, and the metric value matches the
@@ -4097,9 +4228,22 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       int initialTaskCount
   )
   {
+    return setupSupervisorForAutoScalingTest(minScaleUpDelayMillis, minScaleDownDelayMillis, initialTaskCount, 1, 100);
+  }
+
+  private StubServiceEmitter setupSupervisorForAutoScalingTest(
+      long minScaleUpDelayMillis,
+      long minScaleDownDelayMillis,
+      int initialTaskCount,
+      int taskCountMin,
+      int taskCountMax
+  )
+  {
     final AutoScalerConfig autoScalerConfig = testAutoScalerConfig(
         minScaleUpDelayMillis,
-        minScaleDownDelayMillis
+        minScaleDownDelayMillis,
+        taskCountMin,
+        taskCountMax
     );
     final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(
         initialTaskCount,
@@ -4113,6 +4257,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
    * Returns a minimal test-only {@link AutoScalerConfig}
    */
   private static AutoScalerConfig testAutoScalerConfig(long minScaleUpDelayMillis, long minScaleDownDelayMillis)
+  {
+    return testAutoScalerConfig(minScaleUpDelayMillis, minScaleDownDelayMillis, 1, 100);
+  }
+
+  private static AutoScalerConfig testAutoScalerConfig(
+      long minScaleUpDelayMillis,
+      long minScaleDownDelayMillis,
+      int taskCountMin,
+      int taskCountMax
+  )
   {
     return new AutoScalerConfig()
     {
@@ -4143,13 +4297,13 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       @Override
       public int getTaskCountMax()
       {
-        return 100;
+        return taskCountMax;
       }
 
       @Override
       public int getTaskCountMin()
       {
-        return 1;
+        return taskCountMin;
       }
 
       @Override
