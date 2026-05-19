@@ -51,11 +51,21 @@ public class SqlStatementFactory
 
   public DirectStatement directStatement(final SqlQueryPlus sqlRequest)
   {
-    return new DirectStatement(lifecycleToolbox, sqlRequest);
+    return new DirectStatement(lifecycleToolbox, sqlRequest, null);
+  }
+
+  public DirectStatement directStatement(final SqlQueryPlus sqlRequest, final String remoteAddress)
+  {
+    return new DirectStatement(lifecycleToolbox, sqlRequest, remoteAddress);
   }
 
   public PreparedStatement preparedStatement(final SqlQueryPlus sqlRequest)
   {
-    return new PreparedStatement(lifecycleToolbox, sqlRequest);
+    return new PreparedStatement(lifecycleToolbox, sqlRequest, null);
+  }
+
+  public PreparedStatement preparedStatement(final SqlQueryPlus sqlRequest, final String remoteAddress)
+  {
+    return new PreparedStatement(lifecycleToolbox, sqlRequest, remoteAddress);
   }
 }

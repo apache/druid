@@ -41,6 +41,7 @@ public class DruidJdbcStatement extends AbstractDruidJdbcStatement
   private final SqlStatementFactory lifecycleFactory;
   protected final Map<String, Object> queryContext;
   protected final Map<String, Object> defaultContext;
+  private final String remoteAddress;
 
   public DruidJdbcStatement(
       final String connectionId,
@@ -48,20 +49,22 @@ public class DruidJdbcStatement extends AbstractDruidJdbcStatement
       final Map<String, Object> queryContext,
       final Map<String, Object> defaultContext,
       final SqlStatementFactory lifecycleFactory,
-      final ResultFetcherFactory fetcherFactory
+      final ResultFetcherFactory fetcherFactory,
+      final String remoteAddress
   )
   {
     super(connectionId, statementId, fetcherFactory);
     this.queryContext = queryContext;
     this.defaultContext = defaultContext;
     this.lifecycleFactory = Preconditions.checkNotNull(lifecycleFactory, "lifecycleFactory");
+    this.remoteAddress = remoteAddress;
   }
 
   public synchronized void execute(SqlQueryPlus queryPlus, long maxRowCount)
   {
     closeResultSet();
     this.sqlQuery = queryPlus.withContext(defaultContext, queryContext).freshCopy();
-    DirectStatement stmt = lifecycleFactory.directStatement(this.sqlQuery);
+    DirectStatement stmt = lifecycleFactory.directStatement(this.sqlQuery, remoteAddress);
     resultSet = new DruidJdbcResultSet(this, stmt, Long.MAX_VALUE, fetcherFactory);
     try {
       resultSet.execute();

@@ -1950,4 +1950,91 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     }
     return m;
   }
+
+  /**
+   * Test that remote address is properly captured and logged for JDBC Avatica connections.
+   * This verifies the fix for issue #19230 which ensures that the client's remote address
+   * is tracked through the entire SQL execution lifecycle.
+   */
+  @Test
+  public void testRemoteAddressInLogs() throws SQLException
+  {
+    testRequestLogger.clear();
+
+    try (Statement stmt = client.createStatement()) {
+      stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+    }
+
+    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    RequestLogLine logLine = testRequestLogger.getSqlQueryLogs().get(0);
+
+    String remoteAddress = logLine.getRemoteAddr();
+    Assert.assertNotNull("Remote address should not be null", remoteAddress);
+
+    Assert.assertTrue(
+        "Remote address should be a valid IP or localhost",
+        remoteAddress.contains("localhost") ||
+        remoteAddress.contains("127.0.0.1") ||
+        remoteAddress.contains("0:0:0:0:0:0:0:1") ||
+        (remoteAddress.contains(".") && remoteAddress.length() >= 7)
+    );
+  }
+
+  /**
+   * Test that remote address is captured even when a query fails.
+   */
+  @Test
+  public void testRemoteAddressInFailedQuery() throws SQLException
+  {
+    testRequestLogger.clear();
+
+    try (Statement stmt = client.createStatement()) {
+      stmt.executeQuery("SELECT nonexistent FROM druid.foo");
+      Assert.fail("Query should have failed");
+    }
+    catch (SQLException e) {
+      // Expected exception
+    }
+
+    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    RequestLogLine logLine = testRequestLogger.getSqlQueryLogs().get(0);
+
+    String remoteAddress = logLine.getRemoteAddr();
+    Assert.assertNotNull("Remote address should not be null even in failed query", remoteAddress);
+    Assert.assertFalse("Remote address should not be empty even in failed query", remoteAddress.length() == 0);
+  }
+
+  /**
+   * Test that remote address is captured for prepared statements.
+   * Both the prepare-phase and execute-phase log entries must carry the address —
+   * DruidJdbcPreparedStatement.close() emits the prepare-phase reporter, so a
+   * missing address there would leak an empty remoteAddress dimension to metrics.
+   */
+  @Test
+  public void testRemoteAddressInPreparedStatement() throws SQLException
+  {
+    testRequestLogger.clear();
+
+    try (PreparedStatement stmt = client.prepareStatement("SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ?")) {
+      stmt.setString(1, "abc");
+      stmt.executeQuery();
+    }
+
+    Assert.assertFalse(
+        "Should have at least one log entry",
+        testRequestLogger.getSqlQueryLogs().isEmpty()
+    );
+
+    for (RequestLogLine logLine : testRequestLogger.getSqlQueryLogs()) {
+      String remoteAddress = logLine.getRemoteAddr();
+      Assert.assertNotNull(
+          "Every prepared-statement log entry must carry a remote address",
+          remoteAddress
+      );
+      Assert.assertFalse(
+          "Every prepared-statement log entry must carry a non-empty remote address",
+          remoteAddress.isEmpty()
+      );
+    }
+  }
 }
