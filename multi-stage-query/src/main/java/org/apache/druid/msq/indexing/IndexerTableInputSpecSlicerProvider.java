@@ -29,6 +29,7 @@ import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.rpc.StandardRetryPolicy;
 
 import java.util.List;
 
@@ -42,7 +43,10 @@ public class IndexerTableInputSpecSlicerProvider implements InputSpecSlicerProvi
   @Inject
   public IndexerTableInputSpecSlicerProvider(CoordinatorClient coordinatorClient)
   {
-    this.coordinatorClient = coordinatorClient;
+    // Use the "aboutAnHour" retry policy, same as the one used in the TaskToolboxFactory. This prevents
+    // long-running tasks from failing if there are Coordinator/Overlord problems. Calls will still fail
+    // eventually if problems persist.
+    this.coordinatorClient = coordinatorClient.withRetryPolicy(StandardRetryPolicy.aboutAnHour());
   }
 
   @Override
