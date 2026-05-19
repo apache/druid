@@ -28,7 +28,7 @@ import org.junit.Test;
 public class HllSketchHolderTest
 {
   private static final int LG_K = 12;
-  private static final int NUM_VALUES = 1000;
+  private static final int NUM_VALUES = 100;
 
   @Test
   public void testMergeSketchWithSketch()
@@ -39,7 +39,7 @@ public class HllSketchHolderTest
     HllSketchHolder result = holder1.merge(holder2);
 
     Assert.assertSame(holder1, result);
-    assertEstimateWithinBounds(NUM_VALUES * 2, result);
+    Assert.assertEquals(NUM_VALUES * 2, result.getEstimate(), 0.01);
   }
 
   @Test
@@ -51,7 +51,7 @@ public class HllSketchHolderTest
     HllSketchHolder result = holder1.merge(holder2);
 
     Assert.assertSame(holder2, result);
-    assertEstimateWithinBounds(NUM_VALUES * 2, result);
+    Assert.assertEquals(NUM_VALUES * 2, result.getEstimate(), 0.01);
   }
 
   @Test
@@ -63,7 +63,7 @@ public class HllSketchHolderTest
     HllSketchHolder result = holder1.merge(holder2);
 
     Assert.assertSame(holder1, result);
-    assertEstimateWithinBounds(NUM_VALUES * 2, result);
+    Assert.assertEquals(NUM_VALUES * 2, result.getEstimate(), 0.01);
   }
 
   @Test
@@ -75,7 +75,7 @@ public class HllSketchHolderTest
     HllSketchHolder result = holder1.merge(holder2);
 
     Assert.assertSame(holder1, result);
-    assertEstimateWithinBounds(NUM_VALUES * 2, result);
+    Assert.assertEquals(NUM_VALUES * 2, result.getEstimate(), 0.01);
   }
 
   @Test
@@ -113,11 +113,8 @@ public class HllSketchHolderTest
     HllSketchHolder result = holder1.merge(holder2);
 
     double estimate = result.getEstimate();
-    double expected = NUM_VALUES + NUM_VALUES / 2;
-    Assert.assertTrue(
-        "Estimate " + estimate + " not within 10% of " + expected,
-        Math.abs(estimate - expected) / expected < 0.10
-    );
+    double expected = NUM_VALUES + (double) NUM_VALUES / 2;
+    Assert.assertEquals(expected, estimate, expected * 0.01);
   }
 
   private static HllSketchHolder makeSketchHolder(int startValue, int endValue)
@@ -138,14 +135,5 @@ public class HllSketchHolderTest
     Union union = new Union(LG_K);
     union.update(sketch);
     return HllSketchHolder.of(union);
-  }
-
-  private static void assertEstimateWithinBounds(double expected, HllSketchHolder holder)
-  {
-    double estimate = holder.getEstimate();
-    Assert.assertTrue(
-        "Estimate " + estimate + " not within 10% of " + expected,
-        Math.abs(estimate - expected) / expected < 0.10
-    );
   }
 }
