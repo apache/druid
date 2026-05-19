@@ -20,8 +20,10 @@
 package org.apache.druid.benchmark;
 
 import org.apache.datasketches.hll.HllSketch;
+import org.apache.datasketches.hll.Union;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.datasketches.hll.HllSketchHolder;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -121,5 +123,34 @@ public class DataSketchesHllBenchmark
   {
     aggregator.init(buf, 0);
     return aggregatorFactory.deserialize(((HllSketch) aggregator.get(buf, 0)).toCompactByteArray());
+  }
+
+  @Benchmark
+  public HllSketchHolder mergeUnionHolders()
+  {
+    final int lgK = 12;
+    final int numValue = (1 << lgK) * 8;
+
+    HllSketch s1 = new HllSketch(lgK);
+    HllSketch s2 = new HllSketch(lgK);
+    for (int i = 0; i < numValue; i++) {
+      s1.update(i);
+      s2.update(numValue + i);
+    }
+    byte[] mergeSketchBytes1 = s1.toCompactByteArray();
+    byte[] mergeSketchBytes2 = s2.toCompactByteArray();
+
+    HllSketchHolder mergeHolder1;
+    HllSketchHolder mergeHolder2;
+
+    Union u1 = new Union(lgK);
+    u1.update(HllSketch.heapify(mergeSketchBytes1));
+    mergeHolder1 = HllSketchHolder.of(u1);
+
+    Union u2 = new Union(lgK);
+    u2.update(HllSketch.heapify(mergeSketchBytes2));
+    mergeHolder2 = HllSketchHolder.of(u2);
+
+    return mergeHolder1.merge(mergeHolder2);
   }
 }
