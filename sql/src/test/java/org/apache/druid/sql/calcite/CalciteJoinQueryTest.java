@@ -3569,8 +3569,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                   .filters(range(
                                       "m1",
-                                      ColumnType.LONG,
-                                      2L,
+                                      ColumnType.FLOAT,
+                                      2.0,
                                       null,
                                       true,
                                       false
@@ -4754,10 +4754,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         JoinType.INNER
                     )
                 )
-                .virtualColumns(expressionVirtualColumn("v0", "(\"m1\" + \"j0.m1\")", ColumnType.DOUBLE))
+                .virtualColumns(expressionVirtualColumn("v0", "(\"m1\" + \"j0.m1\")", ColumnType.FLOAT))
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
-                    equality("v0", 6.0, ColumnType.DOUBLE)
+                    equality("v0", 6.0, ColumnType.FLOAT)
                 )
                 .columns("m1", "j0.m1")
                 .columnTypes(ColumnType.FLOAT, ColumnType.FLOAT)
@@ -4970,8 +4970,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                         .dataSource(CalciteTests.DATASOURCE1)
                                         .intervals(querySegmentSpec(Intervals.of(
                                             "2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
-                                        .columns("dim1", "m2")
-                                        .columnTypes(ColumnType.STRING, ColumnType.DOUBLE)
+                                        .columns("dim1")
+                                        .columnTypes(ColumnType.STRING)
                                         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                         .context(queryContext)
                                         .build()
@@ -5665,11 +5665,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                   new Object[]{29064L}
                               ),
                               RowSignature.builder()
-                                          .add("ROW_VALUE", ColumnType.LONG)
+                                          .add("EXPR$0", ColumnType.LONG)
                                           .build()
                           ),
                           "j0.",
-                          "(\"l1\" == \"j0.ROW_VALUE\")",
+                          "(\"l1\" == \"j0.EXPR$0\")",
                           JoinType.INNER,
                           null,
                           ExprMacroTable.nil(),
@@ -5690,7 +5690,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported({Modes.SORT_REMOVE_TROUBLE, Modes.DD_SORT_REMOVE_TROUBLE})
+  @NotYetSupported(Modes.SORT_REMOVE_TROUBLE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testRegressionFilteredAggregatorsSubqueryJoins(Map<String, Object> queryContext)

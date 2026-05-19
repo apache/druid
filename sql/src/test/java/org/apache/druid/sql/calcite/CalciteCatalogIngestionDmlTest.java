@@ -880,9 +880,9 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                     dimensions(
                         new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
                         new DefaultDimensionSpec("b", "d1", ColumnType.STRING),
-                        new DefaultDimensionSpec("c", "d3", ColumnType.LONG),
-                        new DefaultDimensionSpec("d", "d4", ColumnType.LONG),
-                        new DefaultDimensionSpec("e", "d5", ColumnType.STRING)
+                        new DefaultDimensionSpec("c", "d2", ColumnType.LONG),
+                        new DefaultDimensionSpec("d", "d3", ColumnType.LONG),
+                        new DefaultDimensionSpec("e", "d4", ColumnType.STRING)
                     )
                 )
                 .setAggregatorSpecs(
@@ -902,7 +902,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .setPostAggregatorSpecs(
                     expressionPostAgg("p0", "1", ColumnType.LONG),
-                    expressionPostAgg("p1", "CAST(\"d3\", 'DOUBLE')", ColumnType.DOUBLE)
+                    expressionPostAgg("p1", "CAST(\"d2\", 'DOUBLE')", ColumnType.DOUBLE)
                 )
                 .setContext(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
@@ -1123,9 +1123,9 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                     dimensions(
                         new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
                         new DefaultDimensionSpec("b", "d1", ColumnType.STRING),
-                        new DefaultDimensionSpec("c", "d3", ColumnType.LONG),
-                        new DefaultDimensionSpec("d", "d4", ColumnType.LONG),
-                        new DefaultDimensionSpec("e", "d5", ColumnType.STRING)
+                        new DefaultDimensionSpec("c", "d2", ColumnType.LONG),
+                        new DefaultDimensionSpec("d", "d3", ColumnType.LONG),
+                        new DefaultDimensionSpec("e", "d4", ColumnType.STRING)
                     )
                 )
                 .setAggregatorSpecs(
@@ -1145,7 +1145,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .setPostAggregatorSpecs(
                     expressionPostAgg("p0", "1", ColumnType.LONG),
-                    expressionPostAgg("p1", "CAST(\"d3\", 'DOUBLE')", ColumnType.DOUBLE)
+                    expressionPostAgg("p1", "CAST(\"d2\", 'DOUBLE')", ColumnType.DOUBLE)
                 )
                 .setContext(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
