@@ -160,7 +160,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     if (config.isScaleDownOnTaskRolloverOnly()) {
       return computeOptimalTaskCount(lastKnownMetrics);
     } else {
-      return -1;
+      return CANNOT_COMPUTE;
     }
   }
 
@@ -170,7 +170,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     final int optimalTaskCount = computeOptimalTaskCount(lastKnownMetrics);
     if (optimalTaskCount <= 0) {
-      return -1;
+      return CANNOT_COMPUTE;
     }
 
     final int currentTaskCount = supervisor.getIoConfig().getTaskCount();
@@ -195,9 +195,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
   /**
-   * Returns the lowest-cost task count given {@code metrics}, or {@code -1} when metrics are
-   * unavailable or otherwise unusable (the only error signal). Returning the current task
-   * count is a valid result and means current task count is already optimal.
+   * Returns the lowest-cost task count given {@code metrics}, or {@link #CANNOT_COMPUTE} when
+   * metrics are unusable. Returning the current task count means the current count is already
+   * optimal (or no better candidate could be evaluated).
    */
   int computeOptimalTaskCount(CostMetrics metrics)
   {
@@ -209,13 +209,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
               .setDimension(DruidMetrics.DESCRIPTION, result.error())
               .setMetric(INVALID_METRICS_COUNT, 1L)
       );
-      return -1;
+      return CANNOT_COMPUTE;
     }
 
     final int partitionCount = metrics.getPartitionCount();
     final int currentTaskCount = metrics.getCurrentTaskCount();
     if (partitionCount <= 0 || currentTaskCount <= 0) {
-      return -1;
+      return CANNOT_COMPUTE;
     }
 
     final int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(
@@ -226,8 +226,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     );
 
     if (validTaskCounts.length == 0) {
+      // Return current count (not an error) so the supervisor can clamp it back into bounds.
       log.warn("No valid task counts after applying constraints for supervisor[%s]", supervisorId);
-      return -1;
+      return currentTaskCount;
     }
 
     // Start with the current task count as optimal

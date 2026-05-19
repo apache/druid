@@ -22,20 +22,20 @@ package org.apache.druid.indexing.overlord.supervisor.autoscaler;
 /**
  * Task-count auto-scaler driven by a streaming supervisor.
  * <p>
- * Scaler return-value contract for {@link #computeTaskCountForRollover()} and any
- * implementation-specific scale-action method:
+ * Return-value contract for {@link #computeTaskCountForRollover()} and any implementation-specific
+ * scale-action method:
  * <ul>
- *   <li>{@code -1} — error case: metrics unavailable or an answer cannot be computed. The
- *       supervisor will skip scaling and emit a failure metric.</li>
- *   <li>Otherwise — the scaler's preferred task count, <i>unclamped</i> by configured min/max
- *       bounds. The supervisor is responsible for clamping to {@code [taskCountMin, taskCountMax]}
- *       (and any partition-count ceiling) and for deciding whether to actually scale. Returning
- *       the current task count is a valid "stay put" signal and still lets the supervisor clamp
- *       an out-of-bounds current value back into range.</li>
+ *   <li>{@link #CANNOT_COMPUTE} when no preferred count can be computed.</li>
+ *   <li>Otherwise, a preferred task count {@code >= 1}, unclamped by min/max bounds. The supervisor
+ *       clamps to {@code [taskCountMin, taskCountMax]} and decides whether to scale. Scaling to
+ *       zero (idle) is the supervisor's responsibility, not the autoscaler's.</li>
  * </ul>
  */
 public interface SupervisorTaskAutoScaler
 {
+  /** Sentinel for "no preferred task count available". The supervisor will skip scaling. */
+  int CANNOT_COMPUTE = -1;
+
   void start();
   void stop();
   void reset();
@@ -47,6 +47,6 @@ public interface SupervisorTaskAutoScaler
    */
   default int computeTaskCountForRollover()
   {
-    return -1;
+    return CANNOT_COMPUTE;
   }
 }

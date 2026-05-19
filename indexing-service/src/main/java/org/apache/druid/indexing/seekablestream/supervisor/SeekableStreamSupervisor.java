@@ -545,8 +545,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                                                .setDimension(DruidMetrics.DATASOURCE, dataSource)
                                                                .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
 
-          // Negative return is the scaler's error signal (see SupervisorTaskAutoScaler).
-          if (desiredTaskCount < 0) {
+          if (desiredTaskCount <= 0) {
             log.warn(
                 "Auto-scaler returned pathological taskCount[%d] for supervisor[%s] for dataSource[%s]; skipping scale.",
                 desiredTaskCount,
@@ -566,13 +565,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           final int clampedTaskCount = Math.min(taskCountMax, Math.max(taskCountMin, desiredTaskCount));
 
           if (clampedTaskCount == currentTaskCount) {
+            // Don't emit on the steady-state no-op.
+            if (desiredTaskCount == currentTaskCount) {
+              log.debug(
+                  "No scale action for supervisor[%s] for dataSource[%s]: scaler wants [%d], current [%d].",
+                  supervisorId,
+                  dataSource,
+                  desiredTaskCount,
+                  currentTaskCount
+              );
+              return;
+            }
+
             final String skipReason;
             if (desiredTaskCount > taskCountMax) {
               skipReason = "Already at max task count";
-            } else if (desiredTaskCount < taskCountMin) {
-              skipReason = "Already at min task count";
             } else {
-              skipReason = "desired capacity reached";
+              skipReason = "Already at min task count";
             }
             log.info(
                 "Skipping scaling for supervisor[%s] for dataSource[%s]: [%s] (scaler wants [%d], current [%d], bounds [%d,%d])",
@@ -700,7 +709,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     final int currentActiveTaskCount = getCurrentTaskCount();
 
-    if (desiredActiveTaskCount < 0 || desiredActiveTaskCount == currentActiveTaskCount) {
+    if (desiredActiveTaskCount <= 0 || desiredActiveTaskCount == currentActiveTaskCount) {
       return false;
     } else {
       log.info(

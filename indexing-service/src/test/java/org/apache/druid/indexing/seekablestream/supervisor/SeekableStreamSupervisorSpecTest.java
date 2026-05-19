@@ -689,6 +689,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -745,8 +746,34 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
+    // taskCountMin=2 so scaler's floored output (1) is below min and triggers the clamp.
+    final Map<String, Object> scaleInProps = getScaleInProperties();
+    scaleInProps.put("taskCountMin", 2);
+    final SeekableStreamSupervisorIOConfig customIoConfig = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
+        1,
+        null,
+        new Period("PT1H"),
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        mapper.convertValue(scaleInProps, AutoScalerConfig.class),
+        LagAggregator.DEFAULT,
+        null,
+        null,
+        null,
+        null,
+        null
+    )
+    {
+    };
+
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(true)).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(customIoConfig).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -767,19 +794,20 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
       @Override
       public int getActiveTaskGroupsCount()
       {
-        return 1;
+        return 2;
       }
     };
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
         mapper.convertValue(
-            getScaleInProperties(),
+            scaleInProps,
             LagBasedAutoScalerConfig.class
         ),
         spec,
         dynamicActionEmitter
     );
+    supervisor.getIoConfig().setTaskCount(2);
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();

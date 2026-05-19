@@ -81,7 +81,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
   {
     Callable<Integer> scaleAction = () -> {
       LOCK.lock();
-      int desiredTaskCount = -1;
+      int desiredTaskCount = CANNOT_COMPUTE;
       try {
         desiredTaskCount = computeDesiredTaskCount(new ArrayList<>(lagMetricsQueue));
       }
@@ -222,7 +222,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     final int partitionCount = supervisor.getPartitionCount();
     if (partitionCount <= 0) {
       log.warn("Partition number for supervisor[%s] <= 0 ? how can it be?", spec.getId());
-      return -1;
+      return CANNOT_COMPUTE;
     }
 
     final int currentActiveTaskCount = supervisor.getIoConfig().getTaskCount();
@@ -232,8 +232,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
       return Math.min(currentActiveTaskCount + lagBasedAutoScalerConfig.getScaleOutStep(), partitionCount);
     }
     if (withinProportion >= lagBasedAutoScalerConfig.getTriggerScaleInFractionThreshold()) {
-      // scale-in: step down from current (the supervisor will clamp to taskCountMin)
-      return currentActiveTaskCount - lagBasedAutoScalerConfig.getScaleInStep();
+      return Math.max(1, currentActiveTaskCount - lagBasedAutoScalerConfig.getScaleInStep());
     }
     // Neither trigger fired; the scaler's preferred count is the current count.
     return currentActiveTaskCount;

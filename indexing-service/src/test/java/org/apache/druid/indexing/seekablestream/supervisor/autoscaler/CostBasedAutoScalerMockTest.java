@@ -292,7 +292,7 @@ public class CostBasedAutoScalerMockTest
   {
     // When scaleDownDuringTaskRolloverOnly is true and the optimal would be a scale-down, the
     // scaler's "preferred" count is to stay put — it signals that by returning the current count.
-    // The supervisor interprets equal-to-current as "desired capacity reached" and skips.
+    // The supervisor interprets equal-to-current as a steady-state no-op and skips silently.
     CostBasedAutoScalerConfig rolloverOnlyConfig = CostBasedAutoScalerConfig.builder()
                                                                             .taskCountMax(100)
                                                                             .taskCountMin(1)
