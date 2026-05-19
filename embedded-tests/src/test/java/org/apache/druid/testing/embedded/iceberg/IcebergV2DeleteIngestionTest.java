@@ -142,7 +142,7 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
     // Ingest and verify: only order_id=1 and 3 should be present
     ingestAndVerify(
         tableName,
-        "SELECT __time, \"order_id\", \"product\", \"amount\" FROM %s ORDER BY \"order_id\"",
+        "SELECT __time, \"order_id\", \"product\", \"amount\" FROM %s ORDER BY __time",
         "2024-01-01T00:00:00.000Z,1,Widget,100\n"
         + "2024-01-01T02:00:00.000Z,3,Doohickey,300"
     );
@@ -171,7 +171,7 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
 
     ingestAndVerify(
         tableName,
-        "SELECT __time, \"order_id\", \"product\", \"amount\" FROM %s ORDER BY \"order_id\"",
+        "SELECT __time, \"order_id\", \"product\", \"amount\" FROM %s ORDER BY __time",
         "2024-01-01T00:00:00.000Z,1,Widget,100\n"
         + "2024-01-01T02:00:00.000Z,3,Doohickey,300"
     );
@@ -193,7 +193,7 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
 
     ingestAndVerify(
         tableName,
-        "SELECT __time, \"order_id\", \"product\", \"amount\" FROM %s ORDER BY \"order_id\"",
+        "SELECT __time, \"order_id\", \"product\", \"amount\" FROM %s ORDER BY __time",
         "2024-01-01T00:00:00.000Z,1,Widget,100\n"
         + "2024-01-01T01:00:00.000Z,2,Gadget,200\n"
         + "2024-01-01T02:00:00.000Z,3,Doohickey,300"
@@ -231,7 +231,7 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
     // Only order_id=2, 3, 5 should remain
     ingestAndVerify(
         tableName,
-        "SELECT __time, \"order_id\", \"product\", \"amount\" FROM %s ORDER BY \"order_id\"",
+        "SELECT __time, \"order_id\", \"product\", \"amount\" FROM %s ORDER BY __time",
         "2024-01-01T01:00:00.000Z,2,Gadget,200\n"
         + "2024-01-01T02:00:00.000Z,3,Doohickey,300\n"
         + "2024-01-01T04:00:00.000Z,5,Whatchamacallit,500"
@@ -336,8 +336,6 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
 
     final PositionDeleteWriter<GenericRecord> writer = Parquet.writeDeletes(outputFile)
                                                              .forTable(table)
-                                                             .createWriterFunc(GenericParquetWriter::create)
-                                                             .rowSchema(TABLE_SCHEMA)
                                                              .overwrite()
                                                              .buildPositionWriter();
     try (PositionDeleteWriter<GenericRecord> w = writer) {

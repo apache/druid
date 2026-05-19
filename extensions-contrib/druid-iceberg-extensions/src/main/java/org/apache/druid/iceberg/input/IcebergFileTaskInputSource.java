@@ -26,17 +26,22 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceFactory;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
- * A non-splittable {@link InputSource} representing a single Iceberg v2 data file
- * with its associated delete files. Created internally by {@link IcebergInputSource}
- * when v2 delete files are detected.
+ * A {@link SplittableInputSource} representing a single Iceberg v2 data file with its
+ * associated delete files. Created internally by {@link IcebergInputSource} when v2
+ * delete files are detected. Reports itself as non-splittable (one file = one split)
+ * so MSQ routes it to a single worker without further splitting.
  *
  * This input source is JSON-serializable, carrying all metadata needed for a worker
  * to read a data file and apply deletes without catalog access:
@@ -47,7 +52,7 @@ import java.util.Map;
  *   <li>warehouseSource for file I/O</li>
  * </ul>
  */
-public class IcebergFileTaskInputSource implements InputSource
+public class IcebergFileTaskInputSource implements SplittableInputSource<List<String>>
 {
   public static final String TYPE_KEY = "icebergFileTask";
 
@@ -127,6 +132,27 @@ public class IcebergFileTaskInputSource implements InputSource
   public boolean isSplittable()
   {
     return false;
+  }
+
+  @Override
+  public Stream<InputSplit<List<String>>> createSplits(
+      final InputFormat inputFormat,
+      @Nullable final SplitHintSpec splitHintSpec
+  )
+  {
+    return Stream.of(new InputSplit<>(Collections.singletonList(dataFilePath)));
+  }
+
+  @Override
+  public int estimateNumSplits(final InputFormat inputFormat, @Nullable final SplitHintSpec splitHintSpec)
+  {
+    return 1;
+  }
+
+  @Override
+  public InputSource withSplit(final InputSplit<List<String>> split)
+  {
+    return this;
   }
 
   @Override
