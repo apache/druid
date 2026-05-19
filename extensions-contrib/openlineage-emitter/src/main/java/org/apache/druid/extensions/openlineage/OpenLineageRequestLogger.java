@@ -53,6 +53,8 @@ import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * OpenLineage RunEvents for completed Druid queries.
@@ -76,6 +78,11 @@ public class OpenLineageRequestLogger implements RequestLogger
   private static final int DISCARD_WARNING_INTERVAL = 1000;
 
   static final String UNKNOWN_QUERY_ID = "unknown-query-id";
+
+  // Matches the output table of MSQ DML: INSERT INTO "foo" or REPLACE INTO foo
+  private static final Pattern MSQ_DML_OUTPUT_PATTERN = Pattern.compile(
+      "(?si)^\\s*(?:INSERT|REPLACE)\\s+INTO\\s+\"?([^\"\\s(,]+)\"?"
+  );
 
   private final ObjectMapper jsonMapper;
   private final String namespace;
@@ -204,19 +211,36 @@ public class OpenLineageRequestLogger implements RequestLogger
   }
 
   /**
-   * SQL-level logging is a no-op. Lineage is emitted from the native query plan via
-   * {@link #logNativeQuery}, which has structured access to datasource references
-   * (JoinDataSource, UnionDataSource, etc.) without requiring SQL parsing.
+   * Emits lineage for MSQ DML statements (INSERT INTO / REPLACE INTO). For native-engine
+   * SQL SELECT queries, lineage is emitted from {@link #logNativeQuery} instead, which has
+   * structured access to datasource references without requiring SQL parsing.
    *
-   * <p>For SQL queries, the broker converts SQL to native queries before execution.
-   * Each native sub-query calls {@link #logNativeQuery}, which extracts inputs from
-   * {@code query.getDataSource().getTableNames()}. The native events carry the parent
-   * SQL query ID in their context for correlation.
+   * <p>MSQ INSERT/REPLACE queries submit an MSQControllerTask and never produce a native
+   * request-log event, so their output lineage must be captured here. The output datasource
+   * is extracted from the SQL text; inputs are not emitted because reliably extracting
+   * FROM/JOIN tables without a full SQL parser is out of scope for the logger layer.
    */
   @Override
   public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
   {
-    // No-op: lineage is emitted from native sub-queries.
+    String sql = requestLogLine.getSql();
+    if (sql == null) {
+      return;
+    }
+    Matcher matcher = MSQ_DML_OUTPUT_PATTERN.matcher(sql);
+    if (!matcher.find()) {
+      return;
+    }
+    String outputTable = matcher.group(1);
+
+    Map<String, Object> sqlContext = requestLogLine.getSqlQueryContext();
+    String queryId = sqlContext != null ? (String) sqlContext.get("sqlQueryId") : null;
+    if (queryId == null) {
+      log.debug("MSQ SQL query reached OpenLineage logger without a sqlQueryId");
+      queryId = UNKNOWN_QUERY_ID;
+    }
+
+    emit(buildRunEvent(queryId, "msq", requestLogLine, List.of(), outputTable));
   }
 
   private ObjectNode buildRunEvent(

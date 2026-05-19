@@ -91,10 +91,10 @@ public class OpenLineageRequestLoggerTest
     };
   }
 
-  // --- logSqlQuery is a no-op ---
+  // --- logSqlQuery: SELECT is no-op; MSQ DML emits ---
 
   @Test
-  public void testSqlQueryIsNoOp() throws IOException
+  public void testSqlSelectIsNoOp() throws IOException
   {
     logger.logSqlQuery(sqlLine(
         "SELECT * FROM \"kttm\"",
@@ -103,6 +103,71 @@ public class OpenLineageRequestLoggerTest
     ));
 
     Assertions.assertEquals(0, capturedEvents.size());
+  }
+
+  @Test
+  public void testMsqInsertEmitsOutputLineage() throws IOException
+  {
+    logger.logSqlQuery(sqlLine(
+        "INSERT INTO \"kttm-result\" SELECT * FROM \"kttm\"",
+        ImmutableMap.of("sqlQueryId", "msq-insert-1"),
+        ImmutableMap.of("success", true, "sqlQuery/time", 1200L, "sqlQuery/bytes", 4096L)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    ObjectNode event = capturedEvents.get(0);
+
+    Assertions.assertEquals("COMPLETE", event.get("eventType").asText());
+    // Output table extracted from SQL
+    Assertions.assertEquals(1, event.get("outputs").size());
+    Assertions.assertEquals("kttm-result", event.get("outputs").get(0).get("name").asText());
+    // Inputs are empty — extracting FROM clause requires a full SQL parser
+    Assertions.assertEquals(0, event.get("inputs").size());
+    // queryType is msq
+    Assertions.assertEquals("msq", event.get("run").get("facets").get("druid_query_context").get("queryType").asText());
+    // stats
+    Assertions.assertEquals(1200L, event.get("run").get("facets").get("druid_query_statistics").get("durationMs").asLong());
+  }
+
+  @Test
+  public void testMsqReplaceEmitsOutputLineage() throws IOException
+  {
+    logger.logSqlQuery(sqlLine(
+        "REPLACE INTO \"kttm-result\" OVERWRITE ALL SELECT * FROM \"kttm\"",
+        ImmutableMap.of("sqlQueryId", "msq-replace-1"),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    Assertions.assertEquals("kttm-result", capturedEvents.get(0).get("outputs").get(0).get("name").asText());
+  }
+
+  @Test
+  public void testMsqInsertUnquotedTable() throws IOException
+  {
+    logger.logSqlQuery(sqlLine(
+        "INSERT INTO kttm_result SELECT count(*) FROM kttm",
+        ImmutableMap.of("sqlQueryId", "msq-unquoted-1"),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    Assertions.assertEquals("kttm_result", capturedEvents.get(0).get("outputs").get(0).get("name").asText());
+  }
+
+  @Test
+  public void testMsqInsertFailure() throws IOException
+  {
+    logger.logSqlQuery(sqlLine(
+        "INSERT INTO \"kttm-result\" SELECT * FROM \"kttm\"",
+        ImmutableMap.of("sqlQueryId", "msq-fail-1"),
+        ImmutableMap.of("success", false, "exception", "Task failed")
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    ObjectNode event = capturedEvents.get(0);
+    Assertions.assertEquals("FAIL", event.get("eventType").asText());
+    Assertions.assertEquals("Task failed", event.get("run").get("facets").get("errorMessage").get("message").asText());
   }
 
   // --- Native query tests ---
