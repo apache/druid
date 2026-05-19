@@ -20,16 +20,12 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.kafka.clients.admin.Admin;
-import org.apache.kafka.clients.admin.ConfigEntry;
-import org.apache.kafka.clients.admin.DescribeConfigsResult;
 import org.apache.kafka.clients.consumer.AcknowledgeType;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaShareConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.config.ConfigResource;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.junit.jupiter.api.AfterEach;
@@ -179,28 +175,7 @@ public class ShareGroupProbeTest
     final String groupId = "probe_group_" + System.currentTimeMillis();
 
     kafkaServer.createTopicWithPartitions(topic, 2);
-
-    try (Admin admin = kafkaServer.newAdminClient()) {
-      final ConfigResource brokerCfg = new ConfigResource(ConfigResource.Type.BROKER, "1");
-      final DescribeConfigsResult res = admin.describeConfigs(List.of(brokerCfg));
-      for (ConfigEntry e : res.all().get().get(brokerCfg).entries()) {
-        if (e.name().startsWith("group.share")) {
-          System.out.println("BROKER_CFG: " + e.name() + "=" + e.value() + " source=" + e.source());
-        }
-      }
-    }
-
     kafkaServer.setShareGroupAutoOffsetReset(groupId, "earliest");
-
-    try (Admin admin = kafkaServer.newAdminClient()) {
-      final ConfigResource grp = new ConfigResource(ConfigResource.Type.GROUP, groupId);
-      final DescribeConfigsResult res = admin.describeConfigs(List.of(grp));
-      for (ConfigEntry e : res.all().get().get(grp).entries()) {
-        if (e.name().startsWith("share")) {
-          System.out.println("GROUP_CFG: " + e.name() + "=" + e.value() + " source=" + e.source());
-        }
-      }
-    }
 
     final Properties props = new Properties();
     props.put("bootstrap.servers", kafkaServer.getBootstrapServerUrl());
