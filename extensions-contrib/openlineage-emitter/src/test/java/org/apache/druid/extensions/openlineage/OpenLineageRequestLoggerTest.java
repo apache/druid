@@ -106,6 +106,56 @@ public class OpenLineageRequestLoggerTest
   }
 
   @Test
+  public void testLogSqlQueryWithNullSql() throws IOException
+  {
+    logger.logSqlQuery(RequestLogLine.forSql(
+        null,
+        ImmutableMap.of(),
+        TIMESTAMP,
+        REMOTE_ADDR,
+        new QueryStats(ImmutableMap.of())
+    ));
+
+    Assertions.assertEquals(0, capturedEvents.size());
+  }
+
+  @Test
+  public void testMsqInsertMissingSqlQueryId() throws IOException
+  {
+    // No sqlQueryId in context → falls back to UNKNOWN_QUERY_ID
+    logger.logSqlQuery(sqlLine(
+        "INSERT INTO \"kttm-result\" SELECT * FROM \"kttm\"",
+        ImmutableMap.of(),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    Assertions.assertEquals(
+        OpenLineageRequestLogger.UNKNOWN_QUERY_ID,
+        capturedEvents.get(0).get("job").get("name").asText()
+    );
+  }
+
+  @Test
+  public void testMsqInsertNullContext() throws IOException
+  {
+    // Null sqlQueryContext → falls back to UNKNOWN_QUERY_ID
+    logger.logSqlQuery(RequestLogLine.forSql(
+        "INSERT INTO \"kttm-result\" SELECT * FROM \"kttm\"",
+        null,
+        TIMESTAMP,
+        REMOTE_ADDR,
+        new QueryStats(ImmutableMap.of("success", true))
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    Assertions.assertEquals(
+        OpenLineageRequestLogger.UNKNOWN_QUERY_ID,
+        capturedEvents.get(0).get("job").get("name").asText()
+    );
+  }
+
+  @Test
   public void testMsqInsertEmitsOutputLineage() throws IOException
   {
     logger.logSqlQuery(sqlLine(
@@ -384,6 +434,20 @@ public class OpenLineageRequestLoggerTest
         null,
         DEFAULT_EXCLUDED_NATIVE_QUERY_TYPES
     ));
+  }
+
+  @Test
+  public void testStopWithHttpTransport()
+  {
+    OpenLineageRequestLogger httpLogger = new OpenLineageRequestLogger(
+        MAPPER,
+        NAMESPACE,
+        OpenLineageRequestLoggerProvider.TransportType.HTTP,
+        "http://localhost:9999/api/v1/lineage",
+        DEFAULT_EXCLUDED_NATIVE_QUERY_TYPES
+    );
+    // Covers the executor-shutdown and httpClient-close branches in stop()
+    Assertions.assertDoesNotThrow(httpLogger::stop);
   }
 
   private static RequestLogLine sqlLine(String sql, Map<String, Object> context, Map<String, Object> stats)
