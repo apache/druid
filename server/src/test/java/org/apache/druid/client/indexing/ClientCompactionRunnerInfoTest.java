@@ -267,6 +267,74 @@ public class ClientCompactionRunnerInfoTest
     );
   }
 
+  @Test
+  public void testMSQEngineWithMinorCompactionTaskPercentZeroIsInvalid()
+  {
+    final CompactionConfigValidationResult validationResult = validateMinorCompactionTaskPercent(0);
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "MSQ: Context 'minorCompactionTaskPercent'[0] must be between 1 and 100",
+        validationResult.getReason()
+    );
+  }
+
+  @Test
+  public void testMSQEngineWithMinorCompactionTaskPercentAboveOneHundredIsInvalid()
+  {
+    final CompactionConfigValidationResult validationResult = validateMinorCompactionTaskPercent(200);
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "MSQ: Context 'minorCompactionTaskPercent'[200] must be between 1 and 100",
+        validationResult.getReason()
+    );
+  }
+
+  @Test
+  public void testMSQEngineWithMinorCompactionTaskPercentNonNumericIsInvalid()
+  {
+    final CompactionConfigValidationResult validationResult = validateMinorCompactionTaskPercent("not-a-number");
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertTrue(
+        "Should fail due to the minorCompactionTaskPercent key explicitly",
+        validationResult.getReason().startsWith("MSQ: Context 'minorCompactionTaskPercent'")
+    );
+  }
+
+  @Test
+  public void testMSQEngineWithMinorCompactionTaskPercentInRangeIsValid()
+  {
+    Assert.assertTrue(validateMinorCompactionTaskPercent(1).isValid());
+    Assert.assertTrue(validateMinorCompactionTaskPercent(40).isValid());
+    Assert.assertTrue(validateMinorCompactionTaskPercent(100).isValid());
+  }
+
+  @Test
+  public void testMSQEngineWithMinorCompactionTaskPercentAbsentIsValid()
+  {
+    final DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
+        new DynamicPartitionsSpec(3, null),
+        Collections.emptyMap(),
+        null,
+        null,
+        null
+    );
+    Assert.assertTrue(
+        ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.MSQ).isValid()
+    );
+  }
+
+  private static CompactionConfigValidationResult validateMinorCompactionTaskPercent(Object value)
+  {
+    final DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
+        new DynamicPartitionsSpec(3, null),
+        Map.of(ClientMSQContext.CTX_MINOR_COMPACTION_TASK_PERCENT, value),
+        null,
+        null,
+        null
+    );
+    return ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.MSQ);
+  }
+
   private static DataSourceCompactionConfig createMSQCompactionConfig(
       PartitionsSpec partitionsSpec,
       Map<String, Object> context,
