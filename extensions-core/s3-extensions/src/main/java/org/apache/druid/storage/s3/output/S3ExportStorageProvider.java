@@ -22,19 +22,27 @@ package org.apache.druid.storage.s3.output;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
+import org.apache.druid.common.aws.AWSClientConfig;
+import org.apache.druid.common.aws.AWSEndpointConfig;
+import org.apache.druid.common.aws.AWSProxyConfig;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.s3.S3InputSource;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.s3.S3StorageConfig;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.net.URI;
@@ -51,10 +59,28 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   @JsonProperty
   private final String prefix;
 
+  @Nullable
+  @JsonProperty
+  private final String assumeRoleArn;
+  @Nullable
+  @JsonProperty
+  private final String assumeRoleExternalId;
+
   @JacksonInject
   S3ExportConfig s3ExportConfig;
   @JacksonInject
-  ServerSideEncryptingAmazonS3 s3;
+  ServerSideEncryptingAmazonS3 s3Client;
+
+  @JacksonInject
+  S3StorageConfig s3StorageConfig;
+  @JacksonInject
+  AWSProxyConfig awsProxyConfig;
+  @JacksonInject
+  AWSEndpointConfig awsEndpointConfig;
+  @JacksonInject
+  AWSClientConfig awsClientConfig;
+  @JacksonInject
+  AwsCredentialsProvider baseCredentialsProvider;
 
   @JacksonInject
   S3UploadManager s3UploadManager;
@@ -62,11 +88,16 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   @JsonCreator
   public S3ExportStorageProvider(
       @JsonProperty(value = "bucket", required = true) String bucket,
-      @JsonProperty(value = "prefix", required = true) String prefix
+      @JsonProperty(value = "prefix", required = true) String prefix,
+      @Nullable @JsonProperty(value = "assumeRoleArn") String assumeRoleArn,
+      @Nullable @JsonProperty(value = "assumeRoleExternalId") String assumeRoleExternalId
+
   )
   {
     this.bucket = bucket;
     this.prefix = prefix;
+    this.assumeRoleArn = assumeRoleArn;
+    this.assumeRoleExternalId = assumeRoleExternalId;
   }
 
 
@@ -93,7 +124,22 @@ public class S3ExportStorageProvider implements ExportStorageProvider
         s3ExportConfig.getChunkSize(),
         s3ExportConfig.getMaxRetry()
     );
-    return new S3StorageConnector(s3OutputConfig, s3, s3UploadManager);
+    if (Strings.isNullOrEmpty(assumeRoleArn)) {
+      return new S3StorageConnector(s3OutputConfig, s3Client, s3UploadManager);
+    }
+    return new S3StorageConnector(
+        s3OutputConfig,
+        ServerSideEncryptingAmazonS3.builder(
+            baseCredentialsProvider,
+            s3StorageConfig,
+            awsProxyConfig,
+            awsEndpointConfig,
+            awsClientConfig,
+            null,
+            this
+        ).build(),
+        s3UploadManager
+    );
   }
 
   @VisibleForTesting
@@ -134,6 +180,22 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   public String getPrefix()
   {
     return prefix;
+  }
+
+  @Nullable
+  @JsonProperty("assumeRoleArn")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getAssumeRoleArn()
+  {
+    return assumeRoleArn;
+  }
+
+  @Nullable
+  @JsonProperty("assumeRoleExternalId")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getAssumeRoleExternalId()
+  {
+    return assumeRoleExternalId;
   }
 
   @Override
