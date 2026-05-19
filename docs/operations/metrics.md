@@ -428,14 +428,14 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/loadQueue/count`|Number of segments to load.|`server`|Varies|
 |`segment/loading/rateKbps`|Current rate of segment loading on a server in kbps (1000 bits per second). The rate is calculated as a moving average over the last 10 GiB or more of successful segment loads on that server.|`server`|Varies|
 |`segment/dropQueue/count`|Number of segments to drop.|`server`|Varies|
-|`segment/loadQueue/assigned`|Number of segments assigned for load or drop to the load queue of a server.|`dataSource`, `server`|Varies|
-|`segment/loadQueue/success`|Number of segment assignments that completed successfully.|`dataSource`, `server`|Varies|
-|`segment/loadQueue/failed`|Number of segment assignments that failed to complete.|`dataSource`, `server`|0|
-|`segment/loadQueue/cancelled`|Number of segment assignments that were canceled before completion.|`dataSource`, `server`|Varies|
+|`segment/loadQueue/assigned`|Number of segments assigned for load or drop to the load queue of a server.|`dataSource`, `description`|Varies|
+|`segment/loadQueue/success`|Number of segment assignments that completed successfully.|`dataSource`, `description`|Varies|
+|`segment/loadQueue/failed`|Number of segment assignments that failed to complete.|`dataSource`, `description`|0|
+|`segment/loadQueue/cancelled`|Number of segment assignments that were canceled before completion.|`dataSource`, `description`|Varies|
 |`segment/size`|Total size of used segments in a data source. Emitted only for data sources to which at least one used segment belongs.|`dataSource`|Varies|
 |`segment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|`dataSource`|< max|
 |`segment/overShadowed/count`|Number of segments marked as unused due to being overshadowed.| |Varies|
-|`segment/unneededEternityTombstone/count`|Number of non-overshadowed eternity tombstones marked as unused.| |Varies|
+|`segment/unneededEternityTombstone/count`|Number of non-overshadowed eternity tombstones marked as unused.|`dataSource`|Varies|
 |`segment/unavailable/count`|Number of unique segments left to load until all used segments are available for queries.|`dataSource`|0|
 |`segment/underReplicated/count`|Number of segments, including replicas, left to load until all used segments are available for queries.|`tier`, `dataSource`|0|
 |`segment/availableDeepStorageOnly/count`|Number of unique segments that are only available for querying directly from deep storage.|`dataSource`|Varies|
