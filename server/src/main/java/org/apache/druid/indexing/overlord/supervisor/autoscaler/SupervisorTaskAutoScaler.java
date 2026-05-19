@@ -19,6 +19,21 @@
 
 package org.apache.druid.indexing.overlord.supervisor.autoscaler;
 
+/**
+ * Task-count auto-scaler driven by a streaming supervisor.
+ * <p>
+ * Scaler return-value contract for {@link #computeTaskCountForRollover()} and any
+ * implementation-specific scale-action method:
+ * <ul>
+ *   <li>{@code -1} — error case: metrics unavailable or an answer cannot be computed. The
+ *       supervisor will skip scaling and emit a failure metric.</li>
+ *   <li>Otherwise — the scaler's preferred task count, <i>unclamped</i> by configured min/max
+ *       bounds. The supervisor is responsible for clamping to {@code [taskCountMin, taskCountMax]}
+ *       (and any partition-count ceiling) and for deciding whether to actually scale. Returning
+ *       the current task count is a valid "stay put" signal and still lets the supervisor clamp
+ *       an out-of-bounds current value back into range.</li>
+ * </ul>
+ */
 public interface SupervisorTaskAutoScaler
 {
   void start();
@@ -26,10 +41,9 @@ public interface SupervisorTaskAutoScaler
   void reset();
 
   /**
-   * Computes the optimal task count during task rollover, allowing a non-disruptive scale-down.
-   * Must be called by the supervisor when tasks are ending their duration.
-   *
-   * @return optimal task count for scale-down, or -1 if no change needed
+   * Preferred task count when a task group is rolling over, allowing a non-disruptive scale-down.
+   * Called by the supervisor when tasks are ending their duration. See the type-level Javadoc for
+   * the return-value contract.
    */
   default int computeTaskCountForRollover()
   {
