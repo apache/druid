@@ -22,7 +22,9 @@ package org.apache.druid.msq.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Smile;
@@ -46,6 +48,7 @@ import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.client.IndexerControllerClient;
 import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.client.WorkerChatHandler;
+import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
@@ -66,6 +69,8 @@ import org.apache.druid.storage.StorageConnectorProvider;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.List;
+import java.util.Set;
 
 public class IndexerWorkerContext implements WorkerContext
 {
@@ -90,6 +95,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final ServiceClientFactory clientFactory;
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
+  private final List<InputSliceReaderProvider> inputSliceReaderProviders;
   private final int maxConcurrentStages;
   private final boolean liveReportCounters;
   private final boolean includeAllCounters;
@@ -112,7 +118,8 @@ public class IndexerWorkerContext implements WorkerContext
       final ServiceClientFactory clientFactory,
       final MemoryIntrospector memoryIntrospector,
       final ProcessingBuffersProvider processingBuffersProvider,
-      final IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory
+      final IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory,
+      final List<InputSliceReaderProvider> inputSliceReaderProviders
   )
   {
     this.task = task;
@@ -127,6 +134,7 @@ public class IndexerWorkerContext implements WorkerContext
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
     this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
+    this.inputSliceReaderProviders = inputSliceReaderProviders;
 
     final QueryContext queryContext = QueryContext.of(task.getContext());
     this.maxConcurrentStages = MultiStageQueryContext.getMaxConcurrentStagesWithDefault(
@@ -171,6 +179,8 @@ public class IndexerWorkerContext implements WorkerContext
         injector.getInstance(OverlordClient.class).withRetryPolicy(StandardRetryPolicy.unlimited());
     final ProcessingBuffersProvider processingBuffersProvider = injector.getInstance(ProcessingBuffersProvider.class);
     final ObjectMapper smileMapper = injector.getInstance(Key.get(ObjectMapper.class, Smile.class));
+    final Set<InputSliceReaderProvider> inputSliceReaderProviders =
+        injector.getInstance(Key.get(new TypeLiteral<>() {}, IndexingService.class));
 
     return new IndexerWorkerContext(
         task,
@@ -189,7 +199,8 @@ public class IndexerWorkerContext implements WorkerContext
             toolbox.getCoordinatorClient(),
             serviceClientFactory,
             smileMapper
-        )
+        ),
+        List.copyOf(inputSliceReaderProviders)
     );
   }
 
@@ -226,6 +237,12 @@ public class IndexerWorkerContext implements WorkerContext
   public Injector injector()
   {
     return injector;
+  }
+
+  @Override
+  public List<InputSliceReaderProvider> inputSliceReaderProviders()
+  {
+    return inputSliceReaderProviders;
   }
 
   @Override
