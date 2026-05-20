@@ -1180,7 +1180,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
               schema = new StringDimensionSchema(
                   schema.getName(),
                   DimensionSchema.MultiValueHandling.ARRAY,
-                  schema.hasBitmapIndex()
+                  schema.hasBitmapIndex(),
+                  ((StringDimensionSchema) schema).getColumnFormatSpec()
               );
             }
             dimensionSchemaMap.put(
@@ -1258,7 +1259,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
                     new StringDimensionSchema(
                         columnSchema.getName(),
                         DimensionSchema.MultiValueHandling.ARRAY,
-                        columnSchema.hasBitmapIndex()
+                        columnSchema.hasBitmapIndex(),
+                        ((StringDimensionSchema) columnSchema).getColumnFormatSpec()
                     )
                 );
               } else {
