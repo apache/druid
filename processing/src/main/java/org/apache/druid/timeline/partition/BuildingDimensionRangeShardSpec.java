@@ -22,6 +22,7 @@ package org.apache.druid.timeline.partition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -109,6 +110,7 @@ public class BuildingDimensionRangeShardSpec implements BuildingShardSpec<Dimens
         numCorePartitions
     ) : new DimensionRangeShardSpec(
         dimensions,
+        VirtualColumns.EMPTY,
         start,
         end,
         partitionId,

@@ -30,6 +30,7 @@ import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -95,7 +96,8 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new HeapMemoryIndexingStateStorage()
     );
 
     derbyConnector.createSegmentTable();

@@ -22,8 +22,8 @@ package org.apache.druid.timeline.partition;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Map;
@@ -55,7 +55,7 @@ public class HashBasedNumberedPartialShardSpecTest
         json,
         PartialShardSpec.class
     );
-    Assert.assertEquals(expected, fromJson);
+    Assertions.assertEquals(expected, fromJson);
   }
 
   @Test
@@ -70,13 +70,13 @@ public class HashBasedNumberedPartialShardSpecTest
     final byte[] json = MAPPER.writeValueAsBytes(expected);
     //noinspection unchecked
     final Map<String, Object> map = MAPPER.readValue(json, Map.class);
-    Assert.assertEquals(5, map.size());
-    Assert.assertEquals(HashBasedNumberedPartialShardSpec.TYPE, map.get("type"));
-    Assert.assertEquals(expected.getPartitionDimensions(), map.get("partitionDimensions"));
-    Assert.assertEquals(expected.getBucketId(), map.get("bucketId"));
-    Assert.assertEquals(expected.getNumBuckets(), map.get("numPartitions"));
-    Assert.assertEquals(expected.getBucketId(), map.get("bucketId"));
-    Assert.assertEquals(expected.getPartitionFunction().toString(), map.get("partitionFunction"));
+    Assertions.assertEquals(5, map.size());
+    Assertions.assertEquals(HashBasedNumberedPartialShardSpec.TYPE, map.get("type"));
+    Assertions.assertEquals(expected.getPartitionDimensions(), map.get("partitionDimensions"));
+    Assertions.assertEquals(expected.getBucketId(), map.get("bucketId"));
+    Assertions.assertEquals(expected.getNumBuckets(), map.get("numPartitions"));
+    Assertions.assertEquals(expected.getBucketId(), map.get("bucketId"));
+    Assertions.assertEquals(expected.getPartitionFunction().toString(), map.get("partitionFunction"));
   }
 
   @Test
@@ -89,7 +89,7 @@ public class HashBasedNumberedPartialShardSpecTest
         null
     );
     final ShardSpec shardSpec = partialShardSpec.complete(MAPPER, 1, 3);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new HashBasedNumberedShardSpec(1, 3, 2, 4, ImmutableList.of("dim"), null, MAPPER),
         shardSpec
     );

@@ -22,30 +22,23 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.curator.test.TestingCluster;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerSpec;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
-import org.apache.druid.indexing.kafka.test.TestBroker;
+import org.apache.druid.indexing.kafka.test.EmbeddedKafkaBroker;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.overlord.sampler.SamplerTestUtils;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -64,7 +57,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -105,8 +97,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         schema.withTimestamp(new TimestampSpec("kafka.timestamp", "iso", null));
       };
 
-  private static TestingCluster zkServer;
-  private static TestBroker kafkaServer;
+  private static EmbeddedKafkaBroker kafkaServer;
 
   private static List<ProducerRecord<byte[], byte[]>> generateRecords(String topic)
   {
@@ -121,20 +112,16 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   }
 
   @BeforeClass
-  public static void setupClass() throws Exception
+  public static void setupClass()
   {
-    zkServer = new TestingCluster(1);
-    zkServer.start();
-
-    kafkaServer = new TestBroker(zkServer.getConnectString(), null, 1, ImmutableMap.of("num.partitions", "2"));
+    kafkaServer = new EmbeddedKafkaBroker(ImmutableMap.of("KAFKA_NUM_PARTITIONS", "2"));
     kafkaServer.start();
   }
 
   @AfterClass
-  public static void tearDownClass() throws Exception
+  public static void tearDownClass()
   {
     kafkaServer.close();
-    zkServer.stop();
   }
 
   @Test
@@ -235,53 +222,6 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
     Assert.assertTrue(nextRow.isUnparseable());
 
     Assert.assertFalse(it.hasNext());
-  }
-
-  @Test
-  public void testWithInputRowParser()
-  {
-    insertData(generateRecords(TOPIC));
-
-    ObjectMapper objectMapper = new DefaultObjectMapper();
-    TimestampSpec timestampSpec = new TimestampSpec("timestamp", "iso", null);
-    DimensionsSpec dimensionsSpec = new DimensionsSpec(
-        Arrays.asList(
-            new StringDimensionSchema("dim1"),
-            new StringDimensionSchema("dim1t"),
-            new StringDimensionSchema("dim2"),
-            new LongDimensionSchema("dimLong"),
-            new FloatDimensionSchema("dimFloat")
-        )
-    );
-    InputRowParser parser = new StringInputRowParser(new JSONParseSpec(timestampSpec, dimensionsSpec, JSONPathSpec.DEFAULT, null, null), "UTF8");
-
-    Consumer<DataSchema.Builder> dataSchema =
-        builder -> builder.withDataSource("test_ds")
-                          .withParserMap(objectMapper.convertValue(parser, Map.class))
-                          .withAggregators(
-                              new DoubleSumAggregatorFactory("met1sum", "met1"),
-                              new CountAggregatorFactory("rows")
-                          )
-                          .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
-                          .withObjectMapper(objectMapper);
-
-    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpecBuilder()
-        .withDataSchema(dataSchema)
-        .withIoConfig(
-            ioConfig -> ioConfig
-                .withConsumerProperties(kafkaServer.consumerProperties())
-                .withUseEarliestSequenceNumber(true)
-        )
-        .build(DATASOURCE, TOPIC);
-
-    KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
-        supervisorSpec,
-        new SamplerConfig(5, 5_000, null, null),
-        new InputSourceSampler(new DefaultObjectMapper()),
-        OBJECT_MAPPER
-    );
-
-    runSamplerAndCompareResponse(samplerSpec, false);
   }
 
   private static void runSamplerAndCompareResponse(SamplerSpec samplerSpec, boolean useInputFormat)
@@ -418,6 +358,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   public void testInvalidKafkaConfig()
   {
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(DATA_SCHEMA)
         .withIoConfig(
             ioConfig -> ioConfig
                 .withJsonInputFormat()
@@ -442,6 +383,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   public void testGetInputSourceResources()
   {
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(DATA_SCHEMA)
         .withIoConfig(
             ioConfig -> ioConfig
                 .withJsonInputFormat()

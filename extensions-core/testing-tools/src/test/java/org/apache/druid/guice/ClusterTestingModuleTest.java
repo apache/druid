@@ -29,6 +29,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.CoordinatorClientImpl;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.actions.RemoteTaskActionClientFactory;
@@ -204,7 +205,7 @@ public class ClusterTestingModuleTest
           null,
           null,
           new ParallelIndexIngestionSpec(
-              DataSchema.builder().withDataSource("test").build(),
+              DataSchema.builder().withDataSource("test").withTimestamp(TimestampSpec.DEFAULT).build(),
               ioConfig,
               ParallelIndexTuningConfig.defaultConfig()
           ),

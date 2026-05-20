@@ -155,7 +155,7 @@ public class DimensionRangePartitionsSpec implements DimensionBasedPartitionsSpe
   }
 
   @Override
-  public boolean needsDeterminePartitions(boolean useForHadoopTask)
+  public boolean needsDeterminePartitions()
   {
     return true;
   }

@@ -33,8 +33,9 @@ import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
 
@@ -80,20 +81,20 @@ public class SegmentAnalysisTest
         2,
         ImmutableMap.of("cnt", new CountAggregatorFactory("cnt")),
         ImmutableMap.of("channel_added_hourly", new AggregateProjectionMetadata(
-            AggregateProjectionMetadata.schemaBuilder("channel_added_hourly")
-                                       .timeColumnName(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
-                                       .virtualColumns(
+            AggregateProjectionSchema.schemaBuilder("channel_added_hourly")
+                                     .timeColumnName(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+                                     .virtualColumns(
                                            Granularities.toVirtualColumn(
                                                Granularities.HOUR,
                                                Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
                                            )
                                        )
-                                       .groupAndOrder(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel")
-                                       .aggregators(new LongSumAggregatorFactory("sum_added", "added"))
-                                       .build(),
+                                     .groupAndOrder(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel")
+                                     .aggregators(new LongSumAggregatorFactory("sum_added", "added"))
+                                     .build(),
             16
         )),
-        new TimestampSpec(null, null, null),
+        TimestampSpec.DEFAULT,
         Granularities.SECOND,
         true
     );
@@ -104,10 +105,10 @@ public class SegmentAnalysisTest
         SegmentAnalysis.class
     );
 
-    Assert.assertEquals(analysis, analysis2);
+    Assertions.assertEquals(analysis, analysis2);
 
     // Verify column order is preserved.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.copyOf(columns.entrySet()),
         ImmutableList.copyOf(analysis2.getColumns().entrySet())
     );

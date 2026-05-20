@@ -34,11 +34,12 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTimeZone;
 
@@ -99,10 +100,7 @@ public class AggregateProjectionSpec
       @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators
   )
   {
-    if (name == null || name.isEmpty()) {
-      throw InvalidInput.exception("projection name cannot be null or empty");
-    }
-    this.name = name;
+    this.name = Projections.validateProjectionName(name);
     if (CollectionUtils.isNullOrEmpty(groupingColumns) && (aggregators == null || aggregators.length == 0)) {
       throw InvalidInput.exception(
           "projection[%s] groupingColumns and aggregators must not both be null or empty",
@@ -162,9 +160,9 @@ public class AggregateProjectionSpec
   }
 
   @JsonIgnore
-  public AggregateProjectionMetadata.Schema toMetadataSchema()
+  public AggregateProjectionSchema toMetadataSchema()
   {
-    return new AggregateProjectionMetadata.Schema(
+    return new AggregateProjectionSchema(
         name,
         timeColumnName,
         filter,

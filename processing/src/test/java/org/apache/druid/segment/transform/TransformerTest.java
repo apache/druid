@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -377,7 +378,7 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertNotNull(actual);
     Assert.assertEquals(ImmutableList.of("dim"), actual.getDimensions());
     Assert.assertArrayEquals(new Object[]{1L, 2L, null, 3L}, (Object[]) actual.getRaw("dim"));
-    Assert.assertEquals(ImmutableList.of("1", "2", "null", "3"), actual.getDimension("dim"));
+    Assert.assertEquals(Arrays.asList("1", "2", null, "3"), actual.getDimension("dim"));
     Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
   }
 
@@ -405,7 +406,7 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertNull(raw[2]);
     Assert.assertEquals(3.4, (Double) raw[3], 0.00001);
     Assert.assertEquals(
-        ImmutableList.of("1.2000000476837158", "2.299999952316284", "null", "3.4000000953674316"),
+        Arrays.asList("1.2000000476837158", "2.299999952316284", null, "3.4000000953674316"),
         actual.getDimension("dim")
     );
     Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
@@ -433,7 +434,7 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertEquals(2.3, (Double) raw[1], 0.0);
     Assert.assertNull(raw[2]);
     Assert.assertEquals(3.4, (Double) raw[3], 0.0);
-    Assert.assertEquals(ImmutableList.of("1.2", "2.3", "null", "3.4"), actual.getDimension("dim"));
+    Assert.assertEquals(Arrays.asList("1.2", "2.3", null, "3.4"), actual.getDimension("dim"));
     Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
   }
 
@@ -506,5 +507,76 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertEquals(actualTranformedRow.getDimension("dim"), dimList.subList(0, 5));
     Assert.assertArrayEquals(dimList.subList(0, 5).toArray(), (Object[]) actualTranformedRow.getRaw("dim"));
     Assert.assertEquals(ImmutableList.of("a"), actualTranformedRow.getDimension("dim1"));
+  }
+
+  @Test
+  public void testNowTransform()
+  {
+    TransformSpec transformSpec = new TransformSpec(
+        null,
+        ImmutableList.of(
+            new ExpressionTransform("ingestion_time", "now()", TestExprMacroTable.INSTANCE),
+            new ExpressionTransform("lag_ms", "now() - __time", TestExprMacroTable.INSTANCE)
+        )
+    );
+
+    long beforeTransform = System.currentTimeMillis();
+
+    InputRow row = new MapBasedInputRow(
+        DateTimes.of("2024-01-01T00:00:00Z"),
+        ImmutableList.of("dim"),
+        ImmutableMap.of("dim", "value")
+    );
+
+    Transformer transformer = transformSpec.toTransformer();
+    InputRow transformed = transformer.transform(row);
+
+    Assert.assertNotNull(transformed);
+    Assert.assertNotNull(transformed.getRaw("ingestion_time"));
+
+    long ingestionTime = ((Number) transformed.getRaw("ingestion_time")).longValue();
+    long afterTransform = System.currentTimeMillis();
+    Assert.assertTrue(
+        "Ingestion time should be between transform start and end: "
+            + beforeTransform + " <= " + ingestionTime + " <= " + afterTransform,
+        ingestionTime >= beforeTransform && ingestionTime <= afterTransform
+    );
+
+    // Verify lag calculation (may be slightly different from ingestionTime - __time due to timing)
+    long lag = ((Number) transformed.getRaw("lag_ms")).longValue();
+    long eventTime = DateTimes.of("2024-01-01T00:00:00Z").getMillis();
+    long expectedLag = ingestionTime - eventTime;
+
+    // Allow small difference since now() is called twice (once for ingestion_time, once for lag_ms)
+    long lagDiff = Math.abs(lag - expectedLag);
+    Assert.assertTrue(
+        "Lag should be approximately correct (diff=" + lagDiff + "ms): expected=" + expectedLag + ", actual=" + lag,
+        lagDiff < 100  // Allow up to 100ms difference
+    );
+
+    // Verify lag is positive (ingestion happened after event)
+    Assert.assertTrue("Lag should be positive", lag > 0);
+  }
+
+  @Test
+  public void testNowCannotBeUsedForTimeColumn()
+  {
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Cannot use non-deterministic expression[now()] to set column name[__time]."
+        + " Non-deterministic expressions such as now() are not supported as __time transforms."
+    ).assertThrowsAndMatches(
+        () -> new ExpressionTransform("__time", "now()", TestExprMacroTable.INSTANCE)
+    );
+  }
+
+  @Test
+  public void testNowRejectedWhenWrappedInArithmeticForTimeColumn()
+  {
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Cannot use non-deterministic expression[now() + 1000] to set column name[__time]."
+        + " Non-deterministic expressions such as now() are not supported as __time transforms."
+    ).assertThrowsAndMatches(
+        () -> new ExpressionTransform("__time", "now() + 1000", TestExprMacroTable.INSTANCE)
+    );
   }
 }

@@ -280,16 +280,16 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
 
       TopNQuery query1 = builder.threshold(10).context(null).build();
       MockQueryRunner mockRunner = new MockQueryRunner(runner);
-      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(QueryPlus.wrap(query1));
+      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner).run(QueryPlus.wrap(query1));
       Assert.assertEquals(1000, mockRunner.query.getThreshold());
 
       TopNQuery query2 = builder.threshold(10).context(context).build();
 
-      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(QueryPlus.wrap(query2));
+      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner).run(QueryPlus.wrap(query2));
       Assert.assertEquals(500, mockRunner.query.getThreshold());
 
       TopNQuery query3 = builder.threshold(2000).context(context).build();
-      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(QueryPlus.wrap(query3));
+      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner).run(QueryPlus.wrap(query3));
       Assert.assertEquals(2000, mockRunner.query.getThreshold());
     }
   }

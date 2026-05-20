@@ -31,16 +31,27 @@ import java.util.Objects;
 public class GetWorkersResponse
 {
   private final List<DartWorkerInfo> workers;
+  private final long idleDurationMillis;
 
-  public GetWorkersResponse(@JsonProperty("workers") final List<DartWorkerInfo> workers)
+  public GetWorkersResponse(
+      @JsonProperty("workers") final List<DartWorkerInfo> workers,
+      @JsonProperty("idleDurationMillis") final long idleDurationMillis
+  )
   {
     this.workers = workers;
+    this.idleDurationMillis = idleDurationMillis;
   }
 
   @JsonProperty
   public List<DartWorkerInfo> getWorkers()
   {
     return workers;
+  }
+
+  @JsonProperty
+  public long getIdleDurationMillis()
+  {
+    return idleDurationMillis;
   }
 
   @Override
@@ -53,12 +64,13 @@ public class GetWorkersResponse
       return false;
     }
     GetWorkersResponse that = (GetWorkersResponse) o;
-    return Objects.equals(workers, that.workers);
+    return Objects.equals(workers, that.workers)
+           && idleDurationMillis == that.idleDurationMillis;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(workers);
+    return Objects.hash(workers, idleDurationMillis);
   }
 }

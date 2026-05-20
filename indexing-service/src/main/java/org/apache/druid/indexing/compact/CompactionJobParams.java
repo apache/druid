@@ -19,7 +19,10 @@
 
 package org.apache.druid.indexing.compact;
 
+import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
+import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
+import org.apache.druid.server.compaction.CompactionTaskStatus;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
@@ -31,20 +34,26 @@ public class CompactionJobParams
 {
   private final DateTime scheduleStartTime;
   private final TimelineProvider timelineProvider;
+  private final CompactionTaskStatusProvider compactionTaskStatusProvider;
   private final ClusterCompactionConfig clusterCompactionConfig;
   private final CompactionSnapshotBuilder snapshotBuilder;
+  private final IndexingStateFingerprintMapper fingerprintMapper;
 
   public CompactionJobParams(
       DateTime scheduleStartTime,
       ClusterCompactionConfig clusterCompactionConfig,
       TimelineProvider timelineProvider,
-      CompactionSnapshotBuilder snapshotBuilder
+      CompactionTaskStatusProvider compactionTaskStatusProvider,
+      CompactionSnapshotBuilder snapshotBuilder,
+      IndexingStateFingerprintMapper indexingStateFingerprintMapper
   )
   {
     this.scheduleStartTime = scheduleStartTime;
     this.clusterCompactionConfig = clusterCompactionConfig;
     this.timelineProvider = timelineProvider;
+    this.compactionTaskStatusProvider = compactionTaskStatusProvider;
     this.snapshotBuilder = snapshotBuilder;
+    this.fingerprintMapper = indexingStateFingerprintMapper;
   }
 
   /**
@@ -75,6 +84,11 @@ public class CompactionJobParams
     return timelineProvider.getTimelineForDataSource(dataSource);
   }
 
+  public CompactionTaskStatus getLatestTaskStatus(CompactionCandidate candidate)
+  {
+    return compactionTaskStatusProvider.getLatestTaskStatus(candidate);
+  }
+
   /**
    * Used to build an {@link org.apache.druid.server.coordinator.AutoCompactionSnapshot}
    * for all the datasources at the end of the current run. During the run, as
@@ -88,9 +102,20 @@ public class CompactionJobParams
     return snapshotBuilder;
   }
 
+  public IndexingStateFingerprintMapper getFingerprintMapper()
+  {
+    return fingerprintMapper;
+  }
+
   @FunctionalInterface
   public interface TimelineProvider
   {
     SegmentTimeline getTimelineForDataSource(String dataSource);
+  }
+
+  @FunctionalInterface
+  public interface CompactionTaskStatusProvider
+  {
+    CompactionTaskStatus getLatestTaskStatus(CompactionCandidate candidate);
   }
 }

@@ -47,6 +47,9 @@ public class OIDCConfig
   @JsonProperty
   private final String scope;
 
+  @JsonProperty
+  private final String clientAuthenticationMethod;
+
   @JsonCreator
   public OIDCConfig(
       @JsonProperty("clientID") String clientID,
@@ -54,7 +57,8 @@ public class OIDCConfig
       @JsonProperty("discoveryURI") String discoveryURI,
       @JsonProperty("oidcClaim") String oidcClaim,
       @JsonProperty("roleClaimPath") String roleClaimPath,
-      @JsonProperty("scope") @Nullable String scope
+      @JsonProperty("scope") @Nullable String scope,
+      @JsonProperty("clientAuthenticationMethod") @Nullable String clientAuthenticationMethod
   )
   {
     this.clientID = Preconditions.checkNotNull(clientID, "null clientID");
@@ -63,6 +67,7 @@ public class OIDCConfig
     this.oidcClaim = oidcClaim == null ? DEFAULT_SCOPE : oidcClaim;
     this.roleClaimPath = roleClaimPath;
     this.scope = scope;
+    this.clientAuthenticationMethod = clientAuthenticationMethod;
   }
 
   @JsonProperty
@@ -99,5 +104,11 @@ public class OIDCConfig
   public String getScope()
   {
     return scope;
+  }
+
+  @JsonProperty
+  public String getClientAuthenticationMethod()
+  {
+    return clientAuthenticationMethod;
   }
 }

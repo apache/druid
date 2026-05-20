@@ -31,6 +31,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
@@ -62,6 +63,7 @@ public class SegmentSchemaCacheModule implements Module
     JsonConfigProvider.bind(binder, "druid.coordinator.segmentMetadata", SegmentMetadataQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.coordinator.query.scheduler", QuerySchedulerProvider.class, Global.class);
     JsonConfigProvider.bind(binder, "druid.coordinator.query.default", DefaultQueryConfig.class);
+    binder.bind(QueryConfigProvider.class).to(DefaultQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.coordinator.query.retryPolicy", RetryQueryRunnerConfig.class);
     JsonConfigProvider.bind(binder, "druid.coordinator.internal.query.config", InternalQueryConfig.class);
 

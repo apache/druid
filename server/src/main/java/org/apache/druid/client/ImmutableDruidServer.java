@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CollectionUtils;
@@ -92,6 +93,11 @@ public class ImmutableDruidServer
     return metadata.getMaxSize();
   }
 
+  public long getStorageSize()
+  {
+    return metadata.getStorageSize();
+  }
+
   public ServerType getType()
   {
     return metadata.getType();
@@ -115,6 +121,17 @@ public class ImmutableDruidServer
       return null;
     }
     return dataSource.getSegment(segmentId);
+  }
+
+  /**
+   * Returns the partial-load profile for the given segment on this server, or {@code null} if the segment is loaded as
+   * a regular full-load (no partial-load metadata announced) or is not present on this server.
+   */
+  @Nullable
+  public PartialLoadProfile getPartialLoadProfile(SegmentId segmentId)
+  {
+    final ImmutableDruidDataSource dataSource = dataSources.get(segmentId.getDataSource());
+    return dataSource == null ? null : dataSource.getPartialLoadProfile(segmentId);
   }
 
   public Iterable<ImmutableDruidDataSource> getDataSources()

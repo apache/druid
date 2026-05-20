@@ -34,6 +34,7 @@ import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
+import org.apache.druid.query.filter.SegmentPruner;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -62,6 +63,7 @@ public class WorkerInputs
       final Int2IntMap stageWorkerCountMap,
       final InputSpecSlicer slicer,
       final WorkerAssignmentStrategy assignmentStrategy,
+      final int maxInputFilesPerWorker,
       final long maxInputBytesPerWorker
   )
   {
@@ -75,45 +77,60 @@ public class WorkerInputs
       return new WorkerInputs(assignmentsMap);
     }
 
-    // Assign input slices to workers.
+    // Assign non-broadcast input slices to workers first, so we know the actual worker count.
+    // Then assign broadcast inputs to all assigned workers.
     for (int inputNumber = 0; inputNumber < numInputs; inputNumber++) {
-      final InputSpec inputSpec = stageDef.getInputSpecs().get(inputNumber);
-
       if (stageDef.getBroadcastInputNumbers().contains(inputNumber)) {
-        // Broadcast case: send everything everywhere.
-        final List<InputSlice> broadcastSlices = slicer.sliceStatic(inputSpec, 1);
-        final InputSlice broadcastSlice = broadcastSlices.isEmpty()
-                                          ? NilInputSlice.INSTANCE
-                                          : Iterables.getOnlyElement(broadcastSlices);
+        continue;
+      }
 
-        for (int workerNumber = 0; workerNumber < stageDef.getMaxWorkerCount(); workerNumber++) {
-          assignmentsMap.computeIfAbsent(
-              workerNumber,
-              ignored -> Arrays.asList(new InputSlice[numInputs])
-          ).set(inputNumber, broadcastSlice);
-        }
-      } else {
-        // Non-broadcast case: split slices across workers.
-        List<InputSlice> slices = assignmentStrategy.assign(
-            stageDef,
-            inputSpec,
-            stageWorkerCountMap,
-            slicer,
-            maxInputBytesPerWorker
-        );
+      final InputSpec inputSpec = stageDef.getInputSpecs().get(inputNumber);
+      final SegmentPruner pruner = stageDef.getSegmentPruner(inputNumber);
 
-        if (slices.isEmpty()) {
-          // Need at least one slice, so we can have at least one worker. It's OK if it has nothing to read.
-          slices = Collections.singletonList(NilInputSlice.INSTANCE);
-        }
+      List<InputSlice> slices = assignmentStrategy.assign(
+          stageDef,
+          inputSpec,
+          stageWorkerCountMap,
+          slicer,
+          pruner,
+          maxInputFilesPerWorker,
+          maxInputBytesPerWorker
+      );
 
-        // Flip the slices, so it's worker number -> slices for that worker.
-        for (int workerNumber = 0; workerNumber < slices.size(); workerNumber++) {
-          assignmentsMap.computeIfAbsent(
-              workerNumber,
-              ignored -> Arrays.asList(new InputSlice[numInputs])
-          ).set(inputNumber, slices.get(workerNumber));
-        }
+      if (slices.isEmpty()) {
+        // Need at least one slice, so we can have at least one worker. It's OK if it has nothing to read.
+        slices = Collections.singletonList(NilInputSlice.INSTANCE);
+      }
+
+      // Flip the slices, so it's worker number -> slices for that worker.
+      for (int workerNumber = 0; workerNumber < slices.size(); workerNumber++) {
+        assignmentsMap.computeIfAbsent(
+            workerNumber,
+            ignored -> Arrays.asList(new InputSlice[numInputs])
+        ).set(inputNumber, slices.get(workerNumber));
+      }
+    }
+
+    if (assignmentsMap.isEmpty()) {
+      // All inputs are broadcast. Use a single worker.
+      assignmentsMap.put(0, Arrays.asList(new InputSlice[numInputs]));
+    }
+
+    // Assign broadcast inputs to all workers determined by non-broadcast assignment above.
+    for (int inputNumber = 0; inputNumber < numInputs; inputNumber++) {
+      if (!stageDef.getBroadcastInputNumbers().contains(inputNumber)) {
+        continue;
+      }
+
+      final InputSpec inputSpec = stageDef.getInputSpecs().get(inputNumber);
+      final SegmentPruner pruner = stageDef.getSegmentPruner(inputNumber);
+      final List<InputSlice> broadcastSlices = slicer.sliceStatic(inputSpec, pruner, 1);
+      final InputSlice broadcastSlice = broadcastSlices.isEmpty()
+                                        ? NilInputSlice.INSTANCE
+                                        : Iterables.getOnlyElement(broadcastSlices);
+
+      for (int workerNumber : assignmentsMap.keySet()) {
+        assignmentsMap.get(workerNumber).set(inputNumber, broadcastSlice);
       }
     }
 

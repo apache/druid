@@ -51,7 +51,6 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
     completions: [
       { value: 'index_parallel', documentation: 'Native batch ingestion (parallel)' },
       { value: 'index', documentation: 'Native batch ingestion (single task)' },
-      { value: 'index_hadoop', documentation: 'Hadoop-based batch ingestion' },
       { value: 'kafka', documentation: 'Kafka supervisor for streaming ingestion' },
       { value: 'kinesis', documentation: 'Kinesis supervisor for streaming ingestion' },
       { value: 'rabbit', documentation: 'RabbitMQ supervisor for streaming ingestion' },

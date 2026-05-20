@@ -21,18 +21,20 @@ package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
-import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
+import org.apache.druid.msq.exec.MSQMetricEventBuilder;
 import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -41,10 +43,9 @@ import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.WorkOrder;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
@@ -55,13 +56,17 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.SegmentManager;
 
+import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
 public class MSQTestWorkerContext implements WorkerContext
 {
+  private static final Logger log = new Logger(MSQTestWorkerContext.class);
   private static final StupidPool<ByteBuffer> BUFFER_POOL = new StupidPool<>("testProcessing", () -> ByteBuffer.allocate(1_000_000));
 
   private final String workerId;
@@ -69,10 +74,12 @@ public class MSQTestWorkerContext implements WorkerContext
   private final ObjectMapper mapper;
   private final Injector injector;
   private final Map<String, WorkerRunRef> inMemoryWorkers;
-  private final File file = FileUtils.createTempDir();
+  private final File file;
   private final WorkerMemoryParameters workerMemoryParameters;
   private final WorkerStorageParameters workerStorageParameters;
   private final ServiceEmitter serviceEmitter;
+  @Nullable
+  private final CoordinatorClient coordinatorClient;
 
   public MSQTestWorkerContext(
       String workerId,
@@ -82,10 +89,12 @@ public class MSQTestWorkerContext implements WorkerContext
       Injector injector,
       WorkerMemoryParameters workerMemoryParameters,
       WorkerStorageParameters workerStorageParameters,
-      ServiceEmitter serviceEmitter
+      ServiceEmitter serviceEmitter,
+      @Nullable CoordinatorClient coordinatorClient
   )
   {
     this.workerId = workerId;
+    this.file = FileUtils.createTempDir("msq-worker-" + workerId);
     this.inMemoryWorkers = inMemoryWorkers;
     this.controller = controller;
     this.mapper = mapper;
@@ -93,6 +102,7 @@ public class MSQTestWorkerContext implements WorkerContext
     this.workerMemoryParameters = workerMemoryParameters;
     this.workerStorageParameters = workerStorageParameters;
     this.serviceEmitter = serviceEmitter;
+    this.coordinatorClient = coordinatorClient;
   }
 
   @Override
@@ -120,7 +130,7 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(MSQMetriceEventBuilder metricBuilder)
+  public void emitMetric(MSQMetricEventBuilder metricBuilder)
   {
     serviceEmitter.emit(
         metricBuilder.setDimension(
@@ -151,7 +161,7 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public WorkerClient makeWorkerClient()
   {
-    return new MSQTestWorkerClient(inMemoryWorkers);
+    return new MSQTestWorkerClient(inMemoryWorkers, mapper, false);
   }
 
   @Override
@@ -197,8 +207,20 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
+  public boolean isDebug()
+  {
+    return true;
+  }
+
+  @Override
   public void close()
   {
+    try {
+      FileUtils.deleteDirectory(file);
+    }
+    catch (IOException e) {
+      log.warn(e, "Failed to delete temp dir[%s] for worker[%s]", file, workerId);
+    }
   }
 
   class FrameContextImpl implements FrameContext
@@ -225,21 +247,21 @@ public class MSQTestWorkerContext implements WorkerContext
     }
 
     @Override
-    public GroupingEngine groupingEngine()
-    {
-      return injector.getInstance(GroupingEngine.class);
-    }
-
-    @Override
     public RowIngestionMeters rowIngestionMeters()
     {
       return new NoopRowIngestionMeters();
     }
 
     @Override
-    public DataSegmentProvider dataSegmentProvider()
+    public SegmentManager segmentManager()
     {
-      return injector.getInstance(DataSegmentProvider.class);
+      return injector.getInstance(SegmentManager.class);
+    }
+
+    @Override
+    public CoordinatorClient coordinatorClient()
+    {
+      return coordinatorClient;
     }
 
     @Override
@@ -258,6 +280,12 @@ public class MSQTestWorkerContext implements WorkerContext
     public ObjectMapper jsonMapper()
     {
       return mapper;
+    }
+
+    @Override
+    public WireTransferableContext wireTransferableContext()
+    {
+      return injector.getInstance(WireTransferableContext.class);
     }
 
     @Override
@@ -287,6 +315,12 @@ public class MSQTestWorkerContext implements WorkerContext
           OffHeapMemorySegmentWriteOutMediumFactory.instance(),
           true
       );
+    }
+
+    @Override
+    public void acquireProcessingBuffers(final int requestedSlices)
+    {
+      // No-op: this mock returns a fixed ProcessingBuffers regardless of slice count.
     }
 
     @Override

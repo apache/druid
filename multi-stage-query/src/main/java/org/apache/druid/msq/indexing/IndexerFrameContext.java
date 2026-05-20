@@ -20,24 +20,28 @@
 package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
 import org.apache.druid.msq.exec.ProcessingBuffers;
+import org.apache.druid.msq.exec.ProcessingBuffersSet;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.server.SegmentManager;
 
+import javax.annotation.Nullable;
 import java.io.File;
 
 public class IndexerFrameContext implements FrameContext
@@ -46,19 +50,33 @@ public class IndexerFrameContext implements FrameContext
   private final IndexerWorkerContext context;
   private final FrameWriterSpec frameWriterSpec;
   private final IndexIO indexIO;
-  private final DataSegmentProvider dataSegmentProvider;
-  private final ResourceHolder<ProcessingBuffers> processingBuffers;
+  private final SegmentManager segmentManager;
+  @Nullable
+  private final CoordinatorClient coordinatorClient;
+
+  /**
+   * Null if the stage does not use processing buffers.
+   */
+  @Nullable
+  private final ProcessingBuffersSet processingBuffersSet;
   private final WorkerMemoryParameters memoryParameters;
   private final WorkerStorageParameters storageParameters;
   private final IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory;
+
+  /**
+   * Acquired by {@link #acquireProcessingBuffers}.
+   */
+  @Nullable
+  private ResourceHolder<ProcessingBuffers> processingBuffers;
 
   public IndexerFrameContext(
       StageId stageId,
       IndexerWorkerContext context,
       FrameWriterSpec frameWriterSpec,
       IndexIO indexIO,
-      DataSegmentProvider dataSegmentProvider,
-      ResourceHolder<ProcessingBuffers> processingBuffers,
+      SegmentManager segmentManager,
+      @Nullable CoordinatorClient coordinatorClient,
+      @Nullable ProcessingBuffersSet processingBuffersSet,
       IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory,
       WorkerMemoryParameters memoryParameters,
       WorkerStorageParameters storageParameters
@@ -68,8 +86,9 @@ public class IndexerFrameContext implements FrameContext
     this.context = context;
     this.frameWriterSpec = frameWriterSpec;
     this.indexIO = indexIO;
-    this.dataSegmentProvider = dataSegmentProvider;
-    this.processingBuffers = processingBuffers;
+    this.segmentManager = segmentManager;
+    this.coordinatorClient = coordinatorClient;
+    this.processingBuffersSet = processingBuffersSet;
     this.memoryParameters = memoryParameters;
     this.storageParameters = storageParameters;
     this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
@@ -88,21 +107,22 @@ public class IndexerFrameContext implements FrameContext
   }
 
   @Override
-  public GroupingEngine groupingEngine()
-  {
-    return context.injector().getInstance(GroupingEngine.class);
-  }
-
-  @Override
   public RowIngestionMeters rowIngestionMeters()
   {
     return context.toolbox().getRowIngestionMetersFactory().createRowIngestionMeters();
   }
 
   @Override
-  public DataSegmentProvider dataSegmentProvider()
+  public SegmentManager segmentManager()
   {
-    return dataSegmentProvider;
+    return segmentManager;
+  }
+
+  @Override
+  @Nullable
+  public CoordinatorClient coordinatorClient()
+  {
+    return coordinatorClient;
   }
 
   @Override
@@ -123,6 +143,12 @@ public class IndexerFrameContext implements FrameContext
   public ObjectMapper jsonMapper()
   {
     return context.jsonMapper();
+  }
+
+  @Override
+  public WireTransferableContext wireTransferableContext()
+  {
+    return context.injector().getInstance(WireTransferableContext.class);
   }
 
   @Override
@@ -150,8 +176,23 @@ public class IndexerFrameContext implements FrameContext
   }
 
   @Override
+  public void acquireProcessingBuffers(final int requestedSlices)
+  {
+    if (processingBuffersSet == null) {
+      throw DruidException.defensive("Stage[%s] does not use processing buffers", stageId);
+    }
+    if (processingBuffers != null) {
+      throw DruidException.defensive("Processing buffers already acquired");
+    }
+    processingBuffers = processingBuffersSet.acquire(requestedSlices);
+  }
+
+  @Override
   public ProcessingBuffers processingBuffers()
   {
+    if (processingBuffers == null) {
+      throw DruidException.defensive("Processing buffers not yet acquired");
+    }
     return processingBuffers.get();
   }
 
@@ -176,6 +217,8 @@ public class IndexerFrameContext implements FrameContext
   @Override
   public void close()
   {
-    processingBuffers.close();
+    if (processingBuffers != null) {
+      processingBuffers.close();
+    }
   }
 }

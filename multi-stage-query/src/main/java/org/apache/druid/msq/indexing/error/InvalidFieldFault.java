@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing.error;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -98,6 +99,18 @@ public class InvalidFieldFault extends BaseMSQFault
   public String getLogMsg()
   {
     return logMsg;
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    // DEVELOPER since this fault is generated when InvalidFieldException is used as a wrapper around
+    // miscellaneous exceptions whose meaning is not clear. Underlying code that has something specific
+    // to say should throw DruidException.
+    return DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                         .ofCategory(DruidException.Category.INVALID_INPUT)
+                         .withErrorCode(getErrorCode())
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 
   @Override

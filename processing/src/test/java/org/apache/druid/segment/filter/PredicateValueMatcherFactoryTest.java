@@ -481,6 +481,61 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     Assert.assertFalse(matcher.matches(false));
   }
 
+  @Test
+  public void testComplexProcessorMatchingListWithNullValues()
+  {
+    // Test that predicate matching works correctly with null values in multi-value lists.
+    // After the fix for null handling, objectToStrings returns actual null instead of "null" string.
+
+    // Searching for "val" in ["val", null, "other"] should match
+    final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
+        String.class,
+        ImmutableList.of(Arrays.asList("val", null, "other"))
+    );
+    columnValueSelector.advance();
+    final ValueMatcher matcher = forSelector("val").makeComplexProcessor(columnValueSelector);
+    Assert.assertTrue(matcher.matches(false));
+  }
+
+  @Test
+  public void testComplexProcessorMatchingNullInListWithNullValues()
+  {
+    // Searching for null in ["a", null, "b"] should match
+    final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
+        String.class,
+        ImmutableList.of(Arrays.asList("a", null, "b"))
+    );
+    columnValueSelector.advance();
+    final ValueMatcher matcher = forSelector(null).makeComplexProcessor(columnValueSelector);
+    Assert.assertTrue(matcher.matches(false));
+  }
+
+  @Test
+  public void testComplexProcessorNotMatchingListWithNullValues()
+  {
+    // Searching for "notpresent" in ["a", null, "b"] should not match
+    final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
+        String.class,
+        ImmutableList.of(Arrays.asList("a", null, "b"))
+    );
+    columnValueSelector.advance();
+    final ValueMatcher matcher = forSelector("notpresent").makeComplexProcessor(columnValueSelector);
+    Assert.assertFalse(matcher.matches(false));
+  }
+
+  @Test
+  public void testComplexProcessorListWithOnlyNull()
+  {
+    // Searching for null in [null] should match
+    final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
+        String.class,
+        ImmutableList.of(Arrays.asList((String) null))
+    );
+    columnValueSelector.advance();
+    final ValueMatcher matcher = forSelector(null).makeComplexProcessor(columnValueSelector);
+    Assert.assertTrue(matcher.matches(false));
+  }
+
   private static PredicateValueMatcherFactory forSelector(@Nullable String value)
   {
     return new PredicateValueMatcherFactory(new SelectorPredicateFactory(value));

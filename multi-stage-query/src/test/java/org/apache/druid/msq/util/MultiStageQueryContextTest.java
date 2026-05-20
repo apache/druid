@@ -22,8 +22,11 @@ package org.apache.druid.msq.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
@@ -34,6 +37,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
@@ -49,6 +53,7 @@ import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FAULT_TOLERAN
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_FRAME_SIZE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_NUM_TASKS;
+import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_ROWS_IN_MEMORY;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_THREADS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MSQ_MODE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_REMOVE_NULL_BYTES;
@@ -116,7 +121,80 @@ public class MultiStageQueryContextTest
 
     Assert.assertEquals(
         1024,
-        MultiStageQueryContext.getMaxInputBytesPerWorker(QueryContext.of(propertyMap)));
+        MultiStageQueryContext.getMaxInputBytesPerWorker(QueryContext.of(propertyMap))
+    );
+  }
+
+  @Test
+  public void getMaxInputFilesPerWorker_unset_returnsDefaultValue()
+  {
+    Assert.assertEquals(
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
+        MultiStageQueryContext.getMaxInputFilesPerWorker(QueryContext.empty())
+    );
+  }
+
+  @Test
+  public void getMaxInputFilesPerWorker_set_returnsCorrectValue()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_INPUT_FILES_PER_WORKER, 5000);
+    Assert.assertEquals(5000, MultiStageQueryContext.getMaxInputFilesPerWorker(QueryContext.of(propertyMap)));
+  }
+
+  @Test
+  public void getMaxInputFilesPerWorker_zero_throwsException()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_INPUT_FILES_PER_WORKER, 0);
+    Assert.assertThrows(
+        DruidException.class,
+        () -> MultiStageQueryContext.getMaxInputFilesPerWorker(QueryContext.of(propertyMap))
+    );
+  }
+
+  @Test
+  public void getMaxInputFilesPerWorker_negative_throwsException()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_INPUT_FILES_PER_WORKER, -1);
+    Assert.assertThrows(
+        DruidException.class,
+        () -> MultiStageQueryContext.getMaxInputFilesPerWorker(QueryContext.of(propertyMap))
+    );
+  }
+
+  @Test
+  public void getMaxPartitions_unset_returnsDefaultValue()
+  {
+    Assert.assertEquals(
+        Limits.DEFAULT_MAX_PARTITIONS,
+        MultiStageQueryContext.getMaxPartitions(QueryContext.empty())
+    );
+  }
+
+  @Test
+  public void getMaxPartitions_set_returnsCorrectValue()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_PARTITIONS, 50000);
+    Assert.assertEquals(50000, MultiStageQueryContext.getMaxPartitions(QueryContext.of(propertyMap)));
+  }
+
+  @Test
+  public void getMaxPartitions_zero_throwsException()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_PARTITIONS, 0);
+    Assert.assertThrows(
+        DruidException.class,
+        () -> MultiStageQueryContext.getMaxPartitions(QueryContext.of(propertyMap))
+    );
+  }
+
+  @Test
+  public void getMaxPartitions_negative_throwsException()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_PARTITIONS, -1);
+    Assert.assertThrows(
+        DruidException.class,
+        () -> MultiStageQueryContext.getMaxPartitions(QueryContext.of(propertyMap))
+    );
   }
 
   @Test
@@ -159,19 +237,33 @@ public class MultiStageQueryContextTest
   }
 
   @Test
-  public void getRowsInMemory_unset_returnsDefaultValue()
+  public void getMaxRowsInMemory_unset_returnsDefaultValue()
   {
     Assert.assertEquals(
-        MultiStageQueryContext.DEFAULT_ROWS_IN_MEMORY,
-        MultiStageQueryContext.getRowsInMemory(QueryContext.empty())
+        MultiStageQueryContext.DEFAULT_MAX_ROWS_IN_MEMORY,
+        MultiStageQueryContext.getMaxRowsInMemory(QueryContext.empty())
     );
   }
 
   @Test
-  public void getRowsInMemory_set_returnsCorrectValue()
+  public void getMaxRowsInMemory_set_returnsCorrectValue()
   {
-    Map<String, Object> propertyMap = ImmutableMap.of(CTX_ROWS_IN_MEMORY, 10);
-    Assert.assertEquals(10, MultiStageQueryContext.getRowsInMemory(QueryContext.of(propertyMap)));
+    Map<String, Object> propertyMap = ImmutableMap.of(CTX_MAX_ROWS_IN_MEMORY, 10);
+    Assert.assertEquals(10, MultiStageQueryContext.getMaxRowsInMemory(QueryContext.of(propertyMap)));
+  }
+
+  @Test
+  public void getMaxRowsInMemory_altSet_returnsCorrectValue()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(CTX_ROWS_IN_MEMORY, 20);
+    Assert.assertEquals(20, MultiStageQueryContext.getMaxRowsInMemory(QueryContext.of(propertyMap)));
+  }
+
+  @Test
+  public void getMaxRowsInMemory_bothSet_returnsCorrectValue()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(CTX_ROWS_IN_MEMORY, 20, CTX_MAX_ROWS_IN_MEMORY, 10);
+    Assert.assertEquals(10, MultiStageQueryContext.getMaxRowsInMemory(QueryContext.of(propertyMap)));
   }
 
   @Test
@@ -206,7 +298,10 @@ public class MultiStageQueryContextTest
   @Test
   public void getSelectDestination_unset_returnsDefaultValue()
   {
-    Assert.assertEquals(MSQSelectDestination.TASKREPORT, MultiStageQueryContext.getSelectDestination(QueryContext.empty()));
+    Assert.assertEquals(
+        MSQSelectDestination.TASKREPORT,
+        MultiStageQueryContext.getSelectDestination(QueryContext.empty())
+    );
   }
 
   @Test
@@ -373,6 +468,43 @@ public class MultiStageQueryContextTest
   {
     Map<String, Object> propertyMap = ImmutableMap.of(CTX_MAX_THREADS, 4);
     Assert.assertEquals(Integer.valueOf(4), MultiStageQueryContext.getMaxThreads(QueryContext.of(propertyMap)));
+  }
+
+  @Test
+  public void withCommonContext_noTimeout_setsStartTimeOnly()
+  {
+    final QueryContext context = MultiStageQueryContext.withCommonContext(QueryContext.empty());
+    Assert.assertTrue(context.containsKey(MultiStageQueryContext.CTX_START_TIME));
+    Assert.assertFalse(context.containsKey(MultiStageQueryContext.CTX_QUERY_DEADLINE));
+    Assert.assertEquals(true, context.get(QueryContexts.FINALIZE_KEY));
+    Assert.assertEquals(true, context.get(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION));
+    Assert.assertTrue(context.containsKey(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE));
+  }
+
+  @Test
+  public void withCommonContext_withTimeout_setsDeadline()
+  {
+    final long timeoutMs = 60_000;
+    final QueryContext context = MultiStageQueryContext.withCommonContext(
+        QueryContext.of(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, timeoutMs))
+    );
+
+    Assert.assertTrue(context.containsKey(MultiStageQueryContext.CTX_START_TIME));
+    Assert.assertTrue(context.containsKey(MultiStageQueryContext.CTX_QUERY_DEADLINE));
+
+    final DateTime startTime = DateTimes.of((String) context.get(MultiStageQueryContext.CTX_START_TIME));
+    final DateTime deadline = DateTimes.of((String) context.get(MultiStageQueryContext.CTX_QUERY_DEADLINE));
+    Assert.assertEquals(timeoutMs, deadline.getMillis() - startTime.getMillis());
+  }
+
+  @Test
+  public void withCommonContext_mergesUserContext()
+  {
+    final QueryContext context = MultiStageQueryContext.withCommonContext(
+        QueryContext.of(ImmutableMap.of("customKey", "customValue"))
+    );
+
+    Assert.assertEquals("customValue", context.get("customKey"));
   }
 
   private static List<String> decodeSortOrder(@Nullable final String input)

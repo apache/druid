@@ -89,7 +89,7 @@ public class QueryResultPusherTest
       }
 
       @Override
-      public void recordFailure(Exception e)
+      public void recordFailure(Exception e, long bytesWritten)
       {
         assertTrue(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
         recordFailureInvoked.set(true);

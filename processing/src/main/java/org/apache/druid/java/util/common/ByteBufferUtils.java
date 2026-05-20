@@ -26,6 +26,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.util.Comparator;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -211,5 +212,29 @@ public class ByteBufferUtils
     {
       return compareUtf8ByteBuffers(o1, o2);
     }
+  }
+
+  /**
+   * Wraps a byte array in a little-endian ByteBuffer.
+   *
+   * @param array byte array to wrap
+   * @return ByteBuffer wrapping the array with little-endian byte order
+   */
+  public static ByteBuffer wrapLE(byte[] array)
+  {
+    return ByteBuffer.wrap(array).order(ByteOrder.LITTLE_ENDIAN);
+  }
+
+  /**
+   * Wraps a portion of a byte array in a little-endian ByteBuffer.
+   *
+   * @param array byte array to wrap
+   * @param offset offset within the array
+   * @param length length of the region to wrap
+   * @return ByteBuffer wrapping the specified portion with little-endian byte order
+   */
+  public static ByteBuffer wrapLE(byte[] array, int offset, int length)
+  {
+    return ByteBuffer.wrap(array, offset, length).order(ByteOrder.LITTLE_ENDIAN);
   }
 }

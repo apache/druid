@@ -31,7 +31,7 @@ public class ITAzureV2ParallelIndexTest extends AbstractAzureInputSourceParallel
   @MethodSource("resources")
   public void testAzureIndexData(Pair<String, List<?>> azureInputSource) throws Exception
   {
-    String dataSource = doTest(azureInputSource, new Pair<>(false, false), "azureStorage");
+    String dataSource = doTest(azureInputSource, new Pair<>(false, false), "azureStorage", null);
     validateAzureSegmentFilesDeleted("segments" + "/" + dataSource);
   }
 }

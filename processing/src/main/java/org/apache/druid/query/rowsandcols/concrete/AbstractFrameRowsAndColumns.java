@@ -19,10 +19,12 @@
 
 package org.apache.druid.query.rowsandcols.concrete;
 
-import com.google.common.base.Objects;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.frame.wire.FrameWireTransferable;
 import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.RowSignature;
@@ -30,14 +32,16 @@ import org.apache.druid.segment.column.RowSignature;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.Objects;
 
 public abstract class AbstractFrameRowsAndColumns implements FrameRowsAndColumns, AutoCloseable, CloseableShapeshifter
 {
   final Frame frame;
+  @Nullable
   final RowSignature signature;
   final LinkedHashMap<String, Column> colCache = new LinkedHashMap<>();
 
-  public AbstractFrameRowsAndColumns(Frame frame, RowSignature signature)
+  public AbstractFrameRowsAndColumns(Frame frame, @Nullable RowSignature signature)
   {
     this.frame = frame;
     this.signature = signature;
@@ -49,15 +53,26 @@ public abstract class AbstractFrameRowsAndColumns implements FrameRowsAndColumns
     return frame;
   }
 
+  public boolean hasSignature()
+  {
+    return signature != null;
+  }
+
   @Override
   public RowSignature getSignature()
   {
+    if (signature == null) {
+      throw DruidException.defensive("No signature present, cannot call getSignature()");
+    }
     return signature;
   }
 
   @Override
   public Collection<String> getColumnNames()
   {
+    if (signature == null) {
+      throw DruidException.defensive("No signature present, cannot call getColumnNames()");
+    }
     return signature.getColumnNames();
   }
 
@@ -72,10 +87,19 @@ public abstract class AbstractFrameRowsAndColumns implements FrameRowsAndColumns
   @Override
   public <T> T as(Class<T> clazz)
   {
-    if (CursorFactory.class.equals(clazz)) {
+    if (CursorFactory.class.equals(clazz) && signature != null) {
       return (T) FrameReader.create(signature).makeCursorFactory(frame);
     }
-    return FrameRowsAndColumns.super.as(clazz);
+    if (WireTransferable.class.equals(clazz)) {
+      return (T) new FrameWireTransferable(frame, signature);
+    }
+    if (Frame.class.equals(clazz)) {
+      return (T) frame;
+    }
+    if (clazz.isInstance(this)) {
+      return (T) this;
+    }
+    return null;
   }
 
   @Override
@@ -85,22 +109,18 @@ public abstract class AbstractFrameRowsAndColumns implements FrameRowsAndColumns
   }
 
   @Override
-  public int hashCode()
+  public boolean equals(Object o)
   {
-    return Objects.hashCode(frame, signature);
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    AbstractFrameRowsAndColumns that = (AbstractFrameRowsAndColumns) o;
+    return Objects.equals(frame, that.frame) && Objects.equals(signature, that.signature);
   }
 
   @Override
-  public boolean equals(Object o)
+  public int hashCode()
   {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof AbstractFrameRowsAndColumns)) {
-      return false;
-    }
-    AbstractFrameRowsAndColumns otherFrame = (AbstractFrameRowsAndColumns) o;
-
-    return frame.writableMemory().equals(otherFrame.frame.writableMemory()) && signature.equals(otherFrame.signature);
+    return Objects.hash(frame, signature);
   }
 }

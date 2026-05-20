@@ -47,6 +47,25 @@ public class SupervisorStatusTest
   }
 
   @Test
+  public void testGetDataSourceFallsBackToIdWhenNull() throws IOException
+  {
+    // Simulate an old Overlord response that does not include the "dataSource" field
+    String json = "{"
+                  + "\"id\":\"wikipedia\","
+                  + "\"state\":\"RUNNING\","
+                  + "\"detailedState\":\"RUNNING\","
+                  + "\"healthy\":true,"
+                  + "\"type\":\"kafka\","
+                  + "\"source\":\"wikipedia\","
+                  + "\"suspended\":false"
+                  + "}";
+    final ObjectMapper mapper = new ObjectMapper();
+    final SupervisorStatus deserialized = mapper.readValue(json, SupervisorStatus.class);
+    Assert.assertEquals("wikipedia", deserialized.getId());
+    Assert.assertEquals("wikipedia", deserialized.getDataSource());
+  }
+
+  @Test
   public void testJsonAttr() throws IOException
   {
     String json = "{"

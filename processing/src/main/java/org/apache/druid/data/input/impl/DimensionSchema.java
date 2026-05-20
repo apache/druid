@@ -176,6 +176,17 @@ public abstract class DimensionSchema
   @JsonIgnore
   public abstract ColumnType getColumnType();
 
+  /**
+   * Returns true if the {@link DimensionHandler#makeIndexer()} of this schema can produce multi-valued
+   * {@link ColumnType#STRING} columns. This method is used by MSQ compaction to determine if it needs to download the
+   * segments to check if any are actually multi-valued.
+   */
+  @JsonIgnore
+  public boolean canBeMultiValued()
+  {
+    return false;
+  }
+
   @JsonIgnore
   public DimensionHandler getDimensionHandler()
   {
@@ -189,7 +200,7 @@ public abstract class DimensionSchema
 
   /**
    * Computes the 'effective' {@link DimensionSchema}, allowing columns which provide mechanisms for customizing storage
-   * format to fill in values from the segment level {@link IndexSpec} defaults. This is useful for comparising the
+   * format to fill in values from the segment level {@link IndexSpec} defaults. This is useful for comparing the
    * operator explicitly defined schema with the 'effective' schema that was written to the segments for things like
    * comparing compaction state.
    */

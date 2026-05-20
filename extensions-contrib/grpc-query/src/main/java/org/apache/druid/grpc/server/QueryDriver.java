@@ -41,12 +41,15 @@ import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
@@ -69,6 +72,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 /**
@@ -96,38 +100,57 @@ public class QueryDriver
 
   private final ObjectMapper jsonMapper;
   private final SqlStatementFactory sqlStatementFactory;
-  private final Map<String, Object> defaultContext;
+  private final QueryConfigProvider queryConfigProvider;
   private final QueryLifecycleFactory queryLifecycleFactory;
+  private final QueryScheduler queryScheduler;
 
   public QueryDriver(
       final ObjectMapper jsonMapper,
       final SqlStatementFactory sqlStatementFactory,
-      final Map<String, Object> defaultContext,
-      final QueryLifecycleFactory queryLifecycleFactory
+      final QueryConfigProvider queryConfigProvider,
+      final QueryLifecycleFactory queryLifecycleFactory,
+      final QueryScheduler queryScheduler
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.sqlStatementFactory = Preconditions.checkNotNull(sqlStatementFactory, "sqlStatementFactory");
-    this.defaultContext = defaultContext;
+    this.queryConfigProvider = queryConfigProvider;
     this.queryLifecycleFactory = queryLifecycleFactory;
+    this.queryScheduler = queryScheduler;
   }
 
   /**
-   * First-cut synchronous query handler. Druid prefers to stream results, in
-   * part to avoid overly-short network timeouts. However, for now, we simply run
-   * the query within this call and prepare the Protobuf response. Async handling
-   * can come later.
+   * Submit a query with cancellation support.
+   *
+   * @param cancelCallback will be populated with a Runnable that cancels the query.
+   *                       The caller should invoke this if the query should be cancelled.
    */
-  public QueryResponse submitQuery(QueryRequest request, AuthenticationResult authResult)
+  public QueryResponse submitQuery(
+      QueryRequest request,
+      AuthenticationResult authResult,
+      AtomicReference<Runnable> cancelCallback
+  )
   {
     if (request.getQueryType() == QueryOuterClass.QueryType.NATIVE) {
-      return runNativeQuery(request, authResult);
+      return runNativeQuery(request, authResult, cancelCallback);
     } else {
-      return runSqlQuery(request, authResult);
+      return runSqlQuery(request, authResult, cancelCallback);
     }
   }
 
-  private QueryResponse runNativeQuery(QueryRequest request, AuthenticationResult authResult)
+  /**
+   * Backward-compatible method for existing tests.
+   */
+  public QueryResponse submitQuery(QueryRequest request, AuthenticationResult authResult)
+  {
+    return submitQuery(request, authResult, new AtomicReference<>(() -> {}));
+  }
+
+  private QueryResponse runNativeQuery(
+      QueryRequest request,
+      AuthenticationResult authResult,
+      AtomicReference<Runnable> cancelCallback
+  )
   {
     Query<?> query;
     try {
@@ -146,8 +169,14 @@ public class QueryDriver
 
     final QueryLifecycle queryLifecycle = queryLifecycleFactory.factorize();
 
+    if (queryScheduler != null) {
+      final String queryId = query.getId();
+      cancelCallback.set(() -> queryScheduler.cancelQuery(queryId));
+    }
+
     final org.apache.druid.server.QueryResponse queryResponse;
     final String currThreadName = Thread.currentThread().getName();
+    Throwable caught = null;
     try {
       queryLifecycle.initialize(query);
       AuthorizationResult authorizationResult = queryLifecycle.authorize(authResult);
@@ -171,7 +200,12 @@ public class QueryDriver
                           .addAllColumns(encodeNativeColumns(rowSignature, request.getSkipColumnsList()))
                           .build();
     }
+    catch (QueryInterruptedException e) {
+      caught = e;
+      throw e;
+    }
     catch (IOException | RuntimeException e) {
+      caught = e;
       return QueryResponse.newBuilder()
                           .setQueryId(query.getId())
                           .setStatus(QueryStatus.RUNTIME_ERROR)
@@ -179,11 +213,16 @@ public class QueryDriver
                           .build();
     }
     finally {
+      queryLifecycle.emitLogsAndMetrics(caught, null, -1);
       Thread.currentThread().setName(currThreadName);
     }
   }
 
-  private QueryResponse runSqlQuery(QueryRequest request, AuthenticationResult authResult)
+  private QueryResponse runSqlQuery(
+      QueryRequest request,
+      AuthenticationResult authResult,
+      AtomicReference<Runnable> cancelCallback
+  )
   {
     final SqlQueryPlus queryPlus;
     try {
@@ -197,6 +236,7 @@ public class QueryDriver
                           .build();
     }
     final DirectStatement stmt = sqlStatementFactory.directStatement(queryPlus);
+    cancelCallback.set(stmt::cancel);
     final String currThreadName = Thread.currentThread().getName();
     try {
       Thread.currentThread().setName(StringUtils.format("grpc-sql[%s]", stmt.sqlQueryId()));
@@ -214,6 +254,11 @@ public class QueryDriver
                           .build();
     }
     catch (ForbiddenException e) {
+      stmt.reporter().failed(e);
+      stmt.close();
+      throw e;
+    }
+    catch (QueryInterruptedException e) {
       stmt.reporter().failed(e);
       stmt.close();
       throw e;
@@ -270,7 +315,7 @@ public class QueryDriver
   {
     return SqlQueryPlus.builder()
                        .sql(request.getQuery())
-                       .systemDefaultContext(defaultContext)
+                       .systemDefaultContext(queryConfigProvider.getContext())
                        .queryContext(translateContext(request))
                        .sqlParameters(translateParameters(request))
                        .auth(authResult)

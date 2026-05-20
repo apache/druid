@@ -21,8 +21,8 @@ package org.apache.druid.collections.bitmap;
 
 import org.apache.druid.collections.IntSetTestUtility;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.roaringbitmap.PeekableIntIterator;
 
 public class BitmapPeekableIteratorTest
@@ -80,20 +80,20 @@ public class BitmapPeekableIteratorTest
   private void assertPeekable(PeekableIntIterator iterator)
   {
     // extra calls are to make sure things that are not expected to have apparent side-effects have none
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     int mark = -1;
     for (int i : IntSetTestUtility.getSetBits()) {
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       iterator.advanceIfNeeded(i);
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       iterator.advanceIfNeeded(i); // this should do nothing
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       if (iterator.hasNext()) {
-        Assert.assertEquals(i, iterator.peekNext());
+        Assertions.assertEquals(i, iterator.peekNext());
         mark = iterator.next();
       }
-      Assert.assertEquals(i, mark);
+      Assertions.assertEquals(i, mark);
     }
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 }

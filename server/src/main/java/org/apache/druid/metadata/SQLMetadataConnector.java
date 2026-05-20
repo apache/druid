@@ -230,6 +230,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
+   *  Checks if the root cause of the given exception is a unique constraint violation.
+   *
+   * @return true if t is a unique constraint violation, false otherwise
+   */
+  public abstract boolean isUniqueConstraintViolation(Throwable t);
+
+  /**
    * Creates the given table and indexes if the table doesn't already exist.
    */
   public void createTable(final String tableName, final Iterable<String> sql)
@@ -355,6 +362,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     columns.add("used BOOLEAN NOT NULL");
     columns.add("payload %2$s NOT NULL");
     columns.add("used_status_last_updated VARCHAR(255) NOT NULL");
+    columns.add("indexing_state_fingerprint VARCHAR(255)");
+    columns.add("upgraded_from_segment_id VARCHAR(255)");
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       columns.add("schema_fingerprint VARCHAR(255)");
@@ -613,6 +622,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     columnNameTypes.put("used_status_last_updated", "VARCHAR(255)");
 
     columnNameTypes.put("upgraded_from_segment_id", "VARCHAR(255)");
+
+    columnNameTypes.put("indexing_state_fingerprint", "VARCHAR(255)");
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       columnNameTypes.put("schema_fingerprint", "VARCHAR(255)");
@@ -1098,6 +1109,48 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
+   * Creates the indexing states table for storing fingerprinted indexing states
+   * <p>
+   * This table stores unique indexing states that are referenced by
+   * segments via fingerprints.
+   */
+  public void createIndexingStatesTable(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %1$s (\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  dataSource VARCHAR(255) NOT NULL,\n"
+                + "  fingerprint VARCHAR(255) NOT NULL,\n"
+                + "  payload %2$s NOT NULL,\n"
+                + "  used BOOLEAN NOT NULL,\n"
+                + "  pending BOOLEAN NOT NULL,\n"
+                + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
+                + "  PRIMARY KEY (fingerprint)\n"
+                + ")",
+                tableName, getPayloadType()
+            )
+        )
+    );
+
+    createIndex(
+        tableName,
+        "IDX_%s_USED",
+        List.of("used", "used_status_last_updated")
+    );
+  }
+
+  @Override
+  public void createIndexingStatesTable()
+  {
+    if (config.get().isCreateTables()) {
+      createIndexingStatesTable(tablesConfigSupplier.get().getIndexingStatesTable());
+    }
+  }
+
+  /**
    * Get the Set of the index on given table
    *
    * @param tableName name of the table to fetch the index map
@@ -1243,15 +1296,27 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         (tableHasColumn(segmentsTables, "schema_fingerprint")
          && tableHasColumn(segmentsTables, "num_rows"));
 
-    if (tableHasColumn(segmentsTables, "used_status_last_updated") && schemaPersistenceRequirementMet) {
-      // do nothing
-    } else {
+    StringBuilder missingColumns = new StringBuilder();
+    if (!tableHasColumn(segmentsTables, "used_status_last_updated")) {
+      missingColumns.append("used_status_last_updated, ");
+    }
+    if (!schemaPersistenceRequirementMet) {
+      missingColumns.append("schema_fingerprint, num_rows, ");
+    }
+    if (!tableHasColumn(segmentsTables, "indexing_state_fingerprint")) {
+      missingColumns.append("indexing_state_fingerprint, ");
+    }
+
+    if (missingColumns.length() > 0) {
       throw new ISE(
           "Cannot start Druid as table[%s] has an incompatible schema."
-          + " Reason: One or all of these columns [used_status_last_updated, schema_fingerprint, num_rows] does not exist in table."
+          + " Reason: The following columns do not exist in the table: [%s]"
           + " See https://druid.apache.org/docs/latest/operations/upgrade-prep.html for more info on remediation.",
-          tablesConfigSupplier.get().getSegmentsTable()
+          tablesConfigSupplier.get().getSegmentsTable(),
+          missingColumns.substring(0, missingColumns.length() - 2)
       );
+    } else {
+      // do nothing
     }
   }
 

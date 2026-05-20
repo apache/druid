@@ -21,7 +21,7 @@ on:
       jdk:
         required: false
         type: string
-        default: '17'
+        default: '25'
       script:
         required: true
         type: string
@@ -38,6 +38,11 @@ on:
         required: false
         type: string
         description: "Artifacts to download. For example: 'unit-test-reports-*'"
+      execute:
+        required: false
+        type: boolean
+        default: true
+        description: 'Controls execution of the invocation - this is a workaround for github actions matrix element skip limitation'
 
 env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
@@ -54,13 +59,14 @@ jobs:
   execute:
     name: "${{ inputs.key }}"
     runs-on: ubuntu-latest
+    if: ${{ inputs.execute }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 500
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: ${{ inputs.jdk }}
@@ -68,7 +74,7 @@ jobs:
 
       - name: Download required artifacts
         if: ${{ inputs.artifacts_to_download != '' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: ${{ inputs.artifacts_to_download }}
           merge-multiple: true
@@ -78,14 +84,56 @@ jobs:
           set -x
           ./.github/scripts/setup_test_profiling_env.sh ${{ inputs.jdk }} run_id=$GITHUB_RUN_ID run_number=$GITHUB_RUN_NUMBER run_attempt=$GITHUB_RUN_ATTEMPT key=${{ inputs.key }} event_ref=$GITHUB_EVENT_REF run_url=$GITHUB_RUN_URL >> $GITHUB_ENV
           echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -c-8)" >> $GITHUB_ENV
-          ./.github/scripts/collect_jstacks &
+          ./.github/scripts/collect_jvm_diagnostics &
+
+      - name: Pre-pull Testcontainers images for unit tests
+        if: ${{ contains(inputs.script, 'run_unit-tests') }}
+        run: |
+          set -eu
+          images=(
+            apache/kafka:4.2.0
+            postgres:16-alpine
+            minio/minio:latest
+            hashicorp/consul:1.18
+            tabulario/iceberg-rest:1.6.0
+            localstack/localstack:4.13.1
+            mcr.microsoft.com/azure-storage/azurite:3.35.0
+            osixia/openldap:1.5.0
+            rancher/k3s:v1.35.0-k3s1
+          )
+          for image in "${images[@]}"; do
+            for attempt in 1 2 3; do
+              if docker pull --quiet "$image"; then
+                break
+              fi
+              echo "::warning ::docker pull $image failed (attempt $attempt); retrying in 10s"
+              sleep 10
+            done
+          done
+        timeout-minutes: 10
 
       - name: 'Execute: ${{ inputs.script }}'
         run: ${{ inputs.script }}
         timeout-minutes: 60
 
+      - name: Publish Test Report
+        if: ${{ hashFiles('**/TEST-*.xml') != '' }}
+        uses: mikepenz/action-junit-report@v6
+        env:
+          NODE_OPTIONS: "--max_old_space_size=4096"
+        with:
+          check_name: "Test Report - ${{ inputs.key }}"
+          report_paths: '**/TEST-*.xml'
+          detailed_summary: true
+          flaky_summary: true
+          annotate_only: true
+          fail_on_failure: true
+          check_retries: true
+          truncate_stack_traces: false
+          job_summary: false
+
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: ${{ failure() || inputs.artifact_prefix != '' }}
         with:
           name: "${{ inputs.artifact_prefix }}-${{ env.HASH }}"
@@ -96,4 +144,5 @@ jobs:
             **/core.[0-9]*
             **/TEST-*.xml
             **/target/jacoco*.exec
-            **/target/jstack*
+            **/target/ci-debug/**
+            distribution/target/apache-druid-*/log/**

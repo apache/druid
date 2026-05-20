@@ -34,8 +34,8 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -48,7 +48,7 @@ public class FieldAccessPostAggregatorTest extends InitializedNullHandlingTest
   public void testSerde() throws JsonProcessingException
   {
     FieldAccessPostAggregator postAgg = new FieldAccessPostAggregator("name", "column");
-    Assert.assertEquals(
+    Assertions.assertEquals(
         postAgg,
         JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(postAgg), FieldAccessPostAggregator.class)
     );
@@ -68,7 +68,7 @@ public class FieldAccessPostAggregatorTest extends InitializedNullHandlingTest
     RowSignature signature = RowSignature.builder()
                                          .add("column", ColumnType.LONG)
                                          .build();
-    Assert.assertEquals(ColumnType.LONG, postAgg.getType(signature));
+    Assertions.assertEquals(ColumnType.LONG, postAgg.getType(signature));
   }
 
   @Test
@@ -76,7 +76,7 @@ public class FieldAccessPostAggregatorTest extends InitializedNullHandlingTest
   {
     FieldAccessPostAggregator postAgg = new FieldAccessPostAggregator("name", "column");
     RowSignature signature = RowSignature.builder().build();
-    Assert.assertNull(postAgg.getType(signature));
+    Assertions.assertNull(postAgg.getType(signature));
   }
 
   @Test
@@ -89,13 +89,13 @@ public class FieldAccessPostAggregatorTest extends InitializedNullHandlingTest
     CountAggregator agg = new CountAggregator();
     Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, agg.get());
-    Assert.assertEquals(0L, fieldAccessPostAggregator.compute(metricValues));
+    Assertions.assertEquals(0L, fieldAccessPostAggregator.compute(metricValues));
 
     agg.aggregate();
     agg.aggregate();
     agg.aggregate();
     metricValues.put(aggName, agg.get());
-    Assert.assertEquals(3L, fieldAccessPostAggregator.compute(metricValues));
+    Assertions.assertEquals(3L, fieldAccessPostAggregator.compute(metricValues));
   }
 
   @Test
@@ -118,7 +118,7 @@ public class FieldAccessPostAggregatorTest extends InitializedNullHandlingTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)

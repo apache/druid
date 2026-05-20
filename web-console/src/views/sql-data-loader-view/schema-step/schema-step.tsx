@@ -407,6 +407,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
         {
           query: `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'druid' ORDER BY TABLE_NAME ASC`,
           resultFormat: 'array',
+          context: { engine: 'native' },
         },
         signal,
       );
@@ -984,6 +985,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                   text="Learn more..."
                   href={`${getLink('DOCS')}/ingestion/schema-model#primary-timestamp`}
                   target="_blank"
+                  rel="noopener noreferrer"
                   intent={Intent.WARNING}
                   minimal
                 />

@@ -34,6 +34,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -52,17 +53,22 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 /**
@@ -112,6 +118,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   private final IndexIO indexIO;
 
   private final ListeningExecutorService virtualStorageLoadOnDemandExec;
+  /**
+   * Bounds the number of in-flight on-demand loads when running with virtual threads. Null when virtual storage is
+   * disabled or when the legacy fixed-pool path is selected (the pool size is the implicit limit there).
+   */
+  @Nullable
+  private final Semaphore virtualStorageLoadOnDemandPermits;
   private ExecutorService loadOnBootstrapExec = null;
   private ExecutorService loadOnDownloadExec = null;
 
@@ -133,24 +145,51 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     log.info("Using storage location strategy[%s].", this.strategy.getClass().getSimpleName());
 
     if (config.isVirtualStorage()) {
-      log.info(
-          "Using virtual storage mode - on demand load threads: [%d].",
-          config.getVirtualStorageLoadThreads()
-      );
       if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() > 0) {
         throw DruidException.defensive("Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnDownload");
       }
       if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
         throw DruidException.defensive("Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnBootstrap");
       }
-      virtualStorageLoadOnDemandExec =
-          MoreExecutors.listeningDecorator(
-              // probably replace this with virtual threads once minimum version is java 21
-              Executors.newFixedThreadPool(
-                  config.getVirtualStorageLoadThreads(),
-                  Execs.makeThreadFactory("VirtualStorageOnDemandLoadingThread-%s")
-              )
-          );
+      if (config.getVirtualStorageLoadThreads() <= 0) {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                "virtualStorageLoadThreads must be greater than 0, got [%d]",
+                                config.getVirtualStorageLoadThreads()
+                            );
+      }
+      if (config.isVirtualStorageEphemeral()) {
+        for (StorageLocation location : locations) {
+          location.setAreWeakEntriesEphemeral(true);
+        }
+      }
+      if (config.isVirtualStorageUseVirtualThreads()) {
+        log.info(
+            "Using virtual storage mode with virtual threads - max concurrent on demand loads: [%d].",
+            config.getVirtualStorageLoadThreads()
+        );
+        virtualStorageLoadOnDemandPermits = new Semaphore(config.getVirtualStorageLoadThreads());
+        virtualStorageLoadOnDemandExec = MoreExecutors.listeningDecorator(
+            Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual()
+                      .name("VirtualStorageOnDemandLoadingThread-", 0)
+                      .factory()
+            )
+        );
+      } else {
+        log.info(
+            "Using virtual storage mode with fixed platform thread pool - on demand load threads: [%d].",
+            config.getVirtualStorageLoadThreads()
+        );
+        virtualStorageLoadOnDemandPermits = null;
+        virtualStorageLoadOnDemandExec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(
+                config.getVirtualStorageLoadThreads(),
+                Execs.makeThreadFactory("VirtualStorageOnDemandLoadingThread-%s")
+            )
+        );
+      }
     } else {
       log.info(
           "Number of threads to load segments into page cache - on bootstrap: [%d], on download: [%d].",
@@ -172,6 +211,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         );
       }
       virtualStorageLoadOnDemandExec = null;
+      virtualStorageLoadOnDemandPermits = null;
     }
   }
 
@@ -223,22 +263,51 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
 
-    final List<DataSegment> cachedSegments = new ArrayList<>();
+    final ConcurrentLinkedQueue<DataSegment> cachedSegments = new ConcurrentLinkedQueue<>();
     final File[] segmentsToLoad = retrieveSegmentMetadataFiles();
+    final CountDownLatch latch = new CountDownLatch(segmentsToLoad.length);
+
+    // If there is no dedicated bootstrap executor, perform the loading sequentially on the current thread.
+    final boolean isLoadingSegmentsSequentially = loadOnBootstrapExec == null;
+    final ExecutorService executorService = isLoadingSegmentsSequentially
+                                            ? MoreExecutors.newDirectExecutorService()
+                                            : loadOnBootstrapExec;
 
     AtomicInteger ignoredFilesCounter = new AtomicInteger(0);
 
-    for (int i = 0; i < segmentsToLoad.length; i++) {
-      final File file = segmentsToLoad[i];
-      log.info("Loading segment cache file [%d/%d][%s].", i + 1, segmentsToLoad.length, file);
-      try {
-        addFilesToCachedSegments(file, ignoredFilesCounter, cachedSegments);
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "Failed to load segment from segment cache file.")
-           .addData("file", file)
-           .emit();
-      }
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    log.info("Loading [%d] segments from disk to cache.", segmentsToLoad.length);
+
+    for (File file : segmentsToLoad) {
+      executorService.submit(() -> {
+        try {
+          addFilesToCachedSegments(file, ignoredFilesCounter, cachedSegments);
+        }
+        catch (Exception e) {
+          log.makeAlert(e, "Failed to load segment from segment cache file.")
+             .addData("file", file)
+             .emit();
+        }
+        finally {
+          latch.countDown();
+        }
+      });
+    }
+
+    try {
+      latch.await();
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      log.noStackTrace().error(e, "Interrupted when trying to retrieve cached segment metadata files");
+    }
+
+    stopwatch.stop();
+    log.info("Loaded [%d/%d] cached segments in [%d]ms.", cachedSegments.size(), segmentsToLoad.length, stopwatch.millisElapsed());
+
+    if (isLoadingSegmentsSequentially) {
+      // Shutdown the direct executor service we created previously in this method.
+      executorService.shutdown();
     }
 
     if (ignoredFilesCounter.get() > 0) {
@@ -247,53 +316,58 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
          .emit();
     }
 
-    return cachedSegments;
+    return List.copyOf(cachedSegments);
   }
 
-  private void addFilesToCachedSegments(File file, AtomicInteger ignored, List<DataSegment> cachedSegments) throws IOException
+  private void addFilesToCachedSegments(
+      File file,
+      AtomicInteger ignored,
+      ConcurrentLinkedQueue<DataSegment> cachedSegments
+  ) throws IOException
   {
     final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
-    boolean removeInfo = false;
     if (!segment.getId().toString().equals(file.getName())) {
       log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
       ignored.incrementAndGet();
-    } else {
-      removeInfo = true;
-      final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
-      for (StorageLocation location : locations) {
-        // check for migrate from old nested local storage path format
-        final File legacyPath = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
-        if (legacyPath.exists()) {
-          final File destination = cacheEntry.toPotentialLocation(location.getPath());
-          FileUtils.mkdirp(destination);
-          final File[] oldFiles = legacyPath.listFiles();
-          final File[] newFiles = destination.listFiles();
-          // make sure old files exist and new files do not exist
-          if (oldFiles != null && oldFiles.length > 0 && newFiles != null && newFiles.length == 0) {
-            Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE);
-          }
-          cleanupLegacyCacheLocation(location.getPath(), legacyPath);
-        }
+      return;
+    }
 
-        if (cacheEntry.checkExists(location.getPath())) {
-          removeInfo = false;
-          final boolean reserveResult;
-          if (config.isVirtualStorage()) {
-            reserveResult = location.reserveWeak(cacheEntry);
-          } else {
-            reserveResult = location.reserve(cacheEntry);
-          }
-          if (!reserveResult) {
-            log.makeAlert(
-                "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
-                location.getPath(),
-                location.availableSizeBytes(),
-                segment.getId(),
-                segment.getSize()
-            ).emit();
-          }
-          cachedSegments.add(segment);
+    boolean removeInfo = true;
+
+    final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
+    for (StorageLocation location : locations) {
+      // check for migrate from old nested local storage path format
+      final File legacyPath = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
+      if (legacyPath.exists()) {
+        final File destination = cacheEntry.toPotentialLocation(location.getPath());
+        FileUtils.mkdirp(destination);
+        final File[] oldFiles = legacyPath.listFiles();
+        final File[] newFiles = destination.listFiles();
+        // make sure old files exist and new files do not exist
+        if (oldFiles != null && oldFiles.length > 0 && newFiles != null && newFiles.length == 0) {
+          Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE);
         }
+        cleanupLegacyCacheLocation(location.getPath(), legacyPath);
+      }
+
+      if (cacheEntry.checkExists(location.getPath())) {
+        removeInfo = false;
+        final boolean reserveResult;
+        if (config.isVirtualStorage()) {
+          reserveResult = location.reserveWeak(cacheEntry);
+        } else {
+          reserveResult = location.reserve(cacheEntry);
+        }
+        if (!reserveResult) {
+          log.makeAlert(
+              "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
+              location.getPath(),
+              location.availableSizeBytes(),
+              segment.getId(),
+              segment.getSize()
+          ).emit();
+        }
+        cachedSegments.add(segment);
       }
     }
 
@@ -317,6 +391,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   {
     final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
     if (!segmentInfoCacheFile.exists()) {
+      FileUtils.mkdirp(segmentInfoCacheFile.getParentFile());
       FileUtils.writeAtomically(
           segmentInfoCacheFile,
           out -> {
@@ -330,7 +405,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public void removeInfoFile(final DataSegment segment)
   {
-    final Runnable delete = () -> deleteSegmentInfoFile(segment);
     final SegmentCacheEntryIdentifier entryId = new SegmentCacheEntryIdentifier(segment.getId());
     boolean isCached = false;
     // defer deleting until the unmount operation of the cache entry, if possible, so that if the process stops before
@@ -338,13 +412,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     for (StorageLocation location : locations) {
       final SegmentCacheEntry cacheEntry = location.getCacheEntry(entryId);
       if (cacheEntry != null) {
-        isCached = isCached || cacheEntry.setOnUnmount(delete);
+        isCached = isCached || cacheEntry.setDeleteInfoFileOnUnmount();
       }
     }
 
     // otherwise we are probably deleting for cleanup reasons, so try it anyway if it wasn't present in any location
     if (!isCached) {
-      delete.run();
+      deleteSegmentInfoFile(segment);
     }
   }
 
@@ -357,9 +431,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public Optional<Segment> acquireCachedSegment(final DataSegment dataSegment)
+  public Optional<Segment> acquireCachedSegment(final SegmentId segmentId)
   {
-    final SegmentCacheEntryIdentifier cacheEntryIdentifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
+    final SegmentCacheEntryIdentifier cacheEntryIdentifier = new SegmentCacheEntryIdentifier(segmentId);
     for (StorageLocation location : locations) {
       final SegmentCacheEntry cacheEntry = location.getStaticCacheEntry(cacheEntryIdentifier);
       if (cacheEntry != null) {
@@ -391,7 +465,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public AcquireSegmentAction acquireSegment(final DataSegment dataSegment) throws SegmentLoadingException
+  public AcquireSegmentAction acquireSegment(final DataSegment dataSegment)
   {
     final SegmentCacheEntryIdentifier identifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
     final AcquireSegmentAction acquireExisting = acquireExistingSegment(identifier);
@@ -423,11 +497,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               // write the segment info file if it doesn't exist. this can happen if we are loading after a drop
               final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), dataSegment.getId().toString());
               if (!segmentInfoCacheFile.exists()) {
+                FileUtils.mkdirp(getEffectiveInfoDir());
                 FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
                   jsonMapper.writeValue(out, dataSegment);
                   return null;
                 });
-                hold.getEntry().setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
+                hold.getEntry().setDeleteInfoFileOnUnmount();
               }
 
               return new AcquireSegmentAction(
@@ -489,6 +564,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   public void load(final DataSegment dataSegment) throws SegmentLoadingException
   {
     if (config.isVirtualStorage()) {
+      if (config.isVirtualStorageEphemeral()) {
+        throw DruidException.defensive(
+            "load() should not be called when virtualStorageIsEphemeral is true"
+        );
+      }
       // virtual storage doesn't do anything with loading immediately, but check to see if the segment is already cached
       // and if so, clear out the onUnmount action
       final ReferenceCountingLock lock = lock(dataSegment);
@@ -530,6 +610,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   ) throws SegmentLoadingException
   {
     if (config.isVirtualStorage()) {
+      if (config.isVirtualStorageEphemeral()) {
+        throw DruidException.defensive(
+            "bootstrap() should not be called when virtualStorageIsEphemeral is true"
+        );
+      }
       // during bootstrap, check if the segment exists in a location and mount it, getCachedSegments already
       // did the reserving for us
       final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(dataSegment.getId());
@@ -619,6 +704,31 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
+  @Nullable
+  @Override
+  public StorageStats getStorageStats()
+  {
+    if (config.isVirtualStorage()) {
+      final Map<String, VirtualStorageLocationStats> locationStats = new HashMap<>();
+      for (StorageLocation location : locations) {
+        locationStats.put(location.getPath().toString(), location.resetWeakStats());
+      }
+      return new StorageStats(
+          Map.of(),
+          locationStats
+      );
+    } else {
+      final Map<String, StorageLocationStats> locationStats = new HashMap<>();
+      for (StorageLocation location : locations) {
+        locationStats.put(location.getPath().toString(), location.resetStaticStats());
+      }
+      return new StorageStats(
+          locationStats,
+          Map.of()
+      );
+    }
+  }
+
   @VisibleForTesting
   public ConcurrentHashMap<DataSegment, ReferenceCountingLock> getSegmentLocks()
   {
@@ -646,6 +756,25 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
     return false;
+  }
+
+  /**
+   * Testing use only please, any callers that want to do stuff with segments should use
+   * {@link #acquireCachedSegment(SegmentId)} or {@link #acquireSegment(DataSegment)} instead. Does not hold locks
+   * and so is not really safe to use while the cache manager is active
+   */
+  @VisibleForTesting
+  @Nullable
+  public ReferenceCountedSegmentProvider getSegmentReferenceProvider(DataSegment segment)
+  {
+    final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
+    for (StorageLocation location : locations) {
+      final SegmentCacheEntry entry = location.getCacheEntry(cacheEntry.id);
+      if (entry != null) {
+        return entry.referenceProvider;
+      }
+    }
+    return null;
   }
 
   /**
@@ -688,15 +817,27 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           final long startTime = System.nanoTime();
           return virtualStorageLoadOnDemandExec.submit(
               () -> {
-                final long execStartTime = System.nanoTime();
-                final long waitTime = execStartTime - startTime;
-                entry.mount(location);
-                return new AcquireSegmentResult(
-                    entry.referenceProvider,
-                    entry.dataSegment.getSize(),
-                    waitTime,
-                    System.nanoTime() - startTime
-                );
+                // Acquire a permit inside the task so that waiting parks the (virtual) thread instead of blocking the
+                // submitter. In fixed-pool mode permits is null and the pool size itself bounds concurrency.
+                if (virtualStorageLoadOnDemandPermits != null) {
+                  virtualStorageLoadOnDemandPermits.acquireUninterruptibly();
+                }
+                try {
+                  final long execStartTime = System.nanoTime();
+                  final long waitTime = execStartTime - startTime;
+                  entry.mount(location);
+                  return new AcquireSegmentResult(
+                      entry.referenceProvider,
+                      entry.dataSegment.getSize(),
+                      waitTime,
+                      System.nanoTime() - execStartTime
+                  );
+                }
+                finally {
+                  if (virtualStorageLoadOnDemandPermits != null) {
+                    virtualStorageLoadOnDemandPermits.release();
+                  }
+                }
               }
           );
         }
@@ -884,6 +1025,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     private File storageDir;
     private ReferenceCountedSegmentProvider referenceProvider;
     private final AtomicReference<Runnable> onUnmount = new AtomicReference<>();
+    // switched from synchronized to use a ReentrantLock to avoid pinning virtual threads to platform threads until
+    // https://openjdk.org/jeps/491, we could consider switching back after java 24+ is the minimum version
+    private final ReentrantLock entryLock = new ReentrantLock();
 
     private SegmentCacheEntry(final DataSegment dataSegment)
     {
@@ -905,9 +1049,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
 
     @Override
-    public synchronized boolean isMounted()
+    public boolean isMounted()
     {
-      return referenceProvider != null;
+      entryLock.lock();
+      try {
+        return referenceProvider != null;
+      }
+      finally {
+        entryLock.unlock();
+      }
     }
 
     @Override
@@ -926,7 +1076,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
 
       try {
-        synchronized (this) {
+        entryLock.lock();
+        try {
           if (location != null) {
             log.debug(
                 "already mounted [%s] in location[%s], but asked to load in [%s], unmounting old location",
@@ -941,7 +1092,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   location.getPath(),
                   mountLocation.getPath()
               );
-            } else {
+            } else if (referenceProvider != null) {
               log.debug("already mounted [%s] in location[%s]", id, mountLocation.getPath());
               return;
             }
@@ -972,17 +1123,30 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           lazyLoadCallback = SegmentLazyLoadFailCallback.NOOP;
           referenceProvider = ReferenceCountedSegmentProvider.of(segment);
         }
-
+        finally {
+          entryLock.unlock();
+        }
 
         // since we do not hold a lock on the location while mounting, make sure that we actually are reserved and
-        // should have mounted, otherwise unmount so we don't leave any orphaned files
-        if (!mountLocation.isReserved(this.id) && !mountLocation.isWeakReserved(this.id)) {
+        // should have mounted, otherwise unmount so we don't leave any orphaned files. These checks acquire the
+        // location lock, so they must run with entryLock released to avoid deadlocking.
+        final boolean isWeak = mountLocation.isWeakReserved(this.id);
+        final boolean isStatic = !isWeak && mountLocation.isReserved(this.id);
+        if (!isWeak && !isStatic) {
           log.debug(
               "aborting mount in location[%s] since entry[%s] is no longer reserved",
               mountLocation.getPath(),
               this.id
           );
           unmount();
+        } else if (isWeak) {
+          mountLocation.trackWeakLoad(dataSegment.getSize());
+        } else {
+          mountLocation.trackStaticLoad(dataSegment.getSize());
+        }
+
+        if (config.isVirtualStorageEphemeral()) {
+          setDeleteInfoFileOnUnmount();
         }
       }
       catch (SegmentLoadingException e) {
@@ -1012,25 +1176,33 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     @Override
     public void unmount()
     {
-      final Lock lock;
-      synchronized (this) {
+      final Lock locationLock;
+      entryLock.lock();
+      try {
         if (location == null) {
           return;
         }
-        lock = location.getLock().readLock();
+        locationLock = location.getLock().readLock();
       }
-      lock.lock();
+      finally {
+        entryLock.unlock();
+      }
+      locationLock.lock();
       try {
-        synchronized (this) {
+        entryLock.lock();
+        try {
           if (referenceProvider != null) {
-            referenceProvider.close();
+            ReferenceCountedSegmentProvider provider = referenceProvider;
             referenceProvider = null;
+            provider.close();
           }
           if (!config.isDeleteOnRemove()) {
             return;
           }
           if (storageDir != null) {
-            atomicMoveAndDeleteCacheEntryDirectory(storageDir);
+            if (storageDir.exists()) {
+              atomicMoveAndDeleteCacheEntryDirectory(storageDir);
+            }
             storageDir = null;
             location = null;
           }
@@ -1040,32 +1212,53 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             onUnmountRunnable.run();
           }
         }
+        finally {
+          entryLock.unlock();
+        }
       }
       finally {
-        lock.unlock();
+        locationLock.unlock();
       }
     }
 
-    public synchronized Optional<Segment> acquireReference()
+    public Optional<Segment> acquireReference()
     {
-      if (referenceProvider == null) {
-        return Optional.empty();
+      entryLock.lock();
+      try {
+        if (referenceProvider == null) {
+          return Optional.empty();
+        }
+        return referenceProvider.acquireReference();
       }
-      return referenceProvider.acquireReference();
+      finally {
+        entryLock.unlock();
+      }
     }
 
-    public synchronized boolean setOnUnmount(Runnable runnable)
+    public boolean setDeleteInfoFileOnUnmount()
     {
-      if (location == null) {
-        return false;
+      entryLock.lock();
+      try {
+        if (location == null) {
+          return false;
+        }
+        onUnmount.set(() -> deleteSegmentInfoFile(dataSegment));
+        return true;
       }
-      onUnmount.set(runnable);
-      return true;
+      finally {
+        entryLock.unlock();
+      }
     }
 
-    public synchronized void clearOnUnmount()
+    public void clearOnUnmount()
     {
-      onUnmount.set(null);
+      entryLock.lock();
+      try {
+        onUnmount.set(null);
+      }
+      finally {
+        entryLock.unlock();
+      }
     }
 
     public void loadIntoPageCache()
@@ -1073,7 +1266,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       if (!isMounted()) {
         return;
       }
-      synchronized (this) {
+      entryLock.lock();
+      try {
         final File[] children = storageDir.listFiles();
         if (children != null) {
           for (File child : children) {
@@ -1087,6 +1281,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           }
         }
       }
+      finally {
+        entryLock.unlock();
+      }
     }
 
     public boolean checkExists(final File location)
@@ -1099,7 +1296,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       return new File(location, relativePathString);
     }
 
-    @GuardedBy("this")
+    @GuardedBy("entryLock")
     private void loadInLocationWithStartMarker(final DataSegment segment, final File storageDir)
         throws SegmentLoadingException
     {
@@ -1123,7 +1320,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
 
-    @GuardedBy("this")
+    @GuardedBy("entryLock")
     private void loadInLocation(final DataSegment segment, final File storageDir)
         throws SegmentLoadingException
     {
@@ -1141,7 +1338,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
 
-    @GuardedBy("this")
+    @GuardedBy("entryLock")
     private SegmentizerFactory getSegmentFactory(final File segmentFiles) throws SegmentLoadingException
     {
       final File factoryJson = new File(segmentFiles, "factory.json");

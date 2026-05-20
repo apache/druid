@@ -105,7 +105,7 @@ druid.auth.authenticator.MyBasicMetadataAuthenticator.initialInternalClientPassw
 # Uses the metadata store for storing users, you can use authentication API to create new users and grant permissions
 druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type=metadata
 
-# If true and the request credential doesn't exists in this credentials store, the request will proceed to next Authenticator in the chain.
+# If true and the request credential doesn't exist in this credentials store, the request proceeds to the next Authenticator in the chain.
 druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure=false
 druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName=MyBasicMetadataAuthorizer
 ```
@@ -401,6 +401,47 @@ The type of role provider (ldap) to authorize requests credentials.<br />
 Array of LDAP group filters used to filter out the allowed set of groups returned from LDAP search. Filters can be begin with *, or end with ,* to provide configurational flexibility to limit or filter allowed set of groups available to LDAP Authorizer.<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
+
+#### ReadOnly Authorizer
+
+The ReadOnly authorizer allows all READ operations and denies all other operations (WRITE, DELETE, etc.).
+
+Example configuration:
+
+```
+druid.auth.authenticatorChain=["basic","anonymous"]
+
+# Basic authenticator for internal user
+druid.auth.authenticator.basic.type=basic
+druid.auth.authenticator.basic.initialAdminPassword=password
+druid.auth.authenticator.basic.initialInternalClientPassword=password
+druid.auth.authenticator.basic.credentialsValidator.type=metadata
+druid.auth.authenticator.basic.authorizerName=BasicAuthorizer
+
+# Anonymous authenticator for external users
+druid.auth.authenticator.anonymous.type=anonymous
+druid.auth.authenticator.anonymous.identity=defaultUser
+druid.auth.authenticator.anonymous.authorizerName=ReadOnlyAuthorizer
+
+# Escalator with Basic auth for internal communications
+druid.escalator.type=basic
+druid.escalator.internalClientUsername=druid_system
+druid.escalator.internalClientPassword=password
+druid.escalator.authorizerName=BasicAuthorizer
+
+# Both authorizers
+druid.auth.authorizers=["BasicAuthorizer","ReadOnlyAuthorizer"]
+
+# BasicAuthorizer configuration
+druid.auth.authorizer.BasicAuthorizer.type=basic
+
+# ReadOnlyAuthorizer configuration
+druid.auth.authorizer.ReadOnlyAuthorizer.type=readOnly
+```
+
+With this configuration:
+- Internal Druid communications use Basic authentication → AllowAll authorizer → full access
+- External users with no authentication → Anonymous authenticator → ReadOnly authorizer → read-only access
 
 #### Properties for LDAPS
 

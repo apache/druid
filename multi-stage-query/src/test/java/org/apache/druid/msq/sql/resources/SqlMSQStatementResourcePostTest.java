@@ -79,7 +79,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         s -> localFileStorageConnector,
         authorizerMapper,
         new DefaultQueryConfig(Map.of("debug", "false")),
-        new ServerConfig()
+        new ServerConfig(),
+        null
     );
   }
 
@@ -335,7 +336,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         s -> NilStorageConnector.getInstance(),
         authorizerMapper,
         DefaultQueryConfig.NIL,
-        new ServerConfig()
+        new ServerConfig(),
+        null
     );
 
     String errorMessage = "The sql statement api cannot read from the select destination [durableStorage] provided in "

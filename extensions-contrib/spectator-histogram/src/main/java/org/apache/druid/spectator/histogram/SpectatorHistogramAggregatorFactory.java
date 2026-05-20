@@ -29,10 +29,15 @@ import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -96,6 +101,27 @@ public class SpectatorHistogramAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new SpectatorHistogramBufferAggregator(metricFactory.makeColumnValueSelector(fieldName));
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+    final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+    // Allow both complex and numeric aggregation to support vectorization during ingestion as well as query time.
+    // When ingesting data, the columnSelectorFactory returns null for column capabilities, so this doesn't
+    // necessarily mean that the column doesn't exist. We need to be prepared to accept anything in this
+    // case. As such, we pretend like the input is COMPLEX to get the logic to use the object-based aggregation.
+    if (capabilities == null || capabilities.getType() == ValueType.COMPLEX) {
+      return new SpectatorHistogramVectorizedAggregator(selectorFactory.makeObjectSelector(fieldName));
+    } else {
+      return new SpectatorHistogramNumericVectorizedAggregator(selectorFactory.makeValueSelector(fieldName));
+    }
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
   }
 
   // This is used when writing metrics to segment files to check whether the column is sorted.
@@ -195,7 +221,7 @@ public class SpectatorHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return SpectatorHistogram.getMaxIntermdiateHistogramSize();
+    return SpectatorHistogram.getMaxIntermediateHistogramSize();
   }
 
   @Override
@@ -258,7 +284,7 @@ public class SpectatorHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName);
+    return name.hashCode() * 31 + fieldName.hashCode();
   }
 
   @Override

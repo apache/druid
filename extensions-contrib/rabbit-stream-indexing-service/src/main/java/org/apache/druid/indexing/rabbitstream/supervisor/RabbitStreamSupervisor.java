@@ -55,6 +55,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -202,7 +203,8 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
         maximumMessageTime,
         ioConfig.getInputFormat(),
         rabbitConfig.getUri(),
-        ioConfig.getTaskDuration().getStandardMinutes()
+        ioConfig.getTaskDuration().getStandardMinutes(),
+        rabbitConfig.getBoundedStreamConfig()  // Pass through bounded config
     );
   }
 
@@ -214,7 +216,9 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
       TreeMap<Integer, Map<String, Long>> sequenceOffsets,
       SeekableStreamIndexTaskIOConfig taskIoConfig,
       SeekableStreamIndexTaskTuningConfig taskTuningConfig,
-      RowIngestionMetersFactory rowIngestionMetersFactory) throws JsonProcessingException
+      RowIngestionMetersFactory rowIngestionMetersFactory,
+      @Nullable List<Integer> serverPrioritiesToAssign
+  ) throws JsonProcessingException
   {
     final String checkpoints = sortingMapper.writerFor(CHECKPOINTS_TYPE_REF).writeValueAsString(sequenceOffsets);
     final Map<String, Object> context = createBaseTaskContexts();
@@ -231,7 +235,8 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
           (RabbitStreamIndexTaskTuningConfig) taskTuningConfig,
           (RabbitStreamIndexTaskIOConfig) taskIoConfig,
           context,
-          sortingMapper
+          sortingMapper,
+          CollectionUtils.isNullOrEmpty(serverPrioritiesToAssign) ? null : serverPrioritiesToAssign.get(i)
       ));
     }
     return taskList;
@@ -356,6 +361,39 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return false;
+  }
+
+  @Override
+  protected boolean isEndOffsetExclusive()
+  {
+    return true;
+  }
+
+  @Override
+  protected boolean isOffsetAtOrBeyond(Long current, Long target)
+  {
+    // RabbitMQ uses Long sequence numbers (delivery tags)
+    return current >= target;
+  }
+
+  @Override
+  protected String createPartitionIdFromString(String partitionIdString)
+  {
+    // RabbitMQ uses String as partition ID, so just return the string as-is
+    return partitionIdString;
+  }
+
+  @Override
+  protected Long createSequenceOffsetFromObject(Object offsetObj)
+  {
+    // RabbitMQ uses Long as sequence offset
+    if (offsetObj instanceof Number) {
+      return ((Number) offsetObj).longValue();
+    }
+    if (offsetObj instanceof String) {
+      return Long.parseLong((String) offsetObj);
+    }
+    throw new IllegalArgumentException("Cannot convert " + offsetObj.getClass() + " to Long offset");
   }
 
   @Override

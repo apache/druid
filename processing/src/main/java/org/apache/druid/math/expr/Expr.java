@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -47,6 +48,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -131,6 +133,26 @@ public interface Expr extends Cacheable
   }
 
   /**
+   * Replaces {@link IdentifierExpr} whose {@link IdentifierExpr#binding} are present as a key in the supplied map with
+   * the map value.
+   */
+  default Expr rewriteBindings(Map<String, String> rewriteMap)
+  {
+    return visit(expr -> {
+      if (expr instanceof IdentifierExpr identifier) {
+        final String replacement = rewriteMap.get(identifier.binding);
+        if (replacement != null) {
+          if (Objects.equals(identifier.identifier, identifier.binding)) {
+            return new IdentifierExpr(replacement, replacement);
+          }
+          return new IdentifierExpr(identifier.identifier, replacement);
+        }
+      }
+      return expr;
+    });
+  }
+
+  /**
    * Evaluate the {@link Expr} with the bindings which supply {@link IdentifierExpr} with their values, producing an
    * {@link ExprEval} with the result.
    */
@@ -181,8 +203,14 @@ public interface Expr extends Cacheable
    * Check if an expression can be 'vectorized', for a given set of inputs. If this method returns true,
    * {@link #asVectorProcessor} is expected to produce a {@link ExprVectorProcessor} which can evaluate values in batches
    * to use with vectorized query engines.
-   *
-   * @param inspector
+   * <p>
+   * Note that this method is insufficient by itself for determining to use vector processors, as it only checks whether
+   * the expression tree itself supports vectorization, but ignores schema-level constraints that
+   * {@link org.apache.druid.segment.virtual.ExpressionPlanner} enforces.
+   * <p>
+   * Most callers should instead prefer to use
+   * {@link org.apache.druid.segment.virtual.ExpressionPlanner#plan(ColumnInspector, Expr)} and check for
+   * {@link org.apache.druid.segment.virtual.ExpressionPlan.Trait#VECTORIZABLE} on the resulting plan.
    */
   default boolean canVectorize(InputBindingInspector inspector)
   {
@@ -293,6 +321,9 @@ public interface Expr extends Cacheable
   {
     final Expr.BindingAnalysis details = analyzeInputs();
     if (details.getRequiredBindings().isEmpty()) {
+      if (details.isNonDeterministic()) {
+        return null;
+      }
       // Constant expression.
       final ExprEval<?> eval = eval(InputBindings.nilBindings());
       if (eval.value() == null) {
@@ -609,15 +640,16 @@ public interface Expr extends Cacheable
     private final ImmutableSet<IdentifierExpr> arrayVariables;
     private final boolean hasInputArrays;
     private final boolean isOutputArray;
+    private final boolean isNonDeterministic;
 
     public BindingAnalysis()
     {
-      this(ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of(), false, false);
+      this(ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of(), false, false, false);
     }
 
     BindingAnalysis(IdentifierExpr expr)
     {
-      this(ImmutableSet.of(expr), ImmutableSet.of(), ImmutableSet.of(), false, false);
+      this(ImmutableSet.of(expr), ImmutableSet.of(), ImmutableSet.of(), false, false, false);
     }
 
     private BindingAnalysis(
@@ -625,7 +657,8 @@ public interface Expr extends Cacheable
         ImmutableSet<IdentifierExpr> scalarVariables,
         ImmutableSet<IdentifierExpr> arrayVariables,
         boolean hasInputArrays,
-        boolean isOutputArray
+        boolean isOutputArray,
+        boolean isNonDeterministic
     )
     {
       this.freeVariables = freeVariables;
@@ -633,6 +666,7 @@ public interface Expr extends Cacheable
       this.arrayVariables = arrayVariables;
       this.hasInputArrays = hasInputArrays;
       this.isOutputArray = isOutputArray;
+      this.isNonDeterministic = isNonDeterministic;
     }
 
     /**
@@ -651,10 +685,12 @@ public interface Expr extends Cacheable
 
         boolean hasInputArrays = false;
         boolean isOutputArray = false;
+        boolean isNonDeterministic = false;
 
         for (final BindingAnalysis other : others) {
           hasInputArrays = hasInputArrays || other.hasInputArrays;
           isOutputArray = isOutputArray || other.isOutputArray;
+          isNonDeterministic = isNonDeterministic || other.isNonDeterministic;
 
           freeVariables.addAll(other.freeVariables);
           scalarVariables.addAll(other.scalarVariables);
@@ -666,7 +702,8 @@ public interface Expr extends Cacheable
             scalarVariables.build(),
             arrayVariables.build(),
             hasInputArrays,
-            isOutputArray
+            isOutputArray,
+            isNonDeterministic
         );
       }
     }
@@ -762,6 +799,27 @@ public interface Expr extends Cacheable
     }
 
     /**
+     * Returns true if the expression tree contains non-deterministic expressions (e.g. now()) whose value may change
+     * between evaluations and must not be folded into a constant.
+     */
+    public boolean isNonDeterministic()
+    {
+      return isNonDeterministic;
+    }
+
+    public BindingAnalysis withNonDeterministic()
+    {
+      return new BindingAnalysis(
+          freeVariables,
+          scalarVariables,
+          arrayVariables,
+          hasInputArrays,
+          isOutputArray,
+          true
+      );
+    }
+
+    /**
      * Add set of arguments as {@link BindingAnalysis#scalarVariables} that are *directly* {@link IdentifierExpr},
      * else they are ignored.
      */
@@ -779,7 +837,8 @@ public interface Expr extends Cacheable
           ImmutableSet.copyOf(Sets.union(scalarVariables, moreScalars)),
           arrayVariables,
           hasInputArrays,
-          isOutputArray
+          isOutputArray,
+          isNonDeterministic
       );
     }
 
@@ -801,7 +860,8 @@ public interface Expr extends Cacheable
           scalarVariables,
           ImmutableSet.copyOf(Sets.union(arrayVariables, arrayIdentifiers)),
           hasInputArrays || !arrayArguments.isEmpty(),
-          isOutputArray
+          isOutputArray,
+          isNonDeterministic
       );
     }
 
@@ -815,7 +875,8 @@ public interface Expr extends Cacheable
           scalarVariables,
           arrayVariables,
           hasArrays || !arrayVariables.isEmpty(),
-          isOutputArray
+          isOutputArray,
+          isNonDeterministic
       );
     }
 
@@ -829,7 +890,8 @@ public interface Expr extends Cacheable
           scalarVariables,
           arrayVariables,
           hasInputArrays,
-          isOutputArray
+          isOutputArray,
+          isNonDeterministic
       );
     }
 
@@ -844,7 +906,8 @@ public interface Expr extends Cacheable
           ImmutableSet.copyOf(scalarVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
           ImmutableSet.copyOf(arrayVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
           hasInputArrays,
-          isOutputArray
+          isOutputArray,
+          isNonDeterministic
       );
     }
 

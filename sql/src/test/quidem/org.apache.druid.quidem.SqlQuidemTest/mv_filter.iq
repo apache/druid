@@ -1,0 +1,176 @@
+!use druidtest:///
+!set outputformat mysql
+
+# Test MV_FILTER_REGEX with constant STRING_TO_MV input
+# STRING_TO_MV('abc,def,abd', ',') produces ['abc', 'def', 'abd']
+# MV_FILTER_REGEX(..., '^ab') filters to elements matching the regex '^ab'
+# 'abc' and 'abd' match, so the result is the multi-value ['abc', 'abd']
+SELECT MV_FILTER_REGEX(STRING_TO_MV('abc,def,abd', ','), '^ab');
++---------------+
+| EXPR$0        |
++---------------+
+| ["abc","abd"] |
++---------------+
+(1 row)
+
+!ok
+
+# Test MV_FILTER_PREFIX with constant STRING_TO_MV input
+# STRING_TO_MV('apple,banana,apricot', ',') produces ['apple', 'banana', 'apricot']
+# MV_FILTER_PREFIX(..., 'ap') filters to elements starting with 'ap'
+# 'apple' and 'apricot' match
+SELECT MV_FILTER_PREFIX(STRING_TO_MV('apple,banana,apricot', ','), 'ap');
++---------------------+
+| EXPR$0              |
++---------------------+
+| ["apple","apricot"] |
++---------------------+
+(1 row)
+
+!ok
+
+# Test MV_FILTER_PREFIX with single match
+# STRING_TO_MV('a,b,c', ',') produces ['a', 'b', 'c']
+# MV_FILTER_PREFIX(..., 'a') filters to elements starting with 'a'
+# Only 'a' matches
+SELECT MV_FILTER_PREFIX(STRING_TO_MV('a,b,c', ','), 'a');
++--------+
+| EXPR$0 |
++--------+
+| a      |
++--------+
+(1 row)
+
+!ok
+
+# Test MV_FILTER_REGEX with no matches
+# All elements ['foo', 'bar', 'baz'] don't match the regex '^x'
+SELECT MV_FILTER_REGEX(STRING_TO_MV('foo,bar,baz', ','), '^x');
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# Test MV_FILTER_PREFIX with no matches
+# None of ['foo', 'bar', 'baz'] start with 'x'
+SELECT MV_FILTER_PREFIX(STRING_TO_MV('foo,bar,baz', ','), 'x');
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# testMultiValuePrefixFilterOnVirtualMVWithRawLiteral
+# Test MV_FILTER_PREFIX with a raw string literal (not from STRING_TO_MV)
+# 'apple' starts with 'a', so it matches
+SELECT MV_FILTER_PREFIX('apple', 'a');
++--------+
+| EXPR$0 |
++--------+
+| apple  |
++--------+
+(1 row)
+
+!ok
+
+# Test MV_FILTER_PREFIX with a raw string literal that doesn't match
+# 'apple' does not start with 'b'
+SELECT MV_FILTER_PREFIX('apple', 'b');
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# testMultiValueRegexFilterOnVirtualMVWithRawLiteral
+# Test MV_FILTER_REGEX with a raw string literal (not from STRING_TO_MV)
+# 'apple' matches regex '^a.*' (starts with 'a')
+SELECT MV_FILTER_REGEX('apple', '^a.*');
++--------+
+| EXPR$0 |
++--------+
+| apple  |
++--------+
+(1 row)
+
+!ok
+
+# Test MV_FILTER_REGEX with a raw string literal that doesn't match
+# 'apple' does not match regex 'a$' (end with 'a')
+SELECT MV_FILTER_REGEX('apple', 'a$');
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# testMultiValuePrefixFilterOnNullReturnsNull
+# Test MV_FILTER_PREFIX with null input returns null
+SELECT MV_FILTER_PREFIX(null, 'a');
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# testMultiValueRegexFilterOnNullReturnsNull
+# Test MV_FILTER_REGEX with null input returns null
+SELECT MV_FILTER_REGEX(null, '^a.*');
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+
+# Test MV_FILTER_PREFIX on dim3 column from numfoo table
+# dim3 contains multi-value strings like ['a','b'], ['b','c'], etc.
+SELECT dim3, MV_FILTER_PREFIX(dim3, 'b') FROM druid.numfoo;
++-----------+--------+
+| dim3      | EXPR$1 |
++-----------+--------+
+| ["a","b"] | b      |
+|           |        |
+| ["b","c"] | b      |
+| d         |        |
+|           |        |
+|           |        |
++-----------+--------+
+(6 rows)
+
+!ok
+
+# Test MV_FILTER_REGEX on dim3 column from numfoo table
+# Filter elements matching regex '^[a-b]$' (single character a or b)
+SELECT dim3, MV_FILTER_REGEX(dim3, '^[a-b]$') FROM druid.numfoo;
++-----------+-----------+
+| dim3      | EXPR$1    |
++-----------+-----------+
+| ["a","b"] | ["a","b"] |
+|           |           |
+| ["b","c"] | b         |
+| d         |           |
+|           |           |
+|           |           |
++-----------+-----------+
+(6 rows)
+
+!ok

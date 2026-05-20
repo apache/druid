@@ -27,6 +27,7 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
@@ -60,7 +61,10 @@ public class StageDefinitionTest
         false
     );
 
-    Assert.assertThrows(ISE.class, () -> stageDefinition.generatePartitionBoundariesForShuffle(null));
+    Assert.assertThrows(
+        ISE.class,
+        () -> stageDefinition.generatePartitionBoundariesForShuffle(null, Limits.DEFAULT_MAX_PARTITIONS)
+    );
   }
 
   @Test
@@ -82,7 +86,10 @@ public class StageDefinitionTest
         false
     );
 
-    Assert.assertThrows(ISE.class, () -> stageDefinition.generatePartitionBoundariesForShuffle(null));
+    Assert.assertThrows(
+        ISE.class,
+        () -> stageDefinition.generatePartitionBoundariesForShuffle(null, Limits.DEFAULT_MAX_PARTITIONS)
+    );
   }
 
   @Test
@@ -117,7 +124,8 @@ public class StageDefinitionTest
                 100,
                 false,
                 false
-            )
+            ),
+            Limits.DEFAULT_MAX_PARTITIONS
         )
     );
   }

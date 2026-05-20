@@ -27,7 +27,6 @@ import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -39,7 +38,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -60,8 +59,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Responsible for bootstrapping segments already cached on disk and bootstrap segments fetched from the coordinator.
- * Also responsible for announcing the node as a data server if applicable, once the bootstrapping operations
- * are complete.
  */
 @ManageLifecycle
 public class SegmentCacheBootstrapper
@@ -69,11 +66,10 @@ public class SegmentCacheBootstrapper
   private final SegmentLoadDropHandler loadDropHandler;
   private final SegmentLoaderConfig config;
   private final DataSegmentAnnouncer segmentAnnouncer;
-  private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentManager segmentManager;
-  private final ServerTypeConfig serverTypeConfig;
   private final CoordinatorClient coordinatorClient;
   private final ServiceEmitter emitter;
+  private final LoadSpecHolder loadSpecHolder;
 
   private volatile boolean isComplete = false;
 
@@ -82,30 +78,24 @@ public class SegmentCacheBootstrapper
 
   private static final EmittingLogger log = new EmittingLogger(SegmentCacheBootstrapper.class);
 
-  private final DataSourceTaskIdHolder datasourceHolder;
-
   @Inject
   public SegmentCacheBootstrapper(
       SegmentLoadDropHandler loadDropHandler,
       SegmentLoaderConfig config,
       DataSegmentAnnouncer segmentAnnouncer,
-      DataSegmentServerAnnouncer serverAnnouncer,
       SegmentManager segmentManager,
-      ServerTypeConfig serverTypeConfig,
       CoordinatorClient coordinatorClient,
       ServiceEmitter emitter,
-      DataSourceTaskIdHolder datasourceHolder
+      LoadSpecHolder loadSpecHolder
   )
   {
     this.loadDropHandler = loadDropHandler;
     this.config = config;
     this.segmentAnnouncer = segmentAnnouncer;
-    this.serverAnnouncer = serverAnnouncer;
     this.segmentManager = segmentManager;
-    this.serverTypeConfig = serverTypeConfig;
     this.coordinatorClient = coordinatorClient;
     this.emitter = emitter;
-    this.datasourceHolder = datasourceHolder;
+    this.loadSpecHolder = loadSpecHolder;
   }
 
   @LifecycleStart
@@ -120,10 +110,6 @@ public class SegmentCacheBootstrapper
       try {
         if (segmentManager.canHandleSegments()) {
           loadSegmentsOnStartup();
-        }
-
-        if (shouldAnnounce()) {
-          serverAnnouncer.announce();
         }
       }
       catch (Exception e) {
@@ -145,9 +131,6 @@ public class SegmentCacheBootstrapper
 
       log.info("Stopping...");
       try {
-        if (shouldAnnounce()) {
-          serverAnnouncer.unannounce();
-        }
         segmentManager.shutdown();
       }
       catch (Exception e) {
@@ -270,12 +253,12 @@ public class SegmentCacheBootstrapper
 
   /**
    * @return a list of bootstrap segments. When bootstrap segments cannot be found, an empty list is returned.
-   * The bootstrap segments returned are filtered by the broadcast datasources indicated by {@link DataSourceTaskIdHolder#getBroadcastDatasourceLoadingSpec()}
-   * if applicable.
+   * The bootstrap segments returned are filtered by the broadcast datasources indicated by
+   * {@link LoadSpecHolder#getBroadcastDatasourceLoadingSpec()} if applicable.
    */
   private List<DataSegment> getBootstrapSegments()
   {
-    final BroadcastDatasourceLoadingSpec.Mode mode = datasourceHolder.getBroadcastDatasourceLoadingSpec().getMode();
+    final BroadcastDatasourceLoadingSpec.Mode mode = loadSpecHolder.getBroadcastDatasourceLoadingSpec().getMode();
     if (mode == BroadcastDatasourceLoadingSpec.Mode.NONE) {
       log.info("Skipping fetch of bootstrap segments.");
       return ImmutableList.of();
@@ -290,7 +273,7 @@ public class SegmentCacheBootstrapper
       final BootstrapSegmentsResponse response =
           FutureUtils.getUnchecked(coordinatorClient.fetchBootstrapSegments(), true);
       if (mode == BroadcastDatasourceLoadingSpec.Mode.ONLY_REQUIRED) {
-        final Set<String> broadcastDatasourcesToLoad = datasourceHolder.getBroadcastDatasourceLoadingSpec().getBroadcastDatasourcesToLoad();
+        final Set<String> broadcastDatasourcesToLoad = loadSpecHolder.getBroadcastDatasourceLoadingSpec().getBroadcastDatasourcesToLoad();
         final List<DataSegment> filteredBroadcast = new ArrayList<>();
         response.getIterator().forEachRemaining(segment -> {
           if (broadcastDatasourcesToLoad.contains(segment.getDataSource())) {
@@ -313,21 +296,6 @@ public class SegmentCacheBootstrapper
       log.info("Fetched [%d] bootstrap segments in [%d]ms.", bootstrapSegments.size(), fetchRunMillis);
     }
     return bootstrapSegments;
-  }
-
-  /**
-   * Returns whether or not we should announce ourselves as a data server using {@link DataSegmentServerAnnouncer}.
-   *
-   * Returns true if _either_:
-   *
-   * <li> Our {@link #serverTypeConfig} indicates we are a segment server. This is necessary for Brokers to be able
-   * to detect that we exist.</li>
-   * <li> The segment manager is able to handle segments. This is necessary for Coordinators to be able to
-   * assign segments to us.</li>
-   */
-  private boolean shouldAnnounce()
-  {
-    return serverTypeConfig.getServerType().isSegmentServer() || segmentManager.canHandleSegments();
   }
 
   private static class BackgroundSegmentAnnouncer implements AutoCloseable

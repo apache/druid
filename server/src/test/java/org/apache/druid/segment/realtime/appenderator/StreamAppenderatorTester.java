@@ -27,8 +27,6 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JSONParseSpec;
-import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
@@ -115,7 +113,8 @@ public class StreamAppenderatorTester implements AutoCloseable
       final ServiceEmitter serviceEmitter,
       final PolicyEnforcer policyEnforcer,
       final boolean releaseLocksOnHandoff,
-      final TaskIntervalUnlocker taskIntervalUnlocker
+      final TaskIntervalUnlocker taskIntervalUnlocker,
+      final SegmentGenerationMetrics segmentGenerationMetrics
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -128,27 +127,15 @@ public class StreamAppenderatorTester implements AutoCloseable
             .addValue(ObjectMapper.class.getName(), objectMapper)
     );
 
-    final Map<String, Object> parserMap = objectMapper.convertValue(
-        new MapInputRowParser(
-            new JSONParseSpec(
-                new TimestampSpec("ts", "auto", null),
-                DimensionsSpec.EMPTY,
-                null,
-                null,
-                null
-            )
-        ),
-        Map.class
-    );
     schema = DataSchema.builder()
                        .withDataSource(DATASOURCE)
-                       .withParserMap(parserMap)
+                       .withTimestamp(new TimestampSpec("ts", "auto", null))
+                       .withDimensions(DimensionsSpec.EMPTY)
                        .withAggregators(
                            new CountAggregatorFactory("count"),
                            new LongSumAggregatorFactory("met", "met")
                        )
                        .withGranularity(new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null))
-                       .withObjectMapper(objectMapper)
                        .build();
     tuningConfig = new TestAppenderatorConfig(
         TuningConfig.DEFAULT_APPENDABLE_INDEX,
@@ -165,7 +152,7 @@ public class StreamAppenderatorTester implements AutoCloseable
         releaseLocksOnHandoff
     );
 
-    metrics = new SegmentGenerationMetrics();
+    metrics = segmentGenerationMetrics == null ? new SegmentGenerationMetrics() : segmentGenerationMetrics;
     queryExecutor = Execs.singleThreaded("queryExecutor(%d)");
 
     IndexIO indexIO = new IndexIO(
@@ -191,18 +178,6 @@ public class StreamAppenderatorTester implements AutoCloseable
     EmittingLogger.registerEmitter(emitter);
     dataSegmentPusher = new DataSegmentPusher()
     {
-      @Deprecated
-      @Override
-      public String getPathForHadoop(String dataSource)
-      {
-        return getPathForHadoop();
-      }
-
-      @Override
-      public String getPathForHadoop()
-      {
-        throw new UnsupportedOperationException();
-      }
 
       @Override
       public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException
@@ -364,6 +339,7 @@ public class StreamAppenderatorTester implements AutoCloseable
     private PolicyEnforcer policyEnforcer = NoopPolicyEnforcer.instance();
     private boolean releaseLocksOnHandoff;
     private TaskIntervalUnlocker taskIntervalUnlocker = interval -> {};
+    private SegmentGenerationMetrics segmentGenerationMetrics;
 
     public Builder maxRowsInMemory(final int maxRowsInMemory)
     {
@@ -386,6 +362,12 @@ public class StreamAppenderatorTester implements AutoCloseable
     public Builder enablePushFailure(final boolean enablePushFailure)
     {
       this.enablePushFailure = enablePushFailure;
+      return this;
+    }
+
+    public Builder segmentGenerationMetrics(final SegmentGenerationMetrics segmentGenerationMetrics)
+    {
+      this.segmentGenerationMetrics = segmentGenerationMetrics;
       return this;
     }
 
@@ -446,7 +428,8 @@ public class StreamAppenderatorTester implements AutoCloseable
           serviceEmitter,
           policyEnforcer,
           releaseLocksOnHandoff,
-          taskIntervalUnlocker
+          taskIntervalUnlocker,
+          segmentGenerationMetrics
       );
     }
 
@@ -468,7 +451,8 @@ public class StreamAppenderatorTester implements AutoCloseable
           serviceEmitter,
           policyEnforcer,
           releaseLocksOnHandoff,
-          taskIntervalUnlocker
+          taskIntervalUnlocker,
+          segmentGenerationMetrics
       );
     }
   }

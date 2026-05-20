@@ -41,7 +41,7 @@ public class CatalogException extends Exception
    */
   public static class NotFoundException extends CatalogException
   {
-    public NotFoundException(String msg, Object...args)
+    public NotFoundException(String msg, Object... args)
     {
       super(NOT_FOUND_ERROR, Response.Status.NOT_FOUND, msg, args);
     }
@@ -55,7 +55,7 @@ public class CatalogException extends Exception
    */
   public static class DuplicateKeyException extends CatalogException
   {
-    public DuplicateKeyException(String msg, Object...args)
+    public DuplicateKeyException(String msg, Object... args)
     {
       super(DUPLICATE_ERROR, Response.Status.BAD_REQUEST, msg, args);
     }
@@ -68,7 +68,7 @@ public class CatalogException extends Exception
       final String errorCode,
       final Response.Status responseCode,
       final String message,
-      final Object...args
+      final Object... args
   )
   {
     super(StringUtils.format(message, args));
@@ -76,7 +76,7 @@ public class CatalogException extends Exception
     this.responseCode = responseCode;
   }
 
-  public static CatalogException badRequest(String msg, Object...args)
+  public static CatalogException badRequest(String msg, Object... args)
   {
     return new CatalogException(
         CatalogException.INVALID_ERROR,

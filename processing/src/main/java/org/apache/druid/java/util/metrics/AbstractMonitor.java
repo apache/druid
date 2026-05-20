@@ -48,7 +48,7 @@ public abstract class AbstractMonitor implements Monitor
   }
 
   @Override
-  public boolean monitor(ServiceEmitter emitter)
+  public synchronized boolean monitor(ServiceEmitter emitter)
   {
     if (started) {
       return doMonitor(emitter);

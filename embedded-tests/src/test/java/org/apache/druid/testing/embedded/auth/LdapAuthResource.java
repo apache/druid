@@ -36,7 +36,7 @@ import java.util.List;
  */
 public class LdapAuthResource extends TestcontainerResource<GenericContainer<?>>
 {
-  private static final String IMAGE_NAME = "osixia/openldap:1.4.0";
+  private static final String IMAGE_NAME = "osixia/openldap:1.5.0";
 
   public static final String ADMIN_PASSWORD = "priest";
   public static final String SYSTEM_PASSWORD = "warlock";

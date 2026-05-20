@@ -201,7 +201,10 @@ public class SqlTestFramework
 
     Class<? extends SqlEngine> getSqlEngineClass();
 
-    SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker);
+    SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    );
 
     /**
      * Should return a module which provides the core Druid components.
@@ -280,9 +283,12 @@ public class SqlTestFramework
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
-      return delegate.addSegmentsToWalker(walker);
+      return delegate.addSegmentsToWalker(walker, jsonMapper);
     }
 
     @Override
@@ -443,16 +449,9 @@ public class SqlTestFramework
 
                 @Provides
                 @LazySingleton
-                public TopNQueryConfig makeTopNQueryConfig(Builder builder)
+                public TopNQueryConfig makeTopNQueryConfig()
                 {
-                  return new TopNQueryConfig()
-                  {
-                    @Override
-                    public int getMinTopNThreshold()
-                    {
-                      return builder.minTopNThreshold;
-                    }
-                  };
+                  return new TopNQueryConfig();
                 }
 
                 @Provides
@@ -605,9 +604,12 @@ public class SqlTestFramework
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
-      return TestDataBuilder.addDataSetsToWalker(tempDirProducer.newTempFolder("segments"), walker);
+      return TestDataBuilder.addDataSetsToWalker(tempDirProducer.newTempFolder("segments"), walker, jsonMapper);
     }
 
     @Override
@@ -748,7 +750,6 @@ public class SqlTestFramework
   public static class Builder
   {
     private final QueryComponentSupplier componentSupplier;
-    private int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
     private int mergeBufferCount;
     private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
     private List<Module> overrideModules = new ArrayList<>();
@@ -758,12 +759,6 @@ public class SqlTestFramework
     public Builder(QueryComponentSupplier componentSupplier)
     {
       this.componentSupplier = componentSupplier;
-    }
-
-    public Builder minTopNThreshold(int minTopNThreshold)
-    {
-      this.minTopNThreshold = minTopNThreshold;
-      return this;
     }
 
     public Builder mergeBufferCount(int mergeBufferCount)
@@ -1056,7 +1051,7 @@ public class SqlTestFramework
     {
       builder.resourceCloser.register(walker);
       if (testDataSets.isEmpty()) {
-        builder.componentSupplier.addSegmentsToWalker(walker);
+        builder.componentSupplier.addSegmentsToWalker(walker, jsonMapper);
       } else {
         for (TestDataSet testDataSet : testDataSets) {
           walker.add(testDataSet, jsonMapper, builder.componentSupplier.getTempDirProducer().newTempFolder());

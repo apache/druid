@@ -23,11 +23,13 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -75,6 +77,14 @@ public class ServerHolder implements Comparable<ServerHolder>
    * Do not remove entries on load/drop success or failure during the run.
    */
   private final Map<DataSegment, SegmentAction> queuedSegments = new HashMap<>();
+
+  /**
+   * Tracks the {@link PartialLoadProfile} for in-flight load operations on this server. Populated from the peon's
+   * existing queue at construction time and updated by {@link #startOperation(SegmentAction, DataSegment,
+   * PartialLoadProfile)} when a fresh partial load is queued during the run. Cleared when the corresponding queued
+   * operation is canceled. Read by the partial-load reconciler to classify in-flight replicas as matching or stale.
+   */
+  private final Map<DataSegment, PartialLoadProfile> inFlightProfiles = new HashMap<>();
 
   private final SegmentCountsPerInterval projectedSegmentCounts = new SegmentCountsPerInterval();
 
@@ -158,6 +168,9 @@ public class ServerHolder implements Comparable<ServerHolder>
 
       final SegmentAction action = holder.getAction();
       addToQueuedSegments(holder.getSegment(), simplify(action));
+      if (holder.getProfile() != null) {
+        inFlightProfiles.put(holder.getSegment(), holder.getProfile());
+      }
 
       if (action == SegmentAction.MOVE_TO) {
         movingSegmentCount.incrementAndGet();
@@ -197,6 +210,11 @@ public class ServerHolder implements Comparable<ServerHolder>
   public long getMaxSize()
   {
     return server.getMaxSize();
+  }
+
+  public long getStorageSize()
+  {
+    return server.getStorageSize();
   }
 
   /**
@@ -381,7 +399,29 @@ public class ServerHolder implements Comparable<ServerHolder>
     return queuedSegments.size();
   }
 
+  /**
+   * Convenience that delegates to {@link #startOperation(SegmentAction, DataSegment, PartialLoadProfile)} with no
+   * partial-load profile, for the regular full-load / drop / move paths that don't carry one.
+   */
   public boolean startOperation(SegmentAction action, DataSegment segment)
+  {
+    return startOperation(action, segment, null);
+  }
+
+  /**
+   * Records the start of {@code action} on {@code segment} on this server for the current coordinator run.
+   * <p>
+   * If the segment already has a queued action, returns {@code false} and does nothing (the caller is expected to
+   * treat this as a no-op / collision). Otherwise: marks the segment as queued, increments the per-run assignment
+   * counter for load actions (so {@link #isLoadQueueFull()} converges), and updates projected segment counts and
+   * size accounting via {@link #addToQueuedSegments}.
+   * <p>
+   * When {@code profile} is non-null, the {@link PartialLoadProfile} is stashed so the partial-load reconciler can
+   * read the in-flight fingerprint back during the same coordinator run via {@link #getInFlightProfile(DataSegment)}.
+   * The profile is cleared on {@link #cancelOperation}; it stays put on success/failure of the queued action so the
+   * inventory's eventual announcement (with realized fingerprint and loadedBytes) is what overwrites it.
+   */
+  public boolean startOperation(SegmentAction action, DataSegment segment, @Nullable PartialLoadProfile profile)
   {
     if (queuedSegments.containsKey(segment)) {
       return false;
@@ -392,6 +432,9 @@ public class ServerHolder implements Comparable<ServerHolder>
     }
 
     addToQueuedSegments(segment, simplify(action));
+    if (profile != null) {
+      inFlightProfiles.put(segment, profile);
+    }
     return true;
   }
 
@@ -407,10 +450,22 @@ public class ServerHolder implements Comparable<ServerHolder>
     // MOVE_FROM operations are not sent to the peon, so they can be considered cancelled
     if (queuedAction == SegmentAction.MOVE_FROM || peon.cancelOperation(segment)) {
       removeFromQueuedSegments(segment, queuedAction);
+      inFlightProfiles.remove(segment);
       return true;
     } else {
       return false;
     }
+  }
+
+  /**
+   * Returns the {@link PartialLoadProfile} for an in-flight load of {@code segment} on this server, or {@code null}
+   * if there's no in-flight load or the in-flight load is a regular full-load (no profile). Used by the partial-load
+   * reconciler to classify in-flight replicas as matching or stale relative to the current rule's fingerprint.
+   */
+  @Nullable
+  public PartialLoadProfile getInFlightProfile(DataSegment segment)
+  {
+    return inFlightProfiles.get(segment);
   }
 
   private boolean hasSegmentLoaded(SegmentId segmentId)

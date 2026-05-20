@@ -282,6 +282,7 @@ public class RowBasedGrouperHelper
           limitSpec,
           sortHasNonGroupingFields,
           mergeBufferSize,
+          querySpecificConfig.getMinSpillFileSize(),
           perQueryStats
       );
     } else {
@@ -426,7 +427,6 @@ public class RowBasedGrouperHelper
         adapter,
         supplier::get,
         decoratedSignature,
-        false,
         false
     );
   }

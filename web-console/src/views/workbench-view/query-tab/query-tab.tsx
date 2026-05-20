@@ -200,7 +200,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   >({
     initQuery: cachedExecutionState ? undefined : currentRunningPromise || query.getLastExecution(),
     initState: cachedExecutionState,
-    processQuery: async (q, signal) => {
+    processQuery: async (q, signal, { setIntermediateStateCallback }) => {
       if (q instanceof WorkbenchQuery) {
         ExecutionStateCache.deleteState(id);
         const { engine, query, prefixLines, cancelQueryId } = q.getApiQuery();
@@ -279,6 +279,15 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                 Api.instance
                   .delete(`/druid/v2/sql/${Api.encodePath(cancelQueryId)}`)
                   .catch(() => {});
+              });
+
+              setIntermediateStateCallback(async signal => {
+                const { data } = await Api.instance.get(
+                  `/druid/v2/sql/queries/${Api.encodePath(cancelQueryId)}/reports`,
+                  { signal },
+                );
+
+                return Execution.fromDartReport(data.report);
               });
             }
 

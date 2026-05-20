@@ -82,6 +82,7 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlVectorizedExpressionResultConsistencyTest;
 import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
@@ -343,8 +344,12 @@ public class SqlBaseBenchmark
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, getQuery(), getContext())) {
       final PlannerResult plannerResult = planner.plan();
       final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
-      final int rowCount = resultSequence.toList().size();
+      final List<Object[]> results = resultSequence.toList();
+      final int rowCount = results.size();
       log.info("Total result row count:" + rowCount);
+      if (rowCount < 10) {
+        log.info(BaseCalciteQueryTest.resultsToString("query results", results));
+      }
     }
     catch (Throwable ex) {
       log.warn(ex, "failed to count rows");

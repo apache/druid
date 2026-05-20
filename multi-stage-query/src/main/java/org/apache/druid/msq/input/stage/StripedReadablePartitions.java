@@ -63,6 +63,12 @@ public class StripedReadablePartitions implements ReadablePartitions
   }
 
   @Override
+  public boolean isEmpty()
+  {
+    return partitionNumbers.isEmpty();
+  }
+
+  @Override
   public Iterator<ReadablePartition> iterator()
   {
     return Iterators.transform(

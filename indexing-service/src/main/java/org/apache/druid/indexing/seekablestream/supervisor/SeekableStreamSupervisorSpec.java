@@ -48,11 +48,13 @@ import java.util.Map;
 
 public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 {
-  protected static final String ILLEGAL_INPUT_SOURCE_UPDATE_ERROR_MESSAGE = "Update of the input source stream from [%s] to [%s] is not supported for a running supervisor."
-                                                                   + "%nTo perform the update safely, follow these steps:"
-                                                                   + "%n(1) Suspend this supervisor, reset its offsets and then terminate it. "
-                                                                   + "%n(2) Create a new supervisor with the new input source stream."
-                                                                   + "%nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too.";
+
+  protected static final String ILLEGAL_INPUT_SOURCE_UPDATE_ERROR_MESSAGE =
+      "Update of the input source stream from [%s] to [%s] is not supported for a running supervisor."
+      + "%nTo perform the update safely, follow these steps:"
+      + "%n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+      + "%n(2) Create a new supervisor with the new input source stream."
+      + "%nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too.";
 
   private static SeekableStreamSupervisorIngestionSpec checkIngestionSchema(
       SeekableStreamSupervisorIngestionSpec ingestionSchema
@@ -183,6 +185,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 
   /**
    * An autoScaler instance will be returned depending on the autoScalerConfig. In case autoScalerConfig is null or autoScaler is disabled then NoopTaskAutoScaler will be returned.
+   *
    * @param supervisor
    * @return autoScaler
    */
@@ -232,6 +235,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
    * <li>You cannot migrate between types of supervisors.</li>
    * <li>You cannot change the input source stream of a running supervisor.</li>
    * </ul>
+   *
    * @param proposedSpec the proposed supervisor spec
    * @throws DruidException if the proposed spec update is not allowed
    */
@@ -240,7 +244,9 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   {
     if (!(proposedSpec instanceof SeekableStreamSupervisorSpec)) {
       throw InvalidInput.exception(
-          "Cannot update supervisor spec from type[%s] to type[%s]", getClass().getSimpleName(), proposedSpec.getClass().getSimpleName()
+          "Cannot update supervisor spec from type[%s] to type[%s]",
+          getClass().getSimpleName(),
+          proposedSpec.getClass().getSimpleName()
       );
     }
     SeekableStreamSupervisorSpec other = (SeekableStreamSupervisorSpec) proposedSpec;
@@ -252,6 +258,40 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 
     if (!this.getSource().equals(other.getSource())) {
       throw InvalidInput.exception(ILLEGAL_INPUT_SOURCE_UPDATE_ERROR_MESSAGE, this.getSource(), other.getSource());
+    }
+  }
+
+  /**
+   * Updates {@link SeekableStreamSupervisorIOConfig#getTaskCount()} on this user-submitted spec
+   * to the desired value. The rules applied are:
+   *
+   * <ol>
+   *   <li>If {@code taskCountStart} is set on this user-submitted spec, use it.</li>
+   *   <li>Otherwise, if {@code taskCount} is set on this user-submitted spec, use it.</li>
+   *   <li>Otherwise, use the existing spec's {@code taskCount}.</li>
+   * </ol>
+   */
+  @Override
+  public void merge(@Nullable SupervisorSpec existingSpec)
+  {
+    // Use this spec's taskCountStart if set.
+    final AutoScalerConfig thisAutoScalerConfig = getIoConfig().getAutoScalerConfig();
+    if (thisAutoScalerConfig != null
+        && thisAutoScalerConfig.getEnableTaskAutoScaler()
+        && thisAutoScalerConfig.getTaskCountStart() != null) {
+      getIoConfig().setTaskCount(thisAutoScalerConfig.getTaskCountStart());
+      return;
+    }
+
+    // Use this spec's taskCount if set.
+    if (getIoConfig().isTaskCountExplicit()) {
+      return;
+    }
+
+    // Use the existing spec's taskCount. If it isn't there, we'll fall back to this spec's taskCount. Because there's
+    // no taskCountStart (and taskCount hasn't been explicitly set) this spec's taskCount will be taskCountMin or 1.
+    if (existingSpec instanceof SeekableStreamSupervisorSpec existingSeekableStreamSpec) {
+      getIoConfig().setTaskCount(existingSeekableStreamSpec.getIoConfig().getTaskCount());
     }
   }
 

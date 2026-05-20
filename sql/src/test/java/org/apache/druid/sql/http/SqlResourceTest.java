@@ -277,7 +277,7 @@ public class SqlResourceTest extends CalciteTestBase
         }
       }
     };
-    stubServiceEmitter = new StubServiceEmitter("test", "test");
+    stubServiceEmitter = StubServiceEmitter.createStarted();
     final AuthConfig authConfig = new AuthConfig();
     final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of());
     final SqlToolbox sqlToolbox = new SqlToolbox(

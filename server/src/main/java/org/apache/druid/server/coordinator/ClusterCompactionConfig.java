@@ -45,6 +45,7 @@ public class ClusterCompactionConfig
   private final boolean useSupervisors;
   private final CompactionEngine engine;
   private final CompactionCandidateSearchPolicy compactionPolicy;
+  private final boolean storeCompactionStatePerSegment;
 
   @JsonCreator
   public ClusterCompactionConfig(
@@ -52,14 +53,19 @@ public class ClusterCompactionConfig
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
       @JsonProperty("compactionPolicy") @Nullable CompactionCandidateSearchPolicy compactionPolicy,
       @JsonProperty("useSupervisors") @Nullable Boolean useSupervisors,
-      @JsonProperty("engine") @Nullable CompactionEngine engine
+      @JsonProperty("engine") @Nullable CompactionEngine engine,
+      @JsonProperty("storeCompactionStatePerSegment") @Nullable Boolean storeCompactionStatePerSegment
   )
   {
     this.compactionTaskSlotRatio = Configs.valueOrDefault(compactionTaskSlotRatio, 0.1);
     this.maxCompactionTaskSlots = Configs.valueOrDefault(maxCompactionTaskSlots, Integer.MAX_VALUE);
     this.compactionPolicy = Configs.valueOrDefault(compactionPolicy, DEFAULT_COMPACTION_POLICY);
     this.engine = Configs.valueOrDefault(engine, CompactionEngine.NATIVE);
-    this.useSupervisors = Configs.valueOrDefault(useSupervisors, false);
+    this.useSupervisors = Configs.valueOrDefault(useSupervisors, true);
+    this.storeCompactionStatePerSegment = Configs.valueOrDefault(
+        storeCompactionStatePerSegment,
+        true
+    );
 
     if (!this.useSupervisors && this.engine == CompactionEngine.MSQ) {
       throw InvalidInput.exception("MSQ Compaction engine can be used only with compaction supervisors.");
@@ -96,6 +102,19 @@ public class ClusterCompactionConfig
     return engine;
   }
 
+  /**
+   * Whether to persist last compaction state directly in segments for backwards compatibility.
+   * <p>
+   * In a future release this option will be removed and last compaction state will no longer be persisted in segments.
+   * Instead, it will only be stored in the metadata store with a fingerprint id that segments will reference. Some
+   * operators may want to disable this behavior early to begin saving space in segment metadatastore table entries.
+   */
+  @JsonProperty
+  public boolean isStoreCompactionStatePerSegment()
+  {
+    return storeCompactionStatePerSegment;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -110,7 +129,8 @@ public class ClusterCompactionConfig
            && Objects.equals(maxCompactionTaskSlots, that.maxCompactionTaskSlots)
            && Objects.equals(compactionPolicy, that.compactionPolicy)
            && Objects.equals(useSupervisors, that.useSupervisors)
-           && Objects.equals(engine, that.engine);
+           && Objects.equals(engine, that.engine)
+           && Objects.equals(storeCompactionStatePerSegment, that.storeCompactionStatePerSegment);
   }
 
   @Override
@@ -121,7 +141,8 @@ public class ClusterCompactionConfig
         maxCompactionTaskSlots,
         compactionPolicy,
         useSupervisors,
-        engine
+        engine,
+        storeCompactionStatePerSegment
     );
   }
 
@@ -134,6 +155,79 @@ public class ClusterCompactionConfig
            ", useSupervisors=" + useSupervisors +
            ", engine=" + engine +
            ", compactionPolicy=" + compactionPolicy +
+           ", storeCompactionStatePerSegment=" + storeCompactionStatePerSegment +
            '}';
+  }
+
+  public Builder toBuilder()
+  {
+    return new Builder().compactionTaskSlotRatio(compactionTaskSlotRatio)
+                        .maxCompactionTaskSlots(maxCompactionTaskSlots)
+                        .compactionPolicy(compactionPolicy)
+                        .useSupervisors(useSupervisors)
+                        .storeCompactionStatePerSegment(storeCompactionStatePerSegment);
+  }
+
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
+  public static class Builder
+  {
+    private Double compactionTaskSlotRatio;
+    private Integer maxCompactionTaskSlots;
+    private CompactionCandidateSearchPolicy compactionPolicy;
+    private Boolean useSupervisors;
+    private CompactionEngine engine;
+    private Boolean storeCompactionStatePerSegment;
+
+    public Builder compactionTaskSlotRatio(double compactionTaskSlotRatio)
+    {
+      this.compactionTaskSlotRatio = compactionTaskSlotRatio;
+      return this;
+    }
+
+    public Builder maxCompactionTaskSlots(int maxCompactionTaskSlots)
+    {
+      this.maxCompactionTaskSlots = maxCompactionTaskSlots;
+      return this;
+    }
+
+    public Builder compactionPolicy(CompactionCandidateSearchPolicy compactionPolicy)
+    {
+      this.compactionPolicy = compactionPolicy;
+      return this;
+    }
+
+    public Builder useSupervisors(boolean useSupervisors)
+    {
+      this.useSupervisors = useSupervisors;
+      return this;
+    }
+
+    public Builder engine(CompactionEngine engine)
+    {
+      this.engine = engine;
+      return this;
+    }
+
+    public Builder storeCompactionStatePerSegment(boolean storeCompactionStatePerSegment)
+    {
+      this.storeCompactionStatePerSegment = storeCompactionStatePerSegment;
+      return this;
+    }
+
+    public ClusterCompactionConfig build()
+    {
+      return new ClusterCompactionConfig(
+          compactionTaskSlotRatio,
+          maxCompactionTaskSlots,
+          compactionPolicy,
+          useSupervisors,
+          engine,
+          storeCompactionStatePerSegment
+      );
+    }
   }
 }

@@ -26,8 +26,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.processor.FrameCombiner;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.DateTimes;
@@ -35,16 +36,18 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
+import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.SegmentSource;
+import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
+import org.apache.druid.msq.querykit.ReadableInputQueue;
 import org.apache.druid.msq.rpc.ControllerResource;
 import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.sql.MSQMode;
-import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.IndexSpec;
@@ -54,8 +57,10 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -141,6 +146,15 @@ public class MultiStageQueryContext
   public static final String CTX_SEGMENT_LOAD_WAIT = "waitUntilSegmentsLoad";
   public static final boolean DEFAULT_SEGMENT_LOAD_WAIT = false;
   public static final String CTX_MAX_INPUT_BYTES_PER_WORKER = "maxInputBytesPerWorker";
+  public static final String CTX_MAX_INPUT_FILES_PER_WORKER = "maxInputFilesPerWorker";
+  public static final String CTX_MAX_PARTITIONS = "maxPartitions";
+
+  /**
+   * Used by {@link #getMaxClusteredByColumns(QueryContext)}. Can be used to adjust the limit of columns appearing
+   * in clusterBy, where the default is {@link Limits#MAX_CLUSTERED_BY_COLUMNS}. This parameter is undocumented
+   * because its main purpose is to speed up the test {@code MSQFaultsTest#testInsertWithHugeClusteringKeys}.
+   */
+  public static final String CTX_MAX_CLUSTERED_BY_COLUMNS = "maxClusteredByColumns";
 
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.SEQUENTIAL.toString();
@@ -157,16 +171,40 @@ public class MultiStageQueryContext
   public static final String CTX_REMOVE_NULL_BYTES = "removeNullBytes";
   public static final boolean DEFAULT_REMOVE_NULL_BYTES = false;
 
-  public static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
-  // Lower than the default to minimize the impact of per-row overheads that are not accounted for by
-  // OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
-  public static final int DEFAULT_ROWS_IN_MEMORY = 100000;
+  /**
+   * Hint to {@link StageProcessor} implementations about whether they should attempt to use
+   * {@link FrameCombiner} when doing sort-based aggregations.
+   */
+  public static final String CTX_USE_COMBINER = "useCombiner";
+  public static final boolean DEFAULT_USE_COMBINER = false;
+
+  /**
+   * Used by {@link #getMaxRowsInMemory(QueryContext)}.
+   */
+  static final String CTX_MAX_ROWS_IN_MEMORY = "maxRowsInMemory";
+
+  /**
+   * Used by {@link #getMaxRowsInMemory(QueryContext)}. Alternate spelling of {@link #CTX_MAX_ROWS_IN_MEMORY}.
+   * Ignored if {@link #CTX_MAX_ROWS_IN_MEMORY} is set.
+   */
+  static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
+
+  /**
+   * Lower than the default to minimize the impact of per-row overheads that are not accounted for by
+   * OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
+   */
+  public static final int DEFAULT_MAX_ROWS_IN_MEMORY = 100000;
 
   public static final String CTX_IS_REINDEX = "isReindex";
 
   public static final String CTX_MAX_NUM_SEGMENTS = "maxNumSegments";
 
   public static final String CTX_START_TIME = "startTime";
+
+  /**
+   * The time that a query should time out. Value is an ISO8601 timestamp.
+   */
+  public static final String CTX_QUERY_DEADLINE = "queryDeadline";
 
   /**
    * Controls sort order within segments. Normally, this is the same as the overall order of the query (from the
@@ -194,13 +232,20 @@ public class MultiStageQueryContext
   public static final String CTX_INCLUDE_ALL_COUNTERS = "includeAllCounters";
   public static final boolean DEFAULT_INCLUDE_ALL_COUNTERS = true;
 
+  /**
+   * Whether workers should send live counter updates to the controller via the message relay. When enabled, workers
+   * periodically send counter snapshots to the controller, allowing the controller to have more up-to-date progress
+   * information.
+   */
+  public static final String CTX_LIVE_REPORT_COUNTERS = "liveReportCounters";
+
   public static final String CTX_FORCE_TIME_SORT = DimensionsSpec.PARAMETER_FORCE_TIME_SORT;
   private static final boolean DEFAULT_FORCE_TIME_SORT = DimensionsSpec.DEFAULT_FORCE_TIME_SORT;
 
   /**
    * The {@link FrameType} to use for row-based frames. This context parameter exists to support rolling updates from
    * older Druid versions. The latest type is given by {@link FrameType#latestRowBased()}, which is set in
-   * {@link MSQTaskQueryMaker#buildOverrideContext} starting in Druid 34. Once all servers are on Druid 34 or newer,
+   * {@link MultiStageQueryContext#withCommonContext} starting in Druid 34. Once all servers are on Druid 34 or newer,
    * the current-latest type {@link FrameType#ROW_BASED_V2} is used.
    */
   public static final String CTX_ROW_BASED_FRAME_TYPE = "rowBasedFrameType";
@@ -225,9 +270,14 @@ public class MultiStageQueryContext
   public static final String CTX_MAX_FRAME_SIZE = "maxFrameSize";
 
   /**
-   * Maximum number of threads to use for processing. Acts as a cap on the value of {@link WorkerContext#threadCount()}.
+   * Maximum number of threads to use for processing. Cap on the value of {@link ExecutionContext#threadCount()}.
    */
   public static final String CTX_MAX_THREADS = "maxThreads";
+
+  /**
+   * Maximum number of segments to load ahead of them being needed. Used when setting up {@link ReadableInputQueue}.
+   */
+  public static final String CTX_SEGMENT_LOAD_AHEAD_COUNT = "segmentLoadAheadCount";
 
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
@@ -314,6 +364,42 @@ public class MultiStageQueryContext
     );
   }
 
+  public static int getMaxInputFilesPerWorker(final QueryContext queryContext)
+  {
+    final Integer value = queryContext.getInt(CTX_MAX_INPUT_FILES_PER_WORKER);
+    if (value == null) {
+      return Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER;
+    }
+    if (value <= 0) {
+      throw InvalidInput.exception("%s must be a positive integer, got[%d]", CTX_MAX_INPUT_FILES_PER_WORKER, value);
+    }
+    return value;
+  }
+
+  public static int getMaxPartitions(final QueryContext queryContext)
+  {
+    final Integer value = queryContext.getInt(CTX_MAX_PARTITIONS);
+    if (value == null) {
+      return Limits.DEFAULT_MAX_PARTITIONS;
+    }
+    if (value <= 0) {
+      throw InvalidInput.exception("%s must be a positive integer, got[%d]", CTX_MAX_PARTITIONS, value);
+    }
+    return value;
+  }
+
+  public static int getMaxClusteredByColumns(final QueryContext queryContext)
+  {
+    final Integer value = queryContext.getInt(CTX_MAX_CLUSTERED_BY_COLUMNS);
+    if (value == null) {
+      return Limits.MAX_CLUSTERED_BY_COLUMNS;
+    }
+    if (value <= 0) {
+      throw InvalidInput.exception("%s must be a positive integer, got[%d]", CTX_MAX_CLUSTERED_BY_COLUMNS, value);
+    }
+    return value;
+  }
+
   public static ClusterStatisticsMergeMode getClusterStatisticsMergeMode(QueryContext queryContext)
   {
     return QueryContexts.getAsEnum(
@@ -387,6 +473,11 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(CTX_REMOVE_NULL_BYTES, DEFAULT_REMOVE_NULL_BYTES);
   }
 
+  public static boolean isUseCombiner(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(CTX_USE_COMBINER, DEFAULT_USE_COMBINER);
+  }
+
   public static boolean isDartQuery(final QueryContext queryContext)
   {
     return queryContext.get(QueryContexts.CTX_DART_QUERY_ID) != null;
@@ -413,9 +504,14 @@ public class MultiStageQueryContext
     return destination;
   }
 
-  public static int getRowsInMemory(final QueryContext queryContext)
+  public static int getMaxRowsInMemory(final QueryContext queryContext)
   {
-    return queryContext.getInt(CTX_ROWS_IN_MEMORY, DEFAULT_ROWS_IN_MEMORY);
+    Integer ctxValue = queryContext.getInt(CTX_MAX_ROWS_IN_MEMORY);
+    if (ctxValue == null) {
+      ctxValue = queryContext.getInt(CTX_ROWS_IN_MEMORY);
+    }
+
+    return ctxValue != null ? ctxValue : DEFAULT_MAX_ROWS_IN_MEMORY;
   }
 
   public static Integer getMaxNumSegments(final QueryContext queryContext)
@@ -469,6 +565,14 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(CTX_INCLUDE_ALL_COUNTERS, DEFAULT_INCLUDE_ALL_COUNTERS);
   }
 
+  /**
+   * See {@link #CTX_LIVE_REPORT_COUNTERS}.
+   */
+  public static boolean getLiveReportCounters(final QueryContext queryContext, final boolean defaultValue)
+  {
+    return queryContext.getBoolean(CTX_LIVE_REPORT_COUNTERS, defaultValue);
+  }
+
   public static boolean isForceSegmentSortByTime(final QueryContext queryContext)
   {
     return queryContext.getBoolean(CTX_FORCE_TIME_SORT, DEFAULT_FORCE_TIME_SORT);
@@ -492,14 +596,64 @@ public class MultiStageQueryContext
   public static DateTime getStartTime(final QueryContext queryContext)
   {
     // Get the start time from the query context set by the broker.
-    if (!queryContext.containsKey(CTX_START_TIME)) {
-      // If it is missing, as could be the case for an older version of the broker, use the current time instead, to
-      // have something to timeout against.
-      DateTime startTime = DateTimes.nowUtc();
-      log.warn("Query context does not contain start time. Defaulting to the current time[%s] instead.", startTime);
-      return startTime;
+    final String startTime = queryContext.getString(CTX_START_TIME);
+    if (startTime != null) {
+      return DateTimes.of(startTime);
+    } else {
+      // If it is missing, as could be the case for an older version of the broker, use the current time instead.
+      final DateTime now = DateTimes.nowUtc();
+      log.warn("Query context does not contain start time. Defaulting to the current time[%s] instead.", now);
+      return now;
     }
-    return DateTimes.of(queryContext.getString(CTX_START_TIME));
+  }
+
+  @Nullable
+  public static DateTime getQueryDeadline(final QueryContext queryContext)
+  {
+    final String queryDeadline = queryContext.getString(CTX_QUERY_DEADLINE);
+    if (queryDeadline != null) {
+      return DateTimes.of(queryDeadline);
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * Returns a final query context including common context keys shared across all MSQ engines (task, Dart, etc.).
+   */
+  public static QueryContext withCommonContext(final QueryContext originalContext)
+  {
+    final Map<String, Object> overrides = new HashMap<>();
+
+    // Add appropriate finalization to native query context.
+    if (!originalContext.containsKey(QueryContexts.FINALIZE_KEY)) {
+      overrides.put(QueryContexts.FINALIZE_KEY, isFinalizeAggregations(originalContext));
+    }
+
+    // This flag is to ensure backward compatibility, as brokers are upgraded after indexers/middlemanagers.
+    if (!originalContext.containsKey(WINDOW_FUNCTION_OPERATOR_TRANSFORMATION)) {
+      overrides.put(WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true);
+    }
+
+    if (!originalContext.containsKey(CTX_ROW_BASED_FRAME_TYPE)) {
+      // Use the latest row-based frame type. The default is an older type, to ensure compatibility during rolling
+      // updates. Since the Broker is updated last, it's safe to set this property on the Broker.
+      overrides.put(CTX_ROW_BASED_FRAME_TYPE, (int) FrameType.latestRowBased().version());
+    }
+
+    // Add start time.
+    final DateTime now = DateTimes.nowUtc();
+    overrides.put(CTX_START_TIME, now.toString());
+
+    // Add query deadline if not already present (and if timeout is set).
+    if (!originalContext.containsKey(CTX_QUERY_DEADLINE)) {
+      final long timeout = originalContext.getTimeout(QueryContexts.NO_TIMEOUT);
+      if (timeout != QueryContexts.NO_TIMEOUT) {
+        overrides.put(CTX_QUERY_DEADLINE, now.plus(timeout).toString());
+      }
+    }
+
+    return originalContext.override(overrides);
   }
 
   public static Set<String> getColumnsExcludedFromTypeVerification(final QueryContext queryContext)
@@ -515,6 +669,11 @@ public class MultiStageQueryContext
   public static Integer getMaxThreads(final QueryContext queryContext)
   {
     return queryContext.getInt(CTX_MAX_THREADS);
+  }
+
+  public static Integer getSegmentLoadAheadCount(final QueryContext queryContext)
+  {
+    return queryContext.getInt(CTX_SEGMENT_LOAD_AHEAD_COUNT);
   }
 
   /**
@@ -602,26 +761,22 @@ public class MultiStageQueryContext
         + "remove this key for automatic lock type selection", Tasks.TASK_LOCK_TYPE);
 
     if (isReplaceQuery && !(taskLockType.equals(TaskLockType.EXCLUSIVE) || taskLockType.equals(TaskLockType.REPLACE))) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "TaskLock must be of type [%s] or [%s] for a REPLACE query. Found invalid type [%s] set."
-                              + appendErrorMessage,
-                              TaskLockType.EXCLUSIVE,
-                              TaskLockType.REPLACE,
-                              taskLockType
-                          );
+      throw InvalidInput.exception(
+          "TaskLock must be of type [%s] or [%s] for a REPLACE query. Found invalid type [%s] set."
+          + appendErrorMessage,
+          TaskLockType.EXCLUSIVE,
+          TaskLockType.REPLACE,
+          taskLockType
+      );
     }
     if (!isReplaceQuery && !(taskLockType.equals(TaskLockType.SHARED) || taskLockType.equals(TaskLockType.APPEND))) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "TaskLock must be of type [%s] or [%s] for an INSERT query. Found invalid type [%s] set."
-                              + appendErrorMessage,
-                              TaskLockType.SHARED,
-                              TaskLockType.APPEND,
-                              taskLockType
-                          );
+      throw InvalidInput.exception(
+          "TaskLock must be of type [%s] or [%s] for an INSERT query. Found invalid type [%s] set."
+          + appendErrorMessage,
+          TaskLockType.SHARED,
+          TaskLockType.APPEND,
+          taskLockType
+      );
     }
     return taskLockType;
   }

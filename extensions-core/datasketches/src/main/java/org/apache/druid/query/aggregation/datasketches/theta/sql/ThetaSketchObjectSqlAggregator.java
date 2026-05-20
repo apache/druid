@@ -67,4 +67,10 @@ public class ThetaSketchObjectSqlAggregator extends ThetaSketchBaseSqlAggregator
         null
     );
   }
+
+  @Override
+  protected String getName()
+  {
+    return NAME;
+  }
 }

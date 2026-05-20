@@ -218,7 +218,7 @@ public class TaskSerdeTest
         new IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
-                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withDimensions(DimensionsSpec.EMPTY)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(
@@ -287,7 +287,7 @@ public class TaskSerdeTest
         new IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
-                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withDimensions(DimensionsSpec.EMPTY)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(

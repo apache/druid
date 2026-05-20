@@ -22,201 +22,664 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.Futures;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.discovery.DataNodeService;
+import org.apache.druid.discovery.DiscoveryDruidNode;
+import org.apache.druid.discovery.DruidNodeAnnouncer;
+import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
+import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
+import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
+import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
+import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CreateDataSegments;
+import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
+import org.joda.time.Period;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import javax.annotation.Nullable;
+import javax.ws.rs.core.Response;
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.mockito.ArgumentMatchers.any;
 
 @RunWith(MockitoJUnitRunner.class)
 public class SeekableStreamIndexTaskRunnerTest
 {
+  private static final String DATA_SOURCE = "datasource";
+
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   @Mock
   private InputRow row;
 
   @Mock
   private SeekableStreamIndexTask task;
 
+  private StubServiceEmitter emitter;
+
+  @Before
+  public void setup()
+  {
+    emitter = new StubServiceEmitter();
+  }
+
+  @Test
+  public void testGetLastSequenceMetadataUsesStableSnapshotIfSequenceCompletesConcurrently() throws Exception
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createRunner();
+    final SequenceMetadata<String, String> firstSequence = new SequenceMetadata<>(
+        0,
+        "test_0",
+        ImmutableMap.of("partition", "0"),
+        ImmutableMap.of("partition", "5"),
+        true,
+        ImmutableSet.of(),
+        null
+    );
+    final SequenceMetadata<String, String> secondSequence = new SequenceMetadata<>(
+        1,
+        "test_1",
+        ImmutableMap.of("partition", "5"),
+        ImmutableMap.of("partition", "10"),
+        false,
+        ImmutableSet.of(),
+        null
+    );
+    final ShrinkingCopyOnWriteArrayList<SequenceMetadata<String, String>> sequences =
+        new ShrinkingCopyOnWriteArrayList<>();
+    sequences.add(firstSequence);
+    sequences.add(secondSequence);
+    setSequences(runner, sequences);
+
+    sequences.removeFirstElementDuringNextSnapshotOrSize();
+
+    Assert.assertSame(secondSequence, runner.getLastSequenceMetadata());
+    Assert.assertEquals(1, sequences.size());
+    Assert.assertSame(secondSequence, sequences.get(0));
+  }
+
+  @Test
+  public void testSetEndOffsetsReturnsBadRequestWhenTaskIsNotPaused() throws Exception
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createInitializedRunner(
+        ImmutableMap.of("partition", "0"),
+        ImmutableMap.of("partition", "10")
+    );
+    setStatus(runner, SeekableStreamIndexTaskRunner.Status.READING);
+
+    final Response response = runner.setEndOffsets(ImmutableMap.of("partition", "5"), false);
+
+    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    Assert.assertEquals("Task must be paused before changing the end offsets", response.getEntity());
+  }
+
+  @Test
+  public void testSetEndOffsetsReturnsBadRequestWhenLatestSequenceIsCheckpointed() throws Exception
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createInitializedRunner(
+        ImmutableMap.of("partition", "0"),
+        ImmutableMap.of("partition", "10")
+    );
+    setSequences(
+        runner,
+        Arrays.asList(
+            new SequenceMetadata<>(
+                0,
+                "test_0",
+                ImmutableMap.of("partition", "0"),
+                ImmutableMap.of("partition", "5"),
+                true,
+                ImmutableSet.of(),
+                null
+            )
+        )
+    );
+
+    final Response response = runner.setEndOffsets(ImmutableMap.of("partition", "6"), false);
+
+    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    Assert.assertTrue(response.getEntity().toString().contains("has already endOffsets set"));
+  }
+
+  @Test
+  public void testSetEndOffsetsReturnsBadRequestWhenEndOffsetPrecedesCurrentOffset() throws Exception
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createInitializedRunner(
+        ImmutableMap.of("partition", "0"),
+        ImmutableMap.of("partition", "10")
+    );
+    setCurrentOffsets(runner, ImmutableMap.of("partition", "5"));
+
+    try (final PausedRunner ignored = pauseRunner(runner)) {
+      final Response response = runner.setEndOffsets(ImmutableMap.of("partition", "4"), false);
+
+      Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+      Assert.assertEquals(
+          "End sequence must be >= current sequence for partition [partition] (current: 5)",
+          response.getEntity()
+      );
+      Assert.assertFalse(runner.getLastSequenceMetadata().isCheckpointed());
+      Assert.assertEquals(1, runner.getSequences().size());
+    }
+  }
+
+  @Test
+  public void testSetEndOffsetsCreatesNewSequenceWhenPaused() throws Exception
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createInitializedRunner(
+        ImmutableMap.of("partition", "0"),
+        ImmutableMap.of("partition", "10")
+    );
+    setCurrentOffsets(runner, ImmutableMap.of("partition", "4"));
+
+    try (final PausedRunner pausedRunner = pauseRunner(runner)) {
+      final Response response = runner.setEndOffsets(ImmutableMap.of("partition", "5"), false);
+
+      Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+      pausedRunner.awaitResumed();
+    }
+
+    final List<SequenceMetadata<String, String>> sequences = runner.getSequences();
+    Assert.assertEquals(2, sequences.size());
+    Assert.assertTrue(sequences.get(0).isCheckpointed());
+    Assert.assertEquals(ImmutableMap.of("partition", "5"), sequences.get(0).getEndOffsets());
+    Assert.assertEquals("test_1", sequences.get(1).getSequenceName());
+    Assert.assertEquals(ImmutableMap.of("partition", "5"), sequences.get(1).getStartOffsets());
+    Assert.assertEquals(ImmutableMap.of("partition", "10"), sequences.get(1).getEndOffsets());
+    Assert.assertEquals(ImmutableSet.of("partition"), sequences.get(1).getExclusiveStartPartitions());
+  }
+
+  @Test
+  public void testSetEndOffsetsFinishUpdatesLatestSequenceWhenPaused() throws Exception
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createInitializedRunner(
+        ImmutableMap.of("partition", "0"),
+        ImmutableMap.of("partition", "10")
+    );
+    setCurrentOffsets(runner, ImmutableMap.of("partition", "4"));
+
+    try (final PausedRunner pausedRunner = pauseRunner(runner)) {
+      final Response response = runner.setEndOffsets(ImmutableMap.of("partition", "6"), true);
+
+      Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+      pausedRunner.awaitResumed();
+    }
+
+    final List<SequenceMetadata<String, String>> sequences = runner.getSequences();
+    Assert.assertEquals(1, sequences.size());
+    Assert.assertTrue(sequences.get(0).isCheckpointed());
+    Assert.assertEquals(ImmutableMap.of("partition", "6"), sequences.get(0).getEndOffsets());
+  }
+
   @Test
   public void testWithinMinMaxTime()
   {
-    DimensionsSpec dimensionsSpec = new DimensionsSpec(
-        Arrays.asList(
-            new StringDimensionSchema("d1"),
-            new StringDimensionSchema("d2")
-        )
+    final DateTime now = DateTimes.nowUtc();
+    final TestSeekableStreamIndexTaskRunner runner = createRunnerWithMessageTimeBounds(
+        120L,
+        now.minusHours(2),
+        now.plusHours(2)
     );
-    DataSchema schema =
-        DataSchema.builder()
-                  .withDataSource("datasource")
-                  .withTimestamp(new TimestampSpec(null, null, null))
-                  .withDimensions(dimensionsSpec)
-                  .withGranularity(
-                      new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
-                  )
-                  .build();
-
-    SeekableStreamIndexTaskTuningConfig tuningConfig = Mockito.mock(SeekableStreamIndexTaskTuningConfig.class);
-    SeekableStreamIndexTaskIOConfig<String, String> ioConfig = Mockito.mock(SeekableStreamIndexTaskIOConfig.class);
-    SeekableStreamStartSequenceNumbers<String, String> sequenceNumbers = Mockito.mock(SeekableStreamStartSequenceNumbers.class);
-    SeekableStreamEndSequenceNumbers<String, String> endSequenceNumbers = Mockito.mock(SeekableStreamEndSequenceNumbers.class);
-
-    DateTime now = DateTimes.nowUtc();
-
-    Mockito.when(ioConfig.getRefreshRejectionPeriodsInMinutes()).thenReturn(120L);
-    Mockito.when(ioConfig.getMaximumMessageTime()).thenReturn(DateTimes.nowUtc().plusHours(2));
-    Mockito.when(ioConfig.getMinimumMessageTime()).thenReturn(DateTimes.nowUtc().minusHours(2));
-    Mockito.when(ioConfig.getInputFormat()).thenReturn(new JsonInputFormat(null, null, null, null, null));
-    Mockito.when(ioConfig.getStartSequenceNumbers()).thenReturn(sequenceNumbers);
-    Mockito.when(ioConfig.getEndSequenceNumbers()).thenReturn(endSequenceNumbers);
-
-    Mockito.when(endSequenceNumbers.getPartitionSequenceNumberMap()).thenReturn(ImmutableMap.of());
-    Mockito.when(sequenceNumbers.getStream()).thenReturn("test");
-
-    Mockito.when(task.getDataSchema()).thenReturn(schema);
-    Mockito.when(task.getIOConfig()).thenReturn(ioConfig);
-    Mockito.when(task.getTuningConfig()).thenReturn(tuningConfig);
-
-    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null,
-                                                                                               LockGranularity.TIME_CHUNK);
 
     Mockito.when(row.getTimestamp()).thenReturn(now);
-    Assert.assertTrue(runner.withinMinMaxRecordTime(row));
+    Assert.assertEquals(InputRowFilterResult.ACCEPTED, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
 
     Mockito.when(row.getTimestamp()).thenReturn(now.minusHours(2).minusMinutes(1));
-    Assert.assertFalse(runner.withinMinMaxRecordTime(row));
+    Assert.assertEquals(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
 
     Mockito.when(row.getTimestamp()).thenReturn(now.plusHours(2).plusMinutes(1));
-    Assert.assertFalse(runner.withinMinMaxRecordTime(row));
+    Assert.assertEquals(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
   }
 
   @Test
   public void testWithinMinMaxTimeNotPopulated()
   {
-    DimensionsSpec dimensionsSpec = new DimensionsSpec(
-        Arrays.asList(
-            new StringDimensionSchema("d1"),
-            new StringDimensionSchema("d2")
-        )
-    );
-    DataSchema schema =
-        DataSchema.builder()
-                  .withDataSource("datasource")
-                  .withTimestamp(new TimestampSpec(null, null, null))
-                  .withDimensions(dimensionsSpec)
-                  .withGranularity(
-                      new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
-                  )
-                  .build();
+    final DateTime now = DateTimes.nowUtc();
+    final TestSeekableStreamIndexTaskRunner runner = createRunner();
 
-    SeekableStreamIndexTaskTuningConfig tuningConfig = Mockito.mock(SeekableStreamIndexTaskTuningConfig.class);
-    SeekableStreamIndexTaskIOConfig<String, String> ioConfig = Mockito.mock(SeekableStreamIndexTaskIOConfig.class);
-    SeekableStreamStartSequenceNumbers<String, String> sequenceNumbers = Mockito.mock(SeekableStreamStartSequenceNumbers.class);
-    SeekableStreamEndSequenceNumbers<String, String> endSequenceNumbers = Mockito.mock(SeekableStreamEndSequenceNumbers.class);
-
-    DateTime now = DateTimes.nowUtc();
-
-    Mockito.when(ioConfig.getRefreshRejectionPeriodsInMinutes()).thenReturn(null);
-    // min max time not populated.
-    Mockito.when(ioConfig.getMaximumMessageTime()).thenReturn(null);
-    Mockito.when(ioConfig.getMinimumMessageTime()).thenReturn(null);
-    Mockito.when(ioConfig.getInputFormat()).thenReturn(new JsonInputFormat(null, null, null, null, null));
-    Mockito.when(ioConfig.getStartSequenceNumbers()).thenReturn(sequenceNumbers);
-    Mockito.when(ioConfig.getEndSequenceNumbers()).thenReturn(endSequenceNumbers);
-
-    Mockito.when(endSequenceNumbers.getPartitionSequenceNumberMap()).thenReturn(ImmutableMap.of());
-    Mockito.when(sequenceNumbers.getStream()).thenReturn("test");
-
-    Mockito.when(task.getDataSchema()).thenReturn(schema);
-    Mockito.when(task.getIOConfig()).thenReturn(ioConfig);
-    Mockito.when(task.getTuningConfig()).thenReturn(tuningConfig);
-    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null,
-                                                                                               LockGranularity.TIME_CHUNK);
-
-    Assert.assertTrue(runner.withinMinMaxRecordTime(row));
+    Mockito.when(row.getTimestamp()).thenReturn(now);
+    Assert.assertEquals(InputRowFilterResult.ACCEPTED, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
 
     Mockito.when(row.getTimestamp()).thenReturn(now.minusHours(2).minusMinutes(1));
-    Assert.assertTrue(runner.withinMinMaxRecordTime(row));
+    Assert.assertEquals(InputRowFilterResult.ACCEPTED, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
 
     Mockito.when(row.getTimestamp()).thenReturn(now.plusHours(2).plusMinutes(1));
-    Assert.assertTrue(runner.withinMinMaxRecordTime(row));
+    Assert.assertEquals(InputRowFilterResult.ACCEPTED, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
   }
 
   @Test
-  public void testGetSupervisorId()
+  public void testEnsureRowRejectionReasonForNullRow()
   {
-    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+    final TestSeekableStreamIndexTaskRunner runner = createRunner();
+
+    Assert.assertEquals(InputRowFilterResult.NULL_OR_EMPTY_RECORD, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(null));
+  }
+
+  @Test
+  public void test_run_emitsRowCountAndSegmentCount_onSuccessfulPublish()
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createRunner();
+    Mockito.when(task.getId()).thenReturn("task1");
+    Mockito.when(task.getSupervisorId()).thenReturn("supervisorId");
+    Assert.assertEquals("supervisorId", runner.getSupervisorId());
+
+    // Setup the task to return a RecordSupplier, StreamAppenderatorDriver, Appenderator
+    final RecordSupplier<?, ?, ?> recordSupplier = Mockito.mock(RecordSupplier.class);
+    Mockito.when(task.newTaskRecordSupplier(any()))
+           .thenReturn(recordSupplier);
+
+    final StreamAppenderator appenderator = Mockito.mock(StreamAppenderator.class);
+    Mockito.when(task.newAppenderator(any(), any(), any(), any()))
+           .thenReturn(appenderator);
+
+    final List<DataSegment> segment = CreateDataSegments
+        .ofDatasource(DATA_SOURCE)
+        .withNumPartitions(10)
+        .withNumRows(1_000)
+        .eachOfSizeInMb(500);
+    final SegmentsAndCommitMetadata commitMetadata =
+        new SegmentsAndCommitMetadata(segment, "offset-100").withWasPublished(true);
+
+    final StreamAppenderatorDriver driver = Mockito.mock(StreamAppenderatorDriver.class);
+    Mockito.when(task.newDriver(any(), any(), any()))
+           .thenReturn(driver);
+    Mockito.when(driver.publish(any(), any(), any()))
+           .thenReturn(Futures.immediateFuture(commitMetadata));
+    Mockito.when(driver.registerHandoff(any()))
+           .thenReturn(Futures.immediateFuture(commitMetadata));
+
+    Mockito.doAnswer(invocation -> {
+      final String metricName = invocation.getArgument(1);
+      final Number value = invocation.getArgument(2);
+      emitter.emit(ServiceMetricEvent.builder().setMetric(metricName, value).build("test", "localhost"));
+      return null;
+    }).when(task).emitMetric(any(), any(), any());
+
+    runner.run(createTaskToolbox());
+    emitter.verifyValue("ingest/segments/count", 10);
+    emitter.verifyValue("ingest/rows/published", 10_000L);
+  }
+
+  private TaskToolbox createTaskToolbox()
+  {
+    final TestUtils testUtils = new TestUtils();
+    final File taskWorkDir = createTaskWorkDirectory();
+    return new TaskToolbox
+        .Builder()
+        .indexIO(TestHelper.getTestIndexIO())
+        .taskWorkDir(taskWorkDir)
+        .taskReportFileWriter(new NoopTestTaskReportFileWriter())
+        .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
+        .rowIngestionMetersFactory(NoopRowIngestionMeters::new)
+        .indexMerger(testUtils.getIndexMergerV9Factory().create(true))
+        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .dataNodeService(new DataNodeService(DruidServer.DEFAULT_TIER, 100L, null, ServerType.HISTORICAL, 1))
+        .lookupNodeService(new LookupNodeService(DruidServer.DEFAULT_TIER))
+        .appenderatorsManager(new TestAppenderatorsManager())
+        .druidNodeAnnouncer(new NoopDruidNodeAnnouncer())
+        .jsonMapper(TestHelper.JSON_MAPPER)
+        .emitter(emitter)
+        .build();
+  }
+
+  private File createTaskWorkDirectory()
+  {
+    try {
+      final File taskWorkDir = temporaryFolder.newFolder();
+      FileUtils.mkdirp(taskWorkDir);
+      FileUtils.mkdirp(new File(taskWorkDir, "persist"));
+      return taskWorkDir;
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private TestSeekableStreamIndexTaskRunner createRunner()
+  {
+    return createRunner(ImmutableMap.of(), ImmutableMap.of());
+  }
+
+  private TestSeekableStreamIndexTaskRunner createRunner(
+      Map<String, String> startOffsets,
+      Map<String, String> endOffsets
+  )
+  {
+    return createRunner(createDataSchema(), null, null, null, startOffsets, endOffsets);
+  }
+
+  private TestSeekableStreamIndexTaskRunner createRunnerWithMessageTimeBounds(
+      Long refreshRejectionPeriodsInMinutes,
+      DateTime minMessageTime,
+      DateTime maxMessageTime
+  )
+  {
+    return createRunner(
+        createDataSchema(),
+        refreshRejectionPeriodsInMinutes,
+        minMessageTime,
+        maxMessageTime,
+        ImmutableMap.of(),
+        ImmutableMap.of()
+    );
+  }
+
+  private TestSeekableStreamIndexTaskRunner createRunner(
+      DataSchema schema,
+      @Nullable Long refreshRejectionPeriodsInMinutes,
+      @Nullable DateTime minMessageTime,
+      @Nullable DateTime maxMessageTime,
+      Map<String, String> startOffsets,
+      Map<String, String> endOffsets
+  )
+  {
+    final SeekableStreamIndexTaskTuningConfig tuningConfig = Mockito.mock(SeekableStreamIndexTaskTuningConfig.class);
+    final SeekableStreamIndexTaskIOConfig<String, String> ioConfig = Mockito.mock(SeekableStreamIndexTaskIOConfig.class);
+    final SeekableStreamStartSequenceNumbers<String, String> sequenceNumbers = new SeekableStreamStartSequenceNumbers<>(
+        "test",
+        startOffsets,
+        ImmutableSet.of()
+    );
+    final SeekableStreamEndSequenceNumbers<String, String> endSequenceNumbers = new SeekableStreamEndSequenceNumbers<>(
+        "test",
+        endOffsets
+    );
+
+    Mockito.when(tuningConfig.getIntermediateHandoffPeriod()).thenReturn(Period.minutes(1));
+    Mockito.when(ioConfig.getRefreshRejectionPeriodsInMinutes()).thenReturn(refreshRejectionPeriodsInMinutes);
+    Mockito.when(ioConfig.getMaximumMessageTime()).thenReturn(maxMessageTime);
+    Mockito.when(ioConfig.getMinimumMessageTime()).thenReturn(minMessageTime);
+    Mockito.when(ioConfig.getInputFormat()).thenReturn(new JsonInputFormat(null, null, null, null, null));
+    Mockito.when(ioConfig.getStartSequenceNumbers()).thenReturn(sequenceNumbers);
+    Mockito.when(ioConfig.getEndSequenceNumbers()).thenReturn(endSequenceNumbers);
+    Mockito.when(ioConfig.getBaseSequenceName()).thenReturn("test");
+
+    Mockito.when(task.getDataSchema()).thenReturn(schema);
+    Mockito.when(task.getIOConfig()).thenReturn(ioConfig);
+    Mockito.when(task.getTuningConfig()).thenReturn(tuningConfig);
+    Mockito.when(task.getContext()).thenReturn(ImmutableMap.of());
+
+    return new TestSeekableStreamIndexTaskRunner(
+        task,
+        LockGranularity.TIME_CHUNK
+    );
+  }
+
+  private static DataSchema createDataSchema()
+  {
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(
         Arrays.asList(
             new StringDimensionSchema("d1"),
             new StringDimensionSchema("d2")
         )
     );
-    DataSchema schema =
-        DataSchema.builder()
-                  .withDataSource("datasource")
-                  .withTimestamp(new TimestampSpec(null, null, null))
-                  .withDimensions(dimensionsSpec)
-                  .withGranularity(
-                      new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
-                  )
-                  .build();
-
-    SeekableStreamIndexTaskTuningConfig tuningConfig = Mockito.mock(SeekableStreamIndexTaskTuningConfig.class);
-    SeekableStreamIndexTaskIOConfig<String, String> ioConfig = Mockito.mock(SeekableStreamIndexTaskIOConfig.class);
-    SeekableStreamStartSequenceNumbers<String, String> sequenceNumbers = Mockito.mock(SeekableStreamStartSequenceNumbers.class);
-    SeekableStreamEndSequenceNumbers<String, String> endSequenceNumbers = Mockito.mock(SeekableStreamEndSequenceNumbers.class);
-
-    Mockito.when(ioConfig.getRefreshRejectionPeriodsInMinutes()).thenReturn(null);
-    Mockito.when(ioConfig.getInputFormat()).thenReturn(new JsonInputFormat(null, null, null, null, null));
-    Mockito.when(ioConfig.getStartSequenceNumbers()).thenReturn(sequenceNumbers);
-    Mockito.when(ioConfig.getEndSequenceNumbers()).thenReturn(endSequenceNumbers);
-
-    Mockito.when(endSequenceNumbers.getPartitionSequenceNumberMap()).thenReturn(ImmutableMap.of());
-    Mockito.when(sequenceNumbers.getStream()).thenReturn("test");
-
-    Mockito.when(task.getDataSchema()).thenReturn(schema);
-    Mockito.when(task.getIOConfig()).thenReturn(ioConfig);
-    Mockito.when(task.getTuningConfig()).thenReturn(tuningConfig);
-
-    Mockito.when(task.getSupervisorId()).thenReturn("supervisorId");
-    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null,
-                                                                                               LockGranularity.TIME_CHUNK);
-    Assert.assertEquals("supervisorId", runner.getSupervisorId());
+    return DataSchema.builder()
+                     .withDataSource(DATA_SOURCE)
+                     .withTimestamp(TimestampSpec.DEFAULT)
+                     .withDimensions(dimensionsSpec)
+                     .withGranularity(
+                         new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
+                     )
+                     .build();
   }
 
-  static class TestasbleSeekableStreamIndexTaskRunner extends SeekableStreamIndexTaskRunner
+  private TestSeekableStreamIndexTaskRunner createInitializedRunner(
+      Map<String, String> startOffsets,
+      Map<String, String> endOffsets
+  ) throws Exception
   {
-    public TestasbleSeekableStreamIndexTaskRunner(
+    final TestSeekableStreamIndexTaskRunner runner = createRunner(startOffsets, endOffsets);
+    runner.setToolbox(createTaskToolbox());
+    runner.initializeSequences();
+    setCurrentOffsets(runner, startOffsets);
+    return runner;
+  }
+
+  private static void setSequences(
+      SeekableStreamIndexTaskRunner runner,
+      List<? extends SequenceMetadata> sequences
+  ) throws NoSuchFieldException, IllegalAccessException
+  {
+    final Field sequencesField = SeekableStreamIndexTaskRunner.class.getDeclaredField("sequences");
+    sequencesField.setAccessible(true);
+    sequencesField.set(runner, sequences);
+  }
+
+  private static void setCurrentOffsets(
+      SeekableStreamIndexTaskRunner runner,
+      Map<?, ?> currentOffsets
+  ) throws NoSuchFieldException, IllegalAccessException
+  {
+    final Field currOffsetsField = SeekableStreamIndexTaskRunner.class.getDeclaredField("currOffsets");
+    currOffsetsField.setAccessible(true);
+    final Map currOffsets = (Map) currOffsetsField.get(runner);
+    currOffsets.clear();
+    currOffsets.putAll(currentOffsets);
+  }
+
+  private static void setStatus(
+      SeekableStreamIndexTaskRunner runner,
+      SeekableStreamIndexTaskRunner.Status status
+  ) throws NoSuchFieldException, IllegalAccessException
+  {
+    final Field statusField = SeekableStreamIndexTaskRunner.class.getDeclaredField("status");
+    statusField.setAccessible(true);
+    statusField.set(runner, status);
+  }
+
+  private static void setPauseRequested(
+      SeekableStreamIndexTaskRunner runner,
+      boolean pauseRequested
+  ) throws NoSuchFieldException, IllegalAccessException
+  {
+    final Field pauseRequestedField = SeekableStreamIndexTaskRunner.class.getDeclaredField("pauseRequested");
+    pauseRequestedField.setAccessible(true);
+    pauseRequestedField.set(runner, pauseRequested);
+  }
+
+  private static SeekableStreamIndexTaskRunner.Status getStatus(
+      SeekableStreamIndexTaskRunner runner
+  ) throws NoSuchFieldException, IllegalAccessException
+  {
+    final Field statusField = SeekableStreamIndexTaskRunner.class.getDeclaredField("status");
+    statusField.setAccessible(true);
+    return (SeekableStreamIndexTaskRunner.Status) statusField.get(runner);
+  }
+
+  private static PausedRunner pauseRunner(TestSeekableStreamIndexTaskRunner runner) throws Exception
+  {
+    setStatus(runner, SeekableStreamIndexTaskRunner.Status.READING);
+    setPauseRequested(runner, true);
+
+    final ExecutorService executor = Executors.newSingleThreadExecutor();
+    final Future<Boolean> possiblyPauseFuture = executor.submit(() -> invokePossiblyPause(runner));
+    waitForStatus(runner, SeekableStreamIndexTaskRunner.Status.PAUSED);
+    return new PausedRunner(runner, executor, possiblyPauseFuture);
+  }
+
+  private static void waitForStatus(
+      SeekableStreamIndexTaskRunner runner,
+      SeekableStreamIndexTaskRunner.Status status
+  ) throws Exception
+  {
+    final long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(2);
+    while (System.currentTimeMillis() < deadline) {
+      if (getStatus(runner) == status) {
+        return;
+      }
+      Thread.sleep(10);
+    }
+    Assert.fail("Timed out waiting for status [" + status + "]");
+  }
+
+  private static boolean invokePossiblyPause(SeekableStreamIndexTaskRunner runner) throws Exception
+  {
+    final Method possiblyPauseMethod = SeekableStreamIndexTaskRunner.class.getDeclaredMethod("possiblyPause");
+    possiblyPauseMethod.setAccessible(true);
+    try {
+      return (boolean) possiblyPauseMethod.invoke(runner);
+    }
+    catch (InvocationTargetException e) {
+      final Throwable cause = e.getCause();
+      if (cause instanceof Exception) {
+        throw (Exception) cause;
+      } else if (cause instanceof Error) {
+        throw (Error) cause;
+      } else {
+        throw new RuntimeException(cause);
+      }
+    }
+  }
+
+  private static class PausedRunner implements AutoCloseable
+  {
+    private final TestSeekableStreamIndexTaskRunner runner;
+    private final ExecutorService executor;
+    private final Future<Boolean> possiblyPauseFuture;
+
+    private PausedRunner(
+        TestSeekableStreamIndexTaskRunner runner,
+        ExecutorService executor,
+        Future<Boolean> possiblyPauseFuture
+    )
+    {
+      this.runner = runner;
+      this.executor = executor;
+      this.possiblyPauseFuture = possiblyPauseFuture;
+    }
+
+    void awaitResumed() throws Exception
+    {
+      Assert.assertTrue(possiblyPauseFuture.get(2, TimeUnit.SECONDS));
+    }
+
+    @Override
+    public void close() throws Exception
+    {
+      try {
+        if (!possiblyPauseFuture.isDone()) {
+          runner.resume();
+          awaitResumed();
+        }
+      }
+      finally {
+        executor.shutdownNow();
+      }
+    }
+  }
+
+  private static class ShrinkingCopyOnWriteArrayList<E> extends CopyOnWriteArrayList<E>
+  {
+    private final AtomicBoolean removeFirstElement = new AtomicBoolean(false);
+
+    void removeFirstElementDuringNextSnapshotOrSize()
+    {
+      removeFirstElement.set(true);
+    }
+
+    @Override
+    public boolean isEmpty()
+    {
+      return super.size() == 0;
+    }
+
+    @Override
+    public int size()
+    {
+      final int size = super.size();
+      if (removeFirstElement.compareAndSet(true, false)) {
+        remove(0);
+      }
+      return size;
+    }
+
+    @Override
+    public Object[] toArray()
+    {
+      final Object[] snapshot = super.toArray();
+      if (removeFirstElement.compareAndSet(true, false)) {
+        remove(0);
+      }
+      return snapshot;
+    }
+  }
+
+  private static class NoopDruidNodeAnnouncer implements DruidNodeAnnouncer
+  {
+
+    @Override
+    public void announce(DiscoveryDruidNode discoveryDruidNode)
+    {
+
+    }
+
+    @Override
+    public void unannounce(DiscoveryDruidNode discoveryDruidNode)
+    {
+
+    }
+  }
+
+  static class TestSeekableStreamIndexTaskRunner extends SeekableStreamIndexTaskRunner
+  {
+    public TestSeekableStreamIndexTaskRunner(
         SeekableStreamIndexTask task,
-        @Nullable InputRowParser parser,
         LockGranularity lockGranularityToUse
     )
     {
-      super(task, parser, lockGranularityToUse);
+      super(task, lockGranularityToUse);
     }
 
     @Override
@@ -235,7 +698,10 @@ public class SeekableStreamIndexTaskRunnerTest
     @Override
     protected Object getNextStartOffset(Object sequenceNumber)
     {
-      return null;
+      if (sequenceNumber == null) {
+        return null;
+      }
+      return String.valueOf(Long.parseLong(sequenceNumber.toString()) + 1);
     }
 
     @Override
@@ -259,7 +725,17 @@ public class SeekableStreamIndexTaskRunnerTest
     @Override
     protected OrderedSequenceNumber createSequenceNumber(Object sequenceNumber)
     {
-      return null;
+      if (sequenceNumber == null) {
+        return null;
+      }
+      return new OrderedSequenceNumber<>(sequenceNumber.toString(), false)
+      {
+        @Override
+        public int compareTo(OrderedSequenceNumber<String> other)
+        {
+          return Long.compare(Long.parseLong(get()), Long.parseLong(other.get()));
+        }
+      };
     }
 
     @Override
@@ -271,7 +747,9 @@ public class SeekableStreamIndexTaskRunnerTest
     @Override
     protected TypeReference<List<SequenceMetadata>> getSequenceMetadataTypeReference()
     {
-      return null;
+      return new TypeReference<>()
+      {
+      };
     }
 
     @Override

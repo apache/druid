@@ -47,20 +47,18 @@ public class CgroupV2DiskMonitor extends FeedDefiningMonitor
   private static final Logger LOG = new Logger(CgroupV2DiskMonitor.class);
   private static final String IO_STAT = "io.stat";
   final CgroupDiscoverer cgroupDiscoverer;
-  final Map<String, String[]> dimensions;
   private final KeyedDiff diff = new KeyedDiff();
 
-  public CgroupV2DiskMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
+  public CgroupV2DiskMonitor(CgroupDiscoverer cgroupDiscoverer, String feed)
   {
     super(feed);
     this.cgroupDiscoverer = cgroupDiscoverer;
-    this.dimensions = dimensions;
   }
 
   @VisibleForTesting
   CgroupV2DiskMonitor(CgroupDiscoverer cgroupDiscoverer)
   {
-    this(cgroupDiscoverer, ImmutableMap.of(), DEFAULT_METRICS_FEED);
+    this(cgroupDiscoverer, DEFAULT_METRICS_FEED);
   }
 
   CgroupV2DiskMonitor()
@@ -86,7 +84,6 @@ public class CgroupV2DiskMonitor extends FeedDefiningMonitor
       if (stats != null) {
         final ServiceMetricEvent.Builder builder = builder()
             .setDimension("diskName", entry.getDiskName());
-        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         builder.setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion());
         for (Map.Entry<String, Long> stat : stats.entrySet()) {
           emitter.emit(builder.setMetric(stat.getKey(), stat.getValue()));

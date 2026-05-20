@@ -50,7 +50,7 @@ public class ImmutableSegmentLoadInfoTest
             null,
             NoneShardSpec.instance(),
             0, 0
-        ), Sets.newHashSet(new DruidServerMetadata("a", "host", null, 10, ServerType.HISTORICAL, "tier", 1))
+        ), Sets.newHashSet(new DruidServerMetadata("a", "host", null, 10, null, ServerType.HISTORICAL, "tier", 1))
     );
 
     ImmutableSegmentLoadInfo serde = mapper.readValue(

@@ -49,10 +49,13 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager.BasicState;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
@@ -77,9 +80,12 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.PendingSegmentRecord;
@@ -695,6 +701,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
+        null,
+        null,
         null
     )
     {
@@ -711,6 +719,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }).anyTimes();
     EasyMock.expect(spec.getType()).andReturn("test").anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
@@ -801,6 +810,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
+        null,
+        null,
         null
     )
     {
@@ -1100,6 +1111,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
+        null,
+        null,
         null
     ) {};
 
@@ -1318,7 +1331,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
-        stopTaskCount
+        stopTaskCount,
+        null,
+        null
     )
     {
     };
@@ -1553,6 +1568,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
+        null,
+        null,
         null
     )
     {
@@ -1889,7 +1906,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -1898,7 +1916,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     Map<String, Map<String, Object>> stats = supervisor.getStats();
 
@@ -1935,7 +1954,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -1944,7 +1964,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     Assert.assertEquals(1, supervisor.getActiveTaskGroupsCount());
@@ -1995,7 +2016,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
@@ -2042,7 +2064,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task0"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     final SeekableStreamSupervisor.TaskGroup taskGroup1 = supervisor.addTaskGroupToActivelyReadingTaskGroup(
         supervisor.getTaskGroupIdForPartition("1"),
@@ -2050,7 +2073,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     final SeekableStreamSupervisor.TaskGroup taskGroup2 = supervisor.addTaskGroupToPendingCompletionTaskGroup(
         supervisor.getTaskGroupIdForPartition("2"),
@@ -2058,7 +2082,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     final PendingSegmentRecord pendingSegmentRecord0 = PendingSegmentRecord.create(
@@ -2111,6 +2136,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             )
         )
     );
+
     EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(SUPERVISOR_ID, new TestSeekableStreamDataSourceMetadata(
         new SeekableStreamEndSequenceNumbers<>(
             "stream",
@@ -2136,7 +2162,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
@@ -2145,7 +2172,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
@@ -2154,7 +2182,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task3"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
@@ -2207,7 +2236,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
@@ -2216,7 +2246,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
@@ -2225,7 +2256,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task3"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
@@ -2282,7 +2314,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
@@ -2291,7 +2324,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
@@ -2349,7 +2383,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
@@ -2358,7 +2393,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
@@ -2392,7 +2428,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -2401,7 +2438,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     verifyAll();
@@ -2431,7 +2469,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -2440,7 +2479,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     verifyAll();
@@ -2481,7 +2521,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task1"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
@@ -2490,7 +2531,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of("task2"),
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
 
     verifyAll();
@@ -2533,7 +2575,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     latch.await();
 
     supervisor.emitLag();
-    Assert.assertEquals(0, emitter.getNumEmittedEvents());
+    Assert.assertEquals(0, emitter.getMetricEvents("ingest/test/lag").size());
+    Assert.assertEquals(0, emitter.getMetricEvents("ingest/test/maxLag").size());
+    Assert.assertEquals(0, emitter.getMetricEvents("ingest/test/avgLag").size());
   }
 
   private void validateSupervisorStateAfterResetOffsets(
@@ -2561,9 +2605,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
     DruidMonitorSchedulerConfig config = new DruidMonitorSchedulerConfig();
     EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(config).times(2);
+    // ScheduledExecutors.scheduleWithFixedDelay and scheduleAtFixedRate use exec.schedule internally,
+    // so we expect 3 schedule calls (1 for delay-based offset fetching, 2 for fixed-rate lag/queue reporting)
     ScheduledExecutorService executorService = EasyMock.createMock(ScheduledExecutorService.class);
-    EasyMock.expect(executorService.scheduleWithFixedDelay(EasyMock.anyObject(), EasyMock.eq(86415000L), EasyMock.eq(300000L), EasyMock.eq(TimeUnit.MILLISECONDS))).andReturn(EasyMock.createMock(ScheduledFuture.class)).once();
-    EasyMock.expect(executorService.scheduleAtFixedRate(EasyMock.anyObject(), EasyMock.eq(86425000L), EasyMock.eq(config.getEmissionDuration().getMillis()), EasyMock.eq(TimeUnit.MILLISECONDS))).andReturn(EasyMock.createMock(ScheduledFuture.class)).times(2);
+    EasyMock.expect(executorService.schedule(EasyMock.anyObject(Runnable.class), EasyMock.anyLong(), EasyMock.eq(TimeUnit.MILLISECONDS))).andReturn(EasyMock.createMock(ScheduledFuture.class)).times(3);
+    EasyMock.expect(executorService.isShutdown()).andReturn(false).anyTimes();
 
     EasyMock.replay(executorService, spec);
     final BaseTestSeekableStreamSupervisor supervisor = new BaseTestSeekableStreamSupervisor()
@@ -2572,6 +2618,30 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       public LagStats computeLagStats()
       {
         return new LagStats(0, 0, 0);
+      }
+
+      @Override
+      protected boolean isEndOffsetExclusive()
+      {
+        return true;
+      }
+
+      @Override
+      protected boolean isOffsetAtOrBeyond(String current, String target)
+      {
+        return Long.parseLong(current) >= Long.parseLong(target);
+      }
+
+      @Override
+      protected String createPartitionIdFromString(String partitionIdString)
+      {
+        return partitionIdString;
+      }
+
+      @Override
+      protected String createSequenceOffsetFromObject(Object offsetObj)
+      {
+        return offsetObj.toString();
       }
     };
     supervisor.scheduleReporting(executorService);
@@ -2647,9 +2717,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         true,
         null,
         null,
+        null,
+        null,
         null
     );
-    SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(1, autoScalerConfig);
+    SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(1, autoScalerConfig, null);
     Assert.assertEquals(
         taskCountMax / DEFAULT_TASKS_PER_WORKER_THREAD,
         SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig)
@@ -2676,6 +2748,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         LagAggregator.DEFAULT,
+        null,
+        null,
         null,
         null,
         null
@@ -2723,13 +2797,15 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         true,
         null,
         null,
+        null,
+        null,
         0.4
     );
     SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
         "stream",
         null,
         1,
-        99,
+        null,
         new Period("PT1H"),
         new Period("PT1S"),
         new Period("PT30S"),
@@ -2741,7 +2817,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         lagAggregator,
         null,
         null,
-        1 // ensure this is overridden
+        1, // ensure this is overridden
+        null,
+        null
     )
     {
     };
@@ -2749,6 +2827,257 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertEquals(2, config.getMaxAllowedStops());
     config.setTaskCount(30);
     Assert.assertEquals(12, config.getMaxAllowedStops());
+  }
+
+  @Test
+  public void testCreateAutoscalerStoresAndReturnsAutoscaler()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+
+    replayAll();
+
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    // Test that createAutoscaler returns null when spec returns null
+    SeekableStreamSupervisorSpec mockSpec = EasyMock.createMock(SeekableStreamSupervisorSpec.class);
+    EasyMock.expect(mockSpec.createAutoscaler(supervisor)).andReturn(null).once();
+    EasyMock.replay(mockSpec);
+
+    Assert.assertNull(supervisor.createAutoscaler(mockSpec));
+    EasyMock.verify(mockSpec);
+
+    verifyAll();
+  }
+
+  @Test
+  public void testComputeUnassignedServerPriorities_whenMultipleReplicasPerPriorityIsSet()
+  {
+    final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(5, Map.of(10, 2, 20, 3));
+
+    Assert.assertEquals(5, (int) ioConfig.getReplicas());
+
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+
+    replayAll();
+
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    // No tasks assigned yet, need all 5 replicas
+    final SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup taskGroup1 =
+        supervisor.addTaskGroupToActivelyReadingTaskGroup(
+            0,
+            ImmutableMap.of("0", "0"),
+            null,
+            null,
+            Set.of(),
+            Set.of(),
+            Map.of()
+        );
+
+    Assert.assertEquals(List.of(20, 20, 20, 10, 10), supervisor.computeUnassignedServerPriorities(taskGroup1, 5));
+
+    // Two tasks with priority 10 already assigned, need 3 more replicas
+    final SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup taskGroup2 =
+        supervisor.addTaskGroupToActivelyReadingTaskGroup(
+            1,
+            ImmutableMap.of("0", "0"),
+            null,
+            null,
+            Set.of("task1", "task2"),
+            Set.of(),
+            Map.of("task1", 10, "task2", 10)
+        );
+
+    Assert.assertEquals(List.of(20, 20, 20), supervisor.computeUnassignedServerPriorities(taskGroup2, 3));
+
+    // Two tasks with priority 10 and one with priority 20 assigned, need 2 more replicas
+    final SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup taskGroup3 =
+        supervisor.addTaskGroupToActivelyReadingTaskGroup(
+            2,
+            ImmutableMap.of("0", "0"),
+            null,
+            null,
+            Set.of("task1", "task2", "task3"),
+            Set.of(),
+            Map.of("task1", 10, "task2", 10, "task3", 20)
+        );
+
+    Assert.assertEquals(List.of(20, 20), supervisor.computeUnassignedServerPriorities(taskGroup3, 2));
+
+    verifyAll();
+  }
+
+  /**
+   * Verifies that when N stored offsets are all outside stream retention, all N partitions are collected in a single
+   * pass and reset together in one {@code resetInternal()} call, producing exactly one exception event.
+   */
+  @Test
+  public void testBatchResetOfMultipleUnavailableOffsets() throws IOException
+  {
+    final StreamPartition<String> shard1Partition = StreamPartition.of(STREAM, "1");
+    final ImmutableMap<String, String> storedOffsets = ImmutableMap.of("0", "5", "1", "10");
+
+    final SeekableStreamSupervisorTuningConfig tuningConfigWithAutoReset = new SeekableStreamSupervisorTuningConfig()
+    {
+      @Override
+      public Integer getWorkerThreads()
+      {
+        return 1;
+      }
+
+      @Override
+      public Long getChatRetries()
+      {
+        return 1L;
+      }
+
+      @Override
+      public Duration getHttpTimeout()
+      {
+        return new Period("PT1M").toStandardDuration();
+      }
+
+      @Override
+      public Duration getShutdownTimeout()
+      {
+        return new Period("PT1S").toStandardDuration();
+      }
+
+      @Override
+      public Duration getRepartitionTransitionDuration()
+      {
+        return new Period("PT2M").toStandardDuration();
+      }
+
+      @Override
+      public Duration getOffsetFetchPeriod()
+      {
+        return new Period("PT5M").toStandardDuration();
+      }
+
+      @Override
+      public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
+      {
+        return new SeekableStreamIndexTaskTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+        {
+          @Override
+          public SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir)
+          {
+            return null;
+          }
+
+          @Override
+          public String toString()
+          {
+            return null;
+          }
+        };
+      }
+    };
+
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(createSupervisorIOConfig()).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(tuningConfigWithAutoReset).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+
+    final TestSeekableStreamDataSourceMetadata storedMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamEndSequenceNumbers<>(STREAM, storedOffsets)
+    );
+    // After resetting both stale partitions, no offsets remain in the metadata store.
+    final TestSeekableStreamDataSourceMetadata expectedAfterReset = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of())
+    );
+
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    // Called once in getOffsetsFromMetadataStorage() and once inside resetInternal().
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID))
+            .andReturn(storedMetadata)
+            .anyTimes();
+    // Must be called exactly once — not once per unavailable partition.
+    EasyMock.expect(
+        indexerMetadataStorageCoordinator.resetDataSourceMetadata(SUPERVISOR_ID, expectedAfterReset)
+    ).andReturn(true).times(1);
+
+    EasyMock.reset(recordSupplier);
+    EasyMock.expect(recordSupplier.getAssignment())
+            .andReturn(ImmutableSet.of(SHARD0_PARTITION, shard1Partition))
+            .anyTimes();
+    EasyMock.expect(recordSupplier.getLatestSequenceNumber(EasyMock.anyObject()))
+            .andReturn("10")
+            .anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM))
+            .andReturn(ImmutableSet.of(SHARD_ID, "1"))
+            .anyTimes();
+    // Both stored offsets are outside stream retention.
+    EasyMock.expect(recordSupplier.isOffsetAvailable(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(false)
+            .anyTimes();
+
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor()
+    {
+      @Override
+      protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
+          String stream,
+          Map<String, String> map
+      )
+      {
+        return new TestSeekableStreamDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(stream, map));
+      }
+    };
+
+    supervisor.start();
+    supervisor.runInternal();
+
+    // The StreamException is recorded exactly once — not once per unavailable partition.
+    final List<SupervisorStateManager.ExceptionEvent> exceptionEvents = supervisor.stateManager.getExceptionEvents();
+    Assert.assertEquals(1, exceptionEvents.size());
+    Assert.assertTrue(((SeekableStreamExceptionEvent) exceptionEvents.get(0)).isStreamException());
+
+    // EasyMock validates that resetDataSourceMetadata was called exactly once (see .times(1) above).
+    verifyAll();
   }
 
   private static DataSchema getDataSchema()
@@ -2774,18 +3103,27 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
   private static SeekableStreamSupervisorIOConfig createSupervisorIOConfig()
   {
-    return createSupervisorIOConfig(1, OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class));
+    return createSupervisorIOConfig(1, OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class), null);
   }
 
   private static SeekableStreamSupervisorIOConfig createSupervisorIOConfig(
       int taskCount,
-      @Nullable AutoScalerConfig autoScalerConfig
+      @Nullable Map<Integer, Integer> serverPriorityToReplicas
+  )
+  {
+    return createSupervisorIOConfig(taskCount, null, serverPriorityToReplicas);
+  }
+
+  private static SeekableStreamSupervisorIOConfig createSupervisorIOConfig(
+      int taskCount,
+      @Nullable AutoScalerConfig autoScalerConfig,
+      @Nullable Map<Integer, Integer> serverPriorityToReplicas
   )
   {
     return new SeekableStreamSupervisorIOConfig(
         "stream",
         new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
+        serverPriorityToReplicas == null ? 1 : serverPriorityToReplicas.values().stream().mapToInt(Integer::intValue).sum(),
         taskCount,
         new Period("PT1H"),
         new Period("P1D"),
@@ -2798,6 +3136,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         LagAggregator.DEFAULT,
         null,
         null,
+        null,
+        serverPriorityToReplicas,
         null
     )
     {
@@ -2829,7 +3169,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     return createSupervisorTuningConfigWithWorkerThreads(1);
   }
 
-  private static SeekableStreamSupervisorTuningConfig createSupervisorTuningConfig()
+  public static SeekableStreamSupervisorTuningConfig createSupervisorTuningConfig()
   {
     return createSupervisorTuningConfigWithWorkerThreads(null);
   }
@@ -2984,7 +3324,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           minimumMessageTime,
           maximumMessageTime,
           ioConfig.getInputFormat(),
-          ioConfig.getTaskDuration().getStandardMinutes()
+          ioConfig.getTaskDuration().getStandardMinutes(),
+          null
       )
       {
       };
@@ -2998,7 +3339,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         TreeMap<Integer, Map<String, String>> sequenceOffsets,
         SeekableStreamIndexTaskIOConfig taskIoConfig,
         SeekableStreamIndexTaskTuningConfig taskTuningConfig,
-        RowIngestionMetersFactory rowIngestionMetersFactory
+        RowIngestionMetersFactory rowIngestionMetersFactory,
+        @Nullable List<Integer> serverPrioritiesToAssign
     )
     {
       return ImmutableList.of(new TestSeekableStreamIndexTask(
@@ -3136,6 +3478,30 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     {
       return false;
     }
+
+    @Override
+    protected boolean isEndOffsetExclusive()
+    {
+      return true;
+    }
+
+    @Override
+    protected boolean isOffsetAtOrBeyond(String current, String target)
+    {
+      return Long.parseLong(current) >= Long.parseLong(target);
+    }
+
+    @Override
+    protected String createPartitionIdFromString(String partitionIdString)
+    {
+      return partitionIdString;
+    }
+
+    @Override
+    protected String createSequenceOffsetFromObject(Object offsetObj)
+    {
+      return offsetObj.toString();
+    }
   }
 
   private class TestSeekableStreamSupervisor extends BaseTestSeekableStreamSupervisor
@@ -3163,6 +3529,34 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     public void setStreamOffsets(Map<String, String> streamOffsets)
     {
       this.streamOffsets = streamOffsets;
+    }
+  }
+
+  private class StateOverrideTestSeekableStreamSupervisor extends TestSeekableStreamSupervisor
+  {
+    private final SupervisorStateManager.State state;
+
+    private StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.State state)
+    {
+      this.state = state;
+    }
+
+    @Override
+    public SupervisorStateManager.State getState()
+    {
+      return state;
+    }
+
+    /**
+     * The shared record-supplier mock in this test returns a single-partition stream, which would
+     * otherwise cause the supervisor's partition-count ceiling in DynamicAllocationTasksNotice to
+     * clamp every cooldown-test scale down to 1. Report a large partition count so the cooldown
+     * tests can exercise bounds at the autoscaler-config level only.
+     */
+    @Override
+    public int getPartitionCount()
+    {
+      return 1_000;
     }
   }
 
@@ -3247,18 +3641,24 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     protected void scheduleReporting(ScheduledExecutorService reportingExec)
     {
       SeekableStreamSupervisorIOConfig ioConfig = spec.getIoConfig();
-      reportingExec.scheduleAtFixedRate(
-          this::emitLag,
-          ioConfig.getStartDelay().getMillis(),
-          spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
-          TimeUnit.MILLISECONDS
+      ScheduledExecutors.scheduleAtFixedRate(
+          reportingExec,
+          Duration.millis(ioConfig.getStartDelay().getMillis()),
+          Duration.millis(spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis()),
+          this::emitLag
       );
-      reportingExec.scheduleAtFixedRate(
-          this::emitNoticesQueueSize,
-          ioConfig.getStartDelay().getMillis(),
-          spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
-          TimeUnit.MILLISECONDS
+      ScheduledExecutors.scheduleAtFixedRate(
+          reportingExec,
+          Duration.millis(ioConfig.getStartDelay().getMillis()),
+          Duration.millis(spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis()),
+          this::emitNoticesQueueSize
       );
+    }
+
+    @Override
+    protected boolean isEndOffsetExclusive()
+    {
+      return true;
     }
   }
 
@@ -3348,9 +3748,608 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             minimumMessageTime,
             maximumMessageTime,
             ioConfig.getInputFormat(),
-            ioConfig.getTaskDuration().getStandardMinutes()
+            ioConfig.getTaskDuration().getStandardMinutes(),
+            null
     )
     {
     };
+  }
+
+  @Test
+  public void testDiscoverExistingTasks_withServerPriorities()
+  {
+    final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(5, Map.of(10, 2, 20, 3));
+
+    Assert.assertEquals(5, (int) ioConfig.getReplicas());
+
+    final SeekableStreamIndexTaskIOConfig taskIoConfig = createTaskIoConfigExt(
+        0,
+        Map.of("0", "0"),
+        Map.of("0", "10"),
+        "test",
+        DateTimes.nowUtc(),
+        null,
+        Set.of(),
+        ioConfig
+    );
+
+    final TestSeekableStreamIndexTask task1 = createTestTask("task1", "0", 20, taskIoConfig, recordSupplier);
+    final TestSeekableStreamIndexTask task2 = createTestTask("task2", "0", 20, taskIoConfig, recordSupplier);
+    final TestSeekableStreamIndexTask task3 = createTestTask("task3", "0", 10, taskIoConfig, recordSupplier);
+
+    // Reset the spec mock to return our custom ioConfig
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of("0")).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("task1")).andReturn(Optional.of(TaskStatus.running("task1"))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("task2")).andReturn(Optional.of(TaskStatus.running("task2"))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("task3")).andReturn(Optional.of(TaskStatus.running("task3"))).anyTimes();
+    EasyMock.expect(taskStorage.getTask("task1")).andReturn(Optional.of(task1)).anyTimes();
+    EasyMock.expect(taskStorage.getTask("task2")).andReturn(Optional.of(task2)).anyTimes();
+    EasyMock.expect(taskStorage.getTask("task3")).andReturn(Optional.of(task3)).anyTimes();
+
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE))
+            .andReturn(Map.of(task1.getId(), task1, task2.getId(), task2, task3.getId(), task3))
+            .anyTimes();
+
+    EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(new TreeMap<>()))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getCurrentOffsetsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of("0", "5")))
+            .anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    supervisor.runInternal();
+
+    // Verify that tasks were discovered and their server priorities were captured
+    SeekableStreamSupervisor.TaskGroup taskGroup = supervisor.getActiveTaskGroup(0);
+    Assert.assertEquals(0, taskGroup.groupId);
+    Assert.assertEquals(3, taskGroup.tasks.size());
+
+    // Verify server priorities were correctly stored
+    Map<String, Integer> taskIdToServerPriority = taskGroup.taskIdToServerPriority;
+    Assert.assertEquals(Integer.valueOf(20), taskIdToServerPriority.get("task1"));
+    Assert.assertEquals(Integer.valueOf(20), taskIdToServerPriority.get("task2"));
+    Assert.assertEquals(Integer.valueOf(10), taskIdToServerPriority.get("task3"));
+
+    verifyAll();
+  }
+
+  /**
+   * Regression test: {@link SeekableStreamSupervisor.TaskGroup#tasks} and {@link SeekableStreamSupervisor.TaskGroup#taskIdToServerPriority}
+   * must not go out of sync when a newly-submitted task dies before the next supervisor run observes it. Otherwise, the orphan priority entry
+   * makes {@link SeekableStreamSupervisor#computeUnassignedServerPriorities} throw on the replacement attempt.
+   */
+  @Test
+  public void testReplacementSubmittedWhenPriorityTaskDiesBeforeDiscovery()
+  {
+    // replicas=2, taskCount=1, priorities {0:1, 1:1}
+    final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(1, Map.of(0, 1, 1, 1));
+
+    Assert.assertEquals(2, (int) ioConfig.getReplicas());
+
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+
+    // Run 1 starts with no active tasks in the overlord. After runInternal() we reset & replay the mock
+    // below to simulate run 2, where one replica is missing from activeTaskMap.
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE))
+            .andReturn(Map.of())
+            .anyTimes();
+
+    EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(new TreeMap<>()))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getCurrentOffsetsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(SHARD_ID, "5")))
+            .anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(ImmutableList.of()).anyTimes();
+
+    final Capture<Task> submittedTasks = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(taskQueue.add(EasyMock.capture(submittedTasks))).andReturn(true).anyTimes();
+
+    replayAll();
+
+    // Custom supervisor that honors serverPrioritiesToAssign when creating tasks so run 1 produces
+    // two replicas carrying priorities
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor()
+    {
+      @Override
+      protected List<SeekableStreamIndexTask<String, String, ByteEntity>> createIndexTasks(
+          int replicas,
+          String baseSequenceName,
+          ObjectMapper sortingMapper,
+          TreeMap<Integer, Map<String, String>> sequenceOffsets,
+          SeekableStreamIndexTaskIOConfig taskIoConfig,
+          SeekableStreamIndexTaskTuningConfig taskTuningConfig,
+          RowIngestionMetersFactory rowIngestionMetersFactory,
+          @Nullable List<Integer> serverPrioritiesToAssign
+      )
+      {
+        final List<SeekableStreamIndexTask<String, String, ByteEntity>> tasks = new ArrayList<>();
+        for (int i = 0; i < replicas; i++) {
+          final Integer priority = serverPrioritiesToAssign == null ? null : serverPrioritiesToAssign.get(i);
+          tasks.add(createTestTask(
+              baseSequenceName + "_replica_" + i + "_p" + priority,
+              "0",
+              priority,
+              taskIoConfig,
+              recordSupplier
+          ));
+        }
+        return tasks;
+      }
+    };
+
+    supervisor.start();
+    supervisor.runInternal();
+
+    // Run 1 should have submitted 2 replicas.
+    final List<Task> run1Tasks = submittedTasks.getValues();
+    Assert.assertEquals(2, run1Tasks.size());
+    final TestSeekableStreamIndexTask orphan = (TestSeekableStreamIndexTask) run1Tasks.get(0);
+    final TestSeekableStreamIndexTask survivor = (TestSeekableStreamIndexTask) run1Tasks.get(1);
+    Assert.assertEquals(
+        Set.of(0, 1),
+        Set.of(orphan.getServerPriority(), survivor.getServerPriority())
+    );
+
+    // Run 2: only the survivor is still active. The orphan died before discoverTasks() could observe it,
+    // so with the old eager-write bug it would linger in taskIdToServerPriority and block replacement.
+    EasyMock.reset(taskQueue, taskStorage);
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE))
+            .andReturn(Map.of(survivor.getId(), survivor))
+            .anyTimes();
+    EasyMock.expect(taskStorage.getStatus(survivor.getId()))
+            .andReturn(Optional.of(TaskStatus.running(survivor.getId())))
+            .anyTimes();
+    EasyMock.expect(taskStorage.getTask(survivor.getId())).andReturn(Optional.of(survivor)).anyTimes();
+    final Capture<Task> replacementCapture = Capture.newInstance();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(replacementCapture))).andReturn(true).once();
+    EasyMock.replay(taskQueue, taskStorage);
+
+    // Must not throw.
+    supervisor.runInternal();
+
+    // Replacement task should carry the orphan's missing priority, not duplicate the survivor's.
+    final TestSeekableStreamIndexTask replacement = (TestSeekableStreamIndexTask) replacementCapture.getValue();
+    Assert.assertEquals(orphan.getServerPriority(), replacement.getServerPriority());
+  }
+
+
+  @Test
+  public void testDynamicAllocationScaleUpAllowedWhenCooldownElapsed()
+  {
+    final long zeroCooldown = 0L;
+    final long unusedCooldown = Duration.standardHours(1).getMillis();
+    final StubServiceEmitter scalingEmitter = setupSupervisorForAutoScalingTest(zeroCooldown, unusedCooldown, 2);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    // minScaleUpDelay = 0 means any scale-up is immediately allowed.
+    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
+
+    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertEquals("Exactly one required-tasks emission expected", 1, events.size());
+    assertScaledToTaskCount(events.get(0), 5);
+  }
+
+  @Test
+  public void testDynamicAllocationScaleUpBlockedWhenCooldownNotElapsed()
+  {
+    final long scaleUpCooldown = Duration.standardHours(1).getMillis();
+    final long unusedCooldown = 0L;
+    final StubServiceEmitter scalingEmitter = setupSupervisorForAutoScalingTest(scaleUpCooldown, unusedCooldown, 2);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    // First scale-up succeeds and stamps the last-scale timestamp.
+    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
+    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount());
+
+    // Second scale-up is within the 1h minScaleUpDelay window and must be blocked.
+    supervisor.handleDynamicAllocationTasksNotice(() -> 7, () -> {}, scalingEmitter);
+    Assert.assertEquals("Second scale-up must not take effect", 5, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertEquals("Two required-tasks emissions expected (one applied, one skipped)", 2, events.size());
+    // First emission: the successful scale carries no skip-reason dim and reports the applied count.
+    assertScaledToTaskCount(events.get(0), 5);
+    // Second emission: the gated scale carries the cooldown skip-reason dim and the proposed (not applied) count.
+    assertScaleSkipped(events.get(1), 7, "Scale cooldown not elapsed yet");
+  }
+
+  @Test
+  public void testDynamicAllocationScaleDownAllowedWhenCooldownElapsed()
+  {
+    final long unusedCooldown = Duration.standardHours(1).getMillis();
+    final long zeroCooldown = 0L;
+    final StubServiceEmitter scalingEmitter = setupSupervisorForAutoScalingTest(unusedCooldown, zeroCooldown, 5);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    // minScaleDownDelay = 0 means any scale-down is immediately allowed.
+    supervisor.handleDynamicAllocationTasksNotice(() -> 2, () -> {}, scalingEmitter);
+
+    Assert.assertEquals(2, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertEquals("Exactly one required-tasks emission expected", 1, events.size());
+    assertScaledToTaskCount(events.get(0), 2);
+  }
+
+  @Test
+  public void testDynamicAllocationScaleDownBlockedWhenCooldownNotElapsed()
+  {
+    final long unusedCooldown = 0L;
+    final long scaleDownCooldown = Duration.standardHours(1).getMillis();
+    final StubServiceEmitter scalingEmitter = setupSupervisorForAutoScalingTest(unusedCooldown, scaleDownCooldown, 5);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    // First scale-down succeeds and stamps the last-scale timestamp.
+    supervisor.handleDynamicAllocationTasksNotice(() -> 3, () -> {}, scalingEmitter);
+    Assert.assertEquals(3, supervisor.getIoConfig().getTaskCount());
+
+    // Second scale-down is within the 1h minScaleDownDelay window and must be blocked.
+    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, scalingEmitter);
+    Assert.assertEquals("Second scale-down must not take effect", 3, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertEquals("Two required-tasks emissions expected (one applied, one skipped)", 2, events.size());
+    assertScaledToTaskCount(events.get(0), 3);
+    assertScaleSkipped(events.get(1), 1, "Scale cooldown not elapsed yet");
+  }
+
+  @Test
+  public void testDynamicAllocationClampsDesiredAboveMaxToMax()
+  {
+    // Scaler returns 20, but taskCountMax=10. Supervisor must clamp and scale to 10.
+    final StubServiceEmitter scalingEmitter =
+        setupSupervisorForAutoScalingTest(0L, 0L, 3, 1, 10);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> 20, () -> {}, scalingEmitter);
+
+    // Task count is clamped to max (10), not the scaler's desired (20).
+    Assert.assertEquals(10, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertEquals(1, events.size());
+    // The emitted metric value reflects the scaler's unclamped desired (the operator hint), not
+    // the clamped value the supervisor actually applied.
+    assertScaledToTaskCount(events.get(0), 20);
+  }
+
+  @Test
+  public void testDynamicAllocationClampsDesiredBelowMinToMin()
+  {
+    // Scaler returns 1, but taskCountMin=3. Supervisor must clamp and scale to 3.
+    final StubServiceEmitter scalingEmitter =
+        setupSupervisorForAutoScalingTest(0L, 0L, 5, 3, 10);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, scalingEmitter);
+
+    Assert.assertEquals(3, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertEquals(1, events.size());
+    assertScaledToTaskCount(events.get(0), 1);
+  }
+
+  @Test
+  public void testDynamicAllocationEmitsAlreadyAtMaxWhenCurrentIsAtMaxAndDesiredAboveMax()
+  {
+    // Current (10) is already at configured max (10). Scaler wants 15 (above max). Supervisor
+    // clamps to 10 which equals current -> emits "Already at max task count" skip reason.
+    final StubServiceEmitter scalingEmitter =
+        setupSupervisorForAutoScalingTest(0L, 0L, 10, 1, 10);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> 15, () -> {}, scalingEmitter);
+
+    Assert.assertEquals("Task count must not change when at max", 10, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertEquals(1, events.size());
+    assertScaleSkipped(events.get(0), 15, "Already at max task count");
+  }
+
+  @Test
+  public void testDynamicAllocationEmitsAlreadyAtMinWhenCurrentIsAtMinAndDesiredBelowMin()
+  {
+    // Current (3) is already at configured min (3). Scaler wants 1 (below min). Supervisor clamps
+    // to 3 which equals current -> emits "Already at min task count" skip reason.
+    final StubServiceEmitter scalingEmitter =
+        setupSupervisorForAutoScalingTest(0L, 0L, 3, 3, 10);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, scalingEmitter);
+
+    Assert.assertEquals("Task count must not change when at min", 3, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertEquals(1, events.size());
+    assertScaleSkipped(events.get(0), 1, "Already at min task count");
+  }
+
+  @Test
+  public void testDynamicAllocationEmitsNothingWhenDesiredEqualsCurrent()
+  {
+    // No skip metric in the steady-state no-op (avoid emitting on every tick).
+    final StubServiceEmitter scalingEmitter =
+        setupSupervisorForAutoScalingTest(0L, 0L, 5, 1, 10);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
+
+    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertTrue("No metric should be emitted in the steady-state no-op case", events.isEmpty());
+  }
+
+  @Test
+  public void testDynamicAllocationEmitsPathologicalSkipReasonWhenScalerReturnsNonPositive()
+  {
+    // Scaler contract: a non-positive return means "I could not compute a useful answer".
+    // Supervisor must not scale and must emit a skip reason surfacing the scaler's failure.
+    final StubServiceEmitter scalingEmitter =
+        setupSupervisorForAutoScalingTest(0L, 0L, 5, 1, 10);
+    final TestSeekableStreamSupervisor supervisor =
+        new StateOverrideTestSeekableStreamSupervisor(SupervisorStateManager.BasicState.RUNNING);
+
+    supervisor.handleDynamicAllocationTasksNotice(() -> -1, () -> {}, scalingEmitter);
+
+    Assert.assertEquals("Task count must not change on pathological return", 5, supervisor.getIoConfig().getTaskCount());
+
+    final List<ServiceMetricEvent> events =
+        scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
+    Assert.assertEquals(1, events.size());
+    assertScaleSkipped(events.get(0), -1, "Auto-scaler failed to compute a task count");
+  }
+
+  /**
+   * Asserts that a required-tasks emission represents an scale event: it carries the standard
+   * supervisor/datasource/stream dims, no scalingSkipReason dim, and the metric value matches the
+   * new task count.
+   */
+  private static void assertScaledToTaskCount(ServiceMetricEvent event, int expectedRequiredCount)
+  {
+    assertStandardDimensions(event);
+    Assert.assertNull(
+        "Attempted scale must not carry a scalingSkipReason dim",
+        event.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION)
+    );
+    Assert.assertEquals(expectedRequiredCount, event.getValue().intValue());
+  }
+
+  /**
+   * Asserts that a required-tasks emission represents a skipped scale: it carries the standard
+   * supervisor/datasource/stream dims, a scalingSkipReason dim equal to {@code expectedReason},
+   * and the metric value matches the proposed (not applied) task count.
+   */
+  private static void assertScaleSkipped(ServiceMetricEvent event, int expectedRequiredCount, String expectedReason)
+  {
+    assertStandardDimensions(event);
+    Assert.assertEquals(
+        expectedReason,
+        event.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION)
+    );
+    Assert.assertEquals(expectedRequiredCount, event.getValue().intValue());
+  }
+
+  private static void assertStandardDimensions(ServiceMetricEvent event)
+  {
+    final Map<String, Object> dims = event.getUserDims();
+    Assert.assertEquals(SUPERVISOR_ID, dims.get(DruidMetrics.SUPERVISOR_ID));
+    Assert.assertEquals(DATASOURCE, dims.get(DruidMetrics.DATASOURCE));
+    Assert.assertEquals(STREAM, dims.get(DruidMetrics.STREAM));
+  }
+
+  private static TestSeekableStreamIndexTask createTestTask(String taskId, String groupId, @Nullable Integer serverPriority, SeekableStreamIndexTaskIOConfig taskIoConfig, RecordSupplier recordSupplier)
+  {
+    return new TestSeekableStreamIndexTask(
+        taskId,
+        null,
+        null,
+        getDataSchema(),
+        getTuningConfig().convertToTaskTuningConfig(),
+        taskIoConfig,
+        null,
+        groupId,
+        null,
+        recordSupplier,
+        serverPriority
+    );
+  }
+
+  /**
+   * Resets the {@link #spec} and {@link #taskMaster} mocks so the supervisor sees an ioConfig with
+   * the given direction-specific cooldowns and so {@code changeTaskCountInIOConfig} can run
+   * without hitting unmocked calls. Returns a dedicated emitter for the caller to pass into the
+   * notice handler so dynamic-allocation events can be asserted in isolation.
+   */
+  private StubServiceEmitter setupSupervisorForAutoScalingTest(
+      long minScaleUpDelayMillis,
+      long minScaleDownDelayMillis,
+      int initialTaskCount
+  )
+  {
+    return setupSupervisorForAutoScalingTest(minScaleUpDelayMillis, minScaleDownDelayMillis, initialTaskCount, 1, 100);
+  }
+
+  private StubServiceEmitter setupSupervisorForAutoScalingTest(
+      long minScaleUpDelayMillis,
+      long minScaleDownDelayMillis,
+      int initialTaskCount,
+      int taskCountMin,
+      int taskCountMax
+  )
+  {
+    final AutoScalerConfig autoScalerConfig = testAutoScalerConfig(
+        minScaleUpDelayMillis,
+        minScaleDownDelayMillis,
+        taskCountMin,
+        taskCountMax
+    );
+    final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(
+        initialTaskCount,
+        autoScalerConfig,
+        null
+    );
+    return resetSpecAndTaskMasterForScaling(ioConfig);
+  }
+
+  /**
+   * Returns a minimal test-only {@link AutoScalerConfig}
+   */
+  private static AutoScalerConfig testAutoScalerConfig(long minScaleUpDelayMillis, long minScaleDownDelayMillis)
+  {
+    return testAutoScalerConfig(minScaleUpDelayMillis, minScaleDownDelayMillis, 1, 100);
+  }
+
+  private static AutoScalerConfig testAutoScalerConfig(
+      long minScaleUpDelayMillis,
+      long minScaleDownDelayMillis,
+      int taskCountMin,
+      int taskCountMax
+  )
+  {
+    return new AutoScalerConfig()
+    {
+      @Override
+      public boolean getEnableTaskAutoScaler()
+      {
+        return true;
+      }
+
+      @Override
+      public long getMinTriggerScaleActionFrequencyMillis()
+      {
+        return 0L;
+      }
+
+      @Override
+      public Duration getMinScaleUpDelay()
+      {
+        return Duration.millis(minScaleUpDelayMillis);
+      }
+
+      @Override
+      public Duration getMinScaleDownDelay()
+      {
+        return Duration.millis(minScaleDownDelayMillis);
+      }
+
+      @Override
+      public int getTaskCountMax()
+      {
+        return taskCountMax;
+      }
+
+      @Override
+      public int getTaskCountMin()
+      {
+        return taskCountMin;
+      }
+
+      @Override
+      public Integer getTaskCountStart()
+      {
+        return null;
+      }
+
+      @Override
+      public Double getStopTaskCountRatio()
+      {
+        return null;
+      }
+
+      @Override
+      public SupervisorTaskAutoScaler createAutoScaler(
+          Supervisor supervisor,
+          SupervisorSpec spec,
+          ServiceEmitter emitter
+      )
+      {
+        throw new UnsupportedOperationException("test autoscaler config: createAutoScaler not used");
+      }
+    };
+  }
+
+  private StubServiceEmitter resetSpecAndTaskMasterForScaling(SeekableStreamSupervisorIOConfig ioConfig)
+  {
+    final StubServiceEmitter scalingEmitter = new StubServiceEmitter("scaling", "localhost");
+
+    EasyMock.reset(spec, taskMaster);
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    // changeTaskCountInIOConfig calls this; absent path just logs and moves on.
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
+
+    replayAll();
+    return scalingEmitter;
   }
 }

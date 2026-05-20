@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka.supervisor;
 
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SupervisorIOConfigBuilder;
 
 import java.util.Map;
@@ -33,6 +34,7 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
   private String topic;
   private String topicPattern;
   private Map<String, Object> consumerProperties;
+  private BoundedStreamConfig boundedStreamConfig;
 
   public KafkaIOConfigBuilder withTopic(String topic)
   {
@@ -68,6 +70,12 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
     return this;
   }
 
+  public KafkaIOConfigBuilder withBoundedStreamConfig(BoundedStreamConfig boundedStreamConfig)
+  {
+    this.boundedStreamConfig = boundedStreamConfig;
+    return this;
+  }
+
   @Override
   public KafkaSupervisorIOConfig build()
   {
@@ -92,7 +100,9 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
         null,
         idleConfig,
         stopTaskCount,
-        null
+        null,
+        null,
+        boundedStreamConfig
     );
   }
 }

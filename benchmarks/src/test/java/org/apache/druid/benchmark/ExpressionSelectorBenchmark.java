@@ -499,25 +499,23 @@ public class ExpressionSelectorBenchmark
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
-                                                             ImmutableList.of(
-                                                                 new ExpressionVirtualColumn(
-                                                                     "ll",
-                                                                     "lookup(s, 'lookyloo')",
-                                                                     ColumnType.STRING,
-                                                                     LookupEnabledTestExprMacroTable.INSTANCE
-                                                                 ),
-                                                                 new ExpressionVirtualColumn(
-                                                                     "v",
-                                                                     "case_searched(n == 1001, -1, "
-                                                                     + "ll == 'asd1', 1, "
-                                                                     + "ll == 'asd2', 2, "
-                                                                     + "ll == 'asd3', 3, "
-                                                                     + "ll == 'asd4', 4, "
-                                                                     + "ll == 'asd5', 5, "
-                                                                     + "-2)",
-                                                                     ColumnType.LONG,
-                                                                     LookupEnabledTestExprMacroTable.INSTANCE
-                                                                 )
+                                                             new ExpressionVirtualColumn(
+                                                                 "ll",
+                                                                 "lookup(s, 'lookyloo')",
+                                                                 ColumnType.STRING,
+                                                                 LookupEnabledTestExprMacroTable.INSTANCE
+                                                             ),
+                                                             new ExpressionVirtualColumn(
+                                                                 "v",
+                                                                 "case_searched(n == 1001, -1, "
+                                                                 + "ll == 'asd1', 1, "
+                                                                 + "ll == 'asd2', 2, "
+                                                                 + "ll == 'asd3', 3, "
+                                                                 + "ll == 'asd4', 4, "
+                                                                 + "ll == 'asd5', 5, "
+                                                                 + "-2)",
+                                                                 ColumnType.LONG,
+                                                                 LookupEnabledTestExprMacroTable.INSTANCE
                                                              )
                                                          )
                                                      )

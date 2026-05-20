@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.TestKubernetesClient;
@@ -84,11 +85,11 @@ class SingleContainerTaskAdapterTest
   @Test
   public void testSingleContainerSupport() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "namespace");
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpec.yaml", Pod.class);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("namespace")
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                        .withNamespace("namespace")
+                                                                        .build();
     SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,

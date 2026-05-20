@@ -179,6 +179,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             }
             multiline={false}
             popoverProps={{}}
+            rel="noopener noreferrer"
             selected={false}
             shouldDismissPopover={true}
             target="_blank"
@@ -257,6 +258,16 @@ exports[`HeaderBar matches snapshot 1`] = `
           <Blueprint5.MenuItem
             active={false}
             disabled={false}
+            icon="applications"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={{}}
+            shouldDismissPopover={true}
+            text="Broker dynamic config"
+          />
+          <Blueprint5.MenuItem
+            active={false}
+            disabled={false}
             icon="wrench"
             multiline={false}
             onClick={[Function]}
@@ -292,7 +303,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             multiline={false}
             popoverProps={{}}
             shouldDismissPopover={true}
-            text="Capabilty detection"
+            text="Capability detection"
           >
             <Blueprint5.MenuItem
               active={false}
@@ -380,6 +391,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             icon="th"
             multiline={false}
             popoverProps={{}}
+            rel="noopener noreferrer"
             shouldDismissPopover={true}
             target="_blank"
             text="Docs"
@@ -391,6 +403,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             icon="user"
             multiline={false}
             popoverProps={{}}
+            rel="noopener noreferrer"
             shouldDismissPopover={true}
             target="_blank"
             text="User group"
@@ -402,6 +415,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             icon="chat"
             multiline={false}
             popoverProps={{}}
+            rel="noopener noreferrer"
             shouldDismissPopover={true}
             target="_blank"
             text="Slack channel"
@@ -413,6 +427,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             icon="git-branch"
             multiline={false}
             popoverProps={{}}
+            rel="noopener noreferrer"
             shouldDismissPopover={true}
             target="_blank"
             text="GitHub"

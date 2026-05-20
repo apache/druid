@@ -157,3 +157,15 @@ Load the T-Digest extension to use the following functions. See the [T-Digest ex
 |--------|-----|-------|
 |`TDIGEST_QUANTILE(expr, quantileFraction, [compression])`|Builds a T-Digest sketch on values produced by `expr` and returns the value for the quantile. Compression parameter (default value 100) determines the accuracy and size of the sketch. Higher compression means higher accuracy but more space to store sketches.|`Double.NaN`|
 |`TDIGEST_GENERATE_SKETCH(expr, [compression])`|Builds a T-Digest sketch on values produced by `expr`. Compression parameter (default value 100) determines the accuracy and size of the sketch Higher compression means higher accuracy but more space to store sketches.|Empty base64 encoded T-Digest sketch STRING|
+
+## Histogram functions
+
+### Spectator Histogram
+
+Load the [Spectator Histogram extension](../development/extensions-contrib/spectator-histogram.md) to use the following functions.
+
+|Function|Notes|Default|
+|--------|-----|-------|
+|`SPECTATOR_COUNT(expr)`|Counts the total number of observations (data points) in a Spectator histogram. The `expr` can be either a numeric column (which will be aggregated into a histogram) or a pre-aggregated [Spectator histogram](../development/extensions-contrib/spectator-histogram.md) column.|`0`|
+|`SPECTATOR_PERCENTILE(expr, percentile)`|Computes an approximate percentile value from a Spectator histogram. The `expr` can be either a numeric column (which will be aggregated into a histogram) or a pre-aggregated [Spectator histogram](../development/extensions-contrib/spectator-histogram.md) column. The `percentile` should be between 0 and 100.|`NaN`|
+|`SPECTATOR_PERCENTILE(expr, ARRAY[p1, p2, ...])`|Computes multiple approximate percentile values from a Spectator histogram and returns them as a DOUBLE ARRAY. The `expr` can be either a numeric column (which will be aggregated into a histogram) or a pre-aggregated [Spectator histogram](../development/extensions-contrib/spectator-histogram.md) column. Each percentile value in the array should be between 0 and 100. This is more efficient than calling `SPECTATOR_PERCENTILE` multiple times for different percentiles.|`null`|

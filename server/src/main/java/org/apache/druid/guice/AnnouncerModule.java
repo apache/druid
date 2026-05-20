@@ -20,12 +20,10 @@
 package org.apache.druid.guice;
 
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.curator.CuratorConfig;
-import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.curator.announcement.PathChildrenAnnouncer;
 import org.apache.druid.curator.announcement.ServiceAnnouncer;
@@ -33,39 +31,17 @@ import org.apache.druid.guice.annotations.DirectExecutorAnnouncer;
 import org.apache.druid.guice.annotations.SingleThreadedAnnouncer;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
-import org.apache.druid.server.coordination.CuratorDataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.server.coordination.DataSegmentAnnouncerProvider;
-import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
-import org.apache.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
-
-import java.util.Properties;
 
 /**
  */
 public class AnnouncerModule implements Module
 {
-  private boolean isZkEnabled = true;
-
-  @Inject
-  public void configure(Properties properties)
-  {
-    isZkEnabled = ZkEnablementConfig.isEnabled(properties);
-  }
-
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.announcer", BatchDataSegmentAnnouncerConfig.class);
-    JsonConfigProvider.bind(binder, "druid.announcer", DataSegmentAnnouncerProvider.class);
-    binder.bind(DataSegmentAnnouncer.class).toProvider(DataSegmentAnnouncerProvider.class);
+    binder.bind(DataSegmentAnnouncer.class).to(BatchDataSegmentAnnouncer.class);
     binder.bind(BatchDataSegmentAnnouncer.class).in(ManageLifecycleAnnouncements.class);
-
-    if (isZkEnabled) {
-      binder.bind(DataSegmentServerAnnouncer.class).to(CuratorDataSegmentServerAnnouncer.class).in(LazySingleton.class);
-    } else {
-      binder.bind(DataSegmentServerAnnouncer.class).to(DataSegmentServerAnnouncer.Noop.class).in(LazySingleton.class);
-    }
   }
 
   @Provides

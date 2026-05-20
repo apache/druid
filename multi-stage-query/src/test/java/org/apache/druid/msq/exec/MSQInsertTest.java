@@ -70,6 +70,7 @@ import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
@@ -117,7 +118,8 @@ public class MSQInsertTest extends MSQTestBase
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
         {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
-        {WITH_APPEND_LOCK, QUERY_CONTEXT_WITH_APPEND_LOCK}
+        {WITH_APPEND_LOCK, QUERY_CONTEXT_WITH_APPEND_LOCK},
+        {USE_COMBINER, USE_COMBINER_MSQ_CONTEXT}
     };
     return Arrays.asList(data);
   }
@@ -545,31 +547,31 @@ public class MSQInsertTest extends MSQTestBase
                                             .add("delta", ColumnType.LONG)
                                             .build();
     AggregateProjectionMetadata expectedProjection = new AggregateProjectionMetadata(
-        AggregateProjectionMetadata.schemaBuilder("channel_added_hourly")
-                                   .timeColumnName(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
-                                   .virtualColumns(
+        AggregateProjectionSchema.schemaBuilder("channel_added_hourly")
+                                 .timeColumnName(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+                                 .virtualColumns(
                                        Granularities.toVirtualColumn(
                                            Granularities.HOUR,
                                            Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
                                        )
                                    )
-                                   .groupAndOrder(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel")
-                                   .aggregators(new LongSumAggregatorFactory("sum_added", "added"))
-                                   .build(),
+                                 .groupAndOrder(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel")
+                                 .aggregators(new LongSumAggregatorFactory("sum_added", "added"))
+                                 .build(),
         16
     );
     AggregateProjectionMetadata expectedProjection2 = new AggregateProjectionMetadata(
-        AggregateProjectionMetadata.schemaBuilder("channel_delta_daily")
-                                   .timeColumnName(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
-                                   .virtualColumns(
+        AggregateProjectionSchema.schemaBuilder("channel_delta_daily")
+                                 .timeColumnName(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+                                 .virtualColumns(
                                        Granularities.toVirtualColumn(
                                            Granularities.DAY,
                                            Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
                                        )
                                    )
-                                   .groupAndOrder(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel")
-                                   .aggregators(new LongSumAggregatorFactory("sum_delta", "delta"))
-                                   .build(),
+                                 .groupAndOrder(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel")
+                                 .aggregators(new LongSumAggregatorFactory("sum_delta", "delta"))
+                                 .build(),
         11
     );
 

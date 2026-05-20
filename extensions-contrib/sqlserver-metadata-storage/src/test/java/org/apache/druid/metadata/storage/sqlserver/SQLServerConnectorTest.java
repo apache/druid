@@ -55,6 +55,36 @@ public class SQLServerConnectorTest
   }
 
   @Test
+  public void testIsUniqueConstraintViolation()
+  {
+    SQLServerConnector connector = new SQLServerConnector(
+        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
+        Suppliers.ofInstance(
+            MetadataStorageTablesConfig.fromBase(null)
+        ),
+        CentralizedDatasourceSchemaConfig.create()
+    );
+
+    // SQL Server integrity_constraint_violation SQL state (23000)
+    Assert.assertTrue(connector.isUniqueConstraintViolation(
+        new SQLException("Violation of UNIQUE KEY constraint", "23000")
+    ));
+
+    // Different SQL state should return false
+    Assert.assertFalse(connector.isUniqueConstraintViolation(
+        new SQLException("some other error", "42000")
+    ));
+
+    // SQLException wrapped in another exception (tests cause chain traversal)
+    Assert.assertTrue(connector.isUniqueConstraintViolation(
+        new RuntimeException(new SQLException("Duplicate key", "23000"))
+    ));
+
+    // Non-SQLException exception
+    Assert.assertFalse(connector.isUniqueConstraintViolation(new Exception("not a SQLException")));
+  }
+
+  @Test
   public void testLimitClause()
   {
     SQLServerConnector connector = new SQLServerConnector(

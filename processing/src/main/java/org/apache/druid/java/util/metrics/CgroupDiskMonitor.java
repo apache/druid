@@ -33,41 +33,34 @@ import java.util.Map;
 public class CgroupDiskMonitor extends FeedDefiningMonitor
 {
   private static final Logger LOG = new Logger(CgroupDiskMonitor.class);
-  final CgroupDiscoverer cgroupDiscoverer;
-  final Map<String, String[]> dimensions;
+  private final CgroupDiscoverer cgroupDiscoverer;
   private final KeyedDiff diff = new KeyedDiff();
   private final boolean isRunningOnCgroupsV2;
   private final CgroupV2DiskMonitor cgroupV2DiskMonitor;
 
-  public CgroupDiskMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
+  public CgroupDiskMonitor(CgroupDiscoverer cgroupDiscoverer, String feed)
   {
     super(feed);
     this.cgroupDiscoverer = cgroupDiscoverer;
-    this.dimensions = dimensions;
-    
+
     // Check if we're running on cgroups v2
     this.isRunningOnCgroupsV2 = cgroupDiscoverer.getCgroupVersion().equals(CgroupVersion.V2);
     if (isRunningOnCgroupsV2) {
-      this.cgroupV2DiskMonitor = new CgroupV2DiskMonitor(cgroupDiscoverer, dimensions, feed);
+      this.cgroupV2DiskMonitor = new CgroupV2DiskMonitor(cgroupDiscoverer, feed);
       LOG.info("Detected cgroups v2, using CgroupV2DiskMonitor behavior for accurate metrics");
     } else {
       this.cgroupV2DiskMonitor = null;
     }
   }
 
-  public CgroupDiskMonitor(final Map<String, String[]> dimensions, String feed)
+  public CgroupDiskMonitor(String feed)
   {
-    this(ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(), dimensions, feed);
-  }
-
-  public CgroupDiskMonitor(final Map<String, String[]> dimensions)
-  {
-    this(dimensions, DEFAULT_METRICS_FEED);
+    this(ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(), feed);
   }
 
   public CgroupDiskMonitor()
   {
-    this(ImmutableMap.of());
+    this(DEFAULT_METRICS_FEED);
   }
 
   @Override
@@ -97,7 +90,6 @@ public class CgroupDiskMonitor extends FeedDefiningMonitor
       if (stats != null) {
         final ServiceMetricEvent.Builder builder = builder()
             .setDimension("diskName", entry.getValue().getDiskName());
-        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         builder.setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion());
         for (Map.Entry<String, Long> stat : stats.entrySet()) {
           emitter.emit(builder.setMetric(stat.getKey(), stat.getValue()));

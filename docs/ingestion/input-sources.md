@@ -155,7 +155,7 @@ Sample specs:
              "protocol" : "http",
              "disableChunkedEncoding" : true,
              "enablePathStyleAccess" : true,
-             "forceGlobalBucketAccessEnabled" : false
+             "crossRegionAccessEnabled" : false
          },
          "proxyConfig": {
              "host" : "proxy-s3.aws.com",
@@ -564,7 +564,7 @@ Sample specs:
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |type|Set the value to `hdfs`.|None|yes|
-|paths|HDFS paths. Can be either a JSON array or comma-separated string of paths. Wildcards like `*` are supported in these paths. Empty files located under one of the given paths will be skipped.|None|yes|
+|paths|HDFS paths. Can be either a JSON array or comma-separated string of paths. Wildcards like `*` are supported in these paths.<br /><br />Empty files located under one of the given paths will be skipped. Hidden files and directories whose names start with `_` or `.` are automatically excluded.<br /><br />When a path points to a directory, only the immediate files in that directory are listed; subdirectories are not traversed. To ingest files from nested directories, use glob patterns such as `hdfs://namenode_host/data/**/*.json`.|None|yes|
 |systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (URI) and `__file_path` (path component of URI).|None|no|
 
 You can also ingest from other storage using the HDFS input source if the HDFS client supports that storage.
@@ -1063,6 +1063,7 @@ The following is a sample spec for a S3 warehouse source:
 |icebergCatalog|The JSON Object used to define the catalog that manages the configured Iceberg table.|yes|
 |warehouseSource|The JSON Object that defines the native input source for reading the data files from the warehouse.|yes|
 |snapshotTime|Timestamp in ISO8601 DateTime format that will be used to fetch the most recent snapshot as of this time.|no|
+|residualFilterMode|Controls how residual filters are handled when the filter results in a residual. This typically happens when an Iceberg filter targets a non-partition column: files may contain rows that don't match the filter (residual rows). Valid values are: `ignore` (default, ingest all rows, and log a warning), and `fail` (fail the ingestion job). Use `fail` to ensure no excess data is being ingested if you don't have filters in transformSpec.|no|
 
 ### Catalog Object
 

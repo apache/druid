@@ -19,23 +19,23 @@
 
 package org.apache.druid.frame;
 
-import com.google.common.primitives.Ints;
-import net.jpountz.lz4.LZ4Compressor;
-import net.jpountz.lz4.LZ4Factory;
-import net.jpountz.lz4.LZ4SafeDecompressor;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.frame.channel.ByteTracker;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.wire.FrameCompression;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
+import java.util.Objects;
 
 /**
  * A data frame.
@@ -66,17 +66,7 @@ import java.nio.channels.WritableByteChannel;
  * as little-endian longs.
  * - NNN bytes: regions, back-to-back.
  *
- * There is also a compressed frame format. Compressed frames are written by {@link #writeTo} when "compress" is
- * true, and decompressed by {@link #decompress}. Format:
- *
- * - 1 byte: compression type: {@link CompressionStrategy#getId()}. Currently, only LZ4 is supported.
- * - 8 bytes: compressed frame length, little-endian long
- * - 8 bytes: uncompressed frame length (numBytes), little-endian long
- * - NNN bytes: LZ4-compressed frame
- * - 8 bytes: 64-bit xxhash checksum of prior content, including 16-byte header and compressed frame, little-endian long
- *
- * Note to developers: if we end up needing to add more fields here, consider introducing a Smile (or Protobuf, etc)
- * header to make it simpler to add more fields.
+ * There is also a compressed frame format. See {@link FrameCompression}.
  */
 public class Frame
 {
@@ -84,19 +74,8 @@ public class Frame
       Byte.BYTES /* version */ +
       Long.BYTES /* total size */ +
       Integer.BYTES /* number of rows */ +
-      Integer.BYTES /* number of columns */ +
+      Integer.BYTES /* number of regions */ +
       Byte.BYTES /* permuted flag */;
-
-  // Compression type, compressed length, uncompressed length
-  public static final int COMPRESSED_FRAME_HEADER_SIZE = Byte.BYTES + Long.BYTES * 2;
-  public static final int COMPRESSED_FRAME_TRAILER_SIZE = Long.BYTES; // Checksum
-  public static final int COMPRESSED_FRAME_ENVELOPE_SIZE = COMPRESSED_FRAME_HEADER_SIZE
-                                                           + COMPRESSED_FRAME_TRAILER_SIZE;
-
-  private static final LZ4Compressor LZ4_COMPRESSOR = LZ4Factory.fastestInstance().fastCompressor();
-  private static final LZ4SafeDecompressor LZ4_DECOMPRESSOR = LZ4Factory.fastestInstance().safeDecompressor();
-
-  private static final int CHECKSUM_SEED = 0;
 
   private final Memory memory;
   private final FrameType frameType;
@@ -180,73 +159,7 @@ public class Frame
    */
   public static Frame decompress(final Memory memory, final long position, final long length)
   {
-    if (memory.getCapacity() < position + length) {
-      throw new ISE("Provided position, length is out of bounds");
-    }
-
-    if (length < COMPRESSED_FRAME_ENVELOPE_SIZE) {
-      throw new ISE("Region too short");
-    }
-
-    // Verify checksum.
-    final long expectedChecksum = memory.getLong(position + length - COMPRESSED_FRAME_TRAILER_SIZE);
-    final long actualChecksum = memory.xxHash64(position, length - COMPRESSED_FRAME_TRAILER_SIZE, CHECKSUM_SEED);
-
-    if (expectedChecksum != actualChecksum) {
-      throw new ISE("Checksum mismatch");
-    }
-
-    final byte compressionTypeId = memory.getByte(position);
-    final CompressionStrategy compressionStrategy = CompressionStrategy.forId(compressionTypeId);
-
-    if (compressionStrategy != CompressionStrategy.LZ4) {
-      throw new ISE("Unsupported compression strategy [%s]", compressionStrategy);
-    }
-
-    final int compressedFrameLength = Ints.checkedCast(memory.getLong(position + Byte.BYTES));
-    final int uncompressedFrameLength = Ints.checkedCast(memory.getLong(position + Byte.BYTES + Long.BYTES));
-    final int compressedFrameLengthFromRegionLength = Ints.checkedCast(length - COMPRESSED_FRAME_ENVELOPE_SIZE);
-    final long frameStart = position + COMPRESSED_FRAME_HEADER_SIZE;
-
-    // Verify length.
-    if (compressedFrameLength != compressedFrameLengthFromRegionLength) {
-      throw new ISE(
-          "Compressed sizes disagree: [%d] (embedded) vs [%d] (region length)",
-          compressedFrameLength,
-          compressedFrameLengthFromRegionLength
-      );
-    }
-
-    if (memory.hasByteBuffer()) {
-      // Decompress directly out of the ByteBuffer.
-      final ByteBuffer srcBuffer = memory.getByteBuffer();
-      final ByteBuffer dstBuffer = ByteBuffer.allocate(uncompressedFrameLength);
-      final int numBytesDecompressed =
-          LZ4_DECOMPRESSOR.decompress(
-              srcBuffer,
-              Ints.checkedCast(memory.getRegionOffset() + frameStart),
-              compressedFrameLength,
-              dstBuffer,
-              0,
-              uncompressedFrameLength
-          );
-
-      // Sanity check.
-      if (numBytesDecompressed != uncompressedFrameLength) {
-        throw new ISE(
-            "Expected to decompress [%d] bytes but got [%d] bytes",
-            uncompressedFrameLength,
-            numBytesDecompressed
-        );
-      }
-
-      return Frame.wrap(dstBuffer);
-    } else {
-      // Copy first, then decompress.
-      final byte[] compressedFrame = new byte[compressedFrameLength];
-      memory.getByteArray(frameStart, compressedFrame, 0, compressedFrameLength);
-      return Frame.wrap(LZ4_DECOMPRESSOR.decompress(compressedFrame, uncompressedFrameLength));
-    }
+    return Frame.wrap(FrameCompression.decompress(memory, position, length));
   }
 
   /**
@@ -254,7 +167,7 @@ public class Frame
    */
   public static int compressionBufferSize(final long frameBytes)
   {
-    return COMPRESSED_FRAME_ENVELOPE_SIZE + LZ4_COMPRESSOR.maxCompressedLength(Ints.checkedCast(frameBytes));
+    return FrameCompression.compressionBufferSize(frameBytes);
   }
 
   public FrameType type()
@@ -332,6 +245,17 @@ public class Frame
   }
 
   /**
+   * Direct, readable access to this frame's memory.
+   * Most callers should use {@link #region} and {@link #physicalRow}, rather than this direct-access method.
+   *
+   * @throws IllegalStateException if this frame wraps non-writable memory
+   */
+  public Memory readableMemory()
+  {
+    return memory;
+  }
+
+  /**
    * Direct, writable access to this frame's memory. Used by operations that modify the frame in-place, like
    * {@link org.apache.druid.frame.write.FrameSort}.
    *
@@ -358,8 +282,7 @@ public class Frame
   public long writeTo(
       final WritableByteChannel channel,
       final boolean compress,
-      @Nullable final ByteBuffer compressionBuffer,
-      ByteTracker byteTracker
+      @Nullable final ByteBuffer compressionBuffer
   ) throws IOException
   {
     if (compress) {
@@ -373,51 +296,27 @@ public class Frame
         );
       }
 
-      final ByteBuffer frameBuffer;
-      final int frameBufferPosition;
-      final int compressedFrameLength;
+      final ByteBuffer compressedBuffer = FrameCompression.compress(memory, numBytes, compressionBuffer);
+      Channels.writeFully(channel, compressedBuffer);
 
-      if (memory.hasByteBuffer()) {
-        // Optimized path when Memory is backed by ByteBuffer.
-        frameBuffer = memory.getByteBuffer();
-        frameBufferPosition = Ints.checkedCast(memory.getRegionOffset());
-      } else {
-        // Copy to byte array first, then decompress.
-        final byte[] frameBytes = new byte[Ints.checkedCast(numBytes)];
-        memory.getByteArray(0, frameBytes, 0, Ints.checkedCast(numBytes));
-        frameBuffer = ByteBuffer.wrap(frameBytes);
-        frameBufferPosition = 0;
-      }
-
-      compressedFrameLength = LZ4_COMPRESSOR.compress(
-          frameBuffer,
-          frameBufferPosition,
-          Ints.checkedCast(numBytes),
-          compressionBuffer,
-          COMPRESSED_FRAME_HEADER_SIZE,
-          compressionBuffer.capacity() - COMPRESSED_FRAME_ENVELOPE_SIZE
-      );
-
-      compressionBuffer.order(ByteOrder.LITTLE_ENDIAN)
-                       .limit(COMPRESSED_FRAME_ENVELOPE_SIZE + compressedFrameLength)
-                       .position(0);
-
-      compressionBuffer.put(0, CompressionStrategy.LZ4.getId())
-                       .putLong(Byte.BYTES, compressedFrameLength)
-                       .putLong(Byte.BYTES + Long.BYTES, numBytes);
-
-      final long checksum = Memory.wrap(compressionBuffer)
-                                  .xxHash64(0, COMPRESSED_FRAME_HEADER_SIZE + compressedFrameLength, CHECKSUM_SEED);
-
-      compressionBuffer.putLong(COMPRESSED_FRAME_HEADER_SIZE + compressedFrameLength, checksum);
-      byteTracker.reserve(compressionBuffer.remaining());
-      Channels.writeFully(channel, compressionBuffer);
-
-      return COMPRESSED_FRAME_ENVELOPE_SIZE + compressedFrameLength;
+      return compressedBuffer.limit();
     } else {
-      byteTracker.reserve(numBytes);
       memory.writeTo(0, numBytes, channel);
       return numBytes;
+    }
+  }
+
+  /**
+   * Returns this frame as a {@link FrameRowsAndColumns} without a signature.
+   */
+  public FrameRowsAndColumns asRAC()
+  {
+    if (frameType.isRowBased()) {
+      return new RowBasedFrameRowsAndColumns(this, null);
+    } else if (frameType.isColumnar()) {
+      return new ColumnBasedFrameRowsAndColumns(this, null);
+    } else {
+      throw DruidException.defensive("FrameType[%s] was neither row-based nor columnar", frameType);
     }
   }
 
@@ -443,6 +342,22 @@ public class Frame
     }
 
     return this;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Frame frame = (Frame) o;
+    return Objects.equals(memory, frame.memory);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(memory);
   }
 
   /**

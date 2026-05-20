@@ -24,7 +24,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 
 /**
@@ -60,4 +59,12 @@ public interface LogicalStage
    * Returns the inputs of this stage.
    */
   List<LogicalInputSpec> getInputSpecs();
+
+  /**
+   * Whether this stage must run on a single worker.
+   */
+  default boolean isSingleWorker()
+  {
+    return false;
+  }
 }

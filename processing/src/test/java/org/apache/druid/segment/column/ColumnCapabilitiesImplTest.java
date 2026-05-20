@@ -21,8 +21,8 @@ package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ColumnCapabilitiesImplTest
 {
@@ -39,17 +39,17 @@ public class ColumnCapabilitiesImplTest
                                                 .setType(ColumnType.UNKNOWN_COMPLEX)
                                                 .setHasNulls(true));
 
-    Assert.assertFalse(json.contains("filterable"));
+    Assertions.assertFalse(json.contains("filterable"));
     
     ColumnCapabilities cc = mapper.readValue(json, ColumnCapabilitiesImpl.class);
 
-    Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, cc.toColumnType());
-    Assert.assertTrue(cc.isDictionaryEncoded().isTrue());
-    Assert.assertTrue(cc.hasSpatialIndexes());
-    Assert.assertTrue(cc.hasMultipleValues().isTrue());
-    Assert.assertTrue(cc.hasBitmapIndexes());
+    Assertions.assertEquals(ColumnType.UNKNOWN_COMPLEX, cc.toColumnType());
+    Assertions.assertTrue(cc.isDictionaryEncoded().isTrue());
+    Assertions.assertTrue(cc.hasSpatialIndexes());
+    Assertions.assertTrue(cc.hasMultipleValues().isTrue());
+    Assertions.assertTrue(cc.hasBitmapIndexes());
     // hasNulls and isFilterable are computed, these should not be set
-    Assert.assertFalse(cc.hasNulls().isTrue());
+    Assertions.assertFalse(cc.hasNulls().isTrue());
   }
 
   @Test
@@ -69,12 +69,12 @@ public class ColumnCapabilitiesImplTest
 
     ColumnCapabilities cc = mapper.readValue(json, ColumnCapabilitiesImpl.class);
 
-    Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, cc.toColumnType());
-    Assert.assertTrue(cc.isDictionaryEncoded().isTrue());
-    Assert.assertTrue(cc.hasSpatialIndexes());
-    Assert.assertTrue(cc.hasMultipleValues().isTrue());
-    Assert.assertTrue(cc.hasBitmapIndexes());
+    Assertions.assertEquals(ColumnType.UNKNOWN_COMPLEX, cc.toColumnType());
+    Assertions.assertTrue(cc.isDictionaryEncoded().isTrue());
+    Assertions.assertTrue(cc.hasSpatialIndexes());
+    Assertions.assertTrue(cc.hasMultipleValues().isTrue());
+    Assertions.assertTrue(cc.hasBitmapIndexes());
     // hasNulls and isFilterable are computed, these should not be set
-    Assert.assertFalse(cc.hasNulls().isTrue());
+    Assertions.assertFalse(cc.hasNulls().isTrue());
   }
 }

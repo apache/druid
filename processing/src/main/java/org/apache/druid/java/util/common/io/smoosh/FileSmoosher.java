@@ -23,6 +23,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
@@ -31,8 +32,10 @@ import org.apache.druid.java.util.common.MappedByteBufferHandler;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.file.SegmentFileChannel;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -123,6 +126,12 @@ public class FileSmoosher implements SegmentFileBuilder
   }
 
   @Override
+  public void addColumn(String name, ColumnDescriptor columnDescriptor)
+  {
+    throw DruidException.defensive("not supported");
+  }
+
+  @Override
   public void add(String name, File fileToAdd) throws IOException
   {
     try (MappedByteBufferHandler fileMappingHandler = FileUtils.map(fileToAdd)) {
@@ -155,10 +164,24 @@ public class FileSmoosher implements SegmentFileBuilder
     return addWithSmooshedWriter(name, size);
   }
 
+  @Override
+  public void abort()
+  {
+    if (currOut != null) {
+      CloseableUtils.closeAndWrapExceptions(currOut);
+    }
+  }
+
   public SmooshedWriter addWithSmooshedWriter(final String name, final long size) throws IOException
   {
     if (size > maxChunkSize) {
-      throw new IAE("Asked to add buffers[%,d] larger than configured max[%,d]", size, maxChunkSize);
+      throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Serialized buffer size[%,d] for column[%s] exceeds the maximum[%,d]. "
+                                  + "Consider adjusting the tuningConfig - for example, reduce maxRowsPerSegment, "
+                                  + "or partition your data further.",
+                                  size, name, maxChunkSize
+                          );
     }
 
     // If current writer is in use then create a new SmooshedWriter which

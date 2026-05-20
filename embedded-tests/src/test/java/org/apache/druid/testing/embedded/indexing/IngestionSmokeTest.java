@@ -20,13 +20,10 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexer.TaskState;
-import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -40,10 +37,10 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -88,7 +85,9 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   protected EmbeddedIndexer indexer = new EmbeddedIndexer()
       .setServerMemory(300_000_000)
       .addProperty("druid.worker.capacity", "2")
-      .addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
+      .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
+      // Use separate task log files because here, we're actually testing TaskLogStreamer.
+      .addProperty("druid.worker.useSeparateTaskLogFiles", "true");
 
   /**
    * Broker with a short metadata refresh period.
@@ -114,9 +113,11 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                 LatchableEmitterModule.class,
                 PostgreSQLMetadataStorageModule.class
             )
+            .useDefaultTimeoutForLatchableEmitter(20)
             .addResource(new PostgreSQLMetadataResource())
             .addResource(new MinIOStorageResource())
             .addResource(kafkaServer)
+            .addCommonProperty("druid.manager.segments.useIncrementalCache", "always")
             .addCommonProperty("druid.emitter", "http")
             .addCommonProperty("druid.emitter.http.recipientBaseUrl", eventCollector.getMetricsUrl())
             .addCommonProperty("druid.emitter.http.flushMillis", "500")
@@ -190,6 +191,9 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                       .hasService("druid/broker")
     );
 
+    waitForNextCoordinatorCacheSync();
+    waitForNextBrokerCacheSync();
+
     cluster.callApi().verifySqlQuery("SELECT * FROM sys.segments WHERE datasource='%s'", dataSource, "");
 
     // Kill all unused segments
@@ -243,7 +247,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
         .dynamicPartitionWithMaxRows(5000)
         .withId(compactTaskId);
     cluster.callApi().onLeaderOverlord(o -> o.runTask(compactTaskId, compactionTask));
-    cluster.callApi().waitForTaskToSucceed(taskId, eventCollector.latchableEmitter());
+    cluster.callApi().waitForTaskToSucceed(compactTaskId, eventCollector.latchableEmitter());
 
     // Verify the compacted data
     final int numCompactedSegments = 5;
@@ -298,7 +302,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(kafkaSupervisorSpec)
     );
-    Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
+    validateSupervisorUpdateResponse(startSupervisorResult, supervisorId);
 
     waitForSegmentsToBeQueryable(1);
 
@@ -308,13 +312,10 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     Assertions.assertEquals("RUNNING", supervisorStatus.getState());
     Assertions.assertEquals(topic, supervisorStatus.getSource());
 
-    // Get the task statuses
-    List<TaskStatusPlus> taskStatuses = ImmutableList.copyOf(
-        (CloseableIterator<TaskStatusPlus>)
-            cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(null, dataSource, 1))
-    );
-    Assertions.assertFalse(taskStatuses.isEmpty());
-    Assertions.assertEquals(TaskState.RUNNING, taskStatuses.get(0).getStatusCode());
+    // Confirm tasks are being created and running
+    int runningTasks = cluster.callApi().getTaskCount("running", dataSource);
+    int completedTasks = cluster.callApi().getTaskCount("complete", dataSource);
+    Assertions.assertTrue(runningTasks + completedTasks > 0);
 
     // Suspend the supervisor and verify the state
     cluster.callApi().onLeaderOverlord(
@@ -347,9 +348,12 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     );
 
     final Optional<InputStream> streamOptional =
-        overlord.bindings()
-                .getInstance(TaskLogStreamer.class)
-                .streamTaskLog(taskId, 0);
+        cluster.callApi().waitForResult(
+            () -> overlord.bindings()
+                          .getInstance(TaskLogStreamer.class)
+                          .streamTaskLog(taskId, 0),
+            Optional::isPresent
+        ).go();
 
     Assertions.assertTrue(streamOptional.isPresent());
 
@@ -367,7 +371,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   {
     return MoreResources.Supervisor.KAFKA_JSON
         .get()
-        .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", null, null)))
+        .withDataSchema(schema -> schema.withTimestamp(TimestampSpec.DEFAULT))
         .withIoConfig(
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())
@@ -405,6 +409,37 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                       .hasService("druid/broker")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(numSegments)
+    );
+    eventCollector.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT)
+                      .hasService("druid/broker")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
+    waitForNextCoordinatorCacheSync();
+    eventCollector.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/metadataCache/sync/time")
+                      .hasService("druid/broker")
+    );
+  }
+
+  protected void validateSupervisorUpdateResponse(Map<String, String> startSupervisorResult, String supervisorId)
+  {
+    Assertions.assertEquals(Map.of("id", supervisorId, "restarted", "true"), startSupervisorResult);
+  }
+
+  protected void waitForNextCoordinatorCacheSync()
+  {
+    eventCollector.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/metadataCache/sync/time")
+                      .hasService("druid/coordinator")
+    );
+  }
+
+  protected void waitForNextBrokerCacheSync()
+  {
+    eventCollector.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/metadataCache/sync/time")
+                      .hasService("druid/broker")
     );
   }
 

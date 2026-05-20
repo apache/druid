@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.jupiter.api.Test;
+
 import java.util.Arrays;
 import java.util.List;
 

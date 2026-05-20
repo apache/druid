@@ -26,6 +26,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.guice.PeonProcessingModule;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedPublishedSegmentRetriever;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
@@ -43,6 +44,8 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -53,6 +56,7 @@ import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 
 import javax.annotation.Nullable;
@@ -71,11 +75,14 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   protected final LockGranularity lockGranularityToUse;
   protected final TaskLockType lockTypeToUse;
   protected final String supervisorId;
+  @Nullable
+  protected final Integer serverPriority;
 
-  // Lazily initialized, to avoid calling it on the overlord when tasks are instantiated.
+  // Lazily initialized to avoid calling it on the overlord when tasks are instantiated.
   // See https://github.com/apache/druid/issues/7724 for issues that can cause.
   // By the way, lazily init is synchronized because the runner may be needed in multiple threads.
   private final Supplier<SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?>> runnerSupplier;
+
 
   public SeekableStreamIndexTask(
       final String id,
@@ -85,7 +92,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
       final SeekableStreamIndexTaskTuningConfig tuningConfig,
       final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig,
       @Nullable final Map<String, Object> context,
-      @Nullable final String groupId
+      @Nullable final String groupId,
+      @Nullable final Integer serverPriority
   )
   {
     super(
@@ -106,6 +114,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
                                 : LockGranularity.SEGMENT;
     this.lockTypeToUse = TaskLocks.determineLockTypeForAppend(getContext());
     this.supervisorId = Preconditions.checkNotNull(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), "supervisorId");
+    this.serverPriority = serverPriority;
   }
 
   protected static String getFormattedGroupId(String supervisorId, String type)
@@ -139,6 +148,17 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public String getSupervisorId()
   {
     return supervisorId;
+  }
+
+  /**
+   * @return the server priority this task belongs to, if specified. When set, this value
+   * maps to {@link DruidServerMetadata#getPriority()} on the corresponding Peon server.
+   */
+  @JsonProperty
+  @Nullable
+  public Integer getServerPriority()
+  {
+    return serverPriority;
   }
 
   @JsonProperty
@@ -195,6 +215,13 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   {
     SeekableStreamIndexTaskRunner.Status status = (getRunner() != null) ? getRunner().getStatus() : null;
     return (status != null) ? status.toString() : null;
+  }
+
+  @Override
+  public ServiceMetricEvent.Builder getMetricBuilder()
+  {
+    return super.getMetricBuilder()
+                .setDimensionIfNotNull(DruidMetrics.SUPERVISOR_ID, supervisorId);
   }
 
   public Appenderator newAppenderator(
@@ -308,5 +335,14 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> getRunner()
   {
     return runnerSupplier.get();
+  }
+
+  @Override
+  public PeonProcessingModule.Config getPeonProcessingModuleConfig()
+  {
+    return new PeonProcessingModule.Config()
+        .withProcessingBuffers()
+        .withProcessingThreads()
+        .withMergeBuffers();
   }
 }

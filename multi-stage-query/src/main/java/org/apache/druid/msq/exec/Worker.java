@@ -108,4 +108,9 @@ public interface Worker
    * Called when the worker is no longer needed, and should shut down.
    */
   void postFinish();
+
+  /**
+   * Signals {@link #run()} to stop executing by throwing an exception into the queue the thread reads from.
+   */
+  void stop();
 }

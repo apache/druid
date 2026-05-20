@@ -24,6 +24,11 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.Provides;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshotsSerializer;
@@ -31,8 +36,10 @@ import org.apache.druid.msq.counters.CpuCounter;
 import org.apache.druid.msq.counters.CpuCounters;
 import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
+import org.apache.druid.msq.counters.StorageCounters;
 import org.apache.druid.msq.counters.SuperSorterProgressTrackerCounter;
 import org.apache.druid.msq.counters.WarningCounters;
+import org.apache.druid.msq.indexing.IndexerControllerContextFactory;
 import org.apache.druid.msq.indexing.MSQCompactionRunner;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
@@ -41,6 +48,7 @@ import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
 import org.apache.druid.msq.indexing.error.ColumnTypeNotSupportedFault;
+import org.apache.druid.msq.indexing.error.DruidExceptionFault;
 import org.apache.druid.msq.indexing.error.DurableStorageConfigurationFault;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
@@ -87,16 +95,26 @@ import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.NilExtraInfoHolder;
 import org.apache.druid.msq.querykit.InputNumberDataSource;
+import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.querykit.RestrictedInputNumberDataSource;
+import org.apache.druid.msq.querykit.WindowOperatorQueryKit;
 import org.apache.druid.msq.querykit.WindowOperatorQueryStageProcessor;
 import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.msq.querykit.common.SortMergeJoinStageProcessor;
 import org.apache.druid.msq.querykit.groupby.GroupByPostShuffleStageProcessor;
 import org.apache.druid.msq.querykit.groupby.GroupByPreShuffleStageProcessor;
+import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
 import org.apache.druid.msq.querykit.results.ExportResultsStageProcessor;
 import org.apache.druid.msq.querykit.results.QueryResultStageProcessor;
+import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.querykit.scan.ScanQueryStageProcessor;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.operator.WindowOperatorQuery;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.StandardRetryPolicy;
+import org.apache.druid.rpc.indexing.OverlordClient;
 
 import java.util.Collections;
 import java.util.List;
@@ -114,6 +132,7 @@ public class MSQIndexingModule implements DruidModule
       CannotParseExternalDataFault.class,
       ColumnTypeNotSupportedFault.class,
       ColumnNameRestrictedFault.class,
+      DruidExceptionFault.class,
       DurableStorageConfigurationFault.class,
       InsertCannotAllocateSegmentFault.class,
       InsertCannotBeEmptyFault.class,
@@ -180,6 +199,7 @@ public class MSQIndexingModule implements DruidModule
         SuperSorterProgressTrackerCounter.Snapshot.class,
         WarningCounters.Snapshot.class,
         SegmentGenerationProgressCounter.Snapshot.class,
+        StorageCounters.Snapshot.class,
         CpuCounters.Snapshot.class,
         CpuCounter.Snapshot.class,
         NilQueryCounterSnapshot.class,
@@ -214,5 +234,35 @@ public class MSQIndexingModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    binder.bind(MultiQueryKit.class).in(LazySingleton.class);
+
+    MSQBinders.queryKitBinder(binder)
+              .addBinding(ScanQuery.class)
+              .to(ScanQueryKit.class);
+    binder.bind(ScanQueryKit.class).in(LazySingleton.class);
+
+    MSQBinders.queryKitBinder(binder)
+              .addBinding(GroupByQuery.class)
+              .to(GroupByQueryKit.class);
+    binder.bind(GroupByQueryKit.class).in(LazySingleton.class);
+
+    MSQBinders.queryKitBinder(binder)
+              .addBinding(WindowOperatorQuery.class)
+              .to(WindowOperatorQueryKit.class);
+    binder.bind(WindowOperatorQueryKit.class).in(LazySingleton.class);
+  }
+
+  @Provides
+  IndexerControllerContextFactory providesContextFactory(Injector injector)
+  {
+    ServiceClientFactory clientFactory =
+        injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
+    OverlordClient overlordClient = injector.getInstance(OverlordClient.class)
+                                            .withRetryPolicy(StandardRetryPolicy.unlimited());
+    return new IndexerControllerContextFactory(
+        injector,
+        clientFactory,
+        overlordClient
+    );
   }
 }

@@ -53,6 +53,8 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
   private static final String CTX_KEY_MAX_SELECTOR_DICTIONARY_SIZE = "maxSelectorDictionarySize";
   private static final String CTX_KEY_MAX_MERGING_DICTIONARY_SIZE = "maxMergingDictionarySize";
+  private static final String CTX_KEY_MAX_SPILL_FILE_COUNT = "maxSpillFileCount";
+  private static final String CTX_KEY_MIN_SPILL_FILE_SIZE = "minSpillFileSize";
   private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
   private static final String CTX_KEY_INTERMEDIATE_COMBINE_DEGREE = "intermediateCombineDegree";
   private static final String CTX_KEY_NUM_PARALLEL_COMBINE_THREADS = "numParallelCombineThreads";
@@ -95,8 +97,23 @@ public class GroupByQueryConfig
   private HumanReadableBytes maxMergingDictionarySize = HumanReadableBytes.valueOf(AUTOMATIC);
 
   @JsonProperty
+  // Maximum number of spill files per query; when exceeded, the query fails.
+  // This is a safety valve to prevent OOM errors.
+  private int maxSpillFileCount = Integer.MAX_VALUE;
+
+  @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
   private HumanReadableBytes maxOnDiskStorage = HumanReadableBytes.valueOf(0);
+
+  @JsonProperty
+  // Minimum number of serialized bytes that must accumulate across pending in-memory spill runs before they are
+  // flushed as a single file to disk. Aggregators like ThetaSketch pre-allocate a large fixed buffer per row
+  // (e.g. ~131KB for ThetaSketch(K=16384)), causing the in-memory grouper to flush frequently. However, when
+  // each key has been seen only a few times, the sketch serializes to just a handful of bytes in compact form.
+  // Without batching, this produces thousands of tiny spill files. By accumulating runs in heap memory first
+  // and writing to disk only once this threshold is reached, we avoid that explosion in file count without any
+  // extra disk I/O for small spills.
+  private HumanReadableBytes minSpillFileSize = HumanReadableBytes.valueOf(1024 * 1024L);
 
   @JsonProperty
   private HumanReadableBytes defaultOnDiskStorage = HumanReadableBytes.valueOf(-1);
@@ -240,6 +257,16 @@ public class GroupByQueryConfig
     return maxOnDiskStorage;
   }
 
+  public int getMaxSpillFileCount()
+  {
+    return maxSpillFileCount;
+  }
+
+  public long getMinSpillFileSize()
+  {
+    return minSpillFileSize.getBytes();
+  }
+
   /**
    * Mirror maxOnDiskStorage if defaultOnDiskStorage's default is not overridden by cluster operator.
    *
@@ -341,6 +368,16 @@ public class GroupByQueryConfig
     newConfig.maxMergingDictionarySize = queryContext
         .getHumanReadableBytes(CTX_KEY_MAX_MERGING_DICTIONARY_SIZE, getConfiguredMaxMergingDictionarySize());
 
+    newConfig.maxSpillFileCount = queryContext.getInt(
+        CTX_KEY_MAX_SPILL_FILE_COUNT,
+        getMaxSpillFileCount()
+    );
+
+    newConfig.minSpillFileSize = queryContext.getHumanReadableBytes(
+        CTX_KEY_MIN_SPILL_FILE_SIZE,
+        getMinSpillFileSize()
+    );
+
     newConfig.forcePushDownLimit = queryContext.getBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
     newConfig.applyLimitPushDownToSegment = queryContext.getBoolean(
         CTX_KEY_APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT,
@@ -384,6 +421,7 @@ public class GroupByQueryConfig
            ", bufferGrouperInitialBuckets=" + bufferGrouperInitialBuckets +
            ", maxMergingDictionarySize=" + maxMergingDictionarySize +
            ", maxOnDiskStorage=" + maxOnDiskStorage.getBytes() +
+           ", minSpillFileSize=" + minSpillFileSize.getBytes() +
            ", defaultOnDiskStorage=" + getDefaultOnDiskStorage().getBytes() + // use the getter because of special behavior for mirroring maxOnDiskStorage if defaultOnDiskStorage not explicitly set.
            ", forcePushDownLimit=" + forcePushDownLimit +
            ", forceHashAggregation=" + forceHashAggregation +

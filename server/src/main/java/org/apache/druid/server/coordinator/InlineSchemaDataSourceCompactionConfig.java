@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -229,6 +230,12 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
   }
 
   @Override
+  public CompactionConfigValidationResult validate(ClusterCompactionConfig clusterCompactionConfig)
+  {
+    return ClientCompactionRunnerInfo.validateCompactionConfig(this, clusterCompactionConfig.getEngine());
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -274,6 +281,29 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
     );
     result = 31 * result + Arrays.hashCode(metricsSpec);
     return result;
+  }
+
+  /**
+   * Creates a builder initialized with all fields from this config.
+   * Useful for creating modified copies of an existing config.
+   */
+  public Builder toBuilder()
+  {
+    return new Builder()
+        .forDataSource(this.dataSource)
+        .withTaskPriority(this.taskPriority)
+        .withInputSegmentSizeBytes(this.inputSegmentSizeBytes)
+        .withMaxRowsPerSegment(this.maxRowsPerSegment)
+        .withSkipOffsetFromLatest(this.skipOffsetFromLatest)
+        .withTuningConfig(this.tuningConfig)
+        .withGranularitySpec(this.granularitySpec)
+        .withDimensionsSpec(this.dimensionsSpec)
+        .withMetricsSpec(this.metricsSpec)
+        .withTransformSpec(this.transformSpec)
+        .withProjections(this.projections)
+        .withIoConfig(this.ioConfig)
+        .withEngine(this.engine)
+        .withTaskContext(this.taskContext);
   }
 
   public static class Builder
@@ -357,6 +387,34 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
     )
     {
       this.granularitySpec = granularitySpec;
+      return this;
+    }
+
+    public Builder withSegmentGranularity(Granularity segmentGranularity)
+    {
+      if (this.granularitySpec == null) {
+        this.granularitySpec = new UserCompactionTaskGranularityConfig(segmentGranularity, null, null);
+      } else {
+        this.granularitySpec = new UserCompactionTaskGranularityConfig(
+            segmentGranularity,
+            this.granularitySpec.getQueryGranularity(),
+            this.granularitySpec.isRollup()
+        );
+      }
+      return this;
+    }
+
+    public Builder withQueryGranularityAndRollup(Granularity queryGranularity, Boolean rollup)
+    {
+      if (this.granularitySpec == null) {
+        this.granularitySpec = new UserCompactionTaskGranularityConfig(null, queryGranularity, rollup);
+      } else {
+        this.granularitySpec = new UserCompactionTaskGranularityConfig(
+            this.granularitySpec.getSegmentGranularity(),
+            queryGranularity,
+            rollup
+        );
+      }
       return this;
     }
 

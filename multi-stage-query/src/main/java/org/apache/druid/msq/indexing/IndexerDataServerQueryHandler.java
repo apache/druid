@@ -30,7 +30,6 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataServerClient;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -45,18 +44,17 @@ import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
 import org.apache.druid.msq.input.table.DataServerSelector;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
-import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryInterruptedException;
-import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.rpc.RpcException;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
+import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 
 import java.util.ArrayList;
@@ -71,21 +69,20 @@ import java.util.stream.Collectors;
 
 /**
  * Task implementation of {@link DataServerQueryHandler}. Implements retry logic as described in
- * {@link #fetchRowsFromDataServer(Query, Function, Closer)}.
+ * {@link #fetchRowsFromDataServer(Query, JavaType, Function, Closer)}.
  */
 public class IndexerDataServerQueryHandler implements DataServerQueryHandler
 {
   private static final Logger log = new Logger(IndexerDataServerQueryHandler.class);
   private static final int DEFAULT_NUM_TRIES = 3;
-  private static final int PER_SERVER_QUERY_NUM_TRIES = 5;
   private final int inputNumber;
   private final String dataSourceName;
   private final ChannelCounters channelCounters;
   private final ServiceClientFactory serviceClientFactory;
   private final CoordinatorClient coordinatorClient;
   private final ObjectMapper objectMapper;
-  private final QueryToolChestWarehouse warehouse;
   private final DataServerRequestDescriptor dataServerRequestDescriptor;
+  private final ServiceRetryPolicy retryPolicy;
 
   public IndexerDataServerQueryHandler(
       int inputNumber,
@@ -94,8 +91,31 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
       ServiceClientFactory serviceClientFactory,
       CoordinatorClient coordinatorClient,
       ObjectMapper objectMapper,
-      QueryToolChestWarehouse warehouse,
       DataServerRequestDescriptor dataServerRequestDescriptor
+  )
+  {
+    this(
+        inputNumber,
+        dataSourceName,
+        channelCounters,
+        serviceClientFactory,
+        coordinatorClient,
+        objectMapper,
+        dataServerRequestDescriptor,
+        IndexerDataServerRetryPolicy.standard()
+    );
+  }
+
+  @VisibleForTesting
+  IndexerDataServerQueryHandler(
+      int inputNumber,
+      String dataSourceName,
+      ChannelCounters channelCounters,
+      ServiceClientFactory serviceClientFactory,
+      CoordinatorClient coordinatorClient,
+      ObjectMapper objectMapper,
+      DataServerRequestDescriptor dataServerRequestDescriptor,
+      ServiceRetryPolicy retryPolicy
   )
   {
     this.inputNumber = inputNumber;
@@ -104,14 +124,14 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
     this.serviceClientFactory = serviceClientFactory;
     this.coordinatorClient = coordinatorClient;
     this.objectMapper = objectMapper;
-    this.warehouse = warehouse;
     this.dataServerRequestDescriptor = dataServerRequestDescriptor;
+    this.retryPolicy = retryPolicy;
   }
 
   @VisibleForTesting
   DataServerClient makeDataServerClient(ServiceLocation serviceLocation)
   {
-    return new DataServerClient(serviceClientFactory, serviceLocation, objectMapper);
+    return new DataServerClient(serviceClientFactory, serviceLocation, objectMapper, retryPolicy);
   }
 
   /**
@@ -139,6 +159,7 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
   @Override
   public <RowType, QueryType> ListenableFuture<DataServerQueryResult<RowType>> fetchRowsFromDataServer(
       Query<QueryType> query,
+      JavaType queryResultType,
       Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction,
       Closer closer
   )
@@ -163,8 +184,10 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
             responseContext,
             closer,
             preparedQuery,
+            queryResultType,
             mappingFunction
         );
+        channelCounters.incrementQueries();
 
         // Add results
         if (yielder != null && !yielder.isDone()) {
@@ -217,49 +240,44 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
       final ResponseContext responseContext,
       final Closer closer,
       final Query<QueryType> query,
+      final JavaType queryResultType,
       final Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction
   )
   {
     final ServiceLocation serviceLocation = ServiceLocation.fromDruidServerMetadata(requestDescriptor.getServerMetadata());
     final DataServerClient dataServerClient = makeDataServerClient(serviceLocation);
-    final QueryToolChest<QueryType, Query<QueryType>> toolChest = warehouse.getToolChest(query);
-    final Function<QueryType, QueryType> preComputeManipulatorFn =
-        toolChest.makePreComputeManipulatorFn(query, MetricManipulatorFns.deserializing());
-    final JavaType queryResultType = toolChest.getBaseResultType();
     final List<SegmentDescriptor> segmentDescriptors =
         requestDescriptor.getSegments()
                          .stream()
                          .map(IndexerDataServerQueryHandler::toSegmentDescriptorWithFullInterval)
                          .collect(Collectors.toList());
 
-    try {
-      return RetryUtils.retry(
-          () -> {
-            final ListenableFuture<Sequence<QueryType>> queryFuture = dataServerClient.run(
-                Queries.withSpecificSegments(
-                    query,
-                    requestDescriptor.getSegments()
-                                     .stream()
-                                     .map(RichSegmentDescriptor::toPlainDescriptor)
-                                     .collect(Collectors.toList())
-                ),
-                responseContext,
-                queryResultType,
-                closer
-            );
+    if (query.getDataSource() instanceof QueryDataSource) {
+      // Subqueries being included would cause "withQuerySegmentSpec" to not work properly.
+      throw DruidException.defensive("Cannot run query with subquery[%s]", query);
+    }
 
-            return closer.register(
-                DataServerQueryHandlerUtils.createYielder(
-                    queryFuture.get().map(preComputeManipulatorFn),
-                    mappingFunction,
-                    channelCounters
-                )
-            );
-          },
-          throwable -> !(throwable instanceof ExecutionException
-                         && throwable.getCause() instanceof QueryInterruptedException
-                         && throwable.getCause().getCause() instanceof InterruptedException),
-          PER_SERVER_QUERY_NUM_TRIES
+    try {
+      final ListenableFuture<Sequence<QueryType>> queryFuture = dataServerClient.run(
+          query.withQuerySegmentSpec(
+              new MultipleSpecificSegmentSpec(
+                  requestDescriptor.getSegments()
+                                   .stream()
+                                   .map(RichSegmentDescriptor::toPlainDescriptor)
+                                   .collect(Collectors.toList())
+              )
+          ),
+          responseContext,
+          queryResultType,
+          closer
+      );
+
+      return closer.register(
+          DataServerQueryHandlerUtils.createYielder(
+              queryFuture.get(),
+              mappingFunction,
+              channelCounters
+          )
       );
     }
     catch (ExecutionException e) {
@@ -274,10 +292,11 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
                             .build(e, "Exception while fetching rows for query from dataservers[%s]", serviceLocation);
       }
     }
-    catch (Exception e) {
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                          .build(e, "Exception while fetching rows for query from dataservers[%s]", serviceLocation);
+                          .build(e, "Interrupted while fetching rows for query from dataservers[%s]", serviceLocation);
     }
   }
 

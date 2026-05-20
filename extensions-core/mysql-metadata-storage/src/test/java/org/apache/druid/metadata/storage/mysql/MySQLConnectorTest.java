@@ -138,6 +138,36 @@ public class MySQLConnectorTest
   }
 
   @Test
+  public void testIsUniqueConstraintViolation()
+  {
+    MySQLConnector connector = new MySQLConnector(
+        CONNECTOR_CONFIG_SUPPLIER,
+        TABLES_CONFIG_SUPPLIER,
+        new MySQLConnectorSslConfig(),
+        MYSQL_DRIVER_CONFIG,
+        centralizedDatasourceSchemaConfig
+    );
+
+    // MySQL integrity_constraint_violation SQL state (23000)
+    Assert.assertTrue(connector.isUniqueConstraintViolation(
+        new SQLException("Duplicate entry 'value' for key 'PRIMARY'", "23000")
+    ));
+
+    // Different SQL state should return false
+    Assert.assertFalse(connector.isUniqueConstraintViolation(
+        new SQLException("some other error", "42S02")
+    ));
+
+    // SQLException wrapped in another exception (tests cause chain traversal)
+    Assert.assertTrue(connector.isUniqueConstraintViolation(
+        new RuntimeException(new SQLException("Duplicate entry", "23000"))
+    ));
+
+    // Non-SQLException exception
+    Assert.assertFalse(connector.isUniqueConstraintViolation(new Exception("not a SQLException")));
+  }
+
+  @Test
   public void testLimitClause()
   {
     MySQLConnector connector = new MySQLConnector(

@@ -166,7 +166,8 @@ public class CoordinatorConfigManager
           Configs.valueOrDefault(maxCompactionTaskSlots, currentClusterConfig.getMaxCompactionTaskSlots()),
           currentClusterConfig.getCompactionPolicy(),
           currentClusterConfig.isUseSupervisors(),
-          currentClusterConfig.getEngine()
+          currentClusterConfig.getEngine(),
+          currentClusterConfig.isStoreCompactionStatePerSegment()
       );
 
       return current.withClusterConfig(updatedClusterConfig);

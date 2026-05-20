@@ -24,27 +24,28 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
+import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
 public class FrameFileWriterTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  Path tempDir;
 
   @Test
   public void test_abort_afterAllFrames() throws IOException
@@ -54,15 +55,20 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
                                                        .frameType(FrameType.latestRowBased())
                                                        .frames();
 
-    final File file = temporaryFolder.newFile();
-    final FrameFileWriter fileWriter = FrameFileWriter.open(Files.newByteChannel(
-        file.toPath(),
-        StandardOpenOption.WRITE
-    ), null, ByteTracker.unboundedTracker());
+    final File file = Files.createTempFile(tempDir, "junit", null).toFile();
+    final FrameFileWriter fileWriter = FrameFileWriter.open(
+        Files.newByteChannel(
+            file.toPath(),
+            StandardOpenOption.WRITE
+        ),
+        null,
+        ByteTracker.unboundedTracker(),
+        FrameTestUtil.WT_CONTEXT_LEGACY
+    );
 
     frames.forEach(frame -> {
       try {
-        fileWriter.writeFrame(frame, FrameFileWriter.NO_PARTITION);
+        fileWriter.write(frame.asRAC(), FrameFileWriter.NO_PARTITION);
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -71,7 +77,7 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
 
     fileWriter.abort();
 
-    final IllegalStateException e = Assert.assertThrows(IllegalStateException.class, () -> FrameFile.open(file, null));
+    final IllegalStateException e = Assertions.assertThrows(IllegalStateException.class, () -> FrameFile.open(file, null));
 
     MatcherAssert.assertThat(
         e,

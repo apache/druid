@@ -19,12 +19,6 @@
 
 package org.apache.druid.storage.s3.output;
 
-import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.UploadPartResult;
 import com.google.common.base.Stopwatch;
 import com.google.common.io.CountingOutputStream;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
@@ -35,6 +29,13 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import java.io.Closeable;
 import java.io.File;
@@ -106,9 +107,9 @@ public class RetryableS3OutputStream extends OutputStream
 
   /**
    * A list of futures to allow us to wait for completion of all uploadPart() calls
-   * before hitting {@link ServerSideEncryptingAmazonS3#completeMultipartUpload(CompleteMultipartUploadRequest)}.
+   * before hitting {@link ServerSideEncryptingAmazonS3#completeMultipartUpload}.
    */
-  private final List<Future<UploadPartResult>> futures = new ArrayList<>();
+  private final List<Future<UploadPartResponse>> futures = new ArrayList<>();
 
   public RetryableS3OutputStream(
       S3OutputConfig config,
@@ -122,16 +123,17 @@ public class RetryableS3OutputStream extends OutputStream
     this.s3Key = s3Key;
     this.uploadManager = uploadManager;
 
-    final InitiateMultipartUploadResult result;
+    final CreateMultipartUploadResponse result;
     try {
-      result = S3Utils.retryS3Operation(() -> s3.initiateMultipartUpload(
-          new InitiateMultipartUploadRequest(config.getBucket(), s3Key)
-      ), config.getMaxRetry());
+      CreateMultipartUploadRequest.Builder requestBuilder = CreateMultipartUploadRequest.builder()
+          .bucket(config.getBucket())
+          .key(s3Key);
+      result = S3Utils.retryS3Operation(() -> s3.createMultipartUpload(requestBuilder), config.getMaxRetry());
     }
     catch (Exception e) {
       throw new IOException("Unable to start multipart upload", e);
     }
-    this.uploadId = result.getUploadId();
+    this.uploadId = result.uploadId();
     this.chunkStorePath = new File(config.getTempDir(), uploadId + UUID.randomUUID());
     FileUtils.mkdirp(this.chunkStorePath);
     this.chunkSize = config.getChunkSize();
@@ -239,14 +241,17 @@ public class RetryableS3OutputStream extends OutputStream
 
   private void completeMultipartUpload()
   {
-    final List<PartETag> pushResults = new ArrayList<>();
-    for (Future<UploadPartResult> future : futures) {
+    final List<CompletedPart> pushResults = new ArrayList<>();
+    for (Future<UploadPartResponse> future : futures) {
       if (error) {
         future.cancel(true);
       }
       try {
-        UploadPartResult result = future.get(1, TimeUnit.HOURS);
-        pushResults.add(result.getPartETag());
+        UploadPartResponse result = future.get(1, TimeUnit.HOURS);
+        pushResults.add(CompletedPart.builder()
+            .partNumber(pushResults.size() + 1)
+            .eTag(result.eTag())
+            .build());
       }
       catch (Exception e) {
         error = true;
@@ -257,17 +262,28 @@ public class RetryableS3OutputStream extends OutputStream
     try {
       boolean isAllPushSucceeded = !error && !pushResults.isEmpty() && futures.size() == pushResults.size();
       if (isAllPushSucceeded) {
+        CompleteMultipartUploadRequest completeRequest = CompleteMultipartUploadRequest.builder()
+            .bucket(config.getBucket())
+            .key(s3Key)
+            .uploadId(uploadId)
+            .multipartUpload(CompletedMultipartUpload.builder()
+                .parts(pushResults)
+                .build())
+            .build();
         RetryUtils.retry(
-            () -> s3.completeMultipartUpload(
-                new CompleteMultipartUploadRequest(config.getBucket(), s3Key, uploadId, pushResults)
-            ),
+            () -> s3.completeMultipartUpload(completeRequest),
             S3Utils.S3RETRY,
             config.getMaxRetry()
         );
       } else {
+        AbortMultipartUploadRequest abortRequest = AbortMultipartUploadRequest.builder()
+            .bucket(config.getBucket())
+            .key(s3Key)
+            .uploadId(uploadId)
+            .build();
         RetryUtils.retry(
             () -> {
-              s3.cancelMultiPartUpload(new AbortMultipartUploadRequest(config.getBucket(), s3Key, uploadId));
+              s3.abortMultipartUpload(abortRequest);
               return null;
             },
             S3Utils.S3RETRY,

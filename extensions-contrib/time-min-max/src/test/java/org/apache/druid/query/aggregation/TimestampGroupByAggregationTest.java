@@ -21,9 +21,15 @@ package org.apache.druid.query.aggregation;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
@@ -123,70 +129,45 @@ public class TimestampGroupByAggregationTest
     helper.close();
   }
 
+  private AggregatorFactory makeTimestampAggregator(String name, String fieldName)
+  {
+    return "timeMin".equals(aggType)
+        ? new TimestampMinAggregatorFactory(name, fieldName, null)
+        : new TimestampMaxAggregatorFactory(name, fieldName, null);
+  }
+
   @Test
   public void testSimpleDataIngestionAndGroupByTest() throws Exception
   {
-    String recordParser = "{\n" +
-        "  \"type\": \"string\",\n" +
-        "  \"parseSpec\": {\n" +
-        "    \"format\": \"tsv\",\n" +
-        "    \"timestampSpec\": {\n" +
-        "      \"column\": \"timestamp\",\n" +
-        "      \"format\": \"auto\"\n" +
-        "    },\n" +
-        "    \"dimensionsSpec\": {\n" +
-        "      \"dimensions\": [\n" +
-        "        \"product\"\n" +
-        "      ],\n" +
-        "      \"dimensionExclusions\": [],\n" +
-        "      \"spatialDimensions\": []\n" +
-        "    },\n" +
-        "    \"columns\": [\n" +
-        "      \"timestamp\",\n" +
-        "      \"cat\",\n" +
-        "      \"product\",\n" +
-        "      \"prefer\",\n" +
-        "      \"prefer2\",\n" +
-        "      \"pty_country\"\n" +
-        "    ]\n" +
-        "  }\n" +
-        "}";
-    String aggregator = "[\n" +
-        "  {\n" +
-        "    \"type\": \"" + aggType + "\",\n" +
-        "    \"name\": \"" + aggField + "\",\n" +
-        "    \"fieldName\": \"timestamp\"\n" +
-        "  }\n" +
-        "]";
-    String groupBy = "{\n" +
-        "  \"queryType\": \"groupBy\",\n" +
-        "  \"dataSource\": \"test_datasource\",\n" +
-        "  \"granularity\": \"MONTH\",\n" +
-        "  \"dimensions\": [\"product\"],\n" +
-        "  \"aggregations\": [\n" +
-        "    {\n" +
-        "      \"type\": \"" + aggType + "\",\n" +
-        "      \"name\": \"" + groupByField + "\",\n" +
-        "      \"fieldName\": \"" + aggField + "\"\n" +
-        "    }\n" +
-        "  ],\n" +
-        "  \"intervals\": [\n" +
-        "    \"2011-01-01T00:00:00.000Z/2011-05-01T00:00:00.000Z\"\n" +
-        "  ]\n" +
-        "}";
+    List<AggregatorFactory> aggregators = List.of(makeTimestampAggregator(aggField, "timestamp"));
+
+    GroupByQuery groupByQuery = GroupByQuery.builder()
+                                            .setDataSource("test_datasource")
+                                            .setGranularity(Granularities.MONTH)
+                                            .setDimensions(new DefaultDimensionSpec("product", "product"))
+                                            .setAggregatorSpecs(makeTimestampAggregator(groupByField, aggField))
+                                            .setInterval("2011-01-01T00:00:00.000Z/2011-05-01T00:00:00.000Z")
+                                            .build();
+
     ZipFile zip = new ZipFile(new File(this.getClass().getClassLoader().getResource("druid.sample.tsv.zip").toURI()));
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         zip.getInputStream(zip.getEntry("druid.sample.tsv")),
-        recordParser,
-        aggregator,
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "auto", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "cat", "product", "prefer", "prefer2", "pty_country")
+        ),
+        aggregators,
         0,
         Granularities.MONTH,
         100,
-        groupBy
+        groupByQuery
     );
 
-    int groupByFieldNumber = ((GroupByQuery) helper.readQuery(groupBy)).getResultRowSignature()
-                                                                       .indexOf(groupByField);
+    int groupByFieldNumber = groupByQuery.getResultRowSignature().indexOf(groupByField);
 
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(36, results.size());

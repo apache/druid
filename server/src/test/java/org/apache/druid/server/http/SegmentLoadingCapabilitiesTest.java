@@ -49,4 +49,5 @@ public class SegmentLoadingCapabilitiesTest
     Assert.assertEquals(3, reread.getNumLoadingThreads());
     Assert.assertEquals(5, reread.getNumTurboLoadingThreads());
   }
+
 }

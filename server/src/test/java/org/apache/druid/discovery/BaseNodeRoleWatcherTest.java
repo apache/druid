@@ -203,6 +203,113 @@ public class BaseNodeRoleWatcherTest
     assertListener(listener1, true, ImmutableList.of(broker1, broker3), ImmutableList.of());
   }
 
+  @Test(timeout = 60_000L)
+  public void testDuplicateChildAddedAfterResetNodesDoesNotNotifyListeners()
+  {
+    BaseNodeRoleWatcher nodeRoleWatcher = BaseNodeRoleWatcher.create(exec, NodeRole.BROKER);
+
+    DiscoveryDruidNode broker1 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker1");
+    DiscoveryDruidNode broker2 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker2");
+
+    // Initial discovery and cache initialization
+    nodeRoleWatcher.childAdded(broker1);
+    nodeRoleWatcher.childAdded(broker2);
+    nodeRoleWatcher.cacheInitialized();
+
+    TestListener listener = new TestListener();
+    nodeRoleWatcher.registerListener(listener);
+
+    // Verify listener received the initial nodes
+    Assert.assertEquals(ImmutableList.of(broker1, broker2), listener.nodesAddedList);
+
+    // Simulate watch reconnect: resetNodes with the same set of nodes
+    LinkedHashMap<String, DiscoveryDruidNode> resetMap = new LinkedHashMap<>();
+    resetMap.put(broker1.getDruidNode().getHostAndPortToUse(), broker1);
+    resetMap.put(broker2.getDruidNode().getHostAndPortToUse(), broker2);
+    nodeRoleWatcher.resetNodes(resetMap);
+
+    // No new additions or removals since the node set is unchanged
+    Assert.assertEquals(ImmutableList.of(broker1, broker2), listener.nodesAddedList);
+    Assert.assertTrue(listener.nodesRemovedList.isEmpty());
+
+    // Simulate K8s watch replaying ADDED events for already-present nodes
+    nodeRoleWatcher.childAdded(broker1);
+    nodeRoleWatcher.childAdded(broker2);
+
+    // Listeners should NOT be notified again — the duplicate adds are no-ops
+    Assert.assertEquals(ImmutableList.of(broker1, broker2), listener.nodesAddedList);
+    Assert.assertTrue(listener.nodesRemovedList.isEmpty());
+
+    // The nodes map should still contain exactly the same two nodes
+    Assert.assertEquals(ImmutableSet.of(broker1, broker2), new HashSet<>(nodeRoleWatcher.getAllNodes()));
+  }
+
+  @Test(timeout = 60_000L)
+  public void testChildRemovedIfPresentRemovesKnownNode()
+  {
+    BaseNodeRoleWatcher nodeRoleWatcher = BaseNodeRoleWatcher.create(exec, NodeRole.BROKER);
+
+    DiscoveryDruidNode broker1 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker1");
+
+    nodeRoleWatcher.childAdded(broker1);
+    nodeRoleWatcher.cacheInitialized();
+
+    TestListener listener = new TestListener();
+    nodeRoleWatcher.registerListener(listener);
+
+    Assert.assertEquals(ImmutableList.of(broker1), listener.nodesAddedList);
+
+    // Remove with skipIfUnknown=true — node IS in cache, should remove and notify
+    nodeRoleWatcher.childRemoved(broker1, true);
+
+    Assert.assertEquals(ImmutableList.of(broker1), listener.nodesRemovedList);
+    Assert.assertTrue(nodeRoleWatcher.getAllNodes().isEmpty());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testChildRemovedIfPresentSkipsUnknownNode()
+  {
+    BaseNodeRoleWatcher nodeRoleWatcher = BaseNodeRoleWatcher.create(exec, NodeRole.BROKER);
+
+    DiscoveryDruidNode broker1 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker1");
+    DiscoveryDruidNode broker2 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker2");
+
+    nodeRoleWatcher.childAdded(broker1);
+    nodeRoleWatcher.cacheInitialized();
+
+    TestListener listener = new TestListener();
+    nodeRoleWatcher.registerListener(listener);
+
+    // Remove broker2 with skipIfUnknown=true — node is NOT in cache, should silently skip
+    nodeRoleWatcher.childRemoved(broker2, true);
+
+    Assert.assertTrue(listener.nodesRemovedList.isEmpty());
+    Assert.assertEquals(1, nodeRoleWatcher.getAllNodes().size());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testChildRemovedIfPresentRepeatedRemovalsAreIdempotent()
+  {
+    BaseNodeRoleWatcher nodeRoleWatcher = BaseNodeRoleWatcher.create(exec, NodeRole.BROKER);
+
+    DiscoveryDruidNode broker1 = buildDiscoveryDruidNode(NodeRole.BROKER, "broker1");
+
+    nodeRoleWatcher.childAdded(broker1);
+    nodeRoleWatcher.cacheInitialized();
+
+    TestListener listener = new TestListener();
+    nodeRoleWatcher.registerListener(listener);
+
+    // First removal should remove and notify
+    nodeRoleWatcher.childRemoved(broker1, true);
+    Assert.assertEquals(ImmutableList.of(broker1), listener.nodesRemovedList);
+
+    // Second removal should silently skip (node already removed)
+    nodeRoleWatcher.childRemoved(broker1, true);
+    // Still only one removal notification
+    Assert.assertEquals(ImmutableList.of(broker1), listener.nodesRemovedList);
+  }
+
   private DiscoveryDruidNode buildDiscoveryDruidNode(NodeRole role, String host)
   {
     return new DiscoveryDruidNode(

@@ -42,8 +42,8 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
-import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.querykit.FrameProcessorTestBase;
+import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.msq.test.LimitedFrameWriterFactory;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.RowBasedSegment;
@@ -106,7 +106,8 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
     final ReadableInput factChannel = ReadableInput.channel(
         ReadableNilFrameChannel.INSTANCE,
         FrameReader.create(JoinTestHelper.FACT_SIGNATURE),
-        STAGE_PARTITION
+        TEST_STAGE_NUMBER,
+        TEST_PARTITION_NUMBER
     );
 
     final ReadableInput countriesChannel =
@@ -155,7 +156,8 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
     final ReadableInput countriesChannel = ReadableInput.channel(
         ReadableNilFrameChannel.INSTANCE,
         FrameReader.create(JoinTestHelper.COUNTRIES_SIGNATURE),
-        STAGE_PARTITION
+        TEST_STAGE_NUMBER,
+        TEST_PARTITION_NUMBER
     );
 
     final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
@@ -232,7 +234,7 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
     final ReadableInput countriesChannel = ReadableInput.channel(
         ReadableNilFrameChannel.INSTANCE,
         FrameReader.create(JoinTestHelper.COUNTRIES_SIGNATURE),
-        STAGE_PARTITION
+        TEST_STAGE_NUMBER, TEST_PARTITION_NUMBER
     );
 
     final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();

@@ -46,6 +46,13 @@ public class DruidCompactionConfigTest
   }
 
   @Test
+  public void testSerdeWithLegacyConfig() throws Exception
+  {
+    final String json = "{\"compactionConfigs\":[],\"useSupervisors\":false,\"engine\":\"native\"}";
+    Assert.assertEquals(DruidCompactionConfig.legacy(), MAPPER.readValue(json, DruidCompactionConfig.class));
+  }
+
+  @Test
   public void testSerdeWithDatasourceConfigs() throws Exception
   {
     final DruidCompactionConfig config = new DruidCompactionConfig(
@@ -61,6 +68,7 @@ public class DruidCompactionConfigTest
                 .withSkipOffsetFromLatest(Period.hours(2))
                 .build()
         ),
+        null,
         null,
         null,
         null,
@@ -83,7 +91,8 @@ public class DruidCompactionConfigTest
         10,
         new NewestSegmentFirstPolicy(null),
         true,
-        CompactionEngine.MSQ
+        CompactionEngine.MSQ,
+        true
     );
     final DruidCompactionConfig copy = config.withClusterConfig(clusterConfig);
 
@@ -116,7 +125,9 @@ public class DruidCompactionConfigTest
     Assert.assertTrue(config.getCompactionConfigs().isEmpty());
     Assert.assertTrue(config.getCompactionPolicy() instanceof NewestSegmentFirstPolicy);
     Assert.assertEquals(CompactionEngine.NATIVE, config.getEngine());
+    Assert.assertTrue(config.isUseSupervisors());
     Assert.assertEquals(0.1, config.getCompactionTaskSlotRatio(), 1e-9);
     Assert.assertEquals(Integer.MAX_VALUE, config.getMaxCompactionTaskSlots());
+    Assert.assertTrue(config.isStoreCompactionStatePerSegment());
   }
 }

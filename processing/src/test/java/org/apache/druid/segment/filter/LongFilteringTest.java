@@ -20,13 +20,10 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
@@ -65,24 +62,23 @@ public class LongFilteringTest extends BaseFilterTest
   private static final String TIMESTAMP_COLUMN = "ts";
   private static final int NUM_FILTER_VALUES = 32;
 
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "millis", DateTimes.of("2000")),
-          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3")))
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "millis", DateTimes.of("2000")),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("dim0", "dim1", "dim2", "dim3"))),
+      ColumnsFilter.all()
   );
 
-  private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.of("ts", 1L, "dim0", "1", "lng", 1L, "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("ts", 2L, "dim0", "2", "lng", 2L, "dim1", "10", "dim2", ImmutableList.of())).get(0),
-      PARSER.parseBatch(ImmutableMap.of("ts", 3L, "dim0", "3", "lng", 3L, "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("ts", 4L, "dim0", "4", "lng", 4L, "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("ts", 5L, "dim0", "5", "lng", 5L, "dim1", "def", "dim2", ImmutableList.of("c"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("ts", 6L, "dim0", "6", "lng", 6L, "dim1", "abc")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("ts", 7L, "dim0", "7", "lng", 100000000L, "dim1", "xyz")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("ts", 8L, "dim0", "8", "lng", 100000001L, "dim1", "xyz")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("ts", 9L, "dim0", "9", "lng", -25L, "dim1", "ghi")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("ts", 10L, "dim0", "10", "lng", -100000001L, "dim1", "qqq")).get(0)
+  private static final List<InputRow> ROWS = List.of(
+      makeMapRow(SCHEMA, Map.of("ts", 1L, "dim0", "1", "lng", 1L, "dim1", "", "dim2", List.of("a", "b"))),
+      makeMapRow(SCHEMA, Map.of("ts", 2L, "dim0", "2", "lng", 2L, "dim1", "10", "dim2", List.of())),
+      makeMapRow(SCHEMA, Map.of("ts", 3L, "dim0", "3", "lng", 3L, "dim1", "2", "dim2", List.of(""))),
+      makeMapRow(SCHEMA, Map.of("ts", 4L, "dim0", "4", "lng", 4L, "dim1", "1", "dim2", List.of("a"))),
+      makeMapRow(SCHEMA, Map.of("ts", 5L, "dim0", "5", "lng", 5L, "dim1", "def", "dim2", List.of("c"))),
+      makeMapRow(SCHEMA, Map.of("ts", 6L, "dim0", "6", "lng", 6L, "dim1", "abc")),
+      makeMapRow(SCHEMA, Map.of("ts", 7L, "dim0", "7", "lng", 100000000L, "dim1", "xyz")),
+      makeMapRow(SCHEMA, Map.of("ts", 8L, "dim0", "8", "lng", 100000001L, "dim1", "xyz")),
+      makeMapRow(SCHEMA, Map.of("ts", 9L, "dim0", "9", "lng", -25L, "dim1", "ghi")),
+      makeMapRow(SCHEMA, Map.of("ts", 10L, "dim0", "10", "lng", -100000001L, "dim1", "qqq"))
   );
 
   public LongFilteringTest(
@@ -118,117 +114,117 @@ public class LongFilteringTest extends BaseFilterTest
   {
     assertFilterMatches(
         new SelectorDimFilter(LONG_COLUMN, "0", null),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new SelectorDimFilter(LONG_COLUMN, "3", null),
-        ImmutableList.of("3")
+        List.of("3")
     );
 
     assertFilterMatches(
         new SelectorDimFilter(LONG_COLUMN, "3.0", null),
-        ImmutableList.of("3")
+        List.of("3")
     );
 
     assertFilterMatches(
         new SelectorDimFilter(LONG_COLUMN, "3.00000000000000000000001", null),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new SelectorDimFilter(LONG_COLUMN, "100000001.0", null),
-        ImmutableList.of("8")
+        List.of("8")
     );
 
     assertFilterMatches(
         new SelectorDimFilter(LONG_COLUMN, "-100000001.0", null),
-        ImmutableList.of("10")
+        List.of("10")
     );
 
     assertFilterMatches(
         new SelectorDimFilter(LONG_COLUMN, "111119223372036854775807.674398674398", null),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "2", "5", false, false, null, null, StringComparators.NUMERIC),
-        ImmutableList.of("2", "3", "4", "5")
+        List.of("2", "3", "4", "5")
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "1", "4", true, true, null, null, StringComparators.NUMERIC),
-        ImmutableList.of("2", "3")
+        List.of("2", "3")
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "2.0", "5.0", false, false, null, null, StringComparators.NUMERIC),
-        ImmutableList.of("2", "3", "4", "5")
+        List.of("2", "3", "4", "5")
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "2.0", "5.0", true, true, null, null, StringComparators.NUMERIC),
-        ImmutableList.of("3", "4")
+        List.of("3", "4")
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "1.9", "5.9", true, true, null, null, StringComparators.NUMERIC),
-        ImmutableList.of("2", "3", "4", "5")
+        List.of("2", "3", "4", "5")
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "2.1", "5.9", false, false, null, null, StringComparators.NUMERIC),
-        ImmutableList.of("3", "4", "5")
+        List.of("3", "4", "5")
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "111119223372036854775807.67", "5.9", false, false, null, null, StringComparators.NUMERIC),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "-111119223372036854775807.67", "5.9", false, false, null, null, StringComparators.NUMERIC),
-        ImmutableList.of("1", "2", "3", "4", "5", "9", "10")
+        List.of("1", "2", "3", "4", "5", "9", "10")
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "2.1", "111119223372036854775807.67", false, false, null, null, StringComparators.NUMERIC),
-        ImmutableList.of("3", "4", "5", "6", "7", "8")
+        List.of("3", "4", "5", "6", "7", "8")
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "2.1", "-111119223372036854775807.67", false, false, null, null, StringComparators.NUMERIC),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "100000000.0", "100000001.0", true, true, null, null, StringComparators.NUMERIC),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "100000000.0", "100000001.0", false, false, null, null, StringComparators.NUMERIC),
-        ImmutableList.of("7", "8")
+        List.of("7", "8")
     );
 
     assertFilterMatches(
         new InDimFilter(LONG_COLUMN, Arrays.asList("2", "4", "8"), null),
-        ImmutableList.of("2", "4")
+        List.of("2", "4")
     );
 
     assertFilterMatches(
         new InDimFilter(LONG_COLUMN, Arrays.asList("1.999999999999999999", "4.00000000000000000000001"), null),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new InDimFilter(LONG_COLUMN, Arrays.asList("100000001.0", "99999999.999999999"), null),
-        ImmutableList.of("8")
+        List.of("8")
     );
 
     assertFilterMatches(
         new InDimFilter(LONG_COLUMN, Arrays.asList("-25.0", "-99999999.999999999"), null),
-        ImmutableList.of("9")
+        List.of("9")
     );
 
     // cross the hashing threshold to test hashset implementation, filter on even values
@@ -238,23 +234,23 @@ public class LongFilteringTest extends BaseFilterTest
     }
     assertFilterMatches(
         new InDimFilter(LONG_COLUMN, infilterValues, null),
-        ImmutableList.of("2", "4", "6")
+        List.of("2", "4", "6")
     );
 
     String jsFn = "function(x) { return(x === 3 || x === 5) }";
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatches(
         new JavaScriptDimFilter(LONG_COLUMN, jsFn, null, JavaScriptConfig.getEnabledInstance()),
-        ImmutableList.of("3", "5")
+        List.of("3", "5")
     );
 
     assertFilterMatches(
         new RegexDimFilter(LONG_COLUMN, "4", null),
-        ImmutableList.of("4")
+        List.of("4")
     );
 
     assertFilterMatches(
         new SearchQueryDimFilter(LONG_COLUMN, new ContainsSearchQuerySpec("2", true), null),
-        ImmutableList.of("2", "9")
+        List.of("2", "9")
     );
   }
 
@@ -263,42 +259,42 @@ public class LongFilteringTest extends BaseFilterTest
   {
     assertFilterMatches(
         new SelectorDimFilter(LONG_COLUMN, "", null),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new SelectorDimFilter(LONG_COLUMN, null, null),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new SelectorDimFilter(LONG_COLUMN, "abc", null),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "a", "b", false, false, null, null, StringComparators.NUMERIC),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, " ", "4", false, false, null, null, StringComparators.NUMERIC),
-        ImmutableList.of("1", "2", "3", "4", "9", "10")
+        List.of("1", "2", "3", "4", "9", "10")
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, " ", "4", false, false, null, null, StringComparators.LEXICOGRAPHIC),
-        ImmutableList.of("1", "2", "3", "4", "7", "8", "9", "10")
+        List.of("1", "2", "3", "4", "7", "8", "9", "10")
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, " ", "A", false, false, null, null, StringComparators.NUMERIC),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, " ", "A", false, false, null, null, StringComparators.LEXICOGRAPHIC),
-        ImmutableList.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10")
+        List.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10")
     );
   }
 
@@ -317,25 +313,25 @@ public class LongFilteringTest extends BaseFilterTest
 
     assertFilterMatches(
         new SelectorDimFilter(LONG_COLUMN, "Monday", exfn),
-        ImmutableList.of("1")
+        List.of("1")
     );
     assertFilterMatches(
         new SelectorDimFilter(LONG_COLUMN, "Notaday", exfn),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "Fridax", "Fridaz", false, false, null, exfn, StringComparators.ALPHANUMERIC),
-        ImmutableList.of("5")
+        List.of("5")
     );
     assertFilterMatches(
         new BoundDimFilter(LONG_COLUMN, "Friday", "Friday", true, true, null, exfn, StringComparators.ALPHANUMERIC),
-        ImmutableList.of()
+        List.of()
     );
 
     assertFilterMatches(
         new InDimFilter(LONG_COLUMN, Arrays.asList("Caturday", "Saturday", "Tuesday"), exfn),
-        ImmutableList.of("2", "6")
+        List.of("2", "6")
     );
 
     // test InFilter HashSet implementation
@@ -346,23 +342,23 @@ public class LongFilteringTest extends BaseFilterTest
     );
     assertFilterMatches(
         new InDimFilter(LONG_COLUMN, bigList, exfn),
-        ImmutableList.of("2", "6")
+        List.of("2", "6")
     );
 
     String jsFn = "function(x) { return(x === 'Wednesday' || x === 'Thursday') }";
-    assertFilterMatchesSkipVectorize(
+    assertFilterMatches(
         new JavaScriptDimFilter(LONG_COLUMN, jsFn, exfn, JavaScriptConfig.getEnabledInstance()),
-        ImmutableList.of("3", "4")
+        List.of("3", "4")
     );
 
     assertFilterMatches(
         new RegexDimFilter(LONG_COLUMN, ".*day", exfn),
-        ImmutableList.of("1", "2", "3", "4", "5", "6")
+        List.of("1", "2", "3", "4", "5", "6")
     );
 
     assertFilterMatches(
         new SearchQueryDimFilter(LONG_COLUMN, new ContainsSearchQuerySpec("s", true), exfn),
-        ImmutableList.of("2", "3", "4")
+        List.of("2", "3", "4")
     );
   }
 }

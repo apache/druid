@@ -21,7 +21,6 @@ package org.apache.druid.indexing.kinesis;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -34,13 +33,13 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,11 +56,10 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
 
   KinesisIndexTaskRunner(
       KinesisIndexTask task,
-      @Nullable InputRowParser<ByteBuffer> parser,
       LockGranularity lockGranularityToUse
   )
   {
-    super(task, parser, lockGranularityToUse);
+    super(task, lockGranularityToUse);
     this.task = task;
   }
 
@@ -100,7 +98,9 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
       SeekableStreamSequenceNumbers<String, String> partitions
   )
   {
-    return new KinesisDataSourceMetadata(partitions);
+    // Include bounded config if this is a bounded task
+    BoundedStreamConfig boundedConfig = task.getIOConfig().getBoundedStreamConfig();
+    return new KinesisDataSourceMetadata(partitions, boundedConfig);
   }
 
   @Override

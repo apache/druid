@@ -56,6 +56,7 @@ public class SegmentsInputSliceTest
                     "host1",
                     null,
                     100L,
+                    null,
                     ServerType.REALTIME,
                     "tier1",
                     0

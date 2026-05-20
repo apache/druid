@@ -48,6 +48,7 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMergerV10Factory;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -64,7 +65,6 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.utils.RuntimeInfo;
@@ -93,7 +93,6 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.dataSegmentMover,
         bob.dataSegmentArchiver,
         bob.segmentAnnouncer,
-        bob.serverAnnouncer,
         bob.handoffNotifierFactory,
         bob.queryRunnerFactoryConglomerateProvider,
         bob.processingConfigProvider,
@@ -107,6 +106,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.cacheConfig,
         bob.cachePopulatorStats,
         bob.indexMergerV9Factory,
+        bob.indexMergerV10Factory,
         bob.druidNodeAnnouncer,
         bob.druidNode,
         bob.lookupNodeService,
@@ -140,7 +140,6 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private DataSegmentMover dataSegmentMover;
     private DataSegmentArchiver dataSegmentArchiver;
     private DataSegmentAnnouncer segmentAnnouncer;
-    private DataSegmentServerAnnouncer serverAnnouncer;
     private SegmentHandoffNotifierFactory handoffNotifierFactory;
     private Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
     private Provider<DruidProcessingConfig> processingConfigProvider;
@@ -153,7 +152,16 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private Cache cache;
     private CacheConfig cacheConfig;
     private CachePopulatorStats cachePopulatorStats;
-    private IndexMergerV9Factory indexMergerV9Factory = new IndexMergerV9Factory(jsonMapper, indexIO, OnHeapMemorySegmentWriteOutMediumFactory.instance());
+    private IndexMergerV9Factory indexMergerV9Factory = new IndexMergerV9Factory(
+        jsonMapper,
+        indexIO,
+        OnHeapMemorySegmentWriteOutMediumFactory.instance()
+    );
+    private IndexMergerV10Factory indexMergerV10Factory = new IndexMergerV10Factory(
+        jsonMapper,
+        indexIO,
+        OnHeapMemorySegmentWriteOutMediumFactory.instance()
+    );
     private DruidNodeAnnouncer druidNodeAnnouncer;
     private DruidNode druidNode;
     private LookupNodeService lookupNodeService;
@@ -230,12 +238,6 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     public Builder setSegmentAnnouncer(DataSegmentAnnouncer segmentAnnouncer)
     {
       this.segmentAnnouncer = segmentAnnouncer;
-      return this;
-    }
-
-    public Builder setServerAnnouncer(DataSegmentServerAnnouncer serverAnnouncer)
-    {
-      this.serverAnnouncer = serverAnnouncer;
       return this;
     }
 

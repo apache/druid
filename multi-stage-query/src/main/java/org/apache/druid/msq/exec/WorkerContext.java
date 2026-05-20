@@ -58,10 +58,10 @@ public interface WorkerContext extends Closeable
   Injector injector();
 
   /**
-   * Emit the metric in the {@link MSQMetriceEventBuilder} using a {@link ServiceEmitter}. Might sets up addtional
+   * Emit the metric in the {@link MSQMetricEventBuilder} using a {@link ServiceEmitter}. Might sets up addtional
    * context dependant dimensions.
    */
-  void emitMetric(MSQMetriceEventBuilder metricBuilder);
+  void emitMetric(MSQMetricEventBuilder metricBuilder);
 
   /**
    * Callback from the worker implementation to "register" the worker. Used in
@@ -115,6 +115,11 @@ public interface WorkerContext extends Closeable
    * Whether to include all counters in reports. See {@link MultiStageQueryContext#CTX_INCLUDE_ALL_COUNTERS} for detail.
    */
   boolean includeAllCounters();
+
+  /**
+   * Whether to log full stack traces for all errors.
+   */
+  boolean isDebug();
 
   @Override
   void close();

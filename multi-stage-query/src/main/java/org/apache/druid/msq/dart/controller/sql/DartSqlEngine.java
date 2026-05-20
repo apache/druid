@@ -30,26 +30,32 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.Dart;
-import org.apache.druid.msq.dart.controller.ControllerHolder;
+import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
+import org.apache.druid.msq.dart.controller.QueryInfoAndReport;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
+import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.indexing.error.CancellationReason;
+import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -60,14 +66,15 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngines;
 import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.sql.http.GetQueriesResponse;
-import org.apache.druid.sql.http.QueryInfo;
+import org.apache.druid.sql.http.GetQueryReportResponse;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 @LazySingleton
@@ -75,14 +82,14 @@ public class DartSqlEngine implements SqlEngine
 {
   public static final String NAME = "msq-dart";
   private static final Logger log = new Logger(DartSqlEngine.class);
-
   private final DartControllerContextFactory controllerContextFactory;
   private final DartControllerRegistry controllerRegistry;
   private final DartControllerConfig controllerConfig;
-  private final ExecutorService controllerExecutor;
+  private final ControllerThreadPool controllerThreadPool;
   private final ServerConfig serverConfig;
   private final QueryKitSpecFactory queryKitSpecFactory;
-  private final DefaultQueryConfig dartQueryConfig;
+  private final MultiQueryKit queryKit;
+  private final QueryConfigProvider queryConfigProvider;
   private final SqlToolbox toolbox;
   private final DartSqlClients sqlClients;
 
@@ -91,34 +98,11 @@ public class DartSqlEngine implements SqlEngine
       DartControllerContextFactory controllerContextFactory,
       DartControllerRegistry controllerRegistry,
       DartControllerConfig controllerConfig,
+      @Dart ControllerThreadPool controllerThreadPool,
       DartQueryKitSpecFactory queryKitSpecFactory,
+      MultiQueryKit queryKit,
       ServerConfig serverConfig,
-      @Dart DefaultQueryConfig dartQueryConfig,
-      SqlToolbox toolbox,
-      DartSqlClients sqlClients
-  )
-  {
-    this(
-        controllerContextFactory,
-        controllerRegistry,
-        controllerConfig,
-        Execs.multiThreaded(controllerConfig.getConcurrentQueries(), "dart-controller-%s"),
-        queryKitSpecFactory,
-        serverConfig,
-        dartQueryConfig,
-        toolbox,
-        sqlClients
-    );
-  }
-
-  public DartSqlEngine(
-      DartControllerContextFactory controllerContextFactory,
-      DartControllerRegistry controllerRegistry,
-      DartControllerConfig controllerConfig,
-      ExecutorService controllerExecutor,
-      QueryKitSpecFactory queryKitSpecFactory,
-      ServerConfig serverConfig,
-      DefaultQueryConfig dartQueryConfig,
+      @Dart QueryConfigProvider queryConfigProvider,
       SqlToolbox toolbox,
       DartSqlClients sqlClients
   )
@@ -126,12 +110,25 @@ public class DartSqlEngine implements SqlEngine
     this.controllerContextFactory = controllerContextFactory;
     this.controllerRegistry = controllerRegistry;
     this.controllerConfig = controllerConfig;
-    this.controllerExecutor = controllerExecutor;
+    this.controllerThreadPool = controllerThreadPool;
     this.queryKitSpecFactory = queryKitSpecFactory;
+    this.queryKit = queryKit;
     this.serverConfig = serverConfig;
-    this.dartQueryConfig = dartQueryConfig;
+    this.queryConfigProvider = queryConfigProvider;
     this.toolbox = toolbox;
     this.sqlClients = sqlClients;
+  }
+
+  /**
+   * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#CTX_SQL_QUERY_ID}
+   * or {@link BaseQuery#QUERY_ID}. Instead we generate a UUID that becomes the {@link Controller#queryId()}.
+   *
+   * The user-provided {@link QueryContexts#CTX_SQL_QUERY_ID} is still registered with the {@link SqlLifecycleManager}
+   * for purposes of query cancellation.
+   */
+  public static String generateExecutionId()
+  {
+    return UUID.randomUUID().toString();
   }
 
   @Override
@@ -173,6 +170,7 @@ public class DartSqlEngine implements SqlEngine
   public void validateContext(Map<String, Object> queryContext)
   {
     SqlEngines.validateNoSpecialContextKeys(queryContext, MSQTaskSqlEngine.SYSTEM_CONTEXT_PARAMETERS);
+    QueryContext.of(queryContext).verifyMaxQueryTimeout(serverConfig.getMaxQueryTimeout());
   }
 
   @Override
@@ -214,9 +212,9 @@ public class DartSqlEngine implements SqlEngine
         plannerContext,
         controllerRegistry,
         controllerConfig,
-        controllerExecutor,
+        controllerThreadPool,
         queryKitSpecFactory,
-        serverConfig
+        queryKit
     );
     if (plannerContext.queryContext().isPrePlanned()) {
       return new PrePlannedDartQueryMaker(plannerContext, dartQueryMaker);
@@ -239,21 +237,15 @@ public class DartSqlEngine implements SqlEngine
   public void initContextMap(Map<String, Object> contextMap)
   {
     // Default context keys from dartQueryConfig.
-    for (Map.Entry<String, Object> entry : dartQueryConfig.getContext().entrySet()) {
+    for (Map.Entry<String, Object> entry : queryConfigProvider.getContext().entrySet()) {
       contextMap.putIfAbsent(entry.getKey(), entry.getValue());
     }
-    /**
-     * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#CTX_SQL_QUERY_ID}
-     * or {@link BaseQuery#QUERY_ID}. Instead we generate a UUID in {@link DartSqlResource#doPost}, overriding whatever
-     * the user may have provided. This becomes the {@link Controller#queryId()}.
-     *
-     * The user-provided {@link QueryContexts#CTX_SQL_QUERY_ID} is still registered with the {@link SqlLifecycleManager}
-     * for purposes of query cancellation.
-     *
-     * The user-provided {@link BaseQuery#QUERY_ID} is ignored.
-     */
-    final String dartQueryId = UUID.randomUUID().toString();
-    contextMap.put(QueryContexts.CTX_DART_QUERY_ID, dartQueryId);
+
+    // Set default query timeout if not already specified.
+    contextMap.putIfAbsent(QueryContexts.TIMEOUT_KEY, serverConfig.getDefaultQueryTimeout());
+
+    // Add execution ID.
+    contextMap.put(QueryContexts.CTX_DART_QUERY_ID, generateExecutionId());
   }
 
   @Override
@@ -263,22 +255,29 @@ public class DartSqlEngine implements SqlEngine
   }
 
   @Override
-  public List<QueryInfo> getRunningQueries(
+  public GetQueriesResponse getQueries(
       boolean selfOnly,
+      boolean includeComplete,
       AuthenticationResult authenticationResult,
-      AuthorizationResult authorizationResult
+      AuthorizationResult stateReadAuthorization
   )
   {
-    final List<DartQueryInfo> queries = controllerRegistry.getAllHolders()
-                                                          .stream()
-                                                          .map(DartQueryInfo::fromControllerHolder)
-                                                          .collect(Collectors.toList());
+    final List<QueryInfoAndReport> queryDetails = controllerRegistry.getAllQueryDetails(includeComplete);
+    final List<DartQueryInfo> queries = new ArrayList<>(queryDetails.size());
+
+    for (final QueryInfoAndReport queryDetail : queryDetails) {
+      queries.add(queryDetail.getQueryInfo());
+    }
 
     // Add queries from all other servers, if "selfOnly" is false.
     if (!selfOnly) {
       final List<GetQueriesResponse> otherQueries = FutureUtils.getUnchecked(
           Futures.successfulAsList(
-              Iterables.transform(sqlClients.getAllClients(), client -> client.getRunningQueries(true))),
+              Iterables.transform(
+                  sqlClients.getAllClients(),
+                  client -> client.getQueries(true, includeComplete)
+              )
+          ),
           true
       );
 
@@ -295,27 +294,82 @@ public class DartSqlEngine implements SqlEngine
     // Sort queries by start time, breaking ties by query ID, so the list comes back in a consistent and nice order.
     queries.sort(Comparator.comparing(DartQueryInfo::getStartTime).thenComparing(DartQueryInfo::getDartQueryId));
 
-    if (authorizationResult.allowAccessWithNoRestriction()) {
+    if (stateReadAuthorization.allowAccessWithNoRestriction()) {
       // User can READ STATE, so they can see all running queries, as well as authentication details.
-      return List.copyOf(queries);
+      return new GetQueriesResponse(List.copyOf(queries));
     } else {
       // User cannot READ STATE, so they can see only their own queries, without authentication details.
-      return queries.stream()
-                    .filter(
-                        query ->
-                            authenticationResult.getAuthenticatedBy() != null
-                            && authenticationResult.getIdentity() != null
-                            && Objects.equals(
-                                authenticationResult.getAuthenticatedBy(),
-                                query.getAuthenticator()
-                            )
-                            && Objects.equals(
-                                authenticationResult.getIdentity(),
-                                query.getIdentity()
-                            ))
-                    .map(DartQueryInfo::withoutAuthenticationResult)
-                    .collect(Collectors.toList());
+      return new GetQueriesResponse(
+          queries.stream()
+                 .filter(query -> isOwnQuery(authenticationResult, query))
+                 .map(DartQueryInfo::withoutAuthenticationResult)
+                 .collect(Collectors.toList())
+      );
     }
+  }
+
+  @Override
+  @Nullable
+  public GetQueryReportResponse getQueryReport(
+      final String sqlQueryId,
+      final boolean selfOnly,
+      final AuthenticationResult authenticationResult,
+      final AuthorizationResult stateReadAuthorization
+  )
+  {
+    QueryInfoAndReport infoAndReport = controllerRegistry.getQueryDetailsBySqlQueryId(sqlQueryId);
+
+    if (infoAndReport == null && !selfOnly) {
+      final List<GetQueryReportResponse> otherReports = FutureUtils.getUnchecked(
+          Futures.successfulAsList(
+              Iterables.transform(sqlClients.getAllClients(), client -> client.getQueryReport(sqlQueryId, true))
+          ),
+          true
+      );
+
+      for (final GetQueryReportResponse otherReport : otherReports) {
+        // Check for non-null report with non-null content (a 404 response returns GetReportResponse with null fields)
+        if (otherReport != null && otherReport.getQueryInfo() != null) {
+          infoAndReport = new QueryInfoAndReport(
+              (DartQueryInfo) otherReport.getQueryInfo(),
+              otherReport.getReportMap(),
+              DateTimes.utc(0)
+          );
+          break;
+        }
+      }
+    }
+
+    if (infoAndReport == null) {
+      return null;
+    }
+
+    if (stateReadAuthorization.allowAccessWithNoRestriction()) {
+      // User can READ STATE, so they can see any report.
+      return new GetQueryReportResponse(infoAndReport.getQueryInfo(), infoAndReport.getReportMap());
+    } else {
+      // User cannot READ STATE, so they can see only their own queries, without authentication details.
+      final DartQueryInfo queryInfo = infoAndReport.getQueryInfo();
+      if (isOwnQuery(authenticationResult, queryInfo)) {
+        return new GetQueryReportResponse(queryInfo.withoutAuthenticationResult(), infoAndReport.getReportMap());
+      } else {
+        return null;
+      }
+    }
+  }
+
+  /**
+   * Returns whether the given query belongs to the authenticated user.
+   */
+  private static boolean isOwnQuery(
+      final AuthenticationResult authenticationResult,
+      final DartQueryInfo queryInfo
+  )
+  {
+    return authenticationResult.getAuthenticatedBy() != null
+           && authenticationResult.getIdentity() != null
+           && Objects.equals(authenticationResult.getAuthenticatedBy(), queryInfo.getAuthenticator())
+           && Objects.equals(authenticationResult.getIdentity(), queryInfo.getIdentity());
   }
 
   @Override
@@ -323,7 +377,7 @@ public class DartSqlEngine implements SqlEngine
   {
     final Object dartQueryId = plannerContext.queryContext().get(QueryContexts.CTX_DART_QUERY_ID);
     if (dartQueryId instanceof String) {
-      final ControllerHolder holder = controllerRegistry.get((String) dartQueryId);
+      final ControllerHolder holder = controllerRegistry.getController((String) dartQueryId);
       if (holder != null) {
         holder.cancel(CancellationReason.USER_REQUEST);
       }

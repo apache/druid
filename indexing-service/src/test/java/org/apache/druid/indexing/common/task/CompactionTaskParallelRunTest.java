@@ -372,9 +372,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               Granularities.HOUR,
               Granularities.MINUTE,
               true,
-
-              // Umbrella interval for all segments, since CompactionTasks generated a single granularitySpec.
-              ImmutableList.of(Intervals.of("2014-01-01/2014-01-01T03:00:00"))
+              ImmutableList.of(Intervals.of("2014-01-01T00:00:00Z/2014-01-01T03:00:00Z"))
           ),
           null
       );
@@ -575,7 +573,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
-        .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim", "a", null)))
+        .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim", "a", null), null))
         .build();
 
     final DataSegmentsWithSchemas dataSegmentsWithSchemas = runTask(compactionTask);
@@ -1000,6 +998,110 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ImmutableList.of(PROJECTION_SPEC, addProjection)
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
+    }
+  }
+
+  @Test
+  public void testRunParallelWithRangePartitioningFilteringAllRows() throws Exception
+  {
+    allowSegmentFetchesByCompactionTask = true;
+
+    // Range partitioning is not supported with segment lock yet
+    Assume.assumeFalse(lockGranularity == LockGranularity.SEGMENT);
+
+    runIndexTask(null, true);
+
+    Collection<DataSegment> usedSegments = getCoordinatorClient().fetchUsedSegments(
+        DATA_SOURCE,
+        ImmutableList.of(INTERVAL_TO_INDEX)
+    ).get();
+    Assert.assertEquals(3, usedSegments.size());
+
+    // Compact with a transform that filters out ALL rows
+    final Builder builder = new Builder(DATA_SOURCE, getSegmentCacheManagerFactory());
+    final CompactionTask compactionTask = builder
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null), true) // dropExisting=true
+        .tuningConfig(newTuningConfig(
+            new SingleDimensionPartitionsSpec(7, null, "dim", false),
+            2,
+            true
+        ))
+        .transformSpec(new CompactionTransformSpec(
+            new SelectorDimFilter("dim", "nonexistent_value", null), // Filters out all rows
+            null
+        ))
+        .build();
+
+    runTask(compactionTask);
+
+    usedSegments = getCoordinatorClient().fetchUsedSegments(
+        DATA_SOURCE,
+        ImmutableList.of(INTERVAL_TO_INDEX)
+    ).get();
+
+    Assert.assertNotNull(usedSegments);
+
+    int tombstoneCount = 0;
+    for (DataSegment segment : usedSegments) {
+      if (segment.isTombstone()) {
+        tombstoneCount++;
+      }
+    }
+
+    Assert.assertTrue("Expected tombstones when all rows filtered in REPLACE mode", tombstoneCount > 0);
+  }
+
+  @Test
+  public void testRunParallelRangePartitioningFilterAllRowsReplaceLegacyMode() throws Exception
+  {
+    allowSegmentFetchesByCompactionTask = true;
+
+    Assume.assumeFalse(lockGranularity == LockGranularity.SEGMENT);
+
+    runIndexTask(null, true);
+
+    Collection<DataSegment> usedSegments = getCoordinatorClient().fetchUsedSegments(
+        DATA_SOURCE,
+        ImmutableList.of(INTERVAL_TO_INDEX)
+    ).get();
+    Assert.assertEquals(3, usedSegments.size());
+
+    final Builder builder = new Builder(DATA_SOURCE, getSegmentCacheManagerFactory());
+    final CompactionTask compactionTask = builder
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null), false) // dropExisting=false -> REPLACE_LEGACY mode
+        .tuningConfig(newTuningConfig(
+            new SingleDimensionPartitionsSpec(7, null, "dim", false),
+            2,
+            true
+        ))
+        .transformSpec(new CompactionTransformSpec(
+            new SelectorDimFilter("dim", "nonexistent_value", null), // Filters all rows
+            null
+        ))
+        .build();
+
+    runTask(compactionTask);
+
+    // In REPLACE_LEGACY mode, should NOT create tombstones when all rows filtered
+    // Original segments should remain unchanged
+    usedSegments = getCoordinatorClient().fetchUsedSegments(
+        DATA_SOURCE,
+        ImmutableList.of(INTERVAL_TO_INDEX)
+    ).get();
+
+    Assert.assertNotNull(usedSegments);
+
+    Assert.assertEquals(
+        "Original segments should remain in REPLACE_LEGACY mode when all rows filtered",
+        3,
+        usedSegments.size()
+    );
+
+    for (DataSegment segment : usedSegments) {
+      Assert.assertFalse(
+          "No tombstones should be created in REPLACE_LEGACY mode",
+          segment.isTombstone()
+      );
     }
   }
 

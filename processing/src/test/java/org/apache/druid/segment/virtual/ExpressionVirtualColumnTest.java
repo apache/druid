@@ -206,7 +206,6 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
       RowAdapters.standardRow(),
       CURRENT_ROW::get,
       RowSignature.empty(),
-      false,
       false
   );
 
@@ -693,7 +692,6 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
             RowSignature.builder().add("x", ColumnType.LONG).build(),
-            false,
             false
         ),
         Parser.parse(SCALE_LONG.getExpression(), TestExprMacroTable.INSTANCE)
@@ -712,7 +710,6 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
             RowSignature.builder().add("x", ColumnType.DOUBLE).build(),
-            false,
             false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
@@ -731,7 +728,6 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
             RowSignature.builder().add("x", ColumnType.FLOAT).build(),
-            false,
             false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
@@ -795,5 +791,27 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
 
     Assert.assertTrue(multiConstantSelector instanceof ConstantMultiValueDimensionSelector);
     Assert.assertEquals(ImmutableList.of("a", "b", "c"), multiConstantSelector.getObject());
+  }
+
+  @Test
+  public void testNowCacheKeyIsNotStableAcrossInstances()
+  {
+    ExpressionVirtualColumn vc1 = new ExpressionVirtualColumn(
+        "v0",
+        "now()",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    ExpressionVirtualColumn vc2 = new ExpressionVirtualColumn(
+        "v0",
+        "now()",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+
+    Assert.assertFalse(
+        "ExpressionVirtualColumn cache keys for now() must differ across instances to defeat result caching",
+        Arrays.equals(vc1.getCacheKey(), vc2.getCacheKey())
+    );
   }
 }

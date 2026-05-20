@@ -26,6 +26,7 @@ import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CountingInputStream;
 import com.google.common.io.Files;
+import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorOutputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
@@ -404,6 +405,46 @@ public class CompressionUtilsTest
     try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(zipFile), zipFile.getName())) {
       // Should read the first file, which contains a single null byte.
       Assert.assertArrayEquals(new byte[]{0}, ByteStreams.toByteArray(inputStream));
+    }
+  }
+
+  @Test
+  public void testGoodLz4CompressUncompressDirectory() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder("testGoodLz4CompressUncompressDirectory");
+    final File lz4File = new File(tmpDir, "compressionUtilTest.lz4");
+
+    try (final OutputStream out = new FileOutputStream(lz4File)) {
+      CompressionUtils.Format.LZ4.compressDirectory(testDir, out);
+    }
+
+    final File newDir = new File(tmpDir, "newDir");
+    Assert.assertTrue(newDir.mkdir());
+
+    final FileUtils.FileCopyResult result;
+    try (final InputStream in = new FileInputStream(lz4File)) {
+      result = CompressionUtils.Format.LZ4.decompressDirectory(in, newDir);
+    }
+
+    verifyUnzip(newDir, result, ImmutableMap.of(testFile.getName(), StringUtils.toUtf8(CONTENT)));
+  }
+
+  @Test
+  public void testDecompressLz4() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder("testDecompressLz4");
+    final File lz4File = new File(tmpDir, testFile.getName() + ".lz4");
+    Assert.assertFalse(lz4File.exists());
+
+    try (
+        final OutputStream out = new LZ4BlockOutputStream(new FileOutputStream(lz4File));
+        final InputStream in = new FileInputStream(testFile)
+    ) {
+      ByteStreams.copy(in, out);
+    }
+
+    try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(lz4File), lz4File.getName())) {
+      assertGoodDataStream(inputStream);
     }
   }
 

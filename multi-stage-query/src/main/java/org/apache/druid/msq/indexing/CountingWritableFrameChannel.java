@@ -20,9 +20,9 @@
 package org.apache.druid.msq.indexing;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -45,10 +45,10 @@ public class CountingWritableFrameChannel implements WritableFrameChannel
   }
 
   @Override
-  public void write(FrameWithPartition frame) throws IOException
+  public void write(RowsAndColumns rac, int partitionNum) throws IOException
   {
-    baseChannel.write(frame);
-    channelCounters.addFrame(partitionNumber == null ? frame.partition() : partitionNumber, frame.frame());
+    baseChannel.write(rac, partitionNum);
+    channelCounters.addRAC(rac, partitionNumber == null ? partitionNum : partitionNumber);
   }
 
   @Override

@@ -21,14 +21,16 @@ package org.apache.druid.java.util.common.io.smoosh;
 
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
-import junit.framework.Assert;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.BufferUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.file.SegmentFileChannel;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,17 +42,18 @@ import java.util.Arrays;
  */
 public class SmooshedFileMapperTest
 {
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
+  @TempDir
+  public File folder;
 
   @Test
   public void testSanity() throws Exception
   {
-    File baseDir = folder.newFolder("base");
+    File baseDir = new File(folder, "base");
+    baseDir.mkdir();
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       for (int i = 0; i < 20; ++i) {
-        File tmpFile = folder.newFile(StringUtils.format("smoosh-%s.bin", i));
+        File tmpFile = new File(folder, StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         smoosher.add(StringUtils.format("%d", i), tmpFile);
       }
@@ -61,7 +64,8 @@ public class SmooshedFileMapperTest
   @Test
   public void testWhenFirstWriterClosedInTheMiddle() throws Exception
   {
-    File baseDir = folder.newFolder("base");
+    File baseDir = new File(folder, "base");
+    baseDir.mkdir();
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       final SegmentFileChannel writer = smoosher.addWithChannel(StringUtils.format("%d", 19), 4);
@@ -80,23 +84,43 @@ public class SmooshedFileMapperTest
     validateOutput(baseDir);
   }
 
-  @Test(expected = ISE.class)
+  @Test
+  public void testColumnSerializedSizeExceedsMaximum() throws Exception
+  {
+    File baseDir = new File(folder, "base");
+    baseDir.mkdir();
+    try (FileSmoosher smoosher = new FileSmoosher(baseDir, 5)) {
+      MatcherAssert.assertThat(
+          Assertions.assertThrows(
+              DruidException.class,
+              () -> smoosher.addWithChannel("foo", 10)
+          ),
+          new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.RUNTIME_FAILURE, "general")
+              .expectMessageContains("Serialized buffer size[10] for column[foo] exceeds the maximum[5].")
+      );
+    }
+  }
+
+  @Test
   public void testExceptionForUnClosedFiles() throws Exception
   {
-    File baseDir = folder.newFolder("base");
-
-    try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
-      for (int i = 0; i < 19; ++i) {
-        final SegmentFileChannel writer = smoosher.addWithChannel(StringUtils.format("%d", i), 4);
-        writer.write(ByteBuffer.wrap(Ints.toByteArray(i)));
+    File baseDir = new File(folder, "base");
+    baseDir.mkdir();
+    Assertions.assertThrows(ISE.class, () -> {
+      try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
+        for (int i = 0; i < 19; ++i) {
+          final SegmentFileChannel writer = smoosher.addWithChannel(StringUtils.format("%d", i), 4);
+          writer.write(ByteBuffer.wrap(Ints.toByteArray(i)));
+        }
       }
-    }
+    });
   }
 
   @Test
   public void testWhenFirstWriterClosedAtTheEnd() throws Exception
   {
-    File baseDir = folder.newFolder("base");
+    File baseDir = new File(folder, "base");
+    baseDir.mkdir();
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       final SegmentFileChannel writer = smoosher.addWithChannel(StringUtils.format("%d", 19), 4);
@@ -117,7 +141,8 @@ public class SmooshedFileMapperTest
   public void testWhenWithPathyLookingFileNames() throws Exception
   {
     String prefix = "foo/bar/";
-    File baseDir = folder.newFolder("base");
+    File baseDir = new File(folder, "base");
+    baseDir.mkdir();
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       final SegmentFileChannel writer = smoosher.addWithChannel(StringUtils.format("%s%d", prefix, 19), 4);
@@ -137,7 +162,8 @@ public class SmooshedFileMapperTest
   @Test
   public void testBehaviorWhenReportedSizesLargeAndExceptionIgnored() throws Exception
   {
-    File baseDir = folder.newFolder("base");
+    File baseDir = new File(folder, "base");
+    baseDir.mkdir();
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       for (int i = 0; i < 20; ++i) {
@@ -145,7 +171,7 @@ public class SmooshedFileMapperTest
         writer.write(ByteBuffer.wrap(Ints.toByteArray(i)));
         try {
           writer.close();
-          Assert.fail("IOException expected");
+          Assertions.fail("IOException expected");
         }
         catch (IOException ignored) {
           // expected
@@ -154,22 +180,22 @@ public class SmooshedFileMapperTest
     }
 
     File[] files = baseDir.listFiles();
-    Assert.assertNotNull(files);
+    Assertions.assertNotNull(files);
     Arrays.sort(files);
 
-    Assert.assertEquals(6, files.length); // 4 smoosh files and 1 meta file
+    Assertions.assertEquals(6, files.length); // 4 smoosh files and 1 meta file
     for (int i = 0; i < 4; ++i) {
-      Assert.assertEquals(FileSmoosher.makeChunkFile(baseDir, i), files[i]);
+      Assertions.assertEquals(FileSmoosher.makeChunkFile(baseDir, i), files[i]);
     }
-    Assert.assertEquals(FileSmoosher.metaFile(baseDir), files[files.length - 1]);
+    Assertions.assertEquals(FileSmoosher.metaFile(baseDir), files[files.length - 1]);
 
     try (SmooshedFileMapper mapper = SmooshedFileMapper.load(baseDir)) {
       for (int i = 0; i < 20; ++i) {
         ByteBuffer buf = mapper.mapFile(StringUtils.format("%d", i));
-        Assert.assertEquals(0, buf.position());
-        Assert.assertEquals(4, buf.remaining());
-        Assert.assertEquals(4, buf.capacity());
-        Assert.assertEquals(i, buf.getInt());
+        Assertions.assertEquals(0, buf.position());
+        Assertions.assertEquals(4, buf.remaining());
+        Assertions.assertEquals(4, buf.capacity());
+        Assertions.assertEquals(i, buf.getInt());
       }
     }
   }
@@ -177,7 +203,8 @@ public class SmooshedFileMapperTest
   @Test
   public void testBehaviorWhenReportedSizesSmall() throws Exception
   {
-    File baseDir = folder.newFolder("base");
+    File baseDir = new File(folder, "base");
+    baseDir.mkdir();
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       boolean exceptionThrown = false;
@@ -185,25 +212,26 @@ public class SmooshedFileMapperTest
         writer.write(ByteBuffer.wrap(Ints.toByteArray(1)));
       }
       catch (ISE e) {
-        Assert.assertTrue(e.getMessage().contains("Liar!!!"));
+        Assertions.assertTrue(e.getMessage().contains("Liar!!!"));
         exceptionThrown = true;
       }
 
-      Assert.assertTrue(exceptionThrown);
+      Assertions.assertTrue(exceptionThrown);
       File[] files = baseDir.listFiles();
-      Assert.assertNotNull(files);
-      Assert.assertEquals(1, files.length);
+      Assertions.assertNotNull(files);
+      Assertions.assertEquals(1, files.length);
     }
   }
 
   @Test
   public void testDeterministicFileUnmapping() throws IOException
   {
-    File baseDir = folder.newFolder("base");
+    File baseDir = new File(folder, "base");
+    baseDir.mkdir();
 
     long totalMemoryUsedBeforeAddingFile = BufferUtils.totalMemoryUsedByDirectAndMappedBuffers();
     try (FileSmoosher smoosher = new FileSmoosher(baseDir)) {
-      File dataFile = folder.newFile("data.bin");
+      File dataFile = new File(folder, "data.bin");
       try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
         raf.setLength(1 << 20); // 1 MiB
       }
@@ -211,7 +239,7 @@ public class SmooshedFileMapperTest
     }
     long totalMemoryUsedAfterAddingFile = BufferUtils.totalMemoryUsedByDirectAndMappedBuffers();
     // Assert no hanging file mappings left by either smoosher or smoosher.add(file)
-    Assert.assertEquals(totalMemoryUsedBeforeAddingFile, totalMemoryUsedAfterAddingFile);
+    Assertions.assertEquals(totalMemoryUsedBeforeAddingFile, totalMemoryUsedAfterAddingFile);
   }
 
   private void validateOutput(File baseDir) throws IOException
@@ -224,19 +252,19 @@ public class SmooshedFileMapperTest
     File[] files = baseDir.listFiles();
     Arrays.sort(files);
 
-    Assert.assertEquals(5, files.length); // 4 smooshed files and 1 meta file
+    Assertions.assertEquals(5, files.length); // 4 smooshed files and 1 meta file
     for (int i = 0; i < 4; ++i) {
-      Assert.assertEquals(FileSmoosher.makeChunkFile(baseDir, i), files[i]);
+      Assertions.assertEquals(FileSmoosher.makeChunkFile(baseDir, i), files[i]);
     }
-    Assert.assertEquals(FileSmoosher.metaFile(baseDir), files[files.length - 1]);
+    Assertions.assertEquals(FileSmoosher.metaFile(baseDir), files[files.length - 1]);
 
     try (SmooshedFileMapper mapper = SmooshedFileMapper.load(baseDir)) {
       for (int i = 0; i < 20; ++i) {
         ByteBuffer buf = mapper.mapFile(StringUtils.format("%s%d", prefix, i));
-        Assert.assertEquals(0, buf.position());
-        Assert.assertEquals(4, buf.remaining());
-        Assert.assertEquals(4, buf.capacity());
-        Assert.assertEquals(i, buf.getInt());
+        Assertions.assertEquals(0, buf.position());
+        Assertions.assertEquals(4, buf.remaining());
+        Assertions.assertEquals(4, buf.capacity());
+        Assertions.assertEquals(i, buf.getInt());
       }
     }
   }

@@ -88,8 +88,7 @@ public class KeyTestUtils
         },
         () -> objects,
         keySignature,
-        true,
-        false
+        true
     );
 
     final FrameWriterFactory writerFactory = FrameWriters.makeFrameWriterFactory(

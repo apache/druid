@@ -28,8 +28,8 @@ import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestMetadataStorageConnector;
 import org.apache.druid.metadata.TestMetadataStorageTablesConfig;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -84,9 +84,9 @@ public class ConfigManagerTest
   {
     setup();
     ConfigManager.SetResult setResult = configManager.set(CONFIG_KEY, configConfigSerdeFromClass, null);
-    Assert.assertFalse(setResult.isOk());
-    Assert.assertFalse(setResult.isRetryable());
-    Assert.assertTrue(setResult.getException() instanceof IllegalAccessException);
+    Assertions.assertFalse(setResult.isOk());
+    Assertions.assertFalse(setResult.isRetryable());
+    Assertions.assertInstanceOf(IllegalAccessException.class, setResult.getException());
   }
 
   @Test
@@ -94,9 +94,9 @@ public class ConfigManagerTest
   {
     setup();
     ConfigManager.SetResult setResult = configManager.set(CONFIG_KEY, configConfigSerdeFromClass, NEW_CONFIG);
-    Assert.assertFalse(setResult.isOk());
-    Assert.assertFalse(setResult.isRetryable());
-    Assert.assertTrue(setResult.getException() instanceof IllegalStateException);
+    Assertions.assertFalse(setResult.isOk());
+    Assertions.assertFalse(setResult.isRetryable());
+    Assertions.assertInstanceOf(IllegalStateException.class, setResult.getException());
   }
 
   @Test
@@ -109,9 +109,9 @@ public class ConfigManagerTest
       @Override
       public Void insertOrUpdate(String tableName, String keyColumn, String valueColumn, String key, byte[] value)
       {
-        Assert.assertFalse(called.getAndSet(true));
-        Assert.assertEquals(TABLE_NAME, tableName);
-        Assert.assertEquals(CONFIG_KEY, key);
+        Assertions.assertFalse(called.getAndSet(true));
+        Assertions.assertEquals(TABLE_NAME, tableName);
+        Assertions.assertEquals(CONFIG_KEY, key);
         return null;
       }
     });
@@ -119,8 +119,8 @@ public class ConfigManagerTest
     try {
       configManager.start();
       ConfigManager.SetResult setResult = configManager.set(CONFIG_KEY, configConfigSerdeFromClass, null, NEW_CONFIG);
-      Assert.assertTrue(setResult.isOk());
-      Assert.assertTrue(called.get());
+      Assertions.assertTrue(setResult.isOk());
+      Assertions.assertTrue(called.get());
     }
     finally {
       configManager.stop();
@@ -136,15 +136,15 @@ public class ConfigManagerTest
       @Override
       public boolean compareAndSwap(List<MetadataCASUpdate> updates)
       {
-        Assert.assertFalse(called.getAndSet(true));
-        Assert.assertEquals(1, updates.size());
+        Assertions.assertFalse(called.getAndSet(true));
+        Assertions.assertEquals(1, updates.size());
         final MetadataCASUpdate singularUpdate = updates.get(0);
-        Assert.assertEquals(TABLE_NAME, singularUpdate.getTableName());
-        Assert.assertEquals(MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN, singularUpdate.getKeyColumn());
-        Assert.assertEquals(MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN, singularUpdate.getValueColumn());
-        Assert.assertEquals(CONFIG_KEY, singularUpdate.getKey());
-        Assert.assertArrayEquals(OLD_CONFIG, singularUpdate.getOldValue());
-        Assert.assertArrayEquals(configConfigSerdeFromClass.serialize(NEW_CONFIG), singularUpdate.getNewValue());
+        Assertions.assertEquals(TABLE_NAME, singularUpdate.getTableName());
+        Assertions.assertEquals(MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN, singularUpdate.getKeyColumn());
+        Assertions.assertEquals(MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN, singularUpdate.getValueColumn());
+        Assertions.assertEquals(CONFIG_KEY, singularUpdate.getKey());
+        Assertions.assertArrayEquals(OLD_CONFIG, singularUpdate.getOldValue());
+        Assertions.assertArrayEquals(configConfigSerdeFromClass.serialize(NEW_CONFIG), singularUpdate.getNewValue());
         return true;
       }
     });
@@ -156,8 +156,8 @@ public class ConfigManagerTest
           OLD_CONFIG,
           NEW_CONFIG
       );
-      Assert.assertTrue(setResult.isOk());
-      Assert.assertTrue(called.get());
+      Assertions.assertTrue(setResult.isOk());
+      Assertions.assertTrue(called.get());
     }
     finally {
       configManager.stop();
@@ -174,9 +174,9 @@ public class ConfigManagerTest
       @Override
       public Void insertOrUpdate(String tableName, String keyColumn, String valueColumn, String key, byte[] value)
       {
-        Assert.assertFalse(called.getAndSet(true));
-        Assert.assertEquals(TABLE_NAME, tableName);
-        Assert.assertEquals(CONFIG_KEY, key);
+        Assertions.assertFalse(called.getAndSet(true));
+        Assertions.assertEquals(TABLE_NAME, tableName);
+        Assertions.assertEquals(CONFIG_KEY, key);
         return null;
       }
     });
@@ -190,8 +190,8 @@ public class ConfigManagerTest
           OLD_CONFIG,
           NEW_CONFIG
       );
-      Assert.assertTrue(setResult.isOk());
-      Assert.assertTrue(called.get());
+      Assertions.assertTrue(setResult.isOk());
+      Assertions.assertTrue(called.get());
     }
     finally {
       configManager.stop();

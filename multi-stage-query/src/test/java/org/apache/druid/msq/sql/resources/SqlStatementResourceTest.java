@@ -272,7 +272,13 @@ public class SqlStatementResourceTest extends MSQTestBase
                           new long[]{3L, 5L},
                           new long[]{},
                           new long[]{},
-                          new long[]{}
+                          new long[]{},
+                          new long[]{},
+                          new long[]{},
+                          new long[]{},
+                          new long[]{},
+                          null,
+                          null
                       )
                   )
                   )
@@ -702,7 +708,8 @@ public class SqlStatementResourceTest extends MSQTestBase
         tempDir -> localFileStorageConnector,
         authorizerMapper,
         new DefaultQueryConfig(Map.of("debug", "true")),
-        new ServerConfig()
+        new ServerConfig(),
+        null
     );
   }
 

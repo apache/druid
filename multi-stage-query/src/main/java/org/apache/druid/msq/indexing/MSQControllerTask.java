@@ -28,10 +28,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
-import com.google.inject.Key;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.indexing.ClientTaskQuery;
-import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -42,9 +40,14 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.dart.controller.ControllerThreadPool;
 import org.apache.druid.msq.exec.ControllerContext;
+import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.ResultsContext;
@@ -59,9 +62,6 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.rpc.ServiceClientFactory;
-import org.apache.druid.rpc.StandardRetryPolicy;
-import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
@@ -76,6 +76,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+
 
 @JsonTypeName(MSQControllerTask.TYPE)
 public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, PendingSegmentAllocatingTask
@@ -118,7 +119,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   @JacksonInject
   private Injector injector;
 
-  private volatile Controller controller;
+  private volatile ControllerHolder controllerHolder;
 
   @JsonCreator
   public MSQControllerTask(
@@ -265,42 +266,58 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   @Override
   public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
-    final ServiceClientFactory clientFactory =
-        injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
-    final OverlordClient overlordClient = injector.getInstance(OverlordClient.class)
-                                                  .withRetryPolicy(StandardRetryPolicy.unlimited());
-    final ControllerContext context = new IndexerControllerContext(
-        this,
-        toolbox,
-        injector,
-        clientFactory,
-        overlordClient
-    );
+    final ControllerContext context = injector.getInstance(IndexerControllerContextFactory.class)
+                                              .buildWithTask(this, toolbox);
 
-    controller = new ControllerImpl(
+    final ControllerImpl controller = new ControllerImpl(
         querySpec,
         new ResultsContext(getSqlTypeNames(), getSqlResultsContext()),
         context,
         injector.getInstance(MSQTaskQueryKitSpecFactory.class)
     );
 
+    controllerHolder = new ControllerHolder(
+        controller,
+        controller.getQueryContext().getString(QueryContexts.CTX_SQL_QUERY_ID, controller.queryId()),
+        getSqlQuery(),
+        null,
+        DateTimes.nowUtc()
+    );
+
+    final ResultsContext resultsContext = new ResultsContext(getSqlTypeNames(), getSqlResultsContext());
     final TaskReportQueryListener queryListener = new TaskReportQueryListener(
-        querySpec.getDestination(),
         () -> toolbox.getTaskReportFileWriter().openReportOutputStream(getId()),
         toolbox.getJsonMapper(),
         getId(),
-        getContext()
+        getContext(),
+        querySpec.getDestination().getRowsInTaskReport(),
+        querySpec.getColumnMappings(),
+        resultsContext
     );
 
-    controller.run(queryListener);
-    return queryListener.getStatusReport().toTaskStatus(getId());
+    final ControllerThreadPool controllerThreadPool = new ControllerThreadPool(
+        Execs.directExecutor(),
+        ScheduledExecutors.fixed(
+            1,
+            "controller-timeout[" + StringUtils.encodeForFormat(controller.queryId()) + "]-%s"
+        )
+    );
+
+    try {
+      controllerHolder.runAsync(queryListener, null, controllerThreadPool).get();
+      return queryListener.getStatusReport().toTaskStatus(getId());
+    }
+    finally {
+      controllerThreadPool.stop();
+    }
   }
 
   @Override
   public void stopGracefully(final TaskConfig taskConfig)
   {
-    if (controller != null) {
-      controller.stop(CancellationReason.TASK_SHUTDOWN);
+    final ControllerHolder holder = controllerHolder;
+    if (holder != null) {
+      holder.cancel(CancellationReason.TASK_SHUTDOWN);
     }
   }
 

@@ -23,14 +23,5 @@ title: "Apache Parquet Extension"
   -->
 
 
-This Apache Druid module extends [Druid Hadoop based indexing](../../ingestion/hadoop.md) to ingest data directly from offline
+This Apache Druid module extends [Druid native batch](../../ingestion/native-batch.md) to ingest data directly from offline
 Apache Parquet files.
-
-Note: If using the `parquet-avro` parser for Apache Hadoop based indexing, `druid-parquet-extensions` depends on the `druid-avro-extensions` module, so be sure to
- [include  both](../../configuration/extensions.md#loading-extensions).
-
-The `druid-parquet-extensions` provides the [Parquet input format](../../ingestion/data-formats.md#parquet), the [Parquet Hadoop parser](../../ingestion/data-formats.md#parquet-hadoop-parser),
-and the [Parquet Avro Hadoop Parser](../../ingestion/data-formats.md#parquet-avro-hadoop-parser) with `druid-avro-extensions`.
-The Parquet input format is available for [native batch ingestion](../../ingestion/native-batch.md)
-and the other 2 parsers are for [Hadoop batch ingestion](../../ingestion/hadoop.md).
-Please see corresponding docs for details.

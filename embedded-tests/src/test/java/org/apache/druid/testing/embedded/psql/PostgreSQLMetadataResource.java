@@ -23,12 +23,12 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
  * Resource that creates a PostgreSQL metadata store.
  */
-public class PostgreSQLMetadataResource extends TestcontainerResource<PostgreSQLContainer<?>>
+public class PostgreSQLMetadataResource extends TestcontainerResource<PostgreSQLContainer>
 {
   private static final String DATABASE_NAME = "druid_test";
   private static final String USERNAME = "sally";
@@ -37,9 +37,9 @@ public class PostgreSQLMetadataResource extends TestcontainerResource<PostgreSQL
   private String connectURI;
 
   @Override
-  protected PostgreSQLContainer<?> createContainer()
+  protected PostgreSQLContainer createContainer()
   {
-    return new PostgreSQLContainer<>("postgres:16-alpine")
+    return new PostgreSQLContainer("postgres:16-alpine")
         .withDatabaseName(DATABASE_NAME)
         .withUsername(USERNAME)
         .withPassword(PASSWORD);

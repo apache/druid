@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -34,7 +33,6 @@ import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.discovery.LatchableServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -72,6 +70,7 @@ import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.http.BrokerDynamicConfigSyncer;
 import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
@@ -95,7 +94,6 @@ public class DruidCoordinatorTest
 {
   private static final long COORDINATOR_START_DELAY = 1;
   private static final long COORDINATOR_PERIOD = 100;
-  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
   private DruidCoordinator coordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
@@ -170,7 +168,8 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
+        new CloneStatusManager()
     );
   }
 
@@ -228,7 +227,7 @@ public class DruidCoordinatorTest
     EasyMock.replay(immutableDruidDataSource);
 
     // Setup ServerInventoryView
-    final DruidServer druidServer = new DruidServer("server1", "localhost", null, 5L, ServerType.HISTORICAL, tier, 0);
+    final DruidServer druidServer = new DruidServer("server1", "localhost", null, 5L, null, ServerType.HISTORICAL, tier, 0);
     final LoadQueuePeon loadQueuePeon = createImmediateLoadPeonFor(druidServer);
     setupPeons(Collections.singletonMap("server1", loadQueuePeon));
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(
@@ -307,8 +306,8 @@ public class DruidCoordinatorTest
     final String dataSource = "dataSource", hotTierName = "hot", coldTierName = "cold";
     final Rule hotTier = new IntervalLoadRule(Intervals.of("2018-01-01/P1M"), ImmutableMap.of(hotTierName, 1), null);
     final Rule coldTier = new ForeverLoadRule(ImmutableMap.of(coldTierName, 1), null);
-    final DruidServer hotServer = new DruidServer("hot", "hot", null, 5L, ServerType.HISTORICAL, hotTierName, 0);
-    final DruidServer coldServer = new DruidServer("cold", "cold", null, 5L, ServerType.HISTORICAL, coldTierName, 0);
+    final DruidServer hotServer = new DruidServer("hot", "hot", null, 5L, null, ServerType.HISTORICAL, hotTierName, 0);
+    final DruidServer coldServer = new DruidServer("cold", "cold", null, 5L, null, ServerType.HISTORICAL, coldTierName, 0);
 
     final Set<DataSegment> dataSegments = Set.of(
         new DataSegment(dataSource, Intervals.of("2018-01-02/P1D"), "v1", null, null, null, null, 0x9, 0),
@@ -375,11 +374,11 @@ public class DruidCoordinatorTest
     final String coldTierName = "cold";
     final String tierName1 = "tier1";
     final String tierName2 = "tier2";
-    final DruidServer hotServer = new DruidServer("hot", "hot", null, 5L, ServerType.HISTORICAL, hotTierName, 0);
-    final DruidServer coldServer = new DruidServer("cold", "cold", null, 5L, ServerType.HISTORICAL, coldTierName, 0);
-    final DruidServer brokerServer1 = new DruidServer("broker1", "broker1", null, 5L, ServerType.BROKER, tierName1, 0);
-    final DruidServer brokerServer2 = new DruidServer("broker2", "broker2", null, 5L, ServerType.BROKER, tierName2, 0);
-    final DruidServer peonServer = new DruidServer("peon", "peon", null, 5L, ServerType.INDEXER_EXECUTOR, tierName2, 0);
+    final DruidServer hotServer = new DruidServer("hot", "hot", null, 5L, null, ServerType.HISTORICAL, hotTierName, 0);
+    final DruidServer coldServer = new DruidServer("cold", "cold", null, 5L, null, ServerType.HISTORICAL, coldTierName, 0);
+    final DruidServer brokerServer1 = new DruidServer("broker1", "broker1", null, 5L, null, ServerType.BROKER, tierName1, 0);
+    final DruidServer brokerServer2 = new DruidServer("broker2", "broker2", null, 5L, null, ServerType.BROKER, tierName2, 0);
+    final DruidServer peonServer = new DruidServer("peon", "peon", null, 5L, null, ServerType.INDEXER_EXECUTOR, tierName2, 0);
 
     final Set<DataSegment> dataSegments = Set.of(
         new DataSegment(dataSource, Intervals.of("2018-01-02/P1D"), "v1", null, null, null, null, 0x9, 0),
@@ -461,7 +460,7 @@ public class DruidCoordinatorTest
   {
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
             .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
+    EasyMock.replay(segmentsMetadataManager, metadataRuleManager);
 
     CoordinatorCustomDutyGroups emptyCustomDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of());
     coordinator = new DruidCoordinator(
@@ -482,7 +481,8 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
+        new CloneStatusManager()
     );
     coordinator.start();
 
@@ -509,7 +509,7 @@ public class DruidCoordinatorTest
   {
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
             .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
+    EasyMock.replay(segmentsMetadataManager, metadataRuleManager);
     CoordinatorCustomDutyGroup group = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
@@ -534,7 +534,8 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
+        new CloneStatusManager()
     );
     coordinator.start();
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
@@ -561,7 +562,7 @@ public class DruidCoordinatorTest
   {
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
             .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
+    EasyMock.replay(segmentsMetadataManager, metadataRuleManager);
     CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
@@ -586,7 +587,8 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
+        new CloneStatusManager()
     );
     coordinator.start();
 
@@ -651,7 +653,7 @@ public class DruidCoordinatorTest
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(Collections.emptyList()).anyTimes();
-    EasyMock.replay(serverInventoryView, loadQueueTaskMaster, segmentsMetadataManager);
+    EasyMock.replay(serverInventoryView, loadQueueTaskMaster, segmentsMetadataManager, metadataRuleManager);
 
     // Create CoordinatorCustomDutyGroups
     // We will have two groups and each group has one duty
@@ -696,14 +698,19 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
+        new CloneStatusManager()
     );
     coordinator.start();
-
-    // Wait until group 1 duty ran for latch1 to countdown
-    latch1.await();
-    // Wait until group 2 duty ran for latch2 to countdown
-    latch2.await();
+    try {
+      // Wait until group 1 duty ran for latch1 to countdown
+      latch1.await();
+      // Wait until group 2 duty ran for latch2 to countdown
+      latch2.await();
+    }
+    finally {
+      coordinator.stop();
+    }
   }
 
   @Test(timeout = 60_000L)
@@ -760,8 +767,8 @@ public class DruidCoordinatorTest
     EasyMock.replay(immutableDruidDataSource);
 
     // Setup ServerInventoryView
-    final DruidServer druidServer1 = new DruidServer("server1", "localhost", null, 5L, ServerType.HISTORICAL, hotTier, 0);
-    final DruidServer druidServer2 = new DruidServer("server2", "localhost", null, 5L, ServerType.HISTORICAL, coldTier, 0);
+    final DruidServer druidServer1 = new DruidServer("server1", "localhost", null, 5L, null, ServerType.HISTORICAL, hotTier, 0);
+    final DruidServer druidServer2 = new DruidServer("server2", "localhost", null, 5L, null, ServerType.HISTORICAL, coldTier, 0);
 
     // For hot server, use a load queue peon that does not perform immediate load
     setupPeons(ImmutableMap.of(
@@ -829,7 +836,7 @@ public class DruidCoordinatorTest
         .anyTimes();
     EasyMock.replay(segmentsMetadataManager);
     CompactionSimulateResult result = coordinator.simulateRunWithConfigUpdate(
-        new ClusterCompactionConfig(0.2, null, null, null, null)
+        new ClusterCompactionConfig(0.2, null, null, null, null, null)
     );
     Assert.assertEquals(Collections.emptyMap(), result.getCompactionStates());
   }

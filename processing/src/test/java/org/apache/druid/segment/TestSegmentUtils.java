@@ -37,7 +37,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -77,8 +77,8 @@ public class TestSegmentUtils
       File factoryJson = new File(destDir, "factory.json");
       try {
         FileUtils.mkdirp(destDir);
-        Assert.assertTrue(segmentFile.createNewFile());
-        Assert.assertTrue(factoryJson.createNewFile());
+        Assertions.assertTrue(segmentFile.createNewFile());
+        Assertions.assertTrue(factoryJson.createNewFile());
       }
       catch (IOException e) {
         throw new SegmentLoadingException(
@@ -125,6 +125,12 @@ public class TestSegmentUtils
     public List<OrderBy> getOrdering()
     {
       return Cursors.ascendingTimeOrder();
+    }
+
+    @Override
+    public int getNumRows()
+    {
+      return 1234;
     }
   };
 
@@ -178,6 +184,8 @@ public class TestSegmentUtils
         return (T) INDEX;
       } else if (clazz.equals(CursorFactory.class)) {
         return (T) new QueryableIndexCursorFactory(INDEX);
+      } else if (clazz.equals(PhysicalSegmentInspector.class)) {
+        return (T) new QueryableIndexPhysicalSegmentInspector(INDEX);
       }
       return null;
     }
@@ -226,50 +234,47 @@ public class TestSegmentUtils
 
   public static DataSegment makeTombstoneSegment(String dataSource, String version, Interval interval)
   {
-    return new DataSegment(
-        dataSource,
-        interval,
-        version,
-        ImmutableMap.of("version", version,
-                        "interval", interval,
-                        "type",
-                        DataSegment.TOMBSTONE_LOADSPEC_TYPE
-        ),
-        Arrays.asList("dim1", "dim2", "dim3"),
-        Arrays.asList("metric1", "metric2"),
-        TombstoneShardSpec.INSTANCE,
-        IndexIO.CURRENT_VERSION_ID,
-        1L
-    );
+    return DataSegment.builder(SegmentId.of(dataSource, interval, version, 0))
+                      .loadSpec(ImmutableMap.of(
+                          "version",
+                          version,
+                          "interval",
+                          interval,
+                          "type",
+                          DataSegment.TOMBSTONE_LOADSPEC_TYPE
+                      ))
+                      .dimensions(Arrays.asList("dim1", "dim2", "dim3"))
+                      .metrics(Arrays.asList("metric1", "metric2"))
+                      .shardSpec(TombstoneShardSpec.INSTANCE)
+                      .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                      .size(1L)
+                      .totalRows(1)
+                      .build();
   }
 
   public static DataSegment makeSegment(String dataSource, String version, Interval interval)
   {
-    return new DataSegment(
-        dataSource,
-        interval,
-        version,
-        ImmutableMap.of("type", "test", "version", version, "interval", interval),
-        Arrays.asList("dim1", "dim2", "dim3"),
-        Arrays.asList("metric1", "metric2"),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        1L
-    );
+    return DataSegment.builder(SegmentId.of(dataSource, interval, version, 0))
+                      .loadSpec(ImmutableMap.of("type", "test", "version", version, "interval", interval))
+                      .dimensions(Arrays.asList("dim1", "dim2", "dim3"))
+                      .metrics(Arrays.asList("metric1", "metric2"))
+                      .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                      .size(1L)
+                      .totalRows(1)
+                      .build();
   }
 
   public static DataSegment makeSegment(String dataSource, String version, long size)
   {
-    return new DataSegment(
-        dataSource,
-        Intervals.ETERNITY,
-        version,
-        ImmutableMap.of("type", "test", "version", version, "interval", Intervals.ETERNITY),
-        Arrays.asList("dim1", "dim2", "dim3"),
-        Arrays.asList("metric1", "metric2"),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        size
-    );
+    return DataSegment.builder(SegmentId.of(dataSource, Intervals.ETERNITY, version, 0))
+                      .loadSpec(ImmutableMap.of("type", "test", "version", version, "interval", Intervals.ETERNITY))
+                      .dimensions(Arrays.asList("dim1", "dim2", "dim3"))
+                      .metrics(Arrays.asList("metric1", "metric2"))
+                      .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                      .size(size)
+                      .totalRows((int) (size / 1000))
+                      .build();
   }
 }

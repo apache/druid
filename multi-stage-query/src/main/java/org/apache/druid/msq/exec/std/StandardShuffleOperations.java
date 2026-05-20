@@ -28,11 +28,12 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
-import org.apache.druid.frame.channel.FrameWithPartition;
+import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.processor.FrameChannelHashPartitioner;
 import org.apache.druid.frame.processor.FrameChannelMixer;
+import org.apache.druid.frame.processor.FrameCombinerFactory;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessorDecorator;
 import org.apache.druid.frame.processor.OutputChannel;
@@ -59,6 +60,7 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -73,11 +75,17 @@ public class StandardShuffleOperations
 {
   private final ExecutionContext executionContext;
   private final WorkOrder workOrder;
+  @Nullable
+  private final FrameCombinerFactory combinerFactory;
 
-  public StandardShuffleOperations(final ExecutionContext executionContext)
+  public StandardShuffleOperations(
+      final ExecutionContext executionContext,
+      @Nullable final FrameCombinerFactory combinerFactory
+  )
   {
     this.executionContext = executionContext;
     this.workOrder = executionContext.workOrder();
+    this.combinerFactory = combinerFactory;
   }
 
   /**
@@ -159,7 +167,7 @@ public class StandardShuffleOperations
 
             final OutputChannel outputChannel = OutputChannel.readOnly(
                 channel.readable(),
-                FrameWithPartition.NO_PARTITION
+                WritableFrameChannel.NO_PARTITION
             );
 
             return new ResultAndChannels<>(
@@ -224,7 +232,8 @@ public class StandardShuffleOperations
               stageDefinition.getShuffleSpec().limitHint(),
               executionContext.cancellationId(),
               executionContext.counters().sortProgress(),
-              executionContext.frameContext().frameWriterSpec().getRemoveNullBytes()
+              executionContext.frameContext().frameWriterSpec().getRemoveNullBytes(),
+              combinerFactory
           );
 
           return FutureUtils.transform(
@@ -364,6 +373,7 @@ public class StandardShuffleOperations
             nextFuture = Futures.transformAsync(
                 nextFuture,
                 ignored -> {
+                  final WorkerMemoryParameters memoryParameters = executionContext.frameContext().memoryParameters();
                   final SuperSorter sorter = new SuperSorter(
                       Collections.singletonList(channel.getReadableChannel()),
                       stageDefinition.getFrameReader(),
@@ -382,8 +392,18 @@ public class StandardShuffleOperations
                       executionContext.makeIntermediateOutputChannelFactory(
                           StringUtils.format("hash-parts-super-sort-%06d", channel.getPartitionNumber())),
                       executionContext.frameContext().frameWriterSpec().getRowBasedFrameType(),
-                      1,
-                      2,
+
+                      // Use full parallelism, since at the time this sorter runs, it is the only sorter running.
+                      //
+                      // Typically, nothing else is running at all. Whenever there is more than one output partition,
+                      // the step prior to this localSort (typically hashPartition) should use buffered output channels
+                      // and therefore would have exited.
+                      //
+                      // In the case where there is one output partition, the step prior to this localSort may run
+                      // concurrently with the sorter, but in that case it will only have one output channel so won't
+                      // have many frames buffered.
+                      memoryParameters.getSuperSorterConcurrentProcessors(),
+                      memoryParameters.getSuperSorterMaxChannelsPerMerger(),
                       ShuffleSpec.UNLIMITED,
                       executionContext.cancellationId(),
 
@@ -391,7 +411,8 @@ public class StandardShuffleOperations
                       // There's a single SuperSorterProgressTrackerCounter per worker, but workers that do local
                       // sorting have a SuperSorter per partition.
                       new SuperSorterProgressTracker(),
-                      executionContext.frameContext().frameWriterSpec().getRemoveNullBytes()
+                      executionContext.frameContext().frameWriterSpec().getRemoveNullBytes(),
+                      combinerFactory
                   );
 
                   return FutureUtils.transform(sorter.run(), r -> Iterables.getOnlyElement(r.getAllChannels()));

@@ -665,4 +665,51 @@ public class DruidSqlParserUtils
   {
     return InvalidSqlInput.exception(message);
   }
+
+  /**
+   * Creates a DruidException for invalid SQL function parameter types.
+   *
+   * @param functionName the SQL function name (e.g., "SPECTATOR_PERCENTILE")
+   * @param parameterName the parameter name
+   * @param expectedType the expected type
+   * @param actualValue the value provided needed to determine type
+   * @return DruidException with INVALID_INPUT category and USER persona
+   */                                                                                                                                                   
+  public static DruidException invalidParameterTypeException(
+      String functionName,
+      String parameterName,
+      String expectedType,
+      @Nullable Object actualValue
+  )                                                                                                                                                     
+  {
+    final String actualType = actualValue == null ? "NULL" : actualValue.getClass().getSimpleName();
+    return InvalidSqlInput.exception(
+        "%s parameter `%s` must be a %s literal, got %s",
+        functionName,
+        parameterName,
+        expectedType,
+        actualType
+    );
+  }                                                                                                                                                     
+                                                                                                                                                        
+  /**
+   * Validates and returns a numeric value from a RexLiteral, or throws invalidParameterTypeException if invalid.
+   *
+   * @param value the value extracted from RexLiteral.value()
+   * @param functionName the SQL function name
+   * @param parameterName the parameter name
+   * @return the value as a Number
+   * @throws DruidException if value is not a Number
+   */                                                                                                                                                   
+  public static Number getNumericLiteral(
+      @Nullable Object value,
+      String functionName,
+      String parameterName
+  )
+  {
+    if (!(value instanceof Number)) {
+      throw invalidParameterTypeException(functionName, parameterName, "numeric", value);
+    }
+    return (Number) value;
+  }
 }

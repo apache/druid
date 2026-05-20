@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.kinesis;
 
-import com.amazonaws.services.kinesis.model.Record;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -47,12 +46,13 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 
 public class KinesisInputFormatTest
@@ -920,9 +920,11 @@ public class KinesisInputFormatTest
       long kinesisTimestampMillis)
   {
     return new KinesisRecordEntity(
-        new Record().withData(ByteBuffer.wrap(payload))
-            .withApproximateArrivalTimestamp(new Date(kinesisTimestampMillis))
-            .withPartitionKey(PARTITION_KEY)
+        KinesisClientRecord.builder()
+            .data(ByteBuffer.wrap(payload))
+            .approximateArrivalTimestamp(Instant.ofEpochMilli(kinesisTimestampMillis))
+            .partitionKey(PARTITION_KEY)
+            .build()
     );
   }
 

@@ -51,6 +51,7 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMergerV10Factory;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -65,7 +66,6 @@ import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.utils.RuntimeInfo;
@@ -89,7 +89,6 @@ public class TaskToolboxFactory
   private final DataSegmentMover dataSegmentMover;
   private final DataSegmentArchiver dataSegmentArchiver;
   private final DataSegmentAnnouncer segmentAnnouncer;
-  private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
   private final Provider<DruidProcessingConfig> processingConfigProvider;
@@ -103,6 +102,7 @@ public class TaskToolboxFactory
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
   private final IndexMergerV9Factory indexMergerV9Factory;
+  private final IndexMergerV10Factory indexMergerV10Factory;
   private final DruidNodeAnnouncer druidNodeAnnouncer;
   private final DruidNode druidNode;
   private final LookupNodeService lookupNodeService;
@@ -137,7 +137,6 @@ public class TaskToolboxFactory
       DataSegmentMover dataSegmentMover,
       DataSegmentArchiver dataSegmentArchiver,
       DataSegmentAnnouncer segmentAnnouncer,
-      DataSegmentServerAnnouncer serverAnnouncer,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
       Provider<DruidProcessingConfig> processingConfigProvider,
@@ -151,6 +150,7 @@ public class TaskToolboxFactory
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       IndexMergerV9Factory indexMergerV9Factory,
+      IndexMergerV10Factory indexMergerV10Factory,
       DruidNodeAnnouncer druidNodeAnnouncer,
       @RemoteChatHandler DruidNode druidNode,
       LookupNodeService lookupNodeService,
@@ -182,7 +182,6 @@ public class TaskToolboxFactory
     this.dataSegmentMover = dataSegmentMover;
     this.dataSegmentArchiver = dataSegmentArchiver;
     this.segmentAnnouncer = segmentAnnouncer;
-    this.serverAnnouncer = serverAnnouncer;
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
     this.processingConfigProvider = processingConfigProvider;
@@ -196,6 +195,7 @@ public class TaskToolboxFactory
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
     this.indexMergerV9Factory = indexMergerV9Factory;
+    this.indexMergerV10Factory = indexMergerV10Factory;
     this.druidNodeAnnouncer = druidNodeAnnouncer;
     this.druidNode = druidNode;
     this.lookupNodeService = lookupNodeService;
@@ -241,14 +241,13 @@ public class TaskToolboxFactory
         .dataSegmentMover(dataSegmentMover)
         .dataSegmentArchiver(dataSegmentArchiver)
         .segmentAnnouncer(segmentAnnouncer)
-        .serverAnnouncer(serverAnnouncer)
         .handoffNotifierFactory(handoffNotifierFactory)
         .queryRunnerFactoryConglomerateProvider(queryRunnerFactoryConglomerateProvider)
         .processingConfigProvider(processingConfigProvider)
         .queryProcessingPool(queryProcessingPool)
         .joinableFactory(joinableFactory)
         .monitorSchedulerProvider(monitorSchedulerProvider)
-        .segmentCacheManager(segmentCacheManagerFactory.manufacturate(taskWorkDir))
+        .segmentCacheManager(segmentCacheManagerFactory.manufacturate(taskWorkDir, true))
         .jsonMapper(jsonMapper)
         .taskWorkDir(taskWorkDir)
         .indexIO(indexIO)
@@ -256,7 +255,9 @@ public class TaskToolboxFactory
         .cacheConfig(cacheConfig)
         .cachePopulatorStats(cachePopulatorStats)
         .indexMerger(
-            indexMergerV9Factory.create(
+            config.buildV10()
+            ? indexMergerV10Factory.create()
+            : indexMergerV9Factory.create(
                 task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, config.isStoreEmptyColumns())
             )
         )

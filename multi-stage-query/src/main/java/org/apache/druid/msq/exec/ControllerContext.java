@@ -29,6 +29,7 @@ import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.server.DruidNode;
 
@@ -64,10 +65,10 @@ public interface ControllerContext
   ObjectMapper jsonMapper();
 
   /**
-   * Emit the metric in the {@link MSQMetriceEventBuilder} using a {@link ServiceEmitter}. Might sets up addtional
+   * Emit the metric in the {@link MSQMetricEventBuilder} using a {@link ServiceEmitter}. Might sets up addtional
    * context dependant dimensions.
    */
-  void emitMetric(MSQMetriceEventBuilder metricBuilder);
+  void emitMetric(MSQMetricEventBuilder metricBuilder);
 
   /**
    * Provides a way for tasks to request injectable objects. Useful because tasks are not able to request injection
@@ -123,4 +124,20 @@ public interface ControllerContext
    * Client for communicating with workers.
    */
   WorkerClient newWorkerClient();
+
+  /**
+   * Maximum number of workers for non-leaf stages.
+   */
+  int maxNonLeafWorkerCount();
+
+  /**
+   * Target number of partitions per worker for shuffle stages. Used at runtime to adjust
+   * shuffle specs that have {@link ShuffleSpec#isAdjustable()} set to true.
+   */
+  int targetPartitionsPerWorker();
+
+  /**
+   * Whether the controller should log full stack traces on error.
+   */
+  boolean isDebug();
 }

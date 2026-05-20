@@ -21,7 +21,6 @@ package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -35,7 +34,7 @@ import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
@@ -63,7 +62,6 @@ public class SegmentCacheBootstrapperCacheTest
   private File infoDir;
   private File cacheDir;
   private TestDataSegmentAnnouncer segmentAnnouncer;
-  private TestDataServerAnnouncer serverAnnouncer;
   private SegmentManager segmentManager;
   private SegmentLoaderConfig loaderConfig;
   private SegmentLocalCacheManager cacheManager;
@@ -106,7 +104,6 @@ public class SegmentCacheBootstrapperCacheTest
         objectMapper
     );
     segmentManager = new SegmentManager(cacheManager);
-    serverAnnouncer = new TestDataServerAnnouncer();
     segmentAnnouncer = new TestDataSegmentAnnouncer();
     coordinatorClient = new TestCoordinatorClient();
     emitter = new StubServiceEmitter();
@@ -138,19 +135,15 @@ public class SegmentCacheBootstrapperCacheTest
         loadDropHandler,
         loaderConfig,
         segmentAnnouncer,
-        serverAnnouncer,
         segmentManager,
-        new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         emitter,
-        new DataSourceTaskIdHolder()
+        new DefaultLoadSpecHolder()
     );
 
     bootstrapper.start();
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     bootstrapper.stop();
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
   @Test
@@ -166,19 +159,15 @@ public class SegmentCacheBootstrapperCacheTest
         loadDropHandler,
         loaderConfig,
         segmentAnnouncer,
-        serverAnnouncer,
         segmentManager,
-        new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         emitter,
-        new DataSourceTaskIdHolder()
+        new DefaultLoadSpecHolder()
     );
 
     bootstrapper.start();
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     bootstrapper.stop();
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 
   @Test
@@ -206,16 +195,13 @@ public class SegmentCacheBootstrapperCacheTest
         loadDropHandler,
         loaderConfig,
         segmentAnnouncer,
-        serverAnnouncer,
         segmentManager,
-        new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         emitter,
-        new DataSourceTaskIdHolder()
+        new DefaultLoadSpecHolder()
     );
 
     bootstrapper.start();
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
 
     // Verify the expected announcements
     Assert.assertTrue(segmentAnnouncer.getObservedSegments().containsAll(expectedSegments));
@@ -231,6 +217,5 @@ public class SegmentCacheBootstrapperCacheTest
     Assert.assertTrue(segmentAnnouncer.getObservedSegments().contains(newSegment));
 
     bootstrapper.stop();
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
   }
 }

@@ -20,8 +20,8 @@
 package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.DateTimes;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ResultTest
 {
@@ -32,7 +32,7 @@ public class ResultTest
     final Result<Object> nullTimestamp2 = new Result<>(null, null);
     final Result<Object> nonNullTimestamp = new Result<>(DateTimes.nowUtc(), null);
 
-    Assert.assertEquals(0, nullTimestamp.compareTo(nullTimestamp2));
-    Assert.assertEquals(1, nullTimestamp.compareTo(nonNullTimestamp));
+    Assertions.assertEquals(0, nullTimestamp.compareTo(nullTimestamp2));
+    Assertions.assertEquals(1, nullTimestamp.compareTo(nonNullTimestamp));
   }
 }

@@ -49,9 +49,9 @@ import java.util.stream.Collectors;
 public class DartControllerContextTest
 {
   private static final List<DruidServerMetadata> SERVERS = ImmutableList.of(
-      new DruidServerMetadata("no", "localhost:1001", null, 1, ServerType.HISTORICAL, "__default", 2), // plaintext
-      new DruidServerMetadata("no", null, "localhost:1002", 1, ServerType.HISTORICAL, "__default", 1), // TLS
-      new DruidServerMetadata("no", "localhost:1003", null, 1, ServerType.REALTIME, "__default", 0)
+      new DruidServerMetadata("no", "localhost:1001", null, 1, null, ServerType.HISTORICAL, "__default", 2), // plaintext
+      new DruidServerMetadata("no", null, "localhost:1002", 1, null, ServerType.HISTORICAL, "__default", 1), // TLS
+      new DruidServerMetadata("no", "localhost:1003", null, 1, null, ServerType.REALTIME, "__default", 0)
   );
   private static final DruidNode SELF_NODE = new DruidNode("none", "localhost", false, 8080, -1, true, false);
   private static final String QUERY_ID = "abc";

@@ -32,6 +32,18 @@ public class ITS3ToS3ParallelIndexTest extends AbstractS3InputSourceParallelInde
   @MethodSource("resources")
   public void testS3IndexData(Pair<String, List<?>> s3InputSource) throws Exception
   {
-    doTest(s3InputSource, new Pair<>(false, false), "s3");
+    doTest(s3InputSource, new Pair<>(false, false), "s3", null);
+  }
+
+  @ParameterizedTest
+  @MethodSource("resources")
+  public void testS3IndexData_withTempCredentials(Pair<String, List<?>> s3InputSource) throws Exception
+  {
+    doTestWithEndpointConfig(
+        s3InputSource,
+        new Pair<>(false, false),
+        minIOStorageResource.createTempCredentialsForInputSource(),
+        minIOStorageResource.getEndpointUrl()
+    );
   }
 }

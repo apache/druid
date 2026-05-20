@@ -56,8 +56,10 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -131,6 +133,9 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
     return new KinesisIndexTaskIOConfig(
         groupId,
         baseSequenceName,
+        null,
+        null,
+        null,
         new SeekableStreamStartSequenceNumbers<>(
             ioConfig.getStream(),
             startPartitions,
@@ -145,7 +150,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         ioConfig.getFetchDelayMillis(),
         ioConfig.getAwsAssumedRoleArn(),
         ioConfig.getAwsExternalId(),
-        ioConfig.getTaskDuration().getStandardMinutes()
+        ioConfig.getTaskDuration().getStandardMinutes(),
+        ioConfig.getBoundedStreamConfig()  // Pass through bounded config
     );
   }
 
@@ -157,7 +163,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
       TreeMap<Integer, Map<String, String>> sequenceOffsets,
       SeekableStreamIndexTaskIOConfig taskIoConfig,
       SeekableStreamIndexTaskTuningConfig taskTuningConfig,
-      RowIngestionMetersFactory rowIngestionMetersFactory
+      RowIngestionMetersFactory rowIngestionMetersFactory,
+      @Nullable List<Integer> serverPrioritiesToAssign
   ) throws JsonProcessingException
   {
     final String checkpoints = sortingMapper.writerFor(CHECKPOINTS_TYPE_REF).writeValueAsString(sequenceOffsets);
@@ -176,7 +183,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
           (KinesisIndexTaskIOConfig) taskIoConfig,
           context,
           spec.getSpec().getTuningConfig().isUseListShards(),
-          awsCredentialsConfig
+          awsCredentialsConfig,
+          CollectionUtils.isNullOrEmpty(serverPrioritiesToAssign) ? null : serverPrioritiesToAssign.get(i)
       ));
     }
     return taskList;
@@ -378,9 +386,35 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   @Override
+  protected boolean isOffsetAtOrBeyond(String current, String target)
+  {
+    return KinesisSequenceNumber.of(current).compareTo(KinesisSequenceNumber.of(target)) >= 0;
+  }
+
+  @Override
+  protected String createPartitionIdFromString(String partitionIdString)
+  {
+    // Kinesis uses String as partition ID, so just return the string as-is
+    return partitionIdString;
+  }
+
+  @Override
+  protected String createSequenceOffsetFromObject(Object offsetObj)
+  {
+    // Kinesis uses String as sequence offset
+    return offsetObj.toString();
+  }
+
+  @Override
   protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return true;
+  }
+
+  @Override
+  protected boolean isEndOffsetExclusive()
+  {
+    return false;
   }
 
   // Unlike the Kafka Indexing Service,

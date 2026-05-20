@@ -26,6 +26,7 @@ import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
@@ -77,7 +78,9 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
       @JsonProperty("idleConfig") IdleConfig idleConfig,
       @JsonProperty("stopTaskCount") Integer stopTaskCount,
-      @Nullable @JsonProperty("emitTimeLagMetrics") Boolean emitTimeLagMetrics
+      @Nullable @JsonProperty("emitTimeLagMetrics") Boolean emitTimeLagMetrics,
+      @Nullable @JsonProperty("serverPriorityToReplicas") Map<Integer, Integer> serverPriorityToReplicas,
+      @Nullable @JsonProperty("boundedStreamConfig") BoundedStreamConfig boundedStreamConfig
   )
   {
     super(
@@ -96,7 +99,9 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         Configs.valueOrDefault(lagAggregator, LagAggregator.DEFAULT),
         lateMessageRejectionStartDateTime,
         idleConfig,
-        stopTaskCount
+        stopTaskCount,
+        serverPriorityToReplicas,
+        boundedStreamConfig
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");

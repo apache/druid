@@ -24,9 +24,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
-import org.joda.time.Interval;
 
 import java.util.Map;
 
@@ -47,7 +47,7 @@ public interface CompactionRunner
    */
   TaskStatus runCompactionTasks(
       CompactionTask compactionTask,
-      Map<Interval, DataSchema> intervalDataSchemaMap,
+      Map<QuerySegmentSpec, DataSchema> inputSchemas,
       TaskToolbox taskToolbox
   ) throws Exception;
 
@@ -59,7 +59,7 @@ public interface CompactionRunner
    */
   CompactionConfigValidationResult validateCompactionTask(
       CompactionTask compactionTask,
-      Map<Interval, DataSchema> intervalToDataSchemaMap
+      Map<QuerySegmentSpec, DataSchema> inputSchemas
   );
 
 }

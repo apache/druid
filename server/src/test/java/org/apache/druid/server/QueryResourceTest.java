@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -258,7 +257,7 @@ public class QueryResourceTest
 
     queryScheduler = QueryStackTests.DEFAULT_NOOP_SCHEDULER;
     testRequestLogger = new TestRequestLogger();
-    emitter = new StubServiceEmitter();
+    emitter = StubServiceEmitter.createStarted();
     queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
   }
 
@@ -274,7 +273,8 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+            new DefaultQueryConfig(Map.of()),
+            null
         ),
         jsonMapper,
         queryScheduler,
@@ -323,7 +323,8 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(overrideConfig)
+            overrideConfig,
+            null
         ),
         jsonMapper,
         queryScheduler,
@@ -403,7 +404,8 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(overrideConfig)
+            overrideConfig,
+            null
         ),
         jsonMapper,
         queryScheduler,
@@ -503,7 +505,8 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+            new DefaultQueryConfig(Map.of()),
+            null
         ),
         jsonMapper,
         queryScheduler,
@@ -588,7 +591,8 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+            new DefaultQueryConfig(Map.of()),
+            null
         ),
         jsonMapper,
         queryScheduler,
@@ -686,7 +690,8 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+            new DefaultQueryConfig(Map.of()),
+            null
         ),
         jsonMapper,
         queryScheduler,
@@ -755,7 +760,7 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
 
-        new QueryLifecycleFactory(null, null, null, null, null, null, NoopPolicyEnforcer.instance(), null, Suppliers.ofInstance(overrideConfig))
+        new QueryLifecycleFactory(null, null, null, null, null, null, NoopPolicyEnforcer.instance(), null, overrideConfig, null)
         {
           @Override
           public QueryLifecycle factorize()
@@ -770,6 +775,8 @@ public class QueryResourceTest
                 overrideConfig,
                 new AuthConfig(),
                 NoopPolicyEnforcer.instance(),
+                null,
+                Collections.emptyMap(),
                 System.currentTimeMillis(),
                 System.nanoTime()
             )
@@ -831,7 +838,8 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(overrideConfig)
+            overrideConfig,
+            null
         ),
         jsonMapper,
         queryScheduler,
@@ -1102,7 +1110,8 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             authMapper,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+            new DefaultQueryConfig(Map.of()),
+            null
         ),
         jsonMapper,
         queryScheduler,
@@ -1183,7 +1192,8 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+            new DefaultQueryConfig(Map.of()),
+            null
         ),
         jsonMapper,
         queryScheduler,
@@ -1287,7 +1297,8 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             authMapper,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+            new DefaultQueryConfig(Map.of()),
+            null
         ),
         jsonMapper,
         queryScheduler,
@@ -1400,7 +1411,8 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             authMapper,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+            new DefaultQueryConfig(Map.of()),
+            null
         ),
         jsonMapper,
         queryScheduler,
@@ -1789,7 +1801,8 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+            new DefaultQueryConfig(Map.of()),
+            null
         ),
         jsonMapper,
         scheduler,

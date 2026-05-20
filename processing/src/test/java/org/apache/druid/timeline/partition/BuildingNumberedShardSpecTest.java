@@ -24,21 +24,21 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class BuildingNumberedShardSpecTest
 {
   @Test
   public void testConvert()
   {
-    Assert.assertEquals(new NumberedShardSpec(5, 10), new BuildingNumberedShardSpec(5).convert(10));
+    Assertions.assertEquals(new NumberedShardSpec(5, 10), new BuildingNumberedShardSpec(5).convert(10));
   }
 
   @Test
   public void testCreateChunk()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new NumberedPartitionChunk<>(5, 0, "test"),
         new BuildingNumberedShardSpec(5).createChunk("test")
     );
@@ -53,9 +53,9 @@ public class BuildingNumberedShardSpecTest
     final BuildingNumberedShardSpec original = new BuildingNumberedShardSpec(5);
     final String json = mapper.writeValueAsString(original);
     ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
-    Assert.assertEquals(ShardSpec.Type.BUILDING_NUMBERED, shardSpec.getType());
+    Assertions.assertEquals(ShardSpec.Type.BUILDING_NUMBERED, shardSpec.getType());
     final BuildingNumberedShardSpec fromJson = (BuildingNumberedShardSpec) shardSpec;
-    Assert.assertEquals(original, fromJson);
+    Assertions.assertEquals(original, fromJson);
   }
 
   @Test

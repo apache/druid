@@ -237,7 +237,10 @@ Servers table lists all discovered servers in the cluster.
 |is_leader|BIGINT|1 if the server is currently the 'leader' (for services which have the concept of leadership), otherwise 0 if the server is not the leader, or null if the server type does not have the concept of leadership|
 |start_time|STRING|Timestamp in ISO8601 format when the server was announced in the cluster|
 |version|VARCHAR|Druid version running on the server|
+|build_revision|VARCHAR|The git commit of the build that produced the server binary|
 |labels|VARCHAR|Labels for the server configured using the property [`druid.labels`](../configuration/index.md)|
+|available_processors|BIGINT|Total number of CPU processors available to the server|
+|total_memory|BIGINT|Total memory in bytes available to the server|
 
 To retrieve information about all servers, use the query:
 
@@ -319,7 +322,7 @@ SELECT * FROM sys.supervisors WHERE healthy=0;
 
 ### SERVER_PROPERTIES table
 
-The `server_properties` table exposes the runtime properties configured on for each Druid server. Each row represents a single property key-value pair associated with a specific server.
+The `server_properties` table exposes the runtime properties configured on each Druid server. Each row represents a single property key-value pair associated with a specific server. This table supports filter and projection pushdown for efficient querying. If a server is unreachable, the table still returns a row for that server with the `error_message` column populated instead of failing the entire query.
 
 |Column|Type|Notes|
 |------|-----|-----|
@@ -328,9 +331,43 @@ The `server_properties` table exposes the runtime properties configured on for e
 |node_roles|VARCHAR|Comma-separated list of roles that the server performs. For example, `[coordinator,overlord]` if the server functions as both a Coordinator and an Overlord.|
 |property|VARCHAR|Name of the property|
 |value|VARCHAR|Value of the property|
+|error_message|VARCHAR|Describes why properties could not be retrieved from the server (e.g., connection refused, HTTP error). Null when properties were fetched successfully.|
 
 For example, to retrieve properties for a specific server, use the query
 
 ```sql
 SELECT * FROM sys.server_properties WHERE server='192.168.1.1:8081'
 ```
+
+### QUERIES table
+
+:::info
+ The `sys.queries` table is an experimental feature. You must enable it by setting the runtime property
+ `druid.sql.planner.enableSysQueriesTable=true` on Broker processes. The main reason this table is experimental
+  is that it only shows queries from the [Dart](dart.md) engine, which is also experimental.
+:::
+
+The queries table provides information about currently running and recently completed SQL queries.
+
+|Column|Type|Notes|
+|------|-----|-----|
+|id|VARCHAR|Execution ID for the query. For Dart queries, this is the `dartQueryId`.|
+|engine|VARCHAR|SQL engine that executed the query, e.g., `msq-dart`|
+|state|VARCHAR|Query status: `ACCEPTED`, `RUNNING`, `SUCCESS`, `FAILED`, or `CANCELED`|
+|info|VARCHAR|JSON-serialized query information including `sqlQueryId`, `sql`, `identity`, `startTime`, and other engine-specific details|
+
+For example, to retrieve all recently completed Dart queries:
+
+```sql
+SELECT *
+FROM sys.queries
+WHERE
+  engine = 'msq-dart'
+  AND state IN ('SUCCESS', 'FAILED', 'CANCELED')
+```
+
+:::info
+ The retention of completed query information is controlled by Dart controller configuration.
+ See `druid.msq.dart.controller.maxRetainedReportCount` and `druid.msq.dart.controller.maxRetainedReportDuration`
+ for details on how long completed queries are retained.
+:::

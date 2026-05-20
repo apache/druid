@@ -27,16 +27,17 @@ import org.apache.druid.segment.DimensionHandlerProvider;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
+import org.apache.druid.segment.column.BitmapIndexType;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Properties;
@@ -56,12 +57,13 @@ public class BuiltInTypesModuleTest
   }
   
   @AfterEach
-  public void beforeEach()
+  public void teardownEach()
   {
     BuiltInTypesModule.setIndexSpecDefaults(IndexSpec.builder().build());
+    BuiltInTypesModule.setMaxStringLength(null);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown()
   {
     if (DEFAULT_HANDLER_PROVIDER == null) {
@@ -73,6 +75,7 @@ public class BuiltInTypesModuleTest
       );
     }
     BuiltInTypesModule.setIndexSpecDefaults(IndexSpec.builder().build());
+    BuiltInTypesModule.setMaxStringLength(null);
   }
 
   @Test
@@ -94,6 +97,8 @@ public class BuiltInTypesModuleTest
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,
         BuiltInTypesModule.getStringMultiValueHandlingMode()
     );
+
+    Assertions.assertNull(BuiltInTypesModule.getMaxStringLength());
   }
 
   @Test
@@ -106,6 +111,8 @@ public class BuiltInTypesModuleTest
     props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.stringDictionaryEncoding.type", StringEncodingStrategy.FRONT_CODED);
     props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.stringDictionaryEncoding.bucketSize", "16");
     props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.stringDictionaryEncoding.formatVersion", "1");
+    props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.longFieldBitmapIndexType.type", "nullValueIndex");
+    props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.doubleFieldBitmapIndexType.type", "nullValueIndex");
     // ensure that this cannot be set
     props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.bitmapEncoding", "roaring");
     props.setProperty("druid.indexing.formats.indexSpec.metricCompression", CompressionStrategy.ZSTD.toString());
@@ -125,7 +132,12 @@ public class BuiltInTypesModuleTest
     );
     Assertions.assertEquals(CompressionStrategy.LZ4, IndexSpec.getDefault().getComplexMetricCompression());
     Assertions.assertEquals(
-        NestedCommonFormatColumnFormatSpec.builder().setStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(16, (byte) 1)).build(),
+        NestedCommonFormatColumnFormatSpec
+            .builder()
+            .setStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(16, (byte) 1))
+            .setLongFieldBitmapIndexType(BitmapIndexType.NullValueIndex.INSTANCE)
+            .setDoubleFieldBitmapIndexType(BitmapIndexType.NullValueIndex.INSTANCE)
+            .build(),
         IndexSpec.getDefault().getAutoColumnFormatSpec()
     );
 
@@ -163,6 +175,34 @@ public class BuiltInTypesModuleTest
     Assertions.assertTrue(exception.getMessage().contains(
         "Invalid value[boo] specified for 'druid.indexing.formats.stringMultiValueHandlingMode'."
         + " Supported values are [[SORTED_ARRAY, SORTED_SET, ARRAY]]."
+    ));
+  }
+
+  @Test
+  public void testMaxStringLengthOverride()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.indexing.formats.maxStringLength", "500");
+    final Injector gadget = makeInjector(props);
+
+    gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class);
+
+    Assertions.assertEquals(500, BuiltInTypesModule.getMaxStringLength());
+  }
+
+  @Test
+  public void testInvalidMaxStringLength()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.indexing.formats.maxStringLength", "-1");
+    final Injector gadget = makeInjector(props);
+
+    final Exception exception = Assertions.assertThrows(
+        Exception.class,
+        () -> gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class)
+    );
+    Assertions.assertTrue(exception.getMessage().contains(
+        "Invalid value[-1] specified for 'druid.indexing.formats.maxStringLength'"
     ));
   }
 

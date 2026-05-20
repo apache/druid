@@ -28,11 +28,53 @@ xargs sed -nr '/^<testsuite/s/.*name=\"([^\"]+)\".*time=\"([^\"]+)\".*/\1\t\2/p'
 sed -r 's/[^\t]+\.(.)[^\t.]+\t/\1\t/' > test_times
 
 for c in {A..Z} ;do
- echo -n "$c    ";
+ echo -n "$c	";
  (echo 0;grep "^$c" test_times| cut -f 2)|paste -s -d + -|bc
-done | sort -k 2 -nr
+done | sed -r 's/ +/\t/' | sort -k 2 -nr > letter_times
+
 # final output is a table like
 # <letter>	<sumTime>
 # C	88
 
+echo "=== Letter times (sorted by duration) ==="
+cat letter_times
 
+NUM_BUCKETS=8
+
+echo ""
+echo "=== Balanced buckets ($NUM_BUCKETS buckets) ==="
+
+# Initialize buckets
+declare -a bucket_time
+declare -a bucket_letters
+for (( i=0; i<NUM_BUCKETS; i++ )); do
+  bucket_time[$i]=0
+  bucket_letters[$i]=""
+done
+
+# Greedy bin packing: assign each letter to the bucket with the smallest total time
+while IFS=$'\t' read -r letter time; do
+  # Find bucket with minimum time
+  min_idx=0
+  min_time=${bucket_time[0]}
+  for (( i=1; i<NUM_BUCKETS; i++ )); do
+    if (( $(echo "${bucket_time[$i]} < $min_time" | bc -l) )); then
+      min_time=${bucket_time[$i]}
+      min_idx=$i
+    fi
+  done
+
+  # Add letter to that bucket
+  bucket_letters[$min_idx]="${bucket_letters[$min_idx]:+${bucket_letters[$min_idx]},}$letter*"
+  bucket_time[$min_idx]=$(echo "${bucket_time[$min_idx]} + $time" | bc -l)
+done < letter_times
+
+# Output buckets sorted by time
+for (( i=0; i<NUM_BUCKETS; i++ )); do
+  echo "${bucket_time[$i]}"$'\t'"${bucket_letters[$i]}"$'\t'"bucket-$i"
+done | sort -k 1 -nr
+
+echo -n "suggested pattern: "
+for (( i=0; i<NUM_BUCKETS; i++ )); do
+  echo -n "\"${bucket_letters[$i]}\", "
+done

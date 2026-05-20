@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -29,7 +30,6 @@ import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Reference to a single run of a particular worker.
@@ -38,26 +38,52 @@ public class WorkerRunRef
 {
   private static final Logger log = new Logger(WorkerRunRef.class);
 
-  private final AtomicReference<Worker> workerRef = new AtomicReference<>();
-  private final AtomicReference<ListenableFuture<?>> futureRef = new AtomicReference<>();
+  @GuardedBy("this")
+  private Worker worker;
+
+  /**
+   * Future returned by {@link #run(Worker, ListeningExecutorService)}.
+   */
+  @GuardedBy("this")
+  private ListenableFuture<?> workerRunFuture;
+
+  /**
+   * Thread running the worker. Set inside the {@link #run} runnable, used by {@link #cancel()} to interrupt
+   * the worker thread directly.
+   */
+  @GuardedBy("this")
+  private Thread workerThread;
+
+  /**
+   * Flag that is set by {@link #cancel()}.
+   */
+  @GuardedBy("this")
+  private boolean canceled;
 
   /**
    * Run the provided worker in the provided executor. Returns a future that resolves when work is complete, or
    * when the worker is canceled.
    */
-  public ListenableFuture<?> run(final Worker worker, final ListeningExecutorService exec)
+  public synchronized ListenableFuture<?> run(final Worker worker, final ListeningExecutorService exec)
   {
-    if (!workerRef.compareAndSet(null, worker)) {
+    if (this.worker != null) {
       throw DruidException.defensive("Already run");
     }
 
-    ListenableFuture<?> priorFuture = futureRef.get();
-    if (priorFuture != null) {
-      return priorFuture;
+    if (canceled) {
+      // cancel() called before run()
+      return Futures.immediateFailedFuture(new CancellationException());
     }
 
-    final ListenableFuture<?> future = exec.submit(() -> {
+    this.worker = worker;
+
+    this.workerRunFuture = exec.submit(() -> {
       final String originalThreadName = Thread.currentThread().getName();
+
+      synchronized (this) {
+        workerThread = Thread.currentThread();
+      }
+
       try {
         Thread.currentThread().setName(StringUtils.format("%s[%s]", originalThreadName, worker.id()));
         worker.run();
@@ -70,22 +96,24 @@ public class WorkerRunRef
         }
       }
       finally {
+        synchronized (this) {
+          workerThread = null;
+          // Clear any interrupt delivered during or after worker.run().
+          //noinspection ResultOfMethodCallIgnored
+          Thread.interrupted();
+        }
+
         Thread.currentThread().setName(originalThreadName);
       }
     });
 
-    if (!futureRef.compareAndSet(null, future)) {
-      // Future was set while submitting to the executor. Must have been a concurrent cancel().
-      // Interrupt the worker.
-      future.cancel(true);
-    }
-
-    return futureRef.get();
+    // Must not cancel the above future, otherwise listeners with cleanup actions may fire before the worker
+    // has fully stopped. Cancellation is done by calling cancel() on the WorkerRunRef itself.
+    return Futures.nonCancellationPropagating(workerRunFuture);
   }
 
-  public Worker worker()
+  public synchronized Worker worker()
   {
-    final Worker worker = workerRef.get();
     if (worker == null) {
       throw DruidException.defensive("No worker, not run yet?");
     }
@@ -93,13 +121,29 @@ public class WorkerRunRef
   }
 
   /**
+   * Returns true if the worker reference has been set (i.e., {@link #run} has been called).
+   */
+  public synchronized boolean hasWorker()
+  {
+    return worker != null;
+  }
+
+  /**
    * Cancel the worker. Interrupts the worker if currently running.
    */
-  public void cancel()
+  public synchronized void cancel()
   {
-    final ListenableFuture<?> existingFuture = futureRef.getAndSet(Futures.immediateFuture(null));
-    if (existingFuture != null && !existingFuture.isDone()) {
-      existingFuture.cancel(true);
+    if (worker == null) {
+      canceled = true;
+      return;
+    }
+
+    // Directly signal the worker to stop.
+    worker.stop();
+
+    // Interrupt the worker as a failsafe, in case the worker is blocked on something.
+    if (workerThread != null) {
+      workerThread.interrupt();
     }
   }
 
@@ -109,7 +153,11 @@ public class WorkerRunRef
    */
   public void awaitStop()
   {
-    final ListenableFuture<?> future = futureRef.get();
+    final ListenableFuture<?> future;
+    synchronized (this) {
+      future = workerRunFuture;
+    }
+
     if (future == null) {
       throw DruidException.defensive("Not running");
     }

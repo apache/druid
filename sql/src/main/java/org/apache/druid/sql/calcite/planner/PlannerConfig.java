@@ -80,6 +80,9 @@ public class PlannerConfig
   @JsonProperty
   private String nativeQuerySqlPlanningMode = QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED; // can be COUPLED or DECOUPLED
 
+  @JsonProperty
+  private boolean enableSysQueriesTable = false;
+
   public int getMaxNumericInFilters()
   {
     return maxNumericInFilters;
@@ -149,6 +152,14 @@ public class PlannerConfig
     return nativeQuerySqlPlanningMode;
   }
 
+  /**
+   * Returns whether the sys.queries table is enabled.
+   */
+  public boolean isEnableSysQueriesTable()
+  {
+    return enableSysQueriesTable;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> queryContext)
   {
     if (queryContext.isEmpty()) {
@@ -177,6 +188,7 @@ public class PlannerConfig
            && useNativeQueryExplain == that.useNativeQueryExplain
            && forceExpressionVirtualColumns == that.forceExpressionVirtualColumns
            && maxNumericInFilters == that.maxNumericInFilters
+           && enableSysQueriesTable == that.enableSysQueriesTable
            && Objects.equals(sqlTimeZone, that.sqlTimeZone)
            && Objects.equals(nativeQuerySqlPlanningMode, that.nativeQuerySqlPlanningMode);
   }
@@ -197,7 +209,8 @@ public class PlannerConfig
         useNativeQueryExplain,
         forceExpressionVirtualColumns,
         maxNumericInFilters,
-        nativeQuerySqlPlanningMode
+        nativeQuerySqlPlanningMode,
+        enableSysQueriesTable
     );
   }
 
@@ -213,6 +226,7 @@ public class PlannerConfig
            ", sqlTimeZone=" + sqlTimeZone +
            ", useNativeQueryExplain=" + useNativeQueryExplain +
            ", nativeQuerySqlPlanningMode=" + nativeQuerySqlPlanningMode +
+           ", enableSysQueriesTable=" + enableSysQueriesTable +
            '}';
   }
 
@@ -247,6 +261,7 @@ public class PlannerConfig
     private boolean forceExpressionVirtualColumns;
     private int maxNumericInFilters;
     private String nativeQuerySqlPlanningMode;
+    private boolean enableSysQueriesTable;
 
     public Builder(PlannerConfig base)
     {
@@ -266,6 +281,7 @@ public class PlannerConfig
       forceExpressionVirtualColumns = base.isForceExpressionVirtualColumns();
       maxNumericInFilters = base.getMaxNumericInFilters();
       nativeQuerySqlPlanningMode = base.getNativeQuerySqlPlanningMode();
+      enableSysQueriesTable = base.isEnableSysQueriesTable();
     }
 
     public Builder requireTimeCondition(boolean option)
@@ -337,6 +353,12 @@ public class PlannerConfig
     public Builder nativeQuerySqlPlanningMode(String mode)
     {
       this.nativeQuerySqlPlanningMode = mode;
+      return this;
+    }
+
+    public Builder enableSysQueriesTable(boolean option)
+    {
+      this.enableSysQueriesTable = option;
       return this;
     }
 
@@ -436,6 +458,7 @@ public class PlannerConfig
       config.maxNumericInFilters = maxNumericInFilters;
       config.forceExpressionVirtualColumns = forceExpressionVirtualColumns;
       config.nativeQuerySqlPlanningMode = nativeQuerySqlPlanningMode;
+      config.enableSysQueriesTable = enableSysQueriesTable;
       return config;
     }
   }

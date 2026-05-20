@@ -39,6 +39,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.indexing.error.MSQFault;
@@ -90,6 +91,7 @@ public class MSQWorkerTaskLauncherRetryTest
         workerFailureListener,
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
+        Limits.MAX_WORKERS,
         new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig(),
         2
     );
@@ -134,6 +136,7 @@ public class MSQWorkerTaskLauncherRetryTest
         workerFailureListener,
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
+        Limits.MAX_WORKERS,
         new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig(),
         2
     );
@@ -180,6 +183,7 @@ public class MSQWorkerTaskLauncherRetryTest
         workerFailureListener,
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
+        Limits.MAX_WORKERS,
         new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig(),
         2
     );
@@ -210,6 +214,7 @@ public class MSQWorkerTaskLauncherRetryTest
         workerFailureListener,
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
+        Limits.MAX_WORKERS,
         new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig(),
         2
     );
@@ -230,6 +235,7 @@ public class MSQWorkerTaskLauncherRetryTest
   {
     private final ConcurrentSkipListSet<Integer> unknownLocationWorkers = new ConcurrentSkipListSet<>();
     private final ConcurrentSkipListSet<Integer> failedWorkers = new ConcurrentSkipListSet<>();
+    private final ConcurrentSkipListSet<String> canceledTasks = new ConcurrentSkipListSet<>();
 
     @Override
     public ListenableFuture<URI> findCurrentLeader()
@@ -246,6 +252,7 @@ public class MSQWorkerTaskLauncherRetryTest
     @Override
     public ListenableFuture<Void> cancelTask(String taskId)
     {
+      canceledTasks.add(taskId);
       return Futures.immediateFuture(null);
     }
 
@@ -265,7 +272,9 @@ public class MSQWorkerTaskLauncherRetryTest
       final Map<String, TaskStatus> taskStatusMap = new HashMap<>();
       for (String taskId : taskIds) {
         int workerNumber = MSQTasks.workerFromTaskId(taskId);
-        if (failedWorkers.contains(workerNumber)) {
+        if (canceledTasks.contains(taskId)) {
+          taskStatusMap.put(taskId, TaskStatus.failure(taskId, "Canceled"));
+        } else if (failedWorkers.contains(workerNumber)) {
           taskStatusMap.put(taskId, TaskStatus.failure(taskId, "Task failed"));
         } else if (unknownLocationWorkers.contains(workerNumber)) {
           taskStatusMap.put(taskId, TaskStatus.running(taskId).withLocation(TaskLocation.unknown()));
@@ -279,7 +288,7 @@ public class MSQWorkerTaskLauncherRetryTest
     @Override
     public ListenableFuture<TaskStatusResponse> taskStatus(String taskId)
     {
-      if (failedWorkers.contains(MSQTasks.workerFromTaskId(taskId))) {
+      if (canceledTasks.contains(taskId) || failedWorkers.contains(MSQTasks.workerFromTaskId(taskId))) {
         return Futures.immediateFuture(new TaskStatusResponse(taskId, createFailedTaskStatus(taskId)));
       }
       if (unknownLocationWorkers.contains(MSQTasks.workerFromTaskId(taskId))) {

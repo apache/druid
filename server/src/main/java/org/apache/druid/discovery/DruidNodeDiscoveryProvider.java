@@ -22,6 +22,7 @@ package org.apache.druid.discovery;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
@@ -50,8 +51,8 @@ public abstract class DruidNodeDiscoveryProvider
       ImmutableSet.of(NodeRole.MIDDLE_MANAGER, NodeRole.INDEXER)
   );
 
-  private final ConcurrentHashMap<String, ServiceDruidNodeDiscovery> serviceDiscoveryMap =
-      new ConcurrentHashMap<>(SERVICE_TO_NODE_TYPES.size());
+  private final ConcurrentHashMap<ServiceAndRoles, ServiceDruidNodeDiscovery> serviceDiscoveryMap =
+      new ConcurrentHashMap<>(10);
 
   public abstract BooleanSupplier getForNode(DruidNode node, NodeRole nodeRole);
 
@@ -63,15 +64,26 @@ public abstract class DruidNodeDiscoveryProvider
    */
   public DruidNodeDiscovery getForService(String serviceName)
   {
-    return serviceDiscoveryMap.computeIfAbsent(
+    return getForServiceAndRoles(
         serviceName,
-        service -> {
+        DruidNodeDiscoveryProvider.SERVICE_TO_NODE_TYPES.get(serviceName)
+    );
+  }
 
-          Set<NodeRole> nodeRolesToWatch = DruidNodeDiscoveryProvider.SERVICE_TO_NODE_TYPES.get(service);
-          if (nodeRolesToWatch == null) {
-            throw new IAE("Unknown service [%s].", service);
+  /**
+   * Get DruidNodeDiscovery instance to discover nodes of a specific role that
+   * announce the given service in their metadata.
+   */
+  public DruidNodeDiscovery getForServiceAndRoles(String serviceName, Set<NodeRole> nodeRolesToWatch)
+  {
+    return serviceDiscoveryMap.computeIfAbsent(
+        new ServiceAndRoles(serviceName, nodeRolesToWatch),
+        serviceAndRoles -> {
+          if (nodeRolesToWatch == null || nodeRolesToWatch.isEmpty()) {
+            throw InvalidInput.exception("No node role specified to watch for service[%s].", serviceName);
           }
-          ServiceDruidNodeDiscovery serviceDiscovery = new ServiceDruidNodeDiscovery(service, nodeRolesToWatch.size());
+          ServiceDruidNodeDiscovery serviceDiscovery =
+              new ServiceDruidNodeDiscovery(serviceName, nodeRolesToWatch.size());
           DruidNodeDiscovery.Listener filteringGatheringUpstreamListener =
               serviceDiscovery.filteringUpstreamListener();
           for (NodeRole nodeRole : nodeRolesToWatch) {
@@ -80,6 +92,14 @@ public abstract class DruidNodeDiscoveryProvider
           return serviceDiscovery;
         }
     );
+  }
+
+  /**
+   * Record containing serviceName and nodeRoles, used as a key in {@link #serviceDiscoveryMap}.
+   */
+  private record ServiceAndRoles(String serviceName, Set<NodeRole> nodeRoles)
+  {
+
   }
 
   private static class ServiceDruidNodeDiscovery implements DruidNodeDiscovery

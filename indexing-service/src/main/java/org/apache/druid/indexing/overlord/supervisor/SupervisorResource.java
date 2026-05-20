@@ -35,6 +35,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
@@ -155,8 +156,17 @@ public class SupervisorResource
           if (!authResult.allowAccessWithNoRestriction()) {
             throw new ForbiddenException(authResult.getErrorMessage());
           }
+          try {
+            spec.validateSpec();
+          }
+          catch (DruidException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity(ImmutableMap.of("error", e.getMessage()))
+                           .build();
+          }
+
           if (Boolean.TRUE.equals(skipRestartIfUnmodified) && !manager.shouldUpdateSupervisor(spec)) {
-            return Response.ok(ImmutableMap.of("id", spec.getId())).build();
+            return Response.ok(ImmutableMap.of("id", spec.getId(), "restarted", false)).build();
           }
 
           manager.createOrUpdateAndStartSupervisor(spec);
@@ -173,7 +183,7 @@ public class SupervisorResource
                         .build()
           );
 
-          return Response.ok(ImmutableMap.of("id", spec.getId())).build();
+          return Response.ok(ImmutableMap.of("id", spec.getId(), "restarted", true)).build();
         }
     );
   }
@@ -204,7 +214,8 @@ public class SupervisorResource
           Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
               req,
               manager,
-              manager.getSupervisorIds()
+              manager.getSupervisorIds(),
+              AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
           );
           final boolean includeFull = full != null;
           final boolean includeState = state != null && state;
@@ -432,7 +443,7 @@ public class SupervisorResource
         manager -> {
           try {
             if (manager.handoffTaskGroupsEarly(id, taskGroupIds)) {
-              return Response.ok().build();
+              return Response.status(Response.Status.ACCEPTED).build();
             } else {
               return Response.status(Response.Status.NOT_FOUND)
                              .entity(ImmutableMap.of("error", StringUtils.format("Supervisor was not found [%s]", id)))
@@ -499,7 +510,8 @@ public class SupervisorResource
           Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
               req,
               manager,
-              manager.getSupervisorIds()
+              manager.getSupervisorIds(),
+              AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
           );
 
           for (final String supervisorId : authorizedSupervisorIds) {
@@ -642,7 +654,8 @@ public class SupervisorResource
   private Set<String> filterAuthorizedSupervisorIds(
       final HttpServletRequest req,
       SupervisorManager manager,
-      Collection<String> supervisorIds
+      Collection<String> supervisorIds,
+      Function<String, ResourceAction> authorizationFn
   )
   {
     Function<String, Iterable<ResourceAction>> raGenerator = supervisorId -> {
@@ -650,7 +663,7 @@ public class SupervisorResource
       if (supervisorSpecOptional.isPresent()) {
         return Iterables.transform(
             supervisorSpecOptional.get().getDataSources(),
-            AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
+            authorizationFn
         );
       } else {
         return null;
@@ -700,7 +713,8 @@ public class SupervisorResource
           Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
               req,
               manager,
-              manager.getSupervisorIds()
+              manager.getSupervisorIds(),
+              AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
           );
 
           for (final String supervisorId : authorizedSupervisorIds) {

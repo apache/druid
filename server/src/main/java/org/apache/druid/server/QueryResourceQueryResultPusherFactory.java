@@ -156,9 +156,9 @@ public class QueryResourceQueryResultPusherFactory
         }
 
         @Override
-        public void recordFailure(Exception e)
+        public void recordFailure(Exception e, long bytesWritten)
         {
-          queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
+          queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), bytesWritten);
         }
 
         @Override

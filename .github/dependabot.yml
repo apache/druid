@@ -5,6 +5,10 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 20
+    cooldown:
+      # Protect against not-yet-discovered regressions or security issues in new releases of dependencies
+      # https://github.blog/changelog/2025-07-01-dependabot-supports-configuration-of-a-minimum-package-age/
+      default-days: 14
     ignore:
       # pin ZooKeeper dependencies to 3.5.x
       - dependency-name: "org.apache.zookeeper"

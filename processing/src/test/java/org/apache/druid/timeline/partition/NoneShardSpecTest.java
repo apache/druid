@@ -21,8 +21,8 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -35,8 +35,8 @@ public class NoneShardSpecTest
   {
     final ShardSpec one = NoneShardSpec.instance();
     final ShardSpec two = NoneShardSpec.instance();
-    Assert.assertEquals(one, two);
-    Assert.assertEquals(one.hashCode(), two.hashCode());
+    Assertions.assertEquals(one, two);
+    Assertions.assertEquals(one.hashCode(), two.hashCode());
   }
 
   @Test
@@ -47,9 +47,9 @@ public class NoneShardSpecTest
     NoneShardSpec serde2 = jsonMapper.readValue(jsonMapper.writeValueAsString(one), NoneShardSpec.class);
 
     // Serde should return same object instead of creating new one every time.
-    Assert.assertTrue(serde1 == serde2);
-    Assert.assertTrue(one == serde1);
-    Assert.assertEquals(ShardSpec.Type.NONE, serde1.getType());
+    Assertions.assertTrue(serde1 == serde2);
+    Assertions.assertTrue(one == serde1);
+    Assertions.assertEquals(ShardSpec.Type.NONE, serde1.getType());
   }
 
   @Test
@@ -57,6 +57,6 @@ public class NoneShardSpecTest
   {
     final String jsonStr = "{\"type\": \"none\",\"partitionNum\": 2}";
     final ShardSpec noneShardSpec = jsonMapper.readValue(jsonStr, ShardSpec.class);
-    Assert.assertEquals(NoneShardSpec.instance(), noneShardSpec);
+    Assertions.assertEquals(NoneShardSpec.instance(), noneShardSpec);
   }
 }

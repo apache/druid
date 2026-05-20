@@ -21,7 +21,7 @@ package org.apache.druid.query.lookup;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.extraction.MapBasedLookupExtractorTest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 

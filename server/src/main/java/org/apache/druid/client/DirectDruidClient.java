@@ -181,6 +181,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         private final AtomicLong channelSuspendedTime = new AtomicLong(0);
         private final BlockingQueue<InputStreamHolder> queue = new LinkedBlockingQueue<>();
         private final AtomicBoolean done = new AtomicBoolean(false);
+        private final AtomicBoolean nodeMetricsEmitted = new AtomicBoolean(false);
         private final AtomicReference<String> fail = new AtomicReference<>();
         private final AtomicReference<TrafficCop> trafficCopRef = new AtomicReference<>();
 
@@ -359,15 +360,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               // Floating math; division by zero will yield Inf, not exception
               totalByteCount.get() / (0.001 * nodeTimeMs)
           );
-          QueryMetrics<? super Query<T>> responseMetrics = acquireResponseMetrics();
-          responseMetrics.reportNodeTime(nodeTimeNs);
-          responseMetrics.reportNodeBytes(totalByteCount.get());
-
-          if (usingBackpressure) {
-            responseMetrics.reportBackPressureTime(channelSuspendedTime.get());
-          }
-
-          responseMetrics.emit(emitter);
+          emitNodeMetrics(nodeTimeNs);
           synchronized (done) {
             try {
               // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
@@ -400,6 +393,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
         private void setupResponseReadFailure(String msg, Throwable th)
         {
+          emitNodeMetrics(System.nanoTime() - requestStartTimeNs);
           fail.set(msg);
           queue.clear();
           queue.offer(
@@ -422,6 +416,21 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           );
         }
 
+        // Emit exactly once, regardless of whether we reach this via done() or setupResponseReadFailure().
+        private void emitNodeMetrics(long nodeTimeNs)
+        {
+          if (!nodeMetricsEmitted.compareAndSet(false, true)) {
+            return;
+          }
+          QueryMetrics<? super Query<T>> responseMetrics = acquireResponseMetrics();
+          responseMetrics.reportNodeTime(nodeTimeNs);
+          responseMetrics.reportNodeBytes(totalByteCount.get());
+          if (usingBackpressure) {
+            responseMetrics.reportBackPressureTime(channelSuspendedTime.get());
+          }
+          responseMetrics.emit(emitter);
+        }
+
         // Returns remaining timeout or throws exception if timeout already elapsed.
         private long checkQueryTimeout()
         {
@@ -437,11 +446,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
         private void checkTotalBytesLimit(long bytes)
         {
-          if (maxScatterGatherBytes < Long.MAX_VALUE && totalBytesGathered.addAndGet(bytes) > maxScatterGatherBytes) {
+          final long currentTotalBytesGathered = totalBytesGathered.addAndGet(bytes);
+          if (currentTotalBytesGathered > maxScatterGatherBytes) {
             String msg = StringUtils.format(
-                "Query[%s] url[%s] max scatter-gather bytes limit reached.",
+                "Query[%s] url[%s] total bytes gathered[%,d] exceeds maxScatterGatherBytes[%,d]",
                 query.getId(),
-                url
+                url,
+                currentTotalBytesGathered,
+                maxScatterGatherBytes
             );
             setupResponseReadFailure(msg, null);
             throw new ResourceLimitExceededException(msg);

@@ -46,12 +46,14 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskContextEnricher;
+import org.apache.druid.indexing.common.task.TaskMetrics;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelIndexTaskRunner;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -72,6 +74,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -415,8 +418,14 @@ public class TaskQueue
     log.info("Notified task runner to clean up [%,d] tasks with IDs[%s].", unknownTaskIds.size(), unknownTaskIds);
 
     // Attain futures for all active tasks (assuming they are ready to run).
-    // Copy tasks list, as notifyStatus may modify it.
-    for (final String queuedTaskId : List.copyOf(activeTasks.keySet())) {
+    // Sort by priority (highest first) so that higher-priority tasks are submitted
+    // to the runner before lower-priority ones.
+    final List<String> queuedTaskIds = activeTasks.values()
+                                                  .stream()
+                                                  .sorted(Comparator.comparingInt((TaskEntry entry) -> entry.getTask().getPriority()).reversed())
+                                                  .map(entry -> entry.getTask().getId())
+                                                  .toList();
+    for (final String queuedTaskId : queuedTaskIds) {
       updateTaskEntry(
           queuedTaskId,
           entry -> startPendingTaskOnRunner(entry, runnerTaskFutures.get(queuedTaskId))
@@ -451,7 +460,6 @@ public class TaskQueue
             }
             final TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
             notifyStatus(entry, taskStatus, taskStatus.getErrorMsg());
-            emitTaskCompletionLogsAndMetrics(task, taskStatus);
             return;
           }
           if (taskIsReady) {
@@ -500,9 +508,12 @@ public class TaskQueue
 
   private boolean isTaskPending(Task task)
   {
-    return taskRunner.getPendingTasks()
-                     .stream()
-                     .anyMatch(workItem -> workItem.getTaskId().equals(task.getId()));
+    // Opt for point lookup on the runner rather than expensive list() call
+    final RunnerTaskState taskState = taskRunner.getRunnerTaskState(task.getId());
+    if (taskState == null) {
+      return false; // we don't know
+    }
+    return taskState == RunnerTaskState.PENDING;
   }
 
   /**
@@ -751,8 +762,8 @@ public class TaskQueue
     }
 
     shutdownTaskOnRunner(task.getId(), reasonFormat, args);
-
     removeTaskLock(task);
+    emitTaskCompletionLogsAndMetrics(task, taskStatus);
     requestManagement();
 
     log.info("Completed notifyStatus for task[%s] with status[%s]", task.getId(), taskStatus);
@@ -813,9 +824,6 @@ public class TaskQueue
                   task.getId(),
                   entry -> notifyStatus(entry, status, "notified status change from task")
               );
-
-              // Emit event and log, if the task is done
-              emitTaskCompletionLogsAndMetrics(task, status);
             }
             catch (Exception e) {
               log.makeAlert(e, "Failed to handle task status")
@@ -966,14 +974,14 @@ public class TaskQueue
   }
 
   /**
-   * Gets the current status of this task either from the {@link TaskRunner}
-   * or from the {@link TaskStorage} (if not available with the TaskRunner).
+   * Gets the current status of this task either from {@link #activeTasks} and {@link #taskRunner}, if active,
+   * or otherwise from the {@link TaskStorage}.
    */
   public Optional<TaskStatus> getTaskStatus(final String taskId)
   {
-    RunnerTaskState runnerTaskState = taskRunner.getRunnerTaskState(taskId);
-    if (runnerTaskState != null && runnerTaskState != RunnerTaskState.NONE) {
-      return Optional.of(TaskStatus.running(taskId).withLocation(taskRunner.getTaskLocation(taskId)));
+    final TaskEntry activeTaskEntry = activeTasks.get(taskId);
+    if (activeTaskEntry != null) {
+      return Optional.of(activeTaskEntry.taskInfo.getStatus().withLocation(taskRunner.getTaskLocation(taskId)));
     } else {
       return taskStorage.getStatus(taskId);
     }
@@ -1044,7 +1052,6 @@ public class TaskQueue
   }
 
   /**
-   * Returns the list of currently active tasks for the given datasource.
    * List of all active and completed task infos currently being managed by this TaskQueue.
    */
   public List<TaskInfo> getTaskInfos()
@@ -1075,24 +1082,22 @@ public class TaskQueue
 
   private void emitTaskCompletionLogsAndMetrics(final Task task, final TaskStatus status)
   {
-    if (status.isComplete()) {
-      final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
-      IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-      IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
+    final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
 
-      emitter.emit(metricBuilder.setMetric("task/run/time", status.getDuration()));
+    emitter.emit(metricBuilder.setMetric(TaskMetrics.RUN_DURATION, status.getDuration()));
 
-      if (status.isSuccess()) {
-        Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));
-      } else {
-        Counters.incrementAndGetLong(totalFailedTaskCount, getMetricKey(task));
-      }
-
-      log.info(
-          "Completed task[%s] with status[%s] in [%d]ms.",
-          task.getId(), status, status.getDuration()
-      );
+    if (status.isSuccess()) {
+      Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));
+    } else {
+      Counters.incrementAndGetLong(totalFailedTaskCount, getMetricKey(task));
     }
+
+    log.info(
+        "Completed task[%s] with status[%s] in [%d]ms.",
+        task.getId(), status, status.getDuration()
+    );
   }
 
   private void validateTaskPayload(Task task)
@@ -1217,7 +1222,18 @@ public class TaskQueue
     if (task == null) {
       return RowKey.empty();
     }
-    return RowKey.with(Dimension.DATASOURCE, task.getDataSource())
-                 .and(Dimension.TASK_TYPE, task.getType());
+
+    String supervisorId = null;
+    if (task instanceof SeekableStreamIndexTask) {
+      supervisorId = ((SeekableStreamIndexTask<?, ?, ?>) task).getSupervisorId();
+    }
+
+    RowKey.Builder builder = RowKey.with(Dimension.DATASOURCE, task.getDataSource())
+                                   .with(Dimension.TASK_TYPE, task.getType());
+
+    if (supervisorId != null) {
+      builder.with(Dimension.SUPERVISOR_ID, supervisorId);
+    }
+    return builder.build();
   }
 }

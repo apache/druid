@@ -156,12 +156,14 @@ public class RabbitStreamIndexTaskTuningConfigTest
                     "maxPendingPersists=100, " +
                     "indexSpec=IndexSpec{" +
                     "bitmapSerdeFactory=null, " +
+                    "metadataCompression=null, " +
                     "dimensionCompression=null, " +
                     "stringDictionaryEncoding=null, " +
                     "metricCompression=null, " +
                     "longEncoding=null, " +
                     "complexMetricCompression=null, " +
                     "autoColumnFormatSpec=null, " +
+                    "stringColumnFormatSpec=null, " +
                     "jsonCompression=null, " +
                     "segmentLoader=null" +
                     "}, " +

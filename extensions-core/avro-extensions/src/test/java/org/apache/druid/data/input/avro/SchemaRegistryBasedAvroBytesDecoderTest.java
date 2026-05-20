@@ -31,7 +31,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumWriter;
-import org.apache.druid.data.input.AvroStreamInputRowParserTest;
+import org.apache.druid.data.input.AvroStreamInputFormatTest;
 import org.apache.druid.data.input.SomeAvroDatum;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -116,7 +116,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     // Given
     Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234)))
            .thenReturn(new AvroSchema(SomeAvroDatum.getClassSchema()));
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
     ByteBuffer bb = ByteBuffer.allocate(bytes.length + 5).put((byte) 0).putInt(1234).put(bytes);
@@ -153,7 +153,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     // Given
     Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234)))
            .thenReturn(new AvroSchema(SomeAvroDatum.getClassSchema()));
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
     ByteBuffer bb = ByteBuffer.allocate(4 + 5).put((byte) 0).putInt(1234).put(bytes, 5, 4);
@@ -265,7 +265,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     // Given
     Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234)))
            .thenThrow(new RestClientException("unauthenticated", 401, 401));
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
     ByteBuffer bb = ByteBuffer.allocate(4 + 5).put((byte) 0).putInt(1234).put(bytes, 5, 4);
@@ -292,7 +292,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     // Given
     Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234)))
            .thenThrow(new RestClientException("resource doesn't exist", 404, 404));
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
     byte[] bytes = getAvroDatum(schema, someAvroDatum);
     ByteBuffer bb = ByteBuffer.allocate(4 + 5).put((byte) 0).putInt(1234).put(bytes, 5, 4);

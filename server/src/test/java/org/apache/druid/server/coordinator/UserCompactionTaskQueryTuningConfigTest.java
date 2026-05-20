@@ -43,27 +43,7 @@ public class UserCompactionTaskQueryTuningConfigTest
   public void testSerdeNulls() throws IOException
   {
     final UserCompactionTaskQueryTuningConfig config =
-        new UserCompactionTaskQueryTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        );
+        UserCompactionTaskQueryTuningConfig.builder().build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     // Check maxRowsPerSegment doesn't exist in the JSON string
     Assert.assertFalse(json.contains("maxRowsPerSegment"));
@@ -75,35 +55,34 @@ public class UserCompactionTaskQueryTuningConfigTest
   @Test
   public void testSerde() throws IOException
   {
-    final UserCompactionTaskQueryTuningConfig tuningConfig = new UserCompactionTaskQueryTuningConfig(
-        40000,
-        new OnheapIncrementalIndex.Spec(true),
-        2000L,
-        null,
-        new SegmentsSplitHintSpec(new HumanReadableBytes(42L), null),
-        new DynamicPartitionsSpec(1000, 20000L),
-        IndexSpec.builder()
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZ4)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        IndexSpec.builder()
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZ4)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        2,
-        1000L,
-        TmpFileSegmentWriteOutMediumFactory.instance(),
-        100,
-        5,
-        1000L,
-        new Duration(3000L),
-        7,
-        1000,
-        100,
-        2
-    );
+    final UserCompactionTaskQueryTuningConfig tuningConfig = UserCompactionTaskQueryTuningConfig.builder()
+        .maxRowsInMemory(40000)
+        .appendableIndexSpec(new OnheapIncrementalIndex.Spec(true))
+        .maxBytesInMemory(2000L)
+        .splitHintSpec(new SegmentsSplitHintSpec(new HumanReadableBytes(42L), null))
+        .partitionsSpec(new DynamicPartitionsSpec(1000, 20000L))
+        .indexSpec(IndexSpec.builder()
+                       .withDimensionCompression(CompressionStrategy.LZ4)
+                       .withMetricCompression(CompressionStrategy.LZ4)
+                       .withLongEncoding(LongEncodingStrategy.LONGS)
+                       .build())
+        .indexSpecForIntermediatePersists(IndexSpec.builder()
+                                               .withDimensionCompression(CompressionStrategy.LZ4)
+                                               .withMetricCompression(CompressionStrategy.LZ4)
+                                               .withLongEncoding(LongEncodingStrategy.LONGS)
+                                               .build())
+        .maxPendingPersists(2)
+        .pushTimeout(1000L)
+        .segmentWriteOutMediumFactory(TmpFileSegmentWriteOutMediumFactory.instance())
+        .maxNumConcurrentSubTasks(100)
+        .maxRetry(5)
+        .taskStatusCheckPeriodMs(1000L)
+        .chatHandlerTimeout(new Duration(3000L))
+        .chatHandlerNumRetries(7)
+        .maxNumSegmentsToMerge(1000)
+        .totalNumMergeTasks(100)
+        .maxColumnsToMerge(2)
+        .build();
 
     final String json = OBJECT_MAPPER.writeValueAsString(tuningConfig);
     final UserCompactionTaskQueryTuningConfig fromJson =
