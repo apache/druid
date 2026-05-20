@@ -1972,11 +1972,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     Assert.assertNotNull("Remote address should not be null", remoteAddress);
 
     Assert.assertTrue(
-        "Remote address should be a valid IP or localhost",
-        remoteAddress.contains("localhost") ||
-        remoteAddress.contains("127.0.0.1") ||
-        remoteAddress.contains("0:0:0:0:0:0:0:1") ||
-        (remoteAddress.contains(".") && remoteAddress.length() >= 7)
+        "Remote address should be a valid IP address, got: " + remoteAddress,
+        remoteAddress.matches("^\\d+\\.\\d+\\.\\d+\\.\\d+$") ||
+        remoteAddress.matches("^[0-9a-fA-F:]+$")
     );
   }
 
