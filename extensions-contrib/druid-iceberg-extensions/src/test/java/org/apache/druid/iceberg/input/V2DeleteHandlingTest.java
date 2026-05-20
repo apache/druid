@@ -209,7 +209,8 @@ public class V2DeleteHandlingTest
     final DeleteFileInfo posDelete = new DeleteFileInfo(
         "s3://bucket/data/pos-del.parquet",
         DeleteFileInfo.ContentType.POSITION,
-        null
+        null,
+        "PARQUET"
     );
     Assert.assertEquals("s3://bucket/data/pos-del.parquet", posDelete.getPath());
     Assert.assertEquals(DeleteFileInfo.ContentType.POSITION, posDelete.getContentType());
@@ -218,7 +219,8 @@ public class V2DeleteHandlingTest
     final DeleteFileInfo eqDelete = new DeleteFileInfo(
         "s3://bucket/data/eq-del.parquet",
         DeleteFileInfo.ContentType.EQUALITY,
-        ImmutableList.of(1, 2)
+        ImmutableList.of(1, 2),
+        "PARQUET"
     );
     Assert.assertEquals(DeleteFileInfo.ContentType.EQUALITY, eqDelete.getContentType());
     Assert.assertEquals(ImmutableList.of(1, 2), eqDelete.getEqualityFieldIds());
