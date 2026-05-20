@@ -3132,27 +3132,94 @@ public class CachingClusteredClientTest
     selector.addServerAndUpdateSegment(new QueryableDruidServer(servers[0], null), dataSegment);
     timeline.add(interval, "ver", new SingleElementPartitionChunk<>(selector));
 
-    final TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder()
+    // include (default): historical segment is included
+    final TimeBoundaryQuery queryInclude = Druids.newTimeBoundaryQueryBuilder()
             .dataSource(DATA_SOURCE)
             .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
-            .context(ImmutableMap.of("realtimeSegmentsOnly", false))
+            .context(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "include"))
             .randomQueryId()
             .build();
 
-    final TimeBoundaryQuery query2 = Druids.newTimeBoundaryQueryBuilder()
+    // exclusive: only realtime segments — historical segment is excluded
+    final TimeBoundaryQuery queryExclusive = Druids.newTimeBoundaryQueryBuilder()
             .dataSource(DATA_SOURCE)
             .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
-            .context(ImmutableMap.of("realtimeSegmentsOnly", true))
+            .context(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "exclusive"))
+            .randomQueryId()
+            .build();
+
+    // backward compat: realtimeSegmentsOnly=true maps to EXCLUSIVE
+    final TimeBoundaryQuery queryLegacyTrue = Druids.newTimeBoundaryQueryBuilder()
+            .dataSource(DATA_SOURCE)
+            .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
+            .context(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, true))
             .randomQueryId()
             .build();
 
     final ResponseContext responseContext = initializeResponseContext();
 
-    getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
-    getDefaultQueryRunner().run(QueryPlus.wrap(query2), responseContext);
+    getDefaultQueryRunner().run(QueryPlus.wrap(queryInclude), responseContext);
+    getDefaultQueryRunner().run(QueryPlus.wrap(queryExclusive), responseContext);
+    getDefaultQueryRunner().run(QueryPlus.wrap(queryLegacyTrue), responseContext);
+
     final Map<String, Integer> remainingResponseMap = (Map<String, Integer>) responseContext.get(ResponseContext.Keys.REMAINING_RESPONSES_FROM_QUERY_SERVERS);
-    Assert.assertEquals(1, remainingResponseMap.get(query.getId()).intValue());
-    Assert.assertEquals(0, remainingResponseMap.get(query2.getId()).intValue());
+    Assert.assertEquals(1, remainingResponseMap.get(queryInclude.getId()).intValue());
+    Assert.assertEquals(0, remainingResponseMap.get(queryExclusive.getId()).intValue());
+    Assert.assertEquals(0, remainingResponseMap.get(queryLegacyTrue.getId()).intValue());
+  }
+
+  @Test
+  public void testRealtimeSegmentsModeExclude()
+  {
+    final Interval interval = Intervals.of("2016-01-01/2016-01-02");
+    final Interval queryInterval = Intervals.of("2016-01-01T14:00:00/2016-01-02T14:00:00");
+    final DataSegment dataSegment = new DataSegment(
+            "dataSource",
+            interval,
+            "ver",
+            ImmutableMap.of("type", "hdfs", "path", "/tmp"),
+            ImmutableList.of("product"),
+            ImmutableList.of("visited_sum"),
+            NoneShardSpec.instance(),
+            9,
+            12334
+    );
+
+    // selector backed only by a realtime server — isRealtimeSegment() == true
+    final DruidServer realtimeServer = new DruidServer(
+            "rt1", "rt1", null, 10, null, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0
+    );
+    final ServerSelector realtimeSelector = new ServerSelector(
+            dataSegment,
+            new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+            HistoricalFilter.IDENTITY_FILTER
+    );
+    realtimeSelector.addServerAndUpdateSegment(new QueryableDruidServer(realtimeServer, null), dataSegment);
+    timeline.add(interval, "ver", new SingleElementPartitionChunk<>(realtimeSelector));
+
+    // exclude: realtime-only segment is skipped
+    final TimeBoundaryQuery queryExclude = Druids.newTimeBoundaryQueryBuilder()
+            .dataSource(DATA_SOURCE)
+            .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
+            .context(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "exclude"))
+            .randomQueryId()
+            .build();
+
+    // include: realtime-only segment is included
+    final TimeBoundaryQuery queryInclude = Druids.newTimeBoundaryQueryBuilder()
+            .dataSource(DATA_SOURCE)
+            .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
+            .context(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "include"))
+            .randomQueryId()
+            .build();
+
+    final ResponseContext responseContext = initializeResponseContext();
+    getDefaultQueryRunner().run(QueryPlus.wrap(queryExclude), responseContext);
+    getDefaultQueryRunner().run(QueryPlus.wrap(queryInclude), responseContext);
+
+    final Map<String, Integer> remainingResponseMap = (Map<String, Integer>) responseContext.get(ResponseContext.Keys.REMAINING_RESPONSES_FROM_QUERY_SERVERS);
+    Assert.assertEquals(0, remainingResponseMap.get(queryExclude.getId()).intValue());
+    Assert.assertEquals(1, remainingResponseMap.get(queryInclude.getId()).intValue());
   }
 
   @SuppressWarnings("unchecked")

@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.QueryContexts.RealtimeSegmentsMode;
 import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
@@ -781,8 +782,34 @@ public class QueryContext
     return getBoolean(QueryContexts.CTX_PREPLANNED, QueryContexts.DEFAULT_PREPLANNED);
   }
 
+  /**
+   * Returns the realtime segments mode for this query. If {@code realtimeSegmentsMode} is absent
+   * or null, falls back to the deprecated {@code realtimeSegmentsOnly} boolean: {@code true} maps
+   * to {@link RealtimeSegmentsMode#EXCLUSIVE}; otherwise returns {@link RealtimeSegmentsMode#INCLUDE}.
+   */
+  public RealtimeSegmentsMode getRealtimeSegmentsMode()
+  {
+    RealtimeSegmentsMode mode = getEnum(
+        QueryContexts.REALTIME_SEGMENTS_MODE,
+        RealtimeSegmentsMode.class,
+        null
+    );
+    if (mode != null) {
+      return mode;
+    }
+    // Backward-compat: honour the deprecated realtimeSegmentsOnly flag.
+    if (getBoolean(QueryContexts.REALTIME_SEGMENTS_ONLY, QueryContexts.DEFAULT_REALTIME_SEGMENTS_ONLY)) {
+      return RealtimeSegmentsMode.EXCLUSIVE;
+    }
+    return QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
+  }
+
+  /**
+   * @deprecated Use {@link #getRealtimeSegmentsMode()} instead.
+   */
+  @Deprecated
   public boolean isRealtimeSegmentsOnly()
   {
-    return getBoolean(QueryContexts.REALTIME_SEGMENTS_ONLY, QueryContexts.DEFAULT_REALTIME_SEGMENTS_ONLY);
+    return getRealtimeSegmentsMode() == RealtimeSegmentsMode.EXCLUSIVE;
   }
 }

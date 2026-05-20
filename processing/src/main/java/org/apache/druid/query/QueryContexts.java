@@ -146,8 +146,19 @@ public class QueryContexts
   public static final String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
   public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
 
+  /**
+   * @deprecated Use {@link #REALTIME_SEGMENTS_MODE} instead.
+   */
+  @Deprecated
   public static final String REALTIME_SEGMENTS_ONLY = "realtimeSegmentsOnly";
+  /**
+   * @deprecated Use {@link #DEFAULT_REALTIME_SEGMENTS_MODE} instead.
+   */
+  @Deprecated
   public static final boolean DEFAULT_REALTIME_SEGMENTS_ONLY = false;
+
+  public static final String REALTIME_SEGMENTS_MODE = "realtimeSegmentsMode";
+  public static final RealtimeSegmentsMode DEFAULT_REALTIME_SEGMENTS_MODE = RealtimeSegmentsMode.INCLUDE;
 
   public static final String CTX_PREPLANNED = "prePlanned";
   public static final boolean DEFAULT_PREPLANNED = true;
@@ -230,6 +241,39 @@ public class QueryContexts
     public String toString()
     {
       return StringUtils.toLowerCase(name()).replace('_', '-');
+    }
+  }
+
+  /**
+   * Classifies segments by whether a historical replica exists
+   * (see {@link org.apache.druid.client.selector.ServerSelector#isRealtimeSegment()}: a segment is
+   * "realtime" only when it has realtime servers and zero historical servers).
+   */
+  public enum RealtimeSegmentsMode
+  {
+    /** Include all segments (default). */
+    INCLUDE,
+    /** Include only segments served solely by realtime servers; any segment with a historical replica
+     *  (including segments mid-handoff) is excluded. */
+    EXCLUSIVE,
+    /** Exclude segments served solely by realtime servers; segments mid-handoff with both realtime
+     *  and historical replicas are still included. */
+    EXCLUDE;
+
+    @JsonCreator
+    public static RealtimeSegmentsMode fromString(String str)
+    {
+      if (str == null) {
+        return null;
+      }
+      return RealtimeSegmentsMode.valueOf(StringUtils.toUpperCase(str));
+    }
+
+    @Override
+    @JsonValue
+    public String toString()
+    {
+      return StringUtils.toLowerCase(name());
     }
   }
 
