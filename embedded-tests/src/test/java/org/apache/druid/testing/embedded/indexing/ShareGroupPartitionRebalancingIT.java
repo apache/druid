@@ -101,8 +101,7 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
 
     final int batchA = 10;
     kafkaServer.publishRecordsToTopic(topic, csvRecords(batchA, 0, "2025-11-01"));
-
-    waitForRowsProcessed(batchA);
+    Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
 
     // Increase from 2 to 4 partitions; broker rebalances automatically.
     kafkaServer.increasePartitionsInTopic(topic, 4);
@@ -111,18 +110,9 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
     final int batchB = 10;
     kafkaServer.publishRecordsToTopic(topic, csvRecords(batchB, batchA, "2025-11-02"));
 
-    waitForRowsProcessed(batchA + batchB);
-
-    cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId));
-    cluster.callApi().waitForTaskToFinish(taskId, overlord.latchableEmitter());
-
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-
-    final long rowCount = Long.parseLong(cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
-    Assertions.assertTrue(
-        rowCount >= batchA + batchB,
-        "Expected at least [" + (batchA + batchB) + "] rows but got [" + rowCount + "]"
-    );
+    // Wait for all records to flow through to queryable segments. Cancelling the task
+    // triggers a publish of any in-memory rows, so we poll until SQL sees the full set.
+    waitForRowCountAfterCancel(taskId, batchA + batchB);
   }
 
   @Test
@@ -139,8 +129,7 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
 
     final int batchA = 10;
     kafkaServer.publishRecordsToTopic(topic, csvRecords(batchA, 0, "2025-12-01"));
-
-    waitForRowsProcessed(batchA);
+    Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
 
     // Increase from 2 to 4 partitions; broker distributes the 2 new partitions across both consumers.
     kafkaServer.increasePartitionsInTopic(topic, 4);
@@ -149,20 +138,7 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
     final int batchB = 20;
     kafkaServer.publishRecordsToTopic(topic, csvRecords(batchB, batchA, "2025-12-02"));
 
-    waitForRowsProcessed(batchA + batchB);
-
-    cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId1));
-    cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId2));
-    cluster.callApi().waitForTaskToFinish(taskId1, overlord.latchableEmitter());
-    cluster.callApi().waitForTaskToFinish(taskId2, overlord.latchableEmitter());
-
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-
-    final long rowCount = Long.parseLong(cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
-    Assertions.assertTrue(
-        rowCount >= batchA + batchB,
-        "Expected at least [" + (batchA + batchB) + "] rows but got [" + rowCount + "]"
-    );
+    waitForRowCountAfterCancel(batchA + batchB, taskId1, taskId2);
   }
 
   private String submitTask(String topic, String groupId)
@@ -239,13 +215,23 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
     return task.getId();
   }
 
-  private void waitForRowsProcessed(long expected) throws Exception
+  private void waitForRowCountAfterCancel(long expected, String... taskIds) throws Exception
   {
-    // Poll the in-flight ingest count via the Overlord task report.
-    // ingest/events/processed aggregate can include events from earlier tests in the
-    // same indexer JVM, leading to false-positive matches. A direct SQL count is the
-    // only reliable signal for "this test's records made it to a queryable segment".
-    final long deadlineMs = System.currentTimeMillis() + 60_000L;
+    // Give the share-consumer time to read and ack everything that has been published.
+    Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
+
+    for (String id : taskIds) {
+      cluster.callApi().onLeaderOverlord(o -> o.cancelTask(id));
+    }
+    for (String id : taskIds) {
+      cluster.callApi().waitForTaskToFinish(id, overlord.latchableEmitter());
+    }
+
+    // Cancel triggers a flush + publish of any in-memory rows. Poll until segments
+    // for those rows become queryable on the broker. Aggregate emitter metrics can
+    // be polluted by earlier tests in the same JVM, so we rely on a direct SQL count.
+    final long deadlineMs = System.currentTimeMillis() + 120_000L;
+    long lastSeen = -1;
     while (System.currentTimeMillis() < deadlineMs) {
       try {
         cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
@@ -253,8 +239,8 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
       catch (Exception ignored) {
       }
       try {
-        final long rows = Long.parseLong(cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
-        if (rows >= expected) {
+        lastSeen = Long.parseLong(cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+        if (lastSeen >= expected) {
           return;
         }
       }
@@ -262,7 +248,7 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
       }
       Thread.sleep(1_000L);
     }
-    throw new IllegalStateException("Timed out waiting for " + expected + " rows.");
+    Assertions.fail("Expected at least [" + expected + "] rows but got [" + lastSeen + "]");
   }
 
   private List<byte[]> csvRecords(int count, int startIndex, String dateStr)

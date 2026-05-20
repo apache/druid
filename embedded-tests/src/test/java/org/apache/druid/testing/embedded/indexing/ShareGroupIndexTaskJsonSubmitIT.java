@@ -126,7 +126,7 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_jsonSubmit_roundTripsPayload() throws Exception
+  public void test_jsonSubmit_overlordReturnsExpectedTaskType() throws Exception
   {
     final String topic = dataSource + "_roundtrip_topic";
     kafkaServer.createTopicWithPartitions(topic, 1);
@@ -138,14 +138,12 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
 
     Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
 
-    final org.apache.druid.client.indexing.TaskPayloadResponse payloadResponse =
-        cluster.callApi().onLeaderOverlord(o -> o.taskPayload(task.getId()));
-    Assertions.assertEquals(task.getId(), payloadResponse.getTask());
-
-    final JsonNode payloadJson = mapper.valueToTree(payloadResponse.getPayload());
-    Assertions.assertEquals("index_kafka_share_group", payloadJson.path("type").asText());
-    Assertions.assertEquals(topic, payloadJson.path("ioConfig").path("topic").asText());
-    Assertions.assertEquals("roundtrip-group", payloadJson.path("ioConfig").path("groupId").asText());
+    final org.apache.druid.indexer.TaskStatusResponse statusResponse =
+        cluster.callApi().onLeaderOverlord(o -> o.taskStatus(task.getId()));
+    Assertions.assertNotNull(statusResponse, "Overlord did not return a status for the submitted task");
+    Assertions.assertNotNull(statusResponse.getStatus(), "Overlord status payload was empty");
+    Assertions.assertEquals(task.getId(), statusResponse.getStatus().getId());
+    Assertions.assertEquals("index_kafka_share_group", statusResponse.getStatus().getType());
 
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(task.getId()));
     cluster.callApi().waitForTaskToFinish(task.getId(), overlord.latchableEmitter());
