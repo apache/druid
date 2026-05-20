@@ -24,6 +24,7 @@ import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
 import org.apache.druid.msq.kernel.GlobalSortTargetSizeShuffleSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.ShuffleSpec;
+import org.apache.druid.msq.kernel.StageDefinition;
 
 /**
  * Static factory methods for common implementations of {@link ShuffleSpecFactory}.
@@ -61,12 +62,13 @@ public class ShuffleSpecFactories
   }
 
   /**
-   * Factory that produces a particular number of output partitions.
+   * Factory that produces an adjustable globally-sorted shuffle spec. The partition count is adjusted at
+   * runtime by {@link StageDefinition#withRuntimeBounds(int, int, int)}.
    */
-  public static ShuffleSpecFactory globalSortWithMaxPartitionCount(final int partitions)
+  public static ShuffleSpecFactory globalSortWithTargetPartitions()
   {
     return (clusterBy, aggregate) ->
-        new GlobalSortMaxCountShuffleSpec(clusterBy, partitions, aggregate, ShuffleSpec.UNLIMITED);
+        new GlobalSortMaxCountShuffleSpec(clusterBy, 1, aggregate, ShuffleSpec.UNLIMITED, true);
   }
 
   /**
@@ -75,7 +77,7 @@ public class ShuffleSpecFactories
    *
    * Produces {@link MixShuffleSpec}, ignoring the target size, if the provided {@link ClusterBy} is empty.
    */
-  public static ShuffleSpecFactory getGlobalSortWithTargetSize(int targetSize)
+  public static ShuffleSpecFactory globalSortWithTargetSize(int targetSize)
   {
     return (clusterBy, aggregate) -> {
       if (clusterBy.isEmpty()) {

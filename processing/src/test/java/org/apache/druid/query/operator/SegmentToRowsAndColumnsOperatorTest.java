@@ -33,8 +33,8 @@ import org.apache.druid.segment.TestSegmentForAs;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -78,7 +78,7 @@ public class SegmentToRowsAndColumnsOperatorTest
   {
     SegmentToRowsAndColumnsOperator op = new SegmentToRowsAndColumnsOperator(
         new TestSegmentForAs(SegmentId.dummy("test"), aClass -> {
-          Assert.assertEquals(CloseableShapeshifter.class, aClass);
+          Assertions.assertEquals(CloseableShapeshifter.class, aClass);
           //noinspection ReturnOfNull
           return null;
         })
@@ -89,13 +89,13 @@ public class SegmentToRowsAndColumnsOperatorTest
       Operator.go(op, new ExceptionalReceiver());
     }
     catch (DruidException e) {
-      Assert.assertEquals(
-          e.getMessage(),
-          "Segment [class org.apache.druid.segment.TestSegmentForAs] cannot shapeshift"
+      Assertions.assertEquals(
+          "Segment [class org.apache.druid.segment.TestSegmentForAs] cannot shapeshift",
+          e.getMessage()
       );
       exceptionThrown = true;
     }
-    Assert.assertTrue(exceptionThrown);
+    Assertions.assertTrue(exceptionThrown);
   }
 
   @Test
@@ -104,14 +104,14 @@ public class SegmentToRowsAndColumnsOperatorTest
     AtomicBoolean closed = new AtomicBoolean(false);
     SegmentToRowsAndColumnsOperator op = new SegmentToRowsAndColumnsOperator(
         new TestSegmentForAs(SegmentId.dummy("test"), aClass -> {
-          Assert.assertEquals(CloseableShapeshifter.class, aClass);
+          Assertions.assertEquals(CloseableShapeshifter.class, aClass);
           return new CloseableShapeshifter()
           {
             @Nullable
             @Override
             public <T> T as(@Nonnull Class<T> clazz)
             {
-              Assert.assertEquals(RowsAndColumns.class, clazz);
+              Assertions.assertEquals(RowsAndColumns.class, clazz);
               return null;
             }
 
@@ -129,14 +129,14 @@ public class SegmentToRowsAndColumnsOperatorTest
       Operator.go(op, new ExceptionalReceiver());
     }
     catch (ISE e) {
-      Assert.assertEquals(
-          e.getMessage(),
-          "Cannot work with segment of type[class org.apache.druid.segment.TestSegmentForAs]"
+      Assertions.assertEquals(
+          "Cannot work with segment of type[class org.apache.druid.segment.TestSegmentForAs]",
+          e.getMessage()
       );
       exceptionThrown = true;
     }
-    Assert.assertTrue(exceptionThrown);
-    Assert.assertTrue(closed.get());
+    Assertions.assertTrue(exceptionThrown);
+    Assertions.assertTrue(closed.get());
   }
 
   @Test
@@ -148,14 +148,14 @@ public class SegmentToRowsAndColumnsOperatorTest
 
     SegmentToRowsAndColumnsOperator op = new SegmentToRowsAndColumnsOperator(
         new TestSegmentForAs(SegmentId.dummy("test"), aClass -> {
-          Assert.assertEquals(CloseableShapeshifter.class, aClass);
+          Assertions.assertEquals(CloseableShapeshifter.class, aClass);
           return new CloseableShapeshifter()
           {
             @SuppressWarnings("unchecked")
             @Override
             public <T> T as(@Nonnull Class<T> clazz)
             {
-              Assert.assertEquals(RowsAndColumns.class, clazz);
+              Assertions.assertEquals(RowsAndColumns.class, clazz);
               return (T) expectedRac;
             }
 
@@ -173,19 +173,19 @@ public class SegmentToRowsAndColumnsOperatorTest
     try {
       new OperatorTestHelper()
           .withPushFn(() -> rac -> {
-            Assert.assertSame(expectedRac, rac);
+            Assertions.assertSame(expectedRac, rac);
             return Operator.Signal.GO;
           })
           .runToCompletion(op);
     }
     catch (RE e) {
-      Assert.assertEquals(
-          e.getMessage(),
-          "Problem closing resources for segment[test_-146136543-09-08T08:23:32.096Z_146140482-04-24T15:36:27.903Z_dummy_version]"
+      Assertions.assertEquals(
+          "Problem closing resources for segment[test_-146136543-09-08T08:23:32.096Z_146140482-04-24T15:36:27.903Z_dummy_version]",
+          e.getMessage()
       );
       exceptionThrown = true;
     }
-    Assert.assertTrue(exceptionThrown);
-    Assert.assertTrue(closed.get());
+    Assertions.assertTrue(exceptionThrown);
+    Assertions.assertTrue(closed.get());
   }
 }

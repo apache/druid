@@ -21,6 +21,7 @@ package org.apache.druid.msq.kernel;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.error.NotYetImplemented;
 import org.apache.druid.frame.key.ClusterBy;
 
 /**
@@ -82,5 +83,23 @@ public interface ShuffleSpec
   default long limitHint()
   {
     return UNLIMITED;
+  }
+
+  /**
+   * Whether this shuffle spec's partition count should be adjusted at runtime by multiplying by
+   * {@code targetPartitionsPerWorker} from the controller context.
+   */
+  default boolean isAdjustable()
+  {
+    return false;
+  }
+
+  /**
+   * Returns a copy of this shuffle spec with the partition count set to {@code partitionCount}
+   * and {@code adjustable} set to false. Only meaningful when {@link #isAdjustable()} is true.
+   */
+  default ShuffleSpec withPartitionCount(int partitionCount)
+  {
+    throw NotYetImplemented.ex(null, "withPartitionCount not implemented for [%s]", getClass().getSimpleName());
   }
 }

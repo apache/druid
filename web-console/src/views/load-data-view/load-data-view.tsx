@@ -1767,6 +1767,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             icon={IconNames.INFO_SIGN}
             href={`${getLink('DOCS')}/ingestion/data-formats#flattenspec`}
             target="_blank"
+            rel="noopener noreferrer"
             minimal
           />
         </FormGroup>

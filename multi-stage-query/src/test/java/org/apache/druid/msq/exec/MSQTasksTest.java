@@ -233,6 +233,7 @@ public class MSQTasksTest
         null, // WorkerFailureListener
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
+        Limits.MAX_WORKERS,
         new MSQWorkerTaskLauncherConfig()
     );
 

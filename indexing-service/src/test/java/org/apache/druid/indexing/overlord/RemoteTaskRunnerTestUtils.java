@@ -186,8 +186,9 @@ public class RemoteTaskRunnerTestUtils
             worker.getHost(),
             worker.getIp(),
             worker.getCapacity(),
-            "",
-            worker.getCategory()
+            worker.getVersion(),
+            worker.getCategory(),
+            true
         ))
     );
   }

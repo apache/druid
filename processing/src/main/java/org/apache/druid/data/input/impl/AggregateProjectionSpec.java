@@ -39,6 +39,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTimeZone;
 
@@ -99,10 +100,7 @@ public class AggregateProjectionSpec
       @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators
   )
   {
-    if (name == null || name.isEmpty()) {
-      throw InvalidInput.exception("projection name cannot be null or empty");
-    }
-    this.name = name;
+    this.name = Projections.validateProjectionName(name);
     if (CollectionUtils.isNullOrEmpty(groupingColumns) && (aggregators == null || aggregators.length == 0)) {
       throw InvalidInput.exception(
           "projection[%s] groupingColumns and aggregators must not both be null or empty",

@@ -30,8 +30,8 @@ import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -51,60 +51,60 @@ public class RestrictedDataSourceTest
   @Test
   public void test_creation_failWithNullPolicy()
   {
-    IAE e = Assert.assertThrows(IAE.class, () -> RestrictedDataSource.create(fooDataSource, null));
-    Assert.assertEquals(e.getMessage(), "Policy can't be null for RestrictedDataSource");
+    IAE e = Assertions.assertThrows(IAE.class, () -> RestrictedDataSource.create(fooDataSource, null));
+    Assertions.assertEquals("Policy can't be null for RestrictedDataSource", e.getMessage());
   }
 
   @Test
   public void test_getTableNames()
   {
-    Assert.assertEquals(Collections.singleton("foo"), restrictedFooDataSource.getTableNames());
-    Assert.assertEquals(Collections.singleton("bar"), restrictedBarDataSource.getTableNames());
+    Assertions.assertEquals(Collections.singleton("foo"), restrictedFooDataSource.getTableNames());
+    Assertions.assertEquals(Collections.singleton("bar"), restrictedBarDataSource.getTableNames());
   }
 
   @Test
   public void test_getChildren()
   {
-    Assert.assertEquals(Collections.singletonList(fooDataSource), restrictedFooDataSource.getChildren());
-    Assert.assertEquals(Collections.singletonList(barDataSource), restrictedBarDataSource.getChildren());
+    Assertions.assertEquals(Collections.singletonList(fooDataSource), restrictedFooDataSource.getChildren());
+    Assertions.assertEquals(Collections.singletonList(barDataSource), restrictedBarDataSource.getChildren());
   }
 
   @Test
   public void test_isCacheable()
   {
-    Assert.assertFalse(restrictedFooDataSource.isCacheable(true));
+    Assertions.assertFalse(restrictedFooDataSource.isCacheable(true));
   }
 
   @Test
   public void test_isGlobal()
   {
-    Assert.assertFalse(restrictedFooDataSource.isGlobal());
+    Assertions.assertFalse(restrictedFooDataSource.isGlobal());
   }
 
   @Test
   public void test_isConcrete()
   {
-    Assert.assertTrue(restrictedFooDataSource.isProcessable());
+    Assertions.assertTrue(restrictedFooDataSource.isProcessable());
   }
 
   @Test
   public void test_withChildren()
   {
-    IllegalArgumentException exception = Assert.assertThrows(
+    IllegalArgumentException exception = Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> restrictedFooDataSource.withChildren(Collections.emptyList())
     );
-    Assert.assertEquals(exception.getMessage(), "Expected [1] child, got [0]");
+    Assertions.assertEquals("Expected [1] child, got [0]", exception.getMessage());
 
-    IllegalArgumentException exception2 = Assert.assertThrows(
+    IllegalArgumentException exception2 = Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> restrictedFooDataSource.withChildren(ImmutableList.of(fooDataSource, barDataSource))
     );
-    Assert.assertEquals(exception2.getMessage(), "Expected [1] child, got [2]");
+    Assertions.assertEquals("Expected [1] child, got [2]", exception2.getMessage());
 
     RestrictedDataSource newRestrictedDataSource = (RestrictedDataSource) restrictedFooDataSource.withChildren(
         ImmutableList.of(barDataSource));
-    Assert.assertEquals(newRestrictedDataSource.getBase(), barDataSource);
+    Assertions.assertEquals(newRestrictedDataSource.getBase(), barDataSource);
   }
 
   @Test
@@ -122,7 +122,7 @@ public class RestrictedDataSourceTest
         DataSource.class
     );
 
-    Assert.assertEquals(restrictedFooDataSource, deserialized);
+    Assertions.assertEquals(restrictedFooDataSource, deserialized);
   }
 
   @Test
@@ -134,7 +134,7 @@ public class RestrictedDataSourceTest
         RestrictedDataSource.class
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         deserializedRestrictedDataSource,
         RestrictedDataSource.create(fooDataSource, NoRestrictionPolicy.instance())
     );
@@ -147,7 +147,7 @@ public class RestrictedDataSourceTest
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final String s = jsonMapper.writeValueAsString(restrictedFooDataSource);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "{\"type\":\"restrict\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"policy\":{\"type\":\"row\",\"rowFilter\":{\"type\":\"true\"}}}",
         s
     );
@@ -156,7 +156,7 @@ public class RestrictedDataSourceTest
   @Test
   public void test_createSegmentPruner_withRowFilterPolicy()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new FilterSegmentPruner(TrueDimFilter.instance(), null, VirtualColumns.EMPTY),
         restrictedFooDataSource.createSegmentPruner()
     );
@@ -166,12 +166,12 @@ public class RestrictedDataSourceTest
   public void test_createSegmentPruner_withNoRestrictionPolicy()
   {
     SegmentPruner pruner = restrictedBarDataSource.createSegmentPruner();
-    Assert.assertNull(pruner);
+    Assertions.assertNull(pruner);
   }
 
   @Test
   public void testStringRep()
   {
-    Assert.assertNotEquals(restrictedFooDataSource.toString(), restrictedBarDataSource.toString());
+    Assertions.assertNotEquals(restrictedFooDataSource.toString(), restrictedBarDataSource.toString());
   }
 }

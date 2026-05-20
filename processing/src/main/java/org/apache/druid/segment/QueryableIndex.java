@@ -64,6 +64,15 @@ public interface QueryableIndex extends Closeable, ColumnInspector
   @Nullable
   BaseColumnHolder getColumnHolder(String columnName);
 
+
+  /**
+   * Provides information about columns, most callers should prefer to call {@link #getColumnHolder(String)} and then
+   * {@link ColumnHolder#getCapabilities()} instead of this method to have fully accurate column details. The default
+   * implementation of this method does this, but callers can only count on {@link ColumnCapabilities#getType()} and
+   * {@link ColumnCapabilities#hasMultipleValues()} to be reliably set from this method; in some implementations richer
+   * fields ({@code isDictionaryEncoded}, {@code hasBitmapIndexes}, {@code hasNulls}, etc.) might keep their
+   * default/UNKNOWN values.
+   */
   @Override
   @Nullable
   default ColumnCapabilities getColumnCapabilities(String column)

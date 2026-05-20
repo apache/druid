@@ -250,10 +250,9 @@ public class DartWorkerContext implements WorkerContext
         this,
         FrameWriterSpec.fromContext(workOrder.getWorkerContext()),
         segmentWrangler,
-        groupingEngine,
         segmentManager,
         coordinatorClient,
-        processingBuffersSet.get().acquireForStage(workOrder.getStageDefinition()),
+        workOrder.getStageDefinition().getProcessor().usesProcessingBuffers() ? processingBuffersSet.get() : null,
         memoryParameters,
         storageParameters,
         dataServerQueryHandlerFactory
@@ -272,6 +271,12 @@ public class DartWorkerContext implements WorkerContext
     // The context parameter "includeAllCounters" is meant to assist with backwards compatibility for versions prior
     // to Druid 31. Dart didn't exist prior to Druid 31, so there is no need for it here. Always emit all counters.
     return true;
+  }
+
+  @Override
+  public boolean isDebug()
+  {
+    return queryContext.isDebug();
   }
 
   @Override

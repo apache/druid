@@ -19,24 +19,17 @@
 
 package org.apache.druid.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.curator.utils.ZKPaths;
-import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
@@ -57,13 +50,12 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @RunWith(Parameterized.class)
-public class CoordinatorServerViewTest extends CuratorTestBase
+public class CoordinatorServerViewTest
 {
-  private ObjectMapper jsonMapper;
-  private ZkPathsConfig zkPathsConfig;
-  private String inventoryPath;
+  private static final long AWAIT_SECONDS = 10;
 
   private CountDownLatch segmentViewInitLatch;
   private CountDownLatch segmentAddedLatch;
@@ -74,7 +66,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
   private CountDownLatch callbackSegmentRemovedLatch;
   private CountDownLatch callbackServerSegmentRemovedLatch;
 
-  private BatchServerInventoryView baseView;
+  private TestServerInventoryView baseView;
   private CoordinatorServerView coordinatorServerView;
   private ExecutorService callbackExec;
 
@@ -92,16 +84,9 @@ public class CoordinatorServerViewTest extends CuratorTestBase
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
-    jsonMapper = TestHelper.makeJsonMapper();
-    zkPathsConfig = new ZkPathsConfig();
-    inventoryPath = zkPathsConfig.getLiveSegmentsPath();
     callbackExec = Execs.singleThreaded("CoordinatorServerViewTest-%s");
-
-    setupServerAndCurator();
-    curator.start();
-    curator.blockUntilConnected();
   }
 
   @Test
@@ -128,17 +113,18 @@ public class CoordinatorServerViewTest extends CuratorTestBase
         0
     );
 
-    setupZNodeForServer(druidServer, zkPathsConfig, jsonMapper);
+    baseView.addServer(druidServer);
+    baseView.markInventoryInitialized();
 
     final DataSegment segment = dataSegmentWithIntervalAndVersion("2014-10-20T00:00:00Z/P1D", "v1");
     final int partition = segment.getShardSpec().getPartitionNum();
     final Interval intervals = Intervals.of("2014-10-20T00:00:00Z/P1D");
-    announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+    baseView.addSegment(druidServer, segment);
+    Assert.assertTrue(awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(awaitLatch(segmentAddedLatch));
 
-    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackSegmentViewInitLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackSegmentAddedLatch));
+    Assert.assertTrue(awaitLatch(callbackSegmentViewInitLatch));
+    Assert.assertTrue(awaitLatch(callbackSegmentAddedLatch));
 
     if (setDruidClientFactory) {
       Assert.assertNotNull(coordinatorServerView.getQueryRunner(druidServer.getName()));
@@ -168,10 +154,10 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     );
     Assert.assertNotNull(timeline.findChunk(intervals, "v1", partition));
 
-    unannounceSegmentForServer(druidServer, segment);
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackServerSegmentRemovedLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackSegmentRemovedLatch));
+    baseView.removeSegment(druidServer, segment);
+    Assert.assertTrue(awaitLatch(segmentRemovedLatch));
+    Assert.assertTrue(awaitLatch(callbackServerSegmentRemovedLatch));
+    Assert.assertTrue(awaitLatch(callbackSegmentRemovedLatch));
 
     Assert.assertEquals(
         0,
@@ -198,28 +184,22 @@ public class CoordinatorServerViewTest extends CuratorTestBase
 
     final List<DruidServer> druidServers = Lists.transform(
         ImmutableList.of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
-        new Function<>()
-        {
-          @Override
-          public DruidServer apply(String input)
-          {
-            return new DruidServer(
-                input,
-                input,
-                null,
-                10000000L,
-                null,
-                ServerType.HISTORICAL,
-                "default_tier",
-                0
-            );
-          }
-        }
+        input -> new DruidServer(
+            input,
+            input,
+            null,
+            10000000L,
+            null,
+            ServerType.HISTORICAL,
+            "default_tier",
+            0
+        )
     );
 
     for (DruidServer druidServer : druidServers) {
-      setupZNodeForServer(druidServer, zkPathsConfig, jsonMapper);
+      baseView.addServer(druidServer);
     }
+    baseView.markInventoryInitialized();
 
     final List<DataSegment> segments = Lists.transform(
         ImmutableList.of(
@@ -228,23 +208,17 @@ public class CoordinatorServerViewTest extends CuratorTestBase
             Pair.of("2011-04-01/2011-04-09", "v2"),
             Pair.of("2011-04-06/2011-04-09", "v3"),
             Pair.of("2011-04-01/2011-04-02", "v3")
-        ), new Function<>()
-        {
-          @Override
-          public DataSegment apply(Pair<String, String> input)
-          {
-            return dataSegmentWithIntervalAndVersion(input.lhs, input.rhs);
-          }
-        }
+        ),
+        input -> dataSegmentWithIntervalAndVersion(input.lhs, input.rhs)
     );
 
     for (int i = 0; i < 5; ++i) {
-      announceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig, jsonMapper);
+      baseView.addSegment(druidServers.get(i), segments.get(i));
     }
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackSegmentViewInitLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackSegmentAddedLatch));
+    Assert.assertTrue(awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(awaitLatch(segmentAddedLatch));
+    Assert.assertTrue(awaitLatch(callbackSegmentViewInitLatch));
+    Assert.assertTrue(awaitLatch(callbackSegmentAddedLatch));
 
     for (int i = 0; i < 5; ++i) {
       if (setDruidClientFactory) {
@@ -269,10 +243,10 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     );
 
     // unannounce the segment created by dataSegmentWithIntervalAndVersion("2011-04-01/2011-04-09", "v2")
-    unannounceSegmentForServer(druidServers.get(2), segments.get(2));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackSegmentRemovedLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackServerSegmentRemovedLatch));
+    baseView.removeSegment(druidServers.get(2), segments.get(2));
+    Assert.assertTrue(awaitLatch(segmentRemovedLatch));
+    Assert.assertTrue(awaitLatch(callbackSegmentRemovedLatch));
+    Assert.assertTrue(awaitLatch(callbackServerSegmentRemovedLatch));
 
     // renew segmentRemovedLatch since we still have 4 segments to unannounce
     segmentRemovedLatch = new CountDownLatch(4);
@@ -294,12 +268,12 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     for (int i = 0; i < 5; ++i) {
       // skip the one that was previously unannounced
       if (i != 2) {
-        unannounceSegmentForServer(druidServers.get(i), segments.get(i));
+        baseView.removeSegment(druidServers.get(i), segments.get(i));
       }
     }
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackSegmentRemovedLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackServerSegmentRemovedLatch));
+    Assert.assertTrue(awaitLatch(segmentRemovedLatch));
+    Assert.assertTrue(awaitLatch(callbackSegmentRemovedLatch));
+    Assert.assertTrue(awaitLatch(callbackServerSegmentRemovedLatch));
 
     Assert.assertEquals(
         0,
@@ -307,12 +281,9 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     );
   }
 
-  private void unannounceSegmentForServer(DruidServer druidServer, DataSegment segment) throws Exception
+  private boolean awaitLatch(CountDownLatch latch) throws InterruptedException
   {
-    curator
-        .delete()
-        .guaranteed()
-        .forPath(ZKPaths.makePath(inventoryPath, druidServer.getHost(), segment.getId().toString()));
+    return latch.await(AWAIT_SECONDS, TimeUnit.SECONDS);
   }
 
   private Pair<Interval, Pair<String, Pair<DruidServer, DataSegment>>> createExpected(
@@ -350,15 +321,9 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     }
   }
 
-  private void setupViews(boolean setDruidClientFactory) throws Exception
+  private void setupViews(boolean setDruidClientFactory) throws InterruptedException
   {
-    baseView = new BatchServerInventoryView(
-        zkPathsConfig,
-        curator,
-        jsonMapper,
-        Predicates.alwaysTrue(),
-        "test"
-    )
+    baseView = new TestServerInventoryView()
     {
       @Override
       public void registerSegmentCallback(Executor exec, final SegmentCallback callback)
@@ -421,6 +386,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     );
 
     baseView.start();
+    baseView.markInventoryInitialized();
     initServerViewTimelineCallback(coordinatorServerView);
     coordinatorServerView.start();
   }
@@ -494,9 +460,13 @@ public class CoordinatorServerViewTest extends CuratorTestBase
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
-    baseView.stop();
-    tearDownServerAndCurator();
+    if (baseView != null) {
+      baseView.stop();
+    }
+    if (callbackExec != null) {
+      callbackExec.shutdownNow();
+    }
   }
 }

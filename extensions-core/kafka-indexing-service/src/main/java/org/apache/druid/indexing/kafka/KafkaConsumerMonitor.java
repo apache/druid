@@ -127,6 +127,12 @@ public class KafkaConsumerMonitor extends AbstractMonitor
               "kafka/consumer/incomingBytes",
               Set.of(CLIENT_ID_TAG, NODE_ID_TAG),
               KafkaConsumerMetric.MetricType.COUNTER
+          ),
+          new KafkaConsumerMetric(
+              POLL_IDLE_RATIO_METRIC_NAME,
+              "kafka/consumer/pollIdleRatio",
+              Set.of(CLIENT_ID_TAG),
+              KafkaConsumerMetric.MetricType.GAUGE
           )
       ).collect(Collectors.toMap(KafkaConsumerMetric::getKafkaMetricName, Function.identity()));
 

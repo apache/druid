@@ -30,16 +30,16 @@ Coordinator service communicates to Historical services to load or drop segments
 
 The Coordinator runs its duties periodically and the time between each run is a configurable parameter. On each
 run, the Coordinator assesses the current state of the cluster before deciding on the appropriate actions to take.
-Similar to the Broker and Historical services, the Coordinator maintains a connection to a ZooKeeper cluster for
-current cluster information. The Coordinator also maintains a connection to a database containing information about
-"used" segments (that is, the segments that *should* be loaded in the cluster) and the loading rules.
+The Coordinator uses ZooKeeper for leader election and to discover other Druid services, and polls each Historical
+service over HTTP for the current set of segments it is serving. The Coordinator also maintains a connection to a
+database containing information about "used" segments (that is, the segments that *should* be loaded in the cluster)
+and the loading rules.
 
 Before any unassigned segments are serviced by Historical services, the Historical services for each tier are first
 sorted in terms of capacity, with least capacity servers having the highest priority. Unassigned segments are always
-assigned to the services with least capacity to maintain a level of balance between services. The Coordinator does not
-directly communicate with a Historical service when assigning it a new segment; instead the Coordinator creates some
-temporary information about the new segment under load queue path of the Historical service. Once this request is seen,
-the Historical service loads the segment and begins servicing it.
+assigned to the services with least capacity to maintain a level of balance between services. The Coordinator sends
+segment load and drop requests to each Historical service over HTTP. Once this request is received, the Historical
+service loads the segment and begins servicing it.
 
 ## Configuration
 
@@ -88,7 +88,7 @@ But in a tier with several Historicals (or a low replication factor), segment re
 Thus, the Coordinator constantly monitors the set of segments present on each Historical in a tier and employs one of the following strategies to identify segments that may be moved from one Historical to another to retain balance.
 
 - `cost` (default): For a given segment in a tier, this strategy picks the server with the minimum "cost" of placing that segment. The cost is a function of the data interval of the segment and the data intervals of all the segments already present on the candidate server. In essence, this strategy tries to avoid placing segments with adjacent or overlapping data intervals on the same server. This is based on the premise that adjacent-interval segments are more likely to be used together in a query and placing them on the same server may lead to skewed CPU usages of Historicals.
-- `diskNormalized`: A derivative of the `cost` strategy that weights the cost of placing a segment on a server with the disk usage ratio of the server. There are known issues with this strategy and is not recommended for a production cluster.
+- `diskNormalized`: A derivative of the `cost` strategy that multiplies the cost of placing a segment on a server by the server's disk usage ratio (`diskUsed / maxSize`). This penalizes fuller servers and drives disk utilization to equalize across the tier, which is useful when historicals within a tier hold segments of widely varying sizes. To prevent oscillation when servers have similar utilization, a segment that is already placed on a server receives a cost discount; a move only fires when the destination saves at least `druid.coordinator.balancer.diskNormalized.moveCostSavingsThreshold` (default `0.05`, i.e. 5%) of the source's cost.
 - `random`: Distributes segments randomly across servers. This is an experimental strategy and is not recommended for a production cluster.
 
 All of the above strategies prioritize moving segments from the Historical with the least available disk space.

@@ -59,13 +59,16 @@ import software.amazon.awssdk.services.s3.model.GetBucketAclResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.Grant;
+import software.amazon.awssdk.services.s3.model.Grantee;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.Permission;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.Type;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import software.amazon.awssdk.services.sts.StsClient;
@@ -164,6 +167,15 @@ public class ServerSideEncryptingAmazonS3
   public GetBucketAclResponse getBucketAcl(String bucket)
   {
     return s3Client.getBucketAcl(builder -> builder.bucket(bucket));
+  }
+
+  public Grant getBucketOwnerGrant(String bucket)
+  {
+    final String ownerId = getBucketAcl(bucket).owner().id();
+    return Grant.builder()
+                .grantee(Grantee.builder().type(Type.CANONICAL_USER).id(ownerId).build())
+                .permission(Permission.FULL_CONTROL)
+                .build();
   }
 
   public HeadObjectResponse getObjectMetadata(String bucket, String key)

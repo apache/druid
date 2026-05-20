@@ -1039,7 +1039,7 @@ public class IndexIO
       final Map<String, Supplier<BaseColumnHolder>> projectionColumns = new LinkedHashMap<>();
 
       for (String column : projectionSpec.getSchema().getColumnNames()) {
-        final String smooshName = Projections.getProjectionSmooshFileName(projectionSpec.getSchema(), column);
+        final String smooshName = Projections.getProjectionSegmentInternalFileName(projectionSpec.getSchema(), column);
         final ByteBuffer colBuffer = segmentFileMapper.mapFile(smooshName);
         final ColumnDescriptor columnDescriptor = metadata.getColumnDescriptors().get(smooshName);
         if (columnDescriptor == null) {

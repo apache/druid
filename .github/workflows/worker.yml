@@ -21,7 +21,7 @@ on:
       jdk:
         required: false
         type: string
-        default: '21'
+        default: '25'
       script:
         required: true
         type: string
@@ -85,6 +85,32 @@ jobs:
           ./.github/scripts/setup_test_profiling_env.sh ${{ inputs.jdk }} run_id=$GITHUB_RUN_ID run_number=$GITHUB_RUN_NUMBER run_attempt=$GITHUB_RUN_ATTEMPT key=${{ inputs.key }} event_ref=$GITHUB_EVENT_REF run_url=$GITHUB_RUN_URL >> $GITHUB_ENV
           echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -c-8)" >> $GITHUB_ENV
           ./.github/scripts/collect_jvm_diagnostics &
+
+      - name: Pre-pull Testcontainers images for unit tests
+        if: ${{ contains(inputs.script, 'run_unit-tests') }}
+        run: |
+          set -eu
+          images=(
+            apache/kafka:4.2.0
+            postgres:16-alpine
+            minio/minio:latest
+            hashicorp/consul:1.18
+            tabulario/iceberg-rest:1.6.0
+            localstack/localstack:4.13.1
+            mcr.microsoft.com/azure-storage/azurite:3.35.0
+            osixia/openldap:1.5.0
+            rancher/k3s:v1.35.0-k3s1
+          )
+          for image in "${images[@]}"; do
+            for attempt in 1 2 3; do
+              if docker pull --quiet "$image"; then
+                break
+              fi
+              echo "::warning ::docker pull $image failed (attempt $attempt); retrying in 10s"
+              sleep 10
+            done
+          done
+        timeout-minutes: 10
 
       - name: 'Execute: ${{ inputs.script }}'
         run: ${{ inputs.script }}

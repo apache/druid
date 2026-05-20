@@ -93,6 +93,11 @@ public class ServiceMetricEvent implements Event
     return serviceDims.get(HOST);
   }
 
+  public Map<String, String> getServiceDims()
+  {
+    return serviceDims;
+  }
+
   public Map<String, Object> getUserDims()
   {
     return userDims;

@@ -483,6 +483,8 @@ template:
 
 Any runtime property or JVM config used by the peon process can also be passed. E.G. below is an example of a ConfigMap that can be used to generate the `nodetype-config-volume` mount in the above template.
 
+The peon container startup script (`peon.sh`) reads `jvm.config` from the directory mounted as `nodetype-config-volume` and prepends its contents to the peon's `JAVA_OPTS` before launching the JVM. If an option is set both in `jvm.config` and in `JAVA_OPTS` (for example via `druid.indexer.runner.javaOptsArray` when using the `overlordSingleContainer` or `overlordMultiContainer` adapters, which inject `JAVA_OPTS` as a container environment variable), the `JAVA_OPTS` value takes precedence under OpenJDK.
+
 <details>
 <summary>Example ConfigMap</summary>
 
@@ -762,6 +764,16 @@ All three examples below are equivalent.
     ```
 
 In all the above cases, Druid will match the selector to any value of task type. Druid applies similar logic for `dataSource`. For `context.tags` setting `null` or an empty object `{}` is equivalent. 
+
+##### Override pod template via context
+
+Set the `podTemplateSelectionKey` key in a task's context to pick a configured pod template directly, bypassing the selection strategy. The value is the same `selectionKey` used by `selectorBased` strategy (i.e. the suffix of `druid.indexer.runner.k8s.podTemplate.<selectionKey>`).
+
+```json
+"context": { "podTemplateSelectionKey": "podSpec1" }
+```
+
+This is gated by the runtime property `druid.indexer.runner.allowTaskPodTemplateSelection`, which defaults to `false`. If the key doesn't match any configured template, the task fails to launch.
 
 #### Running Task Pods in Another Namespace
 

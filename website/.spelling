@@ -291,6 +291,7 @@ averagers
 backend
 backfills
 backfilled
+backfilling
 backpressure
 base64
 baseTime
@@ -303,6 +304,7 @@ boolean
 breakpoint
 broadcasted
 bucketSize
+checkpointed
 checksums
 classpath
 clickstream
@@ -508,6 +510,7 @@ prepends
 prepopulated
 preprocessing
 priori
+reprocessing
 procs
 processFromRaw
 programmatically
@@ -715,6 +718,7 @@ druid.sql.planner.useApproximateTopN
 druid.sql.planner.useLexicographicTopN
 druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useNativeQueryExplain
+error_message
 error_msg
 exprs
 group_id
@@ -895,6 +899,8 @@ c3.2xlarge
 defaultManualBrokerService
 maxPriority
 minPriority
+minScaleUpDelay
+minScaleDownDelay
 NUMBER_FEATURES
 NUMBER_OF_CONTRIBUTORS
 PreparedStatement
@@ -2080,6 +2086,7 @@ autoscalers
 batch_index_task
 cgroup
 classloader
+cooldown
 com.metamx
 common.runtime.properties
 cpuacct
@@ -2168,6 +2175,8 @@ s3n
 slf4j
 sql
 sqlQuery
+scale-up
+scale-down
 successfulSending
 [S]igar
 taskBlackListCleanupPeriod
