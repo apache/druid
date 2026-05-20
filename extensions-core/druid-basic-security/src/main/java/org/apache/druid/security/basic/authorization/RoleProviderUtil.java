@@ -105,6 +105,13 @@ public class RoleProviderUtil
   {
     Object value = (ctx == null) ? null : ctx.get(RoleProviderUtil.ROLE_CLAIM_CONTEXT_KEY);
     if (!(value instanceof Set)) {
+      if (value != null) {
+        LOG.warn(
+            "Role claim context key [%s] is present but expected Set, got [%s]",
+            RoleProviderUtil.ROLE_CLAIM_CONTEXT_KEY,
+            value.getClass().getName()
+        );
+      }
       return null;
     }
     Set<?> rawClaimValues = (Set<?>) value;
@@ -112,6 +119,11 @@ public class RoleProviderUtil
     Set<String> result = new HashSet<>();
     for (Object claimValue : rawClaimValues) {
       if (!(claimValue instanceof String)) {
+        LOG.warn(
+            "Role claim context key [%s] contains a non-String value of type [%s]",
+            RoleProviderUtil.ROLE_CLAIM_CONTEXT_KEY,
+            claimValue == null ? "null" : claimValue.getClass().getName()
+        );
         return null;
       }
       String str = ((String) claimValue).trim();

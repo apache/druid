@@ -46,7 +46,7 @@ public class RoleBasedAuthGen implements AuthorizationGenerator
 
   private static final Logger LOG = new Logger(RoleBasedAuthGen.class);
 
-  private final String roleClaimPath; // dot separated path to roles claim in the ID token
+  private final String roleClaimPath;
 
   public RoleBasedAuthGen(String roleClaimPath)
   {
@@ -64,39 +64,85 @@ public class RoleBasedAuthGen implements AuthorizationGenerator
       return Optional.of(profile);
     }
 
-    final AccessToken accessToken = ((OidcProfile) profile).getAccessToken();
+    final OidcProfile oidcProfile = (OidcProfile) profile;
+
+    Optional<Set<String>> roles = rolesFromClaims(oidcProfile.getAttributes(), "profile attributes")
+        .or(() -> rolesFromIdToken(oidcProfile))
+        .or(() -> rolesFromAccessToken(oidcProfile));
+
+    if (roles.isPresent()) {
+      oidcProfile.setRoles(roles.get());
+      LOG.debug(
+          "Extracted %,d roles from claim path [%s]: %s",
+          roles.get().size(),
+          roleClaimPath,
+          roles.get()
+      );
+    }
+
+    return Optional.of(profile);
+  }
+
+  private Optional<Set<String>> rolesFromIdToken(OidcProfile profile)
+  {
+    try {
+      final JWT jwt = profile.getIdToken();
+      if (jwt == null) {
+        LOG.debug("No ID token; skip role extraction from ID token");
+        return Optional.empty();
+      }
+
+      JWTClaimsSet set = jwt.getJWTClaimsSet();
+      if (set == null) {
+        return Optional.empty();
+      }
+
+      return rolesFromClaims(set.getClaims(), "ID token");
+    }
+    catch (Throwable t) {
+      LOG.debug("No usable ID token on profile; skip role extraction from ID token");
+      return Optional.empty();
+    }
+  }
+
+  private Optional<Set<String>> rolesFromAccessToken(OidcProfile profile)
+  {
+    final AccessToken accessToken = profile.getAccessToken();
 
     if (accessToken == null) {
-      LOG.debug("No access token; skip role extraction");
-      return Optional.of(profile);
+      LOG.debug("No access token; skip role extraction from access token");
+      return Optional.empty();
     }
 
     final String tokenValue = accessToken.getValue();
     if (tokenValue == null || tokenValue.isBlank()) {
-      LOG.debug("Empty access token, skip role extraction");
-      return Optional.of(profile);
+      LOG.debug("Empty access token, skip role extraction from access token");
+      return Optional.empty();
     }
 
     try {
       final JWT jwt = JWTParser.parse(tokenValue);
       JWTClaimsSet set = jwt.getJWTClaimsSet();
-      if (set != null) {
-        Map<String, Object> claims = set.getClaims();
-        Set<String> roles = claimAtPath(claims, roleClaimPath);
-        ((OidcProfile) profile).setRoles(roles);
-        LOG.debug(
-            "Extracted %,d roles from claim path [%s]: %s",
-            roles.size(),
-            roleClaimPath,
-            roles
-        );
+      if (set == null) {
+        return Optional.empty();
       }
+
+      return rolesFromClaims(set.getClaims(), "access token");
     }
     catch (Throwable t) {
-      LOG.debug("No usable ID token on profile; skip extraction");
+      LOG.debug("No usable access token on profile; skip role extraction from access token");
+      return Optional.empty();
     }
+  }
 
-    return Optional.of(profile);
+  private Optional<Set<String>> rolesFromClaims(final Map<String, Object> claims, final String source)
+  {
+    Set<String> roles = claimAtPath(claims, roleClaimPath);
+    if (roles.isEmpty()) {
+      LOG.debug("No roles found at claim path [%s] in %s", roleClaimPath, source);
+      return Optional.empty();
+    }
+    return Optional.of(roles);
   }
 
 

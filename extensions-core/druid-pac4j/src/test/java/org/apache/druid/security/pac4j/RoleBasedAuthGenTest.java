@@ -60,6 +60,48 @@ public class RoleBasedAuthGenTest
   }
 
   @Test
+  public void extractsRolesFromIdTokenWhenAccessTokenMissing()
+  {
+    Map<String, Object> druidms = new HashMap<>();
+    druidms.put("roles", Arrays.asList("admin", "user"));
+
+    Map<String, Object> resourceAccess = new HashMap<>();
+    resourceAccess.put("druidms", druidms);
+
+    String idToken = new PlainJWT(new JWTClaimsSet.Builder()
+                                      .claim("resource_access", resourceAccess)
+                                      .build()).serialize();
+
+    OidcProfile profile = new OidcProfile();
+    profile.setIdTokenString(idToken);
+
+    RoleBasedAuthGen gen = new RoleBasedAuthGen("resource_access.druidms.roles");
+    gen.generate(null, null, profile);
+
+    assertEquals(new HashSet<>(Arrays.asList("admin", "user")), profile.getRoles());
+  }
+
+  @Test
+  public void extractsRolesFromIdTokenWhenAccessTokenIsOpaque()
+  {
+    Map<String, Object> realmAccess = new HashMap<>();
+    realmAccess.put("roles", "admin");
+
+    String idToken = new PlainJWT(new JWTClaimsSet.Builder()
+                                      .claim("realm_access", realmAccess)
+                                      .build()).serialize();
+
+    OidcProfile profile = new OidcProfile();
+    profile.setIdTokenString(idToken);
+    profile.setAccessToken(new BearerAccessToken("opaque-access-token", 3600L, null));
+
+    RoleBasedAuthGen gen = new RoleBasedAuthGen("realm_access.roles");
+    gen.generate(null, null, profile);
+
+    assertEquals(new HashSet<>(Collections.singletonList("admin")), profile.getRoles());
+  }
+
+  @Test
   public void supportsSingleStringLeaf()
   {
     Map<String, Object> realmAccess = new HashMap<>();
