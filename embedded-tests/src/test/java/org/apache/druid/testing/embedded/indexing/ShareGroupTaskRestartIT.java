@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
-import org.apache.druid.java.util.common.StringUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -30,6 +29,7 @@ import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
 import org.apache.druid.indexing.kafka.ShareGroupIndexTask;
 import org.apache.druid.indexing.kafka.ShareGroupIndexTaskIOConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
