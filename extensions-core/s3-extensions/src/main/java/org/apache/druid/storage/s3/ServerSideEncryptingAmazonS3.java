@@ -498,6 +498,19 @@ public class ServerSideEncryptingAmazonS3
       return this.s3StorageConfig;
     }
 
+    /**
+     * Builds a new {@link ServerSideEncryptingAmazonS3} instance.
+     *
+     * <p><b>Resource leak warning:</b> Each instance created by this method holds internal resources such as thread
+     * pools and connection pools. {@link ServerSideEncryptingAmazonS3} is not {@link java.io.Closeable}, so there is
+     * currently no way for callers to release these resources when the instance is no longer needed. Avoid calling
+     * this method repeatedly (e.g., once per file or per task) when a single shared instance would suffice. Consider
+     * memoizing the result, as {@link org.apache.druid.data.input.s3.S3InputSource} does, to ensure the client is
+     * created at most once per configuration.
+     *
+     * <p>The long-term fix is to make {@link ServerSideEncryptingAmazonS3} implement {@link java.io.Closeable} and
+     * arrange for {@code close()} to be called appropriately, but that is a larger change deferred for the future.
+     */
     public ServerSideEncryptingAmazonS3 build()
     {
       if (s3ClientSupplier == null) {

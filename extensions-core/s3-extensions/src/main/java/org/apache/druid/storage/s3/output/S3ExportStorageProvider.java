@@ -28,6 +28,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
@@ -66,6 +68,8 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   @JsonProperty
   private final String assumeRoleExternalId;
 
+  private final Supplier<ServerSideEncryptingAmazonS3> s3ClientSupplier;
+
   @JacksonInject
   S3ExportConfig s3ExportConfig;
   @JacksonInject
@@ -98,8 +102,21 @@ public class S3ExportStorageProvider implements ExportStorageProvider
     this.prefix = prefix;
     this.assumeRoleArn = assumeRoleArn;
     this.assumeRoleExternalId = assumeRoleExternalId;
+    this.s3ClientSupplier = Suppliers.memoize(() -> {
+      if (Strings.isNullOrEmpty(assumeRoleArn)) {
+        return s3Client;
+      }
+      return ServerSideEncryptingAmazonS3.builder(
+          baseCredentialsProvider,
+          s3StorageConfig,
+          awsProxyConfig,
+          awsEndpointConfig,
+          awsClientConfig,
+          null,
+          this
+      ).build();
+    });
   }
-
 
   @Override
   public StorageConnector createStorageConnector(File taskTempDir)
@@ -124,22 +141,7 @@ public class S3ExportStorageProvider implements ExportStorageProvider
         s3ExportConfig.getChunkSize(),
         s3ExportConfig.getMaxRetry()
     );
-    if (Strings.isNullOrEmpty(assumeRoleArn)) {
-      return new S3StorageConnector(s3OutputConfig, s3Client, s3UploadManager);
-    }
-    return new S3StorageConnector(
-        s3OutputConfig,
-        ServerSideEncryptingAmazonS3.builder(
-            baseCredentialsProvider,
-            s3StorageConfig,
-            awsProxyConfig,
-            awsEndpointConfig,
-            awsClientConfig,
-            null,
-            this
-        ).build(),
-        s3UploadManager
-    );
+    return new S3StorageConnector(s3OutputConfig, s3ClientSupplier.get(), s3UploadManager);
   }
 
   @VisibleForTesting
