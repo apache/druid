@@ -480,13 +480,21 @@ public class QueryContextTest
         QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, false))
                    .getRealtimeSegmentsMode()
     );
-    // realtimeSegmentsMode takes precedence over realtimeSegmentsOnly
-    assertEquals(
-        QueryContexts.RealtimeSegmentsMode.EXCLUDE,
-        QueryContext.of(ImmutableMap.of(
+  }
+
+  @Test
+  public void testGetRealtimeSegmentsModeConflictThrows()
+  {
+    BadQueryContextException e = assertThrows(
+        BadQueryContextException.class,
+        () -> QueryContext.of(ImmutableMap.of(
             QueryContexts.REALTIME_SEGMENTS_ONLY, true,
             QueryContexts.REALTIME_SEGMENTS_MODE, "exclude"
         )).getRealtimeSegmentsMode()
+    );
+    assertEquals(
+        "Cannot set both [realtimeSegmentsMode] and deprecated [realtimeSegmentsOnly]; use [realtimeSegmentsMode] only.",
+        e.getMessage()
     );
   }
 
@@ -498,7 +506,10 @@ public class QueryContextTest
         () -> QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "badvalue"))
                          .getRealtimeSegmentsMode()
     );
-    assertTrue(e.getMessage().contains("realtimeSegmentsMode"));
+    assertEquals(
+        "Expected key [realtimeSegmentsMode] to be referring to one of the values [INCLUDE,EXCLUSIVE,EXCLUDE] of enum [RealtimeSegmentsMode], but got [badvalue]",
+        e.getMessage()
+    );
   }
 
   @Test

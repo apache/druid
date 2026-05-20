@@ -251,13 +251,11 @@ public class QueryContexts
    */
   public enum RealtimeSegmentsMode
   {
-    /** Include all segments (default). */
+    /** Query all segments, including realtime (default). */
     INCLUDE,
-    /** Include only segments served solely by realtime servers; any segment with a historical replica
-     *  (including segments mid-handoff) is excluded. */
+    /** Query only realtime segments. */
     EXCLUSIVE,
-    /** Exclude segments served solely by realtime servers; segments mid-handoff with both realtime
-     *  and historical replicas are still included. */
+    /** Skip realtime segments; query only historical. */
     EXCLUDE;
 
     @JsonCreator

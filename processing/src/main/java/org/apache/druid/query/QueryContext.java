@@ -783,9 +783,10 @@ public class QueryContext
   }
 
   /**
-   * Returns the realtime segments mode for this query. If {@code realtimeSegmentsMode} is absent
+   * Returns the realtime segments mode for this query. If {@link QueryContexts#REALTIME_SEGMENTS_MODE} is absent
    * or null, falls back to the deprecated {@code realtimeSegmentsOnly} boolean: {@code true} maps
    * to {@link RealtimeSegmentsMode#EXCLUSIVE}; otherwise returns {@link RealtimeSegmentsMode#INCLUDE}.
+   * Throws {@link BadQueryContextException} if both fields are set simultaneously.
    */
   public RealtimeSegmentsMode getRealtimeSegmentsMode()
   {
@@ -794,12 +795,25 @@ public class QueryContext
         RealtimeSegmentsMode.class,
         null
     );
+    boolean hasDeprecatedFlag = get(QueryContexts.REALTIME_SEGMENTS_ONLY) != null;
+    if (mode != null && hasDeprecatedFlag) {
+      throw new BadQueryContextException(
+          StringUtils.format(
+              "Cannot set both [%s] and deprecated [%s]; use [%s] only.",
+              QueryContexts.REALTIME_SEGMENTS_MODE,
+              QueryContexts.REALTIME_SEGMENTS_ONLY,
+              QueryContexts.REALTIME_SEGMENTS_MODE
+          )
+      );
+    }
     if (mode != null) {
       return mode;
     }
-    // Backward-compat: honour the deprecated realtimeSegmentsOnly flag.
-    if (getBoolean(QueryContexts.REALTIME_SEGMENTS_ONLY, QueryContexts.DEFAULT_REALTIME_SEGMENTS_ONLY)) {
-      return RealtimeSegmentsMode.EXCLUSIVE;
+    if (hasDeprecatedFlag) {
+      // Backward-compat: honour the deprecated realtimeSegmentsOnly flag.
+      return getBoolean(QueryContexts.REALTIME_SEGMENTS_ONLY, QueryContexts.DEFAULT_REALTIME_SEGMENTS_ONLY)
+             ? RealtimeSegmentsMode.EXCLUSIVE
+             : QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
     }
     return QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
   }
