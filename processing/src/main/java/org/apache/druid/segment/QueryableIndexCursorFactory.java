@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -33,6 +34,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Offset;
+import org.apache.druid.segment.projections.ClusterGroupQueryPlan;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.ClusteringColumnSelectorFactory;
 import org.apache.druid.segment.projections.ClusteringVectorColumnSelectorFactory;
@@ -145,24 +147,48 @@ public class QueryableIndexCursorFactory implements CursorFactory
 
   private CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec, ClusteredValueGroupsBaseTableSchema clusterSummary)
   {
-    final List<TableClusterGroupSpec> matching = Projections.pruneClusterGroups(
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
         new ArrayList<>(index.getClusterGroupSchemas()),
-        spec.getFilter(),
-        spec.getVirtualColumns()
+        spec
     );
 
-    if (matching.isEmpty()) {
+    if (plan.survivingGroups().isEmpty()) {
       return EmptyClusteredCursorHolder.INSTANCE;
     }
 
-    if (matching.size() == 1) {
-      return makeSingleGroupClusteredCursorHolder(spec, matching.get(0));
+    if (plan.survivingGroups().size() == 1) {
+      return makeSingleGroupClusteredCursorHolder(spec, plan, plan.survivingGroups().get(0));
     }
-    return makeMultiGroupClusteredCursorHolder(spec, matching);
+    return makeMultiGroupClusteredCursorHolder(spec, plan);
+  }
+
+  /**
+   * Rebuild {@code spec} for the per-group cursor holder of {@code valueGroup}, swapping in the plan's per-group
+   * filter rewrite: clustering-column leaves become {@link org.apache.druid.segment.filter.TrueFilter} /
+   * {@link org.apache.druid.segment.filter.FalseFilter} per the group's constant clustering tuple and fold through
+   * AND / OR / NOT, so the per-group {@link QueryableIndex}'s filter machinery never tries to look up indexes for
+   * clustering columns it doesn't physically carry. Selector-side access to clustering columns (SELECT / GROUP BY)
+   * is still served by {@link ClusteringColumnSelectorFactory} below.
+   */
+  private static CursorBuildSpec rebuildSpecForGroup(
+      CursorBuildSpec spec,
+      ClusterGroupQueryPlan plan,
+      TableClusterGroupSpec valueGroup
+  )
+  {
+    if (spec.getFilter() == null) {
+      return spec;
+    }
+    final Filter rewritten = plan.rewriteFor(valueGroup);
+    if (rewritten == spec.getFilter()) {
+      return spec;
+    }
+    return CursorBuildSpec.builder(spec).setFilter(rewritten).build();
   }
 
   private CursorHolder makeSingleGroupClusteredCursorHolder(
       CursorBuildSpec spec,
+      ClusterGroupQueryPlan plan,
       TableClusterGroupSpec valueGroup
   )
   {
@@ -176,7 +202,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
 
     return new QueryableIndexCursorHolder(
         groupIndex,
-        spec,
+        rebuildSpecForGroup(spec, plan, valueGroup),
         QueryableIndexTimeBoundaryInspector.create(groupIndex)
     )
     {
@@ -215,9 +241,10 @@ public class QueryableIndexCursorFactory implements CursorFactory
    */
   private CursorHolder makeMultiGroupClusteredCursorHolder(
       CursorBuildSpec spec,
-      List<TableClusterGroupSpec> matching
+      ClusterGroupQueryPlan plan
   )
   {
+    final List<TableClusterGroupSpec> matching = plan.survivingGroups();
     // All matching specs share the same parent summary (they came out of one segment); grab a reference for
     // getOrdering() and clusteringColumns below.
     final ClusteredValueGroupsBaseTableSchema clusterSummary = matching.get(0).getSummary();
@@ -235,12 +262,13 @@ public class QueryableIndexCursorFactory implements CursorFactory
             + Arrays.toString(valueGroup.lookupClusteringValues())
         );
       }
+      final CursorBuildSpec groupSpec = rebuildSpecForGroup(spec, plan, valueGroup);
       holderSuppliers.add(
           Suppliers.memoize(
               () -> closer.register(
                   new QueryableIndexCursorHolder(
                       groupIndex,
-                      spec,
+                      groupSpec,
                       QueryableIndexTimeBoundaryInspector.create(groupIndex)
                   )
               )
@@ -395,7 +423,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
   };
 
   /**
-   * CursorHolder that yields no rows. Used when {@link Projections#pruneClusterGroups} excludes every cluster
+   * CursorHolder that yields no rows. Used when {@link Projections#planClusterGroupQuery} excludes every cluster
    * group, so the filter is provably unsatisfiable on this segment.
    */
   private static final class EmptyClusteredCursorHolder implements CursorHolder

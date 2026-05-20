@@ -61,35 +61,4 @@ public enum DruidPredicateMatch
     }
     return FALSE;
   }
-
-  public static DruidPredicateMatch and(DruidPredicateMatch a, DruidPredicateMatch b)
-  {
-    if (a == FALSE || b == FALSE) {
-      return FALSE;
-    }
-    if (a == TRUE && b == TRUE) {
-      return TRUE;
-    }
-    return UNKNOWN;
-  }
-
-  public static DruidPredicateMatch or(DruidPredicateMatch a, DruidPredicateMatch b)
-  {
-    if (a == TRUE || b == TRUE) {
-      return TRUE;
-    }
-    if (a == FALSE && b == FALSE) {
-      return FALSE;
-    }
-    return UNKNOWN;
-  }
-
-  public static DruidPredicateMatch not(DruidPredicateMatch a)
-  {
-    return switch (a) {
-      case TRUE -> FALSE;
-      case FALSE -> TRUE;
-      default -> UNKNOWN;
-    };
-  }
 }

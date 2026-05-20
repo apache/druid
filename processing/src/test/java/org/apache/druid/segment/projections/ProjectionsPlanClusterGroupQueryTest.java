@@ -29,13 +29,16 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.TypedInFilter;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.AndFilter;
+import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.NotFilter;
 import org.apache.druid.segment.filter.OrFilter;
+import org.apache.druid.segment.filter.TrueFilter;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -45,9 +48,14 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-class ProjectionsPruneClusterGroupsTest
+/**
+ * Coverage for {@link Projections#planClusterGroupQuery}, exercised through both facets of the returned
+ * {@link ClusterGroupQueryPlan}: {@code survivingGroups()} (which input groups the query's filter can't rule out
+ * via the clustering tuple) and {@code rewriteFor(group)} (the per-group rewritten filter, with clustering-column
+ * leaves folded to {@link TrueFilter} / {@link FalseFilter} and propagated through AND / OR / NOT).
+ */
+class ProjectionsPlanClusterGroupQueryTest
 {
-  /** Build a fresh single-spec summary for a STRING-clustered ``tenant`` group; each call gets its own summary. */
   private static TableClusterGroupSpec stringGroup(String tenant)
   {
     final RowSignature clustering = RowSignature.builder().add("tenant", ColumnType.STRING).build();
@@ -115,7 +123,11 @@ class ProjectionsPruneClusterGroupsTest
     return built.specs().get(0);
   }
 
-  /** IoT-style mixed-type clustering: {@code (device_id LONG, region STRING)}. */
+  private static TableClusterGroupSpec tenantRegionGroup(String tenant, String region)
+  {
+    return multiGroup(tenant, region);
+  }
+
   private static TableClusterGroupSpec deviceRegionGroup(long deviceId, String region)
   {
     final RowSignature clustering = RowSignature.builder()
@@ -143,7 +155,6 @@ class ProjectionsPruneClusterGroupsTest
     return built.specs().get(0);
   }
 
-  /** Generic single-STRING-column clustering with a domain-agnostic column name. */
   private static TableClusterGroupSpec partitionGroup(String key)
   {
     final RowSignature clustering = RowSignature.builder().add("partition", ColumnType.STRING).build();
@@ -164,18 +175,59 @@ class ProjectionsPruneClusterGroupsTest
     return built.specs().get(0);
   }
 
-  private static List<TableClusterGroupSpec> groups(TableClusterGroupSpec... gs)
+  private static TableClusterGroupSpec virtualClusteringGroup(String loweredTenant)
   {
-    return ImmutableList.copyOf(gs);
+    final RowSignature clustering = RowSignature.builder().add("tenant_lower", ColumnType.STRING).build();
+    final ClusterGroupSchemaTestHelpers.Built built = ClusterGroupSchemaTestHelpers.buildClusterGroups(
+        clustering,
+        List.of(Arrays.asList(loweredTenant))
+    );
+    new ClusteredValueGroupsBaseTableSchema(
+        VirtualColumns.create(
+            new ExpressionVirtualColumn(
+                "tenant_lower",
+                "lower(tenant)",
+                ColumnType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        ),
+        List.of("tenant_lower", ColumnHolder.TIME_COLUMN_NAME, "metric"),
+        new AggregatorFactory[]{new CountAggregatorFactory("count")},
+        List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
+        clustering,
+        null,
+        built.dictionaries(),
+        built.specs()
+    );
+    return built.specs().get(0);
   }
 
-  /** Test convenience: prune without query-side virtual columns. */
+  private static CursorBuildSpec buildSpec(@Nullable Filter filter)
+  {
+    return buildSpec(filter, VirtualColumns.EMPTY);
+  }
+
+  private static CursorBuildSpec buildSpec(@Nullable Filter filter, VirtualColumns virtualColumns)
+  {
+    return CursorBuildSpec.builder().setFilter(filter).setVirtualColumns(virtualColumns).build();
+  }
+
   private static List<TableClusterGroupSpec> pruneClusterGroups(
       List<TableClusterGroupSpec> groups,
       @Nullable Filter filter
   )
   {
-    return Projections.pruneClusterGroups(groups, filter, VirtualColumns.EMPTY);
+    return Projections.planClusterGroupQuery(groups, buildSpec(filter)).survivingGroups();
+  }
+
+  private static Filter rewrite(Filter filter, TableClusterGroupSpec group)
+  {
+    return Projections.planClusterGroupQuery(List.of(group), buildSpec(filter)).rewriteFor(group);
+  }
+
+  private static List<TableClusterGroupSpec> groups(TableClusterGroupSpec... gs)
+  {
+    return ImmutableList.copyOf(gs);
   }
 
   private static LinkedHashSet<Filter> filters(Filter... fs)
@@ -209,6 +261,8 @@ class ProjectionsPruneClusterGroupsTest
     List<TableClusterGroupSpec> kept = pruneClusterGroups(all, f);
     Assertions.assertEquals(1, kept.size());
     Assertions.assertSame(all.get(0), kept.get(0));
+    // Surviving group's rewrite collapses the clustering leaf to TRUE.
+    Assertions.assertSame(TrueFilter.instance(), rewrite(f, all.get(0)));
   }
 
   @Test
@@ -235,10 +289,11 @@ class ProjectionsPruneClusterGroupsTest
   @Test
   void testFilterOnNonClusteringColumnKeepsAllGroups()
   {
-    // Filter doesn't reference a clustering column → can't prune anything.
+    // Filter doesn't reference a clustering column → can't prune anything, leaf is preserved verbatim.
     List<TableClusterGroupSpec> all = groups(stringGroup("acme"), stringGroup("globex"));
     Filter f = new EqualityFilter("metric", ColumnType.LONG, 42L, null);
     Assertions.assertEquals(all, pruneClusterGroups(all, f));
+    Assertions.assertSame(f, rewrite(f, all.get(0)));
   }
 
   @Test
@@ -284,15 +339,19 @@ class ProjectionsPruneClusterGroupsTest
     List<TableClusterGroupSpec> kept = pruneClusterGroups(all, f);
     Assertions.assertEquals(1, kept.size());
     Assertions.assertSame(all.get(1), kept.get(0));
+    // NOT inverts the per-leaf rewrite: pruned group rewrites to FalseFilter, surviving group to TrueFilter.
+    Assertions.assertSame(FalseFilter.instance(), rewrite(f, all.get(0)));
+    Assertions.assertSame(TrueFilter.instance(), rewrite(f, all.get(1)));
   }
 
-  /** Regression: a boolean (kept/pruned) matcher would flip UNKNOWN to "pruned" under NOT, dropping live data. */
   @Test
   void testNotOverNonClusteringColumnKeepsAllGroups()
   {
     List<TableClusterGroupSpec> all = groups(stringGroup("acme"), stringGroup("globex"));
     Filter f = new NotFilter(new EqualityFilter("metric", ColumnType.LONG, 42L, null));
     Assertions.assertEquals(all, pruneClusterGroups(all, f));
+    // Non-clustering NOT is structurally preserved in the per-group rewrite.
+    Assertions.assertEquals(f, rewrite(f, all.get(0)));
   }
 
   @Test
@@ -391,6 +450,8 @@ class ProjectionsPruneClusterGroupsTest
     List<TableClusterGroupSpec> all = groups(stringGroup("acme"), stringGroup("globex"));
     Filter f = new EqualityFilter("tenant", ColumnType.STRING, "unknown", null);
     Assertions.assertTrue(pruneClusterGroups(all, f).isEmpty());
+    // Pruned groups' rewrite collapses the clustering leaf to FALSE.
+    Assertions.assertSame(FalseFilter.instance(), rewrite(f, all.get(0)));
   }
 
   @Test
@@ -400,34 +461,6 @@ class ProjectionsPruneClusterGroupsTest
     List<TableClusterGroupSpec> all = groups(stringGroup("acme"), stringGroup("globex"));
     Filter f = new LikeDimFilter("tenant", "acm%", null, null).toFilter();
     Assertions.assertEquals(all, pruneClusterGroups(all, f));
-  }
-
-  /** Group whose clustering column is itself a virtual column (e.g. {@code lower(tenant)}). */
-  private static TableClusterGroupSpec virtualClusteringGroup(String loweredTenant)
-  {
-    final RowSignature clustering = RowSignature.builder().add("tenant_lower", ColumnType.STRING).build();
-    final ClusterGroupSchemaTestHelpers.Built built = ClusterGroupSchemaTestHelpers.buildClusterGroups(
-        clustering,
-        List.of(Arrays.asList(loweredTenant))
-    );
-    new ClusteredValueGroupsBaseTableSchema(
-        VirtualColumns.create(
-            new ExpressionVirtualColumn(
-                "tenant_lower",
-                "lower(tenant)",
-                ColumnType.STRING,
-                TestExprMacroTable.INSTANCE
-            )
-        ),
-        List.of("tenant_lower", ColumnHolder.TIME_COLUMN_NAME, "metric"),
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
-        clustering,
-        null,
-        built.dictionaries(),
-        built.specs()
-    );
-    return built.specs().get(0);
   }
 
   @Test
@@ -447,7 +480,7 @@ class ProjectionsPruneClusterGroupsTest
         )
     );
     Filter f = new EqualityFilter("query_lower", ColumnType.STRING, "acme", null);
-    List<TableClusterGroupSpec> kept = Projections.pruneClusterGroups(all, f, queryVcs);
+    List<TableClusterGroupSpec> kept = Projections.planClusterGroupQuery(all, buildSpec(f, queryVcs)).survivingGroups();
     Assertions.assertEquals(1, kept.size());
     Assertions.assertSame(all.get(0), kept.get(0));
   }
@@ -467,7 +500,7 @@ class ProjectionsPruneClusterGroupsTest
     );
     Filter f = new EqualityFilter("query_upper", ColumnType.STRING, "ACME", null);
     // No equivalence found → can't prune; keep group conservatively.
-    Assertions.assertEquals(all, Projections.pruneClusterGroups(all, f, queryVcs));
+    Assertions.assertEquals(all, Projections.planClusterGroupQuery(all, buildSpec(f, queryVcs)).survivingGroups());
   }
 
   @Test
@@ -477,7 +510,7 @@ class ProjectionsPruneClusterGroupsTest
     // clustering column via virtual-column equivalence → keep all groups.
     List<TableClusterGroupSpec> all = groups(virtualClusteringGroup("acme"), virtualClusteringGroup("globex"));
     Filter f = new EqualityFilter("query_lower", ColumnType.STRING, "acme", null);
-    Assertions.assertEquals(all, Projections.pruneClusterGroups(all, f, VirtualColumns.EMPTY));
+    Assertions.assertEquals(all, Projections.planClusterGroupQuery(all, buildSpec(f)).survivingGroups());
     // Same with the no-virtual-columns convenience overload.
     Assertions.assertEquals(all, pruneClusterGroups(all, f));
   }
@@ -497,7 +530,7 @@ class ProjectionsPruneClusterGroupsTest
         )
     );
     Filter f = new EqualityFilter("tenant", ColumnType.STRING, "acme", null);
-    List<TableClusterGroupSpec> kept = Projections.pruneClusterGroups(all, f, queryVcs);
+    List<TableClusterGroupSpec> kept = Projections.planClusterGroupQuery(all, buildSpec(f, queryVcs)).survivingGroups();
     Assertions.assertEquals(1, kept.size());
     Assertions.assertSame(all.get(0), kept.get(0));
   }
@@ -521,7 +554,7 @@ class ProjectionsPruneClusterGroupsTest
         )
     );
     Filter f = new EqualityFilter("tenant", ColumnType.STRING, "acme", null);
-    Assertions.assertEquals(all, Projections.pruneClusterGroups(all, f, queryVcs));
+    Assertions.assertEquals(all, Projections.planClusterGroupQuery(all, buildSpec(f, queryVcs)).survivingGroups());
   }
 
   @Test
@@ -544,7 +577,7 @@ class ProjectionsPruneClusterGroupsTest
         )
     );
     Filter f = new EqualityFilter("tenant_lower", ColumnType.STRING, "acme", null);
-    List<TableClusterGroupSpec> kept = Projections.pruneClusterGroups(all, f, queryVcs);
+    List<TableClusterGroupSpec> kept = Projections.planClusterGroupQuery(all, buildSpec(f, queryVcs)).survivingGroups();
     Assertions.assertEquals(1, kept.size());
     Assertions.assertSame(all.get(0), kept.get(0));
   }
@@ -573,18 +606,11 @@ class ProjectionsPruneClusterGroupsTest
         new EqualityFilter("tenant", ColumnType.STRING, "acme", null),
         new EqualityFilter("region", ColumnType.STRING, "us-east-1", null)
     ));
-    List<TableClusterGroupSpec> kept = Projections.pruneClusterGroups(all, f, queryVcs);
+    List<TableClusterGroupSpec> kept = Projections.planClusterGroupQuery(all, buildSpec(f, queryVcs)).survivingGroups();
     Assertions.assertEquals(2, kept.size());
     Assertions.assertSame(all.get(0), kept.get(0));   // (acme, us-east-1)
     Assertions.assertSame(all.get(2), kept.get(1));   // (globex, us-east-1)
   }
-
-  // --- Null clustering value handling ---
-  //
-  // Null clustering values are allowed; these tests pin the pruner's behavior across the supported filter types:
-  //   - NullFilter: matches iff the column value is null.
-  //   - EqualityFilter: does NOT match nulls by design — returns MUST_NOT_MATCH for a null clustering value.
-  //   - TypedInFilter: matches nulls iff null is in the values list.
 
   @Test
   void testNullFilterMatchesNullClusteringValue()
@@ -596,6 +622,8 @@ class ProjectionsPruneClusterGroupsTest
     List<TableClusterGroupSpec> kept = pruneClusterGroups(all, f);
     Assertions.assertEquals(1, kept.size());
     Assertions.assertSame(nullGroup, kept.get(0));
+    // Surviving group's null-on-null clustering leaf rewrites to TRUE.
+    Assertions.assertSame(TrueFilter.instance(), rewrite(f, nullGroup));
   }
 
   @Test
@@ -604,6 +632,8 @@ class ProjectionsPruneClusterGroupsTest
     List<TableClusterGroupSpec> all = groups(stringGroup("acme"));
     Filter f = NullFilter.forColumn("tenant");
     Assertions.assertTrue(pruneClusterGroups(all, f).isEmpty());
+    // Null-on-non-null clustering leaf rewrites to FALSE.
+    Assertions.assertSame(FalseFilter.instance(), rewrite(f, all.get(0)));
   }
 
   @Test
@@ -616,6 +646,8 @@ class ProjectionsPruneClusterGroupsTest
     List<TableClusterGroupSpec> kept = pruneClusterGroups(all, f);
     Assertions.assertEquals(1, kept.size());
     Assertions.assertSame(all.get(1), kept.get(0));
+    // Equality on a null clustering value rewrites to FALSE.
+    Assertions.assertSame(FalseFilter.instance(), rewrite(f, all.get(0)));
   }
 
   @Test
@@ -656,8 +688,6 @@ class ProjectionsPruneClusterGroupsTest
     Assertions.assertEquals(1, kept.size());
     Assertions.assertSame(acmeGroup, kept.get(0));
   }
-
-  // --- Non-tenant domains: IoT-style mixed-type and generic-partition fixtures. ---
 
   @Test
   void testIoTEqualityOnLongClusteringColumn()
@@ -717,5 +747,165 @@ class ProjectionsPruneClusterGroupsTest
     List<TableClusterGroupSpec> kept = pruneClusterGroups(all, f);
     Assertions.assertEquals(1, kept.size());
     Assertions.assertSame(pB, kept.get(0));
+  }
+
+  @Test
+  void testNullFilterPreservedWhenInputIsNull()
+  {
+    Assertions.assertNull(rewrite(null, tenantRegionGroup("acme", "us-east-1")));
+  }
+
+  @Test
+  void testTypedInFilterMatchingReturnsTrue()
+  {
+    final Filter f = new TypedInFilter("tenant", ColumnType.STRING, List.of("acme", "globex"), null, null);
+    Assertions.assertSame(TrueFilter.instance(), rewrite(f, tenantRegionGroup("acme", "us-east-1")));
+  }
+
+  @Test
+  void testTypedInFilterNonMatchingReturnsFalse()
+  {
+    final Filter f = new TypedInFilter("tenant", ColumnType.STRING, List.of("acme", "globex"), null, null);
+    Assertions.assertSame(FalseFilter.instance(), rewrite(f, tenantRegionGroup("initech", "us-east-1")));
+  }
+
+  @Test
+  void testUnrecognizedFilterTypeLeftUnchanged()
+  {
+    // The rewriter walks AND/OR/NOT + NullFilter/EqualityFilter/TypedInFilter. Anything else (e.g., a NotFilter
+    // wrapping a non-clustering leaf) passes through structurally with non-clustering leaves preserved.
+    final Filter inner = new EqualityFilter("metric", ColumnType.STRING, "page-views", null);
+    final Filter f = new NotFilter(inner);
+    Assertions.assertEquals(f, rewrite(f, tenantRegionGroup("acme", "us-east-1")));
+  }
+
+  @Test
+  void testAndDropsTrueChildren()
+  {
+    // tenant=acme is TRUE (clustering matches), region=us-east-1 is TRUE, metric=page-views stays as-is. The two
+    // TRUE children get dropped; only the non-clustering leaf survives — and since it's a single survivor, the
+    // AND wrapper unwraps to the leaf directly.
+    final Filter f = new AndFilter(filters(
+        new EqualityFilter("tenant", ColumnType.STRING, "acme", null),
+        new EqualityFilter("region", ColumnType.STRING, "us-east-1", null),
+        new EqualityFilter("metric", ColumnType.STRING, "page-views", null)
+    ));
+    final Filter expected = new EqualityFilter("metric", ColumnType.STRING, "page-views", null);
+    Assertions.assertEquals(expected, rewrite(f, tenantRegionGroup("acme", "us-east-1")));
+  }
+
+  @Test
+  void testAndShortCircuitsOnFalseChild()
+  {
+    final Filter f = new AndFilter(filters(
+        new EqualityFilter("tenant", ColumnType.STRING, "acme", null),     // FALSE on globex group
+        new EqualityFilter("metric", ColumnType.STRING, "page-views", null)
+    ));
+    Assertions.assertSame(FalseFilter.instance(), rewrite(f, tenantRegionGroup("globex", "us-east-1")));
+  }
+
+  @Test
+  void testAndCollapsesToTrueWhenAllChildrenTrue()
+  {
+    final Filter f = new AndFilter(filters(
+        new EqualityFilter("tenant", ColumnType.STRING, "acme", null),
+        new EqualityFilter("region", ColumnType.STRING, "us-east-1", null)
+    ));
+    Assertions.assertSame(TrueFilter.instance(), rewrite(f, tenantRegionGroup("acme", "us-east-1")));
+  }
+
+  @Test
+  void testOrDropsFalseChildren()
+  {
+    // tenant=acme is FALSE on globex group; the non-clustering metric leaf survives and unwraps to itself.
+    final Filter f = new OrFilter(filters(
+        new EqualityFilter("tenant", ColumnType.STRING, "acme", null),
+        new EqualityFilter("metric", ColumnType.STRING, "page-views", null)
+    ));
+    final Filter expected = new EqualityFilter("metric", ColumnType.STRING, "page-views", null);
+    Assertions.assertEquals(expected, rewrite(f, tenantRegionGroup("globex", "us-east-1")));
+  }
+
+  @Test
+  void testOrShortCircuitsOnTrueChild()
+  {
+    // tenant=acme is TRUE on the acme group → entire OR collapses to TRUE, dropping the non-clustering leaf.
+    final Filter f = new OrFilter(filters(
+        new EqualityFilter("tenant", ColumnType.STRING, "acme", null),
+        new EqualityFilter("metric", ColumnType.STRING, "page-views", null)
+    ));
+    Assertions.assertSame(TrueFilter.instance(), rewrite(f, tenantRegionGroup("acme", "us-east-1")));
+  }
+
+  @Test
+  void testOrCollapsesToFalseWhenAllChildrenFalse()
+  {
+    final Filter f = new OrFilter(filters(
+        new EqualityFilter("tenant", ColumnType.STRING, "acme", null),
+        new EqualityFilter("tenant", ColumnType.STRING, "globex", null)
+    ));
+    Assertions.assertSame(FalseFilter.instance(), rewrite(f, tenantRegionGroup("initech", "us-east-1")));
+  }
+
+  @Test
+  void testMixedAndKeepsOnlyNonClusteringLeaf()
+  {
+    final Filter f = new AndFilter(filters(
+        new EqualityFilter("tenant", ColumnType.STRING, "acme", null),     // TRUE → dropped
+        new NotFilter(new EqualityFilter("metric", ColumnType.STRING, "ads", null))   // structural, kept
+    ));
+    final Filter expected = new NotFilter(new EqualityFilter("metric", ColumnType.STRING, "ads", null));
+    Assertions.assertEquals(expected, rewrite(f, tenantRegionGroup("acme", "us-east-1")));
+  }
+
+  @Test
+  void testMultipleClusteringLeavesUnderOrCollapseIndependently()
+  {
+    // (tenant=acme OR region=us-west-2) — first leaf is FALSE on globex group, second leaf is also FALSE.
+    final Filter f = new OrFilter(filters(
+        new EqualityFilter("tenant", ColumnType.STRING, "acme", null),
+        new EqualityFilter("region", ColumnType.STRING, "us-west-2", null)
+    ));
+    Assertions.assertSame(FalseFilter.instance(), rewrite(f, tenantRegionGroup("globex", "us-east-1")));
+  }
+
+  @Test
+  void testQueryVcEquivalentToClusteringVcRewritesViaEquivalentName()
+  {
+    // Group clusters on tenant_lower := lower(tenant); query writes the filter against its own VC named
+    // query_lower with the same expression. The rewriter should resolve query_lower → tenant_lower via
+    // findEquivalent and collapse the leaf against the group's clustering value.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("query_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final Filter f = new EqualityFilter("query_lower", ColumnType.STRING, "acme", null);
+    final TableClusterGroupSpec acmeGroup = virtualClusteringGroup("acme");
+    final TableClusterGroupSpec globexGroup = virtualClusteringGroup("globex");
+    Assertions.assertSame(
+        TrueFilter.instance(),
+        Projections.planClusterGroupQuery(List.of(acmeGroup), buildSpec(f, queryVcs)).rewriteFor(acmeGroup)
+    );
+    Assertions.assertSame(
+        FalseFilter.instance(),
+        Projections.planClusterGroupQuery(List.of(globexGroup), buildSpec(f, queryVcs)).rewriteFor(globexGroup)
+    );
+  }
+
+  @Test
+  void testQueryVcShadowingClusteringNameWithoutEquivalenceLeavesLeafUnchanged()
+  {
+    // Query defines a VC named "tenant" with an unrelated expression. The rewriter must NOT silently collapse the
+    // leaf against the clustering tuple — instead, leave the leaf in the rewritten filter so the cursor evaluates
+    // it through the query VCs as it would any other (non-clustering) filter. This is the cursor-side analogue of
+    // the pruner's "treat as UNKNOWN" disposition.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("tenant", "lower(otherCol)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final Filter f = new EqualityFilter("tenant", ColumnType.STRING, "acme", null);
+    final TableClusterGroupSpec group = tenantRegionGroup("acme", "us-east-1");
+    Assertions.assertEquals(
+        f,
+        Projections.planClusterGroupQuery(List.of(group), buildSpec(f, queryVcs)).rewriteFor(group)
+    );
   }
 }
