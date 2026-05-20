@@ -39,6 +39,11 @@ Iceberg refers to these metastores as catalogs. The Iceberg extension lets you c
 
 For a given catalog, Iceberg input source reads the table name from the catalog, applies the filters, and extracts all the underlying live data files up to the latest snapshot.
 The data files can be in Parquet, ORC, or Avro formats. The data files typically reside in a warehouse location, which can be in HDFS, S3, or the local filesystem.
+
+:::note
+For Iceberg v1 tables (no delete files), all three formats are supported via the configured `warehouseSource`. For Iceberg v2 tables with delete files, only **Parquet** is currently supported for both data files and delete files. Attempting to ingest an ORC or Avro v2 table results in an `UnsupportedOperationException`. See [#19472](https://github.com/apache/druid/issues/19472) for planned ORC and Avro support.
+:::
+
 The `druid-iceberg-extensions` extension relies on the existing input source connectors in Druid to read the data files from the warehouse. Therefore, the Iceberg input source can be considered as an intermediate input source, which provides the file paths for other input source implementations.
 
 ## Hive metastore catalog
@@ -210,10 +215,14 @@ The Iceberg extension automatically detects v2 delete files during table scan. N
 When `IcebergInputSource` scans the Iceberg table, it inspects each `FileScanTask` for associated delete files:
 
 - **No delete files (v1 path)**: Data file paths are extracted and delegated to `warehouseSource` for reading. This is the existing behavior and remains unchanged.
-- **Delete files detected (v2 path)**: Each task is wrapped in an `IcebergFileTaskInputSource` that carries the data file path, delete file metadata (paths, types, equality field IDs), and the serialized table schema. The `IcebergNativeRecordReader` then applies deletes at read time:
+- **Delete files detected (v2 path)**: Each task is wrapped in an `IcebergFileTaskInputSource` that carries the data file path, delete file metadata (paths, types, equality field IDs, and format), and the serialized table schema. The `IcebergNativeRecordReader` then applies deletes at read time:
   1. Reads positional delete files and builds a set of deleted row positions for the current data file.
   2. Reads equality delete files and builds sets of deleted key tuples.
   3. Streams the data file and skips any row that is position-deleted or equality-deleted.
+
+:::note
+The v2 delete path currently supports only **Parquet** format for both data files and delete files. Each delete file's format is validated independently. An `UnsupportedOperationException` is thrown if a non-Parquet data file or delete file is encountered. See [#19472](https://github.com/apache/druid/issues/19472).
+:::
   4. Converts surviving Iceberg records to Druid `InputRow` objects.
 
 ### Example

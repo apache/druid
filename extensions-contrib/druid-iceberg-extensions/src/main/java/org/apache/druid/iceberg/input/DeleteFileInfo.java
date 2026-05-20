@@ -56,17 +56,20 @@ public class DeleteFileInfo
   private final String path;
   private final ContentType contentType;
   private final List<Integer> equalityFieldIds;
+  private final String format;
 
   @JsonCreator
   public DeleteFileInfo(
       @JsonProperty("path") final String path,
       @JsonProperty("contentType") final ContentType contentType,
-      @JsonProperty("equalityFieldIds") final List<Integer> equalityFieldIds
+      @JsonProperty("equalityFieldIds") final List<Integer> equalityFieldIds,
+      @JsonProperty("format") final String format
   )
   {
     this.path = path;
     this.contentType = contentType;
     this.equalityFieldIds = equalityFieldIds != null ? equalityFieldIds : Collections.emptyList();
+    this.format = format != null ? format : "PARQUET";
   }
 
   @JsonProperty
@@ -87,6 +90,12 @@ public class DeleteFileInfo
     return equalityFieldIds;
   }
 
+  @JsonProperty
+  public String getFormat()
+  {
+    return format;
+  }
+
   @Override
   public boolean equals(final Object o)
   {
@@ -99,13 +108,14 @@ public class DeleteFileInfo
     final DeleteFileInfo that = (DeleteFileInfo) o;
     return Objects.equals(path, that.path)
            && contentType == that.contentType
-           && Objects.equals(equalityFieldIds, that.equalityFieldIds);
+           && Objects.equals(equalityFieldIds, that.equalityFieldIds)
+           && Objects.equals(format, that.format);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(path, contentType, equalityFieldIds);
+    return Objects.hash(path, contentType, equalityFieldIds, format);
   }
 
   @Override
@@ -115,6 +125,7 @@ public class DeleteFileInfo
            + "path='" + path + '\''
            + ", contentType=" + contentType
            + ", equalityFieldIds=" + equalityFieldIds
+           + ", format='" + format + '\''
            + '}';
   }
 }

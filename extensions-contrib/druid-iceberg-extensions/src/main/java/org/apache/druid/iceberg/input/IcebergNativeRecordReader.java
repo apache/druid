@@ -114,6 +114,17 @@ public class IcebergNativeRecordReader implements InputSourceReader
     }
   }
 
+  private void requireParquetDeleteFile(final DeleteFileInfo deleteFileInfo)
+  {
+    if (!"PARQUET".equalsIgnoreCase(deleteFileInfo.getFormat())) {
+      throw new UnsupportedOperationException(
+          "Iceberg delete file format [" + deleteFileInfo.getFormat() + "] is not supported for file ["
+          + deleteFileInfo.getPath() + "]. Only PARQUET is currently supported. "
+          + "See https://github.com/apache/druid/issues/19472"
+      );
+    }
+  }
+
   private static FileIO buildFileIO(
       @Nullable final String fileIOImpl,
       @Nullable final Map<String, String> fileIOProperties,
@@ -244,7 +255,7 @@ public class IcebergNativeRecordReader implements InputSourceReader
       }
 
       final InputFile deleteInputFile = fileIO.newInputFile(deleteFileInfo.getPath());
-      requireParquet(deleteFileInfo.getPath());
+      requireParquetDeleteFile(deleteFileInfo);
       try (CloseableIterable<Record> deleteRecords = Parquet.read(deleteInputFile)
                                                             .project(posDeleteSchema)
                                                             .createReaderFunc(
@@ -300,7 +311,7 @@ public class IcebergNativeRecordReader implements InputSourceReader
 
       final Schema deleteSchema = new Schema(equalityFields);
       final InputFile deleteInputFile = fileIO.newInputFile(deleteFileInfo.getPath());
-      requireParquet(deleteFileInfo.getPath());
+      requireParquetDeleteFile(deleteFileInfo);
       final Set<List<Object>> deletedKeys = new HashSet<>();
       try (CloseableIterable<Record> deleteRecords = Parquet.read(deleteInputFile)
                                                             .project(deleteSchema)

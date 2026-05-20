@@ -344,13 +344,15 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
         return new DeleteFileInfo(
             deleteFile.location(),
             DeleteFileInfo.ContentType.EQUALITY,
-            deleteFile.equalityFieldIds()
+            deleteFile.equalityFieldIds(),
+            deleteFile.format().name()
         );
       case POSITION_DELETES:
         return new DeleteFileInfo(
             deleteFile.location(),
             DeleteFileInfo.ContentType.POSITION,
-            Collections.emptyList()
+            Collections.emptyList(),
+            deleteFile.format().name()
         );
       default:
         throw new UOE(
