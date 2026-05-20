@@ -64,8 +64,14 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
   private final EmbeddedBroker broker = new EmbeddedBroker();
 
   private ShareGroupKafkaResource kafkaServer;
-  private final ObjectMapper mapper = new DefaultObjectMapper()
-      .registerSubtypes(new NamedType(ShareGroupIndexTask.class, "index_kafka_share_group"));
+  private final ObjectMapper mapper = createMapper();
+
+  private static ObjectMapper createMapper()
+  {
+    final ObjectMapper m = new DefaultObjectMapper();
+    m.registerSubtypes(new NamedType(ShareGroupIndexTask.class, "index_kafka_share_group"));
+    return m;
+  }
 
   @Override
   public EmbeddedDruidCluster createCluster()
