@@ -80,9 +80,14 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
 {
   private static final Logger LOG = new Logger(SegmentFileBuilderV10.class);
 
+  /**
+   * Default compression for the V10 metadata header
+   */
+  public static final CompressionStrategy DEFAULT_METADATA_COMPRESSION = CompressionStrategy.ZSTD;
+
   public static SegmentFileBuilderV10 create(ObjectMapper jsonMapper, File baseDir)
   {
-    return create(jsonMapper, baseDir, CompressionStrategy.NONE);
+    return create(jsonMapper, baseDir, DEFAULT_METADATA_COMPRESSION);
   }
 
   public static SegmentFileBuilderV10 create(ObjectMapper jsonMapper, File baseDir, CompressionStrategy metaCompression)
@@ -184,6 +189,7 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
     if (internalFiles.containsKey(name)) {
       throw new IAE("Cannot add files of the same name, already have [%s]", name);
     }
+    ensureNameMatchesActiveGroup(name);
     if (size > maxContainerSize) {
       throw DruidException.forPersona(DruidException.Persona.ADMIN)
                           .ofCategory(DruidException.Category.RUNTIME_FAILURE)
@@ -285,7 +291,27 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
   @Override
   public void addColumn(String name, ColumnDescriptor columnDescriptor)
   {
+    ensureNameMatchesActiveGroup(name);
     this.columns.put(name, columnDescriptor);
+  }
+
+  /**
+   * If a file group is currently active (set by the most recent {@link #startFileGroup} call), enforce that names of
+   * files and columns added under it are prefixed by {@code groupName + "/"}. Prevents silent collisions where two
+   * groups write a file/column of the same bare name and the second silently overwrites the first in the metadata
+   * maps. Existing production callers (e.g. {@code IndexMergerV10} via
+   * {@code Projections.getProjectionSegmentInternalFileName}) already construct prefixed names, so this is a no-op
+   * for them; it catches new writers that forget the convention.
+   */
+  private void ensureNameMatchesActiveGroup(String name)
+  {
+    if (currentFileGroup != null && !name.startsWith(currentFileGroup + "/")) {
+      throw DruidException.defensive(
+          "Name[%s] must start with the active file group prefix[%s/]",
+          name,
+          currentFileGroup
+      );
+    }
   }
 
   /**
@@ -438,7 +464,7 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
     long offset = 0;
     for (ContainerWriter container : containers) {
       final long length = container.file.length();
-      result.add(new SegmentFileContainerMetadata(offset, length));
+      result.add(new SegmentFileContainerMetadata(offset, length, container.group));
       offset += length;
     }
     return result;

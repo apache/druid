@@ -100,13 +100,16 @@ public class WorkerResource
   {
     try {
       if (curatorCoordinator != null) {
+        // Dual-write disabled signal: legacy version="" for old overlords + disabled=true for new overlords.
+        // TODO: Safe to drop DISABLED_VERSION once backward compatibility with overlords is no longer required.
         final Worker disabledWorker = new Worker(
             enabledWorker.getScheme(),
             enabledWorker.getHost(),
             enabledWorker.getIp(),
             enabledWorker.getCapacity(),
             DISABLED_VERSION,
-            enabledWorker.getCategory()
+            enabledWorker.getCategory(),
+            true
         );
         curatorCoordinator.updateWorkerAnnouncement(disabledWorker);
       }

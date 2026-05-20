@@ -23,13 +23,10 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.util.List;
@@ -38,7 +35,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class CostBasedAutoScalerMockTest
@@ -97,8 +93,10 @@ public class CostBasedAutoScalerMockTest
   }
 
   @Test
-  public void testNoOpWhenOptimalEqualsCurrent()
+  public void testReturnsOptimalWhenOptimalEqualsCurrent()
   {
+    // Scaler contract: return the optimal count the scaler wants, regardless of current/bounds.
+    // The supervisor handles the "equal to current -> no scale" decision.
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(mockSupervisor, config, mockSpec, mockEmitter));
 
     int currentTaskCount = 25;
@@ -109,7 +107,7 @@ public class CostBasedAutoScalerMockTest
 
     int result = autoScaler.computeTaskCountForScaleAction();
 
-    Assert.assertEquals("Should return -1 when it equals current (no change needed)", -1, result);
+    Assert.assertEquals("Scaler should return its optimal count even when it equals current", optimalCount, result);
   }
 
   @Test
@@ -176,8 +174,10 @@ public class CostBasedAutoScalerMockTest
   }
 
   @Test
-  public void testReturnsTaskCountMinWhenConfiguredTaskCountIsBelowMin()
+  public void testReturnsUnclampedOptimalBelowMin()
   {
+    // Scaler no longer clamps to the autoScalerConfig bounds — the supervisor does.
+    // Verify the scaler returns the raw optimal even when it is below taskCountMin.
     CostBasedAutoScalerConfig boundedConfig = CostBasedAutoScalerConfig.builder()
                                                                        .taskCountMax(100)
                                                                        .taskCountMin(50)
@@ -186,25 +186,25 @@ public class CostBasedAutoScalerMockTest
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(mockSupervisor, boundedConfig, mockSpec, mockEmitter));
 
     final int configuredTaskCount = 1;
-    final int taskCountMin = 50;
+    final int belowMinOptimal = 49; // 1 below taskCountMin; expect unchanged through scaler
 
-    // Mock computeOptimalTaskCount to return a value different from the boundary,
-    // so the assertion proves the boundary clamping path was taken.
-    doReturn(taskCountMin - 1).when(autoScaler).computeOptimalTaskCount(any());
+    doReturn(belowMinOptimal).when(autoScaler).computeOptimalTaskCount(any());
     setupMocksForMetricsCollection(autoScaler, configuredTaskCount, 1000.0, 0.2);
 
     final int result = autoScaler.computeTaskCountForScaleAction();
 
     Assert.assertEquals(
-        "Should scale to taskCountMin when the configured task count is below the minimum boundary",
-        taskCountMin,
+        "Scaler should return unclamped optimal; clamping is a supervisor concern",
+        belowMinOptimal,
         result
     );
   }
 
   @Test
-  public void testReturnsTaskCountMaxWhenConfiguredTaskCountIsAboveMax()
+  public void testReturnsUnclampedOptimalAboveMax()
   {
+    // Scaler no longer clamps to the autoScalerConfig bounds — the supervisor does.
+    // Verify the scaler returns the raw optimal even when it is above taskCountMax.
     CostBasedAutoScalerConfig boundedConfig = CostBasedAutoScalerConfig.builder()
                                                                        .taskCountMax(50)
                                                                        .taskCountMin(1)
@@ -213,18 +213,16 @@ public class CostBasedAutoScalerMockTest
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(mockSupervisor, boundedConfig, mockSpec, mockEmitter));
 
     final int configuredTaskCount = 100;
-    final int taskCountMax = 50;
+    final int aboveMaxOptimal = 51; // 1 above taskCountMax; expect unchanged through scaler
 
-    // Mock computeOptimalTaskCount to return a value different from the boundary,
-    // so the assertion proves the boundary clamping path was taken.
-    doReturn(taskCountMax + 1).when(autoScaler).computeOptimalTaskCount(any());
+    doReturn(aboveMaxOptimal).when(autoScaler).computeOptimalTaskCount(any());
     setupMocksForMetricsCollection(autoScaler, configuredTaskCount, 10.0, 0.8);
 
     final int result = autoScaler.computeTaskCountForScaleAction();
 
     Assert.assertEquals(
-        "Should scale to taskCountMax when the configured task count is above the maximum boundary",
-        taskCountMax,
+        "Scaler should return unclamped optimal; clamping is a supervisor concern",
+        aboveMaxOptimal,
         result
     );
   }
@@ -292,6 +290,9 @@ public class CostBasedAutoScalerMockTest
   @Test
   public void testScaleDownBlockedWhenScaleDownOnRolloverOnlyEnabled()
   {
+    // When scaleDownDuringTaskRolloverOnly is true and the optimal would be a scale-down, the
+    // scaler's "preferred" count is to stay put — it signals that by returning the current count.
+    // The supervisor interprets equal-to-current as a steady-state no-op and skips silently.
     CostBasedAutoScalerConfig rolloverOnlyConfig = CostBasedAutoScalerConfig.builder()
                                                                             .taskCountMax(100)
                                                                             .taskCountMin(1)
@@ -314,8 +315,8 @@ public class CostBasedAutoScalerMockTest
     setupMocksForMetricsCollection(autoScaler, currentTaskCount, 10.0, 0.9);
 
     Assert.assertEquals(
-        "Should return -1 when scaleDownDuringTaskRolloverOnly is true",
-        -1,
+        "Should return current count (no-op signal) when scaleDownDuringTaskRolloverOnly suppresses the scale-down",
+        currentTaskCount,
         autoScaler.computeTaskCountForScaleAction()
     );
   }
@@ -354,88 +355,8 @@ public class CostBasedAutoScalerMockTest
     );
   }
 
-  @Test
-  public void testEmitsMaxTaskCountSkipReasonWhenCurrentIsAtMax()
-  {
-    CostBasedAutoScalerConfig boundedConfig = CostBasedAutoScalerConfig.builder()
-                                                                       .taskCountMax(10)
-                                                                       .taskCountMin(1)
-                                                                       .enableTaskAutoScaler(true)
-                                                                       .build();
-    CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(mockSupervisor, boundedConfig, mockSpec, mockEmitter));
-
-    final int currentTaskCount = 10; // already at max
-    doReturn(-1).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 100.0, 0.5);
-
-    Assert.assertEquals(-1, autoScaler.computeTaskCountForScaleAction());
-
-    @SuppressWarnings("unchecked")
-    ArgumentCaptor<ServiceEventBuilder<ServiceMetricEvent>> captor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
-    verify(mockEmitter).emit(captor.capture());
-    Assert.assertEquals(
-        "Should emit 'Already at max task count' skip reason when current task count is at maximum",
-        "Already at max task count",
-        ((ServiceMetricEvent.Builder) captor.getValue())
-            .getDimension(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION)
-    );
-  }
-
-  @Test
-  public void testEmitsMinTaskCountSkipReasonWhenCurrentIsAtMin()
-  {
-    CostBasedAutoScalerConfig boundedConfig = CostBasedAutoScalerConfig.builder()
-                                                                       .taskCountMax(100)
-                                                                       .taskCountMin(10)
-                                                                       .enableTaskAutoScaler(true)
-                                                                       .build();
-    CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(mockSupervisor, boundedConfig, mockSpec, mockEmitter));
-
-    final int currentTaskCount = 10; // already at min
-    doReturn(-1).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 100.0, 0.5);
-
-    Assert.assertEquals(-1, autoScaler.computeTaskCountForScaleAction());
-
-    @SuppressWarnings("unchecked")
-    ArgumentCaptor<ServiceEventBuilder<ServiceMetricEvent>> captor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
-    verify(mockEmitter).emit(captor.capture());
-    Assert.assertEquals(
-        "Should emit 'Already at min task count' skip reason when current task count is at minimum",
-        "Already at min task count",
-        ((ServiceMetricEvent.Builder) captor.getValue())
-            .getDimension(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION)
-    );
-  }
-
-  @Test
-  public void testMaxSkipReasonTakesPriorityWhenMinEqualsMax()
-  {
-    // When min == max, current is simultaneously at both bounds.
-    // The comment in the production code states that signaling max has higher priority.
-    CostBasedAutoScalerConfig boundedConfig = CostBasedAutoScalerConfig.builder()
-                                                                       .taskCountMax(5)
-                                                                       .taskCountMin(5)
-                                                                       .enableTaskAutoScaler(true)
-                                                                       .build();
-    CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(mockSupervisor, boundedConfig, mockSpec, mockEmitter));
-
-    final int currentTaskCount = 5; // at both min and max
-    doReturn(-1).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(autoScaler, currentTaskCount, 100.0, 0.5);
-
-    Assert.assertEquals(-1, autoScaler.computeTaskCountForScaleAction());
-
-    @SuppressWarnings("unchecked")
-    ArgumentCaptor<ServiceEventBuilder<ServiceMetricEvent>> captor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
-    verify(mockEmitter).emit(captor.capture());
-    Assert.assertEquals(
-        "Max skip reason should take priority over min skip reason when min equals max",
-        "Already at max task count",
-        ((ServiceMetricEvent.Builder) captor.getValue())
-            .getDimension(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION)
-    );
-  }
+  // Skip-reason emissions ("Already at max/min task count") moved to SeekableStreamSupervisor —
+  // see SeekableStreamSupervisorStateTest for those assertions.
 
   private void setupMocksForMetricsCollection(
       CostBasedAutoScaler autoScaler,

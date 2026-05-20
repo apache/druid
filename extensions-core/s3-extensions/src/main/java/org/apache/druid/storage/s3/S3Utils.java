@@ -43,11 +43,9 @@ import software.amazon.awssdk.services.s3.model.Grant;
 import software.amazon.awssdk.services.s3.model.Grantee;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
-import software.amazon.awssdk.services.s3.model.Permission;
 import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
-import software.amazon.awssdk.services.s3.model.Type;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -240,20 +238,6 @@ public class S3Utils
     ) + "/";
   }
 
-  static Grant grantFullControlToBucketOwner(ServerSideEncryptingAmazonS3 s3Client, String bucket)
-  {
-    final String ownerId = s3Client.getBucketAcl(bucket).owner().id();
-    return Grant
-        .builder()
-        .grantee(Grantee
-            .builder()
-            .type(Type.CANONICAL_USER)
-            .id(ownerId)
-            .build())
-        .permission(Permission.FULL_CONTROL)
-        .build();
-  }
-
   /**
    * Builds the header value for {@code x-amz-grant-full-control}.
    *
@@ -427,7 +411,7 @@ public class S3Utils
   )
   {
     log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
-    service.upload(bucket, key, file, disableAcl ? null : S3Utils.grantFullControlToBucketOwner(service, bucket));
+    service.upload(bucket, key, file, disableAcl ? null : service.getBucketOwnerGrant(bucket));
   }
 
   /**

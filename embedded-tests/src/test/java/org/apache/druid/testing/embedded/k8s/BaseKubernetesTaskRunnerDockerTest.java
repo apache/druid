@@ -32,12 +32,22 @@ import org.junit.jupiter.api.BeforeEach;
  */
 abstract class BaseKubernetesTaskRunnerDockerTest extends IngestionSmokeTest implements LatestImageDockerTest
 {
-  protected static final String MANIFEST_TEMPLATE = "manifests/druid-service-with-operator.yaml";
+  private static final String DEFAULT_MANIFEST_TEMPLATE = "manifests/druid-service-with-operator.yaml";
+
+  protected K3sClusterResource k3sCluster;
 
   /**
    * Subclasses override to enable/disable SharedInformer caching.
    */
   protected abstract boolean useSharedInformers();
+
+  /**
+   * Subclasses override to swap in a different operator manifest template.
+   */
+  protected String getManifestTemplate()
+  {
+    return DEFAULT_MANIFEST_TEMPLATE;
+  }
 
   @Override
   protected EmbeddedDruidCluster addServers(EmbeddedDruidCluster cluster)
@@ -54,9 +64,9 @@ abstract class BaseKubernetesTaskRunnerDockerTest extends IngestionSmokeTest imp
         .addProperty("druid.indexer.runner.k8sSharedInformerResyncPeriod", "PT1s")
         .usingPort(30090);
 
-    final K3sClusterResource k3sCluster = new K3sClusterWithOperatorResource()
+    this.k3sCluster = new K3sClusterWithOperatorResource()
         .usingDruidTestImage()
-        .usingDruidManifestTemplate(MANIFEST_TEMPLATE)
+        .usingDruidManifestTemplate(getManifestTemplate())
         .addService(new K3sDruidService(DruidCommand.Server.COORDINATOR).usingPort(30081))
         .addService(overlordService)
         .addService(new K3sDruidService(DruidCommand.Server.HISTORICAL).usingPort(30083))

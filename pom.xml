@@ -102,6 +102,7 @@
         <guava.version>32.1.3-jre</guava.version>
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>2.2</hamcrest.version>
+        <iceberg.core.version>1.10.0</iceberg.core.version>
         <jetty.version>12.1.8</jetty.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.20.2</jackson.version>
@@ -111,7 +112,7 @@
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
         <netty4.version>4.2.12.Final</netty4.version>
-        <postgresql.version>42.7.2</postgresql.version>
+        <postgresql.version>42.7.11</postgresql.version>
         <protobuf.version>3.25.8</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <slf4j.version>2.0.17</slf4j.version>
@@ -460,12 +461,12 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
-                <version>1.82</version>
+                <version>1.84</version>
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>
-                <version>1.82</version>
+                <version>1.84</version>
             </dependency>
             <!-- Transitive dependency of hive-common in druid-kerberos, druid-ranger-security and
             druid-iceberg-extension  -->

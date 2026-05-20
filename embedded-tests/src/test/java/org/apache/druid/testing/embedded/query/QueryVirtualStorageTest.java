@@ -66,8 +66,9 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 {
-  // size of wiki segments, adjust this if segment size changes for some reason
-  private static final long SIZE_BYTES = 3777834L;
+  // size of wiki segments (size here is size with uncompressed metadata as an upper bound since the zstd default
+  // appears to make different sizes on different platforms) adjust this if segment size changes for some reason
+  private static final long SIZE_BYTES = 3778338L;
   private static final long CACHE_SIZE = HumanReadableBytes.parse("1MiB");
   private static final long MAX_SIZE = HumanReadableBytes.parse("100MiB");
 
@@ -305,11 +306,12 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   @Test
   void testQuerySysTables()
   {
-    String query = "SELECT curr_size, max_size, storage_size FROM sys.servers WHERE tier IS NOT NULL AND server_type = 'historical'";
-    Assertions.assertEquals(
-        StringUtils.format("%s,%s,%s", SIZE_BYTES, MAX_SIZE, CACHE_SIZE),
-        cluster.callApi().runSql(query)
-    );
+    final String query = "SELECT curr_size, max_size, storage_size FROM sys.servers WHERE tier IS NOT NULL AND server_type = 'historical'";
+    final String resultString = cluster.callApi().runSql(query);
+    final String[] split = resultString.split(",");
+    Assertions.assertTrue(Long.parseLong(split[0]) <= SIZE_BYTES);
+    Assertions.assertEquals(MAX_SIZE, Long.parseLong(split[1]));
+    Assertions.assertEquals(CACHE_SIZE, Long.parseLong(split[2]));
   }
 
 

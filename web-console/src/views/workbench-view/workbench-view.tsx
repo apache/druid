@@ -867,6 +867,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                   text="DruidSQL documentation"
                   href={getLink('DOCS_SQL')}
                   target="_blank"
+                  rel="noopener noreferrer"
                 />
               )}
               {queryEngines.includes('sql-msq-task') &&
