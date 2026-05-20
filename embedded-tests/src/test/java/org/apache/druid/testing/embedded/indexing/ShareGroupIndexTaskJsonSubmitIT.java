@@ -21,6 +21,7 @@ package org.apache.druid.testing.embedded.indexing;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Throwables;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -63,7 +64,8 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
   private final EmbeddedBroker broker = new EmbeddedBroker();
 
   private ShareGroupKafkaResource kafkaServer;
-  private final ObjectMapper mapper = new DefaultObjectMapper();
+  private final ObjectMapper mapper = new DefaultObjectMapper()
+      .registerSubtypes(new NamedType(ShareGroupIndexTask.class, "index_kafka_share_group"));
 
   @Override
   public EmbeddedDruidCluster createCluster()

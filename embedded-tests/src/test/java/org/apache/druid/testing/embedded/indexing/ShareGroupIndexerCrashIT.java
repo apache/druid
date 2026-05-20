@@ -123,12 +123,9 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
     final int batchB = 10;
     kafkaServer.publishRecordsToTopic(topic, csvRecords(batchB, batchA, "2025-09-02"));
 
-    // Wait until all batchA + batchB records are processed (at-least-once: batchA may arrive twice).
-    indexer.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("ingest/events/processed")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasSumAtLeast(batchA + batchB)
-    );
+    // Give Task 2 time to consume redelivered + new records.
+    // Post-restart emitter has a fresh counter, so we use a dwell + SQL check instead.
+    Thread.sleep(15_000L);
 
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId2));
     cluster.callApi().waitForTaskToFinish(taskId2, overlord.latchableEmitter());
@@ -164,11 +161,8 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
     final String taskId2 = submitTask(topic, GROUP_ID + "-noack");
     Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
 
-    indexer.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("ingest/events/processed")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasSumAtLeast(numRecords)
-    );
+    // Give Task 2 time to consume redelivered records before cancel.
+    Thread.sleep(15_000L);
 
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId2));
     cluster.callApi().waitForTaskToFinish(taskId2, overlord.latchableEmitter());

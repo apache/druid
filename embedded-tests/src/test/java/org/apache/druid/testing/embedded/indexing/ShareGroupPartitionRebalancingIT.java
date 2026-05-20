@@ -45,6 +45,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -55,7 +56,7 @@ import java.util.Map;
 public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
 {
   private static final long SHARE_CONSUMER_READY_DELAY_MS = 3_000L;
-  private static final long PARTITION_REBALANCE_DELAY_MS = 2_000L;
+  private static final long PARTITION_REBALANCE_DELAY_MS = 15_000L;
   private static final String COL_TIMESTAMP = "__time";
   private static final String COL_ITEM = "item";
   private static final String COL_VALUE = "value";
@@ -167,7 +168,8 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
 
   private String submitTask(String topic, String groupId)
   {
-    final Map<String, Object> consumerProps = kafkaServer.consumerProperties();
+    final Map<String, Object> consumerProps = new HashMap<>(kafkaServer.consumerProperties());
+    consumerProps.put("metadata.max.age.ms", "2000");
     final ShareGroupIndexTaskIOConfig ioConfig = new ShareGroupIndexTaskIOConfig(
         topic,
         groupId,
