@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import org.apache.druid.java.util.common.StringUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -250,7 +251,7 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
   {
     final List<byte[]> records = new ArrayList<>();
     for (int i = 0; i < count; i++) {
-      final String csv = dateStr + "T00:" + String.format("%02d", (startIndex + i) % 60) + ":00Z"
+      final String csv = dateStr + "T00:" + StringUtils.format("%02d", (startIndex + i) % 60) + ":00Z"
                          + ",item" + (startIndex + i) + "," + (startIndex + i);
       records.add(csv.getBytes(StandardCharsets.UTF_8));
     }
