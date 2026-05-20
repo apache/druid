@@ -335,7 +335,7 @@ public class IcebergV2DeleteIngestionTest extends EmbeddedClusterTestBase
     final OutputFile outputFile = table.io().newOutputFile(deletePath);
 
     final PositionDeleteWriter<GenericRecord> writer = Parquet.writeDeletes(outputFile)
-                                                             .forTable(table)
+                                                             .withSpec(table.spec())
                                                              .overwrite()
                                                              .buildPositionWriter();
     try (PositionDeleteWriter<GenericRecord> w = writer) {
