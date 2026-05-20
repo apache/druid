@@ -115,6 +115,11 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
     // Restart the indexer.
     indexer.start();
 
+    // Snapshot the cumulative ingest counter BEFORE Task 2 starts so we can later
+    // assert Task 2 itself processed records (and the test does not pass simply because
+    // Task 1 already acked everything before the simulated crash).
+    final long preTask2Processed = sumOfProcessedEvents();
+
     // Task 2: same group-id. Broker redelivers any unacknowledged records.
     final String taskId2 = submitTask(topic);
     Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
@@ -123,9 +128,8 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
     final int batchB = 10;
     kafkaServer.publishRecordsToTopic(topic, csvRecords(batchB, batchA, "2025-09-02"));
 
-    // Give Task 2 time to consume redelivered + new records.
-    // Post-restart emitter has a fresh counter, so we use a dwell + SQL check instead.
-    Thread.sleep(15_000L);
+    // Prove Task 2 actually processed at least one record after the indexer restart.
+    waitForNewEventsAfter(preTask2Processed, 1);
 
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId2));
     cluster.callApi().waitForTaskToFinish(taskId2, overlord.latchableEmitter());
@@ -151,18 +155,22 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
     kafkaServer.publishRecordsToTopic(topic, csvRecords(numRecords, 0, "2025-10-01"));
 
     // Task 1: starts but is killed before its first publish (no ack committed).
+    // We deliberately do NOT wait the share-consumer ready delay here; the goal is
+    // to maximise the chance that no records are acked before the simulated crash.
     submitTask(topic, GROUP_ID + "-noack");
-    Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
 
     indexer.stop();
     indexer.start();
+
+    // Snapshot the cumulative ingest counter BEFORE Task 2 starts.
+    final long preTask2Processed = sumOfProcessedEvents();
 
     // Task 2 (same group): broker must redeliver all numRecords because none were acked.
     final String taskId2 = submitTask(topic, GROUP_ID + "-noack");
     Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
 
-    // Give Task 2 time to consume redelivered records before cancel.
-    Thread.sleep(15_000L);
+    // Prove Task 2 actually processed all redelivered records (not just zero).
+    waitForNewEventsAfter(preTask2Processed, numRecords);
 
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId2));
     cluster.callApi().waitForTaskToFinish(taskId2, overlord.latchableEmitter());
@@ -263,5 +271,30 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
       records.add(csv.getBytes(StandardCharsets.UTF_8));
     }
     return records;
+  }
+
+  private long sumOfProcessedEvents()
+  {
+    return indexer.latchableEmitter()
+                  .getMetricValues("ingest/events/processed", Map.of(DruidMetrics.DATASOURCE, dataSource))
+                  .stream()
+                  .mapToLong(Number::longValue)
+                  .sum();
+  }
+
+  private void waitForNewEventsAfter(long baseline, long expectedNewEvents) throws InterruptedException
+  {
+    final long deadlineMs = System.currentTimeMillis() + 60_000L;
+    while (System.currentTimeMillis() < deadlineMs) {
+      final long current = sumOfProcessedEvents();
+      if (current - baseline >= expectedNewEvents) {
+        return;
+      }
+      Thread.sleep(1_000L);
+    }
+    Assertions.fail(
+        "Task 2 did not process at least [" + expectedNewEvents + "] new events after indexer restart "
+        + "(baseline=" + baseline + ", current=" + sumOfProcessedEvents() + ")"
+    );
   }
 }
