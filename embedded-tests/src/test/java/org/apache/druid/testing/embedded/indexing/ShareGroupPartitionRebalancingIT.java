@@ -31,7 +31,6 @@ import org.apache.druid.indexing.kafka.ShareGroupIndexTaskIOConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -240,13 +239,30 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
     return task.getId();
   }
 
-  private void waitForRowsProcessed(long expected)
+  private void waitForRowsProcessed(long expected) throws Exception
   {
-    indexer.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("ingest/events/processed")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasSumAtLeast(expected)
-    );
+    // Poll the in-flight ingest count via the Overlord task report.
+    // ingest/events/processed aggregate can include events from earlier tests in the
+    // same indexer JVM, leading to false-positive matches. A direct SQL count is the
+    // only reliable signal for "this test's records made it to a queryable segment".
+    final long deadlineMs = System.currentTimeMillis() + 60_000L;
+    while (System.currentTimeMillis() < deadlineMs) {
+      try {
+        cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+      }
+      catch (Exception ignored) {
+      }
+      try {
+        final long rows = Long.parseLong(cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+        if (rows >= expected) {
+          return;
+        }
+      }
+      catch (Exception ignored) {
+      }
+      Thread.sleep(1_000L);
+    }
+    throw new IllegalStateException("Timed out waiting for " + expected + " rows.");
   }
 
   private List<byte[]> csvRecords(int count, int startIndex, String dateStr)

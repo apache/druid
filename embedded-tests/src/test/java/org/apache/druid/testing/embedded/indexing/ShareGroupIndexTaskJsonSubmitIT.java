@@ -69,7 +69,11 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
   private static ObjectMapper createMapper()
   {
     final ObjectMapper m = new DefaultObjectMapper();
-    m.registerSubtypes(new NamedType(ShareGroupIndexTask.class, "index_kafka_share_group"));
+    m.registerSubtypes(
+        new NamedType(ShareGroupIndexTask.class, "index_kafka_share_group"),
+        new NamedType(ShareGroupIndexTaskIOConfig.class, "kafka_share_group"),
+        new NamedType(KafkaIndexTaskTuningConfig.class, "KafkaTuningConfig")
+    );
     return m;
   }
 
