@@ -1885,6 +1885,8 @@ libraries:
   - org.apache.derby: derby
   - org.apache.derby: derbyclient
   - org.apache.derby: derbynet
+  - org.apache.derby: derbytools
+  - org.apache.derby: derbyshared
 notice: |
   =========================================================================
   ==  NOTICE file corresponding to section 4(d) of the Apache License,
