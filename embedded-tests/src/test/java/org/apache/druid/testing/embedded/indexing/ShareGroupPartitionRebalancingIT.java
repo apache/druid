@@ -112,7 +112,7 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
 
     // Wait for all records to flow through to queryable segments. Cancelling the task
     // triggers a publish of any in-memory rows, so we poll until SQL sees the full set.
-    waitForRowCountAfterCancel(taskId, batchA + batchB);
+    waitForRowCountAfterCancel(batchA + batchB, taskId);
   }
 
   @Test

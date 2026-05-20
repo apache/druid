@@ -138,7 +138,7 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
 
     Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
 
-    final org.apache.druid.indexer.TaskStatusResponse statusResponse =
+    final org.apache.druid.client.indexing.TaskStatusResponse statusResponse =
         cluster.callApi().onLeaderOverlord(o -> o.taskStatus(task.getId()));
     Assertions.assertNotNull(statusResponse, "Overlord did not return a status for the submitted task");
     Assertions.assertNotNull(statusResponse.getStatus(), "Overlord status payload was empty");
