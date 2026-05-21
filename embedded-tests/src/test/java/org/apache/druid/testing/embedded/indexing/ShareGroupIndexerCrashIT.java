@@ -134,14 +134,7 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId2));
     cluster.callApi().waitForTaskToFinish(taskId2, overlord.latchableEmitter());
 
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-
-    // At-least-once guarantee: row count >= batchA + batchB (no loss); may be slightly higher due to redelivery.
-    final long rowCount = Long.parseLong(cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
-    Assertions.assertTrue(
-        rowCount >= batchA + batchB,
-        "Expected at least [" + (batchA + batchB) + "] rows but got [" + rowCount + "]"
-    );
+    waitForRowCountAtLeast(batchA + batchB);
   }
 
   @Test
@@ -175,13 +168,7 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId2));
     cluster.callApi().waitForTaskToFinish(taskId2, overlord.latchableEmitter());
 
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-
-    final long rowCount = Long.parseLong(cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
-    Assertions.assertTrue(
-        rowCount >= numRecords,
-        "Expected at least [" + numRecords + "] rows after crash recovery but got [" + rowCount + "]"
-    );
+    waitForRowCountAtLeast(numRecords);
   }
 
   private String submitTask(String topic)
@@ -295,6 +282,28 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
     Assertions.fail(
         "Task 2 did not process at least [" + expectedNewEvents + "] new events after indexer restart "
         + "(baseline=" + baseline + ", current=" + sumOfProcessedEvents() + ")"
+    );
+  }
+
+  private void waitForRowCountAtLeast(long expected) throws InterruptedException
+  {
+    final long deadlineMs = System.currentTimeMillis() + 90_000L;
+    long observed = -1L;
+    while (System.currentTimeMillis() < deadlineMs) {
+      try {
+        cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+        observed = Long.parseLong(cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+        if (observed >= expected) {
+          return;
+        }
+      }
+      catch (RuntimeException e) {
+        // Datasource not yet visible (no segments published) or transient query failure.
+      }
+      Thread.sleep(2_000L);
+    }
+    Assertions.fail(
+        "Expected at least [" + expected + "] rows after crash recovery but got [" + observed + "] (deadline 90s)"
     );
   }
 }
