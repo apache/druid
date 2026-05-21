@@ -358,6 +358,47 @@ public class KafkaShareGroupRecordSupplierTest
   }
 
   @Test
+  public void testAcknowledgeMap_multiPartition_acknowledgesAllRecords()
+  {
+    final String testTopic = "test-topic";
+    final ConsumerRecord<byte[], byte[]> r0 = new ConsumerRecord<>(testTopic, 0, 10L,
+        "k0".getBytes(StandardCharsets.UTF_8), "v0".getBytes(StandardCharsets.UTF_8));
+    final ConsumerRecord<byte[], byte[]> r1 = new ConsumerRecord<>(testTopic, 1, 20L,
+        "k1".getBytes(StandardCharsets.UTF_8), "v1".getBytes(StandardCharsets.UTF_8));
+    final Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> recordMap = new HashMap<>();
+    recordMap.put(new TopicPartition(testTopic, 0), List.of(r0));
+    recordMap.put(new TopicPartition(testTopic, 1), List.of(r1));
+    when(mockConsumer.poll(any(Duration.class))).thenReturn(new ConsumerRecords<>(recordMap));
+    supplier.poll(1000L);
+
+    final Map<KafkaTopicPartition, java.util.Collection<Long>> offsets = new HashMap<>();
+    offsets.put(new KafkaTopicPartition(true, testTopic, 0), List.of(10L));
+    offsets.put(new KafkaTopicPartition(true, testTopic, 1), List.of(20L));
+    supplier.acknowledge(offsets, AcknowledgeType.ACCEPT);
+
+    verify(mockConsumer).acknowledge(r0, org.apache.kafka.clients.consumer.AcknowledgeType.ACCEPT);
+    verify(mockConsumer).acknowledge(r1, org.apache.kafka.clients.consumer.AcknowledgeType.ACCEPT);
+  }
+
+  @Test
+  public void testAcknowledgeMap_unknownOffset_throwsIllegalStateException()
+  {
+    final String testTopic = "test-topic";
+    when(mockConsumer.poll(any(Duration.class))).thenReturn(ConsumerRecords.empty());
+    supplier.poll(1000L);
+
+    final Map<KafkaTopicPartition, java.util.Collection<Long>> offsets = new HashMap<>();
+    offsets.put(new KafkaTopicPartition(true, testTopic, 0), List.of(99L));
+    try {
+      supplier.acknowledge(offsets, AcknowledgeType.ACCEPT);
+      Assert.fail("expected IllegalStateException for unknown offset");
+    }
+    catch (IllegalStateException expected) {
+      Assert.assertTrue(expected.getMessage().contains("Cannot acknowledge unknown record"));
+    }
+  }
+
+  @Test
   public void testAcknowledgeWithRenewType()
   {
     final String testTopic = "test-topic";

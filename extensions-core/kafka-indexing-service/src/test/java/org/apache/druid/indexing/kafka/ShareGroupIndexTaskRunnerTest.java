@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
@@ -34,6 +35,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
@@ -202,6 +204,74 @@ public class ShareGroupIndexTaskRunnerTest
   }
 
   @Test
+  public void testRunLoop_recordsProcessed_acknowledgesAndPublishes() throws Exception
+  {
+    final StreamAppenderatorDriver driver = mockDriver();
+    final Appenderator appenderator = Mockito.mock(Appenderator.class);
+    final RecordBearingFakeSupplier supplier = new RecordBearingFakeSupplier(task);
+    final StreamChunkReader chunkReader = Mockito.mock(StreamChunkReader.class);
+    final InputRow row = Mockito.mock(InputRow.class);
+    Mockito.when(row.getTimestamp()).thenReturn(org.apache.druid.java.util.common.DateTimes.nowUtc());
+    Mockito.when(chunkReader.parse(Mockito.any(), Mockito.anyBoolean()))
+           .thenReturn(Collections.singletonList(row));
+    final AppenderatorDriverAddResult addOk = AppenderatorDriverAddResult.ok(
+        Mockito.mock(org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec.class),
+        1,
+        1L,
+        false
+    );
+    Mockito.when(driver.add(Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.anyBoolean(), Mockito.anyBoolean()))
+           .thenReturn(addOk);
+    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(task, toolbox, mapper);
+
+    final TaskStatus status = runner.runLoop(
+        driver,
+        appenderator,
+        supplier,
+        chunkReader,
+        task.getIOConfig(),
+        task.getTuningConfig(),
+        toolbox
+    );
+
+    Assert.assertTrue(status.isSuccess());
+    Assert.assertTrue(supplier.acknowledgedAtLeastOnce());
+  }
+
+  @Test
+  public void testRunLoop_segmentAllocationFails_throwsAndExits() throws Exception
+  {
+    final StreamAppenderatorDriver driver = mockDriver();
+    final Appenderator appenderator = Mockito.mock(Appenderator.class);
+    final RecordBearingFakeSupplier supplier = new RecordBearingFakeSupplier(task);
+    final StreamChunkReader chunkReader = Mockito.mock(StreamChunkReader.class);
+    final InputRow row = Mockito.mock(InputRow.class);
+    Mockito.when(row.getTimestamp()).thenReturn(org.apache.druid.java.util.common.DateTimes.nowUtc());
+    Mockito.when(chunkReader.parse(Mockito.any(), Mockito.anyBoolean()))
+           .thenReturn(Collections.singletonList(row));
+    final AppenderatorDriverAddResult notOk = AppenderatorDriverAddResult.fail();
+    Mockito.when(driver.add(Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.anyBoolean(), Mockito.anyBoolean()))
+           .thenReturn(notOk);
+    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(task, toolbox, mapper);
+
+    try {
+      runner.runLoop(
+          driver,
+          appenderator,
+          supplier,
+          chunkReader,
+          task.getIOConfig(),
+          task.getTuningConfig(),
+          toolbox
+      );
+      Assert.fail("expected ISE for failed segment allocation");
+    }
+    catch (org.apache.druid.java.util.common.ISE expected) {
+      Assert.assertTrue(expected.getMessage().contains("Could not allocate segment"));
+    }
+  }
+
+  @Test
   public void testRunLoop_wakeupExceptionWhenStopping_breaksLoop() throws Exception
   {
     final StreamAppenderatorDriver driver = mockDriver();
@@ -318,6 +388,48 @@ public class ShareGroupIndexTaskRunnerTest
     @Override
     public void close()
     {
+    }
+  }
+
+  private static class RecordBearingFakeSupplier extends FakeRecordSupplier
+  {
+    private final java.util.concurrent.atomic.AtomicBoolean acked = new java.util.concurrent.atomic.AtomicBoolean();
+
+    RecordBearingFakeSupplier(ShareGroupIndexTask task)
+    {
+      super(0, task);
+    }
+
+    boolean acknowledgedAtLeastOnce()
+    {
+      return acked.get();
+    }
+
+    @Override
+    public List<OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> poll(
+        long timeout
+    )
+    {
+      // First poll returns one record; subsequent polls trigger stop.
+      if (super.pollCallCount() == 0) {
+        super.poll(timeout);
+        final KafkaTopicPartition tp = new KafkaTopicPartition(false, "topic", 0);
+        final KafkaRecordEntity entity = Mockito.mock(KafkaRecordEntity.class);
+        return Collections.singletonList(
+            new OrderedPartitionableRecord<>("topic", tp, 100L, Collections.singletonList(entity))
+        );
+      }
+      return super.poll(timeout);
+    }
+
+    @Override
+    public void acknowledge(
+        KafkaTopicPartition partitionId,
+        Long offset,
+        AcknowledgeType type
+    )
+    {
+      acked.set(true);
     }
   }
 
