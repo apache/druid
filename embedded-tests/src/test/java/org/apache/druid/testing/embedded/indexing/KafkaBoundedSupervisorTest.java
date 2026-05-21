@@ -292,6 +292,50 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     Assertions.assertEquals("UNHEALTHY_SUPERVISOR", status2.getState(), "Supervisor state should be UNHEALTHY_SUPERVISOR");
   }
 
+  @Test
+  public void test_resetSupervisorAndBackfill()
+  {
+    final String topic = IdUtils.getRandomId();
+    kafkaServer.createTopicWithPartitions(topic, 2);
+
+    // Create a streaming supervisor with concurrent locks (required for backfill)
+    final KafkaSupervisorSpec supervisor = createKafkaSupervisor(kafkaServer)
+        .withContext(Map.of("useConcurrentLocks", true))
+        .withIoConfig(io -> io
+            .withKafkaInputFormat(new JsonInputFormat(null, null, null, null, null))
+            .withUseEarliestSequenceNumber(false)
+        )
+        .build(dataSource, topic);
+
+    cluster.callApi().postSupervisor(supervisor);
+
+    // Publish batch 1 and wait for the supervisor to checkpoint those offsets
+    final int batch1 = publish1kRecords(topic, false);
+    waitUntilPublishedRecordsAreIngested(batch1);
+
+    // Publish batch 2 — this is the gap the backfill supervisor will cover
+    final int batch2 = publish1kRecords(topic, false);
+
+    // Reset the main supervisor and spin up a backfill supervisor for the gap
+    final Map<String, Object> result = cluster.callApi().resetSupervisorAndBackfill(supervisor.getId());
+    final String backfillSupervisorId = (String) result.get("backfillSupervisorId");
+
+    // Wait for the backfill to finish
+    waitForSupervisorToComplete(backfillSupervisorId);
+
+    // Verify all data (batch 1 + gap) was ingested
+    verifyRowCount(batch1 + batch2);
+
+    // Main supervisor should still be running
+    final SupervisorStatus mainStatus = cluster.callApi().getSupervisorStatus(supervisor.getId());
+    Assertions.assertEquals("RUNNING", mainStatus.getState());
+    Assertions.assertTrue(mainStatus.isHealthy());
+
+    final SupervisorStatus backfillStatus = cluster.callApi().getSupervisorStatus(backfillSupervisorId);
+    Assertions.assertEquals("COMPLETED", backfillStatus.getState());
+    Assertions.assertTrue(backfillStatus.isHealthy());
+  }
+
   private void waitForSupervisorToComplete(String supervisorId)
   {
     overlord.latchableEmitter().waitForEvent(

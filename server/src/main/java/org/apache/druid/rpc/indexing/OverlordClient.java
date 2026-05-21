@@ -198,6 +198,15 @@ public interface OverlordClient
   ListenableFuture<Map<String, String>> terminateSupervisor(String supervisorId);
 
   /**
+   * Resets a supervisor to the latest stream offsets and starts a bounded backfill supervisor.
+   * <p>
+   * API: {@code POST /druid/indexer/v1/supervisor/<id>/resetOffsetsAndBackfill}
+   *
+   * @return Map containing "id" and "backfillSupervisorId"
+   */
+  ListenableFuture<Map<String, Object>> resetSupervisorAndBackfill(String supervisorId);
+
+  /**
    * Returns all current supervisor statuses.
    */
   ListenableFuture<CloseableIterator<SupervisorStatus>> supervisorStatuses();

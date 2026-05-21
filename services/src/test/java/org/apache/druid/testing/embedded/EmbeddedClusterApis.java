@@ -431,6 +431,16 @@ public class EmbeddedClusterApis implements EmbeddedResource
   }
 
   /**
+   * Resets a supervisor to the latest stream offsets and starts a bounded backfill supervisor.
+   *
+   * @return Map containing "id" and "backfillSupervisorId"
+   */
+  public Map<String, Object> resetSupervisorAndBackfill(String supervisorId)
+  {
+    return onLeaderOverlord(o -> o.resetSupervisorAndBackfill(supervisorId));
+  }
+
+  /**
    * Fetches the current status of the given supervisor ID.
    */
   public SupervisorStatus getSupervisorStatus(String supervisorId)

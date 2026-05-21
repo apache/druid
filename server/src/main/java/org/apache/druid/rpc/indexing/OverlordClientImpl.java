@@ -266,6 +266,23 @@ public class OverlordClientImpl implements OverlordClient
   }
 
   @Override
+  public ListenableFuture<Map<String, Object>> resetSupervisorAndBackfill(String supervisorId)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/supervisor/%s/resetOffsetsAndBackfill",
+        StringUtils.urlEncode(supervisorId)
+    );
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
+    );
+  }
+
+  @Override
   public ListenableFuture<CloseableIterator<SupervisorStatus>> supervisorStatuses()
   {
     final String path = "/druid/indexer/v1/supervisor?system";
