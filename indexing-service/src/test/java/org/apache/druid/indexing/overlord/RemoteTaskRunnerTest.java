@@ -59,11 +59,15 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
 import org.apache.zookeeper.Watcher;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -75,7 +79,6 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.mockito.Mockito;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -1167,7 +1170,7 @@ public class RemoteTaskRunnerTest
     doSetup();
     final Capture<Request> capturedRequest = Capture.newInstance();
     final String reportString = "my report!";
-    final ByteArrayInputStream reportResponse = new ByteArrayInputStream(StringUtils.toUtf8(reportString));
+    final InputStreamFullResponseHolder reportResponse = taskReportResponse(HttpResponseStatus.OK, reportString);
     EasyMock.expect(httpClient.go(EasyMock.capture(capturedRequest), EasyMock.anyObject()))
             .andReturn(Futures.immediateFuture(reportResponse));
     EasyMock.replay(httpClient);
@@ -1199,6 +1202,43 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(Optional.absent(), remoteTaskRunner.streamTaskReports(task.getId()));
 
     // Verify the HTTP request.
+    EasyMock.verify(httpClient);
+    Assert.assertEquals(
+        "http://dummy:9000/druid/worker/v1/chat/task%20id%20with%20spaces/liveReports",
+        capturedRequest.getValue().getUrl().toString()
+    );
+  }
+
+  @Test
+  public void testStreamTaskReportsUnavailableFromWorker() throws Exception
+  {
+    doSetup();
+    final Capture<Request> capturedRequest = Capture.newInstance();
+    final InputStreamFullResponseHolder reportResponse = taskReportResponse(
+        HttpResponseStatus.SERVICE_UNAVAILABLE,
+        "{\"error\":\"Can't find chatHandler for handler[task]\"}"
+    );
+    EasyMock.expect(httpClient.go(EasyMock.capture(capturedRequest), EasyMock.anyObject()))
+            .andReturn(Futures.immediateFuture(reportResponse));
+    EasyMock.replay(httpClient);
+
+    remoteTaskRunner.run(task);
+    Assert.assertTrue(taskAnnounced(task.getId()));
+    mockWorkerRunningTask(task);
+
+    // Wait for the task to have a known location.
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            () ->
+                !remoteTaskRunner.getRunningTasks().isEmpty()
+                && !Iterables.getOnlyElement(remoteTaskRunner.getRunningTasks())
+                             .getLocation()
+                             .equals(TaskLocation.unknown())
+        )
+    );
+
+    Assert.assertEquals(Optional.absent(), remoteTaskRunner.streamTaskReports(task.getId()));
+
     EasyMock.verify(httpClient);
     Assert.assertEquals(
         "http://dummy:9000/druid/worker/v1/chat/task%20id%20with%20spaces/liveReports",
@@ -1246,5 +1286,18 @@ public class RemoteTaskRunnerTest
             TaskLockType.EXCLUSIVE
         ).getClass()
     );
+  }
+
+  private static InputStreamFullResponseHolder taskReportResponse(
+      final HttpResponseStatus status,
+      final String content
+  )
+  {
+    final InputStreamFullResponseHolder response = new InputStreamFullResponseHolder(
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, status)
+    );
+    response.addChunk(StringUtils.toUtf8(content));
+    response.done();
+    return response;
   }
 }

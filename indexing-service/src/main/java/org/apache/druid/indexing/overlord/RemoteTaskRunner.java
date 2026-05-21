@@ -701,20 +701,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         taskId
     );
 
-    try {
-      return Optional.of(httpClient.go(
-          new Request(HttpMethod.GET, url),
-          new InputStreamResponseHandler()
-      ).get());
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-    catch (ExecutionException e) {
-      // Unwrap if possible
-      Throwables.propagateIfPossible(e.getCause(), IOException.class);
-      throw new RuntimeException(e);
-    }
+    return TaskRunnerUtils.streamTaskReportsFromTaskLocation(httpClient, url);
   }
 
 

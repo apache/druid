@@ -19,12 +19,26 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.google.common.base.Optional;
+import com.google.common.io.ByteStreams;
+import com.google.common.util.concurrent.Futures;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
+import org.easymock.EasyMock;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 
 public class TaskRunnerUtilsTest
@@ -51,5 +65,85 @@ public class TaskRunnerUtilsTest
         "foo bar&"
     );
     Assert.assertEquals("https://1.2.3.4:8290/druid/worker/v1/task/foo%20bar%26/log", url.toString());
+  }
+
+  @Test
+  public void testStreamTaskReportsFromTaskLocationOk() throws Exception
+  {
+    final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
+    final String report = "my report";
+    EasyMock.expect(httpClient.go(EasyMock.anyObject(Request.class), EasyMock.anyObject(InputStreamFullResponseHandler.class)))
+            .andReturn(Futures.immediateFuture(response(HttpResponseStatus.OK, report)));
+    EasyMock.replay(httpClient);
+
+    final Optional<InputStream> stream = TaskRunnerUtils.streamTaskReportsFromTaskLocation(
+        httpClient,
+        new URL("http://example.com/liveReports")
+    );
+
+    Assert.assertTrue(stream.isPresent());
+    Assert.assertEquals(report, StringUtils.fromUtf8(ByteStreams.toByteArray(stream.get())));
+    EasyMock.verify(httpClient);
+  }
+
+  @Test
+  public void testStreamTaskReportsFromTaskLocationNotFound() throws Exception
+  {
+    assertStreamTaskReportsFromTaskLocationUnavailable(HttpResponseStatus.NOT_FOUND);
+  }
+
+  @Test
+  public void testStreamTaskReportsFromTaskLocationServiceUnavailable() throws Exception
+  {
+    assertStreamTaskReportsFromTaskLocationUnavailable(HttpResponseStatus.SERVICE_UNAVAILABLE);
+  }
+
+  @Test
+  public void testStreamTaskReportsFromTaskLocationUnexpectedStatus() throws Exception
+  {
+    final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
+    EasyMock.expect(httpClient.go(EasyMock.anyObject(Request.class), EasyMock.anyObject(InputStreamFullResponseHandler.class)))
+            .andReturn(Futures.immediateFuture(response(HttpResponseStatus.INTERNAL_SERVER_ERROR, "error")));
+    EasyMock.replay(httpClient);
+
+    final IOException e = Assert.assertThrows(
+        IOException.class,
+        () -> TaskRunnerUtils.streamTaskReportsFromTaskLocation(
+            httpClient,
+            new URL("http://example.com/liveReports")
+        )
+    );
+
+    Assert.assertTrue(e.getMessage().contains("500 Internal Server Error"));
+    EasyMock.verify(httpClient);
+  }
+
+  private static void assertStreamTaskReportsFromTaskLocationUnavailable(
+      final HttpResponseStatus status
+  ) throws Exception
+  {
+    final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
+    EasyMock.expect(httpClient.go(EasyMock.anyObject(Request.class), EasyMock.anyObject(InputStreamFullResponseHandler.class)))
+            .andReturn(Futures.immediateFuture(response(status, "error")));
+    EasyMock.replay(httpClient);
+
+    Assert.assertEquals(
+        Optional.absent(),
+        TaskRunnerUtils.streamTaskReportsFromTaskLocation(httpClient, new URL("http://example.com/liveReports"))
+    );
+    EasyMock.verify(httpClient);
+  }
+
+  private static InputStreamFullResponseHolder response(
+      final HttpResponseStatus status,
+      final String content
+  )
+  {
+    final InputStreamFullResponseHolder response = new InputStreamFullResponseHolder(
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, status)
+    );
+    response.addChunk(StringUtils.toUtf8(content));
+    response.done();
+    return response;
   }
 }
