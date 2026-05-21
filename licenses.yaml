@@ -1880,11 +1880,13 @@ name: Apache Derby
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 10.14.2.0
+version: 10.17.1.0
 libraries:
   - org.apache.derby: derby
   - org.apache.derby: derbyclient
   - org.apache.derby: derbynet
+  - org.apache.derby: derbytools
+  - org.apache.derby: derbyshared
 notice: |
   =========================================================================
   ==  NOTICE file corresponding to section 4(d) of the Apache License,
