@@ -38,6 +38,8 @@ import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -576,7 +578,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new SegmentWranglerModule(),
         new HllSketchModule(),
         binder -> binder.bind(Bouncer.class).toInstance(new Bouncer(1)),
-        binder -> binder.bind(PolicyEnforcer.class).toInstance(NoopPolicyEnforcer.instance())
+        binder -> binder.bind(PolicyEnforcer.class).toInstance(NoopPolicyEnforcer.instance()),
+        binder -> binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class).in(LazySingleton.class)
     );
     // adding node role injection to the modules, since CliPeon would also do that through run method
     injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))

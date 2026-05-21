@@ -139,6 +139,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.InputSpecSlicerFactory;
+import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.input.MapInputSpecSlicer;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
 import org.apache.druid.msq.input.external.ExternalInputSpecSlicer;
@@ -148,7 +149,6 @@ import org.apache.druid.msq.input.lookup.LookupInputSpec;
 import org.apache.druid.msq.input.lookup.LookupInputSpecSlicer;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
-import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
@@ -208,6 +208,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -423,8 +424,11 @@ public class ControllerImpl implements Controller
       closer.register(workerSketchFetcher::close);
 
       // Execution-related: run the multi-stage QueryDefinition.
-      final InputSpecSlicerFactory inputSpecSlicerFactory =
-          makeInputSpecSlicerFactory(context.newTableInputSpecSlicer(workerManager));
+      final InputSpecSlicerFactory inputSpecSlicerFactory = makeInputSpecSlicerFactory(
+          context,
+          workerManager.getWorkerIds(),
+          getQueryContext()
+      );
 
       final Pair<ControllerQueryKernel, ListenableFuture<?>> queryRunResult =
           new RunQueryUntilDone(
@@ -2149,17 +2153,30 @@ public class ControllerImpl implements Controller
     );
   }
 
-  private static InputSpecSlicerFactory makeInputSpecSlicerFactory(final InputSpecSlicer tableInputSpecSlicer)
+  private static InputSpecSlicerFactory makeInputSpecSlicerFactory(
+      final ControllerContext controllerContext,
+      final List<String> workerIds,
+      final QueryContext queryContext
+  )
   {
-    return (stagePartitionsMap, stageOutputChannelModeMap) -> new MapInputSpecSlicer(
-        ImmutableMap.<Class<? extends InputSpec>, InputSpecSlicer>builder()
-                    .put(StageInputSpec.class, new StageInputSpecSlicer(stagePartitionsMap, stageOutputChannelModeMap))
-                    .put(ExternalInputSpec.class, new ExternalInputSpecSlicer())
-                    .put(InlineInputSpec.class, new InlineInputSpecSlicer())
-                    .put(LookupInputSpec.class, new LookupInputSpecSlicer())
-                    .put(TableInputSpec.class, tableInputSpecSlicer)
-                    .build()
-    );
+    return (stagePartitionsMap, stageOutputChannelModeMap) -> {
+      Map<Class<? extends InputSpec>, InputSpecSlicer> slicers = new LinkedHashMap<>();
+
+      slicers.put(StageInputSpec.class, new StageInputSpecSlicer(stagePartitionsMap, stageOutputChannelModeMap));
+      slicers.put(ExternalInputSpec.class, new ExternalInputSpecSlicer());
+      slicers.put(InlineInputSpec.class, new InlineInputSpecSlicer());
+      slicers.put(LookupInputSpec.class, new LookupInputSpecSlicer());
+
+      // Context-supplied providers override the default ones, so they get added last.
+      for (final InputSpecSlicerProvider slicerProvider : controllerContext.inputSpecSlicerProviders()) {
+        slicers.put(
+            slicerProvider.specClass(),
+            slicerProvider.createSlicer(controllerContext, queryContext, workerIds)
+        );
+      }
+
+      return new MapInputSpecSlicer(slicers);
+    };
   }
 
   private static Map<Integer, Interval> copyOfStageRuntimesEndingAtCurrentTime(
