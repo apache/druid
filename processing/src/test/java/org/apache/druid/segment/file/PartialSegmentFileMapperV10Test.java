@@ -33,11 +33,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -48,7 +46,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
 
 class PartialSegmentFileMapperV10Test
 {
@@ -554,59 +551,4 @@ class PartialSegmentFileMapperV10Test
     );
   }
 
-  /**
-   * A {@link SegmentRangeReader} backed by a directory of files, supporting both main and external file reads.
-   */
-  static class DirectoryBackedRangeReader implements SegmentRangeReader
-  {
-    private final File directory;
-
-    DirectoryBackedRangeReader(File directory)
-    {
-      this.directory = directory;
-    }
-
-    @Override
-    public InputStream readRange(String filename, long offset, long length) throws IOException
-    {
-      File target = new File(directory, filename);
-      try (RandomAccessFile raf = new RandomAccessFile(target, "r")) {
-        final int available = (int) Math.min(length, Math.max(0, raf.length() - offset));
-        byte[] data = new byte[available];
-        raf.seek(offset);
-        raf.readFully(data);
-        return new ByteArrayInputStream(data);
-      }
-    }
-  }
-
-  /**
-   * A {@link DirectoryBackedRangeReader} that counts range reads (excluding metadata fetches).
-   */
-  static class CountingRangeReader extends DirectoryBackedRangeReader
-  {
-    private final AtomicInteger readCount = new AtomicInteger(0);
-
-    CountingRangeReader(File directory)
-    {
-      super(directory);
-    }
-
-    int getReadCount()
-    {
-      return readCount.get();
-    }
-
-    void resetCount()
-    {
-      readCount.set(0);
-    }
-
-    @Override
-    public InputStream readRange(String filename, long offset, long length) throws IOException
-    {
-      readCount.incrementAndGet();
-      return super.readRange(filename, offset, length);
-    }
-  }
 }

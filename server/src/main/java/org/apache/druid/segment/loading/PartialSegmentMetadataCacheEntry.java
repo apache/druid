@@ -1,0 +1,576 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.segment.loading;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.SettableFuture;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.ReferenceCountingCloseableObject;
+import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileMetadata;
+import org.apache.druid.segment.projections.Projections;
+import org.apache.druid.timeline.SegmentId;
+
+import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
+
+/**
+ * Cache entry for the metadata header of a V10 segment loaded via partial download. Mounting this entry range-reads
+ * the V10 header from deep storage, parses {@link SegmentFileMetadata}, and constructs a
+ * {@link PartialSegmentFileMapperV10} that can later download individual internal files on demand.
+ * <p>
+ * Reservation is sized via a configurable up-front estimate at construction time, then shrunk to the actual on-disk
+ * header size after mount via {@link StorageLocation#adjustReservation}. Mount fails fast if the actual size exceeds
+ * the estimate; the operator must increase the knob to recover.
+ * <p>
+ * Per-bundle cache entries created downstream of this one share the same {@link PartialSegmentFileMapperV10}
+ * instance via {@link #getFileMapper()}; closing the metadata entry closes the file mapper, which unmaps all
+ * containers and external file mappers.
+ * <p>
+ * <b>Reference-counted deferred cleanup.</b> {@link #unmount()} does not necessarily release resources synchronously.
+ * Callers that need the file mapper to stay alive across an intervening drop (e.g. a query reading column data
+ * through {@link PartialSegmentBundleCacheEntry}, or another component that needs the parsed
+ * {@link SegmentFileMetadata}) acquire a reference via {@link #acquireReference()}; while any references are
+ * outstanding, the actual close-file-mapper work is deferred. When the last reference releases the cleanup fires on
+ * that thread. Bundle entries hold one such reference per active mount, so the typical pattern is: mount metadata,
+ * mount bundle (which acquires a reference on metadata), use the bundle, unmount bundle (releases its reference and
+ * triggers metadata cleanup if it was the last reference and metadata's own unmount has been called). The same
+ * instance can be re-mounted after a previous cleanup completes; a fresh internal Phaser is installed on the next
+ * successful mount.
+ * <p>
+ * <b>Deferred cleanup hook.</b> Callers can attach a {@link Runnable} via {@link #setOnUnmount} that fires once after
+ * the mapper is closed in {@link #doActualUnmount}. This is the right place to schedule work that should run only when
+ * the entry is truly purged.
+ */
+public class PartialSegmentMetadataCacheEntry implements ResizableCacheEntry
+{
+  private static final EmittingLogger LOG = new EmittingLogger(PartialSegmentMetadataCacheEntry.class);
+
+  private final SegmentCacheEntryIdentifier id;
+  private final SegmentId segmentId;
+  private final File localCacheDir;
+  private final String targetFilename;
+  private final List<String> externalFilenames;
+  private final SegmentRangeReader rangeReader;
+  private final ObjectMapper jsonMapper;
+  private final long reservationEstimate;
+
+  // ReentrantLock instead of synchronized to avoid pinning virtual threads pre-JEP 491
+  private final ReentrantLock entryLock = new ReentrantLock();
+
+  // current size for accounting; starts at the estimate, shrunk to actual on-disk size after mount
+  @GuardedBy("entryLock")
+  private long currentSize;
+
+  // null until mounted
+  @GuardedBy("entryLock")
+  @Nullable
+  private StorageLocation location;
+  @GuardedBy("entryLock")
+  @Nullable
+  private PartialSegmentFileMapperV10 fileMapper;
+
+  // Optional deferred-cleanup hook invoked by doActualUnmount after the mapper is closed.
+  private final AtomicReference<Runnable> onUnmount = new AtomicReference<>();
+
+  // bundle entries that are currently mounted against this segment, registered by PartialSegmentBundleCacheEntry on
+  // successful mount and removed on unmount. Lets the drop path enumerate bundles for cascade-close without scanning
+  // the StorageLocation's entry maps.
+  private final Set<PartialSegmentBundleCacheEntry> linkedBundles = ConcurrentHashMap.newKeySet();
+
+  // Reference-counted gate over the actual cleanup work (close file mapper, delete header files). Set on
+  // successful mount; unmount() closes the wrapper which defers running cleanup until all outstanding references
+  // (acquired via acquireReference()) are released. Re-created on mount-after-cleanup-completion. Null when the entry
+  // has never been mounted.
+  private final AtomicReference<ReferenceCountingCloseableObject<Closeable>> references = new AtomicReference<>();
+
+  // CAS+SettableFuture mount-dedup gate, mirroring the bundle entry's pattern. Without this, mount()'s slow range-read
+  // would have to hold entryLock for its full duration, blocking concurrent status reads (isMounted, getSize, ...).
+  // With it: one thread wins the CAS and runs doMount; the rest wait on the same future. On failure the gate is
+  // cleared so retries get a fresh attempt; on success the gate stays set until doActualUnmount clears it.
+  private final AtomicReference<SettableFuture<Void>> mountFuture = new AtomicReference<>();
+
+  public PartialSegmentMetadataCacheEntry(
+      SegmentId segmentId,
+      File localCacheDir,
+      String targetFilename,
+      List<String> externalFilenames,
+      SegmentRangeReader rangeReader,
+      ObjectMapper jsonMapper,
+      long reservationEstimate
+  )
+  {
+    if (reservationEstimate <= 0) {
+      throw DruidException.defensive(
+          "Reservation estimate for partial metadata entry[%s] must be positive, got [%d]",
+          segmentId,
+          reservationEstimate
+      );
+    }
+    this.segmentId = segmentId;
+    this.id = new SegmentCacheEntryIdentifier(segmentId);
+    this.localCacheDir = localCacheDir;
+    this.targetFilename = targetFilename;
+    this.externalFilenames = List.copyOf(externalFilenames);
+    this.rangeReader = rangeReader;
+    this.jsonMapper = jsonMapper;
+    this.reservationEstimate = reservationEstimate;
+    this.currentSize = reservationEstimate;
+  }
+
+  @Override
+  public SegmentCacheEntryIdentifier getId()
+  {
+    return id;
+  }
+
+  public SegmentId getSegmentId()
+  {
+    return segmentId;
+  }
+
+  @Override
+  public long getSize()
+  {
+    entryLock.lock();
+    try {
+      return currentSize;
+    }
+    finally {
+      entryLock.unlock();
+    }
+  }
+
+  @Override
+  public boolean isMounted()
+  {
+    entryLock.lock();
+    try {
+      return fileMapper != null;
+    }
+    finally {
+      entryLock.unlock();
+    }
+  }
+
+  @Override
+  public void resizeReservation(long newSize)
+  {
+    // Called from StorageLocation.adjustReservation under the location's writeLock. Acquires entryLock here as a
+    // real (non-reentrant) acquisition: mount() releases entryLock BEFORE calling adjustReservation precisely so the
+    // overall path runs writeLock -> entryLock (matching StorageLocation.release -> unmount), avoiding the
+    // entryLock -> writeLock inversion that would deadlock.
+    entryLock.lock();
+    try {
+      this.currentSize = newSize;
+    }
+    finally {
+      entryLock.unlock();
+    }
+  }
+
+  @Override
+  public void mount(StorageLocation mountLocation) throws IOException
+  {
+    while (true) {
+      final SettableFuture<Void> existing = mountFuture.get();
+      if (existing != null) {
+        awaitMount(existing);
+        // The completed mount may have been for a different location. Verify the requested location matches.
+        entryLock.lock();
+        try {
+          if (location != null && !location.equals(mountLocation)) {
+            throw DruidException.defensive(
+                "Already mounted[%s] in location[%s] which differs from requested[%s]",
+                id,
+                location.getPath(),
+                mountLocation.getPath()
+            );
+          }
+        }
+        finally {
+          entryLock.unlock();
+        }
+        verifyStillReservedOrRollback(mountLocation);
+        return;
+      }
+      final SettableFuture<Void> ours = SettableFuture.create();
+      if (!mountFuture.compareAndSet(null, ours)) {
+        continue;
+      }
+      try {
+        doMount(mountLocation);
+        ours.set(null);
+      }
+      catch (Throwable t) {
+        // clear the future so the next caller gets a fresh attempt
+        mountFuture.set(null);
+        ours.setException(t);
+        if (t instanceof IOException) {
+          throw (IOException) t;
+        }
+        if (t instanceof RuntimeException) {
+          throw (RuntimeException) t;
+        }
+        if (t instanceof Error) {
+          throw (Error) t;
+        }
+        throw DruidException.defensive(t, "Failed to mount metadata entry[%s]", id);
+      }
+      verifyStillReservedOrRollback(mountLocation);
+      return;
+    }
+  }
+
+  /**
+   * Post-mount safety check: confirm the entry is still registered with the location, otherwise roll back. Handles
+   * the race where the entry's reservation gets evicted (e.g. SIEVE picks a weak entry whose lone hold was released
+   * by a concurrent canceler, or {@link StorageLocation#release} fires on the static entry from a coordinator drop)
+   * while mount() is still in progress. Without this check, mount would commit local state for an entry the cache
+   * manager no longer knows about, leaking files on disk and memory mappings. Mirrors the same defensive check in
+   * {@code SegmentCacheEntry.mount}. Returns normally if rollback fires; callers detect via {@link #isMounted}.
+   */
+  private void verifyStillReservedOrRollback(StorageLocation mountLocation)
+  {
+    if (!mountLocation.isReserved(id) && !mountLocation.isWeakReserved(id)) {
+      LOG.debug(
+          "Aborting mount of metadata entry[%s] in location[%s]; entry was evicted while mounting",
+          id,
+          mountLocation.getPath()
+      );
+      unmount();
+    }
+  }
+
+  private void doMount(StorageLocation mountLocation) throws IOException
+  {
+    // The CAS+SettableFuture gate in mount() guarantees only one thread runs this method at a time per entry, so
+    // entryLock is only held briefly for state mutations. The slow PartialSegmentFileMapperV10.create() call (which
+    // may issue a deep-storage range read on first mount) runs outside entryLock so concurrent status reads are not
+    // blocked on it. adjustReservation also runs outside entryLock: StorageLocation.release goes
+    // writeLock -> entryLock (via release -> unmount), so entryLock -> writeLock here would be a deadlock-prone
+    // lock-order inversion.
+    entryLock.lock();
+    try {
+      if (location != null && fileMapper != null) {
+        if (!location.equals(mountLocation)) {
+          throw DruidException.defensive(
+              "Already mounted[%s] in location[%s] which differs from requested[%s]",
+              id,
+              location.getPath(),
+              mountLocation.getPath()
+          );
+        }
+        return;
+      }
+    }
+    finally {
+      entryLock.unlock();
+    }
+
+    final PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
+        rangeReader,
+        jsonMapper,
+        localCacheDir,
+        targetFilename,
+        externalFilenames
+    );
+
+    final long sizeToAdjust;
+    try {
+      final long actualSize = mapper.getOnDiskHeaderSize();
+      if (actualSize > reservationEstimate) {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                            .build(
+                                "Partial segment metadata for [%s] is [%d] bytes on disk, exceeding the "
+                                + "configured reservation estimate of [%d] bytes. Increase "
+                                + "druid.segmentCache.virtualStorage.metadataReservationEstimate.",
+                                segmentId,
+                                actualSize,
+                                reservationEstimate
+                            );
+      }
+      sizeToAdjust = actualSize < reservationEstimate ? actualSize : -1;
+
+      entryLock.lock();
+      try {
+        location = mountLocation;
+        fileMapper = mapper;
+        // Install (or re-install, after a previous mount/unmount cycle terminated the prior Phaser) the
+        // reference-counted gate over cleanup. Future acquireReference() / unmount() calls operate on this instance.
+        references.set(new ReferenceCountingCloseableObject<Closeable>(this::doActualUnmount) {});
+      }
+      finally {
+        entryLock.unlock();
+      }
+    }
+    catch (Throwable t) {
+      // mount failed; close mmaps and delete the on-disk header files so a retry starts clean. Mirrors the eager
+      // SegmentCacheEntry behavior: simpler to redo a small header range-read than to reason about whatever partial
+      // on-disk state the failure left. Crash-mid-mount across JVM restarts is still handled by the mapper's own
+      // corruption recovery when bootstrap runs at next startup; this path covers the in-process retry case.
+      try {
+        mapper.close();
+      }
+      catch (Throwable closeError) {
+        t.addSuppressed(closeError);
+      }
+      try {
+        deleteHeaderFiles();
+      }
+      catch (Throwable deleteError) {
+        t.addSuppressed(deleteError);
+      }
+      throw t;
+    }
+
+    // Only shrink the reservation if the entry is still registered with the location. If we lost the reservation
+    // mid-mount (concurrent canceler / drop), adjustReservation would throw; defer to the post-mount check in
+    // mount() to roll back cleanly instead.
+    if (sizeToAdjust >= 0 && (mountLocation.isReserved(id) || mountLocation.isWeakReserved(id))) {
+      mountLocation.adjustReservation(id, sizeToAdjust);
+    }
+  }
+
+  private static void awaitMount(SettableFuture<Void> future) throws IOException
+  {
+    try {
+      future.get();
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Interrupted while waiting for mount", e);
+    }
+    catch (ExecutionException e) {
+      final Throwable cause = e.getCause() == null ? e : e.getCause();
+      switch (cause) {
+        case IOException ioException -> throw ioException;
+        case RuntimeException runtimeException -> throw runtimeException;
+        case Error error -> throw error;
+        default -> throw DruidException.defensive(e, "mount failed");
+      }
+    }
+  }
+
+  /**
+   * Triggers cleanup of this entry. If any references acquired via {@link #acquireReference()} are still outstanding,
+   * the actual unmap-and-delete work is deferred until the last reference releases; in that case this method returns
+   * immediately and {@link #doActualUnmount} will fire later on the thread that closes the last reference. With no
+   * outstanding references, cleanup runs synchronously on the caller's thread.
+   */
+  @Override
+  public void unmount()
+  {
+    final ReferenceCountingCloseableObject<Closeable> current = references.get();
+    if (current != null && !current.isClosed()) {
+      current.close();
+    }
+  }
+
+  /**
+   * Acquire a reference that keeps this entry's resources (the file mapper, on-disk header files) alive across an
+   * intervening {@link #unmount} call. The returned {@link Closeable} must be closed when the caller is done; at
+   * that point if {@code unmount()} has already been called and no other references remain, the deferred cleanup
+   * fires on the closing thread.
+   *
+   * @throws DruidException if the entry has never been mounted, or has already been cleaned up
+   */
+  public Closeable acquireReference()
+  {
+    final ReferenceCountingCloseableObject<Closeable> current = references.get();
+    if (current == null) {
+      throw DruidException.defensive(
+          "Cannot acquire reference on partial segment metadata entry[%s] before it has been mounted",
+          id
+      );
+    }
+    return current.incrementReferenceAndDecrementOnceCloseable()
+                  .orElseThrow(() -> DruidException.defensive(
+                      "Cannot acquire reference on partial segment metadata entry[%s]; already being unmounted",
+                      id
+                  ));
+  }
+
+  /**
+   * The actual unmount work, invoked by the reference-counted gate's {@code onAdvance} once every outstanding
+   * reference (plus the wrapper's own initial party) has been released. Closes the file mapper, deletes the on-disk
+   * header files (the entry owns its storage-location footprint), and runs the optional {@link #setOnUnmount
+   * onUnmount} hook.
+   */
+  private void doActualUnmount()
+  {
+    final Runnable hook;
+    entryLock.lock();
+    try {
+      if (fileMapper == null) {
+        return;
+      }
+      try {
+        fileMapper.close();
+      }
+      catch (Throwable t) {
+        LOG.warn(t, "Failed to close partial segment file mapper for [%s]", segmentId);
+      }
+      fileMapper = null;
+      location = null;
+      // Clear the mount-dedup gate so a subsequent mount() on this same instance starts a fresh attempt.
+      mountFuture.set(null);
+      deleteHeaderFiles();
+      hook = onUnmount.getAndSet(null);
+    }
+    finally {
+      entryLock.unlock();
+    }
+    // Run the hook outside entryLock so it can touch the file system / cache manager without contending with
+    // concurrent status reads, and so a slow or buggy hook can't deadlock against acquireReference paths.
+    if (hook != null) {
+      try {
+        hook.run();
+      }
+      catch (Throwable t) {
+        LOG.warn(t, "onUnmount hook failed for partial segment metadata entry[%s]", segmentId);
+      }
+    }
+  }
+
+  /**
+   * Returns the file mapper held by this entry while mounted, or null if the entry has not been mounted.
+   */
+  @Nullable
+  public PartialSegmentFileMapperV10 getFileMapper()
+  {
+    entryLock.lock();
+    try {
+      return fileMapper;
+    }
+    finally {
+      entryLock.unlock();
+    }
+  }
+
+  /**
+   * Returns the parsed segment file metadata while mounted, or null if not yet mounted.
+   */
+  @Nullable
+  public SegmentFileMetadata getSegmentFileMetadata()
+  {
+    final PartialSegmentFileMapperV10 mapper = getFileMapper();
+    return mapper == null ? null : mapper.getSegmentFileMetadata();
+  }
+
+  /**
+   * Structural inference of the parent bundles that the given {@code bundleName} depends on within this segment.
+   * Single source of truth for both bootstrap (which post-filters by what's actually restorable on disk) and the
+   * query-time acquire path (which uses the result directly to seed
+   * {@link PartialSegmentBundleCacheEntry#forBundle}'s {@code parentEntryIds}).
+   * <p>
+   * Today's rule is structural and trivial: any non-base bundle depends on the base bundle. The base bundle and the
+   * {@link SegmentFileBuilder#ROOT_BUNDLE_NAME root bundle} have no parents, the root bundle owns everything written
+   * without an explicit {@code startFileBundle} call (older fileGroup-less segments, or shared internal metadata) and
+   * is structurally a peer of the base. If future writers introduce richer dependency graphs, the rule will need to
+   * grow, likely by reading dependency metadata that the writer records explicitly rather than by inference here.
+   */
+  public List<PartialSegmentBundleCacheEntryIdentifier> inferParentBundles(String bundleName)
+  {
+    if (Projections.BASE_TABLE_PROJECTION_NAME.equals(bundleName)
+        || SegmentFileBuilder.ROOT_BUNDLE_NAME.equals(bundleName)) {
+      return List.of();
+    }
+    return List.of(
+        new PartialSegmentBundleCacheEntryIdentifier(
+            segmentId,
+            Projections.BASE_TABLE_PROJECTION_NAME
+        )
+    );
+  }
+
+  /**
+   * Register a bundle entry as a current dependent of this metadata entry. Called by
+   * {@link PartialSegmentBundleCacheEntry} after a successful mount; the drop path uses {@link #snapshotLinkedBundles}
+   * to enumerate dependents for cascade-close.
+   */
+  void registerBundle(PartialSegmentBundleCacheEntry bundle)
+  {
+    linkedBundles.add(bundle);
+  }
+
+  /**
+   * Reverse of {@link #registerBundle}. Called by {@link PartialSegmentBundleCacheEntry#unmount} so the metadata's
+   * view stays consistent with which bundles are actually mounted.
+   */
+  void unregisterBundle(PartialSegmentBundleCacheEntry bundle)
+  {
+    linkedBundles.remove(bundle);
+  }
+
+  /**
+   * Snapshot of bundle entries currently mounted against this segment. Returned as a defensive copy; callers can
+   * iterate freely without risk of concurrent-modification surprises while bundles concurrently mount/unmount. Used
+   * by the drop path to cascade-close bundles before releasing the metadata entry.
+   */
+  public Collection<PartialSegmentBundleCacheEntry> snapshotLinkedBundles()
+  {
+    return new ArrayList<>(linkedBundles);
+  }
+
+  /**
+   * Attach a deferred-cleanup hook to run when this entry is finally purged. {@link #doActualUnmount} invokes the
+   * hook after closing the file mapper and deleting the entry's storage-location files, outside the entry lock.
+   * Replaces any previously-set hook. Pass {@code null} to clear.
+   */
+  public void setOnUnmount(@Nullable Runnable hook)
+  {
+    onUnmount.set(hook);
+  }
+
+  /**
+   * Delete the on-disk header files this entry owns (main + any externals). Called from both
+   * {@link #doActualUnmount} on successful purge and the mount-failure cleanup path; safe to invoke independently of
+   * mount state.
+   */
+  private void deleteHeaderFiles()
+  {
+    deleteIfExists(new File(localCacheDir, targetFilename + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX));
+    for (String filename : externalFilenames) {
+      deleteIfExists(new File(localCacheDir, filename + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX));
+    }
+  }
+
+  private void deleteIfExists(File file)
+  {
+    if (file.exists() && !file.delete()) {
+      LOG.warn("Failed to delete header file[%s] during unmount of partial segment[%s]", file, segmentId);
+    }
+  }
+}

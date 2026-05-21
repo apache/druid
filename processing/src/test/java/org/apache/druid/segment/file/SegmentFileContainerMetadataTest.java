@@ -36,33 +36,48 @@ class SegmentFileContainerMetadataTest
   }
 
   @Test
-  void testSerdeWithFileGroup() throws Exception
+  void testSerdeWithNamedBundle() throws Exception
   {
     final SegmentFileContainerMetadata metadata = new SegmentFileContainerMetadata(100, 4096, "projA");
     final String json = JSON_MAPPER.writeValueAsString(metadata);
-    Assertions.assertTrue(json.contains("\"fileGroup\":\"projA\""), "fileGroup must be present in serialized JSON: " + json);
+    Assertions.assertTrue(json.contains("\"bundle\":\"projA\""), "bundle must be present in serialized JSON: " + json);
     Assertions.assertEquals(metadata, JSON_MAPPER.readValue(json, SegmentFileContainerMetadata.class));
   }
 
   @Test
-  void testSerdeWithNullFileGroupOmitsField() throws Exception
+  void testNullBundleNormalizesToRootAndOmitsFromJson() throws Exception
   {
-    // Old-format segments don't have fileGroup; serializing null must omit the property so older readers (and
-    // future versions reading old segments) round-trip unchanged.
+    // Null in the constructor is the writer-side equivalent of "no explicit startFileBundle call"; the field
+    // normalizes to ROOT_BUNDLE_NAME, and the default value is omitted from JSON so segments without explicit
+    // bundles stay compact on disk.
     final SegmentFileContainerMetadata metadata = new SegmentFileContainerMetadata(0, 1024, null);
+    Assertions.assertEquals(SegmentFileBuilder.ROOT_BUNDLE_NAME, metadata.getBundle());
     final String json = JSON_MAPPER.writeValueAsString(metadata);
-    Assertions.assertFalse(json.contains("fileGroup"), "null fileGroup must be omitted from JSON, got: " + json);
+    Assertions.assertFalse(json.contains("bundle"), "default bundle must be omitted from JSON, got: " + json);
     Assertions.assertEquals(metadata, JSON_MAPPER.readValue(json, SegmentFileContainerMetadata.class));
   }
 
   @Test
-  void testDeserializeLegacyJsonWithoutFileGroup() throws Exception
+  void testExplicitRootBundleAlsoOmitsFromJson() throws Exception
   {
-    // Bytes produced by a writer pre-dating the fileGroup field must deserialize cleanly with fileGroup == null.
-    final String legacyJson = "{\"startOffset\":42,\"size\":8192}";
-    final SegmentFileContainerMetadata metadata = JSON_MAPPER.readValue(legacyJson, SegmentFileContainerMetadata.class);
+    // Passing ROOT_BUNDLE_NAME explicitly is equivalent to passing null; both normalize to the default and both
+    // omit the field from JSON.
+    final SegmentFileContainerMetadata metadata =
+        new SegmentFileContainerMetadata(0, 1024, SegmentFileBuilder.ROOT_BUNDLE_NAME);
+    final String json = JSON_MAPPER.writeValueAsString(metadata);
+    Assertions.assertFalse(json.contains("bundle"), "explicit root bundle must be omitted from JSON, got: " + json);
+    Assertions.assertEquals(metadata, JSON_MAPPER.readValue(json, SegmentFileContainerMetadata.class));
+  }
+
+  @Test
+  void testDeserializeJsonWithoutBundleFieldDefaultsToRoot() throws Exception
+  {
+    // Bytes produced by a writer that didn't include a bundle field (old segments, or new segments without
+    // explicit startFileBundle) must deserialize to the ROOT_BUNDLE_NAME default.
+    final String json = "{\"startOffset\":42,\"size\":8192}";
+    final SegmentFileContainerMetadata metadata = JSON_MAPPER.readValue(json, SegmentFileContainerMetadata.class);
     Assertions.assertEquals(42, metadata.getStartOffset());
     Assertions.assertEquals(8192, metadata.getSize());
-    Assertions.assertNull(metadata.getFileGroup());
+    Assertions.assertEquals(SegmentFileBuilder.ROOT_BUNDLE_NAME, metadata.getBundle());
   }
 }

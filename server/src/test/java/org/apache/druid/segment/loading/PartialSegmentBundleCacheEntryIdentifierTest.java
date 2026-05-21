@@ -19,16 +19,30 @@
 
 package org.apache.druid.segment.loading;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.SegmentId;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-/**
- * Use a {@link SegmentId} as a {@link CacheEntryIdentifier}.
- */
-public record SegmentCacheEntryIdentifier(SegmentId segmentId) implements CacheEntryIdentifier
+class PartialSegmentBundleCacheEntryIdentifierTest
 {
-  @Override
-  public String toString()
+  @Test
+  void testEqualsAndHashCode()
   {
-    return segmentId.toString();
+    EqualsVerifier.forClass(PartialSegmentBundleCacheEntryIdentifier.class).usingGetClass().verify();
+  }
+
+  @Test
+  void testNotEqualToSegmentCacheEntryIdentifierWithSameSegmentId()
+  {
+    final SegmentId segmentId = SegmentId.of("ds", Intervals.of("2025/2026"), "v1", 0);
+    final PartialSegmentBundleCacheEntryIdentifier bundle = new PartialSegmentBundleCacheEntryIdentifier(
+        segmentId,
+        "__base"
+    );
+    final SegmentCacheEntryIdentifier segment = new SegmentCacheEntryIdentifier(segmentId);
+    Assertions.assertNotEquals(bundle, segment);
+    Assertions.assertNotEquals(segment, bundle);
   }
 }

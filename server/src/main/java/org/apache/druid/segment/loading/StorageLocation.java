@@ -424,6 +424,71 @@ public class StorageLocation
   }
 
   /**
+   * Adjusts the reservation size of an already-registered {@link ResizableCacheEntry} downward. Used when an entry's
+   * final size is not known at registration time (e.g. a partial-segment metadata entry that reserves a pessimistic
+   * estimate and shrinks to the actual on-disk header size once the header has been downloaded). Returns reclaimed
+   * capacity to the location's available budget; never triggers eviction.
+   * <p>
+   * Throws if {@code newSize} is greater than the entry's current size: grow semantics require checking the location's
+   * available budget and possibly evicting other entries, and aren't needed by the current callers.
+   */
+  public void adjustReservation(CacheEntryIdentifier id, long newSize)
+  {
+    lock.writeLock().lock();
+    try {
+      final CacheEntry entry;
+      final boolean isStatic;
+      if (staticCacheEntries.containsKey(id)) {
+        entry = staticCacheEntries.get(id);
+        isStatic = true;
+      } else {
+        final WeakCacheEntry weak = weakCacheEntries.get(id);
+        if (weak == null) {
+          throw DruidException.defensive(
+              "Cannot adjust reservation for unknown cache entry[%s]",
+              id
+          );
+        }
+        entry = weak.cacheEntry;
+        isStatic = false;
+      }
+
+      if (!(entry instanceof ResizableCacheEntry)) {
+        throw DruidException.defensive(
+            "Cache entry[%s] of type[%s] does not support reservation adjustment",
+            id,
+            entry.getClass().getSimpleName()
+        );
+      }
+
+      final long oldSize = entry.getSize();
+      final long delta = oldSize - newSize;
+      if (delta < 0) {
+        throw DruidException.defensive(
+            "Cannot grow reservation for cache entry[%s] from [%d] to [%d] bytes; only shrink is supported",
+            id,
+            oldSize,
+            newSize
+        );
+      }
+      if (delta == 0) {
+        return;
+      }
+
+      ((ResizableCacheEntry) entry).resizeReservation(newSize);
+      currSizeBytes.getAndAdd(-delta);
+      if (isStatic) {
+        currStaticSizeBytes.getAndAdd(-delta);
+      } else {
+        currWeakSizeBytes.getAndAdd(-delta);
+      }
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
    * Removes an item from {@link #staticCacheEntries}, reducing {@link #currSizeBytes} by {@link CacheEntry#getSize()}.
    * If the cache entry exists in {@link #weakCacheEntries}, it is left in place to be removed by
    * {@link #reclaim(long)} instead.
