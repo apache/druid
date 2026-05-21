@@ -19,8 +19,15 @@
 
 package org.apache.druid.indexing.seekablestream.common;
 
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 public class AcknowledgeTypeTest
 {
@@ -41,5 +48,70 @@ public class AcknowledgeTypeTest
     for (AcknowledgeType type : AcknowledgeType.values()) {
       Assert.assertSame(type, AcknowledgeType.valueOf(type.name()));
     }
+  }
+
+  @Test
+  public void testAcknowledgingRecordSupplierDefaultMethods()
+  {
+    final AcknowledgingRecordSupplier<String, Long, ByteEntity> stub =
+        new AcknowledgingRecordSupplier<String, Long, ByteEntity>()
+        {
+          @Override
+          public void subscribe(Set<String> topics)
+          {
+          }
+
+          @Override
+          public void unsubscribe()
+          {
+          }
+
+          @Override
+          public Set<String> subscription()
+          {
+            return Set.of();
+          }
+
+          @Override
+          public List<OrderedPartitionableRecord<String, Long, ByteEntity>> poll(long timeoutMs)
+          {
+            return List.of();
+          }
+
+          @Override
+          public void acknowledge(String partitionId, Long offset)
+          {
+          }
+
+          @Override
+          public void acknowledge(String partitionId, Long offset, AcknowledgeType type)
+          {
+          }
+
+          @Override
+          public void acknowledge(Map<String, Collection<Long>> offsets, AcknowledgeType type)
+          {
+          }
+
+          @Override
+          public Map<String, Optional<Exception>> commitSync()
+          {
+            return Map.of();
+          }
+
+          @Override
+          public Set<String> getPartitionIds(String stream)
+          {
+            return Set.of();
+          }
+
+          @Override
+          public void close()
+          {
+          }
+        };
+
+    stub.wakeup();
+    Assert.assertFalse(stub.acquisitionLockTimeoutMs().isPresent());
   }
 }

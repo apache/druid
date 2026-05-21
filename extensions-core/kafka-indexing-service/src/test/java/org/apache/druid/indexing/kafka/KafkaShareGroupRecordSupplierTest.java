@@ -356,4 +356,25 @@ public class KafkaShareGroupRecordSupplierTest
     Mockito.when(mockConsumer.acquisitionLockTimeoutMs()).thenReturn(Optional.empty());
     Assert.assertTrue(supplier.acquisitionLockTimeoutMs().isEmpty());
   }
+
+  @Test
+  public void testAcknowledgeWithRenewType()
+  {
+    final String testTopic = "test-topic";
+    final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
+        testTopic,
+        0,
+        200L,
+        "key".getBytes(StandardCharsets.UTF_8),
+        "value".getBytes(StandardCharsets.UTF_8)
+    );
+    final Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> recordMap = new HashMap<>();
+    recordMap.put(new TopicPartition(testTopic, 0), List.of(record));
+    when(mockConsumer.poll(any(Duration.class))).thenReturn(new ConsumerRecords<>(recordMap));
+
+    supplier.poll(1000L);
+    supplier.acknowledge(new KafkaTopicPartition(true, testTopic, 0), 200L, AcknowledgeType.RENEW);
+
+    verify(mockConsumer).acknowledge(record, org.apache.kafka.clients.consumer.AcknowledgeType.RENEW);
+  }
 }
