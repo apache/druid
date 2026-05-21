@@ -77,7 +77,6 @@ import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.MetadataTaskStorage;
-import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
@@ -387,11 +386,6 @@ public class CliOverlord extends ServerRunnable
                 IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
                 biddy.addBinding("local").to(ForkingTaskRunnerFactory.class);
                 binder.bind(ForkingTaskRunnerFactory.class).in(LazySingleton.class);
-
-                biddy.addBinding(RemoteTaskRunnerFactory.TYPE_NAME)
-                     .to(RemoteTaskRunnerFactory.class)
-                     .in(LazySingleton.class);
-                binder.bind(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
 
                 biddy.addBinding(HttpRemoteTaskRunnerFactory.TYPE_NAME)
                      .to(HttpRemoteTaskRunnerFactory.class)

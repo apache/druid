@@ -27,7 +27,6 @@ import org.apache.druid.curator.CuratorConfig;
 import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.curator.announcement.PathChildrenAnnouncer;
 import org.apache.druid.curator.announcement.ServiceAnnouncer;
-import org.apache.druid.guice.annotations.DirectExecutorAnnouncer;
 import org.apache.druid.guice.annotations.SingleThreadedAnnouncer;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
@@ -57,16 +56,4 @@ public class AnnouncerModule implements Module
     }
   }
 
-  @Provides
-  @DirectExecutorAnnouncer
-  @ManageLifecycleAnnouncements
-  public ServiceAnnouncer getAnnouncerWithDirectExecutorService(CuratorFramework curator, CuratorConfig config)
-  {
-    boolean usingPathChildrenCacheAnnouncer = config.getPathChildrenCacheStrategy();
-    if (usingPathChildrenCacheAnnouncer) {
-      return new PathChildrenAnnouncer(curator, Execs.directExecutor());
-    } else {
-      return new NodeAnnouncer(curator, Execs.directExecutor());
-    }
-  }
 }

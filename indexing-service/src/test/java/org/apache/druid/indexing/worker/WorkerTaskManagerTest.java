@@ -192,18 +192,7 @@ public class WorkerTaskManagerTest
         taskConfig,
         workerConfig,
         overlordClient
-    )
-    {
-      @Override
-      protected void taskStarted(String taskId)
-      {
-      }
-
-      @Override
-      protected void taskAnnouncementChanged(TaskAnnouncement announcement)
-      {
-      }
-    };
+    );
   }
 
   @Before

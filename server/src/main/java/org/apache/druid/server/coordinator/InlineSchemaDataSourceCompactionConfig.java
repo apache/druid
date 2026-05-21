@@ -49,8 +49,8 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
   }
 
   /**
-   * The number of input segments is limited because the byte size of a serialized task spec is limited by
-   * org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig.maxZnodeBytes.
+   * The number of input segments is limited because the byte size of a serialized task spec is bounded by the
+   * maximum payload size accepted by the task runner.
    */
   @Nullable
   private final Integer maxRowsPerSegment;

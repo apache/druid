@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.common.guava.DSuppliers;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -61,8 +60,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
-import org.apache.druid.server.initialization.IndexerZkConfig;
-import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
@@ -285,8 +282,6 @@ public class HttpRemoteTaskRunnerTest
         provisioningStrategy,
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     )
     {
@@ -354,8 +349,6 @@ public class HttpRemoteTaskRunnerTest
         new NoopProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     )
     {
@@ -459,8 +452,6 @@ public class HttpRemoteTaskRunnerTest
         new NoopProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         taskStorageMock,
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     )
     {
@@ -602,8 +593,6 @@ public class HttpRemoteTaskRunnerTest
         new NoopProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     )
     {
@@ -778,8 +767,6 @@ public class HttpRemoteTaskRunnerTest
         new NoopProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     )
     {
@@ -976,8 +963,6 @@ public class HttpRemoteTaskRunnerTest
         new NoopProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     )
     {
@@ -1477,8 +1462,6 @@ public class HttpRemoteTaskRunnerTest
         new NoopProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     )
     {
@@ -1590,8 +1573,6 @@ public class HttpRemoteTaskRunnerTest
         new NoopProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     )
     {
@@ -1751,8 +1732,6 @@ public class HttpRemoteTaskRunnerTest
         new NoopProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         EasyMock.createMock(TaskStorage.class),
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     )
     {
@@ -1797,8 +1776,6 @@ public class HttpRemoteTaskRunnerTest
         new TestProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         EasyMock.createMock(TaskStorage.class),
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     );
     Assert.assertEquals(-1, taskRunner.getMaximumCapacityWithAutoscale());
@@ -1821,8 +1798,6 @@ public class HttpRemoteTaskRunnerTest
         new TestProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         EasyMock.createMock(TaskStorage.class),
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     );
     Assert.assertEquals(-1, taskRunner.getMaximumCapacityWithAutoscale());
@@ -1845,8 +1820,6 @@ public class HttpRemoteTaskRunnerTest
         new TestProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         EasyMock.createMock(TaskStorage.class),
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     );
     // Default autoscaler has max workers of 0
@@ -1879,8 +1852,6 @@ public class HttpRemoteTaskRunnerTest
         new NoopProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         taskStorage,
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     );
 
@@ -2187,8 +2158,6 @@ public class HttpRemoteTaskRunnerTest
         provisioningStrategy,
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     )
     {
