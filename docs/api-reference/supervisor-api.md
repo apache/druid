@@ -3547,7 +3547,7 @@ This endpoint is useful when a supervisor has fallen behind and you want to catc
 
 The following requirements must be met before calling this endpoint:
 
-- The supervisor must be a `SeekableStreamSupervisor`.
+- The supervisor must be a [streaming supervisor](../ingestion/supervisor.md).
 - The supervisor's `useEarliestSequenceNumber` property must be `false`.
 - The supervisor context must have `useConcurrentLocks` set to `true` to allow the backfill supervisor's tasks to write concurrently with the main supervisor's tasks.
 - The supervisor must be in a `RUNNING` state so that it can query the latest offsets from the stream.
