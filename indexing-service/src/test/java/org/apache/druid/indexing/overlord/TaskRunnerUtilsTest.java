@@ -39,6 +39,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.net.URL;
 
 public class TaskRunnerUtilsTest
@@ -78,7 +79,7 @@ public class TaskRunnerUtilsTest
 
     final Optional<InputStream> stream = TaskRunnerUtils.streamTaskReportsFromTaskLocation(
         httpClient,
-        new URL("http://example.com/liveReports")
+        url("http://example.com/liveReports")
     );
 
     Assert.assertTrue(stream.isPresent());
@@ -110,7 +111,7 @@ public class TaskRunnerUtilsTest
         IOException.class,
         () -> TaskRunnerUtils.streamTaskReportsFromTaskLocation(
             httpClient,
-            new URL("http://example.com/liveReports")
+            url("http://example.com/liveReports")
         )
     );
 
@@ -129,9 +130,14 @@ public class TaskRunnerUtilsTest
 
     Assert.assertEquals(
         Optional.absent(),
-        TaskRunnerUtils.streamTaskReportsFromTaskLocation(httpClient, new URL("http://example.com/liveReports"))
+        TaskRunnerUtils.streamTaskReportsFromTaskLocation(httpClient, url("http://example.com/liveReports"))
     );
     EasyMock.verify(httpClient);
+  }
+
+  private static URL url(final String value) throws IOException
+  {
+    return URI.create(value).toURL();
   }
 
   private static InputStreamFullResponseHolder response(
