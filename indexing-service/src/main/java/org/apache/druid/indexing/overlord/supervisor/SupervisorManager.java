@@ -394,27 +394,10 @@ public class SupervisorManager implements SupervisorStatsProvider
     Preconditions.checkNotNull(id, "id");
 
     Pair<Supervisor, SupervisorSpec> supervisorPair = supervisors.get(id);
-    if (!(supervisorPair.lhs instanceof SeekableStreamSupervisor)) {
-      throw new IAE("Supervisor[%s] is not a SeekableStreamSupervisor", id);
-    }
+    validateResetAndBackfill(id, supervisorPair);
+
     SeekableStreamSupervisor streamSupervisor = (SeekableStreamSupervisor) supervisorPair.lhs;
     SeekableStreamSupervisorSpec streamSpec = (SeekableStreamSupervisorSpec) supervisorPair.rhs;
-
-    // Verify useEarliestOffset is false
-    if (streamSupervisor.getIoConfig().isUseEarliestSequenceNumber()) {
-      throw new IAE("Reset with skipped offsets is not supported when useEarliestOffset is true.");
-    }
-
-    if (!specHasConcurrentLocks(streamSpec)) {
-      throw new IAE(
-          "Backfill tasks require 'useConcurrentLocks' to be set to true in the supervisor context to allow concurrent writes with the main supervisor tasks"
-      );
-    }
-
-    // We need an active recordSupplier to query the latest offsets from the stream
-    if (supervisorPair.lhs.getState() != SupervisorStateManager.BasicState.RUNNING) {
-      throw new IAE("Supervisor[%s] must be in a RUNNING state to perform a reset and backfill", id);
-    }
 
     log.info("Capturing latest offsets from stream for supervisor[%s]", id);
     streamSupervisor.updatePartitionLagFromStream();
@@ -423,7 +406,6 @@ public class SupervisorManager implements SupervisorStatsProvider
     log.info("Capturing checkpointed offsets for supervisor[%s]", id);
     Map<?, ?> startOffsets = streamSupervisor.getOffsetsFromMetadataStorage();
 
-    // Validate that we successfully retrieved offsets
     if (endOffsets == null || endOffsets.isEmpty()) {
       throw new ISE("Skipping reset: Failed to get latest offsets from stream for supervisor[%s]", id);
     }
@@ -464,6 +446,29 @@ public class SupervisorManager implements SupervisorStatsProvider
         "id", id,
         "backfillSupervisorId", backfillSupervisorId
     );
+  }
+
+  private void validateResetAndBackfill(String id, Pair<Supervisor, SupervisorSpec> supervisorPair)
+  {
+    if (!(supervisorPair.lhs instanceof SeekableStreamSupervisor)) {
+      throw new IAE("Supervisor[%s] is not a streaming supervisor", id);
+    }
+    SeekableStreamSupervisor streamSupervisor = (SeekableStreamSupervisor) supervisorPair.lhs;
+    SeekableStreamSupervisorSpec streamSpec = (SeekableStreamSupervisorSpec) supervisorPair.rhs;
+
+    if (streamSupervisor.getIoConfig().isUseEarliestSequenceNumber()) {
+      throw new IAE("Reset with skipped offsets is not supported when useEarliestOffset is true.");
+    }
+
+    if (!specHasConcurrentLocks(streamSpec)) {
+      throw new IAE(
+          "Backfill tasks require 'useConcurrentLocks' to be set to true in the supervisor context to allow concurrent writes with the main supervisor tasks"
+      );
+    }
+
+    if (supervisorPair.lhs.getState() != SupervisorStateManager.BasicState.RUNNING) {
+      throw new IAE("Supervisor[%s] must be in a RUNNING state to perform a reset and backfill", id);
+    }
   }
 
   SupervisorSpec createBackfillSpec(
