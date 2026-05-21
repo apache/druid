@@ -22,6 +22,7 @@ package org.apache.druid.segment.file;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -108,11 +109,16 @@ public class SegmentFileContainerMetadata
   /**
    * Jackson {@code valueFilter} that omits the {@code bundle} field from JSON when it carries the
    * {@link SegmentFileBuilder#ROOT_BUNDLE_NAME} default. Jackson invokes {@code equals(value)} against the filter
-   * instance: returning {@code true} means "value equals default, omit it."
+   * instance with the property value (a {@link String} here, not another filter): returning {@code true} means
+   * "value equals default, omit it." The asymmetric equals contract is intentional and required by Jackson's filter
+   * API, so the standard same-class check would defeat the mechanism.
    */
   static final class DefaultBundleFilter
   {
+
     @Override
+    @SuppressWarnings("EqualsDoesntCheckParameterClass")
+    @SuppressFBWarnings("EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS")
     public boolean equals(Object value)
     {
       return SegmentFileBuilder.ROOT_BUNDLE_NAME.equals(value);
