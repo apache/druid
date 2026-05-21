@@ -286,6 +286,49 @@ class FilterSegmentPrunerTest
                   .verify();
   }
 
+  @Test
+  void testPruneNumericRange()
+  {
+    // Regression test for https://github.com/apache/druid/issues/19408
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final DataSegment segLargeIds = makeDataSegment(interval, makeRange("id", 0, "100", "200"));
+
+    final DimFilter filter = new RangeFilter("id", ColumnType.LONG, 80L, null, false, false, null);
+    final FilterSegmentPruner pruner = new FilterSegmentPruner(filter, null, null);
+
+    Assertions.assertTrue(pruner.include(segLargeIds));
+  }
+
+  @Test
+  void testPruneNumericEquality()
+  {
+    // Regression test for https://github.com/apache/druid/issues/19408. The string "1" is not within the
+    // ["1.1", "1.9"] shard range, but the LONG value 1L matches rows with values like "1.1" or "1.9", so the
+    // segment must not be pruned.
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final DataSegment seg = makeDataSegment(interval, makeRange("id", 0, "1.1", "1.9"));
+
+    final DimFilter filter = new EqualityFilter("id", ColumnType.LONG, 1L, null);
+    final FilterSegmentPruner pruner = new FilterSegmentPruner(filter, null, null);
+
+    Assertions.assertTrue(pruner.include(seg));
+  }
+
+  @Test
+  void testPruneNumericIn()
+  {
+    // Regression test for https://github.com/apache/druid/issues/19408. The strings "1" and "2" are not within the
+    // ["1.1", "1.9"] shard range, but the LONG values 1L and 2L match rows with values like "1.1" or "1.9", so the
+    // segment must not be pruned.
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final DataSegment seg = makeDataSegment(interval, makeRange("id", 0, "1.1", "1.9"));
+
+    final DimFilter filter = new TypedInFilter("id", ColumnType.LONG, List.of(1L, 2L), null, null);
+    final FilterSegmentPruner pruner = new FilterSegmentPruner(filter, null, null);
+
+    Assertions.assertTrue(pruner.include(seg));
+  }
+
   private ShardSpec makeRange(
       String column,
       int partitionNumber,

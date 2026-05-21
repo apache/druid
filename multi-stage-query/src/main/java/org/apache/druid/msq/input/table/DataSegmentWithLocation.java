@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.jackson.CommaListJoinDeserializer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -54,8 +55,8 @@ public class DataSegmentWithLocation extends DataSegment
       @JsonProperty("dimensions") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable
       List<String> dimensions,
       @JsonProperty("metrics") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable List<String> metrics,
-      @JsonProperty("projections") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable
-      List<String> projections,
+      @JsonProperty("projections") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable List<String> projections,
+      @JsonProperty("clusterGroups") @Nullable ClusterGroupTuples clusterGroups,
       @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
@@ -74,6 +75,7 @@ public class DataSegmentWithLocation extends DataSegment
         dimensions,
         metrics,
         projections,
+        clusterGroups,
         shardSpec,
         lastCompactionState,
         binaryVersion,
@@ -98,6 +100,7 @@ public class DataSegmentWithLocation extends DataSegment
         dataSegment.getDimensions(),
         dataSegment.getMetrics(),
         dataSegment.getProjections(),
+        dataSegment.getClusterGroups(),
         dataSegment.getShardSpec(),
         null,
         dataSegment.getBinaryVersion(),

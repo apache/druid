@@ -113,7 +113,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -320,7 +319,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ImmutableMap.of(SHARD_ID1, "2"),
         ImmutableMap.of(SHARD_ID1, "4")
     );
-    Assert.assertTrue(task.supportsQueries());
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
@@ -2087,7 +2085,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     task.getRunner().setToolbox(toolboxFactory.build(task));
     task.getRunner().initializeSequences();
-    final CopyOnWriteArrayList<SequenceMetadata<String, String>> sequences = task.getRunner().getSequences();
+    final List<SequenceMetadata<String, String>> sequences = task.getRunner().getSequences();
 
     Assert.assertEquals(3, sequences.size());
 

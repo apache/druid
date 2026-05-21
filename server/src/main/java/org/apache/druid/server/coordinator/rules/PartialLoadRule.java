@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.rules;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
@@ -89,9 +90,21 @@ public abstract class PartialLoadRule extends LoadRule
   @Override
   public void run(DataSegment segment, SegmentActionHandler handler)
   {
-    // Partial plumbing is added in future work. For now, a partial rule that applies to a segment full-loads it,
-    // identical behavior to the corresponding non-partial rule
-    handler.replicateSegment(segment, getTieredReplicants());
+    final PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
+    if (result != null) {
+      // Matcher resolved: route through the partial-load handler. The wrappedLoadSpec map carries scheme-specific
+      // data that the historical-side wrapper deserializes.
+      handler.replicateSegmentPartially(
+          segment,
+          PartialLoadProfile.forRequest(result.wrappedLoadSpec(), result.fingerprint()),
+          getTieredReplicants()
+      );
+    } else {
+      // Matcher does not apply, but the rule still applies because onCannotMatch == FULL_LOAD (FALL_THROUGH would
+      // have caused appliesTo to return false, so run wouldn't be invoked). Route through the regular full-load
+      // handler.
+      handler.replicateSegment(segment, getTieredReplicants());
+    }
   }
 
   @Override

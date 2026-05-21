@@ -37,7 +37,8 @@ import java.util.Map;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = UnknownPartialLoadMatcher.class)
 @JsonSubTypes({
     @JsonSubTypes.Type(name = ExactProjectionPartialLoadMatcher.TYPE, value = ExactProjectionPartialLoadMatcher.class),
-    @JsonSubTypes.Type(name = WildcardProjectionPartialLoadMatcher.TYPE, value = WildcardProjectionPartialLoadMatcher.class)
+    @JsonSubTypes.Type(name = WildcardProjectionPartialLoadMatcher.TYPE, value = WildcardProjectionPartialLoadMatcher.class),
+    @JsonSubTypes.Type(name = WildcardClusterGroupPartialLoadMatcher.TYPE, value = WildcardClusterGroupPartialLoadMatcher.class)
 })
 public interface PartialLoadMatcher
 {
@@ -52,7 +53,8 @@ public interface PartialLoadMatcher
   /**
    * Output of {@link #match(DataSegment, Map)} when the matcher applies. Carries the wrapped load-spec map (ready to
    * be stamped onto an outbound {@link SegmentChangeRequestLoad}) and the fingerprint used by the coordinator to
-   * reconcile loaded replicas against the rule that requested them.
+   * reconcile loaded replicas against the rule that requested them. Scheme-specific data lives inside
+   * {@code wrappedLoadSpec}; callers that need a typed view extract from the map themselves.
    */
   record MatchResult(Map<String, Object> wrappedLoadSpec, String fingerprint)
   {

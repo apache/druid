@@ -27,13 +27,18 @@ import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.schema.ScannableTable;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.impl.AbstractTable;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.error.InternalServerError;
-import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
@@ -47,15 +52,19 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -64,8 +73,10 @@ import java.util.stream.Collectors;
  * that server would have multiple values in the column {@code node_roles} rather than duplicating all the
  * rows.
  */
-public class SystemServerPropertiesTable extends AbstractTable implements ScannableTable
+public class SystemServerPropertiesTable extends AbstractTable implements ProjectableFilterableTable
 {
+  private static final Logger log = new Logger(SystemServerPropertiesTable.class);
+
   public static final String TABLE_NAME = "server_properties";
 
   static final RowSignature ROW_SIGNATURE = RowSignature
@@ -75,7 +86,15 @@ public class SystemServerPropertiesTable extends AbstractTable implements Scanna
       .add("node_roles", ColumnType.STRING)
       .add("property", ColumnType.STRING)
       .add("value", ColumnType.STRING)
+      .add("error_message", ColumnType.STRING)
       .build();
+
+  private static final int SERVER_INDEX = ROW_SIGNATURE.indexOf("server");
+  private static final int SERVICE_NAME_INDEX = ROW_SIGNATURE.indexOf("service_name");
+  private static final int NODE_ROLES_INDEX = ROW_SIGNATURE.indexOf("node_roles");
+  private static final int PROPERTY_INDEX = ROW_SIGNATURE.indexOf("property");
+  private static final int VALUE_INDEX = ROW_SIGNATURE.indexOf("value");
+  private static final int ERROR_MESSAGE_INDEX = ROW_SIGNATURE.indexOf("error_message");
 
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
   private final AuthorizerMapper authorizerMapper;
@@ -108,42 +127,126 @@ public class SystemServerPropertiesTable extends AbstractTable implements Scanna
   }
 
   @Override
-  public Enumerable<Object[]> scan(DataContext root)
+  public Enumerable<Object[]> scan(
+      final DataContext root,
+      final List<RexNode> filters,
+      @Nullable final int[] projects
+  )
   {
     final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
         root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
         "authenticationResult in dataContext"
     );
     SystemSchema.checkStateReadAccessForServers(authenticationResult, authorizerMapper);
+
+    // Extract equality filters to skip fetching properties from non-matching servers.
+    final Map<Integer, Set<String>> columnFilters = extractColumnEqualityFilters(filters, SERVER_INDEX, SERVICE_NAME_INDEX);
+    final Set<String> serverFilter = columnFilters.get(SERVER_INDEX);
+    final Set<String> serviceNameFilter = columnFilters.get(SERVICE_NAME_INDEX);
+
     final Iterator<DiscoveryDruidNode> druidServers = SystemSchema.getDruidServers(druidNodeDiscoveryProvider);
 
     final Map<String, ServerProperties> serverToPropertiesMap = new HashMap<>();
     druidServers.forEachRemaining(discoveryDruidNode -> {
       final DruidNode druidNode = discoveryDruidNode.getDruidNode();
-      final Map<String, String> propertiesMap = getProperties(druidNode);
-      if (serverToPropertiesMap.containsKey(druidNode.getHostAndPortToUse())) {
-        ServerProperties serverProperties = serverToPropertiesMap.get(druidNode.getHostAndPortToUse());
-        serverProperties.addNodeRole(discoveryDruidNode.getNodeRole().getJsonName());
+      final String nodeRole = discoveryDruidNode.getNodeRole().getJsonName();
+
+      final String serverKey = druidNode.getHostAndPortToUse();
+
+      if (serverFilter != null && !serverFilter.contains(serverKey)) {
+        return;
+      }
+      if (serviceNameFilter != null && !serviceNameFilter.contains(druidNode.getServiceName())) {
+        return;
+      }
+
+      final ServerProperties serverProperties = serverToPropertiesMap.get(serverKey);
+      if (serverProperties != null) {
+        serverProperties.addNodeRole(nodeRole);
       } else {
         serverToPropertiesMap.put(
-            druidNode.getHostAndPortToUse(),
+            serverKey,
             new ServerProperties(
-              druidNode.getServiceName(),
-              druidNode.getHostAndPortToUse(),
-              new ArrayList<>(Arrays.asList(discoveryDruidNode.getNodeRole().getJsonName())),
-              propertiesMap
-          )
+                druidNode.getServiceName(),
+                serverKey,
+                new ArrayList<>(Arrays.asList(nodeRole)),
+                druidNode
+            )
         );
       }
     });
-    ArrayList<Object[]> rows = new ArrayList<>();
+
+    final List<Object[]> rows = new ArrayList<>();
     for (ServerProperties serverProperties : serverToPropertiesMap.values()) {
-      rows.addAll(serverProperties.toRows());
+      rows.addAll(serverProperties.buildRows(this, projects));
     }
     return Linq4j.asEnumerable(rows);
   }
 
-  private Map<String, String> getProperties(DruidNode druidNode)
+  /**
+   * Extracts simple equality filters ({@code column = 'literal'}) for the specified columns.
+   * Only handles top-level AND equalities; any other predicate (!=, LIKE, OR, functions) is
+   * ignored and left for Calcite to apply as a post-filter.
+   *
+   * @return map from column index to the set of literal values; absent key means no filter for that column
+   */
+  private static Map<Integer, Set<String>> extractColumnEqualityFilters(final List<RexNode> filters, final int... columnIndices)
+  {
+    final Map<Integer, Set<String>> result = new HashMap<>();
+    for (final RexNode filter : filters) {
+      for (final int columnIndex : columnIndices) {
+        final String value = extractEqualityOnColumn(filter, columnIndex);
+        if (value != null) {
+          result.computeIfAbsent(columnIndex, k -> new HashSet<>()).add(value);
+          break;
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Returns the string literal value if the node is a simple {@code column = 'literal'} (or reversed) equality
+   * on the given column index. Returns null for anything else — Calcite handles those as post-filters.
+   */
+  @Nullable
+  private static String extractEqualityOnColumn(final RexNode node, final int columnIndex)
+  {
+    if (!(node instanceof RexCall)) {
+      return null;
+    }
+    final RexCall call = (RexCall) node;
+    if (call.getKind() != SqlKind.EQUALS) {
+      return null;
+    }
+    final RexNode left = call.getOperands().get(0);
+    final RexNode right = call.getOperands().get(1);
+
+    if (left instanceof RexInputRef && right instanceof RexLiteral) {
+      if (((RexInputRef) left).getIndex() == columnIndex) {
+        return RexLiteral.stringValue(right);
+      }
+    } else if (right instanceof RexInputRef && left instanceof RexLiteral) {
+      if (((RexInputRef) right).getIndex() == columnIndex) {
+        return RexLiteral.stringValue(left);
+      }
+    }
+    return null;
+  }
+
+  private static Object[] projectRow(final Object[] row, @Nullable final int[] projects)
+  {
+    if (projects == null) {
+      return row;
+    }
+    final Object[] projectedRow = new Object[projects.length];
+    for (int i = 0; i < projects.length; i++) {
+      projectedRow[i] = row[projects[i]];
+    }
+    return projectedRow;
+  }
+
+  private PropertiesResult getProperties(DruidNode druidNode)
   {
     final String url = druidNode.getUriToUse().resolve("/status/properties").toString();
     try {
@@ -154,20 +257,38 @@ public class SystemServerPropertiesTable extends AbstractTable implements Scanna
           .get();
 
       if (response.getStatus().getCode() != HttpServletResponse.SC_OK) {
-        throw new RE(
-            "Failed to get properties from node[%s]. Error code[%d], description[%s].",
-            url,
-            response.getStatus().getCode(),
-            response.getStatus().getReasonPhrase()
-        );
+        final String errorMsg = StringUtils.format("HTTP %d: %s",
+                                                    response.getStatus().getCode(),
+                                                    response.getStatus().getReasonPhrase());
+        log.warn("Failed to get properties from node[%s]: error[%s]", url, errorMsg);
+        return new PropertiesResult(new HashMap<>(), errorMsg);
       }
-      return jsonMapper.readValue(
-          response.getContent(),
-          new TypeReference<>(){}
+      return new PropertiesResult(
+          jsonMapper.readValue(response.getContent(), new TypeReference<>(){}),
+          null
       );
     }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(StringUtils.format("Interrupted while fetching properties from node[%s]", url), e);
+    }
     catch (Exception e) {
-      throw InternalServerError.exception(e, "HTTP request to[%s] failed", url);
+      final String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+      log.warn(e, "Failed to get properties from node[%s]", url);
+      return new PropertiesResult(new HashMap<>(), errorMsg);
+    }
+  }
+
+  private static class PropertiesResult
+  {
+    final Map<String, String> properties;
+    @Nullable
+    final String error;
+
+    PropertiesResult(Map<String, String> properties, @Nullable String error)
+    {
+      this.properties = properties;
+      this.error = error;
     }
   }
 
@@ -176,14 +297,19 @@ public class SystemServerPropertiesTable extends AbstractTable implements Scanna
     final String serviceName;
     final String server;
     final List<String> nodeRoles;
-    final Map<String, String> properties;
+    final DruidNode druidNode;
 
-    public ServerProperties(String serviceName, String server, List<String> nodeRoles, Map<String, String> properties)
+    public ServerProperties(
+        String serviceName,
+        String server,
+        List<String> nodeRoles,
+        DruidNode druidNode
+    )
     {
       this.serviceName = serviceName;
       this.server = server;
       this.nodeRoles = nodeRoles;
-      this.properties = properties;
+      this.druidNode = druidNode;
     }
 
     public void addNodeRole(String nodeRole)
@@ -191,10 +317,39 @@ public class SystemServerPropertiesTable extends AbstractTable implements Scanna
       nodeRoles.add(nodeRole);
     }
 
-    public List<Object[]> toRows()
+    private List<Object[]> buildRows(
+        final SystemServerPropertiesTable table,
+        @Nullable final int[] projects
+    )
     {
-      String nodeRolesString = nodeRoles.toString();
-      return properties.entrySet().stream().map(entry -> new Object[]{server, serviceName, nodeRolesString, entry.getKey(), entry.getValue()}).collect(Collectors.toList());
+      final String nodeRolesString = nodeRoles.toString();
+      final PropertiesResult result = table.getProperties(druidNode);
+      final Map<String, String> properties = result.properties;
+      final String error = result.error;
+
+      if (properties.isEmpty()) {
+        final Object[] row = new Object[ROW_SIGNATURE.size()];
+        row[SERVER_INDEX] = server;
+        row[SERVICE_NAME_INDEX] = serviceName;
+        row[NODE_ROLES_INDEX] = nodeRolesString;
+        row[PROPERTY_INDEX] = null;
+        row[VALUE_INDEX] = null;
+        row[ERROR_MESSAGE_INDEX] = error;
+        return Collections.singletonList(projectRow(row, projects));
+      }
+
+      return properties.entrySet().stream()
+          .map(entry -> {
+            final Object[] row = new Object[ROW_SIGNATURE.size()];
+            row[SERVER_INDEX] = server;
+            row[SERVICE_NAME_INDEX] = serviceName;
+            row[NODE_ROLES_INDEX] = nodeRolesString;
+            row[PROPERTY_INDEX] = entry.getKey();
+            row[VALUE_INDEX] = entry.getValue();
+            row[ERROR_MESSAGE_INDEX] = error;
+            return projectRow(row, projects);
+          })
+          .collect(Collectors.toList());
     }
   }
 }

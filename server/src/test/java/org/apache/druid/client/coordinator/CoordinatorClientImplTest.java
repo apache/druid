@@ -49,7 +49,7 @@ import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.DataSourceInformation;
-import org.apache.druid.server.QueryBlocklistRule;
+import org.apache.druid.server.DefaultQueryBlocklistRule;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -840,7 +840,7 @@ public class CoordinatorClientImplTest
   {
     final BrokerDynamicConfig brokerDynamicConfig = BrokerDynamicConfig.builder().withQueryBlocklist(
         List.of(
-            new QueryBlocklistRule("test", Set.of("dataSource"), null, null)
+            new DefaultQueryBlocklistRule("test", Set.of("dataSource"), null, null)
         )
     ).build();
 

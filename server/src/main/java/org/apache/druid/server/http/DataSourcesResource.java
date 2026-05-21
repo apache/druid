@@ -759,7 +759,14 @@ public class DataSourcesResource
       }
     }
 
-    return new ImmutableDruidDataSource(dataSourceName, Collections.emptyMap(), segmentMap);
+    // Use the Collection<DataSegment> @JsonCreator overload here rather than passing segmentMap directly. The two
+    // ImmutableDruidDataSource constructors differ in how they compute totalSizeOfSegments: the Map-based in-process
+    // constructor sums effectiveSizeOf (per-server realized loadedBytes when a segment is wrapped with a partial-load
+    // profile), whereas the Collection-based @JsonCreator overload sums DataSegment.getSize() (the segment's logical
+    // full size). For this synthesized cross-server view, where Map.put dedup picks an arbitrary "winning" server's
+    // instance per segmentId, reporting per-server realized sizes from arbitrary winners would mis-report the total.
+    // Logical-size accumulation is the operator-meaningful "how big is this datasource" semantic.
+    return new ImmutableDruidDataSource(dataSourceName, Collections.emptyMap(), segmentMap.values());
   }
 
   @Nullable

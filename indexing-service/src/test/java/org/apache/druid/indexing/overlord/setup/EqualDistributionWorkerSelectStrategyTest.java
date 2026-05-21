@@ -125,7 +125,6 @@ public class EqualDistributionWorkerSelectStrategyTest
   @Test
   public void testOneDisableWorkerDifferentUsedCapacity()
   {
-    String disabledVersion = "";
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null, null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
@@ -133,7 +132,7 @@ public class EqualDistributionWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "disableHost", "disableHost", 10, disabledVersion, WorkerConfig.DEFAULT_CATEGORY), 2,
+                new Worker("http", "disableHost", "disableHost", 10, "v1", WorkerConfig.DEFAULT_CATEGORY, true), 2,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()
@@ -154,7 +153,6 @@ public class EqualDistributionWorkerSelectStrategyTest
   @Test
   public void testOneDisableWorkerSameUsedCapacity()
   {
-    String disabledVersion = "";
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null, null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
@@ -162,7 +160,7 @@ public class EqualDistributionWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableWorkerInfo(
-                new Worker("http", "disableHost", "disableHost", 10, disabledVersion, WorkerConfig.DEFAULT_CATEGORY), 5,
+                new Worker("http", "disableHost", "disableHost", 10, "v1", WorkerConfig.DEFAULT_CATEGORY, true), 5,
                 new HashSet<>(),
                 new HashSet<>(),
                 DateTimes.nowUtc()

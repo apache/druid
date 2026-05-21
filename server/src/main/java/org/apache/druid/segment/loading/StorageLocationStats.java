@@ -27,12 +27,25 @@ public interface StorageLocationStats
   long getUsedBytes();
 
   /**
-   * Number of load operations during the measurement period
+   * Number of load operations that were started (space reserved) during the measurement period. This is incremented
+   * when the load begins, regardless of whether it ultimately completes.
+   */
+  long getLoadBeginCount();
+
+  /**
+   * Number of bytes for which a load was started (space reserved) during the measurement period. This is incremented
+   * when the load begins, regardless of whether it ultimately completes.
+   */
+  long getLoadBeginBytes();
+
+  /**
+   * Number of load operations that finished (segment downloaded, deserialized, and made queryable) during the
+   * measurement period. This may be lower than {@link #getLoadBeginCount()} when mounts fail or are aborted.
    */
   long getLoadCount();
 
   /**
-   * Number of bytes loaded during the measurement period
+   * Number of bytes for load operations that finished during the measurement period.
    */
   long getLoadBytes();
 

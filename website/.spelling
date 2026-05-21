@@ -291,6 +291,7 @@ averagers
 backend
 backfills
 backfilled
+backfilling
 backpressure
 base64
 baseTime
@@ -303,6 +304,7 @@ boolean
 breakpoint
 broadcasted
 bucketSize
+checkpointed
 checksums
 classpath
 clickstream
@@ -509,6 +511,7 @@ prepends
 prepopulated
 preprocessing
 priori
+reprocessing
 procs
 processFromRaw
 programmatically
@@ -717,6 +720,7 @@ druid.sql.planner.useApproximateTopN
 druid.sql.planner.useLexicographicTopN
 druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useNativeQueryExplain
+error_message
 error_msg
 exprs
 group_id

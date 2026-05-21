@@ -119,8 +119,12 @@ public class KubernetesOverlordModule implements DruidModule
     biddy.addBinding(KubernetesAndWorkerTaskRunnerFactory.TYPE_NAME)
          .to(KubernetesAndWorkerTaskRunnerFactory.class)
          .in(LazySingleton.class);
+    biddy.addBinding(MultipleKubernetesTaskRunnerFactory.TYPE_NAME)
+         .to(MultipleKubernetesTaskRunnerFactory.class)
+         .in(LazySingleton.class);
     binder.bind(KubernetesTaskRunnerFactory.class).in(LazySingleton.class);
     binder.bind(KubernetesAndWorkerTaskRunnerFactory.class).in(LazySingleton.class);
+    binder.bind(MultipleKubernetesTaskRunnerFactory.class).in(LazySingleton.class);
     binder.bind(RunnerStrategy.class)
           .toProvider(RunnerStrategyProvider.class)
           .in(LazySingleton.class);

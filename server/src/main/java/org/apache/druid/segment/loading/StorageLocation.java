@@ -275,7 +275,7 @@ public class StorageLocation
       unmountReclaimed(reclaimResult);
       if (reclaimResult.isSuccess()) {
         staticCacheEntries.put(entry.getId(), entry);
-        trackLoad(entry);
+        trackStaticLoadBegin(entry);
       }
       return reclaimResult.isSuccess();
     }
@@ -323,7 +323,7 @@ public class StorageLocation
         final WeakCacheEntry newEntry = new WeakCacheEntry(entry);
         linkNewWeakEntry(newEntry);
         weakCacheEntries.put(entry.getId(), newEntry);
-        weakStats.getAndUpdate(s -> s.load(entry.getSize()));
+        weakStats.getAndUpdate(s -> s.loadBegin(entry.getSize()));
       }
       return reclaimResult.isSuccess();
     }
@@ -407,7 +407,7 @@ public class StorageLocation
         linkNewWeakEntry(newWeakEntry);
         weakCacheEntries.put(newEntry.getId(), newWeakEntry);
         trackWeakHold(newWeakEntry);
-        weakStats.getAndUpdate(s -> s.load(newEntry.getSize()));
+        weakStats.getAndUpdate(s -> s.loadBegin(newEntry.getSize()));
         hold = new ReservationHold<>(
             (T) newEntry,
             createWeakEntryReleaseRunnable(newWeakEntry, true)
@@ -506,7 +506,7 @@ public class StorageLocation
       hand = newWeakEntry;
     }
     head = newWeakEntry;
-    trackWeakLoad(newWeakEntry);
+    trackWeakLoadBegin(newWeakEntry);
   }
 
   /**
@@ -643,11 +643,16 @@ public class StorageLocation
     }
   }
 
-  private void trackLoad(CacheEntry entry)
+  private void trackStaticLoadBegin(CacheEntry entry)
   {
     currSizeBytes.getAndAdd(entry.getSize());
     currStaticSizeBytes.getAndAdd(entry.getSize());
-    staticStats.getAndUpdate(s -> s.load(entry.getSize()));
+    staticStats.getAndUpdate(s -> s.loadBegin(entry.getSize()));
+  }
+
+  public void trackStaticLoad(long size)
+  {
+    staticStats.getAndUpdate(s -> s.load(size));
   }
 
   private void trackDrop(CacheEntry entry)
@@ -657,7 +662,7 @@ public class StorageLocation
     staticStats.getAndUpdate(s -> s.drop(entry.getSize()));
   }
 
-  private void trackWeakLoad(WeakCacheEntry entry)
+  private void trackWeakLoadBegin(WeakCacheEntry entry)
   {
     currSizeBytes.getAndAdd(entry.cacheEntry.getSize());
     currWeakSizeBytes.getAndAdd(entry.cacheEntry.getSize());
@@ -667,6 +672,11 @@ public class StorageLocation
   {
     currSizeBytes.getAndAdd(-entry.cacheEntry.getSize());
     currWeakSizeBytes.getAndAdd(-entry.cacheEntry.getSize());
+  }
+
+  public void trackWeakLoad(long size)
+  {
+    weakStats.getAndUpdate(s -> s.load(size));
   }
 
   private void trackWeakHold(WeakCacheEntry entry)
@@ -1008,6 +1018,8 @@ public class StorageLocation
   public static final class StaticStats implements StorageLocationStats
   {
     private final AtomicLong sizeUsed;
+    private final AtomicLong loadBeginCount = new AtomicLong(0);
+    private final AtomicLong loadBeginBytes = new AtomicLong(0);
     private final AtomicLong loadCount = new AtomicLong(0);
     private final AtomicLong loadBytes = new AtomicLong(0);
     private final AtomicLong dropCount = new AtomicLong(0);
@@ -1016,6 +1028,13 @@ public class StorageLocation
     public StaticStats(AtomicLong sizeUsed)
     {
       this.sizeUsed = sizeUsed;
+    }
+
+    public StaticStats loadBegin(long size)
+    {
+      loadBeginCount.getAndIncrement();
+      loadBeginBytes.getAndAdd(size);
+      return this;
     }
 
     public StaticStats load(long size)
@@ -1036,6 +1055,18 @@ public class StorageLocation
     public long getUsedBytes()
     {
       return sizeUsed.get();
+    }
+
+    @Override
+    public long getLoadBeginCount()
+    {
+      return loadBeginCount.get();
+    }
+
+    @Override
+    public long getLoadBeginBytes()
+    {
+      return loadBeginBytes.get();
     }
 
     @Override
@@ -1068,6 +1099,8 @@ public class StorageLocation
     private final AtomicLong sizeUsed;
     private final AtomicLong holdCount;
     private final AtomicLong holdBytes;
+    private final AtomicLong loadBeginCount = new AtomicLong(0);
+    private final AtomicLong loadBeginBytes = new AtomicLong(0);
     private final AtomicLong loadCount = new AtomicLong(0);
     private final AtomicLong loadBytes = new AtomicLong(0);
     private final AtomicLong rejectionCount = new AtomicLong(0);
@@ -1088,6 +1121,13 @@ public class StorageLocation
     {
       hitCount.getAndIncrement();
       hitBytes.getAndAdd(size);
+      return this;
+    }
+
+    public WeakStats loadBegin(long size)
+    {
+      loadBeginCount.getAndIncrement();
+      loadBeginBytes.getAndAdd(size);
       return this;
     }
 
@@ -1145,6 +1185,18 @@ public class StorageLocation
     public long getHitBytes()
     {
       return hitBytes.get();
+    }
+
+    @Override
+    public long getLoadBeginCount()
+    {
+      return loadBeginCount.get();
+    }
+
+    @Override
+    public long getLoadBeginBytes()
+    {
+      return loadBeginBytes.get();
     }
 
     @Override

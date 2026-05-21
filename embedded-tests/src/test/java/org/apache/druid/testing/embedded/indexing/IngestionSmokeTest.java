@@ -85,7 +85,9 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   protected EmbeddedIndexer indexer = new EmbeddedIndexer()
       .setServerMemory(300_000_000)
       .addProperty("druid.worker.capacity", "2")
-      .addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
+      .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
+      // Use separate task log files because here, we're actually testing TaskLogStreamer.
+      .addProperty("druid.worker.useSeparateTaskLogFiles", "true");
 
   /**
    * Broker with a short metadata refresh period.
@@ -188,6 +190,9 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasService("druid/broker")
     );
+
+    waitForNextCoordinatorCacheSync();
+    waitForNextBrokerCacheSync();
 
     cluster.callApi().verifySqlQuery("SELECT * FROM sys.segments WHERE datasource='%s'", dataSource, "");
 
@@ -427,6 +432,14 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     eventCollector.latchableEmitter().waitForNextEvent(
         event -> event.hasMetricName("segment/metadataCache/sync/time")
                       .hasService("druid/coordinator")
+    );
+  }
+
+  protected void waitForNextBrokerCacheSync()
+  {
+    eventCollector.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/metadataCache/sync/time")
+                      .hasService("druid/broker")
     );
   }
 

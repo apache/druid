@@ -27,6 +27,7 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -291,8 +292,10 @@ public class PartialLoadRuleTest
   }
 
   @Test
-  void testRunForwardsToReplicateSegment()
+  void testRunWithMatchRoutesToReplicateSegmentPartially()
   {
+    // Matcher resolves to a non-empty set on the segment, so run() routes through the partial-load handler with a
+    // PartialLoadProfile carrying the resolved set + fingerprint.
     PeriodPartialLoadRule rule = new PeriodPartialLoadRule(
         new Period("P30D"),
         false,
@@ -304,10 +307,36 @@ public class PartialLoadRuleTest
     DataSegment segment = segmentWithProjections(IN_WINDOW, List.of("a", "b"));
     RecordingHandler handler = new RecordingHandler();
     rule.run(segment, handler);
-    Assertions.assertEquals(1, handler.replicateCalls);
-    Assertions.assertEquals(0, handler.broadcastCalls);
-    Assertions.assertEquals(0, handler.deleteCalls);
+    Assertions.assertEquals(0, handler.replicateCalls);
+    Assertions.assertEquals(1, handler.replicatePartialCalls);
     Assertions.assertEquals(tier(2), handler.lastTierToReplicaCount);
+    Assertions.assertNotNull(handler.lastProfile);
+    Assertions.assertNotNull(handler.lastProfile.wrappedLoadSpec());
+    Assertions.assertEquals("partialProjection", handler.lastProfile.wrappedLoadSpec().get("type"));
+    Assertions.assertEquals(List.of("a"), handler.lastProfile.wrappedLoadSpec().get("projections"));
+    Assertions.assertTrue(handler.lastProfile.fingerprint().startsWith("v1:"));
+  }
+
+  @Test
+  void testRunWithFullLoadFallbackRoutesToReplicateSegment()
+  {
+    // Matcher does not apply but the rule's onCannotMatch is FULL_LOAD, so run() falls back to the regular full-load
+    // handler.
+    PeriodPartialLoadRule rule = new PeriodPartialLoadRule(
+        new Period("P30D"),
+        false,
+        tier(2),
+        null,
+        exact("nonexistent"),
+        CannotMatchBehavior.FULL_LOAD
+    );
+    DataSegment segment = segmentWithProjections(IN_WINDOW, List.of("a", "b"));
+    RecordingHandler handler = new RecordingHandler();
+    rule.run(segment, handler);
+    Assertions.assertEquals(1, handler.replicateCalls);
+    Assertions.assertEquals(0, handler.replicatePartialCalls);
+    Assertions.assertEquals(tier(2), handler.lastTierToReplicaCount);
+    Assertions.assertNull(handler.lastProfile);
   }
 
   @Test
@@ -363,14 +392,28 @@ public class PartialLoadRuleTest
   private static class RecordingHandler implements SegmentActionHandler
   {
     int replicateCalls;
+    int replicatePartialCalls;
     int broadcastCalls;
     int deleteCalls;
     Map<String, Integer> lastTierToReplicaCount;
+    PartialLoadProfile lastProfile;
 
     @Override
     public void replicateSegment(DataSegment segment, Map<String, Integer> tierToReplicaCount)
     {
       replicateCalls++;
+      lastTierToReplicaCount = tierToReplicaCount;
+    }
+
+    @Override
+    public void replicateSegmentPartially(
+        DataSegment segment,
+        PartialLoadProfile profile,
+        Map<String, Integer> tierToReplicaCount
+    )
+    {
+      replicatePartialCalls++;
+      lastProfile = profile;
       lastTierToReplicaCount = tierToReplicaCount;
     }
 
