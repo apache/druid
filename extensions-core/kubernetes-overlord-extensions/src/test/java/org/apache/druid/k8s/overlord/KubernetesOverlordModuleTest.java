@@ -36,6 +36,7 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
+import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -116,6 +117,19 @@ public class KubernetesOverlordModuleTest
     Assertions.assertNotNull(taskRunnerFactory);
 
     Assertions.assertNotNull(taskRunnerFactory.build());
+  }
+
+  @Test
+  public void testMultipleKubernetesTaskRunnerFactoryBindSuccessfully()
+  {
+    final Properties props = initializePropertes(false);
+    props.setProperty("druid.indexer.runner.type", MultipleKubernetesTaskRunnerFactory.TYPE_NAME);
+    props.setProperty("druid.indexer.runner.clusters[0].taskNamespace", "NAMESPACE");
+    injector = makeInjectorWithProperties(props, false, true);
+
+    final TaskRunnerFactory<?> taskRunnerFactory = injector.getInstance(TaskRunnerFactory.class);
+
+    Assertions.assertInstanceOf(MultipleKubernetesTaskRunnerFactory.class, taskRunnerFactory);
   }
 
   @Test

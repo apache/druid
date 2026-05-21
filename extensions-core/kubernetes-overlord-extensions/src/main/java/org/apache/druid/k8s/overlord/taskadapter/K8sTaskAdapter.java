@@ -90,6 +90,8 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   private static final EmittingLogger log = new EmittingLogger(K8sTaskAdapter.class);
 
   protected final KubernetesClientApi client;
+  protected final KubernetesClientApi podSourceClient;
+  protected final String podSourceNamespace;
   protected final KubernetesTaskRunnerConfig taskRunnerConfig;
   protected final TaskConfig taskConfig;
   protected final StartupLoggingConfig startupLoggingConfig;
@@ -107,7 +109,24 @@ public abstract class K8sTaskAdapter implements TaskAdapter
       TaskLogs taskLogs
   )
   {
+    this(client, taskRunnerConfig.getNamespace(), client, taskRunnerConfig, taskConfig, startupLoggingConfig, node, mapper, taskLogs);
+  }
+
+  public K8sTaskAdapter(
+      KubernetesClientApi podSourceClient,
+      String podSourceNamespace,
+      KubernetesClientApi client,
+      KubernetesTaskRunnerConfig taskRunnerConfig,
+      TaskConfig taskConfig,
+      StartupLoggingConfig startupLoggingConfig,
+      DruidNode node,
+      ObjectMapper mapper,
+      TaskLogs taskLogs
+  )
+  {
     this.client = client;
+    this.podSourceClient = podSourceClient;
+    this.podSourceNamespace = podSourceNamespace;
     this.taskRunnerConfig = taskRunnerConfig;
     this.taskConfig = taskConfig;
     this.startupLoggingConfig = startupLoggingConfig;
@@ -119,8 +138,20 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   @Override
   public Job fromTask(Task task) throws IOException
   {
-    String myPodName = System.getenv("HOSTNAME");
-    Pod pod = client.executeRequest(client -> client.pods().inNamespace(taskRunnerConfig.getNamespace()).withName(myPodName).get());
+    String myPodName = getCurrentPodName();
+    Pod pod = podSourceClient.executeRequest(
+        client -> client.pods().inNamespace(podSourceNamespace).withName(myPodName).get()
+    );
+    if (pod == null) {
+      throw InternalServerError.exception(
+          "Could not load Overlord pod [%s] from namespace [%s] while creating Kubernetes job for task [%s]."
+          + " Check that the Overlord Kubernetes client can get its own pod, or use pod adapter [%s].",
+          myPodName,
+          podSourceNamespace,
+          task.getId(),
+          PodTemplateTaskAdapter.TYPE
+      );
+    }
     PeonCommandContext context = new PeonCommandContext(
         generateCommand(task),
         javaOpts(task),
@@ -131,6 +162,24 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     PodSpec podSpec = pod.getSpec();
     massageSpec(podSpec, taskRunnerConfig.getPrimaryContainerName());
     return createJobFromPodSpec(podSpec, task, context);
+  }
+
+  @VisibleForTesting
+  protected String getCurrentPodName()
+  {
+    return System.getenv("HOSTNAME");
+  }
+
+  @VisibleForTesting
+  public KubernetesClientApi getPodSourceClient()
+  {
+    return podSourceClient;
+  }
+
+  @VisibleForTesting
+  public String getPodSourceNamespace()
+  {
+    return podSourceNamespace;
   }
 
   @Override
@@ -499,4 +548,3 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     return compressedTaskPayload.length() > DruidK8sConstants.MAX_ENV_VARIABLE_KBS;
   }
 }
-
