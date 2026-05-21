@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -501,6 +502,54 @@ class StorageLocationTest
     location.adjustReservation(entry.getId(), 50);
     Assertions.assertEquals(50, entry.getSize());
     Assertions.assertEquals(50, location.currentSizeBytes());
+  }
+
+  @Test
+  public void testAdjustReservationWeakEntryShrinksHeldBytes() throws IOException
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    final TestResizableCacheEntry entry = new TestResizableCacheEntry("a", 80);
+    Assertions.assertTrue(location.reserveWeak(entry));
+
+    // Acquire a hold BEFORE shrinking. trackWeakHold records 80 bytes against currHoldBytes.
+    final StorageLocation.ReservationHold<?> hold = location.addWeakReservationHold(entry.getId(), () -> entry);
+    Assertions.assertNotNull(hold);
+    Assertions.assertEquals(1, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(80, location.getWeakStats().getHoldBytes());
+
+    // Shrink to 30: hold-bytes contribution from the active hold must shrink in lockstep so the eventual
+    // trackWeakRelease (which subtracts the new smaller size) leaves currHoldBytes at 0.
+    location.adjustReservation(entry.getId(), 30);
+    Assertions.assertEquals(30, entry.getSize());
+    Assertions.assertEquals(30, location.currentWeakSizeBytes());
+    Assertions.assertEquals(30, location.getWeakStats().getHoldBytes());
+
+    hold.close();
+    Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(0, location.getWeakStats().getHoldBytes());
+  }
+
+  @Test
+  public void testAdjustReservationWeakEntryShrinksHeldBytesWithMultipleHolds() throws IOException
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    final TestResizableCacheEntry entry = new TestResizableCacheEntry("a", 50);
+    Assertions.assertTrue(location.reserveWeak(entry));
+
+    // Two concurrent holds: trackWeakHold fires twice, so currHoldBytes = 2 * 50 = 100.
+    final StorageLocation.ReservationHold<?> hold1 = location.addWeakReservationHold(entry.getId(), () -> entry);
+    final StorageLocation.ReservationHold<?> hold2 = location.addWeakReservationHold(entry.getId(), () -> entry);
+    Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(100, location.getWeakStats().getHoldBytes());
+
+    // Shrink by 30 (50 → 20): each of the two active holds contributes -30, so currHoldBytes drops by 60.
+    location.adjustReservation(entry.getId(), 20);
+    Assertions.assertEquals(40, location.getWeakStats().getHoldBytes());
+
+    hold1.close();
+    Assertions.assertEquals(20, location.getWeakStats().getHoldBytes());
+    hold2.close();
+    Assertions.assertEquals(0, location.getWeakStats().getHoldBytes());
   }
 
   @SuppressWarnings({"GuardedBy", "FieldAccessNotGuarded"})

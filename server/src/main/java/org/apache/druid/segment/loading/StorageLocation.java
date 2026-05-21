@@ -437,12 +437,12 @@ public class StorageLocation
     lock.writeLock().lock();
     try {
       final CacheEntry entry;
-      final boolean isStatic;
+      final WeakCacheEntry weak;
       if (staticCacheEntries.containsKey(id)) {
         entry = staticCacheEntries.get(id);
-        isStatic = true;
+        weak = null;
       } else {
-        final WeakCacheEntry weak = weakCacheEntries.get(id);
+        weak = weakCacheEntries.get(id);
         if (weak == null) {
           throw DruidException.defensive(
               "Cannot adjust reservation for unknown cache entry[%s]",
@@ -450,7 +450,6 @@ public class StorageLocation
           );
         }
         entry = weak.cacheEntry;
-        isStatic = false;
       }
 
       if (!(entry instanceof ResizableCacheEntry)) {
@@ -477,10 +476,18 @@ public class StorageLocation
 
       ((ResizableCacheEntry) entry).resizeReservation(newSize);
       currSizeBytes.getAndAdd(-delta);
-      if (isStatic) {
+      if (weak == null) {
         currStaticSizeBytes.getAndAdd(-delta);
       } else {
         currWeakSizeBytes.getAndAdd(-delta);
+        // Each active hold contributed entry.getSize() to currHoldBytes via trackWeakHold; shrink each hold's
+        // contribution by the same delta so a future trackWeakRelease (which subtracts the new smaller size) lands
+        // on the correct total. Clamp at 0 defensively against any pre-existing drift.
+        final long activeHolds = weak.holdReferents.getRegisteredParties() - 1L;
+        if (activeHolds > 0) {
+          final long holdDelta = delta * activeHolds;
+          currHoldBytes.updateAndGet(v -> Math.max(0L, v - holdDelta));
+        }
       }
     }
     finally {
