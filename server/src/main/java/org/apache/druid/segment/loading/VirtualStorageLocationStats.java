@@ -93,7 +93,7 @@ public interface VirtualStorageLocationStats
   default boolean hasStats()
   {
     return getUsedBytes() != 0
-           || getHitCount() != 0
+           || getHoldCount() != 0
            || getHoldBytes() != 0
            || getHitCount() != 0
            || getHitBytes() != 0
