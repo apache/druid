@@ -311,7 +311,6 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
 
     // Publish batch 1 and wait for the supervisor to checkpoint those offsets
     final int batch1 = publish1kRecords(topic, false);
-    waitUntilPublishedRecordsAreIngested(batch1);
 
     // Publish batch 2 — this is the gap the backfill supervisor will cover
     final int batch2 = publish1kRecords(topic, false);
