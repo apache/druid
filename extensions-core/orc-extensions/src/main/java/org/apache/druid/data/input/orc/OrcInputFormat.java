@@ -71,6 +71,8 @@ public class OrcInputFormat extends NestedInputFormat
       FileSystem.get(conf);
     }
     catch (IOException ex) {
+      // Reset so a subsequent createReader can retry init instead of skipping it.
+      fileSystemInitialized.set(false);
       throw new RuntimeException(ex);
     }
     finally {
