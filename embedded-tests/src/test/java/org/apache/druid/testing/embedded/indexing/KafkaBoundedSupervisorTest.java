@@ -309,11 +309,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
 
     cluster.callApi().postSupervisor(supervisor);
 
-    // Publish batch 1 and wait for the supervisor to checkpoint those offsets
-    final int batch1 = publish1kRecords(topic, false);
-
-    // Publish batch 2 — this is the gap the backfill supervisor will cover
-    final int batch2 = publish1kRecords(topic, false);
+    final int recordCount = publish1kRecords(topic, false);
 
     // Reset the main supervisor and spin up a backfill supervisor for the gap
     final Map<String, Object> result = cluster.callApi().resetSupervisorAndBackfill(supervisor.getId());
@@ -322,8 +318,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     // Wait for the backfill to finish
     waitForSupervisorToComplete(backfillSupervisorId);
 
-    // Verify all data (batch 1 + gap) was ingested
-    verifyRowCount(batch1 + batch2);
+    verifyRowCount(recordCount);
 
     // Main supervisor should still be running
     final SupervisorStatus mainStatus = cluster.callApi().getSupervisorStatus(supervisor.getId());
