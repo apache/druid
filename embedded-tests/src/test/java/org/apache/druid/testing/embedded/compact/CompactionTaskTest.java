@@ -33,9 +33,12 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchModule;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
@@ -55,6 +58,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -106,6 +110,67 @@ public class CompactionTaskTest extends CompactionTestBase
           "language", "user", "unpatrolled", "newPage", "robot", "anonymous",
           "namespace", "continent", "country", "region", "city", "timestamp"
       );
+
+  /**
+   * Index task identical in shape to {@link MoreResources.Task#INDEX_TASK_WITH_AGGREGATORS} but with a pair of
+   * {@link ExpressionLambdaAggregatorFactory} metrics over the {@code added} long field. Used by
+   * {@link #testCompactionWithExpressionLambdaAggregator} to verify that an expression aggregator survives
+   * serialization into segment metadata, gets re-instantiated during compaction, and produces consistent metric
+   * values across the rollup performed at compaction time (which exercises {@code makeAggregateCombiner}).
+   */
+  private static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_EXPR_AGG = () ->
+      TaskBuilder
+          .ofTypeIndex()
+          .jsonInputFormat()
+          .localInputSourceWithFiles(
+              Resources.DataFile.tinyWiki1Json(),
+              Resources.DataFile.tinyWiki2Json(),
+              Resources.DataFile.tinyWiki3Json()
+          )
+          .timestampColumn("timestamp")
+          .dimensions(
+              "page",
+              "language", "tags", "user", "unpatrolled", "newPage", "robot",
+              "anonymous", "namespace", "continent", "country", "region", "city"
+          )
+          .metricAggregates(
+              new CountAggregatorFactory("ingested_events"),
+              new ExpressionLambdaAggregatorFactory(
+                  "added_sum_expr",
+                  Set.of("added"),
+                  null,
+                  "0",
+                  null,
+                  null,
+                  false,
+                  false,
+                  "__acc + added",
+                  null,
+                  null,
+                  null,
+                  null,
+                  TestExprMacroTable.INSTANCE
+              ),
+              new ExpressionLambdaAggregatorFactory(
+                  "added_or_expr",
+                  Set.of("added"),
+                  null,
+                  "0",
+                  null,
+                  null,
+                  false,
+                  false,
+                  "bitwiseOr(\"__acc\", \"added\")",
+                  null,
+                  null,
+                  null,
+                  null,
+                  TestExprMacroTable.INSTANCE
+              )
+          )
+          .dynamicPartitionWithMaxRows(3)
+          .granularitySpec("DAY", "SECOND", true)
+          .appendToExisting(false);
 
   private String fullDatasourceName;
 
@@ -257,6 +322,33 @@ public class CompactionTaskTest extends CompactionTestBase
   public void testCompactionWithTimestampDimension() throws Exception
   {
     loadDataAndCompact(INDEX_TASK_WITH_TIMESTAMP.get(), COMPACTION_TASK.get(), null);
+  }
+
+  @Test
+  public void testCompactionWithExpressionLambdaAggregator() throws Exception
+  {
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      runTask(INDEX_TASK_WITH_EXPR_AGG.get());
+      verifySegmentsCount(4);
+
+      // Snapshot metric values prior to compaction.
+      final String preCompact = cluster.runSql(
+          "SELECT SUM(added_sum_expr), SUM(added_or_expr) FROM %s",
+          fullDatasourceName
+      );
+
+      // Compact 4 segments → 2; this performs cross-segment rollup which drives RowCombiningTimeAndDimsIterator
+      // into ExpressionLambdaAggregatorFactory.makeAggregateCombiner().
+      compactData(COMPACTION_TASK.get(), null, null);
+      verifySegmentsCount(2);
+
+      // Metric values must round-trip through compaction unchanged.
+      final String postCompact = cluster.runSql(
+          "SELECT SUM(added_sum_expr), SUM(added_or_expr) FROM %s",
+          fullDatasourceName
+      );
+      Assertions.assertEquals(preCompact, postCompact);
+    }
   }
 
   private void loadDataAndCompact(
