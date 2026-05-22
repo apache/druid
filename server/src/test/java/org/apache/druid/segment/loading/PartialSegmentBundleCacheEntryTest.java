@@ -236,7 +236,7 @@ class PartialSegmentBundleCacheEntryTest
     final var baseHold = location.addWeakReservationHold(baseEntry.getId(), () -> baseEntry);
     Assertions.assertNotNull(baseHold);
     baseEntry.mount(location);
-    // close the bootstrap hold so SIEVE could in principle evict, but the aggregate's transitive hold should keep it
+    // close the bootstrap hold so cache could in principle evict, but the aggregate's transitive hold should keep it
     baseHold.close();
 
     final PartialSegmentBundleCacheEntry aggEntry = PartialSegmentBundleCacheEntry.forBundle(
@@ -339,7 +339,7 @@ class PartialSegmentBundleCacheEntryTest
     Assertions.assertFalse(baseEntry.isMounted());
     Assertions.assertFalse(evictedFile.exists(), "container file should be deleted on unmount");
 
-    // remount works (e.g. after SIEVE eviction + re-acquire)
+    // remount works (e.g. after cache eviction + re-acquire)
     Assertions.assertNotNull(location.addWeakReservationHold(baseEntry.getId(), () -> baseEntry));
     baseEntry.mount(location);
     Assertions.assertTrue(baseEntry.isMounted());

@@ -254,7 +254,7 @@ public class PartialSegmentMetadataCacheEntry implements ResizableCacheEntry
 
   /**
    * Post-mount safety check: confirm the entry is still registered with the location, otherwise roll back. Handles
-   * the race where the entry's reservation gets evicted (e.g. SIEVE picks a weak entry whose lone hold was released
+   * the race where the entry's reservation gets evicted (e.g. cache picks a weak entry whose lone hold was released
    * by a concurrent canceler, or {@link StorageLocation#release} fires on the static entry from a coordinator drop)
    * while mount() is still in progress. Without this check, mount would commit local state for an entry the cache
    * manager no longer knows about, leaking files on disk and memory mappings. Mirrors the same defensive check in

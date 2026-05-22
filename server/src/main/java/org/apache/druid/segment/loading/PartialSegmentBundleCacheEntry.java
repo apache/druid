@@ -57,8 +57,8 @@ import java.util.concurrent.locks.ReentrantLock;
  * <b>Dependency holds + references.</b> A bundle entry holds two layers of protection on its metadata cache entry
  * plus every transitive parent bundle entry passed in at construction time via {@code parentEntryIds}. The first
  * layer is a {@link StorageLocation.ReservationHold} acquired via
- * {@link StorageLocation#addWeakReservationHoldIfExists}, which prevents SIEVE from evicting weak dependencies while
- * this bundle is mounted (no-op for statically reserved dependencies). The second layer is a reference acquired via
+ * {@link StorageLocation#addWeakReservationHoldIfExists}, which prevents evicting weak dependencies while this bundle
+ * is mounted (no-op for statically reserved dependencies). The second layer is a reference acquired via
  * {@link PartialSegmentMetadataCacheEntry#acquireReference} / {@link #acquireReference} on each dependency, which
  * defers each dependency's actual unmap-and-delete work until this bundle's own {@link #unmount} runs; this is the
  * protection that matters for statically reserved dependencies where the cache hold is no-op. Both are acquired
@@ -307,7 +307,7 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
   /**
    * Post-mount safety check: confirm the entry is still registered with the location, otherwise roll back. Handles
    * the race where a concurrent canceler releases the hold that was keeping this weak entry in {@code
-   * weakCacheEntries} and SIEVE evicts it while mount() is still working. Without this check, mount would commit
+   * weakCacheEntries} and the cache evicts it while mount() is still working. Without this check, mount would commit
    * local state (sparse-allocated containers on disk, parent holds + references) for an entry the cache manager no
    * longer knows about, leaking those resources. Mirrors the same defensive check in {@code SegmentCacheEntry.mount}.
    * Returns normally if rollback fires; callers detect via {@link #isMounted}.
@@ -363,7 +363,7 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
     boolean registered = false;
     boolean committed = false;
     try {
-      // 1. Cache holds on metadata + parents (prevents SIEVE eviction of weak dependencies)
+      // 1. Cache holds on metadata + parents (prevents cache eviction of weak dependencies)
       final StorageLocation.ReservationHold<?> metadataHold =
           mountLocation.addWeakReservationHoldIfExists(metadataEntry.getId());
       if (metadataHold == null) {
@@ -389,7 +389,7 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
       }
 
       // 2. References on metadata + parents (gates their deferred cleanup on this bundle's lifetime; matters for
-      // statically-reserved dependencies where a drop fires `release()` directly without going through SIEVE)
+      // statically-reserved dependencies where a drop fires `release()` directly without going through cache)
       acquiredRefs.add(metadataEntry.acquireReference());
       for (PartialSegmentBundleCacheEntryIdentifier parentId : parentEntryIds) {
         final CacheEntry parentEntry = mountLocation.getCacheEntry(parentId);
