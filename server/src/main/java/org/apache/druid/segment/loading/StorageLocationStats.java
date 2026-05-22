@@ -58,4 +58,18 @@ public interface StorageLocationStats
    * Number of bytes dropped during the measurement period
    */
   long getDropBytes();
+
+  /**
+   * Whether any stats are nonzero.
+   */
+  default boolean hasStats()
+  {
+    return getUsedBytes() != 0
+           || getLoadBeginCount() != 0
+           || getLoadBeginBytes() != 0
+           || getLoadCount() != 0
+           || getLoadBytes() != 0
+           || getDropCount() != 0
+           || getDropBytes() != 0;
+  }
 }
