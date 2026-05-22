@@ -417,9 +417,9 @@ public class S3Utils
   /**
    * Determines whether to use HTTP or HTTPS protocol based on configuration.
    */
-  public static boolean useHttps(AWSClientConfig clientConfig, AWSEndpointConfig endpointConfig)
+  public static boolean useHttps(@Nullable AWSClientConfig clientConfig, AWSEndpointConfig endpointConfig)
   {
-    String protocol = clientConfig.getProtocol();
+    final String protocol = clientConfig == null ? null : clientConfig.getProtocol();
     final String endpointUrl = endpointConfig.getUrl();
 
     if (org.apache.commons.lang3.StringUtils.isNotEmpty(endpointUrl)) {
