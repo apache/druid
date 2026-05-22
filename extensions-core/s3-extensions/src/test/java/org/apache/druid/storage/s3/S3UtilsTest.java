@@ -19,6 +19,9 @@
 
 package org.apache.druid.storage.s3;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.common.aws.AWSClientConfig;
+import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
@@ -381,5 +384,45 @@ public class S3UtilsTest
         maxRetries
     );
     Assert.assertEquals(maxRetries, count.get());
+  }
+
+  // useHttps tolerates a null clientConfig — see bug where S3InputSource passes null clientConfig
+  // alongside a schemeless endpoint URL and the unconditional clientConfig.getProtocol() NPEs.
+  private static final ObjectMapper JSON = new ObjectMapper();
+
+  private static AWSEndpointConfig endpointWith(String json) throws IOException
+  {
+    return JSON.readValue(json, AWSEndpointConfig.class);
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigSchemelessEndpointReturnsTrue() throws IOException
+  {
+    Assert.assertTrue(S3Utils.useHttps(null, endpointWith("{\"url\":\"s3.example.com\"}")));
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigHttpEndpointReturnsFalse() throws IOException
+  {
+    Assert.assertFalse(S3Utils.useHttps(null, endpointWith("{\"url\":\"http://s3.example.com\"}")));
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigHttpsEndpointReturnsTrue() throws IOException
+  {
+    Assert.assertTrue(S3Utils.useHttps(null, endpointWith("{\"url\":\"https://s3.example.com\"}")));
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigNullEndpointUrlReturnsTrue() throws IOException
+  {
+    Assert.assertTrue(S3Utils.useHttps(null, new AWSEndpointConfig()));
+  }
+
+  @Test
+  public void testUseHttpsDefaultClientConfigSchemelessEndpointReturnsTrue() throws IOException
+  {
+    // Sanity check: default AWSClientConfig protocol is "https"; schemeless URL inherits "https".
+    Assert.assertTrue(S3Utils.useHttps(new AWSClientConfig(), endpointWith("{\"url\":\"s3.example.com\"}")));
   }
 }
