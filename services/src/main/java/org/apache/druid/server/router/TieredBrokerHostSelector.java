@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.sql.http.SqlQuery;
@@ -137,9 +138,10 @@ public class TieredBrokerHostSelector
             {
               nodes.forEach(
                   (node) -> {
-                    NodesHolder nodesHolder = servers.get(node.getDruidNode().getServiceName());
-                    if (nodesHolder != null) {
-                      nodesHolder.add(node.getDruidNode().getHostAndPortToUse(), TO_SERVER.apply(node));
+                    final DruidNode druidNode = node.getDruidNode();
+                    final NodesHolder nodesHolder = servers.get(druidNode.getServiceName());
+                    if (nodesHolder != null && isBrokerEligible(node)) {
+                      nodesHolder.add(druidNode.getHostAndPortToUse(), TO_SERVER.apply(node));
                     }
                   }
               );
@@ -150,9 +152,10 @@ public class TieredBrokerHostSelector
             {
               nodes.forEach(
                   (node) -> {
-                    NodesHolder nodesHolder = servers.get(node.getDruidNode().getServiceName());
+                    final DruidNode druidNode = node.getDruidNode();
+                    final NodesHolder nodesHolder = servers.get(druidNode.getServiceName());
                     if (nodesHolder != null) {
-                      nodesHolder.remove(node.getDruidNode().getHostAndPortToUse());
+                      nodesHolder.remove(druidNode.getHostAndPortToUse());
                     }
                   }
               );
@@ -162,6 +165,16 @@ public class TieredBrokerHostSelector
 
       started = true;
     }
+  }
+
+  private boolean isBrokerEligible(DiscoveryDruidNode brokerNode)
+  {
+    for (TieredBrokerSelectorStrategy strategy : strategies) {
+      if (!strategy.isBrokerEligible(brokerNode)) {
+        return false;
+      }
+    }
+    return true;
   }
 
 
