@@ -61,13 +61,16 @@ import java.util.Set;
  */
 public class WeightedQueryLaningStrategy implements QueryLaningStrategy
 {
-  private static final int DEFAULT_SEGMENT_THRESHOLD = Integer.MAX_VALUE;
-
-  private final int segmentCountThreshold;
+  @JsonProperty
+  @Nullable
+  private final Integer segmentCountThreshold;
+  @JsonProperty
   @Nullable
   private final Period periodThreshold;
+  @JsonProperty
   @Nullable
   private final Duration durationThreshold;
+  @JsonProperty
   @Nullable
   private final Duration segmentRangeThreshold;
 
@@ -88,19 +91,39 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
         "At least one of periodThreshold, durationThreshold, segmentCountThreshold, or segmentRangeThreshold must be set"
     );
     Preconditions.checkArgument(
+        segmentCountThreshold == null || segmentCountThreshold > 0,
+        "segmentCountThreshold must be > 0, got [%s]", segmentCountThreshold
+    );
+    if (durationThreshold != null) {
+      Duration dur = new Period(durationThreshold).toStandardDuration();
+      Preconditions.checkArgument(dur.getMillis() > 0, "durationThreshold must be positive, got [%s]", durationThreshold);
+    }
+    if (segmentRangeThreshold != null) {
+      Duration dur = new Period(segmentRangeThreshold).toStandardDuration();
+      Preconditions.checkArgument(dur.getMillis() > 0, "segmentRangeThreshold must be positive, got [%s]", segmentRangeThreshold);
+    }
+    if (periodThreshold != null) {
+      Period p = new Period(periodThreshold);
+      DateTime now = DateTimes.nowUtc();
+      Preconditions.checkArgument(
+          now.minus(p.toDurationFrom(now)).isBefore(now),
+          "periodThreshold must be positive, got [%s]", periodThreshold
+      );
+    }
+    Preconditions.checkArgument(
         lanes != null && !lanes.isEmpty(),
         "At least one lane must be defined"
     );
     Preconditions.checkArgument(
-        lanes.keySet().stream().noneMatch(QueryScheduler.TOTAL::equals),
+        !lanes.containsKey(QueryScheduler.TOTAL),
         "Lane cannot be named 'total'"
     );
     Preconditions.checkArgument(
-        lanes.keySet().stream().noneMatch("default"::equals),
+        !lanes.containsKey("default"),
         "Lane cannot be named 'default'"
     );
 
-    this.segmentCountThreshold = segmentCountThreshold == null ? DEFAULT_SEGMENT_THRESHOLD : segmentCountThreshold;
+    this.segmentCountThreshold = segmentCountThreshold;
     this.periodThreshold = periodThreshold == null ? null : new Period(periodThreshold);
     this.durationThreshold = durationThreshold == null
                              ? null
@@ -163,7 +186,7 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
       score++;
     }
 
-    if (segments.size() > segmentCountThreshold) {
+    if (segmentCountThreshold != null && segments.size() > segmentCountThreshold) {
       score++;
     }
 

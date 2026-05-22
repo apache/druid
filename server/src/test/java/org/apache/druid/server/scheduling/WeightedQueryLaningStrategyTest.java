@@ -286,6 +286,78 @@ public class WeightedQueryLaningStrategyTest
     );
   }
 
+  @Test
+  public void testValidation_segmentCountThresholdZero()
+  {
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new WeightedQueryLaningStrategy(null, null, 0, null, TWO_LANES)
+    );
+  }
+
+  @Test
+  public void testValidation_segmentCountThresholdNegative()
+  {
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new WeightedQueryLaningStrategy(null, null, -1, null, TWO_LANES)
+    );
+  }
+
+  @Test
+  public void testValidation_durationThresholdZero()
+  {
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new WeightedQueryLaningStrategy(null, "PT0S", null, null, TWO_LANES)
+    );
+  }
+
+  @Test
+  public void testValidation_durationThresholdNegative()
+  {
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new WeightedQueryLaningStrategy(null, "-PT1S", null, null, TWO_LANES)
+    );
+  }
+
+  @Test
+  public void testValidation_segmentRangeThresholdZero()
+  {
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new WeightedQueryLaningStrategy(null, null, null, "PT0S", TWO_LANES)
+    );
+  }
+
+  @Test
+  public void testValidation_segmentRangeThresholdNegative()
+  {
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new WeightedQueryLaningStrategy(null, null, null, "-PT1S", TWO_LANES)
+    );
+  }
+
+  @Test
+  public void testValidation_periodThresholdZero()
+  {
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new WeightedQueryLaningStrategy("PT0S", null, null, null, TWO_LANES)
+    );
+  }
+
+  @Test
+  public void testValidation_periodThresholdNegative()
+  {
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new WeightedQueryLaningStrategy("-PT1S", null, null, null, TWO_LANES)
+    );
+  }
+
   private static Set<SegmentServerSelector> makeSegments(int count)
   {
     Set<SegmentServerSelector> segments = new HashSet<>();
