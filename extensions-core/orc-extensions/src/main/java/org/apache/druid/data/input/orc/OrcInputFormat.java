@@ -57,9 +57,7 @@ public class OrcInputFormat extends NestedInputFormat
     this.conf = conf;
   }
 
-  // Ensure FileSystem class-level initialization happens with the correct classloader (see #1714).
-  // Called once on first createReader() via AtomicBoolean guard to prevent a race when multiple
-  // subtasks concurrently swap Thread.currentThread().setContextClassLoader() (see #19491).
+  // Init FileSystem once under this class's classloader to avoid concurrent setContextClassLoader races.
   private void ensureFileSystemInitialized()
   {
     if (!fileSystemInitialized.compareAndSet(false, true)) {
