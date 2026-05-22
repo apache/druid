@@ -315,7 +315,7 @@ public class PartialSegmentMetadataCacheEntry implements ResizableCacheEntry
                             .build(
                                 "Partial segment metadata for [%s] is [%d] bytes on disk, exceeding the "
                                 + "configured reservation estimate of [%d] bytes. Increase "
-                                + "druid.segmentCache.virtualStorage.metadataReservationEstimate.",
+                                + "druid.segmentCache.virtualStorageMetadataReservationEstimate.",
                                 segmentId,
                                 actualSize,
                                 reservationEstimate
