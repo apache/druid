@@ -405,6 +405,41 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testSchemelessEndpointConfigUrlWithNullClientConfigResolvesSupplier() throws Exception
+  {
+    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.setS3ClientSupplier(EasyMock.anyObject()))
+            .andReturn(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
+            .andReturn(SERVICE);
+    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+
+    final AWSEndpointConfig schemelessEndpoint = MAPPER.readValue(
+        "{\"url\":\"s3.example.com\",\"signingRegion\":\"us-east-1\"}",
+        AWSEndpointConfig.class
+    );
+
+    final S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        EXPECTED_LOCATION,
+        null,
+        CLOUD_CONFIG_PROPERTIES,
+        null,
+        schemelessEndpoint,
+        null
+    );
+
+    // Forces s3ClientSupplier evaluation, which hits S3Utils.useHttps and confirms a null client config does not blow up.
+    inputSource.createEntity(new CloudObjectLocation("bucket", "path"));
+
+    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+  }
+
+  @Test
   public void testGetSetSessionToken()
   {
     // Test that session token getter/setter work correctly
