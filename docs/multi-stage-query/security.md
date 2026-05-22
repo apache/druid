@@ -23,9 +23,9 @@ sidebar_label: Security
   ~ under the License.
   -->
 
-All authenticated users can use the multi-stage query task engine (MSQ task engine) through the UI and API if the
-extension is loaded. However, without additional permissions, users are not able to issue queries that read or write
-Druid datasources or external data. The permission needed depends on what the user is trying to do.
+All authenticated users can use the multi-stage query task engine (MSQ task engine) through the UI and API. However,
+without additional permissions, users are not able to issue queries that read or write Druid datasources or external
+data. The permission needed depends on what the user is trying to do.
 
 To submit a query:
 
@@ -77,4 +77,3 @@ The MSQ task engine needs the following permissions for pushing, fetching, and r
 - `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/delete` to delete files when they're no longer needed.
 
 <!--TBD GCS-->
-
