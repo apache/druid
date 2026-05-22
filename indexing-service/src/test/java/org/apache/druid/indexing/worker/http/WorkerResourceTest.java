@@ -19,26 +19,11 @@
 
 package org.apache.druid.indexing.worker.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.ExponentialBackoffRetry;
-import org.apache.curator.test.TestingCluster;
-import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
-import org.apache.druid.curator.ZkEnablementConfig;
-import org.apache.druid.curator.announcement.NodeAnnouncer;
-import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.worker.Worker;
-import org.apache.druid.indexing.worker.WorkerCuratorCoordinator;
-import org.apache.druid.indexing.worker.WorkerTaskMonitor;
+import org.apache.druid.indexing.worker.WorkerTaskManager;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.server.initialization.IndexerZkConfig;
-import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.easymock.EasyMock;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,33 +34,13 @@ import javax.ws.rs.core.Response;
  */
 public class WorkerResourceTest
 {
-  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
-  private static final String BASE_PATH = "/test/druid";
-  private static final String ANNOUNCEMENT_PATH = StringUtils.format("%s/indexer/announcements/host", BASE_PATH);
-
-  private TestingCluster testingCluster;
-  private CuratorFramework cf;
-
   private Worker worker;
-
-  private WorkerCuratorCoordinator curatorCoordinator;
+  private WorkerTaskManager workerTaskManager;
   private WorkerResource workerResource;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
-    testingCluster = new TestingCluster(1);
-    testingCluster.start();
-
-    cf = CuratorFrameworkFactory.builder()
-                                .connectString(testingCluster.getConnectString())
-                                .retryPolicy(new ExponentialBackoffRetry(1, 10))
-                                .compressionProvider(new PotentiallyGzippedCompressionProvider(false))
-                                .build();
-    cf.start();
-    cf.blockUntilConnected();
-    cf.create().creatingParentsIfNeeded().forPath(BASE_PATH);
-
     worker = new Worker(
         "http",
         "host",
@@ -84,71 +49,49 @@ public class WorkerResourceTest
         "v1",
         WorkerConfig.DEFAULT_CATEGORY
     );
-
-    curatorCoordinator = new WorkerCuratorCoordinator(
-        JSON_MAPPER,
-        new IndexerZkConfig(new ZkPathsConfig()
-        {
-          @Override
-          public String getBase()
-          {
-            return BASE_PATH;
-          }
-        }, null, null, null, null),
-        new RemoteTaskRunnerConfig(),
-        cf,
-        new NodeAnnouncer(cf, Execs.directExecutor()),
-        worker
-    );
-    curatorCoordinator.start();
-
+    workerTaskManager = EasyMock.createMock(WorkerTaskManager.class);
     workerResource = new WorkerResource(
         worker,
-        () -> curatorCoordinator,
-        null,
-        EasyMock.createNiceMock(WorkerTaskMonitor.class),
-        ZkEnablementConfig.ENABLED
+        EasyMock.createNiceMock(TaskRunner.class),
+        workerTaskManager
     );
   }
 
-  @After
-  public void tearDown() throws Exception
-  {
-    curatorCoordinator.stop();
-    cf.close();
-    testingCluster.close();
-  }
-
   @Test
-  public void testDoDisable() throws Exception
+  public void testDoDisable()
   {
-    Worker theWorker = JSON_MAPPER.readValue(cf.getData().forPath(ANNOUNCEMENT_PATH), Worker.class);
-    Assert.assertEquals("v1", theWorker.getVersion());
-    Assert.assertFalse(theWorker.isDisabled());
+    workerTaskManager.workerDisabled();
+    EasyMock.expectLastCall();
+    EasyMock.replay(workerTaskManager);
 
     Response res = workerResource.doDisable();
     Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
 
-    theWorker = JSON_MAPPER.readValue(cf.getData().forPath(ANNOUNCEMENT_PATH), Worker.class);
-    Assert.assertTrue(theWorker.getVersion().isEmpty());
-    Assert.assertTrue(theWorker.isDisabled());
+    EasyMock.verify(workerTaskManager);
   }
 
   @Test
-  public void testDoEnable() throws Exception
+  public void testDoEnable()
   {
-    // Disable the worker
-    Response res = workerResource.doDisable();
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
-    Worker theWorker = JSON_MAPPER.readValue(cf.getData().forPath(ANNOUNCEMENT_PATH), Worker.class);
-    Assert.assertTrue(theWorker.getVersion().isEmpty());
-    Assert.assertTrue(theWorker.isDisabled());
+    workerTaskManager.workerEnabled();
+    EasyMock.expectLastCall();
+    EasyMock.replay(workerTaskManager);
 
-    // Enable the worker
-    res = workerResource.doEnable();
+    Response res = workerResource.doEnable();
     Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
-    theWorker = JSON_MAPPER.readValue(cf.getData().forPath(ANNOUNCEMENT_PATH), Worker.class);
-    Assert.assertEquals("v1", theWorker.getVersion());
-    Assert.assertFalse(theWorker.isDisabled());
+
+    EasyMock.verify(workerTaskManager);
+  }
+
+  @Test
+  public void testIsEnabled()
+  {
+    EasyMock.expect(workerTaskManager.isWorkerEnabled()).andReturn(true);
+    EasyMock.replay(workerTaskManager);
+
+    Response res = workerResource.isEnabled();
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
+
+    EasyMock.verify(workerTaskManager);
   }
 }
