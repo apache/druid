@@ -762,6 +762,21 @@
 
     <dependency>
       <groupId>org.apache.iceberg</groupId>
+      <artifactId>iceberg-arrow</artifactId>
+      <version>${iceberg.core.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.arrow</groupId>
+      <artifactId>arrow-vector</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.arrow</groupId>
+      <artifactId>arrow-memory-netty</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-parquet</artifactId>
       <version>${iceberg.core.version}</version>
       <scope>test</scope>

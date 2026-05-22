@@ -103,6 +103,7 @@
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>2.2</hamcrest.version>
         <iceberg.core.version>1.10.0</iceberg.core.version>
+        <arrow.version>15.0.2</arrow.version>
         <jetty.version>12.1.8</jetty.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.20.2</jackson.version>
@@ -425,6 +426,23 @@
                 <groupId>net.minidev</groupId>
                 <artifactId>json-smart</artifactId>
                 <version>2.5.2</version>
+            </dependency>
+
+            <!-- Arrow + Iceberg-Arrow -->
+            <dependency>
+                <groupId>org.apache.arrow</groupId>
+                <artifactId>arrow-vector</artifactId>
+                <version>${arrow.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.arrow</groupId>
+                <artifactId>arrow-memory-netty</artifactId>
+                <version>${arrow.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.iceberg</groupId>
+                <artifactId>iceberg-arrow</artifactId>
+                <version>${iceberg.core.version}</version>
             </dependency>
 
             <!-- transitive dependency of kafka-clients and kubernetes client
