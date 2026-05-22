@@ -67,7 +67,7 @@ The distribution directory contains `LICENSE` and `NOTICE` files and subdirector
 ## Start up Druid services
 
 Start up Druid services using the automatic single-machine configuration.
-This configuration includes default settings that are appropriate for this tutorial, including settings for the MSQ task engine.
+This configuration includes default settings that are appropriate for this tutorial.
 
 You can view the default settings in the configuration files located in `conf/druid/auto`.
 

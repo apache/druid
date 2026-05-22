@@ -65,7 +65,7 @@ You can access the [data loader](#data-loader) and [lookups view](#lookups) from
 
 ## Query
 
-SQL-based ingestion and the multi-stage query task engine use the **Query** view, which provides you with a UI to edit and use SQL queries. You should see this UI automatically in Druid 24.0 and later.
+SQL-based ingestion and the multi-stage query task engine use the **Query** view, which provides you with a UI to edit and use SQL queries.
 
 The following screenshot shows a populated enhanced **Query** view along with a description of its parts:
 
