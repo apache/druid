@@ -154,36 +154,6 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "name": "org.apache.druid.query.aggregation.datasketches.kll.KllSketchModule",
             "artifact": "druid-datasketches",
             "version": "26.0.0"
-        },
-        {
-            "name": "org.apache.druid.msq.guice.MSQExternalDataSourceModule",
-            "artifact": "druid-multi-stage-query",
-            "version": "26.0.0"
-        },
-        {
-            "name": "org.apache.druid.msq.guice.MSQIndexingModule",
-            "artifact": "druid-multi-stage-query",
-            "version": "26.0.0"
-        },
-        {
-            "name": "org.apache.druid.msq.guice.MSQDurableStorageModule",
-            "artifact": "druid-multi-stage-query",
-            "version": "26.0.0"
-        },
-        {
-            "name": "org.apache.druid.msq.guice.MSQServiceClientModule",
-            "artifact": "druid-multi-stage-query",
-            "version": "26.0.0"
-        },
-        {
-            "name": "org.apache.druid.msq.guice.MSQSqlModule",
-            "artifact": "druid-multi-stage-query",
-            "version": "26.0.0"
-        },
-        {
-            "name": "org.apache.druid.msq.guice.SqlTaskModule",
-            "artifact": "druid-multi-stage-query",
-            "version": "26.0.0"
         }
     ],
     "memory": {
@@ -326,7 +296,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "log4j.shutdownHookEnabled": "true",
     "java.vm.vendor": "Homebrew",
     "sun.arch.data.model": "64",
-    "druid.extensions.loadList": "[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-datasketches\", \"druid-multi-stage-query\"]",
+    "druid.extensions.loadList": "[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-datasketches\"]",
     "java.vendor.url": "https://github.com/Homebrew/homebrew-core/issues",
     "druid.router.coordinatorServiceName": "druid/coordinator",
     "user.timezone": "UTC",
