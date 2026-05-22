@@ -47,11 +47,13 @@ import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.DartMessageRelayFactoryImpl;
 import org.apache.druid.msq.dart.controller.DartMessageRelays;
+import org.apache.druid.msq.dart.controller.DartTableInputSpecSlicerProvider;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClientFactory;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClientFactoryImpl;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
+import org.apache.druid.msq.guice.MSQBinders;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryConfigProvider;
@@ -111,6 +113,10 @@ public class DartControllerModule implements DruidModule
                  .addBinding()
                  .to(DartSqlEngine.class)
                  .in(LazySingleton.class);
+      MSQBinders.inputSpecSlicerProviderBinder(binder, Dart.class)
+                .addBinding()
+                .to(DartTableInputSpecSlicerProvider.class)
+                .in(LazySingleton.class);
     }
 
     @Provides

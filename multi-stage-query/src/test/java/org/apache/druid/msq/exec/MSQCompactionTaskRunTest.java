@@ -30,6 +30,7 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
@@ -237,6 +238,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
         new SegmentWranglerModule(),
         new LookylooModule(),
         new MSQIndexingModule(),
+        binder -> binder.bind(CoordinatorClient.class).toInstance(coordinatorClient),
         binder -> binder.bind(PolicyEnforcer.class).toInstance(NoopPolicyEnforcer.instance()),
         binder -> binder.bind(WireTransferableContext.class).toInstance(new WireTransferableContext(null, null, true)),
         binder -> binder.bind(DataSegmentPusher.class)
