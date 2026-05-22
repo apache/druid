@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.iceberg.FileScanTask;
+import org.apache.iceberg.Table;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
@@ -57,6 +58,39 @@ public abstract class IcebergCatalog
   public boolean isCaseSensitive()
   {
     return true;
+  }
+
+  /**
+   * Load and return the Iceberg Table object for direct use by readers that go beyond file-path delegation.
+   */
+  public Table retrieveTable(String tableNamespace, String tableName)
+  {
+    final Catalog catalog = retrieveCatalog();
+    final Namespace namespace = Namespace.of(tableNamespace);
+    final String tableIdentifier = tableNamespace + "." + tableName;
+
+    final ClassLoader currCtxClassloader = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      final TableIdentifier icebergTableIdentifier = catalog.listTables(namespace).stream()
+                                                            .filter(id -> id.toString().equals(tableIdentifier))
+                                                            .findFirst()
+                                                            .orElseThrow(() -> new IAE(
+                                                                "Couldn't retrieve table identifier for '%s'."
+                                                                + " Please verify that the table exists in the given catalog",
+                                                                tableIdentifier
+                                                            ));
+      return catalog.loadTable(icebergTableIdentifier);
+    }
+    catch (IAE e) {
+      throw e;
+    }
+    catch (Exception e) {
+      throw new RE(e, "Failed to load iceberg table with identifier [%s]", tableIdentifier);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxClassloader);
+    }
   }
 
   /**
