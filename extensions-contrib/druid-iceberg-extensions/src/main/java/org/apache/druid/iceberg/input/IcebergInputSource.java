@@ -76,6 +76,12 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   @JsonProperty
   private final ResidualFilterMode residualFilterMode;
 
+  @JsonProperty
+  private final boolean useArrowReader;
+
+  @JsonProperty
+  private final int arrowBatchSize;
+
   private boolean isLoaded = false;
 
   private SplittableInputSource delegateInputSource;
@@ -88,7 +94,9 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       @JsonProperty("icebergCatalog") IcebergCatalog icebergCatalog,
       @JsonProperty("warehouseSource") InputSourceFactory warehouseSource,
       @JsonProperty("snapshotTime") @Nullable DateTime snapshotTime,
-      @JsonProperty("residualFilterMode") @Nullable ResidualFilterMode residualFilterMode
+      @JsonProperty("residualFilterMode") @Nullable ResidualFilterMode residualFilterMode,
+      @JsonProperty("useArrowReader") @Nullable Boolean useArrowReader,
+      @JsonProperty("arrowBatchSize") @Nullable Integer arrowBatchSize
   )
   {
     this.tableName = Preconditions.checkNotNull(tableName, "tableName cannot be null");
@@ -98,6 +106,10 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     this.warehouseSource = Preconditions.checkNotNull(warehouseSource, "warehouseSource cannot be null");
     this.snapshotTime = snapshotTime;
     this.residualFilterMode = Configs.valueOrDefault(residualFilterMode, ResidualFilterMode.IGNORE);
+    this.useArrowReader = useArrowReader != null && useArrowReader;
+    this.arrowBatchSize = arrowBatchSize != null && arrowBatchSize > 0
+                          ? arrowBatchSize
+                          : IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE;
   }
 
   @Override
@@ -113,6 +125,16 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       File temporaryDirectory
   )
   {
+    if (useArrowReader) {
+      return new IcebergArrowInputSourceReader(
+          icebergCatalog.retrieveTable(namespace, tableName),
+          icebergFilter,
+          snapshotTime,
+          icebergCatalog.isCaseSensitive(),
+          inputRowSchema,
+          arrowBatchSize
+      );
+    }
     if (!isLoaded) {
       retrieveIcebergDatafiles();
     }
@@ -187,6 +209,18 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   public ResidualFilterMode getResidualFilterMode()
   {
     return residualFilterMode;
+  }
+
+  @JsonProperty
+  public boolean isUseArrowReader()
+  {
+    return useArrowReader;
+  }
+
+  @JsonProperty
+  public int getArrowBatchSize()
+  {
+    return arrowBatchSize;
   }
 
   public SplittableInputSource getDelegateInputSource()

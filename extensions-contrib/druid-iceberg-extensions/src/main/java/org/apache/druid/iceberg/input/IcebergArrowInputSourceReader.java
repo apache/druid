@@ -190,7 +190,7 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
         event.put(vec.getName(), extractValue(vec, rowIdx));
       }
     }
-    final long timestamp = schema.getTimestampSpec().extractTimestamp(event);
+    final long timestamp = schema.getTimestampSpec().extractTimestamp(event).getMillis();
     final List<String> dimensions = resolveDimensions(batch);
     return new MapBasedInputRow(timestamp, dimensions, event);
   }
