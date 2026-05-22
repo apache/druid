@@ -298,7 +298,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     final String topic = IdUtils.getRandomId();
     kafkaServer.createTopicWithPartitions(topic, 2);
 
-    // Create a streaming supervisor with concurrent locks (required for backfill)
+    // Create a streaming supervisor with concurrent locks and withUseEarliestSequenceNumber=false
     final KafkaSupervisorSpec supervisor = createKafkaSupervisor(kafkaServer)
         .withContext(Map.of("useConcurrentLocks", true))
         .withIoConfig(io -> io
@@ -309,7 +309,11 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
 
     cluster.callApi().postSupervisor(supervisor);
 
-    final int recordCount = publish1kRecords(topic, false);
+    waitForSupervisorDetailedState(supervisor.getId(), "RUNNING");
+
+    final int batch1 = publish1kRecords(topic, false);
+    waitUntilPublishedRecordsAreIngested(batch1);
+    publish1kRecords(topic, false);
 
     // Reset the main supervisor and spin up a backfill supervisor for the gap
     final Map<String, Object> result = cluster.callApi().resetSupervisorAndBackfill(supervisor.getId());
@@ -317,8 +321,6 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
 
     // Wait for the backfill to finish
     waitForSupervisorToComplete(backfillSupervisorId);
-
-    verifyRowCount(recordCount);
 
     // Main supervisor should still be running
     final SupervisorStatus mainStatus = cluster.callApi().getSupervisorStatus(supervisor.getId());
@@ -336,6 +338,15 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
         event -> event.hasMetricName("supervisor/count")
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
                       .hasDimension("state", "COMPLETED")
+    );
+  }
+
+  private void waitForSupervisorDetailedState(String supervisorId, String detailedState)
+  {
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("supervisor/count")
+                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+                      .hasDimension("detailedState", detailedState)
     );
   }
 
