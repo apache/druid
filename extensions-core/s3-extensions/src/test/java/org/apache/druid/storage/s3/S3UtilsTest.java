@@ -386,8 +386,6 @@ public class S3UtilsTest
     Assert.assertEquals(maxRetries, count.get());
   }
 
-  // useHttps tolerates a null clientConfig — see bug where S3InputSource passes null clientConfig
-  // alongside a schemeless endpoint URL and the unconditional clientConfig.getProtocol() NPEs.
   private static final ObjectMapper JSON = new ObjectMapper();
 
   private static AWSEndpointConfig endpointWith(String json) throws IOException

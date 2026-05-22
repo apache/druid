@@ -409,7 +409,6 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testSchemelessEndpointConfigUrlWithNullClientConfigResolvesSupplier() throws Exception
   {
-    // Reproduces NPE in S3Utils.useHttps when endpointConfig.url lacks a scheme and clientConfig is null.
     EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.setS3ClientSupplier(EasyMock.anyObject()))
             .andReturn(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
@@ -436,7 +435,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null
     );
 
-    // Forces s3ClientSupplier evaluation, which hits S3Utils.useHttps and NPEs pre-fix.
+    // Forces s3ClientSupplier evaluation, which hits S3Utils.useHttps and confirms a null client config does not blow up.
     inputSource.createEntity(new CloudObjectLocation("bucket", "path"));
 
     EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
