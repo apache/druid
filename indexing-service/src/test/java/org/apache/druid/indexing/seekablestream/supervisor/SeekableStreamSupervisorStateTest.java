@@ -2555,6 +2555,154 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
+  public void testResetOffsetsForwardOnlyKeepsAheadPartitions() throws InterruptedException, IOException
+  {
+    // Partition "1" has checkpointed ahead of the reset offset; forwardOnly must keep the higher value.
+    final ImmutableMap<String, String> checkpointOffsets = ImmutableMap.of("0", "5", "1", "200", "2", "100");
+    final ImmutableMap<String, String> resetOffsets = ImmutableMap.of("0", "10", "1", "8", "2", "150");
+    // "1" keeps 200 (checkpoint > reset); "0" advances to 10; "2" advances to 150.
+    final ImmutableMap<String, String> expectedOffsets = ImmutableMap.of("0", "10", "1", "200", "2", "150");
+
+    EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamEndSequenceNumbers<>(STREAM, checkpointOffsets)
+        )
+    );
+    EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(
+        SUPERVISOR_ID,
+        new TestSeekableStreamDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, expectedOffsets))
+    )).andReturn(true);
+    taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset offsets is called");
+    EasyMock.expectLastCall();
+    taskQueue.shutdown("task2", "DataSourceMetadata is updated while reset offsets is called");
+    EasyMock.expectLastCall();
+    taskQueue.shutdown("task3", "DataSourceMetadata is updated while reset offsets is called");
+    EasyMock.expectLastCall();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.getIoConfig().setTaskCount(3);
+    supervisor.start();
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("0"),
+        ImmutableMap.of("0", "5"),
+        null, null, ImmutableSet.of("task1"), ImmutableSet.of(), null
+    );
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("1"),
+        ImmutableMap.of("1", "200"),
+        null, null, ImmutableSet.of("task2"), ImmutableSet.of(), null
+    );
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("2"),
+        ImmutableMap.of("2", "100"),
+        null, null, ImmutableSet.of("task3"), ImmutableSet.of(), null
+    );
+
+    final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamEndSequenceNumbers<>(STREAM, resetOffsets)
+    );
+
+    supervisor.resetOffsetsForwardOnly(resetMetadata);
+
+    validateSupervisorStateAfterResetOffsets(supervisor, resetOffsets, 0);
+  }
+
+  @Test
+  public void testResetOffsetsForwardOnlyAllBehind() throws InterruptedException, IOException
+  {
+    // All checkpointed offsets are behind the reset offsets; behavior is identical to a normal reset.
+    final ImmutableMap<String, String> checkpointOffsets = ImmutableMap.of("0", "5", "1", "6");
+    final ImmutableMap<String, String> resetOffsets = ImmutableMap.of("0", "100", "1", "200");
+
+    EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamEndSequenceNumbers<>(STREAM, checkpointOffsets)
+        )
+    );
+    EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(
+        SUPERVISOR_ID,
+        new TestSeekableStreamDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, resetOffsets))
+    )).andReturn(true);
+    taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset offsets is called");
+    EasyMock.expectLastCall();
+    taskQueue.shutdown("task2", "DataSourceMetadata is updated while reset offsets is called");
+    EasyMock.expectLastCall();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.getIoConfig().setTaskCount(2);
+    supervisor.start();
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("0"),
+        ImmutableMap.of("0", "5"),
+        null, null, ImmutableSet.of("task1"), ImmutableSet.of(), null
+    );
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("1"),
+        ImmutableMap.of("1", "6"),
+        null, null, ImmutableSet.of("task2"), ImmutableSet.of(), null
+    );
+
+    final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamEndSequenceNumbers<>(STREAM, resetOffsets)
+    );
+
+    supervisor.resetOffsetsForwardOnly(resetMetadata);
+
+    validateSupervisorStateAfterResetOffsets(supervisor, resetOffsets, 0);
+  }
+
+  @Test
+  public void testResetOffsetsForwardOnlyNoExistingCheckpoint() throws InterruptedException
+  {
+    // No existing metadata in storage; forwardOnly inserts the reset offsets as-is.
+    final ImmutableMap<String, String> resetOffsets = ImmutableMap.of("0", "50", "1", "75");
+
+    EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(null);
+    EasyMock.expect(indexerMetadataStorageCoordinator.insertDataSourceMetadata(
+        SUPERVISOR_ID,
+        new TestSeekableStreamDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, resetOffsets))
+    )).andReturn(true);
+    taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset offsets is called");
+    EasyMock.expectLastCall();
+    taskQueue.shutdown("task2", "DataSourceMetadata is updated while reset offsets is called");
+    EasyMock.expectLastCall();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.getIoConfig().setTaskCount(2);
+    supervisor.start();
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("0"),
+        ImmutableMap.of("0", "10"),
+        null, null, ImmutableSet.of("task1"), ImmutableSet.of(), null
+    );
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("1"),
+        ImmutableMap.of("1", "20"),
+        null, null, ImmutableSet.of("task2"), ImmutableSet.of(), null
+    );
+
+    final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamEndSequenceNumbers<>(STREAM, resetOffsets)
+    );
+
+    supervisor.resetOffsetsForwardOnly(resetMetadata);
+
+    validateSupervisorStateAfterResetOffsets(supervisor, resetOffsets, 0);
+  }
+
+  @Test
   public void testStaleOffsetsNegativeLagNotEmitted() throws Exception
   {
     expectEmitterSupervisor(false);
@@ -3386,7 +3534,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         Map<String, String> map
     )
     {
-      return null;
+      return new TestSeekableStreamDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(stream, map));
     }
 
     @Override

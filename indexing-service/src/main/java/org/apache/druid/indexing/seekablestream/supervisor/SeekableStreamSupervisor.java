@@ -818,19 +818,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private class ResetOffsetsNotice implements Notice
   {
     final DataSourceMetadata dataSourceMetadata;
+    final boolean forwardOnly;
     private static final String TYPE = "reset_offsets_notice";
 
     ResetOffsetsNotice(
-        final DataSourceMetadata dataSourceMetadata
+        final DataSourceMetadata dataSourceMetadata,
+        final boolean forwardOnly
     )
     {
       this.dataSourceMetadata = dataSourceMetadata;
+      this.forwardOnly = forwardOnly;
     }
 
     @Override
     public void handle()
     {
-      resetOffsetsInternal(dataSourceMetadata);
+      resetOffsetsInternal(dataSourceMetadata, forwardOnly);
     }
 
     @Override
@@ -1341,6 +1344,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @Override
   public void resetOffsets(@Nonnull DataSourceMetadata resetDataSourceMetadata)
   {
+    validateResetOffsetsMetadata(resetDataSourceMetadata);
+    log.info("Posting ResetOffsetsNotice with reset dataSource metadata[%s]", resetDataSourceMetadata);
+    addNotice(new ResetOffsetsNotice(resetDataSourceMetadata, false));
+  }
+
+  /**
+   * Like {@link #resetOffsets}, but never rolls a partition backward: if the stored offset is already ahead of
+   * the requested reset offset for a partition, the stored value is kept. Used by resetSupervisorAndBackfill to
+   * ensure the main supervisor cannot regress even if a task checkpoints between offset capture and this call.
+   */
+  public void resetOffsetsForwardOnly(@Nonnull DataSourceMetadata resetDataSourceMetadata)
+  {
+    validateResetOffsetsMetadata(resetDataSourceMetadata);
+    log.info("Posting ResetOffsetsNotice (forwardOnly) with reset dataSource metadata[%s]", resetDataSourceMetadata);
+    addNotice(new ResetOffsetsNotice(resetDataSourceMetadata, true));
+  }
+
+  private void validateResetOffsetsMetadata(@Nonnull DataSourceMetadata resetDataSourceMetadata)
+  {
     if (resetDataSourceMetadata == null) {
       throw InvalidInput.exception("Reset dataSourceMetadata is required for resetOffsets.");
     }
@@ -1374,8 +1396,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           ioConfig.getStream()
       );
     }
-    log.info("Posting ResetOffsetsNotice with reset dataSource metadata[%s]", resetDataSourceMetadata);
-    addNotice(new ResetOffsetsNotice(resetDataSourceMetadata));
   }
 
   public void registerNewVersionOfPendingSegment(
@@ -2147,7 +2167,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * the metadata storage. Once the offsets are reset, any active tasks serving the partition offsets will be restarted.
    * @param dataSourceMetadata Required reset data source metadata. Assumed that the metadata is validated.
    */
-  public void resetOffsetsInternal(@Nonnull final DataSourceMetadata dataSourceMetadata)
+  public void resetOffsetsInternal(@Nonnull final DataSourceMetadata dataSourceMetadata, final boolean forwardOnly)
   {
     log.info("Reset offsets for supervisor[%s] for dataSource[%s] with metadata[%s]", supervisorId, dataSource, dataSourceMetadata);
 
@@ -2158,7 +2178,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final boolean metadataUpdateSuccess;
     final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(supervisorId);
     if (metadata == null) {
-      log.info("Checkpointed metadata in null for supervisor[%s] for dataSource[%s] - inserting metadata[%s]", supervisorId, dataSource, resetMetadata);
+      log.info("Checkpointed metadata is null for supervisor[%s] for dataSource[%s] - inserting metadata[%s]", supervisorId, dataSource, resetMetadata);
       metadataUpdateSuccess = indexerMetadataStorageCoordinator.insertDataSourceMetadata(supervisorId, resetMetadata);
     } else {
       if (!checkSourceMetadataMatch(metadata)) {
@@ -2170,7 +2190,36 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       @SuppressWarnings("unchecked")
       final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata =
           (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) metadata;
-      final DataSourceMetadata newMetadata = currentMetadata.plus(resetMetadata);
+      final DataSourceMetadata newMetadata;
+      if (forwardOnly) {
+        // For each partition in resetMetadata, keep max(current, reset) so the main supervisor never goes backward.
+        final Map<PartitionIdType, SequenceOffsetType> currentMap =
+            currentMetadata.getSeekableStreamSequenceNumbers().getPartitionSequenceNumberMap();
+        final Map<PartitionIdType, SequenceOffsetType> resetMap =
+            resetMetadata.getSeekableStreamSequenceNumbers().getPartitionSequenceNumberMap();
+        final Map<PartitionIdType, SequenceOffsetType> forwardMap = new HashMap<>(resetMap);
+        forwardMap.forEach((partition, resetOffset) -> {
+          final SequenceOffsetType currentOffset = currentMap.get(partition);
+          if (currentOffset != null && isOffsetAtOrBeyond(currentOffset, resetOffset)) {
+            log.info(
+                "Keeping current offset[%s] for partition[%s] of supervisor[%s] as it is ahead of requested reset offset[%s]",
+                currentOffset,
+                partition,
+                supervisorId,
+                resetOffset
+            );
+            forwardMap.put(partition, currentOffset);
+          }
+        });
+        final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> forwardMetadata =
+            createDataSourceMetaDataForReset(
+                resetMetadata.getSeekableStreamSequenceNumbers().getStream(),
+                forwardMap
+            );
+        newMetadata = currentMetadata.plus(forwardMetadata);
+      } else {
+        newMetadata = currentMetadata.plus(resetMetadata);
+      }
       log.info("Current checkpointed metadata[%s], new metadata[%s] for supervisor[%s] for dataSource[%s]", currentMetadata, newMetadata, supervisorId, dataSource);
       try {
         metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(supervisorId, newMetadata);
