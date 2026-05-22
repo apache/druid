@@ -471,10 +471,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       return acquireExisting;
     }
 
-    if (!config.isVirtualStorage()) {
-      return AcquireSegmentAction.missingSegment();
-    }
-
     final ReferenceCountingLock lock = lock(dataSegment);
     synchronized (lock) {
       try {
