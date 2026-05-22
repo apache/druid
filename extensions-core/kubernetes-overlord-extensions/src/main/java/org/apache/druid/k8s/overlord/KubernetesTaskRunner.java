@@ -21,7 +21,6 @@ package org.apache.druid.k8s.overlord;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -53,15 +52,12 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -389,20 +385,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         taskid
     );
 
-    try {
-      return Optional.of(httpClient.go(
-          new Request(HttpMethod.GET, url),
-          new InputStreamResponseHandler()
-      ).get());
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-    catch (ExecutionException e) {
-      // Unwrap if possible
-      Throwables.propagateIfPossible(e.getCause(), IOException.class);
-      throw new RuntimeException(e);
-    }
+    return TaskRunnerUtils.streamTaskReportsFromTaskLocation(httpClient, url);
   }
 
   @Override

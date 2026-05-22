@@ -38,7 +38,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.execution.DefaultKubernetesTaskRunnerDynamicConfig;
@@ -50,6 +51,9 @@ import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -586,7 +590,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_streamTaskReports_withExistingTask() throws Exception
   {
-    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
+    final KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
       @Override
       public TaskLocation getLocation()
       {
@@ -598,12 +602,12 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     EasyMock.expect(httpClient.go(
         EasyMock.anyObject(Request.class),
-        EasyMock.anyObject(InputStreamResponseHandler.class))
-    ).andReturn(Futures.immediateFuture(IOUtils.toInputStream("{}", StandardCharsets.UTF_8)));
+        EasyMock.anyObject(InputStreamFullResponseHandler.class))
+    ).andReturn(Futures.immediateFuture(taskReportResponse(HttpResponseStatus.OK, "{}")));
 
     replayAll();
 
-    Optional<InputStream> maybeInputStream = runner.streamTaskReports(task.getId());
+    final Optional<InputStream> maybeInputStream = runner.streamTaskReports(task.getId());
 
     verifyAll();
 
@@ -612,33 +616,9 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_streamTaskReports_withoutExistingTask_returnsEmptyOptional() throws Exception
+  public void test_streamTaskReports_whenTaskReportsUnavailable_returnsEmptyOptional() throws Exception
   {
-    Optional<InputStream> maybeInputStream = runner.streamTaskReports(task.getId());
-    Assertions.assertFalse(maybeInputStream.isPresent());
-  }
-
-  @Test
-  public void test_streamTaskReports_withUnknownTaskLocation_returnsEmptyOptional() throws Exception
-  {
-    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
-      @Override
-      public TaskLocation getLocation()
-      {
-        return TaskLocation.unknown();
-      }
-    };
-
-    runner.tasks.put(task.getId(), workItem);
-
-    Optional<InputStream> maybeInputStream = runner.streamTaskReports(task.getId());
-    Assertions.assertFalse(maybeInputStream.isPresent());
-  }
-
-  @Test
-  public void test_streamTaskReports_whenInterruptedExceptionThrown_throwsRuntimeException()
-  {
-    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
+    final KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
       @Override
       public TaskLocation getLocation()
       {
@@ -648,7 +628,58 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     runner.tasks.put(task.getId(), workItem);
 
-    ListenableFuture<InputStream> future = new ListenableFuture<>()
+    EasyMock.expect(httpClient.go(
+        EasyMock.anyObject(Request.class),
+        EasyMock.anyObject(InputStreamFullResponseHandler.class))
+    ).andReturn(Futures.immediateFuture(taskReportResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, "error")));
+
+    replayAll();
+
+    final Optional<InputStream> maybeInputStream = runner.streamTaskReports(task.getId());
+
+    verifyAll();
+
+    Assertions.assertFalse(maybeInputStream.isPresent());
+  }
+
+  @Test
+  public void test_streamTaskReports_withoutExistingTask_returnsEmptyOptional() throws Exception
+  {
+    final Optional<InputStream> maybeInputStream = runner.streamTaskReports(task.getId());
+    Assertions.assertFalse(maybeInputStream.isPresent());
+  }
+
+  @Test
+  public void test_streamTaskReports_withUnknownTaskLocation_returnsEmptyOptional() throws Exception
+  {
+    final KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
+      @Override
+      public TaskLocation getLocation()
+      {
+        return TaskLocation.unknown();
+      }
+    };
+
+    runner.tasks.put(task.getId(), workItem);
+
+    final Optional<InputStream> maybeInputStream = runner.streamTaskReports(task.getId());
+    Assertions.assertFalse(maybeInputStream.isPresent());
+  }
+
+  @Test
+  public void test_streamTaskReports_whenInterruptedExceptionThrown_throwsRuntimeException()
+  {
+    final KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
+      @Override
+      public TaskLocation getLocation()
+      {
+        return TaskLocation.create("host", 0, 1, false);
+      }
+    };
+
+    runner.tasks.put(task.getId(), workItem);
+
+    final ListenableFuture<InputStreamFullResponseHolder> future = new ListenableFuture<>()
     {
       @Override
       public void addListener(Runnable runnable, Executor executor)
@@ -674,13 +705,13 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
       }
 
       @Override
-      public InputStream get() throws InterruptedException
+      public InputStreamFullResponseHolder get() throws InterruptedException
       {
         throw new InterruptedException();
       }
 
       @Override
-      public InputStream get(long timeout, TimeUnit unit) throws InterruptedException
+      public InputStreamFullResponseHolder get(long timeout, TimeUnit unit) throws InterruptedException
       {
         throw new InterruptedException();
       }
@@ -688,12 +719,12 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     EasyMock.expect(httpClient.go(
         EasyMock.anyObject(Request.class),
-        EasyMock.anyObject(InputStreamResponseHandler.class))
+        EasyMock.anyObject(InputStreamFullResponseHandler.class))
     ).andReturn(future);
 
     replayAll();
 
-    Exception e = Assertions.assertThrows(RuntimeException.class, () -> runner.streamTaskReports(task.getId()));
+    final Exception e = Assertions.assertThrows(RuntimeException.class, () -> runner.streamTaskReports(task.getId()));
     Assertions.assertTrue(e.getCause() instanceof InterruptedException);
 
     verifyAll();
@@ -702,7 +733,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_streamTaskReports_whenExecutionExceptionThrown_throwsRuntimeException()
   {
-    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
+    final KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
       @Override
       public TaskLocation getLocation()
       {
@@ -714,7 +745,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     EasyMock.expect(httpClient.go(
         EasyMock.anyObject(Request.class),
-        EasyMock.anyObject(InputStreamResponseHandler.class))
+        EasyMock.anyObject(InputStreamFullResponseHandler.class))
     ).andReturn(Futures.immediateFailedFuture(new Exception()));
 
     replayAll();
@@ -885,5 +916,18 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     Assertions.assertEquals(1, executor.getCorePoolSize());
     Assertions.assertEquals(1, executor.getMaximumPoolSize());
     Assertions.assertEquals(1, runner.getTotalCapacity());
+  }
+
+  private static InputStreamFullResponseHolder taskReportResponse(
+      final HttpResponseStatus status,
+      final String content
+  )
+  {
+    final InputStreamFullResponseHolder response = new InputStreamFullResponseHolder(
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, status)
+    );
+    response.addChunk(content.getBytes(StandardCharsets.UTF_8));
+    response.done();
+    return response;
   }
 }

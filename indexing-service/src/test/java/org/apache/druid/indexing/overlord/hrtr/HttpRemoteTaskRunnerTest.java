@@ -26,6 +26,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.io.ByteStreams;
+import com.google.common.util.concurrent.Futures;
 import org.apache.druid.common.guava.DSuppliers;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -36,6 +38,7 @@ import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
@@ -57,16 +60,24 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -1170,6 +1181,18 @@ public class HttpRemoteTaskRunnerTest
     Assert.assertFalse(taskRunner.getLazyTaskSlotCount().containsKey(additionalWorkerCategory));
   }
 
+  @Test(timeout = 60_000L)
+  public void testStreamTaskReportsFromWorker() throws Exception
+  {
+    assertStreamTaskReportsFromWorker(HttpResponseStatus.OK, Optional.of("my report!"));
+  }
+
+  @Test(timeout = 60_000L)
+  public void testStreamTaskReportsUnavailableFromWorker() throws Exception
+  {
+    assertStreamTaskReportsFromWorker(HttpResponseStatus.SERVICE_UNAVAILABLE, Optional.absent());
+  }
+
   /*
    * Task goes PENDING -> RUNNING -> SUCCESS and few more useless notifications in between.
    */
@@ -1910,6 +1933,107 @@ public class HttpRemoteTaskRunnerTest
     return workerHolder;
   }
 
+  private static void assertStreamTaskReportsFromWorker(
+      final HttpResponseStatus responseStatus,
+      final Optional<String> expectedReport
+  ) throws Exception
+  {
+    final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
+    final Capture<Request> capturedRequest = Capture.newInstance();
+    EasyMock.expect(httpClient.go(
+        EasyMock.capture(capturedRequest),
+        EasyMock.anyObject(InputStreamFullResponseHandler.class))
+    ).andReturn(Futures.immediateFuture(taskReportResponse(responseStatus, expectedReport.or("error"))));
+    EasyMock.replay(httpClient);
+
+    final TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery)
+            .times(2);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+    final Task task = new NoopTask("task id with spaces", null, null, 0, 0, null);
+    final HttpRemoteTaskRunner taskRunner = newHttpTaskRunnerInstance(
+        druidNodeDiscoveryProvider,
+        new NoopProvisioningStrategy<>(),
+        httpClient,
+        ImmutableMap.of(
+            task,
+            ImmutableList.of(
+                TaskAnnouncement.create(
+                    task,
+                    TaskStatus.running(task.getId()),
+                    TaskLocation.unknown()
+                ),
+                TaskAnnouncement.create(
+                    task,
+                    TaskStatus.running(task.getId()),
+                    TaskLocation.create("host", 1234, -1)
+                )
+            )
+        )
+    );
+
+    try {
+      taskRunner.start();
+      druidNodeDiscovery.getListeners().get(0).nodesAdded(
+          ImmutableList.of(
+              new DiscoveryDruidNode(
+                  new DruidNode("service", "host", false, 1234, null, true, false),
+                  NodeRole.MIDDLE_MANAGER,
+                  ImmutableMap.of(
+                      WorkerNodeService.DISCOVERY_SERVICE_KEY,
+                      new WorkerNodeService("ip1", 1, "0", WorkerConfig.DEFAULT_CATEGORY)
+                  )
+              )
+          )
+      );
+      taskRunner.run(task);
+
+      Assert.assertTrue(
+          TestUtils.conditionValid(
+              () ->
+                  !taskRunner.getRunningTasks().isEmpty()
+                  && !Iterables.getOnlyElement(taskRunner.getRunningTasks())
+                               .getLocation()
+                               .equals(TaskLocation.unknown())
+          )
+      );
+
+      final Optional<InputStream> stream = taskRunner.streamTaskReports(task.getId());
+      if (expectedReport.isPresent()) {
+        Assert.assertTrue(stream.isPresent());
+        Assert.assertEquals(expectedReport.get(), StringUtils.fromUtf8(ByteStreams.toByteArray(stream.get())));
+      } else {
+        Assert.assertEquals(Optional.absent(), stream);
+      }
+
+      Assert.assertEquals(
+          "http://host:1234/druid/worker/v1/chat/task%20id%20with%20spaces/liveReports",
+          capturedRequest.getValue().getUrl().toString()
+      );
+    }
+    finally {
+      taskRunner.stop();
+    }
+
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+  }
+
+  private static InputStreamFullResponseHolder taskReportResponse(
+      final HttpResponseStatus status,
+      final String content
+  )
+  {
+    final InputStreamFullResponseHolder response = new InputStreamFullResponseHolder(
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, status)
+    );
+    response.addChunk(StringUtils.toUtf8(content));
+    response.done();
+    return response;
+  }
+
   private static WorkerHolder createWorkerHolder(
       ObjectMapper smileMapper,
       HttpClient httpClient,
@@ -2143,6 +2267,20 @@ public class HttpRemoteTaskRunnerTest
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       ProvisioningStrategy provisioningStrategy)
   {
+    return newHttpTaskRunnerInstance(
+        druidNodeDiscoveryProvider,
+        provisioningStrategy,
+        EasyMock.createNiceMock(HttpClient.class),
+        ImmutableMap.of()
+    );
+  }
+
+  private static HttpRemoteTaskRunner newHttpTaskRunnerInstance(
+      DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
+      ProvisioningStrategy provisioningStrategy,
+      HttpClient httpClient,
+      Map<Task, List<TaskAnnouncement>> toBeAssignedTasks)
+  {
     return new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
         new HttpRemoteTaskRunnerConfig()
@@ -2153,7 +2291,7 @@ public class HttpRemoteTaskRunnerTest
             return 3;
           }
         },
-        EasyMock.createNiceMock(HttpClient.class),
+        httpClient,
         DSuppliers.of(new AtomicReference<>(DefaultWorkerBehaviorConfig.defaultConfig())),
         provisioningStrategy,
         druidNodeDiscoveryProvider,
@@ -2181,7 +2319,7 @@ public class HttpRemoteTaskRunnerTest
             worker,
             ImmutableList.of(),
             ImmutableList.of(),
-            ImmutableMap.of(),
+            toBeAssignedTasks,
             new AtomicInteger(),
             ImmutableSet.of()
         );
