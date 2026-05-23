@@ -86,8 +86,8 @@ public class ExpressionLambdaAggregationTest extends InitializedNullHandlingTest
   public void testNumericExpressionLambdaIngestRollupViaMerge() throws Exception
   {
     // Three rows sharing the same (timestamp, dim) so they roll up into a single output row during merge.
-    // longField values: 1 (0b001), 2 (0b010), 4 (0b100) — sum=7, bitwiseOr=7
-    // doubleField values: 1.5, 2.0, 0.25 — sum=3.75
+    // longField values: 1 (0b001), 2 (0b010), 4 (0b100) -> sum=7, bitwiseOr=7
+    // doubleField values: 1.5, 2.0, 0.25 -> sum=3.75
     final List<InputRow> rows = List.of(
         row(1L, 1.5),
         row(2L, 2.0),
@@ -183,20 +183,21 @@ public class ExpressionLambdaAggregationTest extends InitializedNullHandlingTest
                                         )
                                         .build();
 
-    final AggregationTestHelper helper =
-        AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(Collections.emptyList(), tempFolder);
+    try (final AggregationTestHelper helper =
+             AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(Collections.emptyList(), tempFolder)) {
 
-    final Sequence<Result<TimeseriesResultValue>> seq = helper.runQueryOnSegmentsObjs(
-        ImmutableList.of(segment),
-        query
-    );
-    final TimeseriesResultValue result = Iterables.getOnlyElement(seq.toList()).getValue();
+      final Sequence<Result<TimeseriesResultValue>> seq = helper.runQueryOnSegmentsObjs(
+          ImmutableList.of(segment),
+          query
+      );
+      final TimeseriesResultValue result = Iterables.getOnlyElement(seq.toList()).getValue();
 
-    // Three input rows rolled up into one, count reflects rollup happened
-    Assert.assertEquals(3L, result.getLongMetric("count").longValue());
-    Assert.assertEquals(7L, result.getLongMetric("long_sum").longValue());
-    Assert.assertEquals(7L, result.getLongMetric("bitwise_or").longValue());
-    Assert.assertEquals(3.75, result.getDoubleMetric("double_sum").doubleValue(), 0.0);
+      // Three input rows rolled up into one, count reflects rollup happened
+      Assert.assertEquals(3L, result.getLongMetric("count").longValue());
+      Assert.assertEquals(7L, result.getLongMetric("long_sum").longValue());
+      Assert.assertEquals(7L, result.getLongMetric("bitwise_or").longValue());
+      Assert.assertEquals(3.75, result.getDoubleMetric("double_sum").doubleValue(), 0.0);
+    }
   }
 
   private static InputRow row(long longVal, double doubleVal)

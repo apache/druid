@@ -114,9 +114,7 @@ public class CompactionTaskTest extends CompactionTestBase
   /**
    * Index task identical in shape to {@link MoreResources.Task#INDEX_TASK_WITH_AGGREGATORS} but with a pair of
    * {@link ExpressionLambdaAggregatorFactory} metrics over the {@code added} long field. Used by
-   * {@link #testCompactionWithExpressionLambdaAggregator} to verify that an expression aggregator survives
-   * serialization into segment metadata, gets re-instantiated during compaction, and produces consistent metric
-   * values across the rollup performed at compaction time (which exercises {@code makeAggregateCombiner}).
+   * {@link #testCompactionWithExpressionLambdaAggregator} to verify that an expression aggregator works correctly.
    */
   private static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_EXPR_AGG = () ->
       TaskBuilder
@@ -337,7 +335,7 @@ public class CompactionTaskTest extends CompactionTestBase
           fullDatasourceName
       );
 
-      // Compact 4 segments → 2; this performs cross-segment rollup which drives RowCombiningTimeAndDimsIterator
+      // Compact 4 segments -> 2; this performs cross-segment rollup which drives RowCombiningTimeAndDimsIterator
       // into ExpressionLambdaAggregatorFactory.makeAggregateCombiner().
       compactData(COMPACTION_TASK.get(), null, null);
       verifySegmentsCount(2);
