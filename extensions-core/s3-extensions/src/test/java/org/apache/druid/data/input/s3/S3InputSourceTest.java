@@ -408,10 +408,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   public void testSchemelessEndpointConfigUrlWithNullClientConfigResolvesSupplier() throws Exception
   {
     EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.setS3ClientSupplier(EasyMock.anyObject()))
-            .andReturn(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
-            .andReturn(SERVICE);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getS3StorageConfig())
+            .andStubReturn(S3_STORAGE_CONFIG);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
 
     final AWSEndpointConfig schemelessEndpoint = MAPPER.readValue(
