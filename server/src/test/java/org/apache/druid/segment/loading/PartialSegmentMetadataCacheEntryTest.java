@@ -107,8 +107,8 @@ class PartialSegmentMetadataCacheEntryTest
         () -> entry.mount(location)
     );
     Assertions.assertTrue(
-        thrown.getMessage().contains("metadataReservationEstimate"),
-        "expected operator-facing knob hint, got: " + thrown.getMessage()
+        thrown.getMessage().contains("virtualStorageMetadataReservationEstimate"),
+        "expected operator-facing config hint, got: " + thrown.getMessage()
     );
     Assertions.assertFalse(entry.isMounted());
     Assertions.assertNull(entry.getFileMapper());
