@@ -44,7 +44,6 @@ import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
@@ -264,10 +263,10 @@ public class KubernetesOverlordModule implements DruidModule
   }
 
   /**
-   * Provides a TaskRunnerFactory instance suitable for environments without Zookeeper.
-   * In such environments, the standard RemoteTaskRunnerFactory may not be operational.
-   * Depending on the workerType defined in KubernetesAndWorkerTaskRunnerConfig,
-   * this method selects and returns an appropriate TaskRunnerFactory implementation.
+   * Provides the worker-side {@link TaskRunnerFactory} that the {@code k8sAndWorker} runner pairs
+   * with {@link KubernetesTaskRunnerFactory}. Only {@link HttpRemoteTaskRunnerFactory} is
+   * supported; the ZooKeeper-based 'remote' worker type was removed, and
+   * {@link KubernetesAndWorkerTaskRunnerConfig} enforces this at config-validation time.
    */
   @Provides
   @LazySingleton
@@ -277,10 +276,8 @@ public class KubernetesOverlordModule implements DruidModule
       Injector injector
   )
   {
-    String workerType = runnerConfig.getWorkerType();
-    return HttpRemoteTaskRunnerFactory.TYPE_NAME.equals(workerType)
-           ? injector.getInstance(HttpRemoteTaskRunnerFactory.class)
-           : injector.getInstance(RemoteTaskRunnerFactory.class);
+    // workerType is validated to be HttpRemoteTaskRunnerFactory.TYPE_NAME by the config.
+    return injector.getInstance(HttpRemoteTaskRunnerFactory.class);
   }
 
   /**
