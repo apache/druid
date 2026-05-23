@@ -27,6 +27,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.iceberg.filter.IcebergEqualsFilter;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.iceberg.DataFile;
@@ -106,7 +107,12 @@ public class IcebergArrowInputSourceReaderTest
     writeRows(table, row(1_000L, "alice", 1.1), row(2_000L, "bob", 2.2), row(3_000L, "carol", 3.3));
 
     final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
-        table, null, null, true, INPUT_SCHEMA, IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+        table,
+        null,
+        null,
+        true,
+        INPUT_SCHEMA,
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
     );
 
     final List<InputRow> rows = readAll(reader);
@@ -126,7 +132,12 @@ public class IcebergArrowInputSourceReaderTest
     final Table table = catalog.retrieveTable(NAMESPACE, TABLE);
 
     final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
-        table, null, null, true, INPUT_SCHEMA, IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+        table,
+        null,
+        null,
+        true,
+        INPUT_SCHEMA,
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
     );
 
     final List<InputRow> rows = readAll(reader);
@@ -175,7 +186,12 @@ public class IcebergArrowInputSourceReaderTest
     );
 
     final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
-        table, null, null, true, pruned, IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+        table,
+        null,
+        null,
+        true,
+        pruned,
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
     );
 
     final List<InputRow> rows = readAll(reader);
@@ -196,7 +212,12 @@ public class IcebergArrowInputSourceReaderTest
     writeRows(table, data);
 
     final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
-        table, null, null, true, INPUT_SCHEMA, IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+        table,
+        null,
+        null,
+        true,
+        INPUT_SCHEMA,
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
     );
 
     final List<InputRow> rows = readAll(reader);
@@ -204,21 +225,21 @@ public class IcebergArrowInputSourceReaderTest
   }
 
   @Test
-  public void testSnapshotTime() throws IOException
+  public void testSnapshotTime() throws IOException, InterruptedException
   {
     final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
     writeRows(table, row(1_000L, "snap1", 1.0));
     final long afterFirstSnapshot = System.currentTimeMillis();
 
     // Small sleep to ensure second snapshot has later timestamp
-    try { Thread.sleep(10); } catch (InterruptedException ignored) { }
+    Thread.sleep(10);
     writeRows(table, row(2_000L, "snap2", 2.0));
 
     // Read as-of the first snapshot — should only see 1 row.
     final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
         table,
         null,
-        new org.joda.time.DateTime(afterFirstSnapshot),
+        DateTimes.utc(afterFirstSnapshot),
         true,
         INPUT_SCHEMA,
         IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
@@ -277,9 +298,14 @@ public class IcebergArrowInputSourceReaderTest
   private static final class NoopInputStats implements org.apache.druid.data.input.InputStats
   {
     @Override
-    public void incrementProcessedBytes(final long v) {}
+    public void incrementProcessedBytes(final long v)
+    {
+    }
 
     @Override
-    public long getProcessedBytes() { return 0; }
+    public long getProcessedBytes()
+    {
+      return 0;
+    }
   }
 }

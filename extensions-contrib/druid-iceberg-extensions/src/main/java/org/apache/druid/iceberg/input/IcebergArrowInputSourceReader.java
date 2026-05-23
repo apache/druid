@@ -19,6 +19,7 @@
 
 package org.apache.druid.iceberg.input;
 
+import com.google.common.collect.Maps;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
 import org.apache.arrow.vector.DateDayVector;
@@ -29,14 +30,14 @@ import org.apache.arrow.vector.Float4Vector;
 import org.apache.arrow.vector.Float8Vector;
 import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.SmallIntVector;
+import org.apache.arrow.vector.TimeMicroVector;
 import org.apache.arrow.vector.TimeStampMicroTZVector;
 import org.apache.arrow.vector.TimeStampMicroVector;
-import org.apache.arrow.vector.TimeStampNanoTZVector;
-import org.apache.arrow.vector.TimeStampNanoVector;
 import org.apache.arrow.vector.TimeStampMilliTZVector;
 import org.apache.arrow.vector.TimeStampMilliVector;
+import org.apache.arrow.vector.TimeStampNanoTZVector;
+import org.apache.arrow.vector.TimeStampNanoVector;
 import org.apache.arrow.vector.TinyIntVector;
-import org.apache.arrow.vector.TimeMicroVector;
 import org.apache.arrow.vector.VarBinaryVector;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.druid.data.input.InputRow;
@@ -46,7 +47,6 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.iceberg.filter.IcebergFilter;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.iceberg.CombinedScanTask;
 import org.apache.iceberg.Table;
@@ -61,7 +61,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -183,7 +182,7 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
   private InputRow batchRowToInputRow(final ColumnarBatch batch, final int rowIdx)
   {
     final int numCols = batch.numCols();
-    final Map<String, Object> event = new HashMap<>(numCols);
+    final Map<String, Object> event = Maps.newHashMapWithExpectedSize(numCols);
     for (int col = 0; col < numCols; col++) {
       final FieldVector vec = batch.column(col).getFieldVector();
       if (!vec.isNull(rowIdx)) {
