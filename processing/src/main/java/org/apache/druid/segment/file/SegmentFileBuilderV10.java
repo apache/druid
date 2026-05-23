@@ -50,7 +50,6 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.TreeMap;
 
 /**
@@ -61,20 +60,21 @@ import java.util.TreeMap;
  * V10 file format:
  * | version (byte) | meta compression (byte) | meta length (int) | meta json | container 0 | ... | container n |
  * <p>
- * Containers are scoped to at most one declared file group. Callers declare which group they are writing via
- * {@link #startFileGroup(String)} before writing its files; a new container is started when the declared group
- * changes or the current container would exceed {@link #maxContainerSize}. A group whose total size exceeds the max
- * container size spans multiple containers, all tagged with the same group. This gives readers a clean 1:1 (or 1:N)
- * mapping between groups and containers, which supports per-group partial loading without any read-side reorganization.
- * Projections are the primary caller today, but the mechanism is equally usable for other organizational needs
- * (shared data across columns, internal metadata, etc.).
+ * Containers are scoped to exactly one declared bundle. Callers declare which bundle they are writing via
+ * {@link #startFileBundle(String)} before writing its files; a new container is started when the declared bundle
+ * changes or the current container would exceed {@link #maxContainerSize}. A bundle whose total size exceeds the max
+ * container size spans multiple containers, all tagged with the same bundle. This gives readers a clean 1:1 (or 1:N)
+ * mapping between bundles and containers, which supports per-bundle partial loading without any read-side
+ * reorganization. Projections are the primary caller today, but the mechanism is equally usable for other
+ * organizational needs (shared data across columns, internal metadata, etc.).
  * <p>
- * Callers that never invoke {@link #startFileGroup(String)} are mapped to a null-group container.
+ * Callers that never invoke {@link #startFileBundle(String)} have all writes tagged with the
+ * {@link SegmentFileBuilder#ROOT_BUNDLE_NAME} default bundle.
  * <p>
  * Much of the logic here was ported from {@link org.apache.druid.java.util.common.io.smoosh.FileSmoosher} of the V9
  * format and there is a fair bit of overlap. In fact, the initial implementation of this class wrapped a V9 smoosher
  * to build the files before combining them into the V10 format. The main difference is that V9 fills each container to
- * the max while here we organize with file groups.
+ * the max while here we organize with bundles.
  */
 public class SegmentFileBuilderV10 implements SegmentFileBuilder
 {
@@ -115,8 +115,8 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
   // Nested addWithChannel calls (for example a serializer that, while being written, emits sub-files for its own
   // columnar parts) can't write into the current container concurrently with the outer writer. These nested writes are
   // redirected to temporary files and merged back into container(s) once the outer writer completes. Each entry
-  // carries the file group that was active when the delegate was created so that the merge routes it into the
-  // correct container even if the active group has since changed.
+  // carries the bundle that was active when the delegate was created so that the merge routes it into the correct
+  // container even if the active bundle has since changed.
   private final List<DelegateEntry> completedDelegates = new ArrayList<>();
   private final List<DelegateEntry> inProgressDelegates = new ArrayList<>();
   private long delegateFileCounter = 0;
@@ -124,11 +124,11 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
   @Nullable
   private ContainerWriter currentContainer = null;
   private boolean writerCurrentlyInUse = false;
-  // The file group declared by the most recent {@link #startFileGroup} call. Writes are routed into containers
-  // tagged with this group. Remains {@code null} if the caller never declares one, in which case all writes share
-  // a single null-group container.
-  @Nullable
-  private String currentFileGroup = null;
+
+  /**
+   * The bundle declared by the most recent {@link #startFileBundle} call
+   */
+  private String currentBundle = SegmentFileBuilder.ROOT_BUNDLE_NAME;
 
   @Nullable
   private String interval = null;
@@ -189,7 +189,7 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
     if (internalFiles.containsKey(name)) {
       throw new IAE("Cannot add files of the same name, already have [%s]", name);
     }
-    ensureNameMatchesActiveGroup(name);
+    ensureNameMatchesActiveBundle(name);
     if (size > maxContainerSize) {
       throw DruidException.forPersona(DruidException.Persona.ADMIN)
                           .ofCategory(DruidException.Category.RUNTIME_FAILURE)
@@ -207,7 +207,7 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
       return delegateChannel(name, size);
     }
 
-    ensureContainer(currentFileGroup, size);
+    ensureContainer(currentBundle, size);
     final ContainerWriter target = currentContainer;
     final long startOffset = target.currOffset;
     writerCurrentlyInUse = true;
@@ -284,59 +284,69 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
   {
     return externalSegmentFileBuilders.computeIfAbsent(
         externalFile,
-        (k) -> new SegmentFileBuilderV10(jsonMapper, externalFile, baseDir, maxContainerSize, metadataCompression)
+        (k) -> {
+          final SegmentFileBuilderV10 fresh =
+              new SegmentFileBuilderV10(jsonMapper, externalFile, baseDir, maxContainerSize, metadataCompression);
+          // A late-attached external inherits the parent's currently-active bundle on creation only; subsequent
+          // bundle changes flow through the parent's startFileBundle broadcast. Re-applying on every fetch would
+          // close the external's in-progress container, since V10 bundles cannot currently be re-entered.
+          if (!SegmentFileBuilder.ROOT_BUNDLE_NAME.equals(currentBundle)) {
+            fresh.startFileBundle(currentBundle);
+          }
+          return fresh;
+        }
     );
   }
 
   @Override
   public void addColumn(String name, ColumnDescriptor columnDescriptor)
   {
-    ensureNameMatchesActiveGroup(name);
+    ensureNameMatchesActiveBundle(name);
     this.columns.put(name, columnDescriptor);
   }
 
   /**
-   * If a file group is currently active (set by the most recent {@link #startFileGroup} call), enforce that names of
-   * files and columns added under it are prefixed by {@code groupName + "/"}. Prevents silent collisions where two
-   * groups write a file/column of the same bare name and the second silently overwrites the first in the metadata
-   * maps. Existing production callers (e.g. {@code IndexMergerV10} via
-   * {@code Projections.getProjectionSegmentInternalFileName}) already construct prefixed names, so this is a no-op
-   * for them; it catches new writers that forget the convention.
+   * If a named bundle is currently active (set by the most recent {@link #startFileBundle} call to a non-root value),
+   * enforce that names of files and columns added under it are prefixed by {@code bundleName + "/"}. The root bundle
+   * is unconstrained.
    */
-  private void ensureNameMatchesActiveGroup(String name)
+  private void ensureNameMatchesActiveBundle(String name)
   {
-    if (currentFileGroup != null && !name.startsWith(currentFileGroup + "/")) {
+    if (!SegmentFileBuilder.ROOT_BUNDLE_NAME.equals(currentBundle) && !name.startsWith(currentBundle + "/")) {
       throw DruidException.defensive(
-          "Name[%s] must start with the active file group prefix[%s/]",
+          "Name[%s] must start with the active bundle prefix[%s/]",
           name,
-          currentFileGroup
+          currentBundle
       );
     }
   }
 
   /**
-   * Declare the file group that subsequent writes belong to. Writes are routed into a container tagged with the
-   * declared group; a new container is rolled when the group changes or the incoming file won't fit. A group whose
-   * total size exceeds {@link #maxContainerSize} is split across multiple consecutive containers, all tagged with
-   * the same group. Passing {@code null} clears the current group; subsequent writes are then routed into a
-   * null-group container until the next call.
+   * Declare the bundle that subsequent writes belong to. Writes are routed into a container tagged with the declared
+   * bundle; a new container is rolled when the bundle changes or the incoming file won't fit. A bundle whose total
+   * size exceeds {@link #maxContainerSize} is split across multiple consecutive containers, all tagged with the same
+   * bundle. Passing {@code null} resets to {@link SegmentFileBuilder#ROOT_BUNDLE_NAME}; subsequent writes are then
+   * routed into a root-bundle container until the next call.
    * <p>
    * Current V10-specific limitations worth knowing:
    * <ul>
-   *   <li>Groups cannot be re-entered. Once a different group (or {@code null}) has been declared, the previous
-   *       group's container is closed, and you cannot go back and append more files to it, any such writes would
-   *       open a fresh container for the re-declared group, so the group's files would end up in non-contiguous
-   *       containers. If all of a group's files must land in the same container(s), write them contiguously.</li>
+   *   <li>Bundles cannot be re-entered. Once a different bundle has been declared the previous bundle's container is
+   *       closed, and you cannot go back and append more files to it; any such writes would open a fresh container
+   *       for the re-declared bundle, so the bundle's files would end up in non-contiguous containers. If all of a
+   *       bundle's files must land in the same container(s), write them contiguously.</li>
    *   <li>Throws if called while a writer returned by {@link #addWithChannel} is still open.</li>
    * </ul>
    */
   @Override
-  public void startFileGroup(@Nullable String groupName)
+  public void startFileBundle(@Nullable String bundleName)
   {
     if (writerCurrentlyInUse) {
-      throw DruidException.defensive("Cannot start file group[%s] while a writer is in progress", groupName);
+      throw DruidException.defensive("Cannot start file bundle[%s] while a writer is in progress", bundleName);
     }
-    this.currentFileGroup = groupName;
+    this.currentBundle = bundleName == null ? SegmentFileBuilder.ROOT_BUNDLE_NAME : bundleName;
+    for (SegmentFileBuilderV10 externalFile : externalSegmentFileBuilders.values()) {
+      externalFile.startFileBundle(bundleName);
+    }
   }
 
   public void addInterval(String interval)
@@ -464,35 +474,35 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
     long offset = 0;
     for (ContainerWriter container : containers) {
       final long length = container.file.length();
-      result.add(new SegmentFileContainerMetadata(offset, length, container.group));
+      result.add(new SegmentFileContainerMetadata(offset, length, container.bundle));
       offset += length;
     }
     return result;
   }
 
   /**
-   * Ensure that {@link #currentContainer} is ready to accept {@code size} bytes of a file belonging to {@code group}.
+   * Ensure that {@link #currentContainer} is ready to accept {@code size} bytes of a file belonging to {@code bundle}.
    * Rolls the current container and starts a new one when:
    * <ul>
    *   <li>there is no current container, or</li>
-   *   <li>the current container is for a different group, or</li>
+   *   <li>the current container is for a different bundle, or</li>
    *   <li>the current container cannot fit the incoming bytes within {@link #maxContainerSize}.</li>
    * </ul>
    */
-  private void ensureContainer(@Nullable String group, long size) throws IOException
+  private void ensureContainer(String bundle, long size) throws IOException
   {
     if (currentContainer == null
-        || !Objects.equals(currentContainer.group, group)
+        || !currentContainer.bundle.equals(bundle)
         || !currentContainer.canFit(size)) {
       if (currentContainer != null) {
         currentContainer.close();
       }
-      currentContainer = openNewContainer(group);
+      currentContainer = openNewContainer(bundle);
       containers.add(currentContainer);
     }
   }
 
-  private ContainerWriter openNewContainer(@Nullable String group) throws IOException
+  private ContainerWriter openNewContainer(String bundle) throws IOException
   {
     FileUtils.mkdirp(baseDir);
     final int fileNum = containers.size();
@@ -500,7 +510,7 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
         baseDir,
         StringUtils.format("%s-%05d.container", outputFileName, fileNum)
     );
-    return new ContainerWriter(fileNum, containerFile, group, maxContainerSize);
+    return new ContainerWriter(fileNum, containerFile, bundle, maxContainerSize);
   }
 
   private SegmentFileChannel delegateChannel(final String name, final long size) throws IOException
@@ -509,9 +519,9 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
     // cannot collide, since main and external always have distinct output file names.
     final String delegateName = StringUtils.format("%s-delegate-%d", outputFileName, delegateFileCounter++);
     final File tmpFile = new File(baseDir, delegateName);
-    // Snapshot the active group now so that if this delegate is merged after the outer writer has advanced past
-    // the group it was created under, it still routes into the correct container.
-    final DelegateEntry entry = new DelegateEntry(tmpFile, name, currentFileGroup);
+    // Snapshot the active bundle now so that if this delegate is merged after the outer writer has advanced past
+    // the bundle it was created under, it still routes into the correct container.
+    final DelegateEntry entry = new DelegateEntry(tmpFile, name, currentBundle);
     inProgressDelegates.add(entry);
 
     return new SegmentFileChannel()
@@ -576,9 +586,9 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
 
   /**
    * Move completed delegate temp files into containers by replaying them as regular {@link #add} calls. Only called
-   * when no outer writer is currently holding the builder. Each entry's snapshotted group is restored as
-   * {@link #currentFileGroup} during its replay so the file lands in the container that was active when the
-   * nested write was originally requested, not whichever group happens to be active at merge time.
+   * when no outer writer is currently holding the builder. Each entry's snapshotted bundle is restored as
+   * {@link #currentBundle} during its replay so the file lands in the container that was active when the nested
+   * write was originally requested, not whichever bundle happens to be active at merge time.
    */
   private void mergeDelegatedFiles() throws IOException
   {
@@ -587,10 +597,10 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
     }
     final List<DelegateEntry> toProcess = new ArrayList<>(completedDelegates);
     completedDelegates.clear();
-    final String savedGroup = currentFileGroup;
+    final String savedBundle = currentBundle;
     try {
       for (DelegateEntry entry : toProcess) {
-        currentFileGroup = entry.group;
+        currentBundle = entry.bundle;
         add(entry.name, entry.file);
         if (!entry.file.delete()) {
           LOG.warn("Unable to delete delegate file[%s]", entry.file);
@@ -598,33 +608,32 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
       }
     }
     finally {
-      currentFileGroup = savedGroup;
+      currentBundle = savedBundle;
     }
   }
 
-  private record DelegateEntry(File file, String name, @Nullable String group)
+  private record DelegateEntry(File file, String name, String bundle)
   {
   }
 
   /**
-   * Low-level writer for a single container chunk file. One container holds internal files from at most one group.
+   * Low-level writer for a single container chunk file. One container holds internal files from exactly one bundle.
    */
   private static class ContainerWriter implements GatheringByteChannel
   {
     private final int fileNum;
     private final File file;
-    @Nullable
-    private final String group;
+    private final String bundle;
     private final long maxSize;
     private final Closer closer = Closer.create();
     private final GatheringByteChannel channel;
     private long currOffset = 0;
 
-    ContainerWriter(int fileNum, File file, @Nullable String group, long maxSize) throws IOException
+    ContainerWriter(int fileNum, File file, String bundle, long maxSize) throws IOException
     {
       this.fileNum = fileNum;
       this.file = file;
-      this.group = group;
+      this.bundle = bundle;
       this.maxSize = maxSize;
       final FileOutputStream outStream = closer.register(new FileOutputStream(file));
       this.channel = closer.register(outStream.getChannel());
@@ -675,9 +684,9 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
       closer.close();
       if (LOG.isDebugEnabled()) {
         LOG.debug(
-            "Created container file[%s] for group[%s] of size[%,d] bytes.",
+            "Created container file[%s] for bundle[%s] of size[%,d] bytes.",
             file.getAbsolutePath(),
-            group,
+            bundle,
             file.length()
         );
       }

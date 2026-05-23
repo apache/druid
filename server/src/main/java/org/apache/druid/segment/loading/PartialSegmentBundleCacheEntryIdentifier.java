@@ -19,16 +19,23 @@
 
 package org.apache.druid.segment.loading;
 
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.timeline.SegmentId;
 
 /**
- * Use a {@link SegmentId} as a {@link CacheEntryIdentifier}.
+ * Identifier for a {@link PartialSegmentBundleCacheEntry}; a named group of containers within a partial-loaded V10
+ * segment that gets mounted and evicted as a unit. The {@code bundleName} is the group name declared at write time
+ * via {@link SegmentFileBuilder#startFileBundle}.
+ * <p>
+ * Each partial segment is split across multiple {@link CacheEntry}, with one {@link SegmentCacheEntryIdentifier}-keyed
+ * metadata entry plus one of these per bundle.
  */
-public record SegmentCacheEntryIdentifier(SegmentId segmentId) implements CacheEntryIdentifier
+public record PartialSegmentBundleCacheEntryIdentifier(SegmentId segmentId, String bundleName)
+    implements CacheEntryIdentifier
 {
   @Override
   public String toString()
   {
-    return segmentId.toString();
+    return segmentId + ":" + bundleName;
   }
 }

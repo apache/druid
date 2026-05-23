@@ -53,13 +53,13 @@ class SegmentFileBuilderV10Test
   {
     final File baseDir = newBaseDir();
 
-    // matches the production usage pattern in IndexMergerV10: call startFileGroup then write that projection's
+    // matches the production usage pattern in IndexMergerV10: call startFileBundle then write that projection's
     // columns, then move on to the next projection.
     final String[] projections = {"__base", "projA", "projB"};
     final int colCount = 3;
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (String projection : projections) {
-        builder.startFileGroup(projection);
+        builder.startFileBundle(projection);
         for (int col = 0; col < colCount; col++) {
           final String name = projection + "/col" + col;
           final File tmpFile = new File(tempDir, StringUtils.format("%s-%s.bin", projection, col));
@@ -89,14 +89,14 @@ class SegmentFileBuilderV10Test
     final String slashyProjection = "nested/projection";
     final int colCount = 3;
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
-      builder.startFileGroup("__base");
+      builder.startFileBundle("__base");
       for (int col = 0; col < colCount; col++) {
         final String name = "__base/col" + col;
         final File tmpFile = new File(tempDir, StringUtils.format("base-%s.bin", col));
         Files.write(Ints.toByteArray(name.hashCode()), tmpFile);
         builder.add(name, tmpFile);
       }
-      builder.startFileGroup(slashyProjection);
+      builder.startFileBundle(slashyProjection);
       for (int col = 0; col < colCount; col++) {
         final String name = slashyProjection + "/col" + col;
         final File tmpFile = new File(tempDir, StringUtils.format("slashy-%s.bin", col));
@@ -133,7 +133,7 @@ class SegmentFileBuilderV10Test
     final File baseDir = newBaseDir();
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
-      builder.startFileGroup("projA");
+      builder.startFileBundle("projA");
       final File tmp = new File(tempDir, "no-prefix.bin");
       Files.write(Ints.toByteArray(1), tmp);
       // file name doesn't start with "projA/", so add must throw
@@ -147,7 +147,7 @@ class SegmentFileBuilderV10Test
     final File baseDir = newBaseDir();
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
-      builder.startFileGroup("projA");
+      builder.startFileBundle("projA");
       Assertions.assertThrows(RuntimeException.class, () -> builder.addWithChannel("wrong/col0", 4));
     }
   }
@@ -158,7 +158,7 @@ class SegmentFileBuilderV10Test
     final File baseDir = newBaseDir();
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
-      builder.startFileGroup("projA");
+      builder.startFileBundle("projA");
       Assertions.assertThrows(
           RuntimeException.class,
           () -> builder.addColumn("wrong_no_prefix", new ColumnDescriptor.Builder()
@@ -169,12 +169,12 @@ class SegmentFileBuilderV10Test
   }
 
   @Test
-  void testAddWithoutPrefixIsAllowedWhenNoGroupActive() throws IOException
+  void testAddWithoutPrefixIsAllowedInRootBundle() throws IOException
   {
     final File baseDir = newBaseDir();
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
-      // never call startFileGroup; bare names are fine
+      // never call startFileBundle; bare names are fine under the default root bundle
       final File tmp = new File(tempDir, "bare.bin");
       Files.write(Ints.toByteArray(1), tmp);
       builder.add("col0", tmp);
@@ -183,7 +183,7 @@ class SegmentFileBuilderV10Test
   }
 
   @Test
-  void testContainerMetadataCarriesFileGroup() throws IOException
+  void testContainerMetadataCarriesBundle() throws IOException
   {
     final File baseDir = newBaseDir();
 
@@ -191,7 +191,7 @@ class SegmentFileBuilderV10Test
     final int colCount = 2;
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (String projection : projections) {
-        builder.startFileGroup(projection);
+        builder.startFileBundle(projection);
         for (int col = 0; col < colCount; col++) {
           final String name = projection + "/col" + col;
           final File tmpFile = new File(tempDir, StringUtils.format("%s-%s.bin", projection, col));
@@ -206,35 +206,34 @@ class SegmentFileBuilderV10Test
       final SegmentFileMetadata metadata = mapper.getSegmentFileMetadata();
       Assertions.assertEquals(projections.length, metadata.getContainers().size());
 
-      // Each container's fileGroup must equal the group active when it was written. Build the expected list by
-      // walking the files: each container holds files from exactly one group, so the first file's group prefix is
-      // authoritative.
+      // Each container's bundle must equal the bundle active when it was written. Each container holds files from
+      // exactly one bundle, so the first file's name prefix is authoritative.
       for (int ci = 0; ci < metadata.getContainers().size(); ci++) {
         final int containerIdx = ci;
-        final String expectedGroup = metadata.getFiles().entrySet().stream()
+        final String expectedBundle = metadata.getFiles().entrySet().stream()
             .filter(e -> e.getValue().getContainer() == containerIdx)
             .map(e -> e.getKey().substring(0, e.getKey().indexOf('/')))
             .findFirst()
             .orElseThrow();
         Assertions.assertEquals(
-            expectedGroup,
-            metadata.getContainers().get(ci).getFileGroup(),
-            "container " + ci + " fileGroup mismatch"
+            expectedBundle,
+            metadata.getContainers().get(ci).getBundle(),
+            "container " + ci + " bundle mismatch"
         );
       }
     }
   }
 
   @Test
-  void testContainerWrittenWithoutStartFileGroupHasNullFileGroup() throws IOException
+  void testContainerWrittenWithoutStartFileBundleDefaultsToRoot() throws IOException
   {
     final File baseDir = newBaseDir();
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
-      // never call startFileGroup; the single container should carry fileGroup == null
+      // never call startFileBundle; the single container should be tagged with ROOT_BUNDLE_NAME
       for (int col = 0; col < 3; col++) {
         final String name = "col" + col;
-        final File tmpFile = new File(tempDir, StringUtils.format("nogroup-%s.bin", col));
+        final File tmpFile = new File(tempDir, StringUtils.format("nobundle-%s.bin", col));
         Files.write(Ints.toByteArray(name.hashCode()), tmpFile);
         builder.add(name, tmpFile);
       }
@@ -244,47 +243,78 @@ class SegmentFileBuilderV10Test
     try (SegmentFileMapperV10 mapper = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER)) {
       final SegmentFileMetadata metadata = mapper.getSegmentFileMetadata();
       Assertions.assertEquals(1, metadata.getContainers().size());
-      Assertions.assertNull(metadata.getContainers().get(0).getFileGroup());
+      Assertions.assertEquals(
+          SegmentFileBuilder.ROOT_BUNDLE_NAME,
+          metadata.getContainers().get(0).getBundle()
+      );
     }
   }
 
   @Test
-  void testStartFileGroupNullClearsCurrentGroup() throws IOException
+  void testStartFileBundleNullResetsToRoot() throws IOException
   {
     final File baseDir = newBaseDir();
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
-      builder.startFileGroup("first");
+      builder.startFileBundle("first");
       final File firstFile = new File(tempDir, "first.bin");
       Files.write(Ints.toByteArray(1), firstFile);
       builder.add("first/a", firstFile);
 
-      builder.startFileGroup(null);
-      final File noGroupFile = new File(tempDir, "ng.bin");
-      Files.write(Ints.toByteArray(2), noGroupFile);
-      builder.add("ng/a", noGroupFile);
+      // Passing null resets to ROOT_BUNDLE_NAME; subsequent writes go in a root-bundle container.
+      builder.startFileBundle(null);
+      final File rootFile = new File(tempDir, "root.bin");
+      Files.write(Ints.toByteArray(2), rootFile);
+      builder.add("root_a", rootFile);
     }
 
     final File segmentFile = new File(baseDir, IndexIO.V10_FILE_NAME);
     try (SegmentFileMapperV10 mapper = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER)) {
       final SegmentFileMetadata metadata = mapper.getSegmentFileMetadata();
       Assertions.assertEquals(2, metadata.getContainers().size());
-      Assertions.assertEquals("first", metadata.getContainers().get(0).getFileGroup());
-      Assertions.assertNull(metadata.getContainers().get(1).getFileGroup());
+      Assertions.assertEquals("first", metadata.getContainers().get(0).getBundle());
+      Assertions.assertEquals(
+          SegmentFileBuilder.ROOT_BUNDLE_NAME,
+          metadata.getContainers().get(1).getBundle()
+      );
     }
   }
 
   @Test
-  void testStartFileGroupWhileWriterInUseThrows() throws IOException
+  void testStartFileBundleWhileWriterInUseThrows() throws IOException
   {
     final File baseDir = newBaseDir();
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
-      builder.startFileGroup("__base");
+      builder.startFileBundle("__base");
       try (SegmentFileChannel outer = builder.addWithChannel("__base/col0", 4)) {
-        Assertions.assertThrows(RuntimeException.class, () -> builder.startFileGroup("projA"));
+        Assertions.assertThrows(RuntimeException.class, () -> builder.startFileBundle("projA"));
         outer.write(ByteBuffer.wrap(new byte[]{1, 2, 3, 4}));
       }
+    }
+  }
+
+  @Test
+  void testStartFileBundleWithRootNameIsSameAsNull() throws IOException
+  {
+    final File baseDir = newBaseDir();
+
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
+      // Explicit ROOT_BUNDLE_NAME and null are equivalent; both resolve to the default root bundle.
+      builder.startFileBundle(SegmentFileBuilder.ROOT_BUNDLE_NAME);
+      final File tmp = new File(baseDir, "tmp.bin");
+      Files.write(new byte[]{1, 2, 3, 4}, tmp);
+      builder.add("col0", tmp);
+    }
+
+    final File segmentFile = new File(baseDir, IndexIO.V10_FILE_NAME);
+    try (SegmentFileMapperV10 mapper = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER)) {
+      final SegmentFileMetadata metadata = mapper.getSegmentFileMetadata();
+      Assertions.assertEquals(1, metadata.getContainers().size());
+      Assertions.assertEquals(
+          SegmentFileBuilder.ROOT_BUNDLE_NAME,
+          metadata.getContainers().get(0).getBundle()
+      );
     }
   }
 
@@ -300,7 +330,7 @@ class SegmentFileBuilderV10Test
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (String projection : mainProjections) {
-        builder.startFileGroup(projection);
+        builder.startFileBundle(projection);
         for (int col = 0; col < colCount; col++) {
           final String name = projection + "/col" + col;
           final File tmpFile = new File(tempDir, StringUtils.format("main-%s-%s.bin", projection, col));
@@ -313,7 +343,7 @@ class SegmentFileBuilderV10Test
       // sub-file with its own header + containers. Projection-per-container splitting must apply there too.
       final SegmentFileBuilder external = builder.getExternalBuilder(externalName);
       for (String projection : externalProjections) {
-        external.startFileGroup(projection);
+        external.startFileBundle(projection);
         for (int col = 0; col < colCount; col++) {
           final String name = projection + "/col" + (col + 1000);
           final File tmpFile = new File(tempDir, StringUtils.format("ext-%s-%s.bin", projection, col));
@@ -370,7 +400,7 @@ class SegmentFileBuilderV10Test
     final byte[] nestedBytes = new byte[]{5, 6, 7, 8};
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
-      builder.startFileGroup("__base");
+      builder.startFileBundle("__base");
       try (SegmentFileChannel outer = builder.addWithChannel("__base/outer", outerBytes.length)) {
         // nested write while outer is in use → forced into delegate temp file
         try (SegmentFileChannel nested = builder.addWithChannel("__base/nested", nestedBytes.length)) {
@@ -380,7 +410,7 @@ class SegmentFileBuilderV10Test
       }
 
       final SegmentFileBuilder external = builder.getExternalBuilder(externalName);
-      external.startFileGroup("extProj");
+      external.startFileBundle("extProj");
       try (SegmentFileChannel extOuter = external.addWithChannel("extProj/outer", outerBytes.length)) {
         try (SegmentFileChannel extNested = external.addWithChannel("extProj/nested", nestedBytes.length)) {
           extNested.write(ByteBuffer.wrap(nestedBytes));
@@ -399,12 +429,12 @@ class SegmentFileBuilderV10Test
   }
 
   @Test
-  void testNestedDelegateClosedAfterOuterRoutesToOriginalGroup() throws IOException
+  void testNestedDelegateClosedAfterOuterRoutesToOriginalBundle() throws IOException
   {
     // doing something like this is weird and probably should happen in practice, but if a nested write was requested
-    // while file group "groupA" was active; even if the caller switches to "groupB" before finally closing the nested
-    // channel, the delegated bytes must still land in groupA's container, not groupB's. Otherwise the grouping breaks,
-    // and files from other groups end up in the same container.
+    // while bundle "groupA" was active; even if the caller switches to "groupB" before finally closing the nested
+    // channel, the delegated bytes must still land in groupA's container, not groupB's. Otherwise bundles break and
+    // files from other bundles end up in the same container.
     final File baseDir = newBaseDir();
 
     final byte[] outerBytes = new byte[]{1, 2, 3, 4};
@@ -412,7 +442,7 @@ class SegmentFileBuilderV10Test
     final byte[] groupBBytes = new byte[]{9, 10, 11, 12};
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
-      builder.startFileGroup("groupA");
+      builder.startFileBundle("groupA");
 
       final SegmentFileChannel outer = builder.addWithChannel("groupA/outer", outerBytes.length);
       final SegmentFileChannel nested = builder.addWithChannel("groupA/nested", nestedBytes.length);
@@ -423,7 +453,7 @@ class SegmentFileBuilderV10Test
       outer.close();
 
       // switch group before closing the still-open nested delegate; merge must use the snapshotted "groupA"
-      builder.startFileGroup("groupB");
+      builder.startFileBundle("groupB");
       nested.close();
 
       // and a real groupB file so we can verify groupB's container is independent of the nested file
