@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.loading.SegmentRangeReader;
 import org.apache.druid.utils.CloseableUtils;
@@ -83,6 +84,8 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class PartialSegmentFileMapperV10 implements SegmentFileMapper
 {
+  private static final Logger LOG = new Logger(PartialSegmentFileMapperV10.class);
+
   /**
    * Suffix appended to the target filename to form the local header file. Public so cache-manager components can
    * recognize the partial-download on-disk layout during bootstrap restore and reservation cleanup.
@@ -152,7 +155,14 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       catch (Exception e) {
         // corrupted file (partial write, truncated bitmap, bad JSON, etc.), delete and re-fetch
         result = null;
-        headerFile.delete();
+        if (!headerFile.delete()) {
+          LOG.warn(
+              e,
+              "Failed to delete corrupted header file[%s] for [%s]; will be overwritten by re-fetch",
+              headerFile,
+              targetFilename
+          );
+        }
       }
     }
 
@@ -507,6 +517,15 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
    * {@link #mapFile} calls for files in this container will re-trigger downloads via {@link #initializeContainer}
    * and the bitmap will be repopulated incrementally.
    * <p>
+   * <b>Concurrency contract.</b> The caller is responsible for ensuring no concurrent {@link #mapFile} (or
+   * {@link #ensureFilesAvailable}) call is in flight for any file in this container. This is enforced one layer up
+   * by the cache-entry refcount: {@code PartialSegmentBundleCacheEntry} only invokes {@code evictContainer} from its
+   * {@code doActualUnmount} callback, which fires only after every reference acquired via
+   * {@code acquireReference()} has been closed. Bypassing that gate is dangerous — {@link ByteBufferUtils#unmap}
+   * frees the off-heap mapping, so a {@link ByteBuffer#slice} from a concurrent reader is a JVM SIGSEGV, not a
+   * recoverable error. There is no internal lock in this class that defends against the race; the contract above is
+   * the entire defense.
+   * <p>
    * No-op if the container has not been initialized.
    */
   public void evictContainer(int containerIndex)
@@ -529,8 +548,13 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
             StringUtils.format("%s.container.%05d", targetFilename, containerIndex)
         );
       }
-      if (containerFile.exists()) {
-        containerFile.delete();
+      if (containerFile.exists() && !containerFile.delete()) {
+        LOG.warn(
+            "Failed to delete container file[%s] during eviction of container[%d] for [%s]; leaking on disk",
+            containerFile,
+            containerIndex,
+            targetFilename
+        );
       }
       containerFiles[containerIndex] = null;
     }

@@ -72,8 +72,10 @@ public final class PartialSegmentCacheBootstrap
    * @param jsonMapper        used to parse the header
    * @param location          the storage location these entries belong to; the metadata entry is registered as
    *                          static and bundle entries are registered as weak
-   * @throws IllegalStateException if the expected header file is missing or unreadable
-   * @throws IOException           propagated from {@link CacheEntry#mount} if mount fails
+   * @throws DruidException if the expected header file is missing, if a metadata or bundle reservation cannot be
+   *                        established on the location, or if the metadata entry mount produces a null file mapper
+   * @throws IOException    propagated from {@link CacheEntry#mount} (metadata or bundle) or from on-disk header/bitmap
+   *                        I/O performed during restore
    */
   public static RestoreResult restoreFromDisk(
       SegmentId segmentId,
