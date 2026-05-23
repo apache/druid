@@ -311,11 +311,12 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
 
     waitForSupervisorDetailedState(supervisor.getId(), "RUNNING");
 
-    final int batch1 = publish1kRecords(topic, false);
-    waitUntilPublishedRecordsAreIngested(batch1);
-    publish1kRecords(topic, false);
+    final int totalRecords = publish1kRecords(topic, false);
+    waitUntilPublishedRecordsAreIngested(totalRecords);
 
-    // Reset the main supervisor and spin up a backfill supervisor for the gap
+    // Reset the main supervisor and spin up a backfill supervisor.
+    // Since all records are already ingested before the call, the backfill
+    // supervisor will complete immediately without ingesting anything.
     final Map<String, Object> result = cluster.callApi().resetSupervisorAndBackfill(supervisor.getId());
     final String backfillSupervisorId = (String) result.get("backfillSupervisorId");
 
