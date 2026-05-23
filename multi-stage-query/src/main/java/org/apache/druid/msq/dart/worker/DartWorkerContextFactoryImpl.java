@@ -34,6 +34,7 @@ import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.WorkerContext;
+import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -44,6 +45,8 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SegmentManager;
 
 import java.io.File;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Production implementation of {@link DartWorkerContextFactory}.
@@ -66,6 +69,7 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
   private final Outbox<ControllerMessage> outbox;
   private final DartDataServerQueryHandlerFactory dataServerQueryHandlerFactory;
   private final ServiceEmitter emitter;
+  private final List<InputSliceReaderProvider> inputSliceReaderProviders;
 
   @Inject
   public DartWorkerContextFactoryImpl(
@@ -84,7 +88,8 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
       @Dart ProcessingBuffersProvider processingBuffersProvider,
       Outbox<ControllerMessage> outbox,
       DartDataServerQueryHandlerFactory dataServerQueryHandlerFactory,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      @Dart Set<InputSliceReaderProvider> inputSliceReaderProviders
   )
   {
     this.selfNode = selfNode;
@@ -103,6 +108,7 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
     this.outbox = outbox;
     this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
     this.emitter = emitter;
+    this.inputSliceReaderProviders = List.copyOf(inputSliceReaderProviders);
   }
 
   @Override
@@ -123,7 +129,6 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
         createWorkerClient(queryId),
         processingConfig,
         segmentWrangler,
-        groupingEngine,
         segmentManager,
         coordinatorClient,
         memoryIntrospector,
@@ -132,7 +137,8 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
         tempDir,
         queryContext,
         dataServerQueryHandlerFactory,
-        emitter
+        emitter,
+        inputSliceReaderProviders
     );
   }
 

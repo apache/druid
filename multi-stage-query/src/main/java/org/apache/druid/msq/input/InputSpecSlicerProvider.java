@@ -17,18 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.guice.annotations;
+package org.apache.druid.msq.input;
 
-import com.google.inject.BindingAnnotation;
+import org.apache.druid.msq.exec.ControllerContext;
+import org.apache.druid.query.QueryContext;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.util.List;
 
-@BindingAnnotation
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface DirectExecutorAnnouncer
+/**
+ * Controller-side extension point for {@link InputSpec}: provides an {@link InputSpecSlicer} for a particular
+ * {@link InputSpec} class.
+ */
+public interface InputSpecSlicerProvider
 {
+  /**
+   * The {@link InputSpec} class handled by this provider.
+   */
+  Class<? extends InputSpec> specClass();
+
+  /**
+   * Returns an {@link InputSpecSlicer} that accepts {@link #specClass()}.
+   */
+  InputSpecSlicer createSlicer(
+      ControllerContext controllerContext,
+      QueryContext queryContext,
+      List<String> workerIds
+  );
 }

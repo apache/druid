@@ -55,6 +55,8 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
   static final String THREE_VALUE_LOGIC_CONFIG_STRING = "druid.generic.useThreeValueLogicForNativeFilters";
   static final String SERVERVIEW_TYPE_CONFIG_STRING = "druid.serverview.type";
   static final String SERVERVIEW_TYPE_HTTP = "http";
+  static final String INDEXER_RUNNER_TYPE_CONFIG_STRING = "druid.indexer.runner.type";
+  static final String INDEXER_RUNNER_TYPE_REMOTE = "remote";
 
   public StartupInjectorBuilder()
   {
@@ -169,6 +171,7 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
 
       validateRemovedProcessingConfigs();
       validateServerViewType();
+      validateIndexerRunnerType();
     }
 
     /**
@@ -188,6 +191,26 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
             SERVERVIEW_TYPE_CONFIG_STRING,
             SERVERVIEW_TYPE_HTTP,
             SERVERVIEW_TYPE_HTTP
+        );
+      }
+    }
+
+    /**
+     * Rejects {@code druid.indexer.runner.type=remote}. The ZooKeeper-based {@code RemoteTaskRunner}
+     * has been removed; use the HTTP-based {@code httpRemote} runner (the default) or {@code local}
+     * for single-process testing.
+     */
+    private void validateIndexerRunnerType()
+    {
+      String configuredType = properties.getProperty(INDEXER_RUNNER_TYPE_CONFIG_STRING);
+      if (INDEXER_RUNNER_TYPE_REMOTE.equals(configuredType)) {
+        throw new ISE(
+            "Invalid value[%s] for property[%s]. The ZooKeeper-based 'remote' task runner has"
+            + " been removed. Remove this property to use the default 'httpRemote' runner (or"
+            + " set it to 'local' for single-process testing). See the Druid upgrade notes for"
+            + " details.",
+            configuredType,
+            INDEXER_RUNNER_TYPE_CONFIG_STRING
         );
       }
     }

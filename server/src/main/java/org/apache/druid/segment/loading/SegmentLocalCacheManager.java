@@ -53,10 +53,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -473,16 +471,16 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       return acquireExisting;
     }
 
+    if (!config.isVirtualStorage()) {
+      return AcquireSegmentAction.missingSegment();
+    }
+
     final ReferenceCountingLock lock = lock(dataSegment);
     synchronized (lock) {
       try {
         final AcquireSegmentAction retryAcquireExisting = acquireExistingSegment(identifier);
         if (retryAcquireExisting != null) {
           return retryAcquireExisting;
-        }
-
-        if (!config.isVirtualStorage()) {
-          return AcquireSegmentAction.missingSegment();
         }
 
         final Iterator<StorageLocation> iterator = strategy.getLocations();
@@ -704,39 +702,14 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
-  @Nullable
-  @Override
-  public StorageStats getStorageStats()
-  {
-    if (config.isVirtualStorage()) {
-      final Map<String, VirtualStorageLocationStats> locationStats = new HashMap<>();
-      for (StorageLocation location : locations) {
-        locationStats.put(location.getPath().toString(), location.resetWeakStats());
-      }
-      return new StorageStats(
-          Map.of(),
-          locationStats
-      );
-    } else {
-      final Map<String, StorageLocationStats> locationStats = new HashMap<>();
-      for (StorageLocation location : locations) {
-        locationStats.put(location.getPath().toString(), location.resetStaticStats());
-      }
-      return new StorageStats(
-          locationStats,
-          Map.of()
-      );
-    }
-  }
-
   @VisibleForTesting
   public ConcurrentHashMap<DataSegment, ReferenceCountingLock> getSegmentLocks()
   {
     return segmentLocks;
   }
 
-  @VisibleForTesting
-  List<StorageLocation> getLocations()
+  @Override
+  public List<StorageLocation> getLocations()
   {
     return locations;
   }

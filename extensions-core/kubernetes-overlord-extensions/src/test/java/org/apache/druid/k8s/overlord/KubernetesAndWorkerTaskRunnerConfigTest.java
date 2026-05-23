@@ -38,7 +38,7 @@ public class KubernetesAndWorkerTaskRunnerConfigTest
     );
 
     Assertions.assertEquals("worker", config.getRunnerStrategy());
-    Assertions.assertEquals("remote", config.getWorkerType());
+    Assertions.assertEquals("httpRemote", config.getWorkerType());
   }
 
   @Test
