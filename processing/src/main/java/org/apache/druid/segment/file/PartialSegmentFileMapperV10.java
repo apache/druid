@@ -520,11 +520,9 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
    * <b>Concurrency contract.</b> The caller is responsible for ensuring no concurrent {@link #mapFile} (or
    * {@link #ensureFilesAvailable}) call is in flight for any file in this container. This is enforced one layer up
    * by the cache-entry refcount: {@code PartialSegmentBundleCacheEntry} only invokes {@code evictContainer} from its
-   * {@code doActualUnmount} callback, which fires only after every reference acquired via
-   * {@code acquireReference()} has been closed. Bypassing that gate is dangerous — {@link ByteBufferUtils#unmap}
-   * frees the off-heap mapping, so a {@link ByteBuffer#slice} from a concurrent reader is a JVM SIGSEGV, not a
-   * recoverable error. There is no internal lock in this class that defends against the race; the contract above is
-   * the entire defense.
+   * {@code doActualUnmount} callback, which fires only after every reference acquired via {@code acquireReference()}
+   * has been closed. Bypassing that gate is dangerous, {@link ByteBufferUtils#unmap} frees the off-heap mapping, so a
+   * {@link ByteBuffer#slice} from a concurrent reader is a JVM SIGSEGV, not a recoverable error.
    * <p>
    * No-op if the container has not been initialized.
    */
