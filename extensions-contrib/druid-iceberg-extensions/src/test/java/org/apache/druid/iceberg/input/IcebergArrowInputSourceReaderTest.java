@@ -167,8 +167,7 @@ public class IcebergArrowInputSourceReaderTest
         IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
     );
 
-    // Filter is non-partition on an unpartitioned table — all 3 rows from the file are returned.
-    // iceberg-arrow may dict-encode repeated string columns, so we assert row count only.
+    // iceberg-arrow may dict-encode repeated string columns; assert row count only.
     final List<InputRow> rows = readAll(reader);
     Assert.assertEquals(3, rows.size());
   }
@@ -179,7 +178,6 @@ public class IcebergArrowInputSourceReaderTest
     final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
     writeRows(table, row(1_000L, "alice", 9.9));
 
-    // Only request ts + name; value should not appear in output event.
     final InputRowSchema pruned = new InputRowSchema(
         new TimestampSpec("ts", "millis", null),
         DimensionsSpec.builder()
@@ -234,11 +232,9 @@ public class IcebergArrowInputSourceReaderTest
     writeRows(table, row(1_000L, "snap1", 1.0));
     final long afterFirstSnapshot = System.currentTimeMillis();
 
-    // Small sleep to ensure second snapshot has later timestamp
     Thread.sleep(10);
     writeRows(table, row(2_000L, "snap2", 2.0));
 
-    // Read as-of the first snapshot — should only see 1 row.
     final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
         table,
         null,
@@ -256,11 +252,7 @@ public class IcebergArrowInputSourceReaderTest
   @Test
   public void testAggregatorSourceColumnSurvivesProjection() throws IOException
   {
-    // Regression: projection driven only from DimensionsSpec drops non-dimension columns
-    // (aggregator source fields, transform inputs, filter inputs) — see review on PR 19510.
-    // The authoritative source for "what columns this ingestion needs" is
-    // InputRowSchema.getColumnsFilter(). dimensions=[name] but the ColumnsFilter inclusion
-    // also lists `value` (simulating a doubleSum aggregator over `value`).
+    // Regression: dimensions=[name] plus ColumnsFilter inclusion of `value` (aggregator source).
     final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
     writeRows(table, row(1_000L, "alice", 9.0), row(2_000L, "bob", 4.5));
 
@@ -299,7 +291,7 @@ public class IcebergArrowInputSourceReaderTest
     final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
     writeRows(table, row(1_000L, "alice", 7.0), row(2_000L, "bob", 8.0));
 
-    // ColumnsFilter excludes "value" — fix should push projection so "value" is never read from disk.
+    // Exclusion-based filter must push projection so excluded columns are never read.
     final InputRowSchema prunedSchema = new InputRowSchema(
         new TimestampSpec("ts", "millis", null),
         DimensionsSpec.builder()

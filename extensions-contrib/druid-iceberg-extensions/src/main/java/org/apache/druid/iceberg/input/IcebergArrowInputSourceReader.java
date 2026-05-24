@@ -158,36 +158,20 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
   {
     TableScan scan = table.newScan().caseSensitive(caseSensitive);
 
-    // Drive projection from ColumnsFilter (the authoritative "what columns this ingestion needs"),
-    // walking the Iceberg table schema as the column universe. DimensionsSpec alone is NOT
-    // authoritative — it omits aggregator source fields, transform inputs, and filter inputs.
-    // Pattern mirrors DeltaInputSource#pruneSchema and DruidSegmentReader.
     final List<String> projection = projectedColumns();
     if (projection != null) {
       scan = scan.select(projection);
     }
-
-    // Push predicate into scan planner — reduces files opened and rows read.
     if (icebergFilter != null) {
       scan = icebergFilter.filter(scan);
     }
-
-    // Snapshot pinning for time-travel reads.
     if (snapshotTime != null) {
       scan = scan.asOfTime(snapshotTime.getMillis());
     }
-
     return scan;
   }
 
-  /**
-   * Computes the column projection to push into the Iceberg scan, using
-   * {@link InputRowSchema#getColumnsFilter()} as the authority. Walks the table's full schema
-   * and keeps every column the filter accepts. Returns {@code null} when the filter accepts
-   * every column in the table (no useful pruning), so the caller skips {@code scan.select}.
-   *
-   * Pattern mirrors {@code DeltaInputSource#pruneSchema} and {@code DruidSegmentReader}.
-   */
+  /** Projection authority is ColumnsFilter, not DimensionsSpec. Mirrors DeltaInputSource#pruneSchema. */
   @Nullable
   private List<String> projectedColumns()
   {
@@ -201,7 +185,6 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     if (filtered.equals(allColumns)) {
       return null;
     }
-    // Defensive: ensure timestamp survives even if the ColumnsFilter is misconfigured to omit it.
     final String tsCol = schema.getTimestampSpec().getTimestampColumn();
     if (tsCol != null && allColumns.contains(tsCol) && !filtered.contains(tsCol)) {
       filtered.add(tsCol);
@@ -230,7 +213,6 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     if (!configured.isEmpty()) {
       return configured;
     }
-    // Derive dimensions from the batch schema, excluding the timestamp column.
     final String tsCol = schema.getTimestampSpec().getTimestampColumn();
     final List<String> dims = new ArrayList<>(batch.numCols());
     for (int col = 0; col < batch.numCols(); col++) {
