@@ -40,6 +40,7 @@ import org.apache.arrow.vector.TimeStampNanoVector;
 import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.VarBinaryVector;
 import org.apache.arrow.vector.VarCharVector;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
@@ -54,6 +55,7 @@ import org.apache.iceberg.TableScan;
 import org.apache.iceberg.arrow.vectorized.ArrowReader;
 import org.apache.iceberg.arrow.vectorized.ColumnarBatch;
 import org.apache.iceberg.io.CloseableIterable;
+import org.apache.iceberg.types.Types;
 import org.apache.iceberg.util.TableScanUtil;
 import org.joda.time.DateTime;
 
@@ -65,6 +67,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Reads an Iceberg table via iceberg-arrow's {@link ArrowReader}, yielding {@link InputRow} objects.
@@ -155,15 +158,13 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
   {
     TableScan scan = table.newScan().caseSensitive(caseSensitive);
 
-    // Push column projection into the scan planner — only requested columns are read from disk.
-    final List<String> configuredDims = schema.getDimensionsSpec().getDimensionNames();
-    final String timestampColumn = schema.getTimestampSpec().getTimestampColumn();
-    if (!configuredDims.isEmpty()) {
-      final List<String> selectCols = new ArrayList<>(configuredDims);
-      if (timestampColumn != null && !selectCols.contains(timestampColumn)) {
-        selectCols.add(timestampColumn);
-      }
-      scan = scan.select(selectCols);
+    // Drive projection from ColumnsFilter (the authoritative "what columns this ingestion needs"),
+    // walking the Iceberg table schema as the column universe. DimensionsSpec alone is NOT
+    // authoritative — it omits aggregator source fields, transform inputs, and filter inputs.
+    // Pattern mirrors DeltaInputSource#pruneSchema and DruidSegmentReader.
+    final List<String> projection = projectedColumns();
+    if (projection != null) {
+      scan = scan.select(projection);
     }
 
     // Push predicate into scan planner — reduces files opened and rows read.
@@ -177,6 +178,35 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     }
 
     return scan;
+  }
+
+  /**
+   * Computes the column projection to push into the Iceberg scan, using
+   * {@link InputRowSchema#getColumnsFilter()} as the authority. Walks the table's full schema
+   * and keeps every column the filter accepts. Returns {@code null} when the filter accepts
+   * every column in the table (no useful pruning), so the caller skips {@code scan.select}.
+   *
+   * Pattern mirrors {@code DeltaInputSource#pruneSchema} and {@code DruidSegmentReader}.
+   */
+  @Nullable
+  private List<String> projectedColumns()
+  {
+    final ColumnsFilter filter = schema.getColumnsFilter();
+    final List<String> allColumns = table.schema().columns().stream()
+                                         .map(Types.NestedField::name)
+                                         .collect(Collectors.toList());
+    final List<String> filtered = allColumns.stream()
+                                            .filter(filter::apply)
+                                            .collect(Collectors.toList());
+    if (filtered.equals(allColumns)) {
+      return null;
+    }
+    // Defensive: ensure timestamp survives even if the ColumnsFilter is misconfigured to omit it.
+    final String tsCol = schema.getTimestampSpec().getTimestampColumn();
+    if (tsCol != null && allColumns.contains(tsCol) && !filtered.contains(tsCol)) {
+      filtered.add(tsCol);
+    }
+    return filtered;
   }
 
   private InputRow batchRowToInputRow(final ColumnarBatch batch, final int rowIdx)
