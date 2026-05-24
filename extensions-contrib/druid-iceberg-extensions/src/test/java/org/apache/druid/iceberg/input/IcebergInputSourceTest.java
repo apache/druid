@@ -278,6 +278,42 @@ public class IcebergInputSourceTest
   }
 
   @Test
+  public void testArrowReaderIsNonSplittable() throws IOException
+  {
+    // When useArrowReader=true, splittable contract MUST route through the Arrow path,
+    // not silently fall back to the delegate (path-based) reader in parallel ingestion.
+    final IcebergInputSource inputSource = new IcebergInputSource(
+        TABLENAME,
+        NAMESPACE,
+        null,
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        null,
+        true,
+        1024
+    );
+    final List<InputSplit<List<String>>> splits =
+        inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null))
+                   .collect(Collectors.toList());
+    Assert.assertEquals("Arrow mode must produce exactly one split", 1, splits.size());
+    Assert.assertEquals(
+        "Arrow mode estimateNumSplits must be 1",
+        1,
+        inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(null, null))
+    );
+    final org.apache.druid.data.input.InputSource child = inputSource.withSplit(splits.get(0));
+    Assert.assertTrue(
+        "withSplit on Arrow mode must return an IcebergInputSource (not the delegate)",
+        child instanceof IcebergInputSource
+    );
+    Assert.assertTrue(
+        "withSplit on Arrow mode must preserve useArrowReader=true",
+        ((IcebergInputSource) child).isUseArrowReader()
+    );
+  }
+
+  @Test
   public void testResidualFilterModeFailWithArrowReader() throws IOException
   {
     // Arrow path must honor residualFilterMode=FAIL just like the path-based path.
