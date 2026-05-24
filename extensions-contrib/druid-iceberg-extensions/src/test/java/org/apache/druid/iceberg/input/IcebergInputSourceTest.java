@@ -26,6 +26,7 @@ import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.LocalInputSourceFactory;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.iceberg.filter.IcebergEqualsFilter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
@@ -272,6 +273,40 @@ public class IcebergInputSourceTest
     );
     Assert.assertTrue(
         "Expect residual error to be thrown",
+        exception.getMessage().contains("residual")
+    );
+  }
+
+  @Test
+  public void testResidualFilterModeFailWithArrowReader() throws IOException
+  {
+    // Arrow path must honor residualFilterMode=FAIL just like the path-based path.
+    final IcebergInputSource inputSource = new IcebergInputSource(
+        TABLENAME,
+        NAMESPACE,
+        new IcebergEqualsFilter("id", "123988"),
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        ResidualFilterMode.FAIL,
+        true,
+        1024
+    );
+    final InputRowSchema inputRowSchema = new InputRowSchema(
+        new org.apache.druid.data.input.impl.TimestampSpec("timestamp", "millis", null),
+        org.apache.druid.data.input.impl.DimensionsSpec.builder().build(),
+        org.apache.druid.data.input.ColumnsFilter.all()
+    );
+    final DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> {
+          final org.apache.druid.data.input.InputSourceReader reader =
+              inputSource.reader(inputRowSchema, null, FileUtils.createTempDir());
+          reader.read().close();
+        }
+    );
+    Assert.assertTrue(
+        "Expect residual error to be thrown on Arrow path: " + exception.getMessage(),
         exception.getMessage().contains("residual")
     );
   }
