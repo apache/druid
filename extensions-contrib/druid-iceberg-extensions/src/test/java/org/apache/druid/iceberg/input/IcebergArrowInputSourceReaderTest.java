@@ -20,9 +20,11 @@
 package org.apache.druid.iceberg.input;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -54,6 +56,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class IcebergArrowInputSourceReaderTest
@@ -248,6 +251,46 @@ public class IcebergArrowInputSourceReaderTest
     final List<InputRow> rows = readAll(reader);
     Assert.assertEquals(1, rows.size());
     Assert.assertEquals("snap1", rows.get(0).getDimension("name").get(0));
+  }
+
+  @Test
+  public void testAggregatorSourceColumnSurvivesProjection() throws IOException
+  {
+    // Regression: projection driven only from DimensionsSpec drops non-dimension columns
+    // (aggregator source fields, transform inputs, filter inputs) — see review on PR 19510.
+    // The authoritative source for "what columns this ingestion needs" is
+    // InputRowSchema.getColumnsFilter(). dimensions=[name] but the ColumnsFilter inclusion
+    // also lists `value` (simulating a doubleSum aggregator over `value`).
+    final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
+    writeRows(table, row(1_000L, "alice", 9.0), row(2_000L, "bob", 4.5));
+
+    final InputRowSchema schemaWithAggSource = new InputRowSchema(
+        new TimestampSpec("ts", "millis", null),
+        DimensionsSpec.builder()
+                      .setDimensions(ImmutableList.of(new StringDimensionSchema("name")))
+                      .build(),
+        ColumnsFilter.inclusionBased(ImmutableSet.of("ts", "name", "value"))
+    );
+
+    final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
+        table,
+        null,
+        null,
+        true,
+        schemaWithAggSource,
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+    );
+
+    final List<InputRow> rows = readAll(reader);
+    Assert.assertEquals(2, rows.size());
+    final Map<String, Object> event0 = ((MapBasedInputRow) rows.get(0)).getEvent();
+    Assert.assertEquals("alice", event0.get("name"));
+    Assert.assertNotNull("aggregator source column 'value' must survive projection", event0.get("value"));
+    Assert.assertEquals(9.0, ((Number) event0.get("value")).doubleValue(), 0.0001);
+    final Map<String, Object> event1 = ((MapBasedInputRow) rows.get(1)).getEvent();
+    Assert.assertEquals("bob", event1.get("name"));
+    Assert.assertNotNull("aggregator source column 'value' must survive projection", event1.get("value"));
+    Assert.assertEquals(4.5, ((Number) event1.get("value")).doubleValue(), 0.0001);
   }
 
   // --- helpers ---
