@@ -32,10 +32,12 @@ import org.apache.druid.data.input.InputSourceFactory;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.InputStats;
+import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableScan;
@@ -56,6 +58,7 @@ import java.util.stream.Stream;
 public class IcebergInputSource implements SplittableInputSource<List<String>>
 {
   public static final String TYPE_KEY = "iceberg";
+  private static final Logger log = new Logger(IcebergInputSource.class);
 
   @JsonProperty
   private final String tableName;
@@ -156,6 +159,15 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       @Nullable SplitHintSpec splitHintSpec
   ) throws IOException
   {
+    if (useArrowReader) {
+      log.info(
+          "useArrowReader=true: input source is non-splittable; "
+          + "subtasks will not be created for table[%s.%s]",
+          namespace,
+          tableName
+      );
+      return Stream.of(new InputSplit<>(Collections.emptyList()));
+    }
     if (!isLoaded) {
       retrieveIcebergDatafiles();
     }
@@ -165,6 +177,9 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   @Override
   public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException
   {
+    if (useArrowReader) {
+      return 1;
+    }
     if (!isLoaded) {
       retrieveIcebergDatafiles();
     }
@@ -174,12 +189,18 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   @Override
   public InputSource withSplit(InputSplit<List<String>> inputSplit)
   {
+    if (useArrowReader) {
+      return this;
+    }
     return getDelegateInputSource().withSplit(inputSplit);
   }
 
   @Override
   public SplitHintSpec getSplitHintSpecOrDefault(@Nullable SplitHintSpec splitHintSpec)
   {
+    if (useArrowReader) {
+      return splitHintSpec == null ? new MaxSizeSplitHintSpec(null, null) : splitHintSpec;
+    }
     return getDelegateInputSource().getSplitHintSpecOrDefault(splitHintSpec);
   }
 
