@@ -37,6 +37,8 @@ import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.iceberg.Table;
+import org.apache.iceberg.TableScan;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -126,8 +128,15 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   )
   {
     if (useArrowReader) {
+      final Table table = icebergCatalog.retrieveTable(namespace, tableName);
+      if (icebergFilter != null) {
+        final TableScan filteredScan = icebergFilter.filter(
+            table.newScan().caseSensitive(icebergCatalog.isCaseSensitive())
+        );
+        icebergCatalog.enforceResidualMode(filteredScan, getResidualFilterMode());
+      }
       return new IcebergArrowInputSourceReader(
-          icebergCatalog.retrieveTable(namespace, tableName),
+          table,
           icebergFilter,
           snapshotTime,
           icebergCatalog.isCaseSensitive(),
