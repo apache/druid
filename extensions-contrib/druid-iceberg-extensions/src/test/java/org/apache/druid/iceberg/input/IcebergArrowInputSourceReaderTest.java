@@ -293,6 +293,42 @@ public class IcebergArrowInputSourceReaderTest
     Assert.assertEquals(4.5, ((Number) event1.get("value")).doubleValue(), 0.0001);
   }
 
+  @Test
+  public void testProjectionPrunesUnusedColumns() throws IOException
+  {
+    final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
+    writeRows(table, row(1_000L, "alice", 7.0), row(2_000L, "bob", 8.0));
+
+    // ColumnsFilter excludes "value" — fix should push projection so "value" is never read from disk.
+    final InputRowSchema prunedSchema = new InputRowSchema(
+        new TimestampSpec("ts", "millis", null),
+        DimensionsSpec.builder()
+                      .setDimensions(ImmutableList.of(new StringDimensionSchema("name")))
+                      .build(),
+        ColumnsFilter.exclusionBased(ImmutableSet.of("value"))
+    );
+
+    final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
+        table,
+        null,
+        null,
+        true,
+        prunedSchema,
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+    );
+
+    final List<InputRow> rows = readAll(reader);
+    Assert.assertEquals(2, rows.size());
+    for (final InputRow r : rows) {
+      final Map<String, Object> event = ((MapBasedInputRow) r).getEvent();
+      Assert.assertNull(
+          "excluded column 'value' must be pruned at scan and absent from event",
+          event.get("value")
+      );
+      Assert.assertNotNull("included column 'name' must be present", event.get("name"));
+    }
+  }
+
   // --- helpers ---
 
   private static GenericRecord row(final long ts, final String name, final double value)
