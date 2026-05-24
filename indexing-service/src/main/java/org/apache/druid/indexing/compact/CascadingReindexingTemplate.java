@@ -299,26 +299,14 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
                   .orElse(CompactionConfigValidationResult.success());
   }
 
-  /**
-   * Checks if the given interval's end time is after the specified boundary.
-   * Used to determine if intervals should be skipped based on skip offset configuration.
-   *
-   * @param interval the interval to check
-   * @param boundary the boundary time to compare against
-   * @return true if the interval ends after the boundary
-   */
-  private static boolean intervalEndsAfter(Interval interval, DateTime boundary)
-  {
-    return interval.getEnd().isAfter(boundary);
-  }
-
   @Override
   public List<CompactionJob> createCompactionJobs(
       DruidInputSource source,
       CompactionJobParams jobParams
   )
   {
-    // Check if the rule provider is ready before attempting to create jobs
+
+    // Abort if rule provider is not ready yet (e.g., if it's backed by a cache that hasn't finished warming).
     if (!ruleProvider.isReady()) {
       LOG.info(
           "Rule provider [%s] is not ready, skipping reindexing job creation for dataSource[%s]",
@@ -328,86 +316,32 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       return Collections.emptyList();
     }
 
-    final List<CompactionJob> allJobs = new ArrayList<>();
-    final DateTime currentTime = jobParams.getScheduleStartTime();
-
-    SegmentTimeline timeline = jobParams.getTimeline(dataSource);
-
+    final SegmentTimeline timeline = jobParams.getTimeline(dataSource);
     if (timeline == null || timeline.isEmpty()) {
       LOG.warn("Segment timeline null or empty for [%s] skipping creating compaction jobs.", dataSource);
       return Collections.emptyList();
     }
 
-    List<IntervalPartitioningInfo> searchIntervals = generateAlignedSearchIntervals(currentTime);
-    if (searchIntervals.isEmpty()) {
-      LOG.warn("No search intervals generated for dataSource[%s], no reindexing jobs will be created", dataSource);
-      return Collections.emptyList();
-    }
+    final ReindexingPlan plan = new ReindexingPlanner(this).plan(jobParams.getScheduleStartTime(), timeline);
 
-    // Adjust timeline interval by applying user defined skip offset (if any exists)
-    Interval adjustedTimelineInterval = applySkipOffset(
-        new Interval(timeline.first().getInterval().getStart(), timeline.last().getInterval().getEnd()),
-        jobParams.getScheduleStartTime()
-    );
-    if (adjustedTimelineInterval == null) {
-      LOG.warn("All data for dataSource[%s] is within skip offsets, no reindexing jobs will be created", dataSource);
-      return Collections.emptyList();
-    }
-
-    for (int i = 0; i < searchIntervals.size(); i++) {
-      IntervalPartitioningInfo intervalInfo = searchIntervals.get(i);
-      Interval reindexingInterval = intervalInfo.getInterval();
-
-      if (!reindexingInterval.overlaps(adjustedTimelineInterval)) {
-        // No underlying data exists to reindex for this interval
-        LOG.debug("Search interval[%s] does not overlap with data range[%s], skipping", reindexingInterval, adjustedTimelineInterval);
+    final List<CompactionJob> allJobs = new ArrayList<>();
+    for (ReindexingPlan.PlannedInterval planned : plan.getIntervals()) {
+      if (!planned.isJobEligible()) {
         continue;
       }
-
-      // Skip offsets, if configured, can result in needing to truncate a search interval. If the truncation makes the interval invalid, skip it.
-      if ((skipOffsetFromNow != null || skipOffsetFromLatest != null) &&
-          intervalEndsAfter(reindexingInterval, adjustedTimelineInterval.getEnd())) {
-
-        DateTime alignedEnd = intervalInfo.getGranularity().bucketStart(adjustedTimelineInterval.getEnd());
-        if (!alignedEnd.isAfter(reindexingInterval.getStart())) {
-          LOG.debug("Search interval[%s] is entirely within skip offset, skipping", reindexingInterval);
-          continue;
-        }
-        reindexingInterval = new Interval(reindexingInterval.getStart(), alignedEnd);
-        // Replace the entry in searchIntervals so the downstream synthetic-timeline lookup
-        // in ReindexingConfigBuilder matches the truncated interval.
-        intervalInfo = new IntervalPartitioningInfo(
-            reindexingInterval,
-            intervalInfo.getSourceRule(),
-            intervalInfo.isRuleSynthetic()
-        );
-        searchIntervals.set(i, intervalInfo);
-      }
-
-      InlineSchemaDataSourceCompactionConfig.Builder builder = createBaseBuilder();
-
-      ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
-          ruleProvider,
-          reindexingInterval,
-          currentTime,
-          searchIntervals,
-          tuningConfig
+      LOG.debug(
+          "Creating reindexing jobs for interval[%s] with [%d] rules selected",
+          planned.getInterval(),
+          planned.getRuleCount()
       );
-      int ruleCount = configBuilder.applyTo(builder);
-
-      if (ruleCount > 0) {
-        LOG.debug("Creating reindexing jobs for interval[%s] with [%d] rules selected", reindexingInterval, ruleCount);
-        allJobs.addAll(
-            createJobsForSearchInterval(
-                createJobTemplateForInterval(builder.build()),
-                reindexingInterval,
-                source,
-                jobParams
-            )
-        );
-      } else {
-        LOG.debug("No applicable reindexing rules found for interval[%s]", reindexingInterval);
-      }
+      allJobs.addAll(
+          createJobsForSearchInterval(
+              createJobTemplateForInterval(planned.getConfig()),
+              planned.getInterval(),
+              source,
+              jobParams
+          )
+      );
     }
     return allJobs;
   }
@@ -421,34 +355,35 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   }
 
   /**
-   * Applies the configured skip offset to an interval by adjusting its end time. Uses either
-   * skipOffsetFromNow (relative to reference time) or skipOffsetFromLatest (relative to interval end).
-   * Returns null if the adjusted end would be before the interval start.
-   *
-   * @param interval the interval to adjust
-   * @param skipFromNowReferenceTime the reference time for skipOffsetFromNow calculation
-   * @return the interval with adjusted end time, or null if the result would be invalid
+   * Builds a configuration view of this template's rule timeline against the given reference time and
+   * live segment timeline. Used by the API endpoint that exposes the reindexing timeline to operators.
+   * Callers must short-circuit before invoking this when {@code timeline} is null or empty.
    */
-  @Nullable
-  private Interval applySkipOffset(
-      Interval interval,
-      DateTime skipFromNowReferenceTime
-  )
+  ReindexingTimelineView buildTimelineView(DateTime referenceTime, SegmentTimeline timeline)
   {
-    DateTime maybeAdjustedEnd = interval.getEnd();
-    if (skipOffsetFromNow != null) {
-      maybeAdjustedEnd = skipFromNowReferenceTime.minus(skipOffsetFromNow);
-    } else if (skipOffsetFromLatest != null) {
-      maybeAdjustedEnd = maybeAdjustedEnd.minus(skipOffsetFromLatest);
-    }
-    if (maybeAdjustedEnd.isBefore(interval.getStart())) {
-      return null;
-    } else {
-      return new Interval(interval.getStart(), maybeAdjustedEnd);
-    }
+    return ReindexingTimelineView.fromPlan(new ReindexingPlanner(this).plan(referenceTime, timeline));
   }
 
-  private InlineSchemaDataSourceCompactionConfig.Builder createBaseBuilder()
+  // ── Accessors used by ReindexingPlanner. Package-private to keep this surface internal. ──
+
+  ReindexingRuleProvider getReindexingRuleProvider()
+  {
+    return ruleProvider;
+  }
+
+  @Nullable
+  Period getSkipOffsetFromNowOrNull()
+  {
+    return skipOffsetFromNow;
+  }
+
+  @Nullable
+  Period getSkipOffsetFromLatestOrNull()
+  {
+    return skipOffsetFromLatest;
+  }
+
+  InlineSchemaDataSourceCompactionConfig.Builder createBaseConfigBuilder()
   {
     return InlineSchemaDataSourceCompactionConfig
         .builder()

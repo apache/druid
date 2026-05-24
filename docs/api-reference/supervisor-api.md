@@ -1521,6 +1521,138 @@ In the example below, the outer key (`"0"`) is a **task group ID**; the inner ke
 
 **For automation clients:** If you need to map task IDs to group IDs (for handoff, draining, or observability), use the `/stats` response keys directly instead of re-deriving group IDs from partition data. This avoids coupling to internal supervisor assignment logic.
 
+### Get reindexing timeline for a supervisor
+
+Returns the reindexing timeline for a compaction supervisor that uses a cascading reindexing template. The timeline shows how reindexing rules apply across time intervals, including skip-offset resolution and per-interval configuration.
+
+:::info
+This endpoint is only available for compaction supervisors that use a cascading reindexing template. The Overlord fetches the live segment timeline for the datasource and applies any configured `skipOffsetFromNow` or `skipOffsetFromLatest` so the response reflects what would actually be compacted on the next scheduler run.
+:::
+
+#### URL
+
+`GET` `/druid/indexer/v1/supervisor/{supervisorId}/reindexingTimeline`
+
+#### Query parameters
+
+* `referenceTime` (optional)
+  * Type: String (ISO-8601 datetime)
+  * The reference time to use for computing the timeline. Defaults to the current UTC time if not specified.
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="57" label="200 SUCCESS">
+
+
+*Successfully retrieved reindexing timeline*
+
+</TabItem>
+<TabItem value="58" label="400 BAD REQUEST">
+
+
+*Supervisor is not a compaction supervisor, does not use a cascading reindexing template, or the `referenceTime` parameter is not a valid ISO-8601 datetime*
+
+</TabItem>
+<TabItem value="59" label="404 NOT FOUND">
+
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
+
+---
+
+#### Sample request
+
+The following example retrieves the reindexing timeline for a compaction supervisor on the datasource `my_datasource`. Compaction supervisor IDs follow the pattern `autocompact__<datasource>`.
+
+<Tabs>
+
+<TabItem value="60" label="cURL">
+
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/autocompact__my_datasource/reindexingTimeline?referenceTime=2024-01-15T00:00:00.000Z"
+```
+
+</TabItem>
+<TabItem value="61" label="HTTP">
+
+
+```HTTP
+GET /druid/indexer/v1/supervisor/autocompact__my_datasource/reindexingTimeline?referenceTime=2024-01-15T00:00:00.000Z HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
+
+  ```json
+  {
+      "dataSource": "my_datasource",
+      "referenceTime": "2024-01-15T00:00:00.000Z",
+      "skipOffset": {
+          "type": "skipOffsetFromNow",
+          "period": "P1D",
+          "effectiveEndTime": "2024-01-14T00:00:00.000Z"
+      },
+      "intervals": [
+          {
+              "interval": "2024-01-14T00:00:00.000Z/2024-01-15T00:00:00.000Z",
+              "ruleCount": 0,
+              "appliedRules": []
+          },
+          {
+              "interval": "2024-01-01T00:00:00.000Z/2024-01-14T00:00:00.000Z",
+              "ruleCount": 2,
+              "config": {
+                  "dataSource": "my_datasource",
+                  "taskPriority": 25,
+                  "inputSegmentSizeBytes": 100000000000,
+                  "maxRowsPerSegment": 5000000,
+                  "skipOffsetFromLatest": "PT0S",
+                  "tuningConfig": null,
+                  "taskContext": null,
+                  "granularitySpec": {
+                      "segmentGranularity": "DAY",
+                      "queryGranularity": "HOUR",
+                      "rollup": true
+                  },
+                  "ioConfig": null
+              },
+              "appliedRules": [
+                  {
+                      "type": "partitioning",
+                      "id": "compact-to-daily",
+                      "description": "Compact to daily segments for data older than 1 day",
+                      "olderThan": "P1D",
+                      "segmentGranularity": "DAY"
+                  },
+                  {
+                      "type": "dataSchema",
+                      "id": "rollup-hourly",
+                      "description": "Roll up to hourly query granularity for data older than 1 day",
+                      "olderThan": "P1D",
+                      "queryGranularity": "HOUR",
+                      "rollup": true
+                  }
+              ]
+          }
+      ]
+  }
+  ```
+</details>
+
+If the supervisor's datasource has no segments yet, the response includes an empty `intervals` list rather than the configured rule timeline — the rule timeline has no data to be applied against.
+
 ## Audit history
 
 An audit history provides a comprehensive log of events, including supervisor configuration, creation, suspension, and modification history.

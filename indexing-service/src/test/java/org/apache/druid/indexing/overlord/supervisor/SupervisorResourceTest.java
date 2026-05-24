@@ -26,6 +26,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.indexing.compact.CompactionScheduler;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -109,6 +111,9 @@ public class SupervisorResourceTest extends EasyMockSupport
   @Mock
   private AuditManager auditManager;
 
+  @Mock
+  private CompactionScheduler compactionScheduler;
+
   private SupervisorResource supervisorResource;
 
   @Before
@@ -145,7 +150,8 @@ public class SupervisorResourceTest extends EasyMockSupport
         },
         OBJECT_MAPPER,
         authConfig,
-        auditManager
+        auditManager,
+        compactionScheduler
     );
   }
 
@@ -204,9 +210,9 @@ public class SupervisorResourceTest extends EasyMockSupport
       @Override
       public void validateSpec()
       {
-        throw org.apache.druid.error.DruidException
-            .forPersona(org.apache.druid.error.DruidException.Persona.USER)
-            .ofCategory(org.apache.druid.error.DruidException.Category.INVALID_INPUT)
+        throw DruidException
+            .forPersona(DruidException.Persona.USER)
+            .ofCategory(DruidException.Category.INVALID_INPUT)
             .build("nope");
       }
     };
@@ -1432,6 +1438,90 @@ public class SupervisorResourceTest extends EasyMockSupport
     newSpec.merge(existingSpec);
 
     Assert.assertEquals(1, newSpec.getIoConfig().getTaskCount());
+  }
+
+  @Test
+  public void test_getReindexingTimeline_returnsTimelineFromScheduler()
+  {
+    final org.apache.druid.indexing.compact.ReindexingTimelineView view =
+        new org.apache.druid.indexing.compact.ReindexingTimelineView(
+            "datasource1",
+            org.apache.druid.java.util.common.DateTimes.of("2025-01-29T00:00:00Z"),
+            null,
+            java.util.Collections.emptyList(),
+            null
+        );
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.getSupervisorSpec("autocompact__datasource1"))
+            .andReturn(Optional.of(new TestSupervisorSpec("autocompact__datasource1", null, null)));
+    EasyMock.expect(compactionScheduler.previewReindexingTimeline(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(view);
+    replayAll();
+
+    final Response response = supervisorResource.getReindexingTimeline("autocompact__datasource1", null);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertSame(view, response.getEntity());
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_getReindexingTimeline_supervisorNotFound_returns404()
+  {
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.getSupervisorSpec("missing-id")).andReturn(Optional.absent());
+    replayAll();
+
+    final Response response = supervisorResource.getReindexingTimeline("missing-id", null);
+    Assert.assertEquals(404, response.getStatus());
+    verifyAll();
+  }
+
+  @Test
+  public void test_getReindexingTimeline_invalidReferenceTime_returns400()
+  {
+    replayAll();
+
+    final Response response = supervisorResource.getReindexingTimeline("any-id", "not-a-date");
+    Assert.assertEquals(400, response.getStatus());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> entity = (Map<String, Object>) response.getEntity();
+    Assert.assertTrue(entity.get("error").toString().contains("invalid format"));
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_getReindexingTimeline_schedulerRejectsSpec_returns400()
+  {
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.getSupervisorSpec("non-compaction"))
+            .andReturn(Optional.of(new TestSupervisorSpec("non-compaction", null, null)));
+    EasyMock.expect(compactionScheduler.previewReindexingTimeline(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andThrow(DruidException.forPersona(DruidException.Persona.USER)
+                                    .ofCategory(DruidException.Category.INVALID_INPUT)
+                                    .build("not a compaction supervisor"));
+    replayAll();
+
+    final Response response = supervisorResource.getReindexingTimeline("non-compaction", null);
+    Assert.assertEquals(400, response.getStatus());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> entity = (Map<String, Object>) response.getEntity();
+    Assert.assertTrue(entity.get("error").toString().contains("not a compaction supervisor"));
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_getReindexingTimeline_serviceUnavailable_returns503()
+  {
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
+    replayAll();
+
+    final Response response = supervisorResource.getReindexingTimeline("any-id", null);
+    Assert.assertEquals(503, response.getStatus());
+    verifyAll();
   }
 
   @Test
