@@ -24,9 +24,7 @@ import org.junit.Before;
 
 /**
  * Re-runs every {@link VectorExprResultConsistencyTest} case with the SIMD ({@code jdk.incubator.vector}) expression
- * vector processors enabled, ensuring the SIMD specializations agree with the non-vectorized reference. Smoke-level
- * coverage of the factory dispatch wiring; for deeper coverage of the SIMD chunk loop itself see
- * {@link org.apache.druid.math.expr.vector.simd.SimdBivariateProcessorTest}.
+ * vector processors enabled, ensuring the SIMD specializations agree with the non-vectorized reference.
  */
 public class VectorExprResultConsistencyVectorApiTest extends VectorExprResultConsistencyTest
 {
