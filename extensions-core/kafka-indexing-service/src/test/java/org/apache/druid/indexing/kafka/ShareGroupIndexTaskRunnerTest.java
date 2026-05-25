@@ -43,6 +43,7 @@ import org.apache.kafka.common.errors.WakeupException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.util.Collections;
@@ -269,6 +270,61 @@ public class ShareGroupIndexTaskRunnerTest
     catch (org.apache.druid.java.util.common.ISE expected) {
       Assert.assertTrue(expected.getMessage().contains("Could not allocate segment"));
     }
+  }
+
+  @Test
+  public void testRunLoop_concurrentTasks_useDifferentSequenceNames() throws Exception
+  {
+    final ShareGroupIndexTask taskA = buildTask("share_group_task_A");
+    final ShareGroupIndexTask taskB = buildTask("share_group_task_B");
+    final java.util.Set<String> seqNamesUsedByA = runOnceAndCaptureSequenceNames(taskA);
+    final java.util.Set<String> seqNamesUsedByB = runOnceAndCaptureSequenceNames(taskB);
+    Assert.assertFalse("Task A should call driver.add at least once", seqNamesUsedByA.isEmpty());
+    Assert.assertFalse("Task B should call driver.add at least once", seqNamesUsedByB.isEmpty());
+    final java.util.Set<String> shared = new java.util.HashSet<>(seqNamesUsedByA);
+    shared.retainAll(seqNamesUsedByB);
+    Assert.assertTrue(
+        "Concurrent share-group tasks must not share segment sequence names; shared=" + shared,
+        shared.isEmpty()
+    );
+  }
+
+  private ShareGroupIndexTask buildTask(String id)
+  {
+    return new ShareGroupIndexTask(
+        id,
+        null,
+        task.getDataSchema(),
+        task.getTuningConfig(),
+        task.getIOConfig(),
+        null,
+        mapper
+    );
+  }
+
+  private java.util.Set<String> runOnceAndCaptureSequenceNames(ShareGroupIndexTask t) throws Exception
+  {
+    final StreamAppenderatorDriver driver = mockDriver();
+    final Appenderator appenderator = Mockito.mock(Appenderator.class);
+    final RecordBearingFakeSupplier supplier = new RecordBearingFakeSupplier(t);
+    final StreamChunkReader chunkReader = Mockito.mock(StreamChunkReader.class);
+    final InputRow row = Mockito.mock(InputRow.class);
+    Mockito.when(row.getTimestamp()).thenReturn(org.apache.druid.java.util.common.DateTimes.nowUtc());
+    Mockito.when(chunkReader.parse(Mockito.any(), Mockito.anyBoolean()))
+           .thenReturn(Collections.singletonList(row));
+    final AppenderatorDriverAddResult addOk = AppenderatorDriverAddResult.ok(
+        Mockito.mock(org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec.class),
+        1,
+        1L,
+        false
+    );
+    final ArgumentCaptor<String> seqNameCaptor = ArgumentCaptor.forClass(String.class);
+    Mockito.when(driver.add(Mockito.any(), seqNameCaptor.capture(), Mockito.any(), Mockito.anyBoolean(), Mockito.anyBoolean()))
+           .thenReturn(addOk);
+
+    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(t, toolbox, mapper);
+    runner.runLoop(driver, appenderator, supplier, chunkReader, t.getIOConfig(), t.getTuningConfig(), toolbox);
+    return new java.util.HashSet<>(seqNameCaptor.getAllValues());
   }
 
   @Test
