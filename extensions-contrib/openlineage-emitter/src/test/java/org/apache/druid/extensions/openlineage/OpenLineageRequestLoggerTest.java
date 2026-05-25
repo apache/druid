@@ -206,6 +206,49 @@ public class OpenLineageRequestLoggerTest
   }
 
   @Test
+  public void testMsqInsertDruidSchemaPrefix() throws IOException
+  {
+    // Druid normalizes "druid.foo" → "foo" — our AST extraction should match the planner.
+    logger.logSqlQuery(sqlLine(
+        "INSERT INTO druid.kttm_result SELECT * FROM kttm",
+        ImmutableMap.of("sqlQueryId", "msq-druid-schema-1"),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    Assertions.assertEquals("kttm_result", capturedEvents.get(0).get("outputs").get(0).get("name").asText());
+  }
+
+  @Test
+  public void testMsqInsertWithSetPreamble() throws IOException
+  {
+    // Druid SQL accepts SET statements before DML. We call DruidSqlParser with
+    // allowSetStatements=true; the SET is dropped and only the main INSERT is inspected.
+    logger.logSqlQuery(sqlLine(
+        "SET maxNumTasks = 2;\nINSERT INTO kttm_result SELECT * FROM kttm",
+        ImmutableMap.of("sqlQueryId", "msq-set-1"),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    Assertions.assertEquals("kttm_result", capturedEvents.get(0).get("outputs").get(0).get("name").asText());
+  }
+
+  @Test
+  public void testMsqInsertExternExportSkipped() throws IOException
+  {
+    // INSERT INTO EXTERN(...) AS CSV writes to a file, not a Druid datasource.
+    // The AST target is a SqlCall, not a SqlIdentifier; emit no event at all.
+    logger.logSqlQuery(sqlLine(
+        "INSERT INTO EXTERN(s3(bucket => 'x', prefix => 'y')) AS CSV SELECT * FROM kttm",
+        ImmutableMap.of("sqlQueryId", "msq-extern-1"),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(0, capturedEvents.size(), "EXTERN exports should not emit an output dataset");
+  }
+
+  @Test
   public void testMsqInsertFailure() throws IOException
   {
     logger.logSqlQuery(sqlLine(
