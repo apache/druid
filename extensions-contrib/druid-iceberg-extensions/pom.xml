@@ -809,14 +809,6 @@
           <skip>true</skip>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <!-- Arrow allocator on JDK 21 requires jdk.internal.misc to be opened. -->
-          <argLine>@{argLine} --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED</argLine>
-        </configuration>
-      </plugin>
     </plugins>
 
     <pluginManagement>
