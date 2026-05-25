@@ -255,6 +255,13 @@
           <annotationProcessors>
             <annotationProcessor>org.openjdk.jmh.generators.BenchmarkProcessor</annotationProcessor>
           </annotationProcessors>
+          <annotationProcessorPaths combine.children="append">
+            <path>
+              <groupId>org.openjdk.jmh</groupId>
+              <artifactId>jmh-generator-annprocess</artifactId>
+              <version>${jmh.version}</version>
+            </path>
+          </annotationProcessorPaths>
         </configuration>
       </plugin>
       <plugin>

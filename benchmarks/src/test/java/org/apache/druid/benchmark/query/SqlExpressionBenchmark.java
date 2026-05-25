@@ -177,16 +177,6 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
   @Param({"false", "true"})
   private boolean useVectorApi;
 
-  @Setup(Level.Trial)
-  public void setupExpressionProcessing()
-  {
-    if (useVectorApi) {
-      ExpressionProcessing.initializeForVectorApiTests();
-    } else {
-      ExpressionProcessing.initializeForTests();
-    }
-  }
-
   @Param({
       // non-expression reference
       "0",
@@ -253,6 +243,16 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "60"
   })
   private String query;
+
+  @Setup(Level.Trial)
+  public void setupExpressionProcessing()
+  {
+    if (useVectorApi) {
+      ExpressionProcessing.initializeForVectorApiTests();
+    } else {
+      ExpressionProcessing.initializeForTests();
+    }
+  }
 
   @Override
   public String getQuery()

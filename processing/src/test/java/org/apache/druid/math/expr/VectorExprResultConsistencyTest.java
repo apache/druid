@@ -67,11 +67,6 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 {
   private static final Logger log = new Logger(VectorExprResultConsistencyTest.class);
   private static final int NUM_ITERATIONS = 10;
-  /**
-   * Vector sizes used by each test iteration. Picked to exercise distinct regimes against typical SIMD species
-   * lengths: 3 is below {@code SPECIES.length()} on AVX2/AVX-512 (tail-only); 8 fills an exact AVX2/AVX-512 chunk;
-   * 17 leaves a ragged tail after one or more chunks; 67 spans many chunks plus a tail.
-   */
   private static final List<Integer> VECTOR_SIZES = List.of(3, 8, 17, 67);
 
 
