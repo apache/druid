@@ -22,6 +22,10 @@ package org.apache.druid.extensions.openlineage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlInsert;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlWith;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -29,6 +33,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.RequestLogger;
+import org.apache.druid.sql.calcite.parser.DruidSqlParser;
+import org.apache.druid.sql.calcite.parser.ExternalDestinationSqlIdentifier;
 import org.apache.druid.utils.CloseableUtils;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
@@ -53,8 +59,6 @@ import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * OpenLineage RunEvents for completed Druid queries.
@@ -78,11 +82,6 @@ public class OpenLineageRequestLogger implements RequestLogger
   private static final int DISCARD_WARNING_INTERVAL = 1000;
 
   static final String UNKNOWN_QUERY_ID = "unknown-query-id";
-
-  // Matches the output table of MSQ DML: INSERT INTO "foo" or REPLACE INTO foo
-  private static final Pattern MSQ_DML_OUTPUT_PATTERN = Pattern.compile(
-      "(?si)^\\s*(?:INSERT|REPLACE)\\s+INTO\\s+\"?([^\"\\s(,]+)\"?"
-  );
 
   private final ObjectMapper jsonMapper;
   private final String namespace;
@@ -217,8 +216,8 @@ public class OpenLineageRequestLogger implements RequestLogger
    *
    * <p>MSQ INSERT/REPLACE queries submit an MSQControllerTask and never produce a native
    * request-log event, so their output lineage must be captured here. The output datasource
-   * is extracted from the SQL text; inputs are not emitted because reliably extracting
-   * FROM/JOIN tables without a full SQL parser is out of scope for the logger layer.
+   * is extracted from the SQL AST via Druid's SQL parser; inputs are not emitted because
+   * reliably extracting FROM/JOIN tables in the logger layer would duplicate planner work.
    */
   @Override
   public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
@@ -227,11 +226,10 @@ public class OpenLineageRequestLogger implements RequestLogger
     if (sql == null) {
       return;
     }
-    Matcher matcher = MSQ_DML_OUTPUT_PATTERN.matcher(sql);
-    if (!matcher.find()) {
+    String outputTable = extractMsqOutputDatasource(sql);
+    if (outputTable == null) {
       return;
     }
-    String outputTable = matcher.group(1);
 
     Map<String, Object> sqlContext = requestLogLine.getSqlQueryContext();
     String queryId = sqlContext != null ? (String) sqlContext.get("sqlQueryId") : null;
@@ -241,6 +239,56 @@ public class OpenLineageRequestLogger implements RequestLogger
     }
 
     emit(buildRunEvent(queryId, "msq", requestLogLine, List.of(), outputTable));
+  }
+
+  /**
+   * Extracts the output datasource name from an MSQ DML statement (INSERT INTO / REPLACE INTO)
+   * using Druid's SQL parser. Returns {@code null} for any input that is not a Druid
+   * INSERT/REPLACE into a regular datasource — including:
+   * <ul>
+   *   <li>SELECT and other non-DML statements</li>
+   *   <li>{@code INSERT INTO EXTERN(...) AS CSV ...} export statements (target parses as a
+   *       SqlCall, not a SqlIdentifier)</li>
+   *   <li>SQL that fails to parse</li>
+   * </ul>
+   *
+   * <p>For {@code INSERT INTO druid.foo} or {@code INSERT INTO catalog.druid.foo}, returns just
+   * {@code foo} — matching the planner's normalization to a bare datasource name. CTEs are
+   * unwrapped if present (e.g. {@code WITH x AS (...) INSERT INTO foo SELECT ...}).
+   */
+  @Nullable
+  static String extractMsqOutputDatasource(String sql)
+  {
+    try {
+      // allowSetStatements=true so that a Druid SET preamble (e.g. "SET sqlQueryId = '...'; INSERT
+      // INTO foo ...") doesn't cause the parse to throw. We only inspect the main statement.
+      SqlNode node = DruidSqlParser.parse(sql, true).getMainStatement();
+      // WITH ... INSERT/REPLACE wraps the ingest with a SqlWith; unwrap it.
+      if (node instanceof SqlWith) {
+        node = ((SqlWith) node).body;
+      }
+      // DruidSqlInsert and DruidSqlReplace both extend SqlInsert, so this covers both.
+      if (!(node instanceof SqlInsert)) {
+        return null;
+      }
+      SqlNode target = ((SqlInsert) node).getTargetTable();
+      // INSERT INTO EXTERN(...) AS CSV writes to a file, not a Druid datasource.
+      // ExternalDestinationSqlIdentifier extends SqlIdentifier, so check it explicitly.
+      if (target instanceof ExternalDestinationSqlIdentifier) {
+        return null;
+      }
+      if (!(target instanceof SqlIdentifier)) {
+        return null;
+      }
+      SqlIdentifier id = (SqlIdentifier) target;
+      // Druid's planner normalizes any schema/catalog prefix (e.g. "druid.foo",
+      // "catalog.druid.foo") to the bare datasource name. Match that here.
+      return id.names.isEmpty() ? null : id.names.get(id.names.size() - 1);
+    }
+    catch (Exception e) {
+      log.debug(e, "Failed to parse SQL for MSQ output datasource extraction; skipping output lineage");
+      return null;
+    }
   }
 
   private ObjectNode buildRunEvent(
