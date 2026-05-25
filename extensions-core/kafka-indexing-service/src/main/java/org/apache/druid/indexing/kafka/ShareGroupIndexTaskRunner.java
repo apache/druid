@@ -87,13 +87,13 @@ import java.util.function.Function;
 public class ShareGroupIndexTaskRunner
 {
   private static final Logger log = new Logger(ShareGroupIndexTaskRunner.class);
-  private static final String SEQUENCE_NAME = "share_group_seq_0";
 
   static final String METRIC_COMMIT_FAILURES = "ingest/shareGroup/commitFailures";
 
   private final ShareGroupIndexTask task;
   private final TaskToolbox toolbox;
   private final ObjectMapper configMapper;
+  private final String sequenceName;
   private final Function<ShareGroupIndexTaskIOConfig,
       AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>> supplierFactory;
 
@@ -121,6 +121,7 @@ public class ShareGroupIndexTaskRunner
     this.task = task;
     this.toolbox = toolbox;
     this.configMapper = configMapper;
+    this.sequenceName = task.getId();
     this.supplierFactory = supplierFactory != null ? supplierFactory : this::createDefaultRecordSupplier;
   }
 
@@ -342,7 +343,7 @@ public class ShareGroupIndexTaskRunner
           for (InputRow row : rows) {
             final AppenderatorDriverAddResult addResult = driver.add(
                 row,
-                SEQUENCE_NAME,
+                sequenceName,
                 committerSupplier,
                 true,
                 false
@@ -409,7 +410,7 @@ public class ShareGroupIndexTaskRunner
         final SegmentsAndCommitMetadata published = driver.publish(
             publisher,
             committerSupplier.get(),
-            Collections.singletonList(SEQUENCE_NAME)
+            Collections.singletonList(sequenceName)
         ).get();
 
         final int segmentCount = published.getSegments().size();
