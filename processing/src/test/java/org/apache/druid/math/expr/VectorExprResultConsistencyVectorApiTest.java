@@ -1,0 +1,44 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.math.expr;
+
+import org.junit.After;
+import org.junit.Before;
+
+/**
+ * Re-runs every {@link VectorExprResultConsistencyTest} case with the SIMD ({@code jdk.incubator.vector}) expression
+ * vector processors enabled, ensuring the SIMD specializations agree with the non-vectorized reference. Smoke-level
+ * coverage of the factory dispatch wiring; for deeper coverage of the SIMD chunk loop itself see
+ * {@link org.apache.druid.math.expr.vector.simd.SimdBivariateProcessorTest}.
+ */
+public class VectorExprResultConsistencyVectorApiTest extends VectorExprResultConsistencyTest
+{
+  @Before
+  public void enableVectorApi()
+  {
+    ExpressionProcessing.initializeForVectorApiTests();
+  }
+
+  @After
+  public void resetExpressionProcessing()
+  {
+    ExpressionProcessing.initializeForTests();
+  }
+}

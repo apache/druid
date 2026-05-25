@@ -21,12 +21,15 @@ package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
@@ -170,6 +173,19 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "always"
   })
   private String deferExpressionDimensions;
+
+  @Param({"false", "true"})
+  private boolean useVectorApi;
+
+  @Setup(Level.Trial)
+  public void setupExpressionProcessing()
+  {
+    if (useVectorApi) {
+      ExpressionProcessing.initializeForVectorApiTests();
+    } else {
+      ExpressionProcessing.initializeForTests();
+    }
+  }
 
   @Param({
       // non-expression reference

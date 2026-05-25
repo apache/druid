@@ -115,7 +115,8 @@ public class ForkingTaskRunner
       "--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED",
       "--add-opens=java.base/java.io=ALL-UNNAMED",
       "--add-opens=java.base/java.lang=ALL-UNNAMED",
-      "--add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED"
+      "--add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED",
+      "--add-modules=jdk.incubator.vector"
   );
 
   private final ForkingTaskRunnerConfig config;

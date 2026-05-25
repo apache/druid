@@ -67,7 +67,12 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 {
   private static final Logger log = new Logger(VectorExprResultConsistencyTest.class);
   private static final int NUM_ITERATIONS = 10;
-  private static final int VECTOR_SIZE = 4;
+  /**
+   * Vector sizes used by each test iteration. Picked to exercise distinct regimes against typical SIMD species
+   * lengths: 3 is below {@code SPECIES.length()} on AVX2/AVX-512 (tail-only); 8 fills an exact AVX2/AVX-512 chunk;
+   * 17 leaves a ragged tail after one or more chunks; 67 spans many chunks plus a tail.
+   */
+  private static final List<Integer> VECTOR_SIZES = List.of(3, 8, 17, 67);
 
 
   private static final Map<String, String> LOOKUP = Map.of(
@@ -764,16 +769,18 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       final int numIterations
   )
   {
-    for (int iter = 0; iter < numIterations; iter++) {
-      assertEvalsMatch(
-          expr,
-          parsed,
-          makeSequentialBinding(
-              VECTOR_SIZE,
-              types,
-              -2 + (iter * VECTOR_SIZE) // include negative numbers and zero
-          )
-      );
+    for (int vectorSize : VECTOR_SIZES) {
+      for (int iter = 0; iter < numIterations; iter++) {
+        assertEvalsMatch(
+            expr,
+            parsed,
+            makeSequentialBinding(
+                vectorSize,
+                types,
+                -2 + (iter * vectorSize) // include negative numbers and zero
+            )
+        );
+      }
     }
   }
 
@@ -784,8 +791,10 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       final int numIterations
   )
   {
-    for (int iterations = 0; iterations < numIterations; iterations++) {
-      assertEvalsMatch(expr, parsed, makeRandomizedBindings(VECTOR_SIZE, types));
+    for (int vectorSize : VECTOR_SIZES) {
+      for (int iterations = 0; iterations < numIterations; iterations++) {
+        assertEvalsMatch(expr, parsed, makeRandomizedBindings(vectorSize, types));
+      }
     }
   }
 
@@ -808,7 +817,8 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     );
 
     if (vectorEval.isValue() && nonVectorEval.isValue()) {
-      for (int i = 0; i < VECTOR_SIZE; i++) {
+      final int vectorSize = bindings.lhs.length;
+      for (int i = 0; i < vectorSize; i++) {
         final String message = StringUtils.format(
             "Values do not match for row[%s] for expression[%s], bindings[%s]",
             i,
@@ -1000,9 +1010,9 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       @Nullable ExpressionType outputType
   )
   {
-    final Object[] exprValues = new Object[VECTOR_SIZE];
+    final Object[] exprValues = new Object[bindings.length];
 
-    for (int i = 0; i < VECTOR_SIZE; i++) {
+    for (int i = 0; i < bindings.length; i++) {
       ExprEval<?> eval;
       try {
         eval = expr.eval(bindings[i]);
