@@ -84,6 +84,13 @@ import java.util.stream.Collectors;
  */
 public class IcebergArrowInputSourceReader implements InputSourceReader
 {
+  // Pin Arrow to Unsafe allocator: Netty backend fails on JDK 25 (EmptyByteBuf.memoryAddress UnsupportedOperationException).
+  static {
+    if (System.getProperty("arrow.allocation.manager.type") == null) {
+      System.setProperty("arrow.allocation.manager.type", "Unsafe");
+    }
+  }
+
   static final int DEFAULT_BATCH_SIZE = 1024;
 
   private final Table table;
