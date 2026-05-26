@@ -156,12 +156,6 @@ Druid interacts with ZooKeeper through a set of standard path configurations. We
 |`druid.zk.paths.base`|Base ZooKeeper path.|`/druid`|
 |`druid.zk.paths.coordinatorPath`|Used by the Coordinator for leader election.|`${druid.zk.paths.base}/coordinator`|
 
-The following path is used for service discovery. It is **not** affected by `druid.zk.paths.base` and **must** be specified separately.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.discovery.curator.path`|Services announce themselves under this ZooKeeper path.|`/druid/discovery`|
-
 ### TLS
 
 #### General configuration

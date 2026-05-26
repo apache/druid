@@ -26,7 +26,6 @@ import com.google.inject.Module;
 import com.google.inject.multibindings.ProvidesIntoSet;
 import com.google.inject.name.Named;
 import org.apache.druid.cli.ServerRunnable.DiscoverySideEffectsProvider;
-import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.DruidService;
@@ -61,8 +60,6 @@ public class DiscoverySideEffectsProviderTest
   @Mock
   private DruidNodeAnnouncer discoverableOnlyAnnouncer;
   @Mock
-  private ServiceAnnouncer legacyAnnouncer;
-  @Mock
   private Lifecycle lifecycle;
   private List<Lifecycle.Handler> lifecycleHandlers;
 
@@ -84,7 +81,7 @@ public class DiscoverySideEffectsProviderTest
         .doAnswer((invocation) -> lifecycleHandlers.add(invocation.getArgument(0)))
         .when(lifecycle)
         .addHandler(ArgumentMatchers.any(Lifecycle.Handler.class), ArgumentMatchers.eq(Lifecycle.Stage.ANNOUNCEMENTS));
-    target = DiscoverySideEffectsProvider.withLegacyAnnouncer();
+    target = DiscoverySideEffectsProvider.create();
   }
 
   @Test
@@ -187,7 +184,6 @@ public class DiscoverySideEffectsProviderTest
             binder -> {
               binder.bind(DruidNodeAnnouncer.class).toInstance(discoverableOnlyAnnouncer);
               binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(druidNode);
-              binder.bind(ServiceAnnouncer.class).toInstance(legacyAnnouncer);
               binder.bind(Lifecycle.class).toInstance(lifecycle);
             }
          )

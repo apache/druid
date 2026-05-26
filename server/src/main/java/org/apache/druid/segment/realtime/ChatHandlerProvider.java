@@ -26,24 +26,12 @@ import com.google.common.base.Optional;
 public interface ChatHandlerProvider
 {
   /**
-   * Registers a chat handler which provides an API for others to talk to objects in the indexing service. Depending
-   * on the implementation, this method may also announce this node so that it can be discovered by other services.
+   * Registers a chat handler which provides an API for others to talk to objects in the indexing service.
    *
    * @param key     a unique name identifying this service
    * @param handler instance which implements the API to be exposed
    */
   void register(String key, ChatHandler handler);
-
-  /**
-   * Registers a chat handler which provides an API for others to talk to objects in the indexing service. Setting
-   * announce to false instructs the implementation to only register the handler to expose the API and skip any
-   * discovery announcements that might have been broadcast.
-   *
-   * @param key      a unique name identifying this service
-   * @param handler  instance which implements the API to be exposed
-   * @param announce for implementations that have a service discovery mechanism, whether this node should be announced
-   */
-  void register(String key, ChatHandler handler, boolean announce);
 
   /**
    * Unregisters a chat handler.
