@@ -137,6 +137,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 /**
  * Tests the Avatica-based JDBC implementation using JSON serialization. See
@@ -146,6 +147,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class DruidAvaticaHandlerTest extends CalciteTestBase
 {
+  private static final Pattern IPV4_PATTERN = Pattern.compile("^\\d+\\.\\d+\\.\\d+\\.\\d+$");
+  private static final Pattern IPV6_PATTERN = Pattern.compile("^[0-9a-fA-F:]+$");
+
   private static final int CONNECTION_LIMIT = 4;
   private static final int STATEMENT_LIMIT = 4;
 
@@ -1973,8 +1977,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     Assert.assertTrue(
         "Remote address should be a valid IP address, got: " + remoteAddress,
-        remoteAddress.matches("^\\d+\\.\\d+\\.\\d+\\.\\d+$") ||
-        remoteAddress.matches("^[0-9a-fA-F:]+$")
+        IPV4_PATTERN.matcher(remoteAddress).matches() ||
+        IPV6_PATTERN.matcher(remoteAddress).matches()
     );
   }
 
