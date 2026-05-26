@@ -39,27 +39,45 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.LoggingEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
+import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
+import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
+import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.ListColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanQueryConfig;
+import org.apache.druid.query.scan.ScanQueryEngine;
+import org.apache.druid.query.scan.ScanQueryQueryToolChest;
+import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
@@ -80,7 +98,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.TestAppenderatorConfig;
 import org.apache.druid.segment.realtime.sink.Committers;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -121,7 +138,7 @@ public class SinkQuerySegmentWalkerBenchmark
       new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/2001")));
   private static final String SET_PROCESSING_THREAD_NAMES = "setProcessingThreadNames";
 
-  @Param({"timeseries", "scan", "segmentMetadata"})
+  @Param({"timeseries", "scan", "segmentMetadata", "groupBy"})
   private String queryType;
 
   @Param({"false", "true"})
@@ -134,9 +151,9 @@ public class SinkQuerySegmentWalkerBenchmark
   private final ServiceEmitter serviceEmitter = new ServiceEmitter("test", "test", loggingEmitter);
   private File cacheDir;
 
-  private Closer closer;
   private ExecutorService queryExecutor;
   private Appenderator appenderator;
+  private TestGroupByBuffers groupByBuffers;
 
   @Setup(Level.Trial)
   public void setup() throws Exception
@@ -160,13 +177,13 @@ public class SinkQuerySegmentWalkerBenchmark
     final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
     final AppenderatorConfig tuningConfig = makeTuningConfig();
 
-    closer = Closer.create();
     queryExecutor = Execs.singleThreaded("queryExecutor(%d)");
+    groupByBuffers = TestGroupByBuffers.createDefault();
 
     serviceEmitter.start();
     EmittingLogger.registerEmitter(serviceEmitter);
 
-    final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
+    final QueryRunnerFactoryConglomerate conglomerate = makeQueryRunnerFactoryConglomerate();
     appenderator = Appenderators.createRealtime(
         null,
         schema.getDataSource(),
@@ -227,8 +244,8 @@ public class SinkQuerySegmentWalkerBenchmark
         queryExecutor.shutdownNow();
       }
       try {
-        if (closer != null) {
-          closer.close();
+        if (groupByBuffers != null) {
+          groupByBuffers.close();
         }
       }
       finally {
@@ -258,9 +275,47 @@ public class SinkQuerySegmentWalkerBenchmark
         return makeScanQuery();
       case "segmentMetadata":
         return makeSegmentMetadataQuery();
+      case "groupBy":
+        return makeGroupByQuery();
       default:
         throw new IllegalStateException("Unsupported query type[" + queryType + "]");
     }
+  }
+
+  @SuppressWarnings("rawtypes")
+  private QueryRunnerFactoryConglomerate makeQueryRunnerFactoryConglomerate()
+  {
+    return DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(
+        ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
+                    .put(
+                        TimeseriesQuery.class,
+                        new TimeseriesQueryRunnerFactory(
+                            new TimeseriesQueryQueryToolChest(),
+                            new TimeseriesQueryEngine(),
+                            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+                        )
+                    )
+                    .put(
+                        ScanQuery.class,
+                        new ScanQueryRunnerFactory(
+                            new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
+                            new ScanQueryEngine(),
+                            new ScanQueryConfig()
+                        )
+                    )
+                    .put(
+                        SegmentMetadataQuery.class,
+                        new SegmentMetadataQueryRunnerFactory(
+                            new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
+                            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+                        )
+                    )
+                    .put(
+                        GroupByQuery.class,
+                        GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig(), groupByBuffers)
+                    )
+                    .build()
+    );
   }
 
   private Query<?> makeTimeseriesQuery()
@@ -301,6 +356,17 @@ public class SinkQuerySegmentWalkerBenchmark
                  .merge(true)
                  .context(makeQueryContext())
                  .build();
+  }
+
+  private Query<?> makeGroupByQuery()
+  {
+    return GroupByQuery.builder()
+                       .setDataSource(DATASOURCE)
+                       .setInterval("2000/2001")
+                       .setGranularity(Granularities.ALL)
+                       .setAggregatorSpecs(makeAggregators())
+                       .setContext(makeQueryContext())
+                       .build();
   }
 
   private List<AggregatorFactory> makeAggregators()
