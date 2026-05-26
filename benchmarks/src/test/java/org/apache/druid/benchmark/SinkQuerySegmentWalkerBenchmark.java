@@ -19,29 +19,70 @@
 
 package org.apache.druid.benchmark;
 
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.client.cache.CachePopulatorStats;
+import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.guice.BuiltInTypesModule;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
+import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.LoggingEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.ForwardingQueryProcessingPool;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.Result;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.metadata.metadata.ListColumnIncluderator;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMerger;
+import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
+import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.TuningConfig;
+import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
+import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorTester;
+import org.apache.druid.segment.realtime.appenderator.TestAppenderatorConfig;
 import org.apache.druid.segment.realtime.sink.Committers;
+import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -59,8 +100,11 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -71,6 +115,18 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class SinkQuerySegmentWalkerBenchmark
 {
+  private static final String DATASOURCE = "foo";
+  private static final List<String> QUERY_COLUMNS = ImmutableList.of("__time", "dim", "count", "met");
+  private static final MultipleIntervalSegmentSpec QUERY_INTERVALS =
+      new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/2001")));
+  private static final String SET_PROCESSING_THREAD_NAMES = "setProcessingThreadNames";
+
+  @Param({"timeseries", "scan", "segmentMetadata"})
+  private String queryType;
+
+  @Param({"false", "true"})
+  private boolean setProcessingThreadNames;
+
   @Param({"10", "50", "100", "200"})
   private int numFireHydrants;
 
@@ -78,6 +134,8 @@ public class SinkQuerySegmentWalkerBenchmark
   private final ServiceEmitter serviceEmitter = new ServiceEmitter("test", "test", loggingEmitter);
   private File cacheDir;
 
+  private Closer closer;
+  private ExecutorService queryExecutor;
   private Appenderator appenderator;
 
   @Setup(Level.Trial)
@@ -85,17 +143,57 @@ public class SinkQuerySegmentWalkerBenchmark
   {
     final String userConfiguredCacheDir = System.getProperty("druid.benchmark.cacheDir", System.getenv("DRUID_BENCHMARK_CACHE_DIR"));
     cacheDir = new File(userConfiguredCacheDir);
-    final StreamAppenderatorTester tester =
-        new StreamAppenderatorTester.Builder().maxRowsInMemory(1)
-                                              .basePersistDirectory(cacheDir)
-                                              .withServiceEmitter(serviceEmitter)
-                                              .build();
+    FileUtils.deleteDirectory(cacheDir);
+    final ObjectMapper objectMapper = makeObjectMapper();
+    final IndexIO indexIO = new IndexIO(
+        objectMapper,
+        new ColumnConfig()
+        {
+        }
+    );
+    final IndexMergerV9 indexMerger = new IndexMergerV9(
+        objectMapper,
+        indexIO,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance()
+    );
+    final DataSchema schema = makeDataSchema();
+    final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+    final AppenderatorConfig tuningConfig = makeTuningConfig();
 
-    appenderator = tester.getAppenderator();
+    closer = Closer.create();
+    queryExecutor = Execs.singleThreaded("queryExecutor(%d)");
+
+    serviceEmitter.start();
+    EmittingLogger.registerEmitter(serviceEmitter);
+
+    final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
+    appenderator = Appenderators.createRealtime(
+        null,
+        schema.getDataSource(),
+        schema,
+        tuningConfig,
+        new SegmentGenerationMetrics(),
+        makeDataSegmentPusher(),
+        objectMapper,
+        indexIO,
+        indexMerger,
+        conglomerate,
+        new NoopDataSegmentAnnouncer(),
+        serviceEmitter,
+        new ForwardingQueryProcessingPool(queryExecutor),
+        MapCache.create(2048),
+        new CacheConfig(),
+        new CachePopulatorStats(),
+        NoopPolicyEnforcer.instance(),
+        rowIngestionMeters,
+        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+        CentralizedDatasourceSchemaConfig.create(),
+        interval -> {}
+    );
     appenderator.startJob();
 
     final SegmentIdWithShardSpec segmentIdWithShardSpec = new SegmentIdWithShardSpec(
-        StreamAppenderatorTester.DATASOURCE,
+        DATASOURCE,
         Intervals.of("2000/2001"),
         "A",
         new LinearShardSpec(0)
@@ -119,33 +217,166 @@ public class SinkQuerySegmentWalkerBenchmark
   @TearDown(Level.Trial)
   public void tearDown() throws Exception
   {
-    appenderator.close();
-    FileUtils.deleteDirectory(cacheDir);
+    try {
+      if (appenderator != null) {
+        appenderator.close();
+      }
+    }
+    finally {
+      if (queryExecutor != null) {
+        queryExecutor.shutdownNow();
+      }
+      try {
+        if (closer != null) {
+          closer.close();
+        }
+      }
+      finally {
+        FileUtils.deleteDirectory(cacheDir);
+      }
+    }
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void emitSinkMetrics(Blackhole blackhole) throws Exception
+  public void runSinkQuery(Blackhole blackhole) throws Exception
   {
-    {
-      final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
-                                           .intervals(ImmutableList.of(Intervals.of("2000/2001")))
-                                           .aggregators(
-                                               Arrays.asList(
-                                                   new LongSumAggregatorFactory("count", "count"),
-                                                   new LongSumAggregatorFactory("met", "met")
-                                               )
-                                           )
-                                           .granularity(Granularities.DAY)
-                                           .build();
+    final Query<?> query = makeQuery();
+    final List<?> results = QueryPlus.wrap(query).run(appenderator, ResponseContext.createEmpty()).toList();
+    blackhole.consume(results);
 
-      final List<Result<TimeseriesResultValue>> results =
-          QueryPlus.wrap(query1).run(appenderator, ResponseContext.createEmpty()).toList();
-      blackhole.consume(results);
+    serviceEmitter.flush();
+  }
 
-      serviceEmitter.flush();
+  private Query<?> makeQuery()
+  {
+    switch (queryType) {
+      case "timeseries":
+        return makeTimeseriesQuery();
+      case "scan":
+        return makeScanQuery();
+      case "segmentMetadata":
+        return makeSegmentMetadataQuery();
+      default:
+        throw new IllegalStateException("Unsupported query type[" + queryType + "]");
     }
+  }
+
+  private Query<?> makeTimeseriesQuery()
+  {
+    return Druids.newTimeseriesQueryBuilder()
+                 .dataSource(DATASOURCE)
+                 .intervals(QUERY_INTERVALS)
+                 .aggregators(makeAggregators())
+                 .granularity(Granularities.DAY)
+                 .context(makeQueryContext())
+                 .build();
+  }
+
+  private Query<?> makeScanQuery()
+  {
+    return Druids.newScanQueryBuilder()
+                 .dataSource(DATASOURCE)
+                 .intervals(QUERY_INTERVALS)
+                 .columns(QUERY_COLUMNS)
+                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                 .context(makeQueryContext())
+                 .build();
+  }
+
+  private Query<?> makeSegmentMetadataQuery()
+  {
+    return Druids.newSegmentMetadataQueryBuilder()
+                 .dataSource(DATASOURCE)
+                 .intervals(QUERY_INTERVALS)
+                 .toInclude(new ListColumnIncluderator(QUERY_COLUMNS))
+                 .analysisTypes(
+                     SegmentMetadataQuery.AnalysisType.CARDINALITY,
+                     SegmentMetadataQuery.AnalysisType.SIZE,
+                     SegmentMetadataQuery.AnalysisType.INTERVAL,
+                     SegmentMetadataQuery.AnalysisType.MINMAX,
+                     SegmentMetadataQuery.AnalysisType.AGGREGATORS
+                 )
+                 .merge(true)
+                 .context(makeQueryContext())
+                 .build();
+  }
+
+  private List<AggregatorFactory> makeAggregators()
+  {
+    return Arrays.asList(
+        new LongSumAggregatorFactory("count", "count"),
+        new LongSumAggregatorFactory("met", "met")
+    );
+  }
+
+  private Map<String, Object> makeQueryContext()
+  {
+    return ImmutableMap.of(SET_PROCESSING_THREAD_NAMES, setProcessingThreadNames);
+  }
+
+  private static ObjectMapper makeObjectMapper()
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    objectMapper.registerSubtypes(LinearShardSpec.class);
+    objectMapper.registerModules(new AggregatorsModule());
+    objectMapper.registerModules(new BuiltInTypesModule().getJacksonModules());
+    objectMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), objectMapper)
+    );
+    return objectMapper;
+  }
+
+  private static DataSchema makeDataSchema()
+  {
+    return DataSchema.builder()
+                     .withDataSource(DATASOURCE)
+                     .withTimestamp(new TimestampSpec("ts", "auto", null))
+                     .withDimensions(DimensionsSpec.EMPTY)
+                     .withAggregators(
+                         new CountAggregatorFactory("count"),
+                         new LongSumAggregatorFactory("met", "met")
+                     )
+                     .withGranularity(new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null))
+                     .build();
+  }
+
+  private AppenderatorConfig makeTuningConfig()
+  {
+    return new TestAppenderatorConfig(
+        TuningConfig.DEFAULT_APPENDABLE_INDEX,
+        1,
+        Runtime.getRuntime().totalMemory() / 3,
+        false,
+        IndexSpec.getDefault(),
+        0,
+        false,
+        0L,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
+        cacheDir,
+        false
+    );
+  }
+
+  private static DataSegmentPusher makeDataSegmentPusher()
+  {
+    return new DataSegmentPusher()
+    {
+      @Override
+      public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
+      {
+        return segment;
+      }
+
+      @Override
+      public Map<String, Object> makeLoadSpec(URI uri)
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
   }
 }
