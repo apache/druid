@@ -50,6 +50,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.MetadataConfigModule;
 import org.apache.druid.guice.MetadataManagerModule;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.SegmentSchemaCacheModule;
 import org.apache.druid.guice.SupervisorCleanupModule;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -178,6 +179,7 @@ public class CliCoordinator extends ServerRunnable
       modules.add(new QueryableModule());
     }
 
+    modules.add(new RegexEngineModule());
     modules.add(
         new Module()
         {

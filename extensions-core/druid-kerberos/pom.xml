@@ -248,6 +248,10 @@
           <groupId>org.eclipse.jetty</groupId>
           <artifactId>jetty-servlet</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>com.google.re2j</groupId>
+          <artifactId>re2j</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>

@@ -30,19 +30,19 @@ import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
 import org.apache.druid.java.util.common.parsers.Parsers;
+import org.apache.druid.regex.RegexMatcher;
+import org.apache.druid.regex.RegexPattern;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class RegexReader extends TextReader.Strings
 {
   private final String pattern;
-  private final Pattern compiledPattern;
+  private final RegexPattern compiledPattern;
   private final Function<String, Object> transformationFunction;
 
   private List<String> columns;
@@ -51,7 +51,7 @@ public class RegexReader extends TextReader.Strings
       InputRowSchema inputRowSchema,
       InputEntity source,
       String pattern,
-      Pattern compiledPattern,
+      RegexPattern compiledPattern,
       @Nullable String listDelimiter,
       @Nullable List<String> columns
   )
@@ -83,7 +83,7 @@ public class RegexReader extends TextReader.Strings
   private Map<String, Object> parseLine(String line)
   {
     try {
-      final Matcher matcher = compiledPattern.matcher(line);
+      final RegexMatcher matcher = compiledPattern.matcher(line);
 
       if (!matcher.matches()) {
         throw new ParseException(line, "Incorrect Regex: %s . No match found.", pattern);
