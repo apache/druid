@@ -282,7 +282,6 @@ public class SinkQuerySegmentWalkerBenchmark
     }
   }
 
-  @SuppressWarnings("rawtypes")
   private QueryRunnerFactoryConglomerate makeQueryRunnerFactoryConglomerate()
   {
     return DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(
@@ -318,7 +317,7 @@ public class SinkQuerySegmentWalkerBenchmark
     );
   }
 
-  private Query<?> makeTimeseriesQuery()
+  private TimeseriesQuery makeTimeseriesQuery()
   {
     return Druids.newTimeseriesQueryBuilder()
                  .dataSource(DATASOURCE)
@@ -329,7 +328,7 @@ public class SinkQuerySegmentWalkerBenchmark
                  .build();
   }
 
-  private Query<?> makeScanQuery()
+  private ScanQuery makeScanQuery()
   {
     return Druids.newScanQueryBuilder()
                  .dataSource(DATASOURCE)
@@ -340,7 +339,7 @@ public class SinkQuerySegmentWalkerBenchmark
                  .build();
   }
 
-  private Query<?> makeSegmentMetadataQuery()
+  private SegmentMetadataQuery makeSegmentMetadataQuery()
   {
     return Druids.newSegmentMetadataQueryBuilder()
                  .dataSource(DATASOURCE)
@@ -358,7 +357,7 @@ public class SinkQuerySegmentWalkerBenchmark
                  .build();
   }
 
-  private Query<?> makeGroupByQuery()
+  private GroupByQuery makeGroupByQuery()
   {
     return GroupByQuery.builder()
                        .setDataSource(DATASOURCE)
