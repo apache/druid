@@ -111,8 +111,8 @@ RE2/J helps protect against catastrophic backtracking and Regular Expression Den
 RE2/J does not support all Java regex features.
 
 Unsupported or partially supported features include:
-- backreferences
-- lookbehind assertions
+- back references
+- look behind assertions
 - some advanced backtracking behavior
 
 Patterns using unsupported constructs will fail during regex compilation.
