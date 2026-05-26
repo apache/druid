@@ -434,7 +434,7 @@ public class SupervisorManager implements SupervisorStatsProvider
         endOffsets
     );
 
-    streamSupervisor.resetOffsetsForwardOnly(resetMetadata);
+    streamSupervisor.resetOffsets(resetMetadata);
 
     // Reset autoscaler if present
     SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
