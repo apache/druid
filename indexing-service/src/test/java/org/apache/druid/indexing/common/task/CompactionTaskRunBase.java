@@ -106,7 +106,7 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -1734,7 +1734,7 @@ public abstract class CompactionTaskRunBase
         .indexMerger(testUtils.getIndexMergerV9Factory().create(true))
         .taskReportFileWriter(new SingleFileTaskReportFileWriter(reportsFile))
         .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
-        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .chatHandlerProvider(new ChatHandlerProvider())
         .rowIngestionMetersFactory(testUtils.getRowIngestionMetersFactory())
         .appenderatorsManager(new TestAppenderatorsManager())
         .overlordClient(overlordClient)

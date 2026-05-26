@@ -24,7 +24,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class LocalChatHandlerProviderTest
+public class ChatHandlerProviderTest
 {
   private static class TestChatHandler implements ChatHandler
   {
@@ -32,12 +32,12 @@ public class LocalChatHandlerProviderTest
 
   private static final String TEST_SERVICE_NAME = "test-service-name";
 
-  private LocalChatHandlerProvider chatHandlerProvider;
+  private ChatHandlerProvider chatHandlerProvider;
 
   @Before
   public void setUp()
   {
-    chatHandlerProvider = new LocalChatHandlerProvider();
+    chatHandlerProvider = new ChatHandlerProvider();
   }
 
   @Test

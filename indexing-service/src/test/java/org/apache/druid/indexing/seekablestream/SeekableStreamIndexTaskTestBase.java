@@ -118,7 +118,7 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.server.DruidNode;
@@ -696,7 +696,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         new SingleFileTaskReportFileWriter(reportsFile),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
+        new ChatHandlerProvider(),
         testUtils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
         new NoopOverlordClient(),

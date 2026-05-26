@@ -120,7 +120,6 @@ import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -260,7 +259,7 @@ public class CliOverlord extends ServerRunnable
 
             binder.bind(ParallelIndexSupervisorTaskClientProvider.class).toProvider(Providers.of(null));
             binder.bind(ShuffleClient.class).toProvider(Providers.of(null));
-            binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(new NoopChatHandlerProvider()));
+            binder.bind(ChatHandlerProvider.class).in(LazySingleton.class);
 
             CliPeon.bindDataSegmentKiller(binder);
 
