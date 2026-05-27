@@ -764,7 +764,6 @@
       <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-data</artifactId>
       <version>${iceberg.core.version}</version>
-      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.iceberg</groupId>
