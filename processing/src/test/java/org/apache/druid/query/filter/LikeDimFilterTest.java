@@ -328,7 +328,6 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testGetDimensionRangeSet_literalPattern()
   {
-    // No wildcards, LIKE is equality.
     final LikeDimFilter filter = new LikeDimFilter("foo", "bar", null, null);
     Assert.assertEquals(
         ImmutableRangeSet.of(Range.singleton("bar")),
@@ -339,7 +338,6 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testGetDimensionRangeSet_prefixPattern()
   {
-    // LIKE 'bar%' matches every string starting with 'bar'.
     final LikeDimFilter filter = new LikeDimFilter("foo", "bar%", null, null);
     Assert.assertEquals(
         ImmutableRangeSet.of(Range.closedOpen("bar", "bas")),
@@ -350,7 +348,6 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testGetDimensionRangeSet_midPatternWildcard_returnsNull()
   {
-    // Mid-string wildcards aren't expressible as a single Range.
     final LikeDimFilter filter = new LikeDimFilter("foo", "bar%baz", null, null);
     Assert.assertNull(filter.getDimensionRangeSet("foo"));
   }
@@ -358,7 +355,6 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testGetDimensionRangeSet_suffixPattern_returnsNull()
   {
-    // LIKE '%bar' has no usable prefix.
     final LikeDimFilter filter = new LikeDimFilter("foo", "%bar", null, null);
     Assert.assertNull(filter.getDimensionRangeSet("foo"));
   }
@@ -366,7 +362,6 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testGetDimensionRangeSet_singleWildcard_returnsAll()
   {
-    // LIKE '%' matches everything
     final LikeDimFilter filter = new LikeDimFilter("foo", "%", null, null);
     Assert.assertEquals(
         ImmutableRangeSet.of(Range.all()),
@@ -384,7 +379,6 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testGetDimensionRangeSet_withExtractionFn_returnsNull()
   {
-    // Range information about the post-extraction value doesn't translate back to the source dimension.
     final LikeDimFilter filter = new LikeDimFilter("foo", "bar%", null, new SubstringDimExtractionFn(0, 3));
     Assert.assertNull(filter.getDimensionRangeSet("foo"));
   }
@@ -398,7 +392,6 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testPrefixRange_uppercaseCarryStaysWithinAscii()
   {
-    // 'Z' + 1 = '[' (ASCII 91); carry doesn't preserve case classes, just increments the code point.
     Assert.assertEquals(Range.closedOpen("foZ", "fo["), LikeDimFilter.prefixRange("foZ"));
   }
 
