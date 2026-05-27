@@ -87,6 +87,12 @@ public class HiveIcebergCatalog extends IcebergCatalog
   }
 
   @Override
+  public Configuration getConfiguration()
+  {
+    return configuration;
+  }
+
+  @Override
   public Catalog retrieveCatalog()
   {
     if (hiveCatalog == null) {

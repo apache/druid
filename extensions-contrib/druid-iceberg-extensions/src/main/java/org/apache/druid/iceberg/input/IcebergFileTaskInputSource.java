@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.hadoop.conf.Configuration;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -64,6 +65,7 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
   private final Map<String, String> fileIOProperties;
   // TODO https://github.com/apache/druid/issues/19472: extend to ORC/AVRO once iceberg-orc/iceberg-avro deps are added
   private final String fileFormat;
+  private final Configuration hadoopConf;
 
   @JsonCreator
   public IcebergFileTaskInputSource(
@@ -73,7 +75,8 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
       @JsonProperty("warehouseSource") final InputSourceFactory warehouseSource,
       @JsonProperty("fileIOImpl") @Nullable final String fileIOImpl,
       @JsonProperty("fileIOProperties") @Nullable final Map<String, String> fileIOProperties,
-      @JsonProperty("fileFormat") @Nullable final String fileFormat
+      @JsonProperty("fileFormat") @Nullable final String fileFormat,
+      final Configuration hadoopConf
   )
   {
     this.dataFilePath = dataFilePath;
@@ -83,6 +86,7 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
     this.fileIOImpl = fileIOImpl;
     this.fileIOProperties = fileIOProperties == null ? Collections.emptyMap() : fileIOProperties;
     this.fileFormat = fileFormat != null ? fileFormat : "PARQUET";
+    this.hadoopConf = hadoopConf;
   }
 
   @JsonProperty
@@ -177,7 +181,8 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
         inputRowSchema,
         fileIOImpl,
         fileIOProperties,
-        fileFormat
+        fileFormat,
+        hadoopConf
     );
   }
 }
