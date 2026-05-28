@@ -175,6 +175,11 @@ public class OpenLineageRequestLoggerTest
     Assertions.assertEquals(0, event.get("inputs").size());
     // queryType is msq
     Assertions.assertEquals("msq", event.get("run").get("facets").get("druid_query_context").get("queryType").asText());
+    // sql facet present with the original SQL text
+    Assertions.assertEquals(
+        "INSERT INTO \"kttm-result\" SELECT * FROM \"kttm\"",
+        event.get("job").get("facets").get("sql").get("query").asText()
+    );
     // stats
     Assertions.assertEquals(1200L, event.get("run").get("facets").get("druid_query_statistics").get("durationMs").asLong());
   }
@@ -212,6 +217,35 @@ public class OpenLineageRequestLoggerTest
     logger.logSqlQuery(sqlLine(
         "INSERT INTO druid.kttm_result SELECT * FROM kttm",
         ImmutableMap.of("sqlQueryId", "msq-druid-schema-1"),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    Assertions.assertEquals("kttm_result", capturedEvents.get(0).get("outputs").get(0).get("name").asText());
+  }
+
+  @Test
+  public void testMsqInsertCteUnwrapped() throws IOException
+  {
+    // In Druid MSQ, CTEs appear as the source of the INSERT, not as a wrapper around it.
+    // The target table must still be extracted correctly from the outer SqlInsert node.
+    logger.logSqlQuery(sqlLine(
+        "INSERT INTO kttm_result WITH staged AS (SELECT * FROM kttm) SELECT * FROM staged",
+        ImmutableMap.of("sqlQueryId", "msq-cte-1"),
+        ImmutableMap.of("success", true)
+    ));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    Assertions.assertEquals("kttm_result", capturedEvents.get(0).get("outputs").get(0).get("name").asText());
+  }
+
+  @Test
+  public void testMsqInsertThreePartCatalogPrefix() throws IOException
+  {
+    // catalog.druid.foo → Druid normalizes to bare name "foo"; AST extraction matches.
+    logger.logSqlQuery(sqlLine(
+        "INSERT INTO catalog.druid.kttm_result SELECT * FROM kttm",
+        ImmutableMap.of("sqlQueryId", "msq-catalog-1"),
         ImmutableMap.of("success", true)
     ));
 

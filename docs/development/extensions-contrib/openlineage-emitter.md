@@ -28,7 +28,7 @@ To use this Apache Druid extension, [include](../../configuration/extensions.md#
 
 This extension emits [OpenLineage](https://openlineage.io) `RunEvent`s for each completed Druid query, enabling data lineage tracking with any OpenLineage-compatible backend such as [Marquez](https://marquezproject.ai).
 
-For SQL queries, the SQL text is parsed to extract input datasources (FROM clauses, JOINs, CTEs) and the output datasource (INSERT INTO). For native queries, table names are resolved from the datasource tree. Native sub-queries spawned by a SQL execution are deduplicated against the SQL-level event.
+For MSQ DML statements (`INSERT INTO` / `REPLACE INTO`), the output datasource is extracted from the SQL text and emitted as an output dataset. Input extraction from SQL is not performed — reliably resolving `FROM` / `JOIN` tables at the logger layer would duplicate planner work. For native queries, input table names are resolved from the datasource tree and emitted as input datasets. Native sub-queries spawned by a SQL execution carry a `sqlQueryId` in their context facet for correlation with the parent SQL event.
 
 :::note
 SQL table extraction relies on `calcite-core` being on the classpath, which is the case on Broker nodes. Native query lineage is available on all nodes.
@@ -48,9 +48,9 @@ All configuration parameters are under `druid.request.logging`.
 | `druid.request.logging.emitQueueCapacity` | Maximum number of events buffered in the async HTTP emit queue. Events are dropped (with a warning) when the queue is full. Only applies when `transportType=HTTP`. | no | `1000` |
 | `druid.request.logging.emitThreadCount` | Number of background threads used to POST events to the HTTP endpoint. Only applies when `transportType=HTTP`. | no | `1` |
 | `druid.request.logging.trustStorePath` | Path to the TrustStore file for HTTPS transport. Only applies when `transportType=HTTP`. | no | — |
-| `druid.request.logging.trustStorePassword` | Password for the TrustStore. Only applies when `transportType=HTTP`. | no | — |
+| `druid.request.logging.trustStorePassword` | Password for the TrustStore. Accepts a plain string or a [PasswordProvider](../../operations/password-provider.md) (e.g. an environment variable). Only applies when `transportType=HTTP`. | no | — |
 | `druid.request.logging.keyStorePath` | Path to the KeyStore file for mutual TLS. Only applies when `transportType=HTTP`. | no | — |
-| `druid.request.logging.keyStorePassword` | Password for the KeyStore. Only applies when `transportType=HTTP`. | no | — |
+| `druid.request.logging.keyStorePassword` | Password for the KeyStore. Accepts a plain string or a [PasswordProvider](../../operations/password-provider.md). Only applies when `transportType=HTTP`. | no | — |
 
 ### Examples
 
@@ -86,7 +86,7 @@ Each emitted event follows the [OpenLineage spec](https://openlineage.io/spec/2-
 | Facet | Description |
 |---|---|
 | `processing_engine` | Engine name (`druid`). Standard OpenLineage facet. |
-| `druid_query_context` | Query metadata: `identity` (authenticated user), `remoteAddress`, `queryType`, and `nativeQueryIds` (for SQL queries). |
+| `druid_query_context` | Query metadata: `identity` (authenticated user), `remoteAddress`, `queryType`, and `sqlQueryId` (on native sub-queries of SQL, for correlation with the parent SQL event). |
 | `druid_query_statistics` | Execution stats: `durationMs`, `bytes`, `planningTimeMs`, `statusCode`. |
 | `errorMessage` | Exception message for failed queries. Standard OpenLineage facet. |
 

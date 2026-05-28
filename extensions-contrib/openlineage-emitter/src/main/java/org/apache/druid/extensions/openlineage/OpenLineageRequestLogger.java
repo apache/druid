@@ -68,7 +68,7 @@ public class OpenLineageRequestLogger implements RequestLogger
   private static final Logger log = new Logger(OpenLineageRequestLogger.class);
 
   private static final String PRODUCER =
-      "https://github.com/apache/druid/extensions-contrib/openlineage-emitter";
+      "https://github.com/apache/druid/tree/master/extensions-contrib/openlineage-emitter";
   private static final String SCHEMA_URL =
       "https://openlineage.io/spec/2-0-2/OpenLineage.json";
   private static final String ENGINE_FACET_SCHEMA_URL =
@@ -77,6 +77,15 @@ public class OpenLineageRequestLogger implements RequestLogger
       "https://openlineage.io/spec/facets/1-0-0/ErrorMessageRunFacet.json";
   private static final String JOB_TYPE_FACET_SCHEMA_URL =
       "https://openlineage.io/spec/facets/2-0-2/JobTypeJobFacet.json";
+  private static final String SQL_FACET_SCHEMA_URL =
+      "https://openlineage.io/spec/facets/1-0-1/SQLJobFacet.json";
+  // raw.githubusercontent.com so consumers can dereference the URL and receive JSON, not an HTML tree page.
+  private static final String CUSTOM_SCHEMA_BASE =
+      "https://raw.githubusercontent.com/apache/druid/master/extensions-contrib/openlineage-emitter"
+      + "/src/main/resources/openlineage-schema/";
+  private static final String CONTEXT_FACET_SCHEMA_URL = CUSTOM_SCHEMA_BASE + "DruidQueryContextRunFacet.json";
+  private static final String STATS_FACET_SCHEMA_URL = CUSTOM_SCHEMA_BASE + "DruidQueryStatisticsRunFacet.json";
+  static final int SQL_FACET_MAX_LENGTH = 64 * 1024;
   static final int DEFAULT_EMIT_QUEUE_CAPACITY = 1000;
   static final int DEFAULT_EMIT_THREAD_COUNT = 1;
   private static final int DISCARD_WARNING_INTERVAL = 1000;
@@ -253,8 +262,10 @@ public class OpenLineageRequestLogger implements RequestLogger
    * </ul>
    *
    * <p>For {@code INSERT INTO druid.foo} or {@code INSERT INTO catalog.druid.foo}, returns just
-   * {@code foo} — matching the planner's normalization to a bare datasource name. CTEs are
-   * unwrapped if present (e.g. {@code WITH x AS (...) INSERT INTO foo SELECT ...}).
+   * {@code foo} — matching the planner's normalization to a bare datasource name. CTEs in the
+   * Druid MSQ form {@code INSERT INTO foo WITH x AS (...) SELECT ...} are handled correctly
+   * because the target table is on the outer {@code SqlInsert} node; the CTE appears as the
+   * source, not as a wrapper around the statement.
    */
   @Nullable
   static String extractMsqOutputDatasource(String sql)
@@ -308,7 +319,7 @@ public class OpenLineageRequestLogger implements RequestLogger
     event.put("producer", PRODUCER);
     event.put("schemaURL", SCHEMA_URL);
     event.set("run", buildRun(queryId, queryType, requestLogLine, stats, success));
-    event.set("job", buildJob(queryId));
+    event.set("job", buildJob(queryId, requestLogLine.getSql()));
     event.set("inputs", buildDatasets(inputs));
     event.set("outputs", buildDatasets(output != null ? List.of(output) : List.of()));
     return event;
@@ -332,7 +343,7 @@ public class OpenLineageRequestLogger implements RequestLogger
     engineFacet.put("version", getDruidVersion());
     facets.set("processing_engine", engineFacet);
 
-    ObjectNode contextFacet = createFacet(null);
+    ObjectNode contextFacet = createFacet(CONTEXT_FACET_SCHEMA_URL);
     contextFacet.put("queryType", queryType);
     contextFacet.put("remoteAddress", requestLogLine.getRemoteAddr());
     Object identity = stats.get("identity");
@@ -347,7 +358,7 @@ public class OpenLineageRequestLogger implements RequestLogger
     }
     facets.set("druid_query_context", contextFacet);
 
-    ObjectNode statsFacet = createFacet(null);
+    ObjectNode statsFacet = createFacet(STATS_FACET_SCHEMA_URL);
     putLongStat(statsFacet, "durationMs", stats, "sqlQuery/time", "query/time");
     putLongStat(statsFacet, "bytes", stats, "sqlQuery/bytes", "query/bytes");
     putLongStat(statsFacet, "planningTimeMs", stats, "sqlQuery/planningTimeMs");
@@ -373,7 +384,7 @@ public class OpenLineageRequestLogger implements RequestLogger
     return run;
   }
 
-  private ObjectNode buildJob(String queryId)
+  private ObjectNode buildJob(String queryId, @Nullable String sql)
   {
     ObjectNode job = jsonMapper.createObjectNode();
     job.put("namespace", namespace);
@@ -386,6 +397,21 @@ public class OpenLineageRequestLogger implements RequestLogger
     jobTypeFacet.put("integration", "DRUID");
     jobTypeFacet.put("jobType", "QUERY");
     facets.set("jobType", jobTypeFacet);
+
+    if (sql != null) {
+      ObjectNode sqlFacet = createFacet(SQL_FACET_SCHEMA_URL);
+      if (sql.length() > SQL_FACET_MAX_LENGTH) {
+        log.warn(
+            "SQL text for query [%s] exceeds [%,d] bytes and will be truncated in the sql job facet",
+            queryId,
+            SQL_FACET_MAX_LENGTH
+        );
+        sqlFacet.put("query", sql.substring(0, SQL_FACET_MAX_LENGTH));
+      } else {
+        sqlFacet.put("query", sql);
+      }
+      facets.set("sql", sqlFacet);
+    }
 
     job.set("facets", facets);
     return job;

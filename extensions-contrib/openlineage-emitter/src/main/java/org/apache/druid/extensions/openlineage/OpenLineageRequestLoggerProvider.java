@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.RequestLoggerProvider;
@@ -93,7 +94,7 @@ public class OpenLineageRequestLoggerProvider implements RequestLoggerProvider
 
   @Nullable
   @JsonProperty
-  private String trustStorePassword;
+  private PasswordProvider trustStorePassword;
 
   @Nullable
   @JsonProperty
@@ -101,7 +102,7 @@ public class OpenLineageRequestLoggerProvider implements RequestLoggerProvider
 
   @Nullable
   @JsonProperty
-  private String keyStorePassword;
+  private PasswordProvider keyStorePassword;
 
   @Override
   public RequestLogger get()
@@ -136,7 +137,9 @@ public class OpenLineageRequestLoggerProvider implements RequestLoggerProvider
       if (trustStorePath != null) {
         try (FileInputStream in = new FileInputStream(new File(trustStorePath))) {
           KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-          trustStore.load(in, trustStorePassword != null ? trustStorePassword.toCharArray() : null);
+          // getPassword() may return null if the env var is unset; treat as no-password.
+          String rawTrustPw = trustStorePassword != null ? trustStorePassword.getPassword() : null;
+          trustStore.load(in, rawTrustPw != null ? rawTrustPw.toCharArray() : null);
           tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
           tmf.init(trustStore);
         }
@@ -145,9 +148,12 @@ public class OpenLineageRequestLoggerProvider implements RequestLoggerProvider
       if (keyStorePath != null) {
         try (FileInputStream in = new FileInputStream(new File(keyStorePath))) {
           KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-          keyStore.load(in, keyStorePassword != null ? keyStorePassword.toCharArray() : null);
+          // Resolve once to avoid inconsistent values if the provider is dynamic.
+          String rawKeyPw = keyStorePassword != null ? keyStorePassword.getPassword() : null;
+          char[] keyPwChars = rawKeyPw != null ? rawKeyPw.toCharArray() : null;
+          keyStore.load(in, keyPwChars);
           kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-          kmf.init(keyStore, keyStorePassword != null ? keyStorePassword.toCharArray() : null);
+          kmf.init(keyStore, keyPwChars);
         }
       }
       SSLContext sslContext = SSLContext.getInstance("TLS");
