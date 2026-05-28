@@ -1380,7 +1380,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testResetOffsetsAndBackfill()
+  public void testResetToLatestAndBackfill()
   {
     // 200 - success
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
