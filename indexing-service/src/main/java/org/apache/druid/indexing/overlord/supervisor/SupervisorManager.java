@@ -431,7 +431,13 @@ public class SupervisorManager implements SupervisorStatsProvider
       throw new ISE(e, "Failed to create backfill supervisor spec for supervisor[%s]", id);
     }
 
-    log.info("Started backfill supervisor[%s] for supervisor[%s]", backfillSupervisorId, id);
+    log.info(
+        "Started backfill supervisor[%s] for supervisor[%s] with startOffsets[%s] and endOffsets[%s]",
+        backfillSupervisorId,
+        id,
+        startOffsets,
+        endOffsets
+    );
 
     log.info("Resetting supervisor[%s] metadata to latest offsets", id);
     DataSourceMetadata resetMetadata = streamSupervisor.createDataSourceMetaDataForReset(
