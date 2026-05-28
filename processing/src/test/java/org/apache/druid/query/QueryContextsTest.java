@@ -154,6 +154,15 @@ public class QueryContextsTest
   }
 
   @Test
+  public void testExcludeSourceCloneQueryMode()
+  {
+    Assert.assertEquals(
+        CloneQueryMode.EXCLUDESOURCE,
+        QueryContext.of(ImmutableMap.of(QueryContexts.CLONE_QUERY_MODE, "excludeSource")).getCloneQueryMode()
+    );
+  }
+
+  @Test
   public void testCatalogValidationEnabled()
   {
     Assert.assertEquals(
