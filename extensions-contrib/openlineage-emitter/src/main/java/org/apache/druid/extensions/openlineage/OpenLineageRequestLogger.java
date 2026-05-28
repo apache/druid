@@ -89,6 +89,13 @@ public class OpenLineageRequestLogger implements RequestLogger
   static final int DEFAULT_EMIT_QUEUE_CAPACITY = 1000;
   static final int DEFAULT_EMIT_THREAD_COUNT = 1;
   private static final int DISCARD_WARNING_INTERVAL = 1000;
+  /**
+   * Number of attempts per event (1 initial + MAX_SEND_RETRIES retries).
+   * Delivery is at-most-once after all attempts are exhausted: if every attempt
+   * fails the event is dropped and a warning is logged.
+   */
+  static final int MAX_SEND_RETRIES = 2;
+  private static final long RETRY_SLEEP_MS = 500;
 
   static final String UNKNOWN_QUERY_ID = "unknown-query-id";
 
@@ -458,25 +465,70 @@ public class OpenLineageRequestLogger implements RequestLogger
 
   private void emitHttp(String json)
   {
-    HttpPost post = new HttpPost(transportUrl);
-    post.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
-    try {
-      org.apache.http.HttpResponse response = httpClient.execute(post);
-      int statusCode = response.getStatusLine().getStatusCode();
-      if (statusCode < 200 || statusCode >= 300) {
-        log.warn(
-            "OpenLineage HTTP transport received non-2xx response [%d] from [%s]; event may have been dropped",
-            statusCode,
+    IOException lastException = null;
+    int lastStatusCode = -1;
+
+    for (int attempt = 0; attempt <= MAX_SEND_RETRIES; attempt++) {
+      if (attempt > 0) {
+        try {
+          Thread.sleep(RETRY_SLEEP_MS);
+        }
+        catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          log.warn("OpenLineage HTTP emit interrupted on retry [%d]; dropping event", attempt);
+          return;
+        }
+      }
+
+      HttpPost post = new HttpPost(transportUrl);
+      post.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
+      try {
+        org.apache.http.HttpResponse response = httpClient.execute(post);
+        lastStatusCode = response.getStatusLine().getStatusCode();
+        EntityUtils.consumeQuietly(response.getEntity());
+        if (lastStatusCode >= 200 && lastStatusCode < 300) {
+          return; // success
+        }
+        // Non-2xx: retry (server-side error may be transient)
+        log.debug(
+            "OpenLineage HTTP attempt [%d/%d] received non-2xx [%d] from [%s]",
+            attempt + 1,
+            MAX_SEND_RETRIES + 1,
+            lastStatusCode,
+            transportUrl
+        );
+        lastException = null;
+      }
+      catch (IOException e) {
+        lastException = e;
+        log.debug(
+            e,
+            "OpenLineage HTTP attempt [%d/%d] failed posting to [%s]",
+            attempt + 1,
+            MAX_SEND_RETRIES + 1,
             transportUrl
         );
       }
-      EntityUtils.consumeQuietly(response.getEntity());
+      finally {
+        post.releaseConnection();
+      }
     }
-    catch (IOException e) {
-      log.error(e, "Failed to POST OpenLineage event to [%s]", transportUrl);
-    }
-    finally {
-      post.releaseConnection();
+
+    // All attempts exhausted — delivery guarantee is at-most-once.
+    if (lastException != null) {
+      log.warn(
+          lastException,
+          "OpenLineage event dropped: all [%d] attempts to POST to [%s] failed with an exception",
+          MAX_SEND_RETRIES + 1,
+          transportUrl
+      );
+    } else {
+      log.warn(
+          "OpenLineage event dropped: all [%d] attempts to POST to [%s] returned non-2xx status [%d]",
+          MAX_SEND_RETRIES + 1,
+          transportUrl,
+          lastStatusCode
+      );
     }
   }
 
