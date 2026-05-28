@@ -641,10 +641,10 @@ public class SupervisorResource
   }
 
   @POST
-  @Path("/{id}/resetOffsetsAndBackfill")
+  @Path("/{id}/resetToLatestAndBackfill")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
-  public Response resetOffsetsAndBackfill(
+  public Response resetToLatestAndBackfill(
       @PathParam("id") final String id,
       @QueryParam("backfillTaskCount") @Nullable final Integer backfillTaskCount
   )

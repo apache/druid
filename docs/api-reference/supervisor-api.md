@@ -3564,7 +3564,7 @@ The backfill supervisor has the same configuration as the source supervisor exce
 
 #### URL
 
-`POST` `/druid/indexer/v1/supervisor/{supervisorId}/resetOffsetsAndBackfill`
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/resetToLatestAndBackfill`
 
 #### Query parameters
 
@@ -3614,7 +3614,7 @@ The following example resets a supervisor named `social_media` and starts a back
 
 
 ```shell
-curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/resetOffsetsAndBackfill?backfillTaskCount=2"
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/resetToLatestAndBackfill?backfillTaskCount=2"
 ```
 
 </TabItem>
@@ -3622,7 +3622,7 @@ curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/so
 
 
 ```HTTP
-POST /druid/indexer/v1/supervisor/social_media/resetOffsetsAndBackfill?backfillTaskCount=2 HTTP/1.1
+POST /druid/indexer/v1/supervisor/social_media/resetToLatestAndBackfill?backfillTaskCount=2 HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 

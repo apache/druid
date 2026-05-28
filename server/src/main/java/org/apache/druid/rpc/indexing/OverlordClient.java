@@ -200,7 +200,7 @@ public interface OverlordClient
   /**
    * Resets a supervisor to the latest stream offsets and starts a bounded backfill supervisor.
    * <p>
-   * API: {@code POST /druid/indexer/v1/supervisor/<id>/resetOffsetsAndBackfill}
+   * API: {@code POST /druid/indexer/v1/supervisor/<id>/resetToLatestAndBackfill}
    *
    * @return Map containing "id" and "backfillSupervisorId"
    */
