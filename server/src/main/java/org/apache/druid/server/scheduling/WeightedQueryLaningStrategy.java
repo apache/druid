@@ -64,13 +64,25 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
   @JsonProperty
   @Nullable
   private final Integer segmentCountThreshold;
-  @JsonProperty
+  // Stored as the original config strings so that Jackson round-trip serde is consistent:
+  // the @JsonCreator constructor accepts String parameters, so serialization must also emit
+  // strings. Storing Period/Duration objects directly with @JsonProperty would cause Jackson
+  // to serialize them as complex JSON objects that the constructor cannot deserialize back.
+  @JsonProperty("periodThreshold")
+  @Nullable
+  private final String periodThresholdString;
+  @JsonProperty("durationThreshold")
+  @Nullable
+  private final String durationThresholdString;
+  @JsonProperty("segmentRangeThreshold")
+  @Nullable
+  private final String segmentRangeThresholdString;
+
+  // Parsed from the string fields above at construction time; not serialized.
   @Nullable
   private final Period periodThreshold;
-  @JsonProperty
   @Nullable
   private final Duration durationThreshold;
-  @JsonProperty
   @Nullable
   private final Duration segmentRangeThreshold;
 
@@ -79,35 +91,72 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
 
   @JsonCreator
   public WeightedQueryLaningStrategy(
-      @JsonProperty("periodThreshold") @Nullable String periodThreshold,
-      @JsonProperty("durationThreshold") @Nullable String durationThreshold,
+      @JsonProperty("periodThreshold") @Nullable String periodThresholdString,
+      @JsonProperty("durationThreshold") @Nullable String durationThresholdString,
       @JsonProperty("segmentCountThreshold") @Nullable Integer segmentCountThreshold,
-      @JsonProperty("segmentRangeThreshold") @Nullable String segmentRangeThreshold,
+      @JsonProperty("segmentRangeThreshold") @Nullable String segmentRangeThresholdString,
       @JsonProperty("lanes") Map<String, LaneConfig> lanes
   )
   {
+    final Period parsedPeriod;
+    if (periodThresholdString == null) {
+      parsedPeriod = null;
+    } else {
+      try {
+        parsedPeriod = new Period(periodThresholdString);
+      }
+      catch (IllegalArgumentException e) {
+        throw new IllegalArgumentException(
+            "periodThreshold is not a valid ISO 8601 period, got [" + periodThresholdString + "]"
+        );
+      }
+    }
+    final Duration parsedDuration;
+    if (durationThresholdString == null) {
+      parsedDuration = null;
+    } else {
+      try {
+        parsedDuration = new Period(durationThresholdString).toStandardDuration();
+      }
+      catch (UnsupportedOperationException e) {
+        throw new IllegalArgumentException(
+            "durationThreshold must not contain month or year components, got [" + durationThresholdString + "]"
+        );
+      }
+    }
+    final Duration parsedSegmentRange;
+    if (segmentRangeThresholdString == null) {
+      parsedSegmentRange = null;
+    } else {
+      try {
+        parsedSegmentRange = new Period(segmentRangeThresholdString).toStandardDuration();
+      }
+      catch (UnsupportedOperationException e) {
+        throw new IllegalArgumentException(
+            "segmentRangeThreshold must not contain month or year components, got [" + segmentRangeThresholdString + "]"
+        );
+      }
+    }
+
     Preconditions.checkArgument(
-        segmentCountThreshold != null || periodThreshold != null || durationThreshold != null || segmentRangeThreshold != null,
+        segmentCountThreshold != null || parsedPeriod != null || parsedDuration != null || parsedSegmentRange != null,
         "At least one of periodThreshold, durationThreshold, segmentCountThreshold, or segmentRangeThreshold must be set"
     );
     Preconditions.checkArgument(
         segmentCountThreshold == null || segmentCountThreshold > 0,
         "segmentCountThreshold must be > 0, got [%s]", segmentCountThreshold
     );
-    if (durationThreshold != null) {
-      Duration dur = new Period(durationThreshold).toStandardDuration();
-      Preconditions.checkArgument(dur.getMillis() > 0, "durationThreshold must be positive, got [%s]", durationThreshold);
+    if (parsedDuration != null) {
+      Preconditions.checkArgument(parsedDuration.getMillis() > 0, "durationThreshold must be positive, got [%s]", durationThresholdString);
     }
-    if (segmentRangeThreshold != null) {
-      Duration dur = new Period(segmentRangeThreshold).toStandardDuration();
-      Preconditions.checkArgument(dur.getMillis() > 0, "segmentRangeThreshold must be positive, got [%s]", segmentRangeThreshold);
+    if (parsedSegmentRange != null) {
+      Preconditions.checkArgument(parsedSegmentRange.getMillis() > 0, "segmentRangeThreshold must be positive, got [%s]", segmentRangeThresholdString);
     }
-    if (periodThreshold != null) {
-      Period p = new Period(periodThreshold);
+    if (parsedPeriod != null) {
       DateTime now = DateTimes.nowUtc();
       Preconditions.checkArgument(
-          now.minus(p.toDurationFrom(now)).isBefore(now),
-          "periodThreshold must be positive, got [%s]", periodThreshold
+          now.minus(parsedPeriod.toDurationFrom(now)).isBefore(now),
+          "periodThreshold must be positive, got [%s]", periodThresholdString
       );
     }
     Preconditions.checkArgument(
@@ -122,15 +171,22 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
         !lanes.containsKey("default"),
         "Lane cannot be named 'default'"
     );
+    long distinctScores = lanes.values().stream().mapToInt(LaneConfig::getMinScore).distinct().count();
+    Preconditions.checkArgument(
+        distinctScores == lanes.size(),
+        "Each lane must have a unique minScore so that lane selection is deterministic "
+        + "(a query is assigned to the lane with the highest minScore it meets; equal scores "
+        + "produce non-deterministic results). Found duplicate minScore values in lanes: [%s]",
+        lanes
+    );
 
     this.segmentCountThreshold = segmentCountThreshold;
-    this.periodThreshold = periodThreshold == null ? null : new Period(periodThreshold);
-    this.durationThreshold = durationThreshold == null
-                             ? null
-                             : new Period(durationThreshold).toStandardDuration();
-    this.segmentRangeThreshold = segmentRangeThreshold == null
-                                 ? null
-                                 : new Period(segmentRangeThreshold).toStandardDuration();
+    this.periodThresholdString = periodThresholdString;
+    this.durationThresholdString = durationThresholdString;
+    this.segmentRangeThresholdString = segmentRangeThresholdString;
+    this.periodThreshold = parsedPeriod;
+    this.durationThreshold = parsedDuration;
+    this.segmentRangeThreshold = parsedSegmentRange;
     this.lanes = lanes;
   }
 
@@ -197,7 +253,7 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
                                     .distinct()
                                     .mapToLong(AbstractInterval::toDurationMillis)
                                     .sum();
-      if (new Duration(segmentRangeMs).isLongerThan(segmentRangeThreshold)) {
+      if (segmentRangeMs > segmentRangeThreshold.getMillis()) {
         score++;
       }
     }
