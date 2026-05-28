@@ -394,10 +394,15 @@ public class SupervisorManager implements SupervisorStatsProvider
     Preconditions.checkNotNull(id, "id");
 
     Pair<Supervisor, SupervisorSpec> supervisorPair = supervisors.get(id);
-    validateResetAndBackfill(id, supervisorPair);
+
+    if (!(supervisorPair.lhs instanceof SeekableStreamSupervisor)) {
+      throw new IAE("Supervisor[%s] is not a streaming supervisor", id);
+    }
 
     SeekableStreamSupervisor streamSupervisor = (SeekableStreamSupervisor) supervisorPair.lhs;
     SeekableStreamSupervisorSpec streamSpec = (SeekableStreamSupervisorSpec) supervisorPair.rhs;
+
+    validateResetAndBackfill(id, streamSupervisor, streamSpec);
 
     log.info("Capturing latest offsets from stream for supervisor[%s]", id);
     streamSupervisor.updatePartitionLagFromStream();
@@ -448,14 +453,12 @@ public class SupervisorManager implements SupervisorStatsProvider
     );
   }
 
-  private void validateResetAndBackfill(String id, Pair<Supervisor, SupervisorSpec> supervisorPair)
+  private void validateResetAndBackfill(
+      String id,
+      SeekableStreamSupervisor streamSupervisor,
+      SeekableStreamSupervisorSpec streamSpec
+  )
   {
-    if (!(supervisorPair.lhs instanceof SeekableStreamSupervisor)) {
-      throw new IAE("Supervisor[%s] is not a streaming supervisor", id);
-    }
-    SeekableStreamSupervisor streamSupervisor = (SeekableStreamSupervisor) supervisorPair.lhs;
-    SeekableStreamSupervisorSpec streamSpec = (SeekableStreamSupervisorSpec) supervisorPair.rhs;
-
     if (streamSupervisor.getIoConfig().isUseEarliestSequenceNumber()) {
       throw new IAE("Reset with skipped offsets is not supported when useEarliestOffset is true.");
     }
@@ -466,7 +469,7 @@ public class SupervisorManager implements SupervisorStatsProvider
       );
     }
 
-    if (supervisorPair.lhs.getState() != SupervisorStateManager.BasicState.RUNNING) {
+    if (streamSupervisor.getState() != SupervisorStateManager.BasicState.RUNNING) {
       throw new IAE("Supervisor[%s] must be in a RUNNING state to perform a reset and backfill", id);
     }
   }
@@ -735,7 +738,7 @@ public class SupervisorManager implements SupervisorStatsProvider
   {
     Map<String, Object> context = spec.getContext();
     if (context == null) {
-      return false;
+      return Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
     }
     Boolean useConcurrentLocks = QueryContexts.getAsBoolean(
         Tasks.USE_CONCURRENT_LOCKS,
