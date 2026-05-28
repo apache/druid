@@ -21,19 +21,26 @@ package org.apache.druid.security.kerberos;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.AuthenticationToken;
 import org.apache.hadoop.security.authentication.util.Signer;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
+import org.eclipse.jetty.client.Request;
+import org.eclipse.jetty.http.HttpCookie;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.servlet.Filter;
+import javax.servlet.FilterChain;
 import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -146,18 +153,15 @@ public class KerberosAuthenticatorTest
 
     DruidException exception = Assert.assertThrows(
         DruidException.class,
-        () -> {
-          @SuppressWarnings("unused")
-          KerberosAuthenticator authenticator = new KerberosAuthenticator(
-              TEST_SERVER_PRINCIPAL,
-              TEST_SERVER_KEYTAB,
-              TEST_AUTH_TO_LOCAL,
-              null, // null cookie signature secret
-              TEST_AUTHORIZER_NAME,
-              TEST_NAME,
-              node
-          );
-        }
+        () -> new KerberosAuthenticator(
+            TEST_SERVER_PRINCIPAL,
+            TEST_SERVER_KEYTAB,
+            TEST_AUTH_TO_LOCAL,
+            null, // null cookie signature secret
+            TEST_AUTHORIZER_NAME,
+            TEST_NAME,
+            node
+        )
     );
 
     Assert.assertEquals(DruidException.Persona.OPERATOR, exception.getTargetPersona());
@@ -179,18 +183,15 @@ public class KerberosAuthenticatorTest
 
     DruidException exception = Assert.assertThrows(
         DruidException.class,
-        () -> {
-          @SuppressWarnings("unused")
-          KerberosAuthenticator authenticator = new KerberosAuthenticator(
-              TEST_SERVER_PRINCIPAL,
-              TEST_SERVER_KEYTAB,
-              TEST_AUTH_TO_LOCAL,
-              "", // empty cookie signature secret
-              TEST_AUTHORIZER_NAME,
-              TEST_NAME,
-              node
-          );
-        }
+        () -> new KerberosAuthenticator(
+            TEST_SERVER_PRINCIPAL,
+            TEST_SERVER_KEYTAB,
+            TEST_AUTH_TO_LOCAL,
+            "", // empty cookie signature secret
+            TEST_AUTHORIZER_NAME,
+            TEST_NAME,
+            node
+        )
     );
 
     Assert.assertEquals(DruidException.Persona.OPERATOR, exception.getTargetPersona());
@@ -245,5 +246,173 @@ public class KerberosAuthenticatorTest
     );
     Assert.assertTrue("Persistent cookie should contain 'Expires='", persistentCookieString.contains("Expires="));
     Assert.assertFalse("Persistent cookie should not contain 'Max-Age=0'", persistentCookieString.contains("Max-Age=0"));
+  }
+
+  @Test
+  public void testTokenToCookieStringWithNullToken() throws Exception
+  {
+    final Method method = KerberosAuthenticator.class.getDeclaredMethod(
+        "tokenToCookieString",
+        String.class,
+        String.class,
+        String.class,
+        long.class,
+        boolean.class,
+        boolean.class
+    );
+    method.setAccessible(true);
+
+    final String cookieString = (String) method.invoke(null, null, "localhost", "/", 0, false, false);
+
+    Assert.assertFalse("Null token should not add quoted value", cookieString.contains("\""));
+    Assert.assertTrue("Cookie string should contain Max-Age=0", cookieString.contains("Max-Age=0"));
+  }
+
+  @Test
+  public void testTokenToCookieStringWithNonPersistentPositiveExpires() throws Exception
+  {
+    final Method method = KerberosAuthenticator.class.getDeclaredMethod(
+        "tokenToCookieString",
+        String.class,
+        String.class,
+        String.class,
+        long.class,
+        boolean.class,
+        boolean.class
+    );
+    method.setAccessible(true);
+
+    final String cookieString = (String) method.invoke(
+        null,
+        "some-token",
+        "localhost",
+        "/",
+        System.currentTimeMillis() + 3600,
+        false,  // isCookiePersistent = false
+        false
+    );
+
+    Assert.assertFalse("Non-persistent cookie should not contain 'Expires='", cookieString.contains("Expires="));
+    Assert.assertFalse("Non-persistent cookie should not contain 'Max-Age=0'", cookieString.contains("Max-Age=0"));
+  }
+
+  @Test
+  public void testDecorateProxyRequestWithStringToken()
+  {
+    final KerberosAuthenticator authenticator = new KerberosAuthenticator(
+        TEST_SERVER_PRINCIPAL,
+        TEST_SERVER_KEYTAB,
+        TEST_AUTH_TO_LOCAL,
+        TEST_COOKIE_SECRET,
+        TEST_AUTHORIZER_NAME,
+        TEST_NAME,
+        createTestNode()
+    );
+    final HttpServletRequest clientRequest = Mockito.mock(HttpServletRequest.class);
+    final HttpServletResponse proxyResponse = Mockito.mock(HttpServletResponse.class);
+    final Request proxyRequest = Mockito.mock(Request.class);
+    Mockito.when(clientRequest.getAttribute(KerberosAuthenticator.SIGNED_TOKEN_ATTRIBUTE)).thenReturn("signed-token-value");
+
+    authenticator.decorateProxyRequest(clientRequest, proxyResponse, proxyRequest);
+
+    Mockito.verify(proxyRequest).cookie(ArgumentMatchers.any(HttpCookie.class));
+  }
+
+  @Test
+  public void testDecorateProxyRequestWithoutToken()
+  {
+    final KerberosAuthenticator authenticator = new KerberosAuthenticator(
+        TEST_SERVER_PRINCIPAL,
+        TEST_SERVER_KEYTAB,
+        TEST_AUTH_TO_LOCAL,
+        TEST_COOKIE_SECRET,
+        TEST_AUTHORIZER_NAME,
+        TEST_NAME,
+        createTestNode()
+    );
+    final HttpServletRequest clientRequest = Mockito.mock(HttpServletRequest.class);
+    final HttpServletResponse proxyResponse = Mockito.mock(HttpServletResponse.class);
+    final Request proxyRequest = Mockito.mock(Request.class);
+    Mockito.when(clientRequest.getAttribute(KerberosAuthenticator.SIGNED_TOKEN_ATTRIBUTE)).thenReturn(null);
+
+    authenticator.decorateProxyRequest(clientRequest, proxyResponse, proxyRequest);
+
+    Mockito.verify(proxyRequest, Mockito.never()).cookie(ArgumentMatchers.any());
+  }
+
+  @Test
+  public void testDoFilterWithNullPrincipalThrowsServletException()
+  {
+    // null serverPrincipal causes initializeKerberosLogin to throw "Principal not defined"
+    final KerberosAuthenticator authenticator = new KerberosAuthenticator(
+        null,
+        TEST_SERVER_KEYTAB,
+        TEST_AUTH_TO_LOCAL,
+        TEST_COOKIE_SECRET,
+        TEST_AUTHORIZER_NAME,
+        TEST_NAME,
+        createTestNode()
+    );
+    final Filter filter = authenticator.getFilter();
+    final HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    final HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    final FilterChain chain = Mockito.mock(FilterChain.class);
+    Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(null);
+
+    final ServletException ex = Assert.assertThrows(
+        ServletException.class,
+        () -> filter.doFilter(request, response, chain)
+    );
+    Assert.assertTrue(ex.getMessage().contains("Principal not defined"));
+  }
+
+  @Test
+  public void testDoFilterWithNullKeytabThrowsServletException()
+  {
+    final KerberosAuthenticator authenticator = new KerberosAuthenticator(
+        TEST_SERVER_PRINCIPAL,
+        null,  // null keytab
+        TEST_AUTH_TO_LOCAL,
+        TEST_COOKIE_SECRET,
+        TEST_AUTHORIZER_NAME,
+        TEST_NAME,
+        createTestNode()
+    );
+    final Filter filter = authenticator.getFilter();
+    final HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    final HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    final FilterChain chain = Mockito.mock(FilterChain.class);
+    Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(null);
+
+    final ServletException ex = Assert.assertThrows(
+        ServletException.class,
+        () -> filter.doFilter(request, response, chain)
+    );
+    Assert.assertTrue(ex.getMessage().contains("Keytab not defined"));
+  }
+
+  @Test
+  public void testDoFilterWithEmptyKeytabThrowsServletException()
+  {
+    final KerberosAuthenticator authenticator = new KerberosAuthenticator(
+        TEST_SERVER_PRINCIPAL,
+        "",  // empty keytab
+        TEST_AUTH_TO_LOCAL,
+        TEST_COOKIE_SECRET,
+        TEST_AUTHORIZER_NAME,
+        TEST_NAME,
+        createTestNode()
+    );
+    final Filter filter = authenticator.getFilter();
+    final HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    final HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    final FilterChain chain = Mockito.mock(FilterChain.class);
+    Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(null);
+
+    final ServletException ex = Assert.assertThrows(
+        ServletException.class,
+        () -> filter.doFilter(request, response, chain)
+    );
+    Assert.assertTrue(ex.getMessage().contains("Keytab not defined"));
   }
 }
