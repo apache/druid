@@ -319,6 +319,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           parallelIndexTuningConfig.getMaxSavedParseExceptions(),
           parallelIndexTuningConfig.getMaxColumnsToMerge(),
           parallelIndexTuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(),
+          parallelIndexTuningConfig.isStrictTierAwareSegmentLoad(),
           parallelIndexTuningConfig.getNumPersistThreads()
       );
     } else if (tuningConfig instanceof IndexTuningConfig) {
@@ -354,6 +355,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           indexTuningConfig.getMaxSavedParseExceptions(),
           indexTuningConfig.getMaxColumnsToMerge(),
           indexTuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(),
+          indexTuningConfig.isStrictTierAwareSegmentLoad(),
           indexTuningConfig.getNumPersistThreads()
       );
     } else {
@@ -1559,6 +1561,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           null,
           null,
           0L,
+          null,
           null
       );
     }
@@ -1596,6 +1599,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
         @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
         @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
+        @JsonProperty("strictTierAwareSegmentLoad") @Nullable Boolean strictTierAwareSegmentLoad,
         @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads
     )
     {
@@ -1630,6 +1634,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           maxSavedParseExceptions,
           maxColumnsToMerge,
           awaitSegmentAvailabilityTimeoutMillis,
+          strictTierAwareSegmentLoad,
           null,
           numPersistThreads
       );
@@ -1676,6 +1681,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           getMaxSavedParseExceptions(),
           getMaxColumnsToMerge(),
           getAwaitSegmentAvailabilityTimeoutMillis(),
+          isStrictTierAwareSegmentLoad(),
           getNumPersistThreads()
       );
     }

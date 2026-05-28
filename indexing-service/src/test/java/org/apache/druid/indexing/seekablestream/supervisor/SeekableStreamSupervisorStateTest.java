@@ -2991,6 +2991,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             null,
             null,
             null,
+            null,
             null
         )
         {
@@ -3218,6 +3219,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
       {
         return new SeekableStreamIndexTaskTuningConfig(
+            null,
             null,
             null,
             null,

@@ -108,6 +108,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -144,6 +145,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
       @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
+      @JsonProperty("strictTierAwareSegmentLoad") @Nullable Boolean strictTierAwareSegmentLoad,
       @JsonProperty("maxAllowedLockCount") @Nullable Integer maxAllowedLockCount,
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads
   )
@@ -173,6 +175,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         maxSavedParseExceptions,
         maxColumnsToMerge,
         awaitSegmentAvailabilityTimeoutMillis,
+        strictTierAwareSegmentLoad,
         numPersistThreads
     );
 

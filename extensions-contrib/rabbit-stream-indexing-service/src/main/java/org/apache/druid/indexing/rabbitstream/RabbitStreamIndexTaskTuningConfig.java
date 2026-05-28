@@ -75,7 +75,8 @@ public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTu
       @Nullable Integer recordBufferSize,
       @Nullable Integer recordBufferOfferTimeout,
       @Nullable Integer maxRecordsPerPoll,
-      @Nullable Integer maxColumnsToMerge
+      @Nullable Integer maxColumnsToMerge,
+      @Nullable Boolean strictTierAwareSegmentLoad
   )
   {
     super(
@@ -101,7 +102,8 @@ public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTu
         maxSavedParseExceptions,
         numPersistThreads,
         maxColumnsToMerge,
-        null
+        null,
+        strictTierAwareSegmentLoad
     );
 
     this.recordBufferSize = recordBufferSize;
@@ -135,7 +137,8 @@ public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTu
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
       @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
-      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
+      @JsonProperty("strictTierAwareSegmentLoad") @Nullable Boolean strictTierAwareSegmentLoad
   )
   {
     this(
@@ -162,7 +165,8 @@ public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTu
         recordBufferSize,
         recordBufferOfferTimeout,
         maxRecordsPerPoll,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        strictTierAwareSegmentLoad
     );
   }
 
@@ -234,7 +238,8 @@ public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTu
         getRecordBufferSizeConfigured(),
         getRecordBufferOfferTimeout(),
         getMaxRecordsPerPollConfigured(),
-        getMaxColumnsToMerge()
+        getMaxColumnsToMerge(),
+        isStrictTierAwareSegmentLoad()
         );
   }
 
@@ -262,6 +267,7 @@ public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTu
         ", numPersistThreads=" + getNumPersistThreads() +
         ", maxRecordsPerPole=" + getMaxRecordsPerPollConfigured() +
         ", maxColumnsToMerge=" + getMaxColumnsToMerge() +
+        ", strictTierAwareSegmentLoad=" + isStrictTierAwareSegmentLoad() +
         '}';
   }
 

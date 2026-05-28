@@ -75,6 +75,7 @@ public class RabbitStreamIndexTaskTuningConfigTest
 
     Assert.assertFalse(config.isSkipSequenceNumberAvailabilityCheck());
     Assert.assertFalse(config.isResetOffsetAutomatically());
+    Assert.assertFalse(config.isStrictTierAwareSegmentLoad());
   }
 
   @Test
@@ -89,6 +90,7 @@ public class RabbitStreamIndexTaskTuningConfigTest
                      + "  \"maxPendingPersists\": 100,\n"
                      + "  \"reportParseExceptions\": true,\n"
                      + "  \"handoffConditionTimeout\": 100,\n"
+                     + "  \"strictTierAwareSegmentLoad\": true,\n"
                      + "  \"recordBufferSize\": 1000,\n"
                      + "  \"recordBufferOfferTimeout\": 500,\n"
                      + "  \"resetOffsetAutomatically\": false,\n"
@@ -116,6 +118,7 @@ public class RabbitStreamIndexTaskTuningConfigTest
     Assert.assertEquals(1000, config.getRecordBufferSizeOrDefault(1_000_000_000));
     Assert.assertEquals(500, config.getRecordBufferOfferTimeout());
     Assert.assertFalse(config.isResetOffsetAutomatically());
+    Assert.assertTrue(config.isStrictTierAwareSegmentLoad());
   }
 
 
@@ -184,7 +187,8 @@ public class RabbitStreamIndexTaskTuningConfigTest
                     "maxSavedParseExceptions=0, " +
                     "numPersistThreads=1, " +
                     "maxRecordsPerPoll=null, " +
-                    "maxColumnsToMerge=-1}";
+                    "maxColumnsToMerge=-1, " +
+                    "strictTierAwareSegmentLoad=false}";
 
 
     Assert.assertEquals(resStr, config.toString());

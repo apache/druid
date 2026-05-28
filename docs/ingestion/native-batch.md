@@ -276,6 +276,7 @@ The following table lists the properties of a `tuningConfig` object:
 |`chatHandlerTimeout`|Timeout for reporting the pushed segments in worker tasks.|PT10S|no|
 |`chatHandlerNumRetries`|Retries for reporting the pushed segments in worker tasks.|5|no|
 |`awaitSegmentAvailabilityTimeoutMillis`|Milliseconds to wait for the newly indexed segments to become available for query after ingestion completes. If `<= 0`, no wait occurs. If `> 0`, the task waits for the Coordinator to indicate that the new segments are available for querying. If the timeout expires, the task exits as successful, but the segments are not confirmed as available for query.|Long|no (default = 0)|
+|`strictTierAwareSegmentLoad`|When `awaitSegmentAvailabilityTimeoutMillis` is greater than 0, require each newly indexed segment to have at least one Historical replica loaded in every tier with a positive replica count in the matching retention rule before the segment is considered available. When false, any loaded Historical replica is enough.|false|no|
 
 ### Split Hint Spec
 

@@ -504,6 +504,7 @@ public abstract class SeekableStreamSupervisorTestBase
             null,
             null,
             null,
+            null,
             null
         )
         {

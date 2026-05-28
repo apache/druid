@@ -87,7 +87,8 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @Deprecated @Nullable Integer maxRecordsPerPoll,
       @Nullable Integer maxBytesPerPoll,
       @Nullable Period intermediateHandoffPeriod,
-      @Nullable Integer maxColumnsToMerge
+      @Nullable Integer maxColumnsToMerge,
+      @Nullable Boolean strictTierAwareSegmentLoad
   )
   {
     super(
@@ -113,7 +114,8 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         maxSavedParseExceptions,
         null,
         maxColumnsToMerge,
-        false
+        false,
+        strictTierAwareSegmentLoad
     );
     this.recordBufferSize = recordBufferSize;
     this.recordBufferSizeBytes = recordBufferSizeBytes;
@@ -159,7 +161,8 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @JsonProperty("maxRecordsPerPoll") @Deprecated @Nullable Integer maxRecordsPerPoll,
       @JsonProperty("maxBytesPerPoll") @Nullable Integer maxBytesPerPoll,
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
-      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
+      @JsonProperty("strictTierAwareSegmentLoad") @Nullable Boolean strictTierAwareSegmentLoad
   )
   {
     this(
@@ -190,7 +193,8 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         maxRecordsPerPoll,
         maxBytesPerPoll,
         intermediateHandoffPeriod,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        strictTierAwareSegmentLoad
     );
   }
 
@@ -294,7 +298,8 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getMaxRecordsPerPollConfigured(),
         getMaxBytesPerPollConfigured(),
         getIntermediateHandoffPeriod(),
-        getMaxColumnsToMerge()
+        getMaxColumnsToMerge(),
+        isStrictTierAwareSegmentLoad()
     );
   }
 
@@ -364,6 +369,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            ", maxBytesPerPoll=" + maxBytesPerPoll +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", maxColumnsToMerge=" + getMaxColumnsToMerge() +
+           ", strictTierAwareSegmentLoad=" + isStrictTierAwareSegmentLoad() +
            '}';
   }
 }

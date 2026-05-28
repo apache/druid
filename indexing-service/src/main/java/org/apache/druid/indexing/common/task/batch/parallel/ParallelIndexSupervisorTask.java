@@ -178,6 +178,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   private final boolean missingIntervalsInOverwriteMode;
 
   private final long awaitSegmentAvailabilityTimeoutMillis;
+  private final boolean strictTierAwareSegmentLoad;
 
   @MonotonicNonNull
   private AuthorizerMapper authorizerMapper;
@@ -266,6 +267,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
     }
 
     awaitSegmentAvailabilityTimeoutMillis = ingestionSchema.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis();
+    strictTierAwareSegmentLoad = ingestionSchema.getTuningConfig().isStrictTierAwareSegmentLoad();
     this.ingestionState = IngestionState.NOT_STARTED;
     this.isCompactionTask = isCompactionTask;
   }
@@ -633,7 +635,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
     waitForSegmentAvailability(
         toolbox,
         segmentsToWaitFor,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        strictTierAwareSegmentLoad
     );
   }
 
@@ -1344,6 +1347,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
         tuningConfig.getMaxSavedParseExceptions(),
         tuningConfig.getMaxColumnsToMerge(),
         tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(),
+        tuningConfig.isStrictTierAwareSegmentLoad(),
         tuningConfig.getNumPersistThreads()
     );
   }

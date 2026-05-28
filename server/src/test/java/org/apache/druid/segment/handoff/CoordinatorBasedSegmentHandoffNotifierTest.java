@@ -107,4 +107,36 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     Assert.assertTrue(callbackCalled.get());
     EasyMock.verify(coordinatorClient);
   }
+
+  @Test
+  public void testStrictTierAwareSegmentLoad()
+  {
+    final Interval interval = Intervals.of("2011-04-01/2011-04-02");
+    final SegmentDescriptor descriptor = new SegmentDescriptor(interval, "v1", 2);
+
+    final AtomicBoolean callbackCalled = new AtomicBoolean(false);
+    final CoordinatorClient coordinatorClient = EasyMock.createMock(CoordinatorClient.class);
+    EasyMock.expect(coordinatorClient.isHandoffComplete("test_ds", descriptor, true))
+            .andReturn(Futures.immediateFuture(true))
+            .once();
+    EasyMock.replay(coordinatorClient);
+    final CoordinatorBasedSegmentHandoffNotifier notifier = new CoordinatorBasedSegmentHandoffNotifier(
+        "test_ds",
+        coordinatorClient,
+        notifierConfig,
+        "test_task",
+        true
+    );
+
+    notifier.registerSegmentHandoffCallback(
+        descriptor,
+        Execs.directExecutor(),
+        () -> callbackCalled.set(true)
+    );
+    notifier.checkForSegmentHandoffs();
+
+    Assert.assertTrue(notifier.getHandOffCallbacks().isEmpty());
+    Assert.assertTrue(callbackCalled.get());
+    EasyMock.verify(coordinatorClient);
+  }
 }

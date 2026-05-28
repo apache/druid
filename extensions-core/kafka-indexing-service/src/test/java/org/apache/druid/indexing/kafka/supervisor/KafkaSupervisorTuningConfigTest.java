@@ -71,6 +71,7 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(Duration.standardSeconds(10), config.getHttpTimeout());
     Assert.assertEquals(Duration.standardSeconds(80), config.getShutdownTimeout());
     Assert.assertEquals(Duration.standardSeconds(30), config.getOffsetFetchPeriod());
+    Assert.assertFalse(config.isStrictTierAwareSegmentLoad());
   }
 
   @Test
@@ -85,6 +86,7 @@ public class KafkaSupervisorTuningConfigTest
                      + "  \"maxPendingPersists\": 100,\n"
                      + "  \"reportParseExceptions\": true,\n"
                      + "  \"handoffConditionTimeout\": 100,\n"
+                     + "  \"strictTierAwareSegmentLoad\": true,\n"
                      + "  \"workerThreads\": 12,\n"
                      + "  \"chatRetries\": 14,\n"
                      + "  \"httpTimeout\": \"PT15S\",\n"
@@ -113,6 +115,7 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(100, config.getMaxPendingPersists());
     Assert.assertTrue(config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
+    Assert.assertTrue(config.isStrictTierAwareSegmentLoad());
     Assert.assertEquals(12, (int) config.getWorkerThreads());
     Assert.assertEquals(14L, (long) config.getChatRetries());
     Assert.assertEquals(Duration.standardSeconds(15), config.getHttpTimeout());

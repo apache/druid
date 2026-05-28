@@ -54,7 +54,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @Nullable Integer maxSavedParseExceptions,
       @Nullable Integer numPersistThreads,
       @Nullable Integer maxColumnsToMerge,
-      @Nullable Boolean releaseLocksOnHandoff
+      @Nullable Boolean releaseLocksOnHandoff,
+      @Nullable Boolean strictTierAwareSegmentLoad
   )
   {
     super(
@@ -80,7 +81,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         maxSavedParseExceptions,
         numPersistThreads,
         maxColumnsToMerge,
-        releaseLocksOnHandoff
+        releaseLocksOnHandoff,
+        strictTierAwareSegmentLoad
     );
   }
 
@@ -106,7 +108,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
       @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
-      @JsonProperty("releaseLocksOnHandoff") @Nullable Boolean releaseLocksOnHandoff
+      @JsonProperty("releaseLocksOnHandoff") @Nullable Boolean releaseLocksOnHandoff,
+      @JsonProperty("strictTierAwareSegmentLoad") @Nullable Boolean strictTierAwareSegmentLoad
   )
   {
     this(
@@ -131,7 +134,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         maxSavedParseExceptions,
         numPersistThreads,
         maxColumnsToMerge,
-        releaseLocksOnHandoff
+        releaseLocksOnHandoff,
+        strictTierAwareSegmentLoad
     );
   }
 
@@ -160,7 +164,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         getMaxSavedParseExceptions(),
         getNumPersistThreads(),
         getMaxColumnsToMerge(),
-        isReleaseLocksOnHandoff()
+        isReleaseLocksOnHandoff(),
+        isStrictTierAwareSegmentLoad()
     );
   }
 
@@ -188,6 +193,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
            ", numPersistThreads=" + getNumPersistThreads() +
            ", getMaxColumnsToMerge=" + getMaxColumnsToMerge() +
+           ", strictTierAwareSegmentLoad=" + isStrictTierAwareSegmentLoad() +
         '}';
   }
 

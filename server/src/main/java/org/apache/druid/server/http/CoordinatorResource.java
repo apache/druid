@@ -83,11 +83,15 @@ public class CoordinatorResource
   public Response getLoadStatus(
       @QueryParam("simple") String simple,
       @QueryParam("full") String full,
-      @QueryParam("computeUsingClusterView") @Nullable String computeUsingClusterView
+      @QueryParam("computeUsingClusterView") @Nullable String computeUsingClusterView,
+      @QueryParam("strictTierAwareSegmentLoad") @Nullable final String strictTierAwareSegmentLoad
   )
   {
+    final boolean strictTierAwareLoad = isQueryParamEnabled(strictTierAwareSegmentLoad);
     if (simple != null) {
-      return Response.ok(coordinator.getDatasourceToUnavailableSegmentCount()).build();
+      return Response.ok(
+          coordinator.getDatasourceToUnavailableSegmentCount(strictTierAwareLoad)
+      ).build();
     }
 
     if (full != null) {
@@ -95,7 +99,12 @@ public class CoordinatorResource
           coordinator.getTierToDatasourceToUnderReplicatedCount(computeUsingClusterView != null)
       ).build();
     }
-    return Response.ok(coordinator.getDatasourceToLoadStatus()).build();
+    return Response.ok(coordinator.getDatasourceToLoadStatus(strictTierAwareLoad)).build();
+  }
+
+  private static boolean isQueryParamEnabled(@Nullable String queryParam)
+  {
+    return queryParam != null && (queryParam.isEmpty() || Boolean.parseBoolean(queryParam));
   }
 
   @GET

@@ -44,7 +44,17 @@ import java.util.Set;
 public class NoopCoordinatorClient implements CoordinatorClient
 {
   @Override
-  public ListenableFuture<Boolean> isHandoffComplete(String dataSource, SegmentDescriptor descriptor)
+  public ListenableFuture<Boolean> isHandoffComplete(final String dataSource, final SegmentDescriptor descriptor)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<Boolean> isHandoffComplete(
+      final String dataSource,
+      final SegmentDescriptor descriptor,
+      final boolean strictTierAwareSegmentLoad
+  )
   {
     throw new UnsupportedOperationException();
   }

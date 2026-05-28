@@ -53,6 +53,7 @@ import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.rules.CannotMatchBehavior;
 import org.apache.druid.server.coordinator.rules.ExactProjectionPartialLoadMatcher;
@@ -677,7 +678,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(databaseRuleManager);
 
     String interval1 = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
-    Response response1 = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval1, 1, "v1");
+    Response response1 = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval1, 1, "v1", null);
     Assert.assertTrue((boolean) response1.getEntity());
 
     EasyMock.verify(databaseRuleManager);
@@ -693,7 +694,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(inventoryView, databaseRuleManager);
 
     String interval2 = "2013-01-02T01:00:00Z/2013-01-02T02:00:00Z";
-    Response response2 = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval2, 1, "v1");
+    Response response2 = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval2, 1, "v1", null);
     Assert.assertFalse((boolean) response2.getEntity());
 
     EasyMock.verify(inventoryView, databaseRuleManager);
@@ -724,10 +725,103 @@ public class DataSourcesResourceTest
             .once();
     EasyMock.replay(inventoryView, databaseRuleManager);
 
-    Response response3 = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval3, 1, "v1");
+    Response response3 = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval3, 1, "v1", null);
     Assert.assertTrue((boolean) response3.getEntity());
 
     EasyMock.verify(inventoryView, databaseRuleManager);
+  }
+
+  @Test
+  public void testIsHandOffCompleteUsesStrictTierAwareSegmentLoadWhenRequested()
+  {
+    final MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
+    final DruidCoordinator druidCoordinator = EasyMock.createMock(DruidCoordinator.class);
+    final CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig.builder().build();
+    final String interval = "2013-01-02T02:00:00Z/2013-01-02T03:00:00Z";
+    final Rule loadRule = new IntervalLoadRule(
+        Intervals.of("2013-01-02T00:00:00Z/2013-01-03T00:00:00Z"),
+        ImmutableMap.of("hot", 1, "cold", 1),
+        null
+    );
+    final SegmentLoadInfo hotOnlySegmentLoadInfo = new SegmentLoadInfo(createSegment(Intervals.of(interval), "v1", 1));
+    hotOnlySegmentLoadInfo.addServer(createHistoricalServerMetadata("hotServer", "hot"));
+    final VersionedIntervalTimeline<String, SegmentLoadInfo> hotOnlyTimeline =
+        createTimeline(interval, hotOnlySegmentLoadInfo);
+
+    final SegmentLoadInfo allTierSegmentLoadInfo = new SegmentLoadInfo(createSegment(Intervals.of(interval), "v1", 1));
+    allTierSegmentLoadInfo.addServer(createHistoricalServerMetadata("hotServer", "hot"));
+    allTierSegmentLoadInfo.addServer(createHistoricalServerMetadata("coldServer", "cold"));
+    final VersionedIntervalTimeline<String, SegmentLoadInfo> allTierTimeline =
+        createTimeline(interval, allTierSegmentLoadInfo);
+
+    final DataSourcesResource dataSourcesResource =
+        new DataSourcesResource(
+            inventoryView,
+            segmentsMetadataManager,
+            databaseRuleManager,
+            null,
+            null,
+            druidCoordinator,
+            auditManager
+        );
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
+            .andReturn(ImmutableList.of(loadRule))
+            .times(4);
+    EasyMock.expect(druidCoordinator.getCurrentDynamicConfig())
+            .andReturn(dynamicConfig)
+            .times(2);
+    EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
+            .andReturn(hotOnlyTimeline)
+            .once();
+    EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
+            .andReturn(hotOnlyTimeline)
+            .once();
+    EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
+            .andReturn(hotOnlyTimeline)
+            .once();
+    EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
+            .andReturn(allTierTimeline)
+            .once();
+    EasyMock.replay(inventoryView, databaseRuleManager, druidCoordinator);
+
+    final Response defaultResponse = dataSourcesResource.isHandOffComplete(
+        TestDataSource.WIKI,
+        interval,
+        1,
+        "v1",
+        null
+    );
+    Assert.assertTrue((boolean) defaultResponse.getEntity());
+
+    final Response falseParamResponse = dataSourcesResource.isHandOffComplete(
+        TestDataSource.WIKI,
+        interval,
+        1,
+        "v1",
+        "false"
+    );
+    Assert.assertTrue((boolean) falseParamResponse.getEntity());
+
+    final Response hotOnlyResponse = dataSourcesResource.isHandOffComplete(
+        TestDataSource.WIKI,
+        interval,
+        1,
+        "v1",
+        "true"
+    );
+    Assert.assertFalse((boolean) hotOnlyResponse.getEntity());
+
+    final Response allTierResponse = dataSourcesResource.isHandOffComplete(
+        TestDataSource.WIKI,
+        interval,
+        1,
+        "v1",
+        "true"
+    );
+    Assert.assertTrue((boolean) allTierResponse.getEntity());
+
+    EasyMock.verify(inventoryView, databaseRuleManager, druidCoordinator);
   }
 
   @Test
@@ -766,7 +860,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(databaseRuleManager, segmentsMetadataManager);
 
     String interval = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
-    Response response = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1");
+    Response response = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1", null);
     Assert.assertTrue((boolean) response.getEntity());
 
     EasyMock.verify(databaseRuleManager, segmentsMetadataManager);
@@ -813,7 +907,7 @@ public class DataSourcesResourceTest
             .once();
     EasyMock.replay(inventoryView, databaseRuleManager, segmentsMetadataManager);
 
-    Response response = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1");
+    Response response = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1", null);
     Assert.assertFalse((boolean) response.getEntity());
 
     EasyMock.verify(inventoryView, databaseRuleManager, segmentsMetadataManager);
@@ -864,7 +958,7 @@ public class DataSourcesResourceTest
             .once();
     EasyMock.replay(databaseRuleManager, segmentsMetadataManager);
 
-    Response response = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1");
+    Response response = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1", null);
     Assert.assertTrue((boolean) response.getEntity());
 
     EasyMock.verify(databaseRuleManager, segmentsMetadataManager);
@@ -916,7 +1010,7 @@ public class DataSourcesResourceTest
             .once();
     EasyMock.replay(inventoryView, databaseRuleManager, segmentsMetadataManager);
 
-    Response response = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1");
+    Response response = dataSourcesResource.isHandOffComplete(TestDataSource.WIKI, interval, 1, "v1", null);
     Assert.assertFalse((boolean) response.getEntity());
 
     EasyMock.verify(inventoryView, databaseRuleManager, segmentsMetadataManager);
@@ -1345,6 +1439,59 @@ public class DataSourcesResourceTest
   }
 
   @Test
+  public void testSegmentLoadChecksForRequiredTiers()
+  {
+    final Interval interval = Intervals.of("2011-04-01/2011-04-02");
+    final SegmentDescriptor descriptor = new SegmentDescriptor(interval, "v1", 2);
+    final Set<String> requiredTiers = ImmutableSet.of("hot", "cold");
+
+    Assert.assertFalse(
+        DataSourcesResource.isSegmentLoadedOnRequiredTiers(
+            Collections.singletonList(
+                new ImmutableSegmentLoadInfo(
+                    createSegment(interval, "v1", 2),
+                    Sets.newHashSet(createHistoricalServerMetadata("a", "hot"))
+                )
+            ),
+            descriptor,
+            requiredTiers
+        )
+    );
+
+    Assert.assertTrue(
+        DataSourcesResource.isSegmentLoadedOnRequiredTiers(
+            Collections.singletonList(
+                new ImmutableSegmentLoadInfo(
+                    createSegment(interval, "v1", 2),
+                    Sets.newHashSet(
+                        createHistoricalServerMetadata("a", "hot"),
+                        createHistoricalServerMetadata("b", "cold")
+                    )
+                )
+            ),
+            descriptor,
+            requiredTiers
+        )
+    );
+
+    Assert.assertFalse(
+        DataSourcesResource.isSegmentLoadedOnRequiredTiers(
+            Collections.singletonList(
+                new ImmutableSegmentLoadInfo(
+                    createSegment(interval, "v1", 2),
+                    Sets.newHashSet(
+                        createHistoricalServerMetadata("a", "hot"),
+                        createRealtimeServerMetadata("b", "cold")
+                    )
+                )
+            ),
+            descriptor,
+            requiredTiers
+        )
+    );
+  }
+
+  @Test
   public void testSegmentLoadChecksForPartitionNumber()
   {
     Interval interval = Intervals.of("2011-04-01/2011-04-02");
@@ -1662,7 +1809,7 @@ public class DataSourcesResourceTest
   @Test
   public void testGetDatasourceLoadstatusForceMetadataRefreshNull()
   {
-    Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, null, null, null, null, null);
+    Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, null, null, null, null, null, null);
     Assert.assertEquals(400, response.getStatus());
   }
 
@@ -1675,7 +1822,7 @@ public class DataSourcesResourceTest
     ).andReturn(DataSourcesSnapshot.fromUsedSegments(List.of())).once();
     EasyMock.replay(segmentsMetadataManager);
 
-    Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, null, null, null);
+    Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, null, null, null, null);
     Assert.assertEquals(204, response.getStatus());
   }
 
@@ -1733,7 +1880,7 @@ public class DataSourcesResourceTest
     EasyMock.expect(inventoryView.getLoadInfoForAllSegments()).andReturn(completedLoadInfoMap).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView);
 
-    Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, null, null, null);
+    Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, null, null, null, null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
     Assert.assertEquals(1, ((Map) response.getEntity()).size());
@@ -1748,13 +1895,59 @@ public class DataSourcesResourceTest
     EasyMock.expect(inventoryView.getLoadInfoForAllSegments()).andReturn(halfLoadedInfoMap).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView);
 
-    response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, null, null, null);
+    response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, null, null, null, null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
     Assert.assertEquals(1, ((Map) response.getEntity()).size());
     Assert.assertTrue(((Map) response.getEntity()).containsKey(TestDataSource.WIKI));
     Assert.assertEquals(50.0, ((Map) response.getEntity()).get(TestDataSource.WIKI));
     EasyMock.verify(segmentsMetadataManager, inventoryView);
+  }
+
+  @Test
+  public void testGetDatasourceLoadstatusDefaultUsesStrictTierAwareSegmentLoadWhenRequested()
+  {
+    final DateTime now = DateTimes.nowUtc();
+    final DataSegment loadedOnAllTiers = new DataSegment(
+        TestDataSource.WIKI,
+        new Interval(now.minusDays(5), Period.days(1)),
+        "",
+        null,
+        null,
+        null,
+        null,
+        0x9,
+        10
+    );
+    final DataSegment missingTier = new DataSegment(
+        TestDataSource.WIKI,
+        new Interval(now.minusDays(4), Period.days(1)),
+        "",
+        null,
+        null,
+        null,
+        null,
+        0x9,
+        20
+    );
+    final List<DataSegment> segments = ImmutableList.of(loadedOnAllTiers, missingTier);
+    final DruidCoordinator druidCoordinator = EasyMock.createMock(DruidCoordinator.class);
+    final DataSourcesResource dataSourcesResource =
+        new DataSourcesResource(null, segmentsMetadataManager, null, null, null, druidCoordinator, auditManager);
+
+    EasyMock.expect(segmentsMetadataManager.forceUpdateDataSourcesSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(segments))
+            .once();
+    EasyMock.expect(druidCoordinator.isSegmentAvailable(loadedOnAllTiers, true)).andReturn(true).once();
+    EasyMock.expect(druidCoordinator.isSegmentAvailable(missingTier, true)).andReturn(false).once();
+    EasyMock.replay(segmentsMetadataManager, druidCoordinator);
+
+    final Response response =
+        dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, null, null, null, "true");
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertNotNull(response.getEntity());
+    Assert.assertEquals(50.0, ((Map) response.getEntity()).get(TestDataSource.WIKI));
+    EasyMock.verify(segmentsMetadataManager, druidCoordinator);
   }
 
   @Test
@@ -1811,7 +2004,7 @@ public class DataSourcesResourceTest
     EasyMock.expect(inventoryView.getLoadInfoForAllSegments()).andReturn(completedLoadInfoMap).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView);
 
-    Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, "simple", null, null);
+    Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, "simple", null, null, null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
     Assert.assertEquals(1, ((Map) response.getEntity()).size());
@@ -1826,7 +2019,7 @@ public class DataSourcesResourceTest
     EasyMock.expect(inventoryView.getLoadInfoForAllSegments()).andReturn(halfLoadedInfoMap).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView);
 
-    response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, "simple", null, null);
+    response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, "simple", null, null, null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
     Assert.assertEquals(1, ((Map) response.getEntity()).size());
@@ -1883,7 +2076,7 @@ public class DataSourcesResourceTest
 
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(null, segmentsMetadataManager, null, null, null, druidCoordinator, auditManager);
-    Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, null, "full", null);
+    Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, null, "full", null, null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
     Assert.assertEquals(2, ((Map) response.getEntity()).size());
@@ -1942,7 +2135,15 @@ public class DataSourcesResourceTest
 
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(null, segmentsMetadataManager, null, null, null, druidCoordinator, auditManager);
-    Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, null, "full", "computeUsingClusterView");
+    Response response = dataSourcesResource.getDatasourceLoadstatus(
+        TestDataSource.WIKI,
+        true,
+        null,
+        null,
+        "full",
+        "computeUsingClusterView",
+        null
+    );
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());
     Assert.assertEquals(2, ((Map) response.getEntity()).size());
@@ -1955,17 +2156,32 @@ public class DataSourcesResourceTest
 
   private DruidServerMetadata createRealtimeServerMetadata(String name)
   {
-    return createServerMetadata(name, ServerType.REALTIME);
+    return createRealtimeServerMetadata(name, "tier");
+  }
+
+  private DruidServerMetadata createRealtimeServerMetadata(String name, String tier)
+  {
+    return createServerMetadata(name, ServerType.REALTIME, tier);
   }
 
   private DruidServerMetadata createHistoricalServerMetadata(String name)
   {
-    return createServerMetadata(name, ServerType.HISTORICAL);
+    return createHistoricalServerMetadata(name, "tier");
+  }
+
+  private DruidServerMetadata createHistoricalServerMetadata(String name, String tier)
+  {
+    return createServerMetadata(name, ServerType.HISTORICAL, tier);
   }
 
   private DruidServerMetadata createServerMetadata(String name, ServerType type)
   {
-    return new DruidServerMetadata(name, name, null, 10000, null, type, "tier", 1);
+    return createServerMetadata(name, type, "tier");
+  }
+
+  private DruidServerMetadata createServerMetadata(String name, ServerType type, String tier)
+  {
+    return new DruidServerMetadata(name, name, null, 10000, null, type, tier, 1);
   }
 
   private DataSegment createSegment(Interval interval, String version, int partitionNumber)
@@ -1980,6 +2196,25 @@ public class DataSourcesResourceTest
         new NumberedShardSpec(partitionNumber, 100),
         0, 0
     );
+  }
+
+  private VersionedIntervalTimeline<String, SegmentLoadInfo> createTimeline(
+      String interval,
+      SegmentLoadInfo segmentLoadInfo
+  )
+  {
+    return new VersionedIntervalTimeline<>(null)
+    {
+      @Override
+      public List<TimelineObjectHolder<String, SegmentLoadInfo>> lookupWithIncompletePartitions(Interval lookupInterval)
+      {
+        final PartitionHolder<SegmentLoadInfo> partitionHolder =
+            new PartitionHolder<>(new NumberedPartitionChunk<>(1, 1, segmentLoadInfo));
+        final List<TimelineObjectHolder<String, SegmentLoadInfo>> ret = new ArrayList<>();
+        ret.add(new TimelineObjectHolder<>(Intervals.of(interval), "v1", partitionHolder));
+        return ret;
+      }
+    };
   }
 
   private void prepareRequestForAudit()

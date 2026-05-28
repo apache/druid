@@ -45,6 +45,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
   private final Duration pollDuration;
   private final String dataSource;
   private final String taskId;
+  private final boolean strictTierAwareSegmentLoad;
 
   public CoordinatorBasedSegmentHandoffNotifier(
       String dataSource,
@@ -53,10 +54,22 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
       String taskId
   )
   {
+    this(dataSource, coordinatorClient, config, taskId, false);
+  }
+
+  public CoordinatorBasedSegmentHandoffNotifier(
+      String dataSource,
+      CoordinatorClient coordinatorClient,
+      CoordinatorBasedSegmentHandoffNotifierConfig config,
+      String taskId,
+      boolean strictTierAwareSegmentLoad
+  )
+  {
     this.dataSource = dataSource;
     this.coordinatorClient = coordinatorClient;
     this.pollDuration = config.getPollDuration();
     this.taskId = taskId;
+    this.strictTierAwareSegmentLoad = strictTierAwareSegmentLoad;
   }
 
   @Override
@@ -92,7 +105,12 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
         SegmentDescriptor descriptor = entry.getKey();
         try {
           Boolean handOffComplete =
-              FutureUtils.getUnchecked(coordinatorClient.isHandoffComplete(dataSource, descriptor), true);
+              FutureUtils.getUnchecked(
+                  strictTierAwareSegmentLoad
+                  ? coordinatorClient.isHandoffComplete(dataSource, descriptor, true)
+                  : coordinatorClient.isHandoffComplete(dataSource, descriptor),
+                  true
+              );
           if (Boolean.TRUE.equals(handOffComplete)) {
             log.debug("Segment handoff complete for dataSource[%s] segment[%s] for task[%s]", dataSource, descriptor, taskId);
             entry.getValue().lhs.execute(entry.getValue().rhs);

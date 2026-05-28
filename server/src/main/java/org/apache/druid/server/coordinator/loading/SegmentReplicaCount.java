@@ -136,6 +136,11 @@ public class SegmentReplicaCount
     return loaded + loadedNonHistorical;
   }
 
+  int loadedOnHistoricals()
+  {
+    return loaded;
+  }
+
   /**
    * Number of replicas which are safely loaded on historical servers and are
    * not being dropped.

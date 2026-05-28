@@ -75,6 +75,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
     Assert.assertEquals(1, config.getNumPersistThreads());
     Assert.assertEquals(-1, config.getMaxColumnsToMerge());
+    Assert.assertFalse(config.isStrictTierAwareSegmentLoad());
   }
 
   @Test
@@ -90,6 +91,7 @@ public class KafkaIndexTaskTuningConfigTest
                      + "  \"maxPendingPersists\": 100,\n"
                      + "  \"reportParseExceptions\": true,\n"
                      + "  \"handoffConditionTimeout\": 100,\n"
+                     + "  \"strictTierAwareSegmentLoad\": true,\n"
                      + "  \"indexSpec\": { \"metricCompression\" : \"NONE\" },\n"
                      + "  \"indexSpecForIntermediatePersists\": { \"dimensionCompression\" : \"uncompressed\" },\n"
                      + "  \"appendableIndexSpec\": { \"type\" : \"onheap\" },\n"
@@ -116,6 +118,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(100, config.getMaxPendingPersists());
     Assert.assertEquals(true, config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
+    Assert.assertTrue(config.isStrictTierAwareSegmentLoad());
     Assert.assertEquals(
         IndexSpec.builder().withMetricCompression(CompressionStrategy.NONE).build(),
         config.getIndexSpec()
@@ -143,6 +146,7 @@ public class KafkaIndexTaskTuningConfigTest
         .withIndexSpecForIntermediatePersists(IndexSpec.getDefault())
         .withReportParseExceptions(true)
         .withMaxColumnsToMerge(5)
+        .withStrictTierAwareSegmentLoad(true)
         .build();
     KafkaIndexTaskTuningConfig copy = original.convertToTaskTuningConfig();
 
@@ -159,6 +163,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
     Assert.assertEquals(2, copy.getNumPersistThreads());
     Assert.assertEquals(5, copy.getMaxColumnsToMerge());
+    Assert.assertTrue(copy.isStrictTierAwareSegmentLoad());
   }
 
   @Test
@@ -186,7 +191,8 @@ public class KafkaIndexTaskTuningConfigTest
         42,
         2,
         -1,
-        false
+        false,
+        true
     );
 
     String serialized = mapper.writeValueAsString(base);
@@ -213,6 +219,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
     Assert.assertEquals(base.getNumPersistThreads(), deserialized.getNumPersistThreads());
     Assert.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
+    Assert.assertEquals(base.isStrictTierAwareSegmentLoad(), deserialized.isStrictTierAwareSegmentLoad());
   }
 
   @Test
@@ -239,6 +246,7 @@ public class KafkaIndexTaskTuningConfigTest
         42,
         2,
         -1,
+        true,
         "extra string"
     );
 
@@ -265,6 +273,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
     Assert.assertEquals(base.getNumPersistThreads(), deserialized.getNumPersistThreads());
     Assert.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
+    Assert.assertEquals(base.isStrictTierAwareSegmentLoad(), deserialized.isStrictTierAwareSegmentLoad());
   }
 
   @Test

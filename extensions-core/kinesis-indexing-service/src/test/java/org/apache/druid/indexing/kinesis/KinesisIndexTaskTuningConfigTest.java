@@ -86,6 +86,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertNull(config.getFetchThreads());
     Assert.assertFalse(config.isSkipSequenceNumberAvailabilityCheck());
     Assert.assertFalse(config.isResetOffsetAutomatically());
+    Assert.assertFalse(config.isStrictTierAwareSegmentLoad());
   }
 
   @Test
@@ -105,6 +106,7 @@ public class KinesisIndexTaskTuningConfigTest
                      + "  \"recordBufferFullWait\": 500,\n"
                      + "  \"resetOffsetAutomatically\": false,\n"
                      + "  \"skipSequenceNumberAvailabilityCheck\": true,\n"
+                     + "  \"strictTierAwareSegmentLoad\": true,\n"
                      + "  \"fetchThreads\": 2,\n"
                      + "  \"appendableIndexSpec\": { \"type\" : \"onheap\" }\n"
                      + "}";
@@ -135,6 +137,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertTrue(config.isSkipSequenceNumberAvailabilityCheck());
     Assert.assertFalse(config.isResetOffsetAutomatically());
     Assert.assertEquals(-1, config.getMaxColumnsToMerge());
+    Assert.assertTrue(config.isStrictTierAwareSegmentLoad());
 
   }
 
@@ -169,7 +172,8 @@ public class KinesisIndexTaskTuningConfigTest
         6000,
         1_000_000,
         new Period("P3D"),
-        1000
+        1000,
+        true
     );
 
     String serialized = mapper.writeValueAsString(base);
@@ -201,6 +205,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(base.getMaxRecordsPerPollConfigured(), deserialized.getMaxRecordsPerPollConfigured());
     Assert.assertEquals(base.getMaxBytesPerPollConfigured(), deserialized.getMaxBytesPerPollConfigured());
     Assert.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
+    Assert.assertEquals(base.isStrictTierAwareSegmentLoad(), deserialized.isStrictTierAwareSegmentLoad());
   }
 
   @Test
@@ -234,7 +239,8 @@ public class KinesisIndexTaskTuningConfigTest
         1_000_000,
         6000,
         new Period("P3D"),
-        1000
+        1000,
+        true
     );
 
     String serialized = mapper.writeValueAsString(new TestModifiedKinesisIndexTaskTuningConfig(base, "loool"));
@@ -263,6 +269,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(base.getRecordBufferSizeBytesConfigured(), deserialized.getRecordBufferSizeBytesConfigured());
     Assert.assertEquals(base.getMaxRecordsPerPollConfigured(), deserialized.getMaxRecordsPerPollConfigured());
     Assert.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
+    Assert.assertEquals(base.isStrictTierAwareSegmentLoad(), deserialized.isStrictTierAwareSegmentLoad());
   }
 
   @Test
@@ -329,7 +336,8 @@ public class KinesisIndexTaskTuningConfigTest
         null,
         null,
         null,
-        null
+        null,
+        true
     );
     KinesisIndexTaskTuningConfig copy = original.convertToTaskTuningConfig();
 
@@ -353,6 +361,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(10, (int) copy.getMaxRecordsPerPollConfigured());
     Assert.assertEquals(new Period().withDays(Integer.MAX_VALUE), copy.getIntermediateHandoffPeriod());
     Assert.assertEquals(-1, copy.getMaxColumnsToMerge());
+    Assert.assertTrue(copy.isStrictTierAwareSegmentLoad());
   }
 
   @Test

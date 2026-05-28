@@ -42,6 +42,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   private static final Period DEFAULT_INTERMEDIATE_PERSIST_PERIOD = new Period("PT10M");
   private static final Boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = Boolean.FALSE;
   private static final boolean DEFAULT_RELEASE_LOCKS_ON_HANDOFF = false;
+  private static final boolean DEFAULT_STRICT_TIER_AWARE_SEGMENT_LOAD = false;
   private static final long DEFAULT_HANDOFF_CONDITION_TIMEOUT = Duration.ofMinutes(15).toMillis();
 
   private final AppendableIndexSpec appendableIndexSpec;
@@ -70,6 +71,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   private final int numPersistThreads;
   private final int maxColumnsToMerge;
   private final boolean releaseLocksOnHandoff;
+  private final boolean strictTierAwareSegmentLoad;
 
   public SeekableStreamIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
@@ -94,7 +96,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       @Nullable Integer maxSavedParseExceptions,
       @Nullable Integer numPersistThreads,
       @Nullable Integer maxColumnsToMerge,
-      @Nullable Boolean releaseLocksOnHandoff
+      @Nullable Boolean releaseLocksOnHandoff,
+      @Nullable Boolean strictTierAwareSegmentLoad
   )
   {
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -150,6 +153,10 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     }
     this.maxColumnsToMerge = maxColumnsToMerge == null ? DEFAULT_MAX_COLUMNS_TO_MERGE : maxColumnsToMerge;
     this.releaseLocksOnHandoff = Configs.valueOrDefault(releaseLocksOnHandoff, DEFAULT_RELEASE_LOCKS_ON_HANDOFF);
+    this.strictTierAwareSegmentLoad = Configs.valueOrDefault(
+        strictTierAwareSegmentLoad,
+        DEFAULT_STRICT_TIER_AWARE_SEGMENT_LOAD
+    );
   }
 
   @Override
@@ -303,6 +310,12 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     return releaseLocksOnHandoff;
   }
 
+  @JsonProperty
+  public boolean isStrictTierAwareSegmentLoad()
+  {
+    return strictTierAwareSegmentLoad;
+  }
+
   public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);
 
   @Override
@@ -330,6 +343,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
            numPersistThreads == that.numPersistThreads &&
            maxColumnsToMerge == that.maxColumnsToMerge &&
            releaseLocksOnHandoff == that.releaseLocksOnHandoff &&
+           strictTierAwareSegmentLoad == that.strictTierAwareSegmentLoad &&
            Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
@@ -364,7 +378,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
         maxSavedParseExceptions,
         numPersistThreads,
         maxColumnsToMerge,
-        releaseLocksOnHandoff
+        releaseLocksOnHandoff,
+        strictTierAwareSegmentLoad
     );
   }
 

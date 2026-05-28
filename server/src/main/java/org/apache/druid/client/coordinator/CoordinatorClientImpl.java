@@ -79,14 +79,25 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<Boolean> isHandoffComplete(String dataSource, SegmentDescriptor descriptor)
+  public ListenableFuture<Boolean> isHandoffComplete(final String dataSource, final SegmentDescriptor descriptor)
+  {
+    return isHandoffComplete(dataSource, descriptor, false);
+  }
+
+  @Override
+  public ListenableFuture<Boolean> isHandoffComplete(
+      final String dataSource,
+      final SegmentDescriptor descriptor,
+      final boolean strictTierAwareSegmentLoad
+  )
   {
     final String path = StringUtils.format(
-        "/druid/coordinator/v1/datasources/%s/handoffComplete?interval=%s&partitionNumber=%d&version=%s",
+        "/druid/coordinator/v1/datasources/%s/handoffComplete?interval=%s&partitionNumber=%d&version=%s%s",
         StringUtils.urlEncode(dataSource),
         StringUtils.urlEncode(descriptor.getInterval().toString()),
         descriptor.getPartitionNumber(),
-        StringUtils.urlEncode(descriptor.getVersion())
+        StringUtils.urlEncode(descriptor.getVersion()),
+        strictTierAwareSegmentLoad ? "&strictTierAwareSegmentLoad=true" : ""
     );
 
     return FutureUtils.transform(

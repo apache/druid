@@ -72,6 +72,7 @@ public class RabbitStreamSupervisorTuningConfigTest
     Assert.assertEquals(Duration.standardSeconds(80), config.getShutdownTimeout());
     Assert.assertEquals(Duration.standardSeconds(120), config.getRepartitionTransitionDuration());
     Assert.assertEquals(100, config.getMaxRecordsPerPollOrDefault());
+    Assert.assertFalse(config.isStrictTierAwareSegmentLoad());
   }
 
   @Test
@@ -86,6 +87,7 @@ public class RabbitStreamSupervisorTuningConfigTest
         + "  \"maxPendingPersists\": 100,\n"
         + "  \"reportParseExceptions\": true,\n"
         + "  \"handoffConditionTimeout\": 100,\n"
+        + "  \"strictTierAwareSegmentLoad\": true,\n"
         + "  \"workerThreads\": 12,\n"
         + "  \"chatRetries\": 14,\n"
         + "  \"httpTimeout\": \"PT15S\",\n"
@@ -112,6 +114,7 @@ public class RabbitStreamSupervisorTuningConfigTest
     Assert.assertEquals(100, config.getMaxPendingPersists());
     Assert.assertEquals(true, config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
+    Assert.assertTrue(config.isStrictTierAwareSegmentLoad());
     Assert.assertEquals(12, (int) config.getWorkerThreads());
     Assert.assertEquals(14L, (long) config.getChatRetries());
     Assert.assertEquals(15, (int) config.getRecordBufferSizeConfigured());
