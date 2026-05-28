@@ -22,6 +22,7 @@ package org.apache.druid.server.http;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
@@ -74,7 +75,10 @@ public class CoordinatorDynamicConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getDynamicConfigs()
   {
-    return Response.ok(manager.getCurrentDynamicConfig()).build();
+    return DynamicConfigEtagHelper.buildReadResponseWithEtag(
+        manager::getCurrentDynamicConfigBytes,
+        manager::convertBytesToDynamicConfig
+    );
   }
 
   // default value is used for backwards compatibility
@@ -86,10 +90,9 @@ public class CoordinatorDynamicConfigsResource
   )
   {
     try {
-      CoordinatorDynamicConfig current = manager.getCurrentDynamicConfig();
-
-      final SetResult setResult = manager.setDynamicConfig(
-          dynamicConfigBuilder.build(current),
+      final SetResult setResult = manager.updateDynamicConfig(
+          dynamicConfigBuilder::build,
+          DynamicConfigEtagHelper.getIfMatch(req),
           AuthorizationUtils.buildAuditInfo(req)
       );
 
@@ -97,10 +100,11 @@ public class CoordinatorDynamicConfigsResource
         coordinatorDynamicConfigSyncer.queueBroadcastConfigToBrokers();
         return Response.ok().build();
       } else {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity(ServletResourceUtils.sanitizeException(setResult.getException()))
-                       .build();
+        return DynamicConfigEtagHelper.toErrorResponse(setResult);
       }
+    }
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
     }
     catch (IllegalArgumentException e) {
       return Response.status(Response.Status.BAD_REQUEST)

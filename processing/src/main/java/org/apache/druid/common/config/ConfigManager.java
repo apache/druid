@@ -181,6 +181,30 @@ public class ConfigManager
     return set(key, serde, null, obj);
   }
 
+  /**
+   * Returns the raw payload bytes currently stored for {@code key}, or
+   * {@code null} if none. Prefers the in-memory watched copy; falls back to the
+   * metadata store. Returns a defensive copy — the cached array backs equality
+   * checks and CAS oldValue payloads.
+   */
+  @Nullable
+  public byte[] getCurrentBytes(final String key)
+  {
+    final ConfigHolder<?> holder = watchedConfigs.get(key);
+    if (holder != null) {
+      final byte[] cached = holder.rawBytes.get();
+      if (cached != null) {
+        return cached.clone();
+      }
+    }
+    return dbConnector.lookup(configTable, "name", "payload", key);
+  }
+
+  public boolean isCompareAndSwapEnabled()
+  {
+    return config.get().isEnableCompareAndSwap();
+  }
+
   public <T> SetResult set(final String key, final ConfigSerde<T> serde, @Nullable final byte[] oldValue, final T newObject)
   {
     if (newObject == null || !started) {
@@ -259,10 +283,11 @@ public class ConfigManager
 
   public static class SetResult
   {
-    private static final SetResult SUCCESS = new SetResult(null, false);
+    private static final SetResult SUCCESS = new SetResult(null, false, false);
     private final Exception exception;
 
     private final boolean retryableException;
+    private final boolean preconditionFailed;
 
     public static SetResult ok()
     {
@@ -271,18 +296,25 @@ public class ConfigManager
 
     public static SetResult failure(Exception e)
     {
-      return new SetResult(e, false);
+      return new SetResult(e, false, false);
     }
 
     public static SetResult retryableFailure(Exception e)
     {
-      return new SetResult(e, true);
+      return new SetResult(e, true, false);
     }
 
-    private SetResult(@Nullable Exception exception, boolean retryableException)
+    /** Client-supplied precondition (e.g. {@code If-Match}) failed; maps to HTTP 412. */
+    public static SetResult preconditionFailed(Exception e)
+    {
+      return new SetResult(e, false, true);
+    }
+
+    private SetResult(@Nullable Exception exception, boolean retryableException, boolean preconditionFailed)
     {
       this.exception = exception;
       this.retryableException = retryableException;
+      this.preconditionFailed = preconditionFailed;
     }
 
     public boolean isOk()
@@ -293,6 +325,11 @@ public class ConfigManager
     public boolean isRetryable()
     {
       return retryableException;
+    }
+
+    public boolean isPreconditionFailed()
+    {
+      return preconditionFailed;
     }
 
     public Exception getException()

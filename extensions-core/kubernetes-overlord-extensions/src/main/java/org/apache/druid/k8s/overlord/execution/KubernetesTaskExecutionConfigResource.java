@@ -25,8 +25,10 @@ import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.http.DynamicConfigEtagHelper;
+import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.joda.time.Interval;
@@ -43,7 +45,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Resource that manages Kubernetes-specific execution configurations for running tasks.
@@ -54,10 +55,8 @@ import java.util.concurrent.atomic.AtomicReference;
 @Path("/druid/indexer/v1/k8s/taskrunner/executionconfig")
 public class KubernetesTaskExecutionConfigResource
 {
-  private static final Logger log = new Logger(KubernetesTaskExecutionConfigResource.class);
   private final JacksonConfigManager configManager;
   private final AuditManager auditManager;
-  private AtomicReference<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef = null;
 
   @Inject
   public KubernetesTaskExecutionConfigResource(
@@ -84,23 +83,23 @@ public class KubernetesTaskExecutionConfigResource
       @Context final HttpServletRequest req
   )
   {
-    KubernetesTaskRunnerDynamicConfig currentConfig = getDynamicConfig();
-    KubernetesTaskRunnerDynamicConfig mergedConfig = dynamicConfig;
-
-    if (currentConfig != null) {
-      mergedConfig = currentConfig.merge(dynamicConfig);
+    try {
+      final ConfigManager.SetResult setResult = configManager.setIfMatch(
+          KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
+          DynamicConfigEtagHelper.getIfMatch(req),
+          KubernetesTaskRunnerDynamicConfig.class,
+          null,
+          currentConfig -> currentConfig == null ? dynamicConfig : currentConfig.merge(dynamicConfig),
+          AuthorizationUtils.buildAuditInfo(req)
+      );
+      if (setResult.isOk()) {
+        return Response.ok().build();
+      } else {
+        return DynamicConfigEtagHelper.toErrorResponse(setResult);
+      }
     }
-    final ConfigManager.SetResult setResult = configManager.set(
-        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        mergedConfig,
-        AuthorizationUtils.buildAuditInfo(req)
-    );
-    if (setResult.isOk()) {
-      log.info("Updating K8s execution configs: %s", mergedConfig);
-
-      return Response.ok().build();
-    } else {
-      return Response.status(Response.Status.BAD_REQUEST).build();
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
     }
   }
 
@@ -154,14 +153,13 @@ public class KubernetesTaskExecutionConfigResource
   @ResourceFilters(ConfigResourceFilter.class)
   public Response getExecutionConfig()
   {
-    return Response.ok(getDynamicConfig()).build();
-  }
-
-  private KubernetesTaskRunnerDynamicConfig getDynamicConfig()
-  {
-    if (dynamicConfigRef == null) {
-      dynamicConfigRef = configManager.watch(KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, KubernetesTaskRunnerDynamicConfig.class);
-    }
-    return dynamicConfigRef.get();
+    return DynamicConfigEtagHelper.buildReadResponseWithEtag(
+        () -> configManager.getCurrentBytes(KubernetesTaskRunnerDynamicConfig.CONFIG_KEY),
+        currentBytes -> configManager.convertByteToConfig(
+            currentBytes,
+            KubernetesTaskRunnerDynamicConfig.class,
+            null
+        )
+    );
   }
 }

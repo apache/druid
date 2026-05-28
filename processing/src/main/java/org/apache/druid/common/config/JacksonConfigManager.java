@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.UnaryOperator;
 
 /**
  */
@@ -125,6 +126,112 @@ public class JacksonConfigManager
                   .build()
     );
     return configManager.set(key, configSerde, oldValue, newValue);
+  }
+
+  @Nullable
+  public byte[] getCurrentBytes(String key)
+  {
+    return configManager.getCurrentBytes(key);
+  }
+
+  public boolean isCompareAndSwapEnabled()
+  {
+    return configManager.isCompareAndSwapEnabled();
+  }
+
+  /**
+   * Set the config, optionally guarded by an {@code If-Match}-style
+   * precondition. When {@code ifMatchEtag} is {@code null}, behaves like
+   * {@link #set(String, Object, AuditInfo)}. Otherwise the write only commits
+   * if the currently stored bytes hash to {@code ifMatchEtag}; on mismatch the
+   * result reports {@link SetResult#isPreconditionFailed() preconditionFailed}.
+   *
+   * <p>The precondition is enforced via metadata-store CAS, so conditional
+   * writes require {@code druid.manager.config.enableCompareAndSwap} to be
+   * true (the default). With CAS disabled, {@code If-Match} writes fail as a
+   * precondition failure instead of silently degrading to last-writer-wins.
+   */
+  public <T> SetResult setIfMatch(
+      String key,
+      @Nullable String ifMatchEtag,
+      T newValue,
+      AuditInfo auditInfo
+  )
+  {
+    if (newValue == null) {
+      return SetResult.failure(new IllegalArgumentException("input obj is null"));
+    }
+    if (ifMatchEtag == null) {
+      return set(key, newValue, auditInfo);
+    }
+    if (!configManager.isCompareAndSwapEnabled()) {
+      return SetResult.preconditionFailed(
+          new IllegalStateException(
+              "If-Match requires druid.manager.config.enableCompareAndSwap to be enabled for key[" + key + "]"
+          )
+      );
+    }
+    final byte[] currentBytes = configManager.getCurrentBytes(key);
+    if (!ConfigEtag.matches(ifMatchEtag, currentBytes)) {
+      return SetResult.preconditionFailed(
+          new IllegalStateException("If-Match precondition failed for key[" + key + "]")
+      );
+    }
+    final SetResult result = set(key, currentBytes, newValue, auditInfo);
+    // Retryable CAS failure here = concurrent writer between our read and CAS;
+    // surface as precondition failed since the caller asked us to reject that.
+    if (!result.isOk() && result.isRetryable()) {
+      return SetResult.preconditionFailed(
+          new IllegalStateException("If-Match precondition failed (concurrent update) for key[" + key + "]")
+      );
+    }
+    return result;
+  }
+
+  /**
+   * Applies {@code updateOperator} to the config deserialized from the bytes
+   * used for {@code If-Match} validation and CAS. This is intended for partial
+   * updates whose output must be built from the same snapshot that the
+   * precondition protects.
+   */
+  public <T> SetResult setIfMatch(
+      String key,
+      @Nullable String ifMatchEtag,
+      Class<? extends T> clazz,
+      @Nullable T defaultVal,
+      UnaryOperator<T> updateOperator,
+      AuditInfo auditInfo
+  )
+  {
+    if (ifMatchEtag != null && !configManager.isCompareAndSwapEnabled()) {
+      return SetResult.preconditionFailed(
+          new IllegalStateException(
+              "If-Match requires druid.manager.config.enableCompareAndSwap to be enabled for key[" + key + "]"
+          )
+      );
+    }
+    final byte[] currentBytes = configManager.getCurrentBytes(key);
+    if (ifMatchEtag != null && !ConfigEtag.matches(ifMatchEtag, currentBytes)) {
+      return SetResult.preconditionFailed(
+          new IllegalStateException("If-Match precondition failed for key[" + key + "]")
+      );
+    }
+    final ConfigSerde<T> configSerde = create(clazz, defaultVal);
+    final T currentValue = configSerde.deserialize(currentBytes);
+    final T newValue = updateOperator.apply(currentValue);
+    if (newValue == null) {
+      return SetResult.failure(new IllegalArgumentException("input obj is null"));
+    }
+    if (ifMatchEtag == null) {
+      return set(key, newValue, auditInfo);
+    }
+    final SetResult result = set(key, currentBytes, newValue, auditInfo);
+    if (!result.isOk() && result.isRetryable()) {
+      return SetResult.preconditionFailed(
+          new IllegalStateException("If-Match precondition failed (concurrent update) for key[" + key + "]")
+      );
+    }
+    return result;
   }
 
   @VisibleForTesting
