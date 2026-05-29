@@ -21,7 +21,6 @@ package org.apache.druid.client;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.primitives.Bytes;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.CloneQueryMode;
@@ -29,6 +28,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.NoopDataSource;
 import org.apache.druid.timeline.DataSegment;
@@ -43,6 +43,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.Set;
 
 import static org.easymock.EasyMock.expect;
@@ -63,7 +65,12 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
 
   private static final byte[] QUERY_CACHE_KEY = new byte[]{1, 2, 3};
   private static final byte[] JOIN_KEY = new byte[]{4, 5};
-  private static final byte[] FULL_QUERY_CACHE_KEY = new byte[]{DataSource.NOOP_CACHE_ID, 1, 2, 3};
+  private static final byte[] NOOP_DATA_SOURCE_CACHE_KEY = new byte[]{DataSource.NOOP_CACHE_ID};
+  private static final byte[] FULL_QUERY_CACHE_KEY = computeFullQueryCacheKey(
+      NOOP_DATA_SOURCE_CACHE_KEY,
+      QUERY_CACHE_KEY,
+      CloneQueryMode.EXCLUDECLONES
+  );
 
   @Before
   public void setup()
@@ -239,7 +246,49 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
     replayAll();
     CachingClusteredClient.CacheKeyManager<Object> keyManager = makeKeyManager();
     byte[] cacheKey = keyManager.computeSegmentLevelQueryCacheKey();
-    Assert.assertArrayEquals(Bytes.concat(JOIN_KEY, QUERY_CACHE_KEY), cacheKey);
+    Assert.assertArrayEquals(
+        computeFullQueryCacheKey(JOIN_KEY, QUERY_CACHE_KEY, CloneQueryMode.EXCLUDECLONES),
+        cacheKey
+    );
+  }
+
+  @Test
+  public void testSegmentQueryCacheKey_includesCloneQueryMode()
+  {
+    reset(query);
+
+    expect(query.context()).andReturn(
+        QueryContext.of(
+            ImmutableMap.of(
+                QueryContexts.BY_SEGMENT_KEY,
+                false,
+                QueryContexts.CLONE_QUERY_MODE,
+                CloneQueryMode.EXCLUDECLONES.toString()
+            )
+        )
+    ).times(2);
+    expect(query.getDataSource()).andReturn(new NoopDataSource());
+    expect(query.context()).andReturn(
+        QueryContext.of(
+            ImmutableMap.of(
+                QueryContexts.BY_SEGMENT_KEY,
+                false,
+                QueryContexts.CLONE_QUERY_MODE,
+                CloneQueryMode.EXCLUDESOURCE.toString()
+            )
+        )
+    ).times(2);
+    expect(query.getDataSource()).andReturn(new NoopDataSource());
+
+    replayAll();
+    final byte[] excludeClonesCacheKey = makeKeyManager().computeSegmentLevelQueryCacheKey();
+    final byte[] excludeSourceCacheKey = makeKeyManager().computeSegmentLevelQueryCacheKey();
+
+    Assert.assertFalse(Arrays.equals(excludeClonesCacheKey, excludeSourceCacheKey));
+    Assert.assertArrayEquals(
+        computeFullQueryCacheKey(NOOP_DATA_SOURCE_CACHE_KEY, QUERY_CACHE_KEY, CloneQueryMode.EXCLUDESOURCE),
+        excludeSourceCacheKey
+    );
   }
 
   @Test
@@ -271,6 +320,21 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         strategy,
         true,
         true
+    );
+  }
+
+  private static byte[] computeFullQueryCacheKey(
+      byte[] dataSourceCacheKey,
+      byte[] queryCacheKey,
+      CloneQueryMode cloneQueryMode
+  )
+  {
+    return Objects.requireNonNull(
+        new CacheKeyBuilder(CachingClusteredClient.CacheKeyManager.CACHE_KEY_PREFIX_ID)
+            .appendByteArray(dataSourceCacheKey)
+            .appendByteArray(queryCacheKey)
+            .appendString(cloneQueryMode.toString())
+            .build()
     );
   }
 

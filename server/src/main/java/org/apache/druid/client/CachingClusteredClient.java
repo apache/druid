@@ -32,7 +32,6 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
-import com.google.common.primitives.Bytes;
 import com.google.inject.Inject;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -71,6 +70,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.planning.ExecutionVertex;
@@ -783,6 +783,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
   @VisibleForTesting
   static class CacheKeyManager<T>
   {
+    static final byte CACHE_KEY_PREFIX_ID = (byte) 0xFF;
+
     private final Query<T> query;
     private final CacheStrategy<T, Object, Query<T>> strategy;
     private final boolean isSegmentLevelCachingEnable;
@@ -853,20 +855,26 @@ public class CachingClusteredClient implements QuerySegmentWalker
     }
 
     /**
-     * Adds the cache key prefix for join data sources. Return null if its a join but caching is not supported
+     * Adds the cache key prefix for join data sources and clone query mode. Return null if it's a join but caching is
+     * not supported.
      */
     @Nullable
     private byte[] computeQueryCacheKeyWithJoin()
     {
       Preconditions.checkNotNull(strategy, "strategy cannot be null");
-      byte[] dataSourceCacheKey = query.getDataSource().getCacheKey();
+      final byte[] dataSourceCacheKey = query.getDataSource().getCacheKey();
       if (null == dataSourceCacheKey) {
         return null;
-      } else if (dataSourceCacheKey.length > 0) {
-        return Bytes.concat(dataSourceCacheKey, strategy.computeCacheKey(query));
-      } else {
-        return strategy.computeCacheKey(query);
       }
+
+      return Preconditions.checkNotNull(
+          new CacheKeyBuilder(CACHE_KEY_PREFIX_ID)
+              .appendByteArray(dataSourceCacheKey)
+              .appendByteArray(strategy.computeCacheKey(query))
+              .appendString(query.context().getCloneQueryMode().toString())
+              .build(),
+          "query cache key"
+      );
     }
   }
 
