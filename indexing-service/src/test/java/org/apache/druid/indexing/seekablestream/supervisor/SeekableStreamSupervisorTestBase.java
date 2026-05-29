@@ -436,6 +436,16 @@ public abstract class SeekableStreamSupervisorTestBase
     {
       return null;
     }
+
+    @Override
+    public SeekableStreamSupervisorSpec createBackfillSpec(
+        String backfillId,
+        BoundedStreamConfig boundedStreamConfig,
+        @Nullable Integer taskCount
+    )
+    {
+      return null;
+    }
   }
 
   protected static SeekableStreamSupervisorTuningConfig getTuningConfig()

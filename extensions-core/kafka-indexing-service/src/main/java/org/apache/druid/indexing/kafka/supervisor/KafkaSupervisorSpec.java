@@ -36,6 +36,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -161,6 +162,59 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
         getIoConfig(),
         getContext(),
         suspend,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        (KafkaIndexTaskClientFactory) indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig
+    );
+  }
+
+  @Override
+  public KafkaSupervisorSpec createBackfillSpec(
+      String backfillId,
+      BoundedStreamConfig boundedStreamConfig,
+      @Nullable Integer taskCount
+  )
+  {
+    KafkaSupervisorIOConfig ioConfig = getIoConfig();
+    KafkaSupervisorIOConfig backfillIoConfig = new KafkaSupervisorIOConfig(
+        ioConfig.getTopic(),
+        ioConfig.getTopicPattern(),
+        ioConfig.getInputFormat(),
+        ioConfig.getReplicas(),
+        taskCount != null ? taskCount : ioConfig.getTaskCount(),
+        ioConfig.getTaskDuration().toPeriod(),
+        ioConfig.getConsumerProperties(),
+        ioConfig.getAutoScalerConfig(),
+        ioConfig.getLagAggregator(),
+        ioConfig.getPollTimeout(),
+        ioConfig.getStartDelay().toPeriod(),
+        ioConfig.getPeriod().toPeriod(),
+        ioConfig.isUseEarliestSequenceNumber(),
+        ioConfig.getCompletionTimeout().toPeriod(),
+        ioConfig.getLateMessageRejectionPeriod().isPresent() ? ioConfig.getLateMessageRejectionPeriod().get().toPeriod() : null,
+        ioConfig.getEarlyMessageRejectionPeriod().isPresent() ? ioConfig.getEarlyMessageRejectionPeriod().get().toPeriod() : null,
+        ioConfig.getLateMessageRejectionStartDateTime().isPresent() ? ioConfig.getLateMessageRejectionStartDateTime().get() : null,
+        ioConfig.getConfigOverrides(),
+        ioConfig.getIdleConfig(),
+        ioConfig.getStopTaskCount(),
+        ioConfig.isEmitTimeLagMetrics(),
+        ioConfig.getServerPriorityToReplicas(),
+        boundedStreamConfig
+    );
+    return new KafkaSupervisorSpec(
+        backfillId,
+        null,
+        getDataSchema(),
+        getTuningConfig(),
+        backfillIoConfig,
+        getContext(),
+        isSuspended(),
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,

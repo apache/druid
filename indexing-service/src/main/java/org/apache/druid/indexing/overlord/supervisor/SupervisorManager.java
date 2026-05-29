@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -424,11 +423,11 @@ public class SupervisorManager implements SupervisorStatsProvider
       Map<String, Object> normalizedStartOffsets = jsonMapper.readValue(jsonMapper.writeValueAsString(startOffsets), Map.class);
       Map<String, Object> normalizedEndOffsets = jsonMapper.readValue(jsonMapper.writeValueAsString(endOffsets), Map.class);
       BoundedStreamConfig boundedStreamConfig = new BoundedStreamConfig(normalizedStartOffsets, normalizedEndOffsets);
-      SupervisorSpec backfillSpec = createBackfillSpec(streamSpec, backfillSupervisorId, boundedStreamConfig, backfillTaskCount);
+      SupervisorSpec backfillSpec = streamSpec.createBackfillSpec(backfillSupervisorId, boundedStreamConfig, backfillTaskCount);
       createOrUpdateAndStartSupervisor(backfillSpec);
     }
     catch (JsonProcessingException e) {
-      throw new ISE(e, "Failed to create backfill supervisor spec for supervisor[%s]", id);
+      throw new ISE(e, "Failed to serialize offsets for backfill supervisor[%s]", backfillSupervisorId);
     }
 
     log.info(
@@ -478,23 +477,6 @@ public class SupervisorManager implements SupervisorStatsProvider
     if (streamSupervisor.getState() != SupervisorStateManager.BasicState.RUNNING) {
       throw new IAE("Supervisor[%s] must be in a RUNNING state to perform a reset and backfill", id);
     }
-  }
-
-  SupervisorSpec createBackfillSpec(
-      SeekableStreamSupervisorSpec sourceSpec,
-      String backfillSupervisorId,
-      BoundedStreamConfig boundedStreamConfig,
-      @Nullable Integer backfillTaskCount
-  ) throws JsonProcessingException
-  {
-    ObjectNode specNode = jsonMapper.valueToTree(sourceSpec);
-    specNode.put("id", backfillSupervisorId);
-    ObjectNode ioConfigNode = (ObjectNode) specNode.path("spec").path("ioConfig");
-    ioConfigNode.set("boundedStreamConfig", jsonMapper.valueToTree(boundedStreamConfig));
-    if (backfillTaskCount != null) {
-      ioConfigNode.put("taskCount", backfillTaskCount);
-    }
-    return jsonMapper.treeToValue(specNode, SupervisorSpec.class);
   }
 
   public boolean checkPointDataSourceMetadata(

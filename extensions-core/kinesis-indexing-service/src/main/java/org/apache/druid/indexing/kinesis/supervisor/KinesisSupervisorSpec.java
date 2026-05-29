@@ -35,6 +35,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
@@ -181,6 +182,59 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
         getIoConfig(),
         getContext(),
         suspend,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        (KinesisIndexTaskClientFactory) indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        awsCredentialsConfig,
+        supervisorStateManagerConfig
+    );
+  }
+
+  @Override
+  public KinesisSupervisorSpec createBackfillSpec(
+      String backfillId,
+      BoundedStreamConfig boundedStreamConfig,
+      @Nullable Integer taskCount
+  )
+  {
+    KinesisSupervisorIOConfig ioConfig = getIoConfig();
+    KinesisSupervisorIOConfig backfillIoConfig = new KinesisSupervisorIOConfig(
+        ioConfig.getStream(),
+        ioConfig.getInputFormat(),
+        ioConfig.getEndpoint(),
+        null,
+        ioConfig.getReplicas(),
+        taskCount != null ? taskCount : ioConfig.getTaskCount(),
+        ioConfig.getTaskDuration().toPeriod(),
+        ioConfig.getStartDelay().toPeriod(),
+        ioConfig.getPeriod().toPeriod(),
+        ioConfig.isUseEarliestSequenceNumber(),
+        ioConfig.getCompletionTimeout().toPeriod(),
+        ioConfig.getLateMessageRejectionPeriod().isPresent() ? ioConfig.getLateMessageRejectionPeriod().get().toPeriod() : null,
+        ioConfig.getEarlyMessageRejectionPeriod().isPresent() ? ioConfig.getEarlyMessageRejectionPeriod().get().toPeriod() : null,
+        ioConfig.getLateMessageRejectionStartDateTime().isPresent() ? ioConfig.getLateMessageRejectionStartDateTime().get() : null,
+        ioConfig.getRecordsPerFetch(),
+        ioConfig.getFetchDelayMillis(),
+        ioConfig.getAwsAssumedRoleArn(),
+        ioConfig.getAwsExternalId(),
+        ioConfig.getAutoScalerConfig(),
+        ioConfig.isDeaggregate(),
+        ioConfig.getServerPriorityToReplicas(),
+        boundedStreamConfig
+    );
+    return new KinesisSupervisorSpec(
+        backfillId,
+        null,
+        getDataSchema(),
+        getTuningConfig(),
+        backfillIoConfig,
+        getContext(),
+        isSuspended(),
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,

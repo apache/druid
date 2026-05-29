@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -70,6 +69,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Collections;
@@ -1231,17 +1231,8 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void testCreateBackfillSpec() throws Exception
+  public void testCreateBackfillSpec()
   {
-    final ObjectMapper localMapper = new DefaultObjectMapper();
-    localMapper.registerSubtypes(
-        new NamedType(TestBackfillSupervisorSpec.class, "testBackfill"),
-        new NamedType(TestBackfillSupervisorSpec.IngestionSpec.class, "testBackfillIngestionSpec"),
-        new NamedType(TestBackfillSupervisorSpec.IOConfig.class, "testBackfillIOConfig")
-    );
-
-    final SupervisorManager localManager = new SupervisorManager(localMapper, metadataSupervisorManager);
-
     final TestBackfillSupervisorSpec.IOConfig ioConfig = new TestBackfillSupervisorSpec.IOConfig("test-stream", null, null);
     final TestBackfillSupervisorSpec.IngestionSpec ingestionSpec = new TestBackfillSupervisorSpec.IngestionSpec(ioConfig);
     final SeekableStreamSupervisorSpec sourceSpec = new TestBackfillSupervisorSpec("original-id", ingestionSpec);
@@ -1252,12 +1243,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     );
 
     // Without overriding taskCount
-    final SupervisorSpec backfillSpec = localManager.createBackfillSpec(
-        sourceSpec,
-        "backfill-id",
-        boundedStreamConfig,
-        null
-    );
+    final SupervisorSpec backfillSpec = sourceSpec.createBackfillSpec("backfill-id", boundedStreamConfig, null);
     Assert.assertEquals("backfill-id", backfillSpec.getId());
     final TestBackfillSupervisorSpec backfillCast = (TestBackfillSupervisorSpec) backfillSpec;
     final BoundedStreamConfig actualConfig = backfillCast.getIoConfig().getBoundedStreamConfig();
@@ -1267,12 +1253,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     Assert.assertEquals(1, backfillCast.getIoConfig().getTaskCount());
 
     // With overriding taskCount
-    final SupervisorSpec backfillSpecWithCount = localManager.createBackfillSpec(
-        sourceSpec,
-        "backfill-id-2",
-        boundedStreamConfig,
-        5
-    );
+    final SupervisorSpec backfillSpecWithCount = sourceSpec.createBackfillSpec("backfill-id-2", boundedStreamConfig, 5);
     Assert.assertEquals("backfill-id-2", backfillSpecWithCount.getId());
     final TestBackfillSupervisorSpec backfillWithCount = (TestBackfillSupervisorSpec) backfillSpecWithCount;
     Assert.assertEquals(5, backfillWithCount.getIoConfig().getTaskCount());
@@ -1390,6 +1371,19 @@ public class SupervisorManagerTest extends EasyMockSupport
     protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend)
     {
       return this;
+    }
+
+    @Override
+    public SeekableStreamSupervisorSpec createBackfillSpec(
+        String backfillId,
+        BoundedStreamConfig boundedStreamConfig,
+        @Nullable Integer taskCount
+    )
+    {
+      return new TestBackfillSupervisorSpec(
+          backfillId,
+          new IngestionSpec(new IOConfig(getIoConfig().getStream(), taskCount, boundedStreamConfig))
+      );
     }
 
     @Override

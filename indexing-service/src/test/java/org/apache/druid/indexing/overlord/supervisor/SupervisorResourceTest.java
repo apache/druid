@@ -34,6 +34,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIngestionSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
@@ -1758,6 +1759,16 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     @Override
     protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend)
+    {
+      return null;
+    }
+
+    @Override
+    public SeekableStreamSupervisorSpec createBackfillSpec(
+        String backfillId,
+        BoundedStreamConfig boundedStreamConfig,
+        @Nullable Integer taskCount
+    )
     {
       return null;
     }
