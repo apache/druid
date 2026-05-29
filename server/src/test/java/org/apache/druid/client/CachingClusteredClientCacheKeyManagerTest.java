@@ -333,6 +333,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         new CacheKeyBuilder(CachingClusteredClient.CacheKeyManager.CACHE_KEY_PREFIX_ID)
             .appendByteArray(dataSourceCacheKey)
             .appendByteArray(queryCacheKey)
+            .appendString(QueryContexts.CLONE_QUERY_MODE)
             .appendString(cloneQueryMode.toString())
             .build()
     );

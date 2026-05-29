@@ -784,6 +784,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
   static class CacheKeyManager<T>
   {
     static final byte CACHE_KEY_PREFIX_ID = (byte) 0xFF;
+    private static final List<String> CACHE_KEY_CONTEXT_KEYS = Collections.singletonList(
+        QueryContexts.CLONE_QUERY_MODE
+    );
 
     private final Query<T> query;
     private final CacheStrategy<T, Object, Query<T>> strategy;
@@ -867,14 +870,32 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return null;
       }
 
-      return Preconditions.checkNotNull(
-          new CacheKeyBuilder(CACHE_KEY_PREFIX_ID)
-              .appendByteArray(dataSourceCacheKey)
-              .appendByteArray(strategy.computeCacheKey(query))
-              .appendString(query.context().getCloneQueryMode().toString())
-              .build(),
-          "query cache key"
-      );
+      final CacheKeyBuilder cacheKeyBuilder = new CacheKeyBuilder(CACHE_KEY_PREFIX_ID)
+          .appendByteArray(dataSourceCacheKey)
+          .appendByteArray(strategy.computeCacheKey(query));
+      appendCacheKeyContext(cacheKeyBuilder);
+
+      return Preconditions.checkNotNull(cacheKeyBuilder.build(), "query cache key");
+    }
+
+    private void appendCacheKeyContext(final CacheKeyBuilder cacheKeyBuilder)
+    {
+      for (String contextKey : CACHE_KEY_CONTEXT_KEYS) {
+        cacheKeyBuilder
+            .appendString(contextKey)
+            .appendString(getCacheKeyContextValue(contextKey));
+      }
+    }
+
+    @Nullable
+    private String getCacheKeyContextValue(final String contextKey)
+    {
+      if (QueryContexts.CLONE_QUERY_MODE.equals(contextKey)) {
+        return query.context().getCloneQueryMode().toString();
+      }
+
+      final Object value = query.context().get(contextKey);
+      return value == null ? null : String.valueOf(value);
     }
   }
 
