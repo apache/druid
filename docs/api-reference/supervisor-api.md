@@ -3539,7 +3539,7 @@ when the supervisor's tasks restart, they resume reading from `{"0": 100, "1": 1
   ```
 </details>
 
-### Reset offsets and start a backfill supervisor
+### Reset offsets to latest and start a backfill supervisor
 
 This endpoint is supported for Apache Kafka and RabbitMQ Stream supervisors. Amazon Kinesis is not supported yet.
 
@@ -3570,7 +3570,7 @@ The backfill supervisor has the same configuration as the source supervisor exce
 
 | Parameter | Type | Description | Default |
 |---------|---------|---------|---------|
-| `backfillTaskCount` | Integer | Number of parallel tasks for the backfill supervisor. If not specified, inherits `taskCount` from the source supervisor. | None |
+| `backfillTaskCount` | Integer | Number of parallel tasks for the backfill supervisor. | Defaults to `taskCount` from the source supervisor if not specified |
 
 #### Responses
 

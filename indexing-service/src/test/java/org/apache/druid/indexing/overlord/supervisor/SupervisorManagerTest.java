@@ -1080,7 +1080,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void testResetSupervisorAndBackfill() throws Exception
+  public void testResetToLatestAndBackfill() throws Exception
   {
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
     replayAll();
@@ -1125,7 +1125,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     supervisorsMap.put("id1", Pair.of(nonStreamSupervisor, streamSpec));
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> manager.resetSupervisorAndBackfill("id1", null)
+        () -> manager.resetToLatestAndBackfill("id1", null)
     );
 
     // useEarliestSequenceNumber=true → IAE
@@ -1135,7 +1135,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> manager.resetSupervisorAndBackfill("id1", null)
+        () -> manager.resetToLatestAndBackfill("id1", null)
     );
     EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
 
@@ -1146,7 +1146,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> manager.resetSupervisorAndBackfill("id1", null)
+        () -> manager.resetToLatestAndBackfill("id1", null)
     );
     EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
 
@@ -1157,7 +1157,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> manager.resetSupervisorAndBackfill("id1", null)
+        () -> manager.resetToLatestAndBackfill("id1", null)
     );
     EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
 
@@ -1169,7 +1169,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> manager.resetSupervisorAndBackfill("id1", null)
+        () -> manager.resetToLatestAndBackfill("id1", null)
     );
     EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
 
@@ -1181,7 +1181,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> manager.resetSupervisorAndBackfill("id1", null)
+        () -> manager.resetToLatestAndBackfill("id1", null)
     );
     EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
 
@@ -1193,7 +1193,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> manager.resetSupervisorAndBackfill("id1", null)
+        () -> manager.resetToLatestAndBackfill("id1", null)
     );
     EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
 
@@ -1208,7 +1208,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
     Assert.assertThrows(
         IllegalStateException.class,
-        () -> manager.resetSupervisorAndBackfill("id1", null)
+        () -> manager.resetToLatestAndBackfill("id1", null)
     );
     EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
 
@@ -1224,7 +1224,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
     Assert.assertThrows(
         IllegalStateException.class,
-        () -> manager.resetSupervisorAndBackfill("id1", null)
+        () -> manager.resetToLatestAndBackfill("id1", null)
     );
 
     verifyAll();

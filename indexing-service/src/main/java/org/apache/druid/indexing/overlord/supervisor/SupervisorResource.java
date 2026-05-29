@@ -649,10 +649,10 @@ public class SupervisorResource
       @QueryParam("backfillTaskCount") @Nullable final Integer backfillTaskCount
   )
   {
-    return handleResetAndBackfill(id, backfillTaskCount);
+    return handleResetToLatestAndBackfill(id, backfillTaskCount);
   }
 
-  private Response handleResetAndBackfill(final String id, @Nullable final Integer backfillTaskCount)
+  private Response handleResetToLatestAndBackfill(final String id, @Nullable final Integer backfillTaskCount)
   {
     if (backfillTaskCount != null && backfillTaskCount < 1) {
       return Response.status(Response.Status.BAD_REQUEST)
@@ -667,7 +667,7 @@ public class SupervisorResource
                            .build();
           }
           try {
-            Map<String, Object> result = manager.resetSupervisorAndBackfill(id, backfillTaskCount);
+            Map<String, Object> result = manager.resetToLatestAndBackfill(id, backfillTaskCount);
             return Response.ok(result).build();
           }
           catch (IllegalArgumentException e) {

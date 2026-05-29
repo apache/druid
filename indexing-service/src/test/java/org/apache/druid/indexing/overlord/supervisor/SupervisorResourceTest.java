@@ -1386,7 +1386,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     // 200 - success
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
     EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(ImmutableSet.of("my-id"));
-    EasyMock.expect(supervisorManager.resetSupervisorAndBackfill("my-id", null))
+    EasyMock.expect(supervisorManager.resetToLatestAndBackfill("my-id", null))
             .andReturn(ImmutableMap.of("id", "my-id", "backfillSupervisorId", "my-id_backfill_abcdefgh"));
     replayAll();
 
@@ -1412,7 +1412,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     // 400 - IAE (e.g. supervisor not running)
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
     EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(ImmutableSet.of("my-id"));
-    EasyMock.expect(supervisorManager.resetSupervisorAndBackfill("my-id", null))
+    EasyMock.expect(supervisorManager.resetToLatestAndBackfill("my-id", null))
             .andThrow(new IllegalArgumentException("Supervisor[my-id] must be in a RUNNING state"));
     replayAll();
 
@@ -1428,7 +1428,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     // 500 - ISE (e.g. failed to retrieve offsets)
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
     EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(ImmutableSet.of("my-id"));
-    EasyMock.expect(supervisorManager.resetSupervisorAndBackfill("my-id", null))
+    EasyMock.expect(supervisorManager.resetToLatestAndBackfill("my-id", null))
             .andThrow(new IllegalStateException("Failed to get latest offsets from stream"));
     replayAll();
 

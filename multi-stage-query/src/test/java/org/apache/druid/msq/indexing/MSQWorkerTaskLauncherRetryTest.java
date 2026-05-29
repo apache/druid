@@ -323,7 +323,7 @@ public class MSQWorkerTaskLauncherRetryTest
     }
 
     @Override
-    public ListenableFuture<Map<String, Object>> resetSupervisorAndBackfill(String supervisorId)
+    public ListenableFuture<Map<String, Object>> resetToLatestAndBackfill(String supervisorId)
     {
       throw new UOE("Not implemented");
     }

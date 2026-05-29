@@ -204,7 +204,7 @@ public interface OverlordClient
    *
    * @return Map containing "id" and "backfillSupervisorId"
    */
-  ListenableFuture<Map<String, Object>> resetSupervisorAndBackfill(String supervisorId);
+  ListenableFuture<Map<String, Object>> resetToLatestAndBackfill(String supervisorId);
 
   /**
    * Returns all current supervisor statuses.

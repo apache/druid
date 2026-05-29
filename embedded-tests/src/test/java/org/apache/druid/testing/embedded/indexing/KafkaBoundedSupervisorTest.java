@@ -293,7 +293,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
   }
 
   @Test
-  public void test_resetSupervisorAndBackfill()
+  public void test_resetToLatestAndBackfill()
   {
     final String topic = IdUtils.getRandomId();
     kafkaServer.createTopicWithPartitions(topic, 2);
@@ -317,7 +317,8 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     // Reset the main supervisor and spin up a backfill supervisor.
     // Since all records are already ingested before the call, the backfill
     // supervisor will complete immediately without ingesting anything.
-    final Map<String, Object> result = cluster.callApi().resetSupervisorAndBackfill(supervisor.getId());
+    final Map<String, Object> result = cluster.callApi().resetToLatestAndBackfill(supervisor.getId());
+    Assertions.assertEquals(supervisor.getId(), result.get("id"));
     final String backfillSupervisorId = (String) result.get("backfillSupervisorId");
 
     // Wait for the backfill to finish

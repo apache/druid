@@ -387,7 +387,7 @@ public class SupervisorManager implements SupervisorStatsProvider
    * @throws IllegalStateException    if the latest or checkpointed offsets cannot be retrieved,
    *                                  or if the backfill spec cannot be serialized
    */
-  public Map<String, Object> resetSupervisorAndBackfill(String id, @Nullable Integer backfillTaskCount)
+  public Map<String, Object> resetToLatestAndBackfill(String id, @Nullable Integer backfillTaskCount)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(id, "id");

@@ -266,7 +266,7 @@ public class OverlordClientImpl implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<Map<String, Object>> resetSupervisorAndBackfill(String supervisorId)
+  public ListenableFuture<Map<String, Object>> resetToLatestAndBackfill(String supervisorId)
   {
     final String path = StringUtils.format(
         "/druid/indexer/v1/supervisor/%s/resetToLatestAndBackfill",

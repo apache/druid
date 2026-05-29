@@ -435,9 +435,9 @@ public class EmbeddedClusterApis implements EmbeddedResource
    *
    * @return Map containing "id" and "backfillSupervisorId"
    */
-  public Map<String, Object> resetSupervisorAndBackfill(String supervisorId)
+  public Map<String, Object> resetToLatestAndBackfill(String supervisorId)
   {
-    return onLeaderOverlord(o -> o.resetSupervisorAndBackfill(supervisorId));
+    return onLeaderOverlord(o -> o.resetToLatestAndBackfill(supervisorId));
   }
 
   /**
