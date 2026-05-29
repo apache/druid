@@ -392,14 +392,18 @@ public class SupervisorManager implements SupervisorStatsProvider
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(id, "id");
 
-    Pair<Supervisor, SupervisorSpec> supervisorPair = supervisors.get(id);
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
 
-    if (!(supervisorPair.lhs instanceof SeekableStreamSupervisor)) {
+    if (supervisor == null) {
+      throw new IAE("Supervisor[%s] does not exist", id);
+    }
+
+    if (!(supervisor.lhs instanceof SeekableStreamSupervisor)) {
       throw new IAE("Supervisor[%s] is not a streaming supervisor", id);
     }
 
-    SeekableStreamSupervisor streamSupervisor = (SeekableStreamSupervisor) supervisorPair.lhs;
-    SeekableStreamSupervisorSpec streamSpec = (SeekableStreamSupervisorSpec) supervisorPair.rhs;
+    SeekableStreamSupervisor streamSupervisor = (SeekableStreamSupervisor) supervisor.lhs;
+    SeekableStreamSupervisorSpec streamSpec = (SeekableStreamSupervisorSpec) supervisor.rhs;
 
     validateResetAndBackfill(id, streamSupervisor, streamSpec);
 
