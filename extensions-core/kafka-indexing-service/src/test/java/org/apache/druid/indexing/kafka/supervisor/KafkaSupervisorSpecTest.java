@@ -591,10 +591,10 @@ public class KafkaSupervisorSpecTest
     KafkaSupervisorSpec backfill = (KafkaSupervisorSpec) spec.createBackfillSpec("backfill-id", boundedStreamConfig, 2);
 
     Assert.assertEquals("backfill-id", backfill.getId());
-    Assert.assertEquals("testDs", backfill.getDataSchema().getDataSource());
-    Assert.assertEquals("metrics", backfill.getIoConfig().getTopic());
-    Assert.assertEquals(2, backfill.getIoConfig().getTaskCount());
-    Assert.assertEquals(boundedStreamConfig, backfill.getIoConfig().getBoundedStreamConfig());
+    Assert.assertEquals("testDs", backfill.getSpec().getDataSchema().getDataSource());
+    Assert.assertEquals("metrics", backfill.getSpec().getIOConfig().getTopic());
+    Assert.assertEquals(2, backfill.getSpec().getIOConfig().getTaskCount());
+    Assert.assertEquals(boundedStreamConfig, backfill.getSpec().getIOConfig().getBoundedStreamConfig());
   }
 
   private KafkaSupervisorSpec getSpec(String topic, String topicPattern)

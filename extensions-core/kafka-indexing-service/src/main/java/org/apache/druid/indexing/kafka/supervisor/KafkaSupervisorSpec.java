@@ -181,7 +181,7 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
       @Nullable Integer taskCount
   )
   {
-    KafkaSupervisorIOConfig ioConfig = getIoConfig();
+    KafkaSupervisorIOConfig ioConfig = getSpec().getIOConfig();
     KafkaSupervisorIOConfig backfillIoConfig = new KafkaSupervisorIOConfig(
         ioConfig.getTopic(),
         ioConfig.getTopicPattern(),
@@ -210,8 +210,8 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
     return new KafkaSupervisorSpec(
         backfillId,
         null,
-        getDataSchema(),
-        getTuningConfig(),
+        getSpec().getDataSchema(),
+        getSpec().getTuningConfig(),
         backfillIoConfig,
         getContext(),
         isSuspended(),

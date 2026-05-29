@@ -202,7 +202,7 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
       @Nullable Integer taskCount
   )
   {
-    KinesisSupervisorIOConfig ioConfig = getIoConfig();
+    KinesisSupervisorIOConfig ioConfig = getSpec().getIOConfig();
     KinesisSupervisorIOConfig backfillIoConfig = new KinesisSupervisorIOConfig(
         ioConfig.getStream(),
         ioConfig.getInputFormat(),
@@ -230,8 +230,8 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
     return new KinesisSupervisorSpec(
         backfillId,
         null,
-        getDataSchema(),
-        getTuningConfig(),
+        getSpec().getDataSchema(),
+        getSpec().getTuningConfig(),
         backfillIoConfig,
         getContext(),
         isSuspended(),

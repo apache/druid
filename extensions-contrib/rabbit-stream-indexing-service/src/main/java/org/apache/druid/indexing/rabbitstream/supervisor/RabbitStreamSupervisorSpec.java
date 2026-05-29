@@ -163,7 +163,7 @@ public class RabbitStreamSupervisorSpec extends SeekableStreamSupervisorSpec
       @Nullable Integer taskCount
   )
   {
-    RabbitStreamSupervisorIOConfig ioConfig = getIoConfig();
+    RabbitStreamSupervisorIOConfig ioConfig = getSpec().getIOConfig();
     RabbitStreamSupervisorIOConfig backfillIoConfig = new RabbitStreamSupervisorIOConfig(
         ioConfig.getStream(),
         ioConfig.getUri(),
@@ -188,8 +188,8 @@ public class RabbitStreamSupervisorSpec extends SeekableStreamSupervisorSpec
     return new RabbitStreamSupervisorSpec(
         backfillId,
         null,
-        getDataSchema(),
-        getTuningConfig(),
+        getSpec().getDataSchema(),
+        getSpec().getTuningConfig(),
         backfillIoConfig,
         getContext(),
         isSuspended(),
