@@ -109,15 +109,29 @@ public class CoordinatorDutyGroup
 
     markRunStarted();
     final CoordinatorRunStats stats = params.getCoordinatorStats();
+    final StringBuilder cycleSummary = new StringBuilder();
+    long cycleTotalMs = 0;
     for (CoordinatorDuty duty : duties) {
       if (coordinator.isLeader()) {
         final Stopwatch dutyRunTime = Stopwatch.createStarted();
         params = duty.run(params);
         dutyRunTime.stop();
+        final long elapsed = dutyRunTime.millisElapsed();
+        cycleTotalMs += elapsed;
 
         final String dutyName = duty.getClass().getName();
+        final String shortName = dutyName.substring(dutyName.lastIndexOf('.') + 1).replace('$', '.');
+        if (cycleSummary.length() > 0) {
+          cycleSummary.append(", ");
+        }
+        cycleSummary.append(shortName).append('=').append(elapsed).append("ms");
+
         if (params == null) {
           log.warn("Stopping run for group[%s] on request of duty[%s].", name, dutyName);
+          log.info(
+              "DutyGroup[%s] cycle (aborted at duty[%s]) timings: total=%,dms; %s",
+              name, dutyName, cycleTotalMs, cycleSummary
+          );
           return;
         } else {
           stats.add(
@@ -128,6 +142,11 @@ public class CoordinatorDutyGroup
         }
       }
     }
+
+    log.info(
+        "DutyGroup[%s] cycle timings: total=%,dms; %s",
+        name, cycleTotalMs, cycleSummary
+    );
 
     // Emit stats collected from all duties
     if (stats.rowCount() > 0) {

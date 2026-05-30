@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.loading;
 
-import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.server.coordinator.DruidCluster;
@@ -64,6 +63,10 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private final RoundRobinServerSelector serverSelector;
   private final BalancerStrategy strategy;
 
+  // Fixed for the lifetime of this assigner (a new instance is created each coordinator run),
+  // so it is computed once here rather than on every replicateSegment/replicateSegmentPartially call.
+  private final Set<String> allTiersInCluster;
+
   private final boolean useRoundRobinAssignment;
   private final Map<String, Set<String>> historicalTierAliases;
   private final Map<String, String> tierToAliasName;
@@ -86,6 +89,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     this.cluster = cluster;
     this.strategy = strategy;
     this.loadQueueManager = loadQueueManager;
+    final Set<String> allTiersInCluster = new HashSet<>();
+    cluster.getTierNames().forEach(allTiersInCluster::add);
+    this.allTiersInCluster = allTiersInCluster;
     this.replicaCountMap = SegmentReplicaCountMap.create(cluster);
     this.replicationThrottler = createReplicationThrottler(cluster, loadingConfig);
     this.useRoundRobinAssignment = loadingConfig.isUseRoundRobinSegmentAssignment();
@@ -234,7 +240,6 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   public void replicateSegment(DataSegment segment, Map<String, Integer> tierToReplicaCount)
   {
     final Map<String, Integer> effectiveTierToReplicaCount = expandWithAliases(tierToReplicaCount);
-    final Set<String> allTiersInCluster = Sets.newHashSet(cluster.getTierNames());
 
     if (effectiveTierToReplicaCount.isEmpty()) {
       // Track the counts for a segment even if it requires 0 replicas on all tiers
@@ -290,7 +295,6 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   )
   {
     final Map<String, Integer> effectiveTierToReplicaCount = expandWithAliases(tierToReplicaCount);
-    final Set<String> allTiersInCluster = Sets.newHashSet(cluster.getTierNames());
 
     if (effectiveTierToReplicaCount.isEmpty()) {
       replicaCountMap.computeIfAbsent(segment.getId(), DruidServer.DEFAULT_TIER);
