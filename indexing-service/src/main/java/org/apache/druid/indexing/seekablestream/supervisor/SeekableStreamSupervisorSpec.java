@@ -297,4 +297,10 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 
   protected abstract SeekableStreamSupervisorSpec toggleSuspend(boolean suspend);
 
+  public abstract SeekableStreamSupervisorSpec createBackfillSpec(
+      String backfillId,
+      BoundedStreamConfig boundedStreamConfig,
+      @Nullable Integer taskCount
+  );
+
 }

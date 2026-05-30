@@ -124,7 +124,7 @@ public abstract class SeekableStreamSupervisorTestBase
     }
 
     @Override
-    protected void updatePartitionLagFromStream()
+    public void updatePartitionLagFromStream()
     {
       // do nothing
     }
@@ -205,7 +205,7 @@ public abstract class SeekableStreamSupervisorTestBase
     }
 
     @Override
-    protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
+    public SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
         String stream,
         Map<String, String> map
     )
@@ -433,6 +433,16 @@ public abstract class SeekableStreamSupervisorTestBase
 
     @Override
     protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend)
+    {
+      return null;
+    }
+
+    @Override
+    public SeekableStreamSupervisorSpec createBackfillSpec(
+        String backfillId,
+        BoundedStreamConfig boundedStreamConfig,
+        @Nullable Integer taskCount
+    )
     {
       return null;
     }

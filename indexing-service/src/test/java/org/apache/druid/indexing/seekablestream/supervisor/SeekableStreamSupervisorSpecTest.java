@@ -943,6 +943,16 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
       }
 
       @Override
+      public SeekableStreamSupervisorSpec createBackfillSpec(
+          String backfillId,
+          BoundedStreamConfig boundedStreamConfig,
+          @Nullable Integer taskCount
+      )
+      {
+        return null;
+      }
+
+      @Override
       public String getType()
       {
         return null;
