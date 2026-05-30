@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -66,16 +67,28 @@ public class KillStalePendingSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    final Stopwatch totalTime = Stopwatch.createStarted();
+
     final Set<String> killDatasources = new HashSet<>(
         params.getUsedSegmentsTimelinesPerDataSource().keySet()
     );
+    final int candidates = killDatasources.size();
     killDatasources.removeAll(
         params.getCoordinatorDynamicConfig()
               .getDataSourcesToNotKillStalePendingSegmentsIn()
     );
 
+    final Stopwatch minCreatedTime0 = Stopwatch.createStarted();
     final DateTime minCreatedTime = getMinCreatedTimeToRetain();
+    minCreatedTime0.stop();
+
+    final Stopwatch killTime = Stopwatch.createStarted();
+    long totalKilled = 0;
+    int datasourcesWithKills = 0;
+    long maxCallMs = 0;
+    String slowestDs = null;
     for (String dataSource : killDatasources) {
+      final Stopwatch perCall = Stopwatch.createStarted();
       int pendingSegmentsKilled = FutureUtils.getUnchecked(
           overlordClient.killPendingSegments(
               dataSource,
@@ -83,10 +96,17 @@ public class KillStalePendingSegments implements CoordinatorDuty
           ),
           true
       );
+      final long elapsed = perCall.millisElapsed();
+      if (elapsed > maxCallMs) {
+        maxCallMs = elapsed;
+        slowestDs = dataSource;
+      }
       if (pendingSegmentsKilled > 0) {
+        datasourcesWithKills++;
+        totalKilled += pendingSegmentsKilled;
         log.info(
-            "Killed [%d] pendingSegments created before [%s] for datasource[%s].",
-            pendingSegmentsKilled, minCreatedTime, dataSource
+            "Killed [%d] pendingSegments created before [%s] for datasource[%s] in [%,d]ms.",
+            pendingSegmentsKilled, minCreatedTime, dataSource, elapsed
         );
         params.getCoordinatorStats().add(
             Stats.Kill.PENDING_SEGMENTS,
@@ -95,6 +115,17 @@ public class KillStalePendingSegments implements CoordinatorDuty
         );
       }
     }
+    killTime.stop();
+
+    log.info(
+        "KillStalePendingSegments summary: candidates[%d], kept[%d] (skipped via config), datasourcesWithKills[%d],"
+        + " totalKilled[%,d], slowestDs[%s] at [%,d]ms;"
+        + " minCreatedTimeMs[%,d], killLoopMs[%,d], totalMs[%,d].",
+        candidates, candidates - killDatasources.size(), datasourcesWithKills,
+        totalKilled, slowestDs, maxCallMs,
+        minCreatedTime0.millisElapsed(), killTime.millisElapsed(), totalTime.millisElapsed()
+    );
+
     return params;
   }
 

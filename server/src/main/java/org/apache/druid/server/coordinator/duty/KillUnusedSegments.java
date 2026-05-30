@@ -27,6 +27,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -155,21 +156,30 @@ public class KillUnusedSegments implements CoordinatorDuty
 
   private DruidCoordinatorRuntimeParams runInternal(final DruidCoordinatorRuntimeParams params)
   {
+    final Stopwatch totalTime = Stopwatch.createStarted();
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     final CoordinatorRunStats stats = params.getCoordinatorStats();
 
+    final Stopwatch slotsTime = Stopwatch.createStarted();
     final int availableKillTaskSlots = getAvailableKillTaskSlots(dynamicConfig, stats);
+    slotsTime.stop();
     if (availableKillTaskSlots <= 0) {
-      log.debug("Skipping KillUnusedSegments because there are no available kill task slots.");
+      log.info(
+          "KillUnusedSegments skipped: no available kill task slots."
+          + " slotsLookupMs[%,d], totalMs[%,d].",
+          slotsTime.millisElapsed(), totalTime.millisElapsed()
+      );
       return params;
     }
 
+    final Stopwatch dsListTime = Stopwatch.createStarted();
     final Set<String> dataSourcesToKill;
     if (CollectionUtils.isNullOrEmpty(dynamicConfig.getSpecificDataSourcesToKillUnusedSegmentsIn())) {
       dataSourcesToKill = storageCoordinator.retrieveAllDatasourceNames();
     } else {
       dataSourcesToKill = dynamicConfig.getSpecificDataSourcesToKillUnusedSegmentsIn();
     }
+    dsListTime.stop();
 
     if (datasourceCircularKillList == null ||
         !datasourceCircularKillList.equalsSet(dataSourcesToKill)) {
@@ -178,11 +188,21 @@ public class KillUnusedSegments implements CoordinatorDuty
 
     lastKillTime = DateTimes.nowUtc();
 
+    final Stopwatch killLoopTime = Stopwatch.createStarted();
     killUnusedSegments(dataSourcesToKill, availableKillTaskSlots, stats);
+    killLoopTime.stop();
 
     // any datasources that are no longer being considered for kill should have their
     // last kill interval removed from map.
     datasourceToLastKillIntervalEnd.keySet().retainAll(dataSourcesToKill);
+
+    log.info(
+        "KillUnusedSegments summary: availableSlots[%d], datasourcesToKill[%d];"
+        + " slotsLookupMs[%,d], dsListMs[%,d], killLoopMs[%,d], totalMs[%,d].",
+        availableKillTaskSlots, dataSourcesToKill.size(),
+        slotsTime.millisElapsed(), dsListTime.millisElapsed(),
+        killLoopTime.millisElapsed(), totalTime.millisElapsed()
+    );
     return params;
   }
 
@@ -204,6 +224,12 @@ public class KillUnusedSegments implements CoordinatorDuty
     final Set<String> remainingDatasourcesToKill = new HashSet<>(dataSourcesToKill);
 
     int submittedTasks = 0;
+    long findIntervalTotalMs = 0;
+    long submitTotalMs = 0;
+    long maxFindIntervalMs = 0;
+    String slowestFindDs = null;
+    int dsScanned = 0;
+    int dsWithNoInterval = 0;
     for (String dataSource : datasourceCircularKillList) {
       if (dataSource.equals(prevDatasourceKilled) && remainingDatasourcesToKill.size() > 1) {
         // Skip this dataSource if it's the same as the previous one and there are remaining datasources to kill.
@@ -213,9 +239,18 @@ public class KillUnusedSegments implements CoordinatorDuty
         remainingDatasourcesToKill.remove(dataSource);
       }
 
+      dsScanned++;
       final DateTime maxUsedStatusLastUpdatedTime = DateTimes.nowUtc().minus(bufferPeriod);
+      final Stopwatch findIntervalSw = Stopwatch.createStarted();
       final Interval intervalToKill = findIntervalForKill(dataSource, maxUsedStatusLastUpdatedTime, stats);
+      final long findMs = findIntervalSw.millisElapsed();
+      findIntervalTotalMs += findMs;
+      if (findMs > maxFindIntervalMs) {
+        maxFindIntervalMs = findMs;
+        slowestFindDs = dataSource;
+      }
       if (intervalToKill == null) {
+        dsWithNoInterval++;
         datasourceToLastKillIntervalEnd.remove(dataSource);
         // If no interval is found for this datasource, either terminate or continue based on remaining datasources to kill.
         if (remainingDatasourcesToKill.isEmpty()) {
@@ -225,6 +260,7 @@ public class KillUnusedSegments implements CoordinatorDuty
       }
 
       try {
+        final Stopwatch submitSw = Stopwatch.createStarted();
         FutureUtils.getUnchecked(
             overlordClient.runKillTask(
                 TASK_ID_PREFIX,
@@ -236,6 +272,7 @@ public class KillUnusedSegments implements CoordinatorDuty
             ),
             true
         );
+        submitTotalMs += submitSw.millisElapsed();
         ++submittedTasks;
         datasourceToLastKillIntervalEnd.put(dataSource, intervalToKill.getEnd());
 
@@ -260,6 +297,12 @@ public class KillUnusedSegments implements CoordinatorDuty
         Sets.difference(dataSourcesToKill, remainingDatasourcesToKill),
         remainingDatasourcesToKill.size(),
         remainingDatasourcesToKill
+    );
+    log.info(
+        "KillUnusedSegments killLoop: dsScanned[%d], dsWithNoInterval[%d], submitted[%d];"
+        + " findIntervalTotalMs[%,d], submitTotalMs[%,d], slowestFindIntervalDs[%s] at [%,d]ms.",
+        dsScanned, dsWithNoInterval, submittedTasks,
+        findIntervalTotalMs, submitTotalMs, slowestFindDs, maxFindIntervalMs
     );
 
     stats.add(Stats.Kill.SUBMITTED_TASKS, submittedTasks);
