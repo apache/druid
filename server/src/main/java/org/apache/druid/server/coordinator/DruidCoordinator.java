@@ -39,6 +39,7 @@ import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -782,11 +783,32 @@ public class DruidCoordinator
     @Override
     public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
     {
+      final Stopwatch totalTime = Stopwatch.createStarted();
+
+      final Stopwatch broadcastTime = Stopwatch.createStarted();
       broadcastSegments = params.getBroadcastSegments();
+      broadcastTime.stop();
+
+      final Stopwatch replStatusTime = Stopwatch.createStarted();
       segmentReplicationStatus = params.getSegmentReplicationStatus();
+      replStatusTime.stop();
+
+      final Stopwatch cacheUpdateTime = Stopwatch.createStarted();
       if (coordinatorSegmentMetadataCache != null) {
         coordinatorSegmentMetadataCache.updateSegmentReplicationStatus(segmentReplicationStatus);
       }
+      cacheUpdateTime.stop();
+
+      log.info(
+          "UpdateReplicationStatus summary: broadcastSegments[%,d], hasReplStatus[%s], hasMetaCache[%s];"
+          + " broadcastMs[%,d], replStatusMs[%,d], cacheUpdateMs[%,d], totalMs[%,d].",
+          broadcastSegments == null ? 0 : broadcastSegments.size(),
+          segmentReplicationStatus != null,
+          coordinatorSegmentMetadataCache != null,
+          broadcastTime.millisElapsed(), replStatusTime.millisElapsed(),
+          cacheUpdateTime.millisElapsed(), totalTime.millisElapsed()
+      );
+
       return params;
     }
   }
@@ -799,27 +821,66 @@ public class DruidCoordinator
     @Override
     public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
     {
+      final Stopwatch totalTime = Stopwatch.createStarted();
+
       // Collect stats for unavailable and under-replicated segments
       final CoordinatorRunStats stats = params.getCoordinatorStats();
-      getDatasourceToUnavailableSegmentCount().forEach(
-          (dataSource, numUnavailable) -> stats.add(
-              Stats.Segments.UNAVAILABLE,
-              RowKey.of(Dimension.DATASOURCE, dataSource),
-              numUnavailable
-          )
-      );
-      getTierToDatasourceToUnderReplicatedCount(false).forEach(
-          (tier, countsPerDatasource) -> countsPerDatasource.forEach(
-              (dataSource, underReplicatedCount) ->
-                  stats.addToSegmentStat(Stats.Segments.UNDER_REPLICATED, tier, dataSource, underReplicatedCount)
-          )
-      );
-      getDatasourceToDeepStorageQueryOnlySegmentCount().forEach(
-          (dataSource, numDeepStorageOnly) -> stats.add(
-              Stats.Segments.DEEP_STORAGE_ONLY,
-              RowKey.of(Dimension.DATASOURCE, dataSource),
-              numDeepStorageOnly
-          )
+
+      final Object2IntMap<String> dsToUnavailable;
+      final Map<String, Object2LongMap<String>> tierToDsToUnderRepl;
+      final Object2IntMap<String> dsToDeepStorageOnly;
+
+      if (segmentReplicationStatus == null) {
+        dsToUnavailable = Object2IntMaps.emptyMap();
+        tierToDsToUnderRepl = Collections.emptyMap();
+        dsToDeepStorageOnly = Object2IntMaps.emptyMap();
+      } else {
+        // Single fused pass replaces three independent full iterations over
+        // metadataManager.iterateAllUsedSegments(). ignoreMissingServers=true replicates
+        // the !false inversion inside computeUnderReplicated(segments, false).
+        final SegmentReplicationStatus.SegmentStatsSnapshot snapshot = segmentReplicationStatus.computeSegmentStats(
+            metadataManager.iterateAllUsedSegments(),
+            true
+        );
+        dsToUnavailable = snapshot.getDatasourceToUnavailableCount();
+        tierToDsToUnderRepl = snapshot.getTierToDatasourceToUnderReplicatedCount();
+        dsToDeepStorageOnly = snapshot.getDatasourceToDeepStorageOnlyCount();
+      }
+
+      long unavailableTotal = 0;
+      for (final Object2IntMap.Entry<String> e : dsToUnavailable.object2IntEntrySet()) {
+        unavailableTotal += e.getIntValue();
+        stats.add(Stats.Segments.UNAVAILABLE, RowKey.of(Dimension.DATASOURCE, e.getKey()), e.getIntValue());
+      }
+
+      long underReplTotal = 0;
+      int tierCount = 0;
+      for (final Map.Entry<String, Object2LongMap<String>> tierEntry : tierToDsToUnderRepl.entrySet()) {
+        tierCount++;
+        for (final Object2LongMap.Entry<String> dsEntry : tierEntry.getValue().object2LongEntrySet()) {
+          underReplTotal += dsEntry.getLongValue();
+          stats.addToSegmentStat(
+              Stats.Segments.UNDER_REPLICATED,
+              tierEntry.getKey(),
+              dsEntry.getKey(),
+              dsEntry.getLongValue()
+          );
+        }
+      }
+
+      long deepStorageTotal = 0;
+      for (final Object2IntMap.Entry<String> e : dsToDeepStorageOnly.object2IntEntrySet()) {
+        deepStorageTotal += e.getIntValue();
+        stats.add(Stats.Segments.DEEP_STORAGE_ONLY, RowKey.of(Dimension.DATASOURCE, e.getKey()), e.getIntValue());
+      }
+
+      log.info(
+          "CollectSegmentStats summary: unavailableTotal[%,d] across[%d] ds,"
+          + " underReplicatedTotal[%,d] across[%d] tiers, deepStorageOnly[%,d] across[%d] ds; totalMs[%,d].",
+          unavailableTotal, dsToUnavailable.size(),
+          underReplTotal, tierCount,
+          deepStorageTotal, dsToDeepStorageOnly.size(),
+          totalTime.millisElapsed()
       );
 
       return params;

@@ -1116,6 +1116,7 @@ public class SqlSegmentsMetadataQuery
     return intervals.stream().filter(Objects::nonNull).collect(Collectors.toList());
   }
 
+
   /**
    * Retrieves unused segments that exactly match the given interval.
    *
