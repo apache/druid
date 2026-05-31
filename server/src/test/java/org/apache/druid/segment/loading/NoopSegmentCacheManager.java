@@ -121,6 +121,12 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   @Override
   public List<StorageLocation> getLocations()
   {
-    return List.of();
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public StorageLoadingThreadPool getLoadingThreadPool()
+  {
+    throw new UnsupportedOperationException();
   }
 }

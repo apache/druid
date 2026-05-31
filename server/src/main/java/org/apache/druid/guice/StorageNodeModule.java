@@ -33,9 +33,14 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationSelectorStrategy;
+import org.apache.druid.segment.loading.external.StorageLocationVirtualStorageManager;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -62,6 +67,8 @@ public class StorageNodeModule implements Module
     bindLocationSelectorStrategy(binder);
     binder.bind(ServerTypeConfig.class).toProvider(Providers.of(null));
     binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class).in(LazySingleton.class);
+    binder.bind(SegmentCacheManager.class).to(SegmentLocalCacheManager.class).in(LazySingleton.class);
+    binder.bind(VirtualStorageManager.class).to(StorageLocationVirtualStorageManager.class).in(LazySingleton.class);
     MetricsModule.register(binder, StorageMonitor.class);
   }
 
@@ -118,6 +125,13 @@ public class StorageNodeModule implements Module
         config.getPriority(),
         isSegmentCacheConfigured
     );
+  }
+
+  @Provides
+  @ManageLifecycle
+  public StorageLoadingThreadPool getStorageLoadingThreadPool(SegmentLoaderConfig config)
+  {
+    return StorageLoadingThreadPool.createFromConfig(config);
   }
 
   @Provides

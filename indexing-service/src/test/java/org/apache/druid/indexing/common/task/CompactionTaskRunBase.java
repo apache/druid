@@ -101,6 +101,7 @@ import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
@@ -1263,7 +1264,7 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -1375,7 +1376,7 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -1492,7 +1493,7 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), compactSegment.getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
 
     List<String> rowsFromSegment = new ArrayList<>();
     segmentCacheManager.load(compactSegment);
@@ -1714,6 +1715,7 @@ public abstract class CompactionTaskRunBase
     final SegmentCacheManager cacheManager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         objectMapper
@@ -1748,7 +1750,7 @@ public abstract class CompactionTaskRunBase
   protected List<String> getCSVFormatRowsFromSegments(List<DataSegment> segments) throws Exception
   {
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {

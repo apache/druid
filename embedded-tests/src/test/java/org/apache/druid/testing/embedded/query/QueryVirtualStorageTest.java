@@ -25,7 +25,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidProcessingConfigTest;
@@ -47,6 +47,8 @@ import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 import org.apache.druid.testing.embedded.msq.EmbeddedDurableShuffleStorageTest;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -278,29 +280,28 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 
     // Now fetch the report using the SQL query ID
     final GetQueryReportResponse reportResponse = msqApis.getDartQueryReport(sqlQueryId, broker);
-
-    // Verify the report response
     Assertions.assertNotNull(reportResponse, "Report response should not be null");
-    ChannelCounters.Snapshot segmentChannelCounters =
-        (ChannelCounters.Snapshot) reportResponse.getReportMap()
-                                                 .findReport("multiStageQuery")
-                                                 .map(r ->
-                                                          ((MSQTaskReportPayload) r.getPayload()).getCounters()
-                                                                                                 .snapshotForStage(0)
-                                                                                                 .get(0)
-                                                                                                 .getMap()
-                                                                                                 .get("input0")
-                                                 ).orElse(null);
 
-    Assertions.assertNotNull(segmentChannelCounters);
-    Assertions.assertArrayEquals(new long[]{24L}, segmentChannelCounters.getFiles());
-    Assertions.assertTrue(segmentChannelCounters.getLoadFiles()[0] > 0 && segmentChannelCounters.getLoadFiles()[0] <= segmentChannelCounters.getFiles()[0]);
-    // size of all segments at time of writing, possibly we have to load all of them, but possibly less depending on
-    // test order
-    Assertions.assertTrue(segmentChannelCounters.getLoadBytes()[0] > 0);
-    Assertions.assertTrue(segmentChannelCounters.getLoadBytes()[0] <= SIZE_BYTES);
-    Assertions.assertTrue(segmentChannelCounters.getLoadTime()[0] > 0);
-    Assertions.assertTrue(segmentChannelCounters.getLoadWait()[0] > 0);
+    final MSQTaskReportPayload reportPayload =
+        ((MSQTaskReport) reportResponse.getReportMap().get(MSQTaskReport.REPORT_KEY)).getPayload();
+
+    // Verify stage 0 (segment read) input counters
+    final EmbeddedMSQApis.ChannelSums inputChannelSums = msqApis.getInputChannelSums(reportPayload, 0);
+    Assertions.assertEquals(24L, inputChannelSums.files());
+    Assertions.assertEquals(24L, inputChannelSums.totalFiles());
+    Assertions.assertEquals(0L, inputChannelSums.queries());
+    Assertions.assertEquals(0L, inputChannelSums.totalQueries());
+    Assertions.assertEquals(39244L, inputChannelSums.rows());
+    MatcherAssert.assertThat(inputChannelSums.bytes(), Matchers.greaterThan(0L));
+    MatcherAssert.assertThat(inputChannelSums.bytes(), Matchers.lessThanOrEqualTo(SIZE_BYTES));
+
+    // Verify stage 0 (segment read) VSF load counters
+    MatcherAssert.assertThat(inputChannelSums.loadFiles(), Matchers.greaterThan(0L));
+    MatcherAssert.assertThat(inputChannelSums.loadFiles(), Matchers.lessThanOrEqualTo(24L));
+    MatcherAssert.assertThat(inputChannelSums.loadTime(), Matchers.greaterThan(0L));
+    MatcherAssert.assertThat(inputChannelSums.loadWait(), Matchers.greaterThan(0L));
+    MatcherAssert.assertThat(inputChannelSums.loadBytes(), Matchers.greaterThan(0L));
+    MatcherAssert.assertThat(inputChannelSums.loadBytes(), Matchers.lessThanOrEqualTo(SIZE_BYTES));
   }
 
   @Test

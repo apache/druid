@@ -77,7 +77,7 @@ public class RegularLoadableSegment implements LoadableSegment
    * @param segmentManager    segment manager for loading and caching segments
    * @param segmentId         the segment ID to load
    * @param descriptor        segment descriptor for querying
-   * @param inputCounters     optional counters for tracking input
+   * @param inputCounters     optional counters for tracking input via {@link LoadableSegmentUtils#countedLoad}
    * @param coordinatorClient optional client for fetching DataSegment from Coordinator when not available locally
    * @param isReindex         true if this is a DML command writing to the same table it's reading from
    */
@@ -121,13 +121,6 @@ public class RegularLoadableSegment implements LoadableSegment
 
   @Override
   @Nullable
-  public ChannelCounters inputCounters()
-  {
-    return inputCounters;
-  }
-
-  @Override
-  @Nullable
   public String description()
   {
     return segmentId.toString();
@@ -157,7 +150,15 @@ public class RegularLoadableSegment implements LoadableSegment
     acquired = true;
 
     if (cachedDataSegment != null) {
-      return segmentManager.acquireSegment(cachedDataSegment);
+      final AcquireSegmentAction action = segmentManager.acquireSegment(cachedDataSegment);
+      return new AcquireSegmentAction(
+          () -> LoadableSegmentUtils.countedLoad(
+              action.getSegmentFuture(),
+              cachedDataSegment.getSize(),
+              inputCounters
+          ),
+          action
+      );
     } else {
       // Create a shim AcquireSegmentAction that doesn't acquire a hold (yet). We can't make a real
       // AcquireSegmentAction yet because we don't have the DataSegment object. It needs to be fetched
@@ -168,7 +169,11 @@ public class RegularLoadableSegment implements LoadableSegment
       return new AcquireSegmentAction(
           Suppliers.memoize(() -> FutureUtils.transformAsync(
               dataSegmentFutureSupplier.get(),
-              dataSegment -> closer.register(segmentManager.acquireSegment(dataSegment)).getSegmentFuture()
+              dataSegment -> LoadableSegmentUtils.countedLoad(
+                  closer.register(segmentManager.acquireSegment(dataSegment)).getSegmentFuture(),
+                  dataSegment.getSize(),
+                  inputCounters
+              )
           )),
           closer
       );
