@@ -36,7 +36,9 @@ export function SupervisorResetToLatestDialog(props: SupervisorResetToLatestDial
   return (
     <AsyncActionDialog
       action={async () => {
-        const url = `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/resetToLatestAndBackfill${
+        const url = `/druid/indexer/v1/supervisor/${Api.encodePath(
+          supervisorId,
+        )}/resetToLatestAndBackfill${
           backfillTaskCount !== undefined ? `?backfillTaskCount=${backfillTaskCount}` : ''
         }`;
         const resp = await Api.instance.post(url, {});
