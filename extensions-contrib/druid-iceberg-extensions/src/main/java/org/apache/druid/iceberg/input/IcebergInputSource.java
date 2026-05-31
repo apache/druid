@@ -306,6 +306,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
             warehouseSource,
             scanResult.getFileIOImpl(),
             scanResult.getFileIOProperties(),
+            scanResult.getHadoopConfigOverrides(),
             task.file().format().name()
         ));
       }

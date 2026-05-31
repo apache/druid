@@ -62,6 +62,7 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
   private final InputSourceFactory warehouseSource;
   private final String fileIOImpl;
   private final Map<String, String> fileIOProperties;
+  private final Map<String, String> hadoopConfigOverrides;
   // TODO https://github.com/apache/druid/issues/19472: extend to ORC/AVRO once iceberg-orc/iceberg-avro deps are added
   private final String fileFormat;
 
@@ -73,6 +74,7 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
       @JsonProperty("warehouseSource") final InputSourceFactory warehouseSource,
       @JsonProperty("fileIOImpl") @Nullable final String fileIOImpl,
       @JsonProperty("fileIOProperties") @Nullable final Map<String, String> fileIOProperties,
+      @JsonProperty("hadoopConfigOverrides") @Nullable final Map<String, String> hadoopConfigOverrides,
       @JsonProperty("fileFormat") @Nullable final String fileFormat
   )
   {
@@ -82,6 +84,7 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
     this.warehouseSource = warehouseSource;
     this.fileIOImpl = fileIOImpl;
     this.fileIOProperties = fileIOProperties == null ? Collections.emptyMap() : fileIOProperties;
+    this.hadoopConfigOverrides = hadoopConfigOverrides == null ? Collections.emptyMap() : hadoopConfigOverrides;
     this.fileFormat = fileFormat != null ? fileFormat : "PARQUET";
   }
 
@@ -120,6 +123,12 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
   public Map<String, String> getFileIOProperties()
   {
     return fileIOProperties;
+  }
+
+  @JsonProperty
+  public Map<String, String> getHadoopConfigOverrides()
+  {
+    return hadoopConfigOverrides;
   }
 
   @JsonProperty

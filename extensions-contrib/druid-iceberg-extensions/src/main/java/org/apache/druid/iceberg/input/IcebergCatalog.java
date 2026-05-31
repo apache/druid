@@ -181,13 +181,15 @@ public abstract class IcebergCatalog
     private final boolean hasDeleteFiles;
     private final String fileIOImpl;
     private final Map<String, String> fileIOProperties;
+    private final Map<String, String> hadoopConfigOverrides;
 
     FileScanResult(
         final Table table,
         final List<FileScanTask> fileScanTasks,
         final boolean hasDeleteFiles,
         final String fileIOImpl,
-        final Map<String, String> fileIOProperties
+        final Map<String, String> fileIOProperties,
+        final Map<String, String> hadoopConfigOverrides
     )
     {
       this.table = table;
@@ -195,6 +197,7 @@ public abstract class IcebergCatalog
       this.hasDeleteFiles = hasDeleteFiles;
       this.fileIOImpl = fileIOImpl;
       this.fileIOProperties = fileIOProperties;
+      this.hadoopConfigOverrides = hadoopConfigOverrides;
     }
 
     public Table getTable()
@@ -220,6 +223,11 @@ public abstract class IcebergCatalog
     public Map<String, String> getFileIOProperties()
     {
       return fileIOProperties;
+    }
+
+    public Map<String, String> getHadoopConfigOverrides()
+    {
+      return hadoopConfigOverrides;
     }
   }
 
@@ -322,7 +330,15 @@ public abstract class IcebergCatalog
 
       final String fileIOImpl = table.io().getClass().getName();
       final Map<String, String> fileIOProperties = new HashMap<>(table.io().properties());
-      return new FileScanResult(table, fileScanTasks, hasDeleteFiles, fileIOImpl, fileIOProperties);
+      final Map<String, String> hadoopConfigOverrides = new HashMap<>(getHadoopConfigOverrides());
+      return new FileScanResult(
+          table,
+          fileScanTasks,
+          hasDeleteFiles,
+          fileIOImpl,
+          fileIOProperties,
+          hadoopConfigOverrides
+      );
     }
     catch (DruidException e) {
       throw e;
