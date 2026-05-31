@@ -307,7 +307,11 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
             scanResult.getFileIOImpl(),
             scanResult.getFileIOProperties(),
             scanResult.getHadoopConfigOverrides(),
-            task.file().format().name()
+            task.file().format().name(),
+            // Controller-side construction: workers will get @HiveConf via Jackson injection during deserialization.
+            // For local/sampling/sequential paths that never serialize, the reader's null-fallback applies and
+            // hadoopConfigOverrides still flow through.
+            null
         ));
       }
 

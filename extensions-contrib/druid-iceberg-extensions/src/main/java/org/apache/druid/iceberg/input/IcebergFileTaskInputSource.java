@@ -19,6 +19,7 @@
 
 package org.apache.druid.iceberg.input;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputFormat;
@@ -29,6 +30,8 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.iceberg.guice.HiveConf;
+import org.apache.hadoop.conf.Configuration;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -65,6 +68,7 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
   private final Map<String, String> hadoopConfigOverrides;
   // TODO https://github.com/apache/druid/issues/19472: extend to ORC/AVRO once iceberg-orc/iceberg-avro deps are added
   private final String fileFormat;
+  private final Configuration baseHadoopConf;
 
   @JsonCreator
   public IcebergFileTaskInputSource(
@@ -75,7 +79,8 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
       @JsonProperty("fileIOImpl") @Nullable final String fileIOImpl,
       @JsonProperty("fileIOProperties") @Nullable final Map<String, String> fileIOProperties,
       @JsonProperty("hadoopConfigOverrides") @Nullable final Map<String, String> hadoopConfigOverrides,
-      @JsonProperty("fileFormat") @Nullable final String fileFormat
+      @JsonProperty("fileFormat") @Nullable final String fileFormat,
+      @JacksonInject @HiveConf final Configuration baseHadoopConf
   )
   {
     this.dataFilePath = dataFilePath;
@@ -86,6 +91,7 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
     this.fileIOProperties = fileIOProperties == null ? Collections.emptyMap() : fileIOProperties;
     this.hadoopConfigOverrides = hadoopConfigOverrides == null ? Collections.emptyMap() : hadoopConfigOverrides;
     this.fileFormat = fileFormat != null ? fileFormat : "PARQUET";
+    this.baseHadoopConf = baseHadoopConf;
   }
 
   @JsonProperty
@@ -178,6 +184,10 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
       final File temporaryDirectory
   )
   {
+    final Configuration effectiveConf = new Configuration(
+        baseHadoopConf != null ? baseHadoopConf : new Configuration()
+    );
+    hadoopConfigOverrides.forEach(effectiveConf::set);
     return new IcebergNativeRecordReader(
         dataFilePath,
         deleteFiles,
@@ -186,7 +196,8 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
         inputRowSchema,
         fileIOImpl,
         fileIOProperties,
-        fileFormat
+        fileFormat,
+        effectiveConf
     );
   }
 }

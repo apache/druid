@@ -91,7 +91,8 @@ public class IcebergNativeRecordReader implements InputSourceReader
       final InputRowSchema inputRowSchema,
       @Nullable final String fileIOImpl,
       @Nullable final Map<String, String> fileIOProperties,
-      final String fileFormat
+      final String fileFormat,
+      final Configuration hadoopConf
   )
   {
     this.dataFilePath = dataFilePath;
@@ -99,8 +100,8 @@ public class IcebergNativeRecordReader implements InputSourceReader
     this.tableSchemaJson = tableSchemaJson;
     this.warehouseSource = warehouseSource;
     this.inputRowSchema = inputRowSchema;
-    this.hadoopConf = new Configuration();
-    this.fileIO = buildFileIO(fileIOImpl, fileIOProperties, hadoopConf);
+    this.hadoopConf = hadoopConf != null ? hadoopConf : new Configuration();
+    this.fileIO = buildFileIO(fileIOImpl, fileIOProperties, this.hadoopConf);
     this.fileFormat = fileFormat;
   }
 
