@@ -40,6 +40,7 @@ import org.joda.time.DateTime;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +62,17 @@ public abstract class IcebergCatalog
   public boolean isCaseSensitive()
   {
     return true;
+  }
+
+  /**
+   * Hadoop configuration overrides to apply on top of the worker-side cluster Hadoop config
+   * when reading Iceberg v2 data/delete files. Returned map must be JSON-serializable.
+   * Default is empty; subclasses that hold a populated Hadoop {@link org.apache.hadoop.conf.Configuration}
+   * should expose its entries here so they reach workers without shipping the raw Hadoop type.
+   */
+  public Map<String, String> getHadoopConfigOverrides()
+  {
+    return Collections.emptyMap();
   }
 
   /**
