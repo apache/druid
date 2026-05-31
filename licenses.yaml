@@ -424,7 +424,7 @@ name: Caffeine
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.9.3
+version: 3.2.4
 libraries:
   - com.github.ben-manes.caffeine: caffeine
 
@@ -434,7 +434,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.41.0
+version: 2.49.0
 libraries:
   - com.google.errorprone: error_prone_annotations
 
