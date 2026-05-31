@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.FileScanTask;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableScan;
@@ -62,11 +61,6 @@ public abstract class IcebergCatalog
   public boolean isCaseSensitive()
   {
     return true;
-  }
-
-  public Configuration getConfiguration()
-  {
-    return new Configuration();
   }
 
   /**
