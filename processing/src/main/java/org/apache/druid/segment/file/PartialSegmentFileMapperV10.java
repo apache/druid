@@ -239,6 +239,11 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   private final File[] containerFiles;
   private final ReentrantLock[] containerLocks;
 
+  // bundle name -> indices (into metadata.getContainers()) of this single mapper's containers in that bundle.
+  // Computed once at construction from the immutable container metadata. Single-mapper scope only: stitching bundles
+  // across attached external mappers is the cache layer's concern (PartialSegmentBundleCacheEntry).
+  private final Map<String, List<Integer>> bundleToContainerIndices;
+
   // external file mappers
   private final Map<String, PartialSegmentFileMapperV10> externalMappers = new HashMap<>();
 
@@ -273,19 +278,42 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       fileNameToIndex.put(sortedFileNames.get(i), i);
     }
 
-    final int numContainers = metadata.getContainers().size();
+    final List<SegmentFileContainerMetadata> containerMetas = metadata.getContainers();
+    final int numContainers = containerMetas.size();
     this.containers = new MappedByteBuffer[numContainers];
     this.containerFiles = new File[numContainers];
     this.containerLocks = new ReentrantLock[numContainers];
+    final Map<String, List<Integer>> bundleIndices = new HashMap<>();
     for (int i = 0; i < numContainers; i++) {
       this.containerLocks[i] = new ReentrantLock();
+      bundleIndices.computeIfAbsent(containerMetas.get(i).getBundle(), name -> new ArrayList<>()).add(i);
     }
+    bundleIndices.replaceAll((name, indices) -> List.copyOf(indices));
+    this.bundleToContainerIndices = Map.copyOf(bundleIndices);
     this.bitmapLock = new ReentrantLock();
   }
 
   public SegmentFileMetadata getSegmentFileMetadata()
   {
     return metadata;
+  }
+
+  /**
+   * The distinct bundle names present in this single mapper's containers (not including any attached external
+   * mappers). Computed once at construction.
+   */
+  public Set<String> getBundleNames()
+  {
+    return bundleToContainerIndices.keySet();
+  }
+
+  /**
+   * Indices, into this mapper's {@link SegmentFileMetadata#getContainers()} list, of the containers belonging to
+   * {@code bundleName}; empty if this mapper has no containers in that bundle.
+   */
+  public List<Integer> getContainerIndicesForBundle(String bundleName)
+  {
+    return bundleToContainerIndices.getOrDefault(bundleName, List.of());
   }
 
   /**
@@ -379,6 +407,20 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   }
 
   /**
+   * Download every internal file referenced by this mapper's metadata (and recursively every attached external
+   * mapper's metadata) so that {@link #isFullyDownloaded} returns true afterward. Used by the eager
+   * {@code acquireSegment} path on partial-eligible segments to force the segment fully resident before returning.
+   * Files already downloaded are skipped.
+   */
+  public void ensureAllDownloaded() throws IOException
+  {
+    ensureFilesAvailable(metadata.getFiles().keySet());
+    for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
+      external.ensureAllDownloaded();
+    }
+  }
+
+  /**
    * Pre-download a set of internal files so that subsequent {@link #mapFile(String)} calls for these files will not
    * trigger individual downloads. Files that are already downloaded are skipped. Useful for batch-downloading all
    * files in a bundle at once (see {@link SegmentFileBuilder#startFileBundle}).
@@ -434,6 +476,24 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   public Set<String> getDownloadedFiles()
   {
     return Set.copyOf(downloadedFiles);
+  }
+
+  /**
+   * Whether every internal file in this mapper's metadata (and recursively every attached external mapper's metadata)
+   * is downloaded. Used by the sync cursor-factory path to verify that the segment has been fully loaded before
+   * cursor construction; the async path is the only way to drive on-demand downloads.
+   */
+  public boolean isFullyDownloaded()
+  {
+    if (!downloadedFiles.containsAll(metadata.getFiles().keySet())) {
+      return false;
+    }
+    for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
+      if (!external.isFullyDownloaded()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override

@@ -140,7 +140,7 @@ public class RegularLoadableSegment implements LoadableSegment
       throw DruidException.defensive("Segment with descriptor[%s] is already acquired", descriptor);
     }
 
-    final Optional<Segment> cachedSegment = segmentManager.acquireCachedSegment(segmentId);
+    final Optional<Segment> cachedSegment = segmentManager.acquireCachedPartialSegment(segmentId);
     if (cachedSegment.isPresent()) {
       acquired = true;
     }
@@ -157,7 +157,7 @@ public class RegularLoadableSegment implements LoadableSegment
     acquired = true;
 
     if (cachedDataSegment != null) {
-      return segmentManager.acquireSegment(cachedDataSegment);
+      return segmentManager.acquirePartialSegment(cachedDataSegment);
     } else {
       // Create a shim AcquireSegmentAction that doesn't acquire a hold (yet). We can't make a real
       // AcquireSegmentAction yet because we don't have the DataSegment object. It needs to be fetched
@@ -168,7 +168,7 @@ public class RegularLoadableSegment implements LoadableSegment
       return new AcquireSegmentAction(
           Suppliers.memoize(() -> FutureUtils.transformAsync(
               dataSegmentFutureSupplier.get(),
-              dataSegment -> closer.register(segmentManager.acquireSegment(dataSegment)).getSegmentFuture()
+              dataSegment -> closer.register(segmentManager.acquirePartialSegment(dataSegment)).getSegmentFuture()
           )),
           closer
       );

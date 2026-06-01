@@ -19,11 +19,10 @@
 
 package org.apache.druid.segment.loading;
 
-import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -103,23 +102,60 @@ public interface SegmentCacheManager
   void drop(DataSegment segment);
 
   /**
-   * Applies a {@link SegmentMapFunction} to a {@link Segment} if it is available in the cache. If not present in any
-   * storage location, this method will not attempt to download the {@link DataSegment} from deep storage. The
-   * {@link Segment} returned by this method is considered an open reference, cache implementations must not allow it
-   * to be dropped until it has been closed. As such, the returned {@link Segment} must be closed when the caller is
-   * finished doing segment things.
+   * Returns a {@link Segment} if it is available in the cache. If not present in any storage location, this method will
+   * not attempt to download the {@link DataSegment} from deep storage. The {@link Segment} returned by this method is
+   * considered an open reference, cache implementations must not allow it to be dropped until it has been closed. As
+   * such, the returned {@link Segment} must be closed when the caller is finished doing segment things.
    */
   Optional<Segment> acquireCachedSegment(SegmentId segmentId);
 
   /**
-   * Returns a {@link AcquireSegmentAction} for a given {@link DataSegment} and {@link SegmentDescriptor}, which returns
-   * a reference provider for the {@link Segment} if already present in the cache, or tries to fetch from deep storage
-   * and map if not. The {@link Segment} returned by the provider returned by this method are considered an open
-   * reference, cache implementations must not allow the segment to be dropped until it has been closed. As such, the
-   * returned {@link Segment} from {@link ReferenceCountedObjectProvider#acquireReference()} must be closed when the
-   * caller is finished doing segment things.
+   * Returns a {@link AcquireSegmentAction} for a given {@link DataSegment}, which returns a reference provider for the
+   * {@link Segment} if already present in the cache, or tries to fetch from deep storage and map if not. The
+   * {@link Segment} returned by the provider returned by this method are considered an open reference, cache
+   * implementations must not allow the segment to be dropped until it has been closed. As such, the returned
+   * {@link Segment} from {@link ReferenceCountedObjectProvider#acquireReference()} must be closed when the caller is
+   * finished doing segment things.
    */
   AcquireSegmentAction acquireSegment(DataSegment dataSegment);
+
+  /**
+   * Partial-load variant of {@link #acquireCachedSegment(SegmentId)}, returns a {@link Segment} for the
+   * {@link DataSegment} if any cached form is available, either a partial-loaded entry which callers can load
+   * on-demand via async methods like {@link CursorFactory#makeCursorHolderAsync}), or an eager cached segment via the
+   * same lookup as {@link #acquireCachedSegment(SegmentId)} if not. Empty when nothing is cached.
+   * <p>
+   * Callers on this path acknowledge that the returned segment might not be fully downloaded, and that synchronous
+   * methods may refuse if the underlying partial is not fully downloaded; and must use asynchronous methods instead.
+   * <p>
+   * The {@link Segment} returned by this method is considered an open reference, cache implementations must not allow
+   * it to be dropped until it has been closed. As such, the returned {@link Segment} must be closed when the caller is
+   * finished doing segment things.
+   */
+  default Optional<Segment> acquireCachedPartialSegment(SegmentId segmentId)
+  {
+    return acquireCachedSegment(segmentId);
+  }
+
+  /**
+   * Partial-load variant of {@link #acquireSegment(DataSegment)}, returns an {@link AcquireSegmentAction}
+   * that resolves to a partial-loaded V10 {@link Segment} when the segment's {@link LoadSpec} supports range reads,
+   * or falls back to {@link #acquireSegment(DataSegment)} for non-partial-eligible segments (eager full download).
+   * Either way callers should use async methods such as {@link CursorFactory#makeCursorHolderAsync} to load data on
+   * demand.
+   * <p>
+   * Unlike {@link #acquireSegment(DataSegment)}, if the segment in deep storage supports partial loading, this
+   * operation will only download a minimal amount of metadata, and defer additional loading to the async methods
+   * callers use to interact with the returned segment.
+   * <p>
+   * The {@link Segment} returned by this method is considered an open reference, cache implementations must not allow
+   * it to be dropped until it has been closed. As such, the returned {@link Segment} must be closed when the caller is
+   * finished doing segment things.
+   */
+  default AcquireSegmentAction acquirePartialSegment(DataSegment dataSegment)
+  {
+    return acquireSegment(dataSegment);
+  }
 
   /**
    * Alternative to {@link #acquireCachedSegment(SegmentId)}, to return the {@link File} location of the segment files

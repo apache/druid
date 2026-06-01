@@ -213,7 +213,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     ComplexMetrics.registerSerde(NestedDataComplexTypeSerde.TYPE_NAME, NestedDataComplexTypeSerde.INSTANCE);
 
     SegmentCacheManager segmentCacheManager = mock(SegmentCacheManager.class);
-    when(segmentCacheManager.acquireSegment(any())).thenAnswer(invocation -> {
+    when(segmentCacheManager.acquirePartialSegment(any())).thenAnswer(invocation -> {
       DataSegment segment = invocation.getArgument(0);
       QueryableIndexSegment index = new QueryableIndexSegment(
           new TestUtils().getTestIndexIO().loadIndex(new File((String) segment.getLoadSpec().get("path"))),
@@ -224,7 +224,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
           null
       );
     });
-    when(segmentCacheManager.acquireCachedSegment(any())).thenReturn(Optional.empty());
+    when(segmentCacheManager.acquireCachedPartialSegment(any())).thenReturn(Optional.empty());
     GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         new GroupByQueryConfig(),
         TestGroupByBuffers.createDefault()

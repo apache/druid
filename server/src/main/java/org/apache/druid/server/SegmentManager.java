@@ -193,10 +193,9 @@ public class SegmentManager
   }
 
   /**
-   * Returns a {@link Segment} transformed with a {@link SegmentMapFunction}, if it is available in the cache. The
-   * returned {@link Segment} must be closed when the caller is finished doing segment things. This method will not
-   * download a {@link DataSegment} if it is not already present in {@link #cacheManager}, use
-   * {@link #acquireSegment(DataSegment)} instead.
+   * Returns a {@link Segment}, if it is available in the cache. The returned {@link Segment} must be closed when the
+   * caller is finished doing segment things. This method will not download a {@link DataSegment} if it is not already
+   * present in {@link #cacheManager}, use {@link #acquireSegment(DataSegment)} instead.
    */
   public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
   {
@@ -212,9 +211,9 @@ public class SegmentManager
   }
 
   /**
-   * Returns a {@link AcquireSegmentAction}, where calling {@link AcquireSegmentAction#getSegmentFuture()} will either return
-   * immediately if the {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage if not.
-   * The returned {@link Segment}, if present, must be closed when the caller is finished doing segment things.
+   * Returns a {@link AcquireSegmentAction}, where calling {@link AcquireSegmentAction#getSegmentFuture()} will either
+   * return immediately if the {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage
+   * if not. The returned {@link Segment}, if present, must be closed when the caller is finished doing segment things.
    * <p>
    * Calling this method is treated as an intent to acquire and use the segment via resolving the future, and cache
    * manager implementations will place a hold on this segment until the 'loadCleanup' closer is closed - typically
@@ -223,6 +222,32 @@ public class SegmentManager
   public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
   {
     return cacheManager.acquireSegment(dataSegment);
+  }
+
+  /**
+   * Partial-load variant of {@link #acquireCachedSegment(SegmentId)}, returns a {@link Segment} when the cache holds
+   * an entry for the id; empty otherwise. The returned segment may not be fully loaded, callers must use async methods
+   * like {@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync} to download data on-demand. If the
+   * returned segment is only partially loaded, the synchronous methods like {@code makeCursorHolder} will fail if
+   * anything is still missing. If the segment is fully loaded, or not capable of partial loading, this method will
+   * still return a segment if it is present in cache and any async methods will function properly and return
+   * immediately.
+   */
+  public Optional<Segment> acquireCachedPartialSegment(SegmentId segmentId)
+  {
+    return cacheManager.acquireCachedPartialSegment(segmentId);
+  }
+
+  /**
+   * Partial-load variant of {@link #acquireSegment(DataSegment)}, returns an {@link AcquireSegmentAction} that
+   * resolves to a partial-load capable {@link Segment}. Cache managers that don't support partial loading (or segments
+   * whose {@code LoadSpec} can't supply range reads) fall back to the eager {@link #acquireSegment(DataSegment)}
+   * behavior. If the returned segment is only partially loaded, callers must use async methods like
+   * {@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync} to download data on-demand.
+   */
+  public AcquireSegmentAction acquirePartialSegment(DataSegment dataSegment)
+  {
+    return cacheManager.acquirePartialSegment(dataSegment);
   }
 
   /**

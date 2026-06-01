@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.loading.DirectoryBackedRangeReader;
 import org.apache.druid.segment.loading.SegmentRangeReader;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

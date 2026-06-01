@@ -31,7 +31,6 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.file.CountingRangeReader;
-import org.apache.druid.segment.file.DirectoryBackedRangeReader;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.file.SegmentFileBuilderV10;
 import org.apache.druid.segment.projections.Projections;
@@ -45,6 +44,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -229,6 +229,7 @@ class PartialSegmentMetadataCacheEntryTest
             List.of(),
             new DirectoryBackedRangeReader(segmentFile.getParentFile()),
             JSON_MAPPER,
+            null,
             0
         )
     );
@@ -257,7 +258,7 @@ class PartialSegmentMetadataCacheEntryTest
     );
     Assertions.assertTrue(headerFile.exists());
 
-    final Closeable ref = entry.acquireReference();
+    final Closeable ref = entry.acquireMetadataReference();
     Assertions.assertTrue(entry.isMounted());
 
     entry.unmount();
@@ -283,6 +284,7 @@ class PartialSegmentMetadataCacheEntryTest
         List.of(),
         rangeReader,
         JSON_MAPPER,
+        null,
         ESTIMATE
     );
     Assertions.assertTrue(location.reserve(entry));
@@ -352,14 +354,14 @@ class PartialSegmentMetadataCacheEntryTest
   }
 
   @Test
-  void testAcquireReferenceBeforeMountThrows()
+  void testAcquireMetadataReferenceBeforeMountThrows()
   {
     final PartialSegmentMetadataCacheEntry entry = newEntry(ESTIMATE);
-    Assertions.assertThrows(DruidException.class, entry::acquireReference);
+    Assertions.assertThrows(DruidException.class, entry::acquireMetadataReference);
   }
 
   @Test
-  void testAcquireReferenceAfterCleanupCompletesThrows() throws Exception
+  void testAcquireMetadataReferenceAfterCleanupCompletesThrows() throws Exception
   {
     final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 4, null);
     final PartialSegmentMetadataCacheEntry entry = newEntry(ESTIMATE);
@@ -367,7 +369,17 @@ class PartialSegmentMetadataCacheEntryTest
     entry.mount(location);
     entry.unmount(); // no references; cleanup runs synchronously
     Assertions.assertFalse(entry.isMounted());
-    Assertions.assertThrows(DruidException.class, entry::acquireReference);
+    Assertions.assertThrows(DruidException.class, entry::acquireMetadataReference);
+  }
+
+  @Test
+  void testAcquireReferenceBeforeMountReturnsEmpty()
+  {
+    // Segment-level acquireReference returns empty (not throw) when the entry isn't mounted, matches the
+    // SegmentCacheEntry contract used by SegmentLocalCacheManager.acquireCachedSegment to skip locations that don't
+    // have the segment.
+    final PartialSegmentMetadataCacheEntry entry = newEntry(ESTIMATE);
+    Assertions.assertEquals(Optional.empty(), entry.acquireReference());
   }
 
   @Test
@@ -402,6 +414,7 @@ class PartialSegmentMetadataCacheEntryTest
         List.of(),
         new DirectoryBackedRangeReader(segmentFile.getParentFile()),
         JSON_MAPPER,
+        null,
         estimate
     );
   }
