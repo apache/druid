@@ -164,6 +164,9 @@
 
             <!-- required for certain EqualsVerifier tests (not required in production) -->
             --add-opens=java.base/java.util=ALL-UNNAMED
+
+            <!-- required for SIMD for druid.expressions.useVectorApi -->
+            --add-modules=jdk.incubator.vector
         </jdk.strong.encapsulation.argLine>
         <jdk.security.manager.allow.argLine><!-- empty placeholder --></jdk.security.manager.allow.argLine>
         <repoOrgId>maven.org</repoOrgId>
@@ -1794,6 +1797,8 @@
                       <exclude>**/*_jmhType_*.class</exclude>
                       <exclude>**/*_jmhTest_*.class</exclude>
                       <exclude>**/*_generated*.class</exclude>
+                      <!-- forbidden-apis can't resolve jdk.incubator.vector classes from its own classpath -->
+                      <exclude>**/math/expr/vector/simd/Simd*.class</exclude>
                     </excludes>
                     <suppressAnnotations>
                         <annotation>**.SuppressForbidden</annotation>
@@ -2143,6 +2148,11 @@
 
                         <!-- HadoopFsWrapper javadocs cannot be generated due to missing annotations -->
                         <excludePackageNames>org.apache.hadoop.fs</excludePackageNames>
+
+                        <!-- required for SIMD expression vector processors that import jdk.incubator.vector -->
+                        <additionalOptions>
+                            <additionalOption>--add-modules=jdk.incubator.vector</additionalOption>
+                        </additionalOptions>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -2152,6 +2162,9 @@
                     <inherited>true</inherited>
                     <configuration>
                         <release>${maven.compiler.release}</release>
+                        <compilerArgs>
+                            <arg>--add-modules=jdk.incubator.vector</arg>
+                        </compilerArgs>
                     </configuration>
                 </plugin>
               <plugin>
@@ -2212,6 +2225,8 @@
                                 <arg>-J--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</arg>
                                 <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
                                 <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                                <arg>-J--add-modules=jdk.incubator.vector</arg>
+                                <arg>--add-modules=jdk.incubator.vector</arg>
                             </compilerArgs>
                               <annotationProcessorPaths>
                                 <path>
