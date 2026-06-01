@@ -764,6 +764,14 @@
       <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-data</artifactId>
       <version>${iceberg.core.version}</version>
+      <exclusions>
+        <!-- iceberg-data pulls orc-core:nohive:1.9.x which collides with druid-orc-extensions orc-core:1.7.x
+             on the embedded-tests classpath. v2 reader only handles Parquet, so the orc transitive is unused. -->
+        <exclusion>
+          <groupId>org.apache.orc</groupId>
+          <artifactId>orc-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.iceberg</groupId>
