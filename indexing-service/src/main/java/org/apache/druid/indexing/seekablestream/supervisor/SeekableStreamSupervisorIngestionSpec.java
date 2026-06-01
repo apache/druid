@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.indexing.DataSchema;
 
+import java.util.Objects;
+
 public abstract class SeekableStreamSupervisorIngestionSpec
 {
   private final DataSchema dataSchema;
@@ -57,5 +59,28 @@ public abstract class SeekableStreamSupervisorIngestionSpec
   public SeekableStreamSupervisorTuningConfig getTuningConfig()
   {
     return tuningConfig;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    // Compares via getters so subclasses (which only narrow the component types) are covered without
+    // their own overrides; the getClass() check keeps different stream types unequal.
+    SeekableStreamSupervisorIngestionSpec that = (SeekableStreamSupervisorIngestionSpec) o;
+    return Objects.equals(getDataSchema(), that.getDataSchema())
+           && Objects.equals(getIOConfig(), that.getIOConfig())
+           && Objects.equals(getTuningConfig(), that.getTuningConfig());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getDataSchema(), getIOConfig(), getTuningConfig());
   }
 }

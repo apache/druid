@@ -5445,34 +5445,19 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("bootstrap.servers", kafkaHost);
 
-    final KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
-        topic,
-        null,
-        INPUT_FORMAT,
-        null,
-        1,
-        new Period("PT1H"),
-        consumerProperties,
-        null,
-        null,
-        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-        new Period("P1D"),
-        new Period("PT30S"),
-        true,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        true,
-        Map.of(
-            10, 2,
-            20, 3
-        ),
-        null
-    );
+    final KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
+        .withTopic(topic)
+        .withInputFormat(INPUT_FORMAT)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withConsumerProperties(consumerProperties)
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(true)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withEmitTimeLagMetrics(true)
+        .withServerPriorityToReplicas(Map.of(10, 2, 20, 3))
+        .build();
 
     Assert.assertEquals(5, (int) kafkaSupervisorIOConfig.getReplicas());
 
@@ -5563,31 +5548,20 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("bootstrap.servers", kafkaHost);
 
-    final KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
-        topic,
-        null,
-        INPUT_FORMAT,
-        1,
-        1,
-        new Period("PT1H"),
-        consumerProperties,
-        null,
-        null,
-        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        true,
-        null,
-        new BoundedStreamConfig(startOffsets, endOffsets)
-    );
+    final KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
+        .withTopic(topic)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withConsumerProperties(consumerProperties)
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withEmitTimeLagMetrics(true)
+        .withBoundedStreamConfig(new BoundedStreamConfig(startOffsets, endOffsets))
+        .build();
 
     Assert.assertTrue(kafkaSupervisorIOConfig.isBounded());
 
@@ -5840,31 +5814,24 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
-    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
-        multiTopic ? null : topic,
-        multiTopic ? topicPattern : null,
-        INPUT_FORMAT,
-        replicas,
-        taskCount,
-        new Period(duration),
-        consumerProperties,
-        null,
-        null,
-        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-        new Period("P1D"),
-        new Period("PT30S"),
-        useEarliestOffset,
-        new Period("PT30M"),
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        null,
-        null,
-        idleConfig,
-        null,
-        true,
-        serverPriorityToReplicas,
-        null
-    );
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
+        .withTopic(multiTopic ? null : topic)
+        .withTopicPattern(multiTopic ? topicPattern : null)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(replicas)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period(duration))
+        .withConsumerProperties(consumerProperties)
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(useEarliestOffset)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLateMessageRejectionPeriod(lateMessageRejectionPeriod)
+        .withEarlyMessageRejectionPeriod(earlyMessageRejectionPeriod)
+        .withIdleConfig(idleConfig)
+        .withEmitTimeLagMetrics(true)
+        .withServerPriorityToReplicas(serverPriorityToReplicas)
+        .build();
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
         null,
@@ -5936,31 +5903,20 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
     consumerProperties.put("isolation.level", "read_committed");
-    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
-        topic,
-        null,
-        INPUT_FORMAT,
-        replicas,
-        taskCount,
-        new Period(duration),
-        consumerProperties,
-        null,
-        null,
-        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-        new Period("P1D"),
-        new Period("PT30S"),
-        useEarliestOffset,
-        new Period("PT30M"),
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null
-    );
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
+        .withTopic(topic)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(replicas)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period(duration))
+        .withConsumerProperties(consumerProperties)
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(useEarliestOffset)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLateMessageRejectionPeriod(lateMessageRejectionPeriod)
+        .withEarlyMessageRejectionPeriod(earlyMessageRejectionPeriod)
+        .build();
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
         null,
@@ -6032,31 +5988,20 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
     consumerProperties.put("isolation.level", "read_committed");
-    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
-        topic,
-        null,
-        INPUT_FORMAT,
-        replicas,
-        taskCount,
-        new Period(duration),
-        consumerProperties,
-        null,
-        null,
-        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-        new Period("P1D"),
-        new Period("PT30S"),
-        useEarliestOffset,
-        new Period("PT30M"),
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null
-    );
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
+        .withTopic(topic)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(replicas)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period(duration))
+        .withConsumerProperties(consumerProperties)
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(useEarliestOffset)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLateMessageRejectionPeriod(lateMessageRejectionPeriod)
+        .withEarlyMessageRejectionPeriod(earlyMessageRejectionPeriod)
+        .build();
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
         null,
@@ -6609,31 +6554,20 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
-    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
-        topic,
-        null,
-        INPUT_FORMAT,
-        replicas,
-        taskCount,
-        new Period(duration),
-        consumerProperties,
-        null,
-        null,
-        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-        new Period("P1D"),
-        new Period("PT30S"),
-        true,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        true,
-        null,
-        boundedConfig
-    );
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
+        .withTopic(topic)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(replicas)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period(duration))
+        .withConsumerProperties(consumerProperties)
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(true)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withEmitTimeLagMetrics(true)
+        .withBoundedStreamConfig(boundedConfig)
+        .build();
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
         null,

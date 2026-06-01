@@ -26,6 +26,7 @@ import org.apache.druid.indexing.kinesis.KinesisRegion;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Duration;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -202,6 +203,41 @@ public class KinesisSupervisorIOConfigTest
 
     Assert.assertFalse(config.isBounded());
     Assert.assertNull(config.getBoundedStreamConfig());
+  }
+
+  private static KinesisIOConfigBuilder ioConfigBuilder()
+  {
+    return new KinesisIOConfigBuilder()
+        .withStream("stream")
+        .withEndpoint("awsEndpoint")
+        .withReplicas(1)
+        .withTaskCount(2)
+        .withTaskDuration(new Period("PT1H"));
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    final KinesisSupervisorIOConfig config = ioConfigBuilder().build();
+    Assert.assertEquals(config, ioConfigBuilder().build());
+    Assert.assertEquals(config.hashCode(), ioConfigBuilder().build().hashCode());
+    Assert.assertNotEquals(config, null);
+    Assert.assertNotEquals(config, "not an io config");
+    Assert.assertNotEquals(config, ioConfigBuilder().withEndpoint("other").build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withReplicas(9).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withTaskCount(9).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withFetchDelayMillis(999).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withDeaggregate(true).build());
+  }
+
+  @Test
+  public void testTuningConfigEqualsAndHashCode()
+  {
+    final KinesisSupervisorTuningConfig config = KinesisSupervisorTuningConfig.defaultConfig();
+    Assert.assertEquals(config, KinesisSupervisorTuningConfig.defaultConfig());
+    Assert.assertEquals(config.hashCode(), KinesisSupervisorTuningConfig.defaultConfig().hashCode());
+    Assert.assertNotEquals(config, null);
+    Assert.assertNotEquals(config, "not a tuning config");
   }
 
 }

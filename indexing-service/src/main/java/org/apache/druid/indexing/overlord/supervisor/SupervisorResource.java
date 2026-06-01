@@ -166,6 +166,9 @@ public class SupervisorResource
           }
 
           if (Boolean.TRUE.equals(skipRestartIfUnmodified) && !manager.shouldUpdateSupervisor(spec)) {
+            // No restart needed, but still persist the spec if it actually changed (e.g. a taskCount
+            // change under autoscaling) so the metadata store reflects the latest submission.
+            manager.updateSupervisorSpecWithoutRestart(spec);
             return Response.ok(ImmutableMap.of("id", spec.getId(), "restarted", false)).build();
           }
 

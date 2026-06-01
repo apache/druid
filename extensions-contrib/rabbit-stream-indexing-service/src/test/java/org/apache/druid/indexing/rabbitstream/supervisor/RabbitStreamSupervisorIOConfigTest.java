@@ -26,6 +26,7 @@ import org.apache.druid.indexing.rabbitstream.RabbitStreamIndexTaskModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Duration;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -210,6 +211,40 @@ public class RabbitStreamSupervisorIOConfigTest
 
     Assert.assertFalse(config.isBounded());
     Assert.assertNull(config.getBoundedStreamConfig());
+  }
+
+  private static RabbitStreamIOConfigBuilder ioConfigBuilder()
+  {
+    return new RabbitStreamIOConfigBuilder()
+        .withStream("stream")
+        .withUri("rabbit://localhost")
+        .withReplicas(1)
+        .withTaskCount(2)
+        .withTaskDuration(new Period("PT1H"));
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    final RabbitStreamSupervisorIOConfig config = ioConfigBuilder().build();
+    Assert.assertEquals(config, ioConfigBuilder().build());
+    Assert.assertEquals(config.hashCode(), ioConfigBuilder().build().hashCode());
+    Assert.assertNotEquals(config, null);
+    Assert.assertNotEquals(config, "not an io config");
+    Assert.assertNotEquals(config, ioConfigBuilder().withUri("rabbit://other").build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withReplicas(9).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withTaskCount(9).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withPollTimeout(999L).build());
+  }
+
+  @Test
+  public void testTuningConfigEqualsAndHashCode()
+  {
+    final RabbitStreamSupervisorTuningConfig config = RabbitStreamSupervisorTuningConfig.defaultConfig();
+    Assert.assertEquals(config, RabbitStreamSupervisorTuningConfig.defaultConfig());
+    Assert.assertEquals(config.hashCode(), RabbitStreamSupervisorTuningConfig.defaultConfig().hashCode());
+    Assert.assertNotEquals(config, null);
+    Assert.assertNotEquals(config, "not a tuning config");
   }
 
 }

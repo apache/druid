@@ -255,6 +255,42 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
+  public void testUpdateSupervisorSpecWithoutRestartPersistsChangedSpecAndDoesNotRestart()
+  {
+    final Capture<TestSupervisorSpec> capturedInsert = Capture.newInstance();
+    final Map<String, SupervisorSpec> existingSpecs =
+        ImmutableMap.of("id1", new VersionedTestSupervisorSpec("id1", supervisor1, 1));
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    // Persist is expected; supervisor1.stop(...) is NOT expected, so verifyAll() asserts no restart.
+    metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.capture(capturedInsert));
+    replayAll();
+
+    manager.start();
+    final SupervisorSpec updated = new VersionedTestSupervisorSpec("id1", supervisor1, 2);
+    Assert.assertTrue(manager.updateSupervisorSpecWithoutRestart(updated));
+    Assert.assertSame(updated, capturedInsert.getValue());
+    Assert.assertSame(updated, manager.getSupervisorSpec("id1").get());
+    verifyAll();
+  }
+
+  @Test
+  public void testUpdateSupervisorSpecWithoutRestartIsNoopForIdenticalSpec()
+  {
+    final Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", new TestSupervisorSpec("id1", supervisor1));
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    // No insert expected for an identical spec.
+    replayAll();
+
+    manager.start();
+    Assert.assertFalse(manager.updateSupervisorSpecWithoutRestart(new TestSupervisorSpec("id1", supervisor1)));
+    verifyAll();
+  }
+
+  @Test
   public void testShouldUpdateSupervisorIllegalEvolution()
   {
     SupervisorSpec spec = new TestSupervisorSpec("id1", supervisor1)
@@ -1392,6 +1428,12 @@ public class SupervisorManagerTest extends EasyMockSupport
       return getSpec().getIOConfig();
     }
 
+    @Override
+    public Builder<?> toBuilder()
+    {
+      throw new UnsupportedOperationException();
+    }
+
     @JsonTypeName("testBackfillIngestionSpec")
     static class IngestionSpec extends SeekableStreamSupervisorIngestionSpec
     {
@@ -1425,6 +1467,28 @@ public class SupervisorManagerTest extends EasyMockSupport
       {
         super(stream, null, 1, taskCount, null, null, null, false, null, null, null, null, LagAggregator.DEFAULT, null, null, null, null, boundedStreamConfig);
       }
+    }
+  }
+
+  /**
+   * A {@link TestSupervisorSpec} with an explicitly-serialized {@code version} field, so two specs
+   * sharing the same id can still differ in their serialized form (the base spec serializes only
+   * id-derived properties).
+   */
+  private static class VersionedTestSupervisorSpec extends TestSupervisorSpec
+  {
+    private final int version;
+
+    VersionedTestSupervisorSpec(String id, Supervisor supervisor, int version)
+    {
+      super(id, supervisor);
+      this.version = version;
+    }
+
+    @JsonProperty
+    public int getVersion()
+    {
+      return version;
     }
   }
 }

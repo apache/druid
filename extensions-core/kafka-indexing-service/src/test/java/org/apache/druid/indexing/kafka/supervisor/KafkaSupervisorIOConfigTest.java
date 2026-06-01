@@ -618,4 +618,45 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(2, deserialized.getBoundedStreamConfig().getStartSequenceNumbers().size());
     Assert.assertEquals(2, deserialized.getBoundedStreamConfig().getEndSequenceNumbers().size());
   }
+
+  private static KafkaIOConfigBuilder ioConfigBuilder()
+  {
+    return new KafkaIOConfigBuilder()
+        .withTopic("topic")
+        .withConsumerProperties(ImmutableMap.of("bootstrap.servers", "localhost:9092"))
+        .withReplicas(1)
+        .withTaskCount(2)
+        .withTaskDuration(new Period("PT1H"));
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    final KafkaSupervisorIOConfig config = ioConfigBuilder().build();
+    Assert.assertEquals(config, ioConfigBuilder().build());
+    Assert.assertEquals(config.hashCode(), ioConfigBuilder().build().hashCode());
+    Assert.assertNotEquals(config, null);
+    Assert.assertNotEquals(config, "not an io config");
+    Assert.assertNotEquals(config, ioConfigBuilder().withTopic("other").build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withReplicas(9).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withTaskCount(9).build());
+    Assert.assertNotEquals(
+        config,
+        ioConfigBuilder().withConsumerProperties(ImmutableMap.of("bootstrap.servers", "other:9092")).build()
+    );
+    Assert.assertNotEquals(config, ioConfigBuilder().withEmitTimeLagMetrics(true).build());
+  }
+
+  @Test
+  public void testTuningConfigEqualsAndHashCode()
+  {
+    final KafkaSupervisorTuningConfig config = new KafkaTuningConfigBuilder().build();
+    Assert.assertEquals(config, new KafkaTuningConfigBuilder().build());
+    Assert.assertEquals(config.hashCode(), new KafkaTuningConfigBuilder().build().hashCode());
+    Assert.assertNotEquals(config, null);
+    Assert.assertNotEquals(config, "not a tuning config");
+    Assert.assertNotEquals(config, new KafkaTuningConfigBuilder().withWorkerThreads(99).build());
+    Assert.assertNotEquals(config, new KafkaTuningConfigBuilder().withShutdownTimeout(new Period("PT99M")).build());
+    Assert.assertNotEquals(config, new KafkaTuningConfigBuilder().withOffsetFetchPeriod(new Period("PT99S")).build());
+  }
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
@@ -45,6 +46,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 {
@@ -295,6 +297,72 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     }
   }
 
+  /**
+   * Common restart decision shared by all seekable-stream supervisors. A copy of the proposed spec
+   * ({@code this}) is taken, differences that do not require a restart ("ignore cases") are
+   * neutralized on that copy, and the result is compared to the running {@code old} spec for
+   * equality. Returns {@code true} when a restart is needed.
+   * <p>
+   * Ignore cases work on a copy so the proposed spec — which may be persisted — is never mutated:
+   * <ul>
+   *   <li>{@code ioConfig.taskCount} when autoscaling is enabled on either spec, since it is
+   *       overridden at runtime.</li>
+   * </ul>
+   * Everything else (dataSchema, tuningConfig, the rest of ioConfig, context, suspended) must match,
+   * as determined by {@link #equals(Object)}. Subclasses may add type-specific rules by calling
+   * {@code super.requireRestart(old)} first.
+   */
+  @Override
+  public boolean requireRestart(SupervisorSpec old)
+  {
+    if (!(old instanceof SeekableStreamSupervisorSpec other)) {
+      return true;
+    }
+
+    // Start from a builder initialized with this (proposed) spec, neutralize the ignore-case fields
+    // via builder setters, then build and compare. The builder produces a copy, so the proposed spec
+    // — which may be persisted — is never mutated.
+    final Builder<?> proposed = toBuilder();
+
+    // Ignore case: taskCount is overridden at runtime when autoscaling is enabled, so align it to
+    // the existing spec's value.
+    if (isAutoScalerEnabled() || other.isAutoScalerEnabled()) {
+      proposed.taskCount(other.getIoConfig().getTaskCount());
+    }
+
+    return !proposed.build().equals(other);
+  }
+
+  private boolean isAutoScalerEnabled()
+  {
+    final AutoScalerConfig autoScalerConfig = getIoConfig().getAutoScalerConfig();
+    return autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SeekableStreamSupervisorSpec that = (SeekableStreamSupervisorSpec) o;
+    // Injected services (taskStorage, mapper, emitter, etc.) are excluded; only the user-defined
+    // spec content determines equality.
+    return suspended == that.suspended
+           && Objects.equals(id, that.id)
+           && Objects.equals(ingestionSchema, that.ingestionSchema)
+           && Objects.equals(context, that.context);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(id, ingestionSchema, context, suspended);
+  }
+
   protected abstract SeekableStreamSupervisorSpec toggleSuspend(boolean suspend);
 
   public abstract SeekableStreamSupervisorSpec createBackfillSpec(
@@ -302,5 +370,113 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       BoundedStreamConfig boundedStreamConfig,
       @Nullable Integer taskCount
   );
+
+  /**
+   * Returns a builder pre-populated with this spec's values (including injected services), so callers
+   * can produce a modified copy without mutating this instance. Subclasses return their own builder.
+   */
+  public abstract Builder<?> toBuilder();
+
+  /**
+   * Self-typed builder for {@link SeekableStreamSupervisorSpec} and its subclasses. Holds the spec's
+   * components and injected services; subclasses implement {@link #self()} and {@link #build()} to
+   * reconstruct the concrete spec. Setter methods correspond to fields a restart comparison may
+   * neutralize (see {@link #requireRestart}).
+   */
+  @SuppressFBWarnings(
+      value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
+      justification = "Fields are populated via copyFrom() and read by build() in concrete subclasses, which "
+                      + "live in other modules and so are invisible to SpotBugs' per-module analysis."
+  )
+  public abstract static class Builder<T extends Builder<T>>
+  {
+    protected String id;
+    protected DataSchema dataSchema;
+    protected SeekableStreamSupervisorIOConfig ioConfig;
+    protected SeekableStreamSupervisorTuningConfig tuningConfig;
+    protected Map<String, Object> context;
+    protected Boolean suspended;
+    protected TaskStorage taskStorage;
+    protected TaskMaster taskMaster;
+    protected IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
+    protected SeekableStreamIndexTaskClientFactory indexTaskClientFactory;
+    protected ObjectMapper mapper;
+    protected ServiceEmitter emitter;
+    protected DruidMonitorSchedulerConfig monitorSchedulerConfig;
+    protected RowIngestionMetersFactory rowIngestionMetersFactory;
+    protected SupervisorStateManagerConfig supervisorStateManagerConfig;
+
+    protected abstract T self();
+
+    public abstract SeekableStreamSupervisorSpec build();
+
+    /**
+     * Copies all fields (components and injected services) from an existing spec into this builder.
+     */
+    public T copyFrom(SeekableStreamSupervisorSpec spec)
+    {
+      this.id = spec.id;
+      this.dataSchema = spec.getSpec().getDataSchema();
+      this.ioConfig = spec.getIoConfig();
+      this.tuningConfig = spec.getTuningConfig();
+      this.context = spec.context;
+      this.suspended = spec.suspended;
+      this.taskStorage = spec.taskStorage;
+      this.taskMaster = spec.taskMaster;
+      this.indexerMetadataStorageCoordinator = spec.indexerMetadataStorageCoordinator;
+      this.indexTaskClientFactory = spec.indexTaskClientFactory;
+      this.mapper = spec.mapper;
+      this.emitter = spec.emitter;
+      this.monitorSchedulerConfig = spec.monitorSchedulerConfig;
+      this.rowIngestionMetersFactory = spec.rowIngestionMetersFactory;
+      this.supervisorStateManagerConfig = spec.supervisorStateManagerConfig;
+      return self();
+    }
+
+    public T id(String id)
+    {
+      this.id = id;
+      return self();
+    }
+
+    public T dataSchema(DataSchema dataSchema)
+    {
+      this.dataSchema = dataSchema;
+      return self();
+    }
+
+    public T ioConfig(SeekableStreamSupervisorIOConfig ioConfig)
+    {
+      this.ioConfig = ioConfig;
+      return self();
+    }
+
+    public T tuningConfig(SeekableStreamSupervisorTuningConfig tuningConfig)
+    {
+      this.tuningConfig = tuningConfig;
+      return self();
+    }
+
+    public T context(Map<String, Object> context)
+    {
+      this.context = context;
+      return self();
+    }
+
+    public T suspended(boolean suspended)
+    {
+      this.suspended = suspended;
+      return self();
+    }
+
+    /**
+     * Sets {@code ioConfig.taskCount} on a copy of the current ioConfig (never mutates the original).
+     */
+    public T taskCount(int taskCount)
+    {
+      this.ioConfig = this.ioConfig.toBuilder().withTaskCount(taskCount).build();
+      return self();
+    }
+  }
 
 }

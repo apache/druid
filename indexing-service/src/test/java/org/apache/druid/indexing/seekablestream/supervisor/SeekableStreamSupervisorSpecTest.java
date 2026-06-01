@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
@@ -672,28 +673,18 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     // Use an ioConfig whose autoScalerConfig matches the test's intent (min=15, max=20) so the
     // supervisor's bounds and the scaler's bounds agree.
-    EasyMock.expect(spec.getIoConfig()).andReturn(new SeekableStreamSupervisorIOConfig(
-        "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
-        null,
-        new Period("PT1H"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        misconfiguredAutoScalerConfig,
-        LagAggregator.DEFAULT,
-        null,
-        null,
-        null,
-        null,
-        null
-    )
-    {
-    }).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withReplicas(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withAutoScalerConfig(misconfiguredAutoScalerConfig)
+        .withLagAggregator(LagAggregator.DEFAULT)
+        .build()).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -749,28 +740,18 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     // taskCountMin=2 so scaler's floored output (1) is below min and triggers the clamp.
     final Map<String, Object> scaleInProps = getScaleInProperties();
     scaleInProps.put("taskCountMin", 2);
-    final SeekableStreamSupervisorIOConfig customIoConfig = new SeekableStreamSupervisorIOConfig(
-        "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
-        null,
-        new Period("PT1H"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        mapper.convertValue(scaleInProps, AutoScalerConfig.class),
-        LagAggregator.DEFAULT,
-        null,
-        null,
-        null,
-        null,
-        null
-    )
-    {
-    };
+    final SeekableStreamSupervisorIOConfig customIoConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withReplicas(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withAutoScalerConfig(mapper.convertValue(scaleInProps, AutoScalerConfig.class))
+        .withLagAggregator(LagAggregator.DEFAULT)
+        .build();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(customIoConfig).anyTimes();
@@ -829,33 +810,23 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   @Test
   public void testSeekableStreamSupervisorSpecWithScaleDisable() throws InterruptedException
   {
-    SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
-        "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
-        1,
-        new Period("PT1H"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        LagAggregator.DEFAULT,
-        null,
-        null,
-        null,
-        null,
-        null
-    )
-    {
-    };
+    SeekableStreamSupervisorIOConfig ioConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLagAggregator(LagAggregator.DEFAULT)
+        .build();
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -888,30 +859,21 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   @Test
   public void testEnablingIdleBeviourPerSupervisorWithOverlordConfigEnabled()
   {
-    SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
-        "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
-        1,
-        new Period("PT1H"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        LagAggregator.DEFAULT,
-        null,
-        new IdleConfig(true, null),
-        null,
-        null,
-        null
-    )
-    {
-    };
+    SeekableStreamSupervisorIOConfig ioConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLagAggregator(LagAggregator.DEFAULT)
+        .withIdleConfig(new IdleConfig(true, null))
+        .build();
 
-    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(ioConfig).anyTimes();
     EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
     EasyMock.replay(ingestionSchema);
     spec = new SeekableStreamSupervisorSpec(
@@ -950,6 +912,12 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
       )
       {
         return null;
+      }
+
+      @Override
+      public Builder<?> toBuilder()
+      {
+        throw new UnsupportedOperationException();
       }
 
       @Override
@@ -1454,6 +1422,73 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     assertMergeResult(null, spec(null, 2, 8, null), 2); // taskCountMin from constructor
   }
 
+  @Test
+  public void testRequireRestart_identicalSpecsDoNotRestart()
+  {
+    final TestSeekableStreamSupervisorSpec seed =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
+    final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().build();
+    final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().build();
+    Assert.assertFalse(newSpec.requireRestart(oldSpec));
+  }
+
+  @Test
+  public void testRequireRestart_taskCountChangeWithAutoscalerDoesNotRestart()
+  {
+    final TestSeekableStreamSupervisorSpec seed =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
+    final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().taskCount(2).build();
+    final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().taskCount(5).build();
+    Assert.assertFalse(newSpec.requireRestart(oldSpec));
+  }
+
+  @Test
+  public void testRequireRestart_taskCountChangeWithoutAutoscalerRestarts()
+  {
+    final TestSeekableStreamSupervisorSpec seed = buildSpecWithIoConfig("id", createIOConfig(2, null));
+    final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().taskCount(2).build();
+    final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().taskCount(5).build();
+    Assert.assertTrue(newSpec.requireRestart(oldSpec));
+  }
+
+  @Test
+  public void testRequireRestart_contextChangeRestarts()
+  {
+    final TestSeekableStreamSupervisorSpec seed =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
+    final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().build();
+    final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().context(ImmutableMap.of("k", "v")).build();
+    Assert.assertTrue(newSpec.requireRestart(oldSpec));
+  }
+
+  @Test
+  public void testRequireRestart_suspendedChangeRestarts()
+  {
+    final TestSeekableStreamSupervisorSpec seed =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
+    final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().suspended(false).build();
+    final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().suspended(true).build();
+    Assert.assertTrue(newSpec.requireRestart(oldSpec));
+  }
+
+  @Test
+  public void testRequireRestart_dataSchemaChangeRestarts()
+  {
+    final TestSeekableStreamSupervisorSpec seed =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
+    final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().build();
+    final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().dataSchema(getDataSchema("other-datasource")).build();
+    Assert.assertTrue(newSpec.requireRestart(oldSpec));
+  }
+
+  @Test
+  public void testRequireRestart_differentSpecTypeRestarts()
+  {
+    final TestSeekableStreamSupervisorSpec seed =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
+    Assert.assertTrue(seed.toBuilder().build().requireRestart(new NoopSupervisorSpec("id", ImmutableList.of("ds"))));
+  }
+
   private void assertMergeResult(
       @Nullable TestSeekableStreamSupervisorSpec existingSpec,
       TestSeekableStreamSupervisorSpec newSpec,
@@ -1527,53 +1562,24 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
   private SeekableStreamSupervisorIOConfig getIOConfig(boolean scaleOut, int maxTaskCount)
   {
-    if (scaleOut) {
-      return new SeekableStreamSupervisorIOConfig(
-          "stream",
-          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-          1,
-          null, // autoscaler uses taskCountStart/taskCountMin for the initial value
-          new Period("PT1H"),
-          new Period("P1D"),
-          new Period("PT30S"),
-          false,
-          new Period("PT30M"),
-          null,
-          null,
-          mapper.convertValue(getScaleOutProperties(maxTaskCount), AutoScalerConfig.class),
-          LagAggregator.DEFAULT,
-          null,
-          null,
-          null,
-          null,
-          null
-      )
-      {
-      };
-    } else {
-      return new SeekableStreamSupervisorIOConfig(
-          "stream",
-          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-          1,
-          null, // autoscaler uses taskCountStart/taskCountMin for the initial value
-          new Period("PT1H"),
-          new Period("P1D"),
-          new Period("PT30S"),
-          false,
-          new Period("PT30M"),
-          null,
-          null,
-          mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class),
-          LagAggregator.DEFAULT,
-          null,
-          null,
-          null,
-          null,
-          null
-      )
-      {
-      };
-    }
+    final AutoScalerConfig autoScalerConfig = mapper.convertValue(
+        scaleOut ? getScaleOutProperties(maxTaskCount) : getScaleInProperties(),
+        AutoScalerConfig.class
+    );
+    // taskCount is left unset; with autoscaling enabled the ioConfig derives it from
+    // taskCountStart/taskCountMin.
+    return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withReplicas(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withAutoScalerConfig(autoScalerConfig)
+        .withLagAggregator(LagAggregator.DEFAULT)
+        .build();
   }
 
   private static DataSchema getDataSchema()
@@ -1630,28 +1636,19 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     Map<String, Object> endOffsets = ImmutableMap.of("0", 100L);
     BoundedStreamConfig boundedConfig = new BoundedStreamConfig(startOffsets, endOffsets);
 
-    SeekableStreamSupervisorIOConfig boundedIoConfig = new SeekableStreamSupervisorIOConfig(
-        "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
-        1,
-        new Period("PT1H"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        LagAggregator.DEFAULT,
-        null,
-        null,
-        null,
-        null,
-        boundedConfig
-    )
-    {
-    };
+    SeekableStreamSupervisorIOConfig boundedIoConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLagAggregator(LagAggregator.DEFAULT)
+        .withBoundedStreamConfig(boundedConfig)
+        .build();
 
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();

@@ -23,10 +23,15 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Period;
 
+import java.util.Map;
+
 /**
- * Builder for a {@link SeekableStreamSupervisorIOConfig}.
+ * Builder for a {@link SeekableStreamSupervisorIOConfig}. Subclasses add stream-specific fields and
+ * implement {@link #build()}. {@link #copyFromBase(SeekableStreamSupervisorIOConfig)} populates the
+ * base-class fields from an existing config, enabling {@code toBuilder()}-style copies.
  *
  * @param <Self> Type of this builder itself
  * @param <C>    Type of the IOConfig created by this builder
@@ -51,6 +56,8 @@ public abstract class SupervisorIOConfigBuilder<
   protected DateTime lateMessageRejectionStartDateTime;
   protected IdleConfig idleConfig;
   protected Integer stopTaskCount;
+  protected Map<Integer, Integer> serverPriorityToReplicas;
+  protected BoundedStreamConfig boundedStreamConfig;
 
   public Self withStream(String stream)
   {
@@ -154,11 +161,94 @@ public abstract class SupervisorIOConfigBuilder<
     return self();
   }
 
+  public Self withServerPriorityToReplicas(Map<Integer, Integer> serverPriorityToReplicas)
+  {
+    this.serverPriorityToReplicas = serverPriorityToReplicas;
+    return self();
+  }
+
+  public Self withBoundedStreamConfig(BoundedStreamConfig boundedStreamConfig)
+  {
+    this.boundedStreamConfig = boundedStreamConfig;
+    return self();
+  }
+
+  /**
+   * Populates this builder's base-class fields from an existing config. Stores the constructor's
+   * input types ({@link Period} rather than the normalized {@link Duration}) so {@link #build()}
+   * round-trips through the public constructor.
+   */
+  public Self copyFromBase(SeekableStreamSupervisorIOConfig io)
+  {
+    this.stream = io.getStream();
+    this.inputFormat = io.getInputFormat();
+    this.replicas = io.getReplicas();
+    this.taskCount = io.getTaskCount();
+    this.taskDuration = toPeriod(io.getTaskDuration());
+    this.startDelay = toPeriod(io.getStartDelay());
+    this.period = toPeriod(io.getPeriod());
+    this.useEarliestSequenceNumber = io.isUseEarliestSequenceNumber();
+    this.completionTimeout = toPeriod(io.getCompletionTimeout());
+    this.lateMessageRejectionPeriod = io.getLateMessageRejectionPeriod().isPresent()
+                                      ? toPeriod(io.getLateMessageRejectionPeriod().get()) : null;
+    this.earlyMessageRejectionPeriod = io.getEarlyMessageRejectionPeriod().isPresent()
+                                       ? toPeriod(io.getEarlyMessageRejectionPeriod().get()) : null;
+    this.lateMessageRejectionStartDateTime = io.getLateMessageRejectionStartDateTime().orNull();
+    this.autoScalerConfig = io.getAutoScalerConfig();
+    this.lagAggregator = io.getLagAggregator();
+    this.idleConfig = io.getIdleConfig();
+    this.stopTaskCount = io.getStopTaskCount();
+    this.serverPriorityToReplicas = io.getServerPriorityToReplicas();
+    this.boundedStreamConfig = io.getBoundedStreamConfig();
+    return self();
+  }
+
   public abstract C build();
 
+  protected static Period toPeriod(Duration duration)
+  {
+    return duration == null ? null : new Period(duration);
+  }
+
   @SuppressWarnings("unchecked")
-  private Self self()
+  protected Self self()
   {
     return (Self) this;
+  }
+
+  /**
+   * Concrete builder producing a plain {@link SeekableStreamSupervisorIOConfig}. All instances are of
+   * the single anonymous class defined in {@link #build()}, so builder-produced configs share a
+   * runtime class and compare correctly via {@link SeekableStreamSupervisorIOConfig#equals(Object)}.
+   */
+  public static final class DefaultSupervisorIOConfigBuilder
+      extends SupervisorIOConfigBuilder<DefaultSupervisorIOConfigBuilder, SeekableStreamSupervisorIOConfig>
+  {
+    @Override
+    public SeekableStreamSupervisorIOConfig build()
+    {
+      return new SeekableStreamSupervisorIOConfig(
+          stream,
+          inputFormat,
+          replicas,
+          taskCount,
+          taskDuration,
+          startDelay,
+          period,
+          useEarliestSequenceNumber,
+          completionTimeout,
+          lateMessageRejectionPeriod,
+          earlyMessageRejectionPeriod,
+          autoScalerConfig,
+          lagAggregator,
+          lateMessageRejectionStartDateTime,
+          idleConfig,
+          stopTaskCount,
+          serverPriorityToReplicas,
+          boundedStreamConfig
+      )
+      {
+      };
+    }
   }
 }
