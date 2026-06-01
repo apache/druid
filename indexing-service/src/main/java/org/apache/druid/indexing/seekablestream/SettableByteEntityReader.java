@@ -55,7 +55,8 @@ class SettableByteEntityReader<T extends ByteEntity> implements InputEntityReade
     this.entity = new SettableByteEntity<>();
     this.delegate = new TransformingInputEntityReader(
         format.createReader(inputRowSchema, entity, indexingTmpDir),
-        transformSpec.toTransformer()
+        transformSpec.toTransformer(),
+        transformSpec.getFilter() != null
     );
   }
 

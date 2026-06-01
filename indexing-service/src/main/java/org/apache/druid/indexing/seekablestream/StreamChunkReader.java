@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.transform.FilteredInputRow;
 import org.apache.druid.segment.transform.TransformSpec;
 
 import javax.annotation.Nullable;
@@ -70,7 +71,9 @@ class StreamChunkReader<RecordType extends ByteEntity>
         transformSpec,
         indexingTmpDir
     );
-    this.rowFilter = rowFilter;
+    this.rowFilter = transformSpec.getFilter() == null
+                     ? rowFilter
+                     : wrapFilterToPreserveTransformFilterReason(rowFilter);
     this.rowIngestionMeters = rowIngestionMeters;
     this.parseExceptionHandler = parseExceptionHandler;
   }
@@ -87,6 +90,16 @@ class StreamChunkReader<RecordType extends ByteEntity>
     this.rowFilter = rowFilter;
     this.rowIngestionMeters = rowIngestionMeters;
     this.parseExceptionHandler = parseExceptionHandler;
+  }
+
+  private static InputRowFilter wrapFilterToPreserveTransformFilterReason(final InputRowFilter rowFilter)
+  {
+    return row -> {
+      if (row instanceof FilteredInputRow) {
+        return ((FilteredInputRow) row).getFilterResult();
+      }
+      return rowFilter.test(row);
+    };
   }
 
   List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard) throws IOException

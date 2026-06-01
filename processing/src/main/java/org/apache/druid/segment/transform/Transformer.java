@@ -72,6 +72,18 @@ public class Transformer
   @Nullable
   public InputRow transform(@Nullable final InputRow row)
   {
+    return transform(row, false);
+  }
+
+  @Nullable
+  InputRow transformOrMarkFiltered(@Nullable final InputRow row)
+  {
+    return transform(row, true);
+  }
+
+  @Nullable
+  private InputRow transform(@Nullable final InputRow row, final boolean markFiltered)
+  {
     if (row == null) {
       return null;
     }
@@ -87,7 +99,7 @@ public class Transformer
     if (valueMatcher != null) {
       rowSupplierForValueMatcher.set(transformedRow);
       if (!valueMatcher.matches(false)) {
-        return null;
+        return markFiltered ? FilteredInputRow.CUSTOM_FILTER : null;
       }
     }
 

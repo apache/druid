@@ -30,17 +30,32 @@ public class TransformingInputEntityReader implements InputEntityReader
 {
   private final InputEntityReader delegate;
   private final Transformer transformer;
+  private final boolean preserveFilteredRows;
 
-  public TransformingInputEntityReader(InputEntityReader delegate, Transformer transformer)
+  public TransformingInputEntityReader(final InputEntityReader delegate, final Transformer transformer)
+  {
+    this(delegate, transformer, false);
+  }
+
+  public TransformingInputEntityReader(
+      final InputEntityReader delegate,
+      final Transformer transformer,
+      final boolean preserveFilteredRows
+  )
   {
     this.delegate = delegate;
     this.transformer = transformer;
+    this.preserveFilteredRows = preserveFilteredRows;
   }
 
   @Override
   public CloseableIterator<InputRow> read() throws IOException
   {
-    return delegate.read().map(transformer::transform);
+    if (preserveFilteredRows) {
+      return delegate.read().map(transformer::transformOrMarkFiltered);
+    } else {
+      return delegate.read().map(transformer::transform);
+    }
   }
 
   @Override
