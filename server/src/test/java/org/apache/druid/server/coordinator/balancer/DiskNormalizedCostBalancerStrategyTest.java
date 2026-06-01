@@ -43,7 +43,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class DiskWeightedCostBalancerStrategyTest
+public class DiskNormalizedCostBalancerStrategyTest
 {
   private static final Interval DAY = Intervals.of("2015-01-01T00/2015-01-01T01");
 
@@ -147,8 +147,8 @@ public class DiskWeightedCostBalancerStrategyTest
     List<ServerHolder> serverHolderList = setupDummyCluster(10, 20);
     DataSegment segment = getSegment(1000);
 
-    BalancerStrategy strategy = new DiskWeightedCostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "DiskWeightedCostBalancerStrategyTest-%d"))
+    BalancerStrategy strategy = new DiskNormalizedCostBalancerStrategy(
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "DiskNormalizedCostBalancerStrategyTest-%d"))
     );
     ServerHolder holder = strategy.findServersToLoadSegment(segment, serverHolderList).next();
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
@@ -161,8 +161,8 @@ public class DiskWeightedCostBalancerStrategyTest
     List<ServerHolder> serverHolderList = setupDummyCluster(10, 20);
     DataSegment segment = getSegment(1000);
 
-    BalancerStrategy strategy = new DiskWeightedCostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskWeightedCostBalancerStrategyTest-%d"))
+    BalancerStrategy strategy = new DiskNormalizedCostBalancerStrategy(
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d"))
     );
     ServerHolder holder = strategy.findServersToLoadSegment(segment, serverHolderList).next();
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
@@ -183,7 +183,7 @@ public class DiskWeightedCostBalancerStrategyTest
   )
   {
     List<DataSegment> segments = IntStream.range(baseIndex, baseIndex + segmentCount)
-        .mapToObj(DiskWeightedCostBalancerStrategyTest::getSegment)
+        .mapToObj(DiskNormalizedCostBalancerStrategyTest::getSegment)
         .collect(Collectors.toList());
     return buildServer(name, maxSize, sizeUsed, segments);
   }
@@ -211,14 +211,14 @@ public class DiskWeightedCostBalancerStrategyTest
   private static BalancerStrategy newCostStrategy()
   {
     return new CostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskWeightedCostBalancerStrategyTest-%d"))
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d"))
     );
   }
 
-  private static BalancerStrategy newDiskWeightedStrategy()
+  private static BalancerStrategy newDiskNormalizedStrategy()
   {
-    return new DiskWeightedCostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskWeightedCostBalancerStrategyTest-%d"))
+    return new DiskNormalizedCostBalancerStrategy(
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d"))
     );
   }
 
@@ -243,17 +243,17 @@ public class DiskWeightedCostBalancerStrategyTest
         newCostStrategy().findServersToLoadSegment(proposal, servers).next().getServer().getName()
     );
 
-    // DiskWeighted uses projected headroom: A ~= 10K / 0.09, B ~= 60K / 0.89.
+    // DiskNormalized uses projected headroom: A ~= 10K / 0.09, B ~= 60K / 0.89.
     // The emptier server wins despite the higher raw cost.
     Assert.assertEquals(
-        "DiskWeightedCostBalancerStrategy must prefer the emptier server",
+        "DiskNormalizedCostBalancerStrategy must prefer the emptier server",
         "B",
-        newDiskWeightedStrategy().findServersToLoadSegment(proposal, servers).next().getServer().getName()
+        newDiskNormalizedStrategy().findServersToLoadSegment(proposal, servers).next().getServer().getName()
     );
   }
 
   @Test
-  public void testDiskWeightedFixesSkewThatCostCannotCorrect()
+  public void testDiskNormalizedFixesSkewThatCostCannotCorrect()
   {
     final long maxSize = 10_000_000L;
     // A: 80% full, 20 same-DS DAY segments (indices 0-19).
@@ -277,17 +277,17 @@ public class DiskWeightedCostBalancerStrategyTest
         newCostStrategy().findDestinationServerToMoveSegment(segmentToMove, heavy, servers)
     );
 
-    // DiskWeightedCostBalancerStrategy (default 5% threshold):
+    // DiskNormalizedCostBalancerStrategy (default 5% threshold):
     //   A: 38K / 0.20 * 0.95 = 180.5K
     //   B: 40K / 0.80        =  50.0K
     // B wins decisively and the segment moves, reducing the skew.
-    final ServerHolder diskWeightedResult =
-        newDiskWeightedStrategy().findDestinationServerToMoveSegment(segmentToMove, heavy, servers);
+    final ServerHolder diskNormalizedResult =
+        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, heavy, servers);
     Assert.assertNotNull(
-        "DiskWeighted must correct the skew by moving the segment off the heavier server",
-        diskWeightedResult
+        "DiskNormalized must correct the skew by moving the segment off the heavier server",
+        diskNormalizedResult
     );
-    Assert.assertEquals("B", diskWeightedResult.getServer().getName());
+    Assert.assertEquals("B", diskNormalizedResult.getServer().getName());
   }
 
   @Test
@@ -305,14 +305,14 @@ public class DiskWeightedCostBalancerStrategyTest
     // Default threshold (5%): dest is not cheap enough to justify the move.
     Assert.assertNull(
         "Default threshold must block a marginal move to prevent ping-ponging",
-        newDiskWeightedStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers)
+        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers)
     );
 
     // Lowering the threshold to 1% reduces the discount; the same marginal
     // difference now triggers the move. This proves the threshold is what
     // blocks it above.
-    final BalancerStrategy onePercentThreshold = new DiskWeightedCostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskWeightedCostBalancerStrategyTest-%d")),
+    final BalancerStrategy onePercentThreshold = new DiskNormalizedCostBalancerStrategy(
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d")),
         0.01
     );
     final ServerHolder movedTo = onePercentThreshold.findDestinationServerToMoveSegment(segmentToMove, source, servers);
@@ -341,12 +341,12 @@ public class DiskWeightedCostBalancerStrategyTest
         newCostStrategy().findServersToLoadSegment(newSegment, servers).next().getServer().getName()
     );
 
-    // DiskWeighted uses projected headroom: A_norm = 10K / 0.04 = 250K,
+    // DiskNormalized uses projected headroom: A_norm = 10K / 0.04 = 250K,
     // B_norm = 40K / 0.29 = 138K -> B wins.
     Assert.assertEquals(
-        "DiskWeighted must prefer the emptier server despite its higher raw cost",
+        "DiskNormalized must prefer the emptier server despite its higher raw cost",
         "B",
-        newDiskWeightedStrategy().findServersToLoadSegment(newSegment, servers).next().getServer().getName()
+        newDiskNormalizedStrategy().findServersToLoadSegment(newSegment, servers).next().getServer().getName()
     );
   }
 
@@ -371,14 +371,14 @@ public class DiskWeightedCostBalancerStrategyTest
         newCostStrategy().findServersToLoadSegment(largeSegment, servers).next().getServer().getName()
     );
 
-    // If diskWeighted used current headroom, A would also win:
+    // If diskNormalized used current headroom, A would also win:
     //   A_current = 10K / 0.30, B_current = 40K / 0.50.
     // With projected headroom, B wins:
     //   A_projected = 10K / 0.05, B_projected = 40K / 0.25.
     Assert.assertEquals(
-        "DiskWeighted must account for the proposal size before choosing a server",
+        "DiskNormalized must account for the proposal size before choosing a server",
         "B",
-        newDiskWeightedStrategy().findServersToLoadSegment(largeSegment, servers).next().getServer().getName()
+        newDiskNormalizedStrategy().findServersToLoadSegment(largeSegment, servers).next().getServer().getName()
     );
   }
 
@@ -402,11 +402,11 @@ public class DiskWeightedCostBalancerStrategyTest
     Assert.assertNotNull("CostBalancerStrategy must recommend moving to the near-full DEST", costResult);
     Assert.assertEquals("DEST", costResult.getServer().getName());
 
-    // DiskWeighted: DEST_norm = 10K / 0.05 = 200K > SOURCE_norm = 38K / 0.30 * 0.95 ≈ 120K.
+    // DiskNormalized: DEST_norm = 10K / 0.05 = 200K > SOURCE_norm = 38K / 0.30 * 0.95 ≈ 120K.
     // Near-full DEST is too expensive after normalization -> no move.
     Assert.assertNull(
-        "DiskWeighted must block the move to the near-full server",
-        newDiskWeightedStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers)
+        "DiskNormalized must block the move to the near-full server",
+        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers)
     );
   }
 
@@ -418,7 +418,7 @@ public class DiskWeightedCostBalancerStrategyTest
     final List<DataSegment> sourceSegments = new ArrayList<>();
     sourceSegments.add(largeSegment);
     IntStream.range(1, 20)
-             .mapToObj(DiskWeightedCostBalancerStrategyTest::getSegment)
+             .mapToObj(DiskNormalizedCostBalancerStrategyTest::getSegment)
              .forEach(sourceSegments::add);
 
     // SOURCE is fuller before the move, but already projects the segment.
@@ -436,11 +436,11 @@ public class DiskWeightedCostBalancerStrategyTest
     Assert.assertNotNull("CostBalancerStrategy must recommend moving to the lower raw-cost DEST", costResult);
     Assert.assertEquals("DEST", costResult.getServer().getName());
 
-    // If diskWeighted used current headroom, DEST would win: 10K / 0.30 < 38K / 0.20 * 0.95.
+    // If diskNormalized used current headroom, DEST would win: 10K / 0.30 < 38K / 0.20 * 0.95.
     // With projected headroom, DEST is too full after placement: 10K / 0.05 > 38K / 0.20 * 0.95.
     Assert.assertNull(
-        "DiskWeighted must not move a large segment to a server that would become too full",
-        newDiskWeightedStrategy().findDestinationServerToMoveSegment(largeSegment, source, servers)
+        "DiskNormalized must not move a large segment to a server that would become too full",
+        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(largeSegment, source, servers)
     );
   }
 
@@ -448,8 +448,8 @@ public class DiskWeightedCostBalancerStrategyTest
   public void testRejectsInvalidThreshold()
   {
     try {
-      new DiskWeightedCostBalancerStrategy(
-          MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskWeightedCostBalancerStrategyTest-%d")),
+      new DiskNormalizedCostBalancerStrategy(
+          MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d")),
           1.0
       );
       Assert.fail("Expected IllegalArgumentException for threshold=1.0");
@@ -459,8 +459,8 @@ public class DiskWeightedCostBalancerStrategyTest
     }
 
     try {
-      new DiskWeightedCostBalancerStrategy(
-          MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskWeightedCostBalancerStrategyTest-%d")),
+      new DiskNormalizedCostBalancerStrategy(
+          MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d")),
           -0.01
       );
       Assert.fail("Expected IllegalArgumentException for negative threshold");

@@ -53,7 +53,7 @@ import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.balancer.DiskWeightedCostBalancerStrategyFactory;
+import org.apache.druid.server.coordinator.balancer.DiskNormalizedCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
@@ -584,8 +584,8 @@ public class CoordinatorSimulationBuilder
           return new CostBalancerStrategyFactory();
         case "cachingCost":
           return buildCachingCostBalancerStrategy();
-        case "diskWeighted":
-          return new DiskWeightedCostBalancerStrategyFactory();
+        case "diskNormalized":
+          return new DiskNormalizedCostBalancerStrategyFactory();
         case "random":
           return new RandomBalancerStrategyFactory();
         default:

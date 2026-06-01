@@ -27,12 +27,12 @@ import org.apache.druid.common.config.Configs;
 import javax.annotation.Nullable;
 
 /**
- * Configuration for {@link DiskWeightedCostBalancerStrategy}.
+ * Configuration for {@link DiskNormalizedCostBalancerStrategy}.
  * <p>
  * Bound to the prefix
- * {@code druid.coordinator.balancer.diskWeighted}.
+ * {@code druid.coordinator.balancer.diskNormalized}.
  */
-public class DiskWeightedCostBalancerStrategyConfig
+public class DiskNormalizedCostBalancerStrategyConfig
 {
   /**
    * Default minimum fractional cost reduction required before a segment will
@@ -51,13 +51,13 @@ public class DiskWeightedCostBalancerStrategyConfig
   @JsonProperty
   private final double moveCostSavingsThreshold;
 
-  public DiskWeightedCostBalancerStrategyConfig()
+  public DiskNormalizedCostBalancerStrategyConfig()
   {
     this(null);
   }
 
   @JsonCreator
-  public DiskWeightedCostBalancerStrategyConfig(
+  public DiskNormalizedCostBalancerStrategyConfig(
       @JsonProperty("moveCostSavingsThreshold") @Nullable Double moveCostSavingsThreshold
   )
   {
@@ -65,7 +65,7 @@ public class DiskWeightedCostBalancerStrategyConfig
 
     Preconditions.checkArgument(
         this.moveCostSavingsThreshold >= 0.0 && this.moveCostSavingsThreshold < 1.0,
-        "'druid.coordinator.balancer.diskWeighted.moveCostSavingsThreshold'[%s] must be in [0.0, 1.0)",
+        "'druid.coordinator.balancer.diskNormalized.moveCostSavingsThreshold'[%s] must be in [0.0, 1.0)",
         this.moveCostSavingsThreshold
     );
   }
