@@ -75,7 +75,7 @@ export function SupervisorResetToLatestDialog(props: SupervisorResetToLatestDial
           onValueChange={v => setBackfillTaskCount(v)}
           onValueEmpty={() => setBackfillTaskCount(undefined)}
           min={1}
-          placeholder="Use supervisor spec default"
+          placeholder="Use supervisor's taskCount by default"
           fill
         />
       </FormGroup>
