@@ -41,12 +41,12 @@ import org.apache.druid.timeline.DataSegment;
  * To prevent oscillation when servers have similar headroom, any server that
  * is already projected to hold the segment (the source on a move, or a currently
  * serving node on a drop) receives a cost discount equal to
- * {@link DiskNormalizedCostBalancerStrategyConfig.DEFAULT_MOVE_COST_SAVINGS_THRESHOLD}. A move therefore fires only when
+ * {@link DiskWeightedCostBalancerStrategyConfig.DEFAULT_MOVE_COST_SAVINGS_THRESHOLD}. A move therefore fires only when
  * the destination saves at least this fraction of the source's cost. The default
  * is configurable via
- * {@code druid.coordinator.balancer.diskNormalized.moveCostSavingsThreshold}.
+ * {@code druid.coordinator.balancer.diskWeighted.moveCostSavingsThreshold}.
  */
-public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
+public class DiskWeightedCostBalancerStrategy extends CostBalancerStrategy
 {
   /**
    * Numerical floor on the headroom divisor to prevent division by zero or by
@@ -57,12 +57,12 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
 
   private final double sourceCostMultiplier;
 
-  public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec)
+  public DiskWeightedCostBalancerStrategy(ListeningExecutorService exec)
   {
-    this(exec, DiskNormalizedCostBalancerStrategyConfig.DEFAULT_MOVE_COST_SAVINGS_THRESHOLD);
+    this(exec, DiskWeightedCostBalancerStrategyConfig.DEFAULT_MOVE_COST_SAVINGS_THRESHOLD);
   }
 
-  public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec, double moveCostSavingsThreshold)
+  public DiskWeightedCostBalancerStrategy(ListeningExecutorService exec, double moveCostSavingsThreshold)
   {
     super(exec);
     Preconditions.checkArgument(
