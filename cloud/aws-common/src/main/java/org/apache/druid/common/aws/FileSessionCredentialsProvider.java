@@ -19,10 +19,10 @@
 
 package org.apache.druid.common.aws;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSSessionCredentials;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +32,17 @@ import java.util.Properties;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class FileSessionCredentialsProvider implements AWSCredentialsProvider
+/**
+ * Loads AWS session credentials from a properties file and refreshes them periodically.
+ *
+ * <p>The credentials file must contain {@code sessionToken}, {@code accessKey}, and {@code secretKey} properties.
+ * Credentials are loaded immediately on construction and refreshed every hour via a background thread.
+ *
+ * <p>Note: In AWS SDK v1, {@code AWSCredentialsProvider} had a {@code refresh()} method as part of the interface.
+ * In SDK v2, {@code AwsCredentialsProvider} has no such method, so refresh is handled internally via a
+ * scheduled executor.
+ */
+public class FileSessionCredentialsProvider implements AwsCredentialsProvider
 {
   private final ScheduledExecutorService scheduler =
       Execs.scheduledSingleThreaded("FileSessionCredentialsProviderRefresh-%d");
@@ -42,7 +52,7 @@ public class FileSessionCredentialsProvider implements AWSCredentialsProvider
    * This field doesn't need to be volatile. From the Java Memory Model point of view, volatile on this field changes
    * nothing and doesn't provide any extra guarantees.
    */
-  private AWSSessionCredentials awsSessionCredentials;
+  private AwsSessionCredentials awsSessionCredentials;
 
   public FileSessionCredentialsProvider(String sessionCredentialsFile)
   {
@@ -53,13 +63,12 @@ public class FileSessionCredentialsProvider implements AWSCredentialsProvider
   }
 
   @Override
-  public AWSCredentials getCredentials()
+  public AwsCredentials resolveCredentials()
   {
     return awsSessionCredentials;
   }
 
-  @Override
-  public void refresh()
+  private void refresh()
   {
     try {
       Properties props = new Properties();
@@ -71,42 +80,10 @@ public class FileSessionCredentialsProvider implements AWSCredentialsProvider
       String accessKey = props.getProperty("accessKey");
       String secretKey = props.getProperty("secretKey");
 
-      awsSessionCredentials = new Credentials(sessionToken, accessKey, secretKey);
+      awsSessionCredentials = AwsSessionCredentials.create(accessKey, secretKey, sessionToken);
     }
     catch (IOException e) {
       throw new RuntimeException("cannot refresh AWS credentials", e);
-    }
-  }
-
-  private static class Credentials implements AWSSessionCredentials
-  {
-    private final String sessionToken;
-    private final String accessKey;
-    private final String secretKey;
-
-    private Credentials(String sessionToken, String accessKey, String secretKey)
-    {
-      this.sessionToken = sessionToken;
-      this.accessKey = accessKey;
-      this.secretKey = secretKey;
-    }
-
-    @Override
-    public String getSessionToken()
-    {
-      return sessionToken;
-    }
-
-    @Override
-    public String getAWSAccessKeyId()
-    {
-      return accessKey;
-    }
-
-    @Override
-    public String getAWSSecretKey()
-    {
-      return secretKey;
     }
   }
 }

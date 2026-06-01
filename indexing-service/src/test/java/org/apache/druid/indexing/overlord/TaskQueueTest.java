@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.common.guava.DSuppliers;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.HttpInputSource;
@@ -52,6 +51,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
+import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -87,8 +87,6 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.initialization.IndexerZkConfig;
-import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -98,6 +96,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -592,7 +591,7 @@ public class TaskQueueTest extends IngestionTestBase
     final DataSchema dataSchema =
         DataSchema.builder()
                   .withDataSource("DS")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(DimensionsSpec.builder().build())
                   .withGranularity(
                       new UniformGranularitySpec(Granularities.YEAR, Granularities.DAY, null)
@@ -751,6 +750,47 @@ public class TaskQueueTest extends IngestionTestBase
     serviceEmitter.verifyEmitted("task/run/time", 3);
   }
 
+  @Test
+  public void testTaskSubmissionToTaskRunnerBasedOnPriority() throws Exception
+  {
+    final RecordingTaskRunner recordingRunner = new RecordingTaskRunner(serviceEmitter);
+    final TaskQueue priorityQueue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(10, null, null, null, null, null),
+        new DefaultTaskConfig(),
+        getTaskStorage(),
+        recordingRunner,
+        actionClientFactory,
+        getLockbox(),
+        serviceEmitter,
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
+    );
+    priorityQueue.setActive(true);
+
+    final NoopTask lowPriority1 = NoopTask.ofPriority(1);
+    final NoopTask lowPriority2 = NoopTask.ofPriority(10);
+    final NoopTask medPriority = NoopTask.ofPriority(50);
+    final NoopTask highPriority1 = NoopTask.ofPriority(90);
+    final NoopTask highPriority2 = NoopTask.ofPriority(100);
+
+    priorityQueue.add(lowPriority1);
+    priorityQueue.add(medPriority);
+    priorityQueue.add(lowPriority2);
+    priorityQueue.add(highPriority2);
+    priorityQueue.add(highPriority1);
+
+    priorityQueue.manageQueuedTasks();
+
+    final List<String> submitted = recordingRunner.getSubmittedTaskIds();
+    Assert.assertEquals(5, submitted.size());
+    Assert.assertEquals(highPriority2.getId(), submitted.get(0));
+    Assert.assertEquals(highPriority1.getId(), submitted.get(1));
+    Assert.assertEquals(medPriority.getId(), submitted.get(2));
+    Assert.assertEquals(lowPriority2.getId(), submitted.get(3));
+    Assert.assertEquals(lowPriority1.getId(), submitted.get(4));
+  }
+
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner()
   {
     final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider
@@ -767,8 +807,6 @@ public class TaskQueueTest extends IngestionTestBase
         new NoopProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
-        EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         serviceEmitter
     );
   }
@@ -902,6 +940,31 @@ public class TaskQueueTest extends IngestionTestBase
       catch (Exception e) {
         throw new RuntimeException(e);
       }
+    }
+  }
+
+  /**
+   * A task runner that records the order in which tasks are submitted via {@link #run(Task)}.
+   */
+  static class RecordingTaskRunner extends SimpleTaskRunner
+  {
+    private final List<String> submittedTaskIds = new ArrayList<>();
+
+    RecordingTaskRunner(ServiceEmitter emitter)
+    {
+      super(emitter);
+    }
+
+    @Override
+    public ListenableFuture<TaskStatus> run(Task task)
+    {
+      submittedTaskIds.add(task.getId());
+      return Futures.immediateFuture(TaskStatus.success(task.getId()));
+    }
+
+    List<String> getSubmittedTaskIds()
+    {
+      return submittedTaskIds;
     }
   }
 }

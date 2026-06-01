@@ -65,6 +65,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -81,7 +82,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
   private static final HdfsInputSourceConfig DEFAULT_INPUT_SOURCE_CONFIG = new HdfsInputSourceConfig(null);
   private static final String COLUMN = "value";
   private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
-      new TimestampSpec(null, null, null),
+      TimestampSpec.DEFAULT,
       DimensionsSpec.EMPTY,
       ColumnsFilter.all()
   );
@@ -487,6 +488,233 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
           StringUtils.format("%s/bar", System.getProperty("user.dir")),
           inputSource.getSystemFieldValue(entity3, SystemField.PATH)
       );
+    }
+  }
+
+  public static class GetPathsTest
+  {
+    @Rule
+    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+    private FileSystem fileSystem;
+    private Configuration configuration;
+
+    @Before
+    public void setup() throws IOException
+    {
+      final File dir = temporaryFolder.getRoot();
+      configuration = new Configuration(true);
+      fileSystem = new LocalFileSystem();
+      fileSystem.initialize(dir.toURI(), configuration);
+      fileSystem.setWorkingDirectory(new Path(dir.getAbsolutePath()));
+    }
+
+    @After
+    public void teardown() throws IOException
+    {
+      fileSystem.close();
+    }
+
+    @Test
+    public void testGetPathsWithGlobMatchingNoFiles() throws IOException
+    {
+      final Collection<Path> paths = HdfsInputSource.getPaths(
+          Collections.singletonList(fileSystem.getWorkingDirectory() + "/nonexistent*"),
+          configuration
+      );
+      Assert.assertTrue(paths.isEmpty());
+    }
+
+    @Test
+    public void testGetPathsFiltersZeroLengthFiles() throws IOException
+    {
+      // Create an empty file (zero length)
+      final Path emptyFile = new Path("empty_file");
+      fileSystem.create(emptyFile).close();
+
+      // Create a non-empty file
+      final Path nonEmptyFile = new Path("non_empty_file");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(nonEmptyFile), StandardCharsets.UTF_8)
+      )) {
+        writer.write("data");
+      }
+
+      final Collection<Path> paths = HdfsInputSource.getPaths(
+          Collections.singletonList(fileSystem.makeQualified(new Path("*_file")).toString()),
+          configuration
+      );
+
+      Assert.assertEquals(1, paths.size());
+      Assert.assertTrue(paths.contains(fileSystem.makeQualified(nonEmptyFile)));
+    }
+
+    @Test
+    public void testGetPathsWithMultipleInputPaths() throws IOException
+    {
+      final Path fileA = new Path("groupA_1");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(fileA), StandardCharsets.UTF_8)
+      )) {
+        writer.write("a");
+      }
+
+      final Path fileB = new Path("groupB_1");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(fileB), StandardCharsets.UTF_8)
+      )) {
+        writer.write("b");
+      }
+
+      final Collection<Path> paths = HdfsInputSource.getPaths(
+          Arrays.asList(
+              fileSystem.makeQualified(new Path("groupA*")).toString(),
+              fileSystem.makeQualified(new Path("groupB*")).toString()
+          ),
+          configuration
+      );
+
+      Assert.assertEquals(2, paths.size());
+      Assert.assertTrue(paths.contains(fileSystem.makeQualified(fileA)));
+      Assert.assertTrue(paths.contains(fileSystem.makeQualified(fileB)));
+    }
+
+    @Test
+    public void testGetPathsWithCommaSeparatedString() throws IOException
+    {
+      final Path fileA = new Path("comma_a");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(fileA), StandardCharsets.UTF_8)
+      )) {
+        writer.write("a");
+      }
+
+      final Path fileB = new Path("comma_b");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(fileB), StandardCharsets.UTF_8)
+      )) {
+        writer.write("b");
+      }
+
+      final String commaSeparated =
+          fileSystem.makeQualified(fileA) + "," + fileSystem.makeQualified(fileB);
+      final Collection<Path> paths = HdfsInputSource.getPaths(
+          Collections.singletonList(commaSeparated),
+          configuration
+      );
+
+      Assert.assertEquals(2, paths.size());
+      Assert.assertTrue(paths.contains(fileSystem.makeQualified(fileA)));
+      Assert.assertTrue(paths.contains(fileSystem.makeQualified(fileB)));
+    }
+
+    @Test
+    public void testGetPathsFiltersHiddenFiles() throws IOException
+    {
+      final Path visibleFile = new Path("visible");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(visibleFile), StandardCharsets.UTF_8)
+      )) {
+        writer.write("data");
+      }
+
+      final Path dotFile = new Path(".hidden");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(dotFile), StandardCharsets.UTF_8)
+      )) {
+        writer.write("data");
+      }
+
+      final Path underscoreFile = new Path("_metadata");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(underscoreFile), StandardCharsets.UTF_8)
+      )) {
+        writer.write("data");
+      }
+
+      final Collection<Path> paths = HdfsInputSource.getPaths(
+          Collections.singletonList(fileSystem.makeQualified(new Path("*")).toString()),
+          configuration
+      );
+
+      Assert.assertEquals(1, paths.size());
+      Assert.assertTrue(paths.contains(fileSystem.makeQualified(visibleFile)));
+      Assert.assertFalse(paths.contains(fileSystem.makeQualified(dotFile)));
+      Assert.assertFalse(paths.contains(fileSystem.makeQualified(underscoreFile)));
+    }
+
+    @Test
+    public void testGetPathsDirectoryListsFilesNonRecursively() throws IOException
+    {
+      final Path dir = new Path("mydir");
+      fileSystem.mkdirs(dir);
+
+      final Path fileInDir = new Path(dir, "file1");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(fileInDir), StandardCharsets.UTF_8)
+      )) {
+        writer.write("data");
+      }
+
+      // Create a nested subdirectory with a file -- should NOT be included
+      final Path subDir = new Path(dir, "subdir");
+      fileSystem.mkdirs(subDir);
+
+      final Path nestedFile = new Path(subDir, "nested_file");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(nestedFile), StandardCharsets.UTF_8)
+      )) {
+        writer.write("nested");
+      }
+
+      // Create a hidden file in the directory -- should NOT be included
+      final Path hiddenInDir = new Path(dir, ".hidden_in_dir");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(hiddenInDir), StandardCharsets.UTF_8)
+      )) {
+        writer.write("hidden");
+      }
+
+      final Collection<Path> paths = HdfsInputSource.getPaths(
+          Collections.singletonList(fileSystem.makeQualified(dir).toString()),
+          configuration
+      );
+
+      Assert.assertEquals(1, paths.size());
+      Assert.assertTrue(paths.contains(fileSystem.makeQualified(fileInDir)));
+    }
+
+    @Test
+    public void testGetPathsSkipsHiddenDirectories() throws IOException
+    {
+      final Path visibleDir = new Path("visible_dir");
+      fileSystem.mkdirs(visibleDir);
+
+      final Path visibleFile = new Path(visibleDir, "data");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(visibleFile), StandardCharsets.UTF_8)
+      )) {
+        writer.write("data");
+      }
+
+      final Path hiddenDir = new Path(".hidden_dir");
+      fileSystem.mkdirs(hiddenDir);
+
+      final Path hiddenFile = new Path(hiddenDir, "should_skip");
+      try (Writer writer = new BufferedWriter(
+          new OutputStreamWriter(fileSystem.create(hiddenFile), StandardCharsets.UTF_8)
+      )) {
+        writer.write("skip");
+      }
+
+      final Collection<Path> paths = HdfsInputSource.getPaths(
+          Collections.singletonList(fileSystem.makeQualified(new Path("*dir")).toString()),
+          configuration
+      );
+
+      Assert.assertEquals(1, paths.size());
+      Assert.assertTrue(paths.contains(fileSystem.makeQualified(visibleFile)));
+      Assert.assertFalse(paths.contains(fileSystem.makeQualified(hiddenFile)));
     }
   }
 

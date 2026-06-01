@@ -91,13 +91,11 @@ public class DataSegmentTest
         new CompactionTransformSpec(
             new SelectorDimFilter("dim1", "foo", null),
             VirtualColumns.create(
-                ImmutableList.of(
-                    new ExpressionVirtualColumn(
-                        "isRobotFiltered",
-                        "concat(isRobot, '_filtered')",
-                        ColumnType.STRING,
-                        ExprMacroTable.nil()
-                    )
+                new ExpressionVirtualColumn(
+                    "isRobotFiltered",
+                    "concat(isRobot, '_filtered')",
+                    ColumnType.STRING,
+                    ExprMacroTable.nil()
                 )
             )
         ),
@@ -168,13 +166,11 @@ public class DataSegmentTest
                                          new CompactionTransformSpec(
                                              new SelectorDimFilter("dim1", "foo", null),
                                              VirtualColumns.create(
-                                                 ImmutableList.of(
-                                                     new ExpressionVirtualColumn(
-                                                         "isRobotFiltered",
-                                                         "concat(isRobot, '_filtered')",
-                                                         ColumnType.STRING,
-                                                         ExprMacroTable.nil()
-                                                     )
+                                                 new ExpressionVirtualColumn(
+                                                     "isRobotFiltered",
+                                                     "concat(isRobot, '_filtered')",
+                                                     ColumnType.STRING,
+                                                     ExprMacroTable.nil()
                                                  )
                                              )
                                          ),
@@ -380,13 +376,11 @@ public class DataSegmentTest
         new CompactionTransformSpec(
             new SelectorDimFilter("dim1", "foo", null),
             VirtualColumns.create(
-                ImmutableList.of(
-                    new ExpressionVirtualColumn(
-                        "isRobotFiltered",
-                        "concat(isRobot, '_filtered')",
-                        ColumnType.STRING,
-                        ExprMacroTable.nil()
-                    )
+                new ExpressionVirtualColumn(
+                    "isRobotFiltered",
+                    "concat(isRobot, '_filtered')",
+                    ColumnType.STRING,
+                    ExprMacroTable.nil()
                 )
             )
         ),
@@ -421,13 +415,11 @@ public class DataSegmentTest
     CompactionTransformSpec transformSpec = new CompactionTransformSpec(
         new SelectorDimFilter("dim1", "foo", null),
         VirtualColumns.create(
-            ImmutableList.of(
-                new ExpressionVirtualColumn(
-                    "isRobotFiltered",
-                    "concat(isRobot, '_filtered')",
-                    ColumnType.STRING,
-                    ExprMacroTable.nil()
-                )
+            new ExpressionVirtualColumn(
+                "isRobotFiltered",
+                "concat(isRobot, '_filtered')",
+                ColumnType.STRING,
+                ExprMacroTable.nil()
             )
         )
     );

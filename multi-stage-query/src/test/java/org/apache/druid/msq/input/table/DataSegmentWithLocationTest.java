@@ -21,7 +21,6 @@ package org.apache.druid.msq.input.table;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -80,13 +79,11 @@ public class DataSegmentWithLocationTest
         new CompactionTransformSpec(
             new SelectorDimFilter("dim1", "foo", null),
             VirtualColumns.create(
-                ImmutableList.of(
-                    new ExpressionVirtualColumn(
-                        "isRobotFiltered",
-                        "concat(isRobot, '_filtered')",
-                        ColumnType.STRING,
-                        ExprMacroTable.nil()
-                    )
+                new ExpressionVirtualColumn(
+                    "isRobotFiltered",
+                    "concat(isRobot, '_filtered')",
+                    ColumnType.STRING,
+                    ExprMacroTable.nil()
                 )
             )
         ),

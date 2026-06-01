@@ -31,7 +31,7 @@ import { QueryOverview } from './component/query/overview';
 import { saveScreenshotIfError } from './util/debug';
 import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR, UNIFIED_CONSOLE_URL } from './util/druid';
 import { createBrowser, createPage } from './util/playwright';
-import { retryIfJestAssertionError } from './util/retry';
+import { retryIfJestAssertionError, retryOnAnyError } from './util/retry';
 import { waitTillWebConsoleReady } from './util/setup';
 
 jest.setTimeout(5 * 60 * 1000);
@@ -168,9 +168,15 @@ async function validateDatasourceStatus(page: playwright.Page, datasourceName: s
 async function validateQuery(page: playwright.Page, datasourceName: string) {
   const queryOverview = new QueryOverview(page, UNIFIED_CONSOLE_URL);
   const query = `SELECT * FROM ${T(datasourceName)} ORDER BY __time`;
-  const results = await queryOverview.runQuery(query);
-  expect(results).toBeDefined();
-  expect(results.length).toBeGreaterThan(0);
+  let results!: string[][];
+  await retryOnAnyError(
+    async () => {
+      results = await queryOverview.runQuery(query);
+      expect(results.length).toBeGreaterThan(0);
+    },
+    1000,
+    3,
+  );
   expect(results[0]).toStrictEqual([
     /* __time */ '2015-09-12T00:46:58.772Z',
     /* time */ '2015-09-12T00:46:58.771Z',

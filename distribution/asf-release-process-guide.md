@@ -130,7 +130,7 @@ For docs, please make sure to add any relevant redirects in `website/redirects.j
 The only additions to the release branch after branching should be bug fixes, which should be back-ported from the master branch, via a second PR or a cherry-pick, not with a direct PR to the release branch.  
 
 Release manager must also ensure that CI is passing successfully on the release branch. Since CI on branch can contain additional tests such as ITs for different JVM flavours. (Note that CI is sometimes flaky for older branches).
-To check the CI status on a release branch, you can go to the commits page e.g. https://github.com/apache/druid/commits/24.0.0. On this page, latest commmit should show
+To check the CI status on a release branch, you can go to the commits page e.g. https://github.com/apache/druid/commits/24.0.0. On this page, latest commit should show
 a green &#10004; in the commit description. If the commit has a failed build, please click on red &#10005; icon in the commit description to go to travis build job and investigate. 
 You can restart a failed build via travis if it is flaky. 
 
@@ -225,9 +225,8 @@ At the core of these tools is a dependency registry file, `licenses.yaml`, that 
 | --- | --- |
 | SOURCE/JAVA-CORE | Source level inclusions in the core Druid codebase |
 | SOURCE/WEB-CONSOLE | Source level inclusions in the various web consoles |
-| BINARY/JAVA-CORE | Bundled binary-only dependencies for core Druid components (i.e., not an extension, not a hadoop-dependency, not web console stuff) |
+| BINARY/JAVA-CORE | Bundled binary-only dependencies for core Druid components (i.e., not an extension, not web console stuff) |
 | BINARY/WEB-CONSOLE | Bundled binary-only dependencies for the various web consoles |
-| BINARY/HADOOP-CLIENT | Bundled binary-only dependencies contained in the `hadoop-client` directory |
 | BINARY/EXTENSIONS/{extension-name} | Bundled binary-only dependencies for Druid extensions |
 
 
@@ -249,7 +248,7 @@ These additional tools were largely used to bootstrap the initial `LICENSE`, `LI
 
 | tool | description |
 | --- | --- |
-| [generate-license-dependency-reports](bin/generate-license-dependency-reports.py) | Point this to the Druid source root, and give it the location of a temp scratch directory, and it will output Maven dependency reports for Druid. (I believe I had to generate Maven dep report separately for hadoop-client) |
+| [generate-license-dependency-reports](bin/generate-license-dependency-reports.py) | Point this to the Druid source root, and give it the location of a temp scratch directory, and it will output Maven dependency reports for Druid. |
 | [check-licenses](bin/check-licenses.py) | Checks `licenses.yaml` against the output of `generate-license-dependency-reports.py`, used by travis and `-Papache-release` when building distribution, to verify that all dependencies are present and match the versions in `licenses.yaml`. |
 | [jar-notice-lister](bin/jar-notice-lister.py) | Point this to an extracted Druid binary distribution, and give it a temp scratch directory, and it will output NOTICE information for all the Druid JAR files. |
 

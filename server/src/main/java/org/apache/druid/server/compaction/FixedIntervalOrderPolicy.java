@@ -62,7 +62,7 @@ public class FixedIntervalOrderPolicy implements CompactionCandidateSearchPolicy
   )
   {
     return findIndex(candidate) < Integer.MAX_VALUE
-        ? Eligibility.OK
+        ? Eligibility.FULL
         : Eligibility.fail("Datasource/Interval is not in the list of 'eligibleCandidates'");
   }
 

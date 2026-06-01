@@ -75,11 +75,12 @@ public class ApproximateHistogramVectorAggregator implements VectorAggregator
     final boolean[] isValueNull = selector.getNullVector();
 
     for (int i = 0; i < numRows; i++) {
-      if (isValueNull != null && isValueNull[i]) {
+      final int row = rows != null ? rows[i] : i;
+      if (isValueNull != null && isValueNull[row]) {
         continue;
       }
       final int position = positions[i] + positionOffset;
-      innerAggregator.aggregate(buf, position, vector[rows != null ? rows[i] : i]);
+      innerAggregator.aggregate(buf, position, vector[row]);
     }
   }
 

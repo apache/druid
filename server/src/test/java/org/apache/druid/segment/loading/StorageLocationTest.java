@@ -20,6 +20,7 @@
 package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -194,10 +196,14 @@ class StorageLocationTest
     final Closer closer = Closer.create();
     Assertions.assertNotNull(closer.register(location.addWeakReservationHold(entry1.getId(), () -> entry1)));
     Assertions.assertNotNull(closer.register(location.addWeakReservationHold(entry2.getId(), () -> entry2)));
+    Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(50, location.getWeakStats().getHoldBytes());
     Assertions.assertTrue(location.reserveWeak(entry3));
     Assertions.assertTrue(location.reserveWeak(entry4));
 
     Assertions.assertEquals(100, location.currentWeakSizeBytes());
+    Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(50, location.getWeakStats().getHoldBytes());
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
@@ -206,6 +212,9 @@ class StorageLocationTest
     Assertions.assertNotNull(closer.register(location.addWeakReservationHold(entry5.getId(), () -> entry5)));
 
     Assertions.assertEquals(100, location.currentWeakSizeBytes());
+    Assertions.assertEquals(3, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(75, location.getWeakStats().getHoldBytes());
+
 
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
@@ -222,7 +231,12 @@ class StorageLocationTest
     Assertions.assertTrue(location.isWeakReserved(entry5.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry6.getId()));
 
-    Assertions.assertTrue(location.reserveWeak(entry7));
+    Assertions.assertEquals(3, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(75, location.getWeakStats().getHoldBytes());
+
+    Assertions.assertNotNull(closer.register(location.addWeakReservationHold(entry7.getId(), () -> entry7)));
+    Assertions.assertEquals(4, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(100, location.getWeakStats().getHoldBytes());
 
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
@@ -232,6 +246,10 @@ class StorageLocationTest
     Assertions.assertFalse(location.isWeakReserved(entry6.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry7.getId()));
 
+    // all storage is held, cannot reserve
+    Assertions.assertFalse(location.reserveWeak(entry8));
+
+    // release holds
     CloseableUtils.closeAndWrapExceptions(closer);
     Assertions.assertTrue(location.reserveWeak(entry8));
 
@@ -244,6 +262,8 @@ class StorageLocationTest
     Assertions.assertTrue(location.isWeakReserved(entry7.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry8.getId()));
     Assertions.assertEquals(100, location.currentWeakSizeBytes());
+    Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(0, location.getWeakStats().getHoldBytes());
   }
 
   @Test
@@ -366,7 +386,170 @@ class StorageLocationTest
       }
     }
 
-    Assertions.assertEquals(0, loc.getActiveWeakHolds());
+    Assertions.assertEquals(0, loc.getWeakStats().getHoldCount());
+  }
+
+  @Test
+  public void testReclaimRestoreDoesNotCreateZombieEntries()
+  {
+    StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    CacheEntry entry1 = new TestCacheEntry("1", 10);
+    CacheEntry entry2 = new TestCacheEntry("2", 90);
+    CacheEntry entry3 = new TestCacheEntry("3", 20);
+
+    location.reserveWeak(entry1);
+    // hold entry2 so it cannot be evicted by reclaim
+    StorageLocation.ReservationHold<?> hold2 = location.addWeakReservationHold(
+        entry2.getId(),
+        () -> entry2
+    );
+
+    // must free 20 bytes but can only evict entry1 (10). Fails and restores entry1
+    // where the bug was a mismatch caused by creating a new entry in the list but re-using the old entry for the map.
+    Assertions.assertFalse(location.reserveWeak(entry3));
+
+    // the hand pointer reaches the new entry1, removes the old entry1 from the map which is a zombie, then wraps around
+    // to the same zombie entry1 again since its head — at which point the map no longer contains the ID and the defensive exception was
+    // thrown.
+    Assertions.assertFalse(location.reserveWeak(entry3));
+
+    hold2.close();
+  }
+
+  @Test
+  public void testAdjustReservationStaticEntry()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    final TestResizableCacheEntry entry = new TestResizableCacheEntry("a", 50);
+    Assertions.assertTrue(location.reserve(entry));
+    Assertions.assertEquals(50, location.currentSizeBytes());
+    Assertions.assertEquals(50, location.availableSizeBytes());
+
+    location.adjustReservation(entry.getId(), 10);
+    Assertions.assertEquals(10, entry.getSize());
+    Assertions.assertEquals(10, location.currentSizeBytes());
+    Assertions.assertEquals(90, location.availableSizeBytes());
+
+    // after shrink, location can host new entries that wouldn't have fit at the original size
+    final TestResizableCacheEntry entry2 = new TestResizableCacheEntry("b", 80);
+    Assertions.assertTrue(location.reserve(entry2));
+
+    // release accounting still uses the (post-shrink) size
+    location.release(entry);
+    Assertions.assertEquals(80, location.currentSizeBytes());
+  }
+
+  @Test
+  public void testAdjustReservationWeakEntry()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    final TestResizableCacheEntry entry = new TestResizableCacheEntry("a", 80);
+    Assertions.assertTrue(location.reserveWeak(entry));
+    Assertions.assertEquals(80, location.currentWeakSizeBytes());
+
+    location.adjustReservation(entry.getId(), 30);
+    Assertions.assertEquals(30, entry.getSize());
+    Assertions.assertEquals(30, location.currentWeakSizeBytes());
+    Assertions.assertEquals(30, location.currentSizeBytes());
+  }
+
+  @Test
+  public void testAdjustReservationGrowThrows()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    final TestResizableCacheEntry entry = new TestResizableCacheEntry("a", 30);
+    Assertions.assertTrue(location.reserve(entry));
+
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> location.adjustReservation(entry.getId(), 60)
+    );
+    // entry size and location accounting unchanged
+    Assertions.assertEquals(30, entry.getSize());
+    Assertions.assertEquals(30, location.currentSizeBytes());
+  }
+
+  @Test
+  public void testAdjustReservationUnknownEntryThrows()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> location.adjustReservation(new StringCacheIdentifier("nope"), 10)
+    );
+  }
+
+  @Test
+  public void testAdjustReservationNonResizableEntryThrows()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    final CacheEntry entry = new TestCacheEntry("a", 30);
+    Assertions.assertTrue(location.reserve(entry));
+
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> location.adjustReservation(entry.getId(), 10)
+    );
+  }
+
+  @Test
+  public void testAdjustReservationToSameSizeIsNoOp()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    final TestResizableCacheEntry entry = new TestResizableCacheEntry("a", 50);
+    Assertions.assertTrue(location.reserve(entry));
+
+    location.adjustReservation(entry.getId(), 50);
+    Assertions.assertEquals(50, entry.getSize());
+    Assertions.assertEquals(50, location.currentSizeBytes());
+  }
+
+  @Test
+  public void testAdjustReservationWeakEntryShrinksHeldBytes() throws IOException
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    final TestResizableCacheEntry entry = new TestResizableCacheEntry("a", 80);
+    Assertions.assertTrue(location.reserveWeak(entry));
+
+    // Acquire a hold BEFORE shrinking. trackWeakHold records 80 bytes against currHoldBytes.
+    final StorageLocation.ReservationHold<?> hold = location.addWeakReservationHold(entry.getId(), () -> entry);
+    Assertions.assertNotNull(hold);
+    Assertions.assertEquals(1, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(80, location.getWeakStats().getHoldBytes());
+
+    // Shrink to 30: hold-bytes contribution from the active hold must shrink in lockstep so the eventual
+    // trackWeakRelease (which subtracts the new smaller size) leaves currHoldBytes at 0.
+    location.adjustReservation(entry.getId(), 30);
+    Assertions.assertEquals(30, entry.getSize());
+    Assertions.assertEquals(30, location.currentWeakSizeBytes());
+    Assertions.assertEquals(30, location.getWeakStats().getHoldBytes());
+
+    hold.close();
+    Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(0, location.getWeakStats().getHoldBytes());
+  }
+
+  @Test
+  public void testAdjustReservationWeakEntryShrinksHeldBytesWithMultipleHolds() throws IOException
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    final TestResizableCacheEntry entry = new TestResizableCacheEntry("a", 50);
+    Assertions.assertTrue(location.reserveWeak(entry));
+
+    // Two concurrent holds: trackWeakHold fires twice, so currHoldBytes = 2 * 50 = 100.
+    final StorageLocation.ReservationHold<?> hold1 = location.addWeakReservationHold(entry.getId(), () -> entry);
+    final StorageLocation.ReservationHold<?> hold2 = location.addWeakReservationHold(entry.getId(), () -> entry);
+    Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
+    Assertions.assertEquals(100, location.getWeakStats().getHoldBytes());
+
+    // Shrink by 30 (50 → 20): each of the two active holds contributes -30, so currHoldBytes drops by 60.
+    location.adjustReservation(entry.getId(), 20);
+    Assertions.assertEquals(40, location.getWeakStats().getHoldBytes());
+
+    hold1.close();
+    Assertions.assertEquals(20, location.getWeakStats().getHoldBytes());
+    hold2.close();
+    Assertions.assertEquals(0, location.getWeakStats().getHoldBytes());
   }
 
   @SuppressWarnings({"GuardedBy", "FieldAccessNotGuarded"})
@@ -495,6 +678,55 @@ class StorageLocationTest
     public void unmount()
     {
       // do nothing
+    }
+  }
+
+  private static final class TestResizableCacheEntry implements ResizableCacheEntry
+  {
+    private final StringCacheIdentifier id;
+    private long size;
+    private boolean isMounted = false;
+
+    private TestResizableCacheEntry(String id, long size)
+    {
+      this.id = new StringCacheIdentifier(id);
+      this.size = size;
+    }
+
+    @Override
+    public StringCacheIdentifier getId()
+    {
+      return id;
+    }
+
+    @Override
+    public long getSize()
+    {
+      return size;
+    }
+
+    @Override
+    public boolean isMounted()
+    {
+      return isMounted;
+    }
+
+    @Override
+    public void mount(StorageLocation location)
+    {
+      isMounted = true;
+    }
+
+    @Override
+    public void unmount()
+    {
+      isMounted = false;
+    }
+
+    @Override
+    public void resizeReservation(long newSize)
+    {
+      this.size = newSize;
     }
   }
 

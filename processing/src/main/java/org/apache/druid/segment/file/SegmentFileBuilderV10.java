@@ -23,13 +23,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.primitives.Ints;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.io.Channels;
+import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.projections.ProjectionMetadata;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -39,23 +45,49 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
+import java.nio.channels.GatheringByteChannel;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * {@link SegmentFileBuilder} for V10 format segments. Right now, this uses a {@link FileSmoosher} underneath to build
- * V9 smoosh files and collect the metadata about the offsets in those containers, and then appends them into the V10
- * consolidated segment file after the header and {@link SegmentFileMetadata} is written.
+ * {@link SegmentFileBuilder} for V10 format segments. Files are written into 'container' chunk files in {@link #baseDir}
+ * and are concatenated after the header and {@link SegmentFileMetadata} on {@link #close()} to produce the final
+ * consolidated segment file.
  * <p>
  * V10 file format:
  * | version (byte) | meta compression (byte) | meta length (int) | meta json | container 0 | ... | container n |
+ * <p>
+ * Containers are scoped to exactly one declared bundle. Callers declare which bundle they are writing via
+ * {@link #startFileBundle(String)} before writing its files; a new container is started when the declared bundle
+ * changes or the current container would exceed {@link #maxContainerSize}. A bundle whose total size exceeds the max
+ * container size spans multiple containers, all tagged with the same bundle. This gives readers a clean 1:1 (or 1:N)
+ * mapping between bundles and containers, which supports per-bundle partial loading without any read-side
+ * reorganization. Projections are the primary caller today, but the mechanism is equally usable for other
+ * organizational needs (shared data across columns, internal metadata, etc.).
+ * <p>
+ * Callers that never invoke {@link #startFileBundle(String)} have all writes tagged with the
+ * {@link SegmentFileBuilder#ROOT_BUNDLE_NAME} default bundle.
+ * <p>
+ * Much of the logic here was ported from {@link org.apache.druid.java.util.common.io.smoosh.FileSmoosher} of the V9
+ * format and there is a fair bit of overlap. In fact, the initial implementation of this class wrapped a V9 smoosher
+ * to build the files before combining them into the V10 format. The main difference is that V9 fills each container to
+ * the max while here we organize with bundles.
  */
 public class SegmentFileBuilderV10 implements SegmentFileBuilder
 {
+  private static final Logger LOG = new Logger(SegmentFileBuilderV10.class);
+
+  /**
+   * Default compression for the V10 metadata header
+   */
+  public static final CompressionStrategy DEFAULT_METADATA_COMPRESSION = CompressionStrategy.ZSTD;
+
   public static SegmentFileBuilderV10 create(ObjectMapper jsonMapper, File baseDir)
   {
-    return create(jsonMapper, baseDir, CompressionStrategy.NONE);
+    return create(jsonMapper, baseDir, DEFAULT_METADATA_COMPRESSION);
   }
 
   public static SegmentFileBuilderV10 create(ObjectMapper jsonMapper, File baseDir, CompressionStrategy metaCompression)
@@ -72,11 +104,31 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
   private final ObjectMapper jsonMapper;
   private final String outputFileName;
   private final File baseDir;
-  private final long maxChunkSize;
+  private final long maxContainerSize;
   private final CompressionStrategy metadataCompression;
-  private final FileSmoosher smoosher;
   private final Map<String, SegmentFileBuilderV10> externalSegmentFileBuilders;
   private final Map<String, ColumnDescriptor> columns = new TreeMap<>();
+
+  private final List<ContainerWriter> containers = new ArrayList<>();
+  private final Map<String, SegmentInternalFileMetadata> internalFiles = new TreeMap<>();
+
+  // Nested addWithChannel calls (for example a serializer that, while being written, emits sub-files for its own
+  // columnar parts) can't write into the current container concurrently with the outer writer. These nested writes are
+  // redirected to temporary files and merged back into container(s) once the outer writer completes. Each entry
+  // carries the bundle that was active when the delegate was created so that the merge routes it into the correct
+  // container even if the active bundle has since changed.
+  private final List<DelegateEntry> completedDelegates = new ArrayList<>();
+  private final List<DelegateEntry> inProgressDelegates = new ArrayList<>();
+  private long delegateFileCounter = 0;
+
+  @Nullable
+  private ContainerWriter currentContainer = null;
+  private boolean writerCurrentlyInUse = false;
+
+  /**
+   * The bundle declared by the most recent {@link #startFileBundle} call
+   */
+  private String currentBundle = SegmentFileBuilder.ROOT_BUNDLE_NAME;
 
   @Nullable
   private String interval = null;
@@ -89,35 +141,142 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
       ObjectMapper jsonMapper,
       String outputFileName,
       File baseDir,
-      long maxChunkSize,
+      long maxContainerSize,
       CompressionStrategy metadataCompression
   )
   {
     this.jsonMapper = jsonMapper;
     this.outputFileName = outputFileName;
     this.baseDir = baseDir;
-    this.maxChunkSize = maxChunkSize;
+    this.maxContainerSize = maxContainerSize;
     this.metadataCompression = metadataCompression;
-    this.smoosher = new FileSmoosher(baseDir, Ints.checkedCast(maxChunkSize), outputFileName);
     this.externalSegmentFileBuilders = new TreeMap<>();
   }
 
   @Override
   public void add(String name, File fileToAdd) throws IOException
   {
-    smoosher.add(name, fileToAdd);
+    try (FileInputStream fis = new FileInputStream(fileToAdd);
+         FileChannel src = fis.getChannel()) {
+      final long size = src.size();
+      try (SegmentFileChannel out = addWithChannel(name, size)) {
+        long position = 0;
+        while (position < size) {
+          final long transferred = src.transferTo(position, size - position, out);
+          if (transferred <= 0) {
+            throw new IOE("Unable to transfer bytes from file[%s] at position[%,d]", fileToAdd, position);
+          }
+          position += transferred;
+        }
+      }
+    }
   }
 
   @Override
   public void add(String name, ByteBuffer bufferToAdd) throws IOException
   {
-    smoosher.add(name, bufferToAdd);
+    try (SegmentFileChannel out = addWithChannel(name, bufferToAdd.remaining())) {
+      out.write(bufferToAdd);
+    }
   }
 
   @Override
-  public SegmentFileChannel addWithChannel(String name, long size) throws IOException
+  public SegmentFileChannel addWithChannel(final String name, final long size) throws IOException
   {
-    return smoosher.addWithChannel(name, size);
+    if (name.contains(",")) {
+      throw new IAE("Cannot have a comma in the name of a file, got[%s].", name);
+    }
+    if (internalFiles.containsKey(name)) {
+      throw new IAE("Cannot add files of the same name, already have [%s]", name);
+    }
+    ensureNameMatchesActiveBundle(name);
+    if (size > maxContainerSize) {
+      throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(
+                              "Serialized buffer size[%,d] for column[%s] exceeds the maximum[%,d]. "
+                              + "Consider adjusting the tuningConfig - for example, reduce maxRowsPerSegment, "
+                              + "or partition your data further.",
+                              size, name, maxContainerSize
+                          );
+    }
+
+    // If an outer writer is mid-write we can't append to the current container concurrently, route through a temp
+    // file that will be merged back into a container once the outer writer releases.
+    if (writerCurrentlyInUse) {
+      return delegateChannel(name, size);
+    }
+
+    ensureContainer(currentBundle, size);
+    final ContainerWriter target = currentContainer;
+    final long startOffset = target.currOffset;
+    writerCurrentlyInUse = true;
+
+    return new SegmentFileChannel()
+    {
+      private boolean open = true;
+      private long bytesWritten = 0;
+
+      @Override
+      public int write(ByteBuffer src) throws IOException
+      {
+        return Ints.checkedCast(verifySize(target.write(src)));
+      }
+
+      @Override
+      public long write(ByteBuffer[] srcs, int offset, int length) throws IOException
+      {
+        return verifySize(target.write(srcs, offset, length));
+      }
+
+      @Override
+      public long write(ByteBuffer[] srcs) throws IOException
+      {
+        return verifySize(target.write(srcs));
+      }
+
+      private long verifySize(long bytesWrittenInChunk)
+      {
+        bytesWritten += bytesWrittenInChunk;
+
+        if (bytesWritten != target.currOffset - startOffset) {
+          throw new ISE("Perhaps there is some concurrent modification going on?");
+        }
+        if (bytesWritten > size) {
+          throw new ISE("Wrote[%,d] bytes for something of size[%,d].  Liar!!!", bytesWritten, size);
+        }
+
+        return bytesWrittenInChunk;
+      }
+
+      @Override
+      public boolean isOpen()
+      {
+        return open;
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        if (!open) {
+          return;
+        }
+        open = false;
+        writerCurrentlyInUse = false;
+
+        if (bytesWritten != target.currOffset - startOffset) {
+          throw new ISE("Perhaps there is some concurrent modification going on?");
+        }
+        if (bytesWritten != size) {
+          throw new IOE("Expected [%,d] bytes, only saw [%,d], potential corruption?", size, bytesWritten);
+        }
+        internalFiles.put(
+            name,
+            new SegmentInternalFileMetadata(target.fileNum, startOffset, target.currOffset - startOffset)
+        );
+        mergeDelegatedFiles();
+      }
+    };
   }
 
   @Override
@@ -125,14 +284,69 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
   {
     return externalSegmentFileBuilders.computeIfAbsent(
         externalFile,
-        (k) -> new SegmentFileBuilderV10(jsonMapper, externalFile, baseDir, maxChunkSize, metadataCompression)
+        (k) -> {
+          final SegmentFileBuilderV10 fresh =
+              new SegmentFileBuilderV10(jsonMapper, externalFile, baseDir, maxContainerSize, metadataCompression);
+          // A late-attached external inherits the parent's currently-active bundle on creation only; subsequent
+          // bundle changes flow through the parent's startFileBundle broadcast. Re-applying on every fetch would
+          // close the external's in-progress container, since V10 bundles cannot currently be re-entered.
+          if (!SegmentFileBuilder.ROOT_BUNDLE_NAME.equals(currentBundle)) {
+            fresh.startFileBundle(currentBundle);
+          }
+          return fresh;
+        }
     );
   }
 
   @Override
   public void addColumn(String name, ColumnDescriptor columnDescriptor)
   {
+    ensureNameMatchesActiveBundle(name);
     this.columns.put(name, columnDescriptor);
+  }
+
+  /**
+   * If a named bundle is currently active (set by the most recent {@link #startFileBundle} call to a non-root value),
+   * enforce that names of files and columns added under it are prefixed by {@code bundleName + "/"}. The root bundle
+   * is unconstrained.
+   */
+  private void ensureNameMatchesActiveBundle(String name)
+  {
+    if (!SegmentFileBuilder.ROOT_BUNDLE_NAME.equals(currentBundle) && !name.startsWith(currentBundle + "/")) {
+      throw DruidException.defensive(
+          "Name[%s] must start with the active bundle prefix[%s/]",
+          name,
+          currentBundle
+      );
+    }
+  }
+
+  /**
+   * Declare the bundle that subsequent writes belong to. Writes are routed into a container tagged with the declared
+   * bundle; a new container is rolled when the bundle changes or the incoming file won't fit. A bundle whose total
+   * size exceeds {@link #maxContainerSize} is split across multiple consecutive containers, all tagged with the same
+   * bundle. Passing {@code null} resets to {@link SegmentFileBuilder#ROOT_BUNDLE_NAME}; subsequent writes are then
+   * routed into a root-bundle container until the next call.
+   * <p>
+   * Current V10-specific limitations worth knowing:
+   * <ul>
+   *   <li>Bundles cannot be re-entered. Once a different bundle has been declared the previous bundle's container is
+   *       closed, and you cannot go back and append more files to it; any such writes would open a fresh container
+   *       for the re-declared bundle, so the bundle's files would end up in non-contiguous containers. If all of a
+   *       bundle's files must land in the same container(s), write them contiguously.</li>
+   *   <li>Throws if called while a writer returned by {@link #addWithChannel} is still open.</li>
+   * </ul>
+   */
+  @Override
+  public void startFileBundle(@Nullable String bundleName)
+  {
+    if (writerCurrentlyInUse) {
+      throw DruidException.defensive("Cannot start file bundle[%s] while a writer is in progress", bundleName);
+    }
+    this.currentBundle = bundleName == null ? SegmentFileBuilder.ROOT_BUNDLE_NAME : bundleName;
+    for (SegmentFileBuilderV10 externalFile : externalSegmentFileBuilders.values()) {
+      externalFile.startFileBundle(bundleName);
+    }
   }
 
   public void addInterval(String interval)
@@ -153,7 +367,9 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
   @Override
   public void abort()
   {
-    smoosher.abort();
+    if (currentContainer != null) {
+      CloseableUtils.closeAndWrapExceptions(currentContainer);
+    }
   }
 
   @Override
@@ -163,11 +379,22 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
       externalBuilder.close();
     }
 
-    smoosher.close();
+    if (!completedDelegates.isEmpty() || !inProgressDelegates.isEmpty()) {
+      abort();
+      throw new ISE(
+          "[%d] writers in progress and [%d] completed writers needs to be closed before closing builder.",
+          inProgressDelegates.size(),
+          completedDelegates.size()
+      );
+    }
 
-    SegmentFileMetadata segmentFileMetadata = new SegmentFileMetadata(
-        smoosher.getContainers(),
-        smoosher.getInternalFiles(),
+    if (currentContainer != null) {
+      currentContainer.close();
+    }
+
+    final SegmentFileMetadata segmentFileMetadata = new SegmentFileMetadata(
+        buildContainerMetadata(),
+        internalFiles,
         interval,
         columns.isEmpty() ? null : columns,
         projections,
@@ -181,16 +408,9 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
       final FileChannel channel = closer.register(outputStream.getChannel());
       final ByteBuffer intBuffer = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
 
-      outputStream.write(new byte[]{IndexIO.V10_VERSION, metadataCompression.getId()});
-      // write uncompressed metadata length
-      intBuffer.putInt(metadataBytes.length);
-      intBuffer.flip();
-      outputStream.write(intBuffer.array());
-
-      if (CompressionStrategy.NONE == metadataCompression) {
-        // no compression, just write the plain metadata bytes
-        outputStream.write(metadataBytes);
-      } else {
+      // compress the data if specified, however we throw it out if compression is larger than uncompressed
+      final ByteBuffer compressed;
+      if (CompressionStrategy.NONE != metadataCompression) {
         // compress the data using the strategy, write the compressed length, then the compressed blob
         final CompressionStrategy.Compressor compressor = metadataCompression.getCompressor();
         final ByteBuffer inBuffer = compressor.allocateInBuffer(metadataBytes.length, closer)
@@ -200,8 +420,25 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
 
         final ByteBuffer outBuffer = compressor.allocateOutBuffer(metadataBytes.length, closer)
                                                .order(ByteOrder.nativeOrder());
-        final ByteBuffer compressed = compressor.compress(inBuffer, outBuffer);
+        compressed = compressor.compress(inBuffer, outBuffer);
+      } else {
+        compressed = null;
+      }
+      final boolean shouldCompress = compressed != null && (4 + compressed.remaining()) < metadataBytes.length;
 
+      outputStream.write(new byte[]{
+          IndexIO.V10_VERSION,
+          shouldCompress ? metadataCompression.getId() : CompressionStrategy.NONE.getId()
+      });
+      // write uncompressed metadata length
+      intBuffer.putInt(metadataBytes.length);
+      intBuffer.flip();
+      outputStream.write(intBuffer.array());
+
+      if (CompressionStrategy.NONE == metadataCompression || !shouldCompress) {
+        // no compression, just write the plain metadata bytes
+        outputStream.write(metadataBytes);
+      } else {
         // write compression length
         intBuffer.position(0);
         intBuffer.putInt(compressed.remaining());
@@ -212,7 +449,8 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
         Channels.writeFully(channel, compressed);
       }
 
-      for (File f : smoosher.getOutFiles()) {
+      for (ContainerWriter container : containers) {
+        final File f = container.file;
         try (FileInputStream fis = new FileInputStream(f)) {
           byte[] buffer = new byte[4096];
           int bytesRead;
@@ -220,11 +458,236 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
             outputStream.write(buffer, 0, bytesRead);
           }
         }
-        // delete all the old 00000.smoosh
+        // delete all the old container files
         DruidException.conditionalDefensive(
             f.delete(),
-            "Failed to delete temporary file[%s]",
+            "Failed to delete temporary container file[%s]",
             f
+        );
+      }
+    }
+  }
+
+  private List<SegmentFileContainerMetadata> buildContainerMetadata()
+  {
+    final List<SegmentFileContainerMetadata> result = new ArrayList<>(containers.size());
+    long offset = 0;
+    for (ContainerWriter container : containers) {
+      final long length = container.file.length();
+      result.add(new SegmentFileContainerMetadata(offset, length, container.bundle));
+      offset += length;
+    }
+    return result;
+  }
+
+  /**
+   * Ensure that {@link #currentContainer} is ready to accept {@code size} bytes of a file belonging to {@code bundle}.
+   * Rolls the current container and starts a new one when:
+   * <ul>
+   *   <li>there is no current container, or</li>
+   *   <li>the current container is for a different bundle, or</li>
+   *   <li>the current container cannot fit the incoming bytes within {@link #maxContainerSize}.</li>
+   * </ul>
+   */
+  private void ensureContainer(String bundle, long size) throws IOException
+  {
+    if (currentContainer == null
+        || !currentContainer.bundle.equals(bundle)
+        || !currentContainer.canFit(size)) {
+      if (currentContainer != null) {
+        currentContainer.close();
+      }
+      currentContainer = openNewContainer(bundle);
+      containers.add(currentContainer);
+    }
+  }
+
+  private ContainerWriter openNewContainer(String bundle) throws IOException
+  {
+    FileUtils.mkdirp(baseDir);
+    final int fileNum = containers.size();
+    final File containerFile = new File(
+        baseDir,
+        StringUtils.format("%s-%05d.container", outputFileName, fileNum)
+    );
+    return new ContainerWriter(fileNum, containerFile, bundle, maxContainerSize);
+  }
+
+  private SegmentFileChannel delegateChannel(final String name, final long size) throws IOException
+  {
+    // Prefixed with outputFileName so delegate files from a main builder and its externals (which share baseDir)
+    // cannot collide, since main and external always have distinct output file names.
+    final String delegateName = StringUtils.format("%s-delegate-%d", outputFileName, delegateFileCounter++);
+    final File tmpFile = new File(baseDir, delegateName);
+    // Snapshot the active bundle now so that if this delegate is merged after the outer writer has advanced past
+    // the bundle it was created under, it still routes into the correct container.
+    final DelegateEntry entry = new DelegateEntry(tmpFile, name, currentBundle);
+    inProgressDelegates.add(entry);
+
+    return new SegmentFileChannel()
+    {
+      private final FileChannel channel = FileChannel.open(
+          tmpFile.toPath(),
+          StandardOpenOption.WRITE,
+          StandardOpenOption.CREATE,
+          StandardOpenOption.TRUNCATE_EXISTING
+      );
+
+      private long bytesWritten = 0;
+
+      @Override
+      public int write(ByteBuffer src) throws IOException
+      {
+        return Ints.checkedCast(addBytes(channel.write(src)));
+      }
+
+      @Override
+      public long write(ByteBuffer[] srcs, int offset, int length) throws IOException
+      {
+        return addBytes(channel.write(srcs, offset, length));
+      }
+
+      @Override
+      public long write(ByteBuffer[] srcs) throws IOException
+      {
+        return addBytes(channel.write(srcs));
+      }
+
+      private long addBytes(long n)
+      {
+        if (n > size - bytesWritten) {
+          throw new ISE(
+              "Wrote more bytes[%,d] than expected[%,d] for delegated file[%s]",
+              bytesWritten + n, size, name
+          );
+        }
+        bytesWritten += n;
+        return n;
+      }
+
+      @Override
+      public boolean isOpen()
+      {
+        return channel.isOpen();
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        channel.close();
+        completedDelegates.add(entry);
+        inProgressDelegates.remove(entry);
+        if (!writerCurrentlyInUse) {
+          mergeDelegatedFiles();
+        }
+      }
+    };
+  }
+
+  /**
+   * Move completed delegate temp files into containers by replaying them as regular {@link #add} calls. Only called
+   * when no outer writer is currently holding the builder. Each entry's snapshotted bundle is restored as
+   * {@link #currentBundle} during its replay so the file lands in the container that was active when the nested
+   * write was originally requested, not whichever bundle happens to be active at merge time.
+   */
+  private void mergeDelegatedFiles() throws IOException
+  {
+    if (completedDelegates.isEmpty()) {
+      return;
+    }
+    final List<DelegateEntry> toProcess = new ArrayList<>(completedDelegates);
+    completedDelegates.clear();
+    final String savedBundle = currentBundle;
+    try {
+      for (DelegateEntry entry : toProcess) {
+        currentBundle = entry.bundle;
+        add(entry.name, entry.file);
+        if (!entry.file.delete()) {
+          LOG.warn("Unable to delete delegate file[%s]", entry.file);
+        }
+      }
+    }
+    finally {
+      currentBundle = savedBundle;
+    }
+  }
+
+  private record DelegateEntry(File file, String name, String bundle)
+  {
+  }
+
+  /**
+   * Low-level writer for a single container chunk file. One container holds internal files from exactly one bundle.
+   */
+  private static class ContainerWriter implements GatheringByteChannel
+  {
+    private final int fileNum;
+    private final File file;
+    private final String bundle;
+    private final long maxSize;
+    private final Closer closer = Closer.create();
+    private final GatheringByteChannel channel;
+    private long currOffset = 0;
+
+    ContainerWriter(int fileNum, File file, String bundle, long maxSize) throws IOException
+    {
+      this.fileNum = fileNum;
+      this.file = file;
+      this.bundle = bundle;
+      this.maxSize = maxSize;
+      final FileOutputStream outStream = closer.register(new FileOutputStream(file));
+      this.channel = closer.register(outStream.getChannel());
+    }
+
+    boolean canFit(long size)
+    {
+      // overflow-safe form of currOffset + size <= maxSize for non-negative currOffset/size/maxSize
+      return size <= maxSize - currOffset;
+    }
+
+    @Override
+    public int write(ByteBuffer src) throws IOException
+    {
+      return Ints.checkedCast(recordWrite(channel.write(src)));
+    }
+
+    @Override
+    public long write(ByteBuffer[] srcs, int offset, int length) throws IOException
+    {
+      return recordWrite(channel.write(srcs, offset, length));
+    }
+
+    @Override
+    public long write(ByteBuffer[] srcs) throws IOException
+    {
+      return recordWrite(channel.write(srcs));
+    }
+
+    private long recordWrite(long n)
+    {
+      if (n > maxSize - currOffset) {
+        throw new ISE("Wrote more bytes[%,d] than available[%,d]", n, maxSize - currOffset);
+      }
+      currOffset += n;
+      return n;
+    }
+
+    @Override
+    public boolean isOpen()
+    {
+      return channel.isOpen();
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      closer.close();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "Created container file[%s] for bundle[%s] of size[%,d] bytes.",
+            file.getAbsolutePath(),
+            bundle,
+            file.length()
         );
       }
     }

@@ -40,7 +40,7 @@ import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.indexing.IndexerControllerContext;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
-import org.apache.druid.msq.input.InputSpecSlicer;
+import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
@@ -52,6 +52,7 @@ import org.apache.druid.server.coordination.ServerType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Dart implementation of {@link ControllerContext}.
@@ -87,8 +88,9 @@ public class DartControllerContext implements ControllerContext
   private final DartWorkerClient workerClient;
   private final TimelineServerView serverView;
   private final MemoryIntrospector memoryIntrospector;
-  private final QueryContext context;
+  private final List<InputSpecSlicerProvider> inputSpecSlicerProviders;
   private final ServiceEmitter emitter;
+  private final QueryContext context;
 
   public DartControllerContext(
       final Injector injector,
@@ -97,6 +99,7 @@ public class DartControllerContext implements ControllerContext
       final DartWorkerClient workerClient,
       final MemoryIntrospector memoryIntrospector,
       final TimelineServerView serverView,
+      final List<InputSpecSlicerProvider> inputSpecSlicerProviders,
       final ServiceEmitter emitter,
       final QueryContext context
   )
@@ -107,8 +110,9 @@ public class DartControllerContext implements ControllerContext
     this.workerClient = workerClient;
     this.serverView = serverView;
     this.memoryIntrospector = memoryIntrospector;
-    this.context = context;
+    this.inputSpecSlicerProviders = inputSpecSlicerProviders;
     this.emitter = emitter;
+    this.context = context;
   }
 
   @Override
@@ -189,9 +193,9 @@ public class DartControllerContext implements ControllerContext
   }
 
   @Override
-  public InputSpecSlicer newTableInputSpecSlicer(WorkerManager workerManager)
+  public List<InputSpecSlicerProvider> inputSpecSlicerProviders()
   {
-    return DartTableInputSpecSlicer.createFromWorkerIds(workerManager.getWorkerIds(), serverView, context);
+    return inputSpecSlicerProviders;
   }
 
   @Override
@@ -210,7 +214,12 @@ public class DartControllerContext implements ControllerContext
   {
     // We're ignoring WorkerFailureListener. Dart worker failures are routed into the controller by
     // ControllerMessageListener, which receives a notification when a worker goes offline.
-    return new DartWorkerManager(queryKernelConfig.getWorkerIds(), workerClient);
+    final List<String> workerIds = queryKernelConfig.getWorkerIds();
+    return new DartWorkerManager(
+        workerIds,
+        workerIds.stream().map(id -> WorkerId.fromString(id).getHostAndPort()).collect(Collectors.toList()),
+        workerClient
+    );
   }
 
   @Override
@@ -229,5 +238,37 @@ public class DartControllerContext implements ControllerContext
   public TaskLockType taskLockType()
   {
     throw DruidException.defensive("TaskLockType is not used with class[%s]", getClass().getName());
+  }
+
+  @Override
+  public int maxNonLeafWorkerCount()
+  {
+    return context.getInt(
+        DartControllerContext.CTX_MAX_NON_LEAF_WORKER_COUNT,
+        DartControllerContext.DEFAULT_MAX_NON_LEAF_WORKER_COUNT
+    );
+  }
+
+  @Override
+  public int targetPartitionsPerWorker()
+  {
+    return MultiStageQueryContext.getTargetPartitionsPerWorkerWithDefault(
+        context,
+        DEFAULT_TARGET_PARTITIONS_PER_WORKER
+    );
+  }
+
+  @Override
+  public boolean isDebug()
+  {
+    return context.isDebug();
+  }
+
+  /**
+   * Getter for {@link DartTableInputSpecSlicerProvider} to retrieve the server view.
+   */
+  TimelineServerView serverView()
+  {
+    return serverView;
   }
 }

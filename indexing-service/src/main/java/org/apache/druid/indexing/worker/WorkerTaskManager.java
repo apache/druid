@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.worker;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -38,6 +39,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
@@ -83,6 +85,7 @@ import java.util.stream.Collectors;
  */
 public class WorkerTaskManager implements IndexerTaskCountStatsProvider
 {
+  public static final String STATE_FILE = "workerState.json";
   private static final EmittingLogger log = new EmittingLogger(WorkerTaskManager.class);
 
   private final ObjectMapper jsonMapper;
@@ -93,10 +96,8 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
 
   private final ConcurrentMap<String, Task> assignedTasks = new ConcurrentHashMap<>();
 
-  // ZK_CLEANUP_TODO : these are marked protected to be used in subclass WorkerTaskMonitor that updates ZK.
-  // should be marked private alongwith WorkerTaskMonitor removal.
-  protected final ConcurrentMap<String, TaskDetails> runningTasks = new ConcurrentHashMap<>();
-  protected final ConcurrentMap<String, TaskAnnouncement> completedTasks = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, TaskDetails> runningTasks = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, TaskAnnouncement> completedTasks = new ConcurrentHashMap<>();
 
   private final ChangeRequestHistory<WorkerHistoryItem> changeHistory = new ChangeRequestHistory<>();
 
@@ -105,7 +106,18 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
 
   private final ScheduledExecutorService completedTasksCleanupExecutor;
 
+  /**
+   * Whether this worker is disabled (i.e., not accepting new tasks). Persisted to
+   * {@link #STATE_FILE} under {@link #storageDir} so the flag survives
+   * process restarts, unless {@link #startAlwaysEnabled} is true.
+   */
   private final AtomicBoolean disabled = new AtomicBoolean(false);
+
+  /**
+   * When true, {@link #STATE_FILE} is deleted (rather than read) on startup,
+   * and the worker starts enabled. Controlled by {@code druid.worker.startAlwaysEnabled}.
+   */
+  private final boolean startAlwaysEnabled;
 
   private final OverlordClient overlordClient;
   private final File storageDir;
@@ -115,6 +127,7 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
       ObjectMapper jsonMapper,
       TaskRunner taskRunner,
       TaskConfig taskConfig,
+      WorkerConfig workerConfig,
       OverlordClient overlordClient
   )
   {
@@ -123,6 +136,7 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
     this.exec = Execs.singleThreaded("WorkerTaskManager-NoticeHandler");
     this.completedTasksCleanupExecutor = Execs.scheduledSingleThreaded("WorkerTaskManager-CompletedTasksCleaner");
     this.overlordClient = overlordClient;
+    this.startAlwaysEnabled = workerConfig.isStartAlwaysEnabled();
 
     storageDir = taskConfig.getBaseTaskDir();
   }
@@ -138,6 +152,7 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
       try {
         log.debug("Starting...");
         cleanupAndMakeTmpTaskDir();
+        loadStateFile();
         registerLocationListener();
         restoreRestorableTasks();
         initAssignedTasks();
@@ -340,6 +355,61 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
     return new File(storageDir, "assignedTasks");
   }
 
+  /**
+   * Full path to {@link #STATE_FILE}.
+   */
+  public File getStateFile()
+  {
+    return new File(storageDir, STATE_FILE);
+  }
+
+  /**
+   * Read {@link #STATE_FILE} and initialize {@link #disabled}. When {@link #startAlwaysEnabled}
+   * is true, delete the file (if present) instead and leave {@link #disabled} at its default.
+   */
+  private void loadStateFile()
+  {
+    final File stateFile = getStateFile();
+    if (stateFile.exists()) {
+      if (startAlwaysEnabled) {
+        try {
+          Files.delete(stateFile.toPath());
+        }
+        catch (IOException e) {
+          log.warn(e, "Failed to delete state file[%s].", stateFile);
+        }
+      } else {
+        try {
+          final WorkerState state = jsonMapper.readValue(stateFile, WorkerState.class);
+          disabled.set(state.disabled());
+        }
+        catch (Exception e) {
+          log.warn(e, "Failed to read state file[%s]. Starting as enabled.", stateFile);
+        }
+      }
+    }
+  }
+
+  /**
+   * Write {@link #disabled} to {@link #STATE_FILE}.
+   */
+  private void writeStateFile()
+  {
+    final File stateFile = getStateFile();
+    try {
+      FileUtils.writeAtomically(
+          stateFile,
+          out -> {
+            jsonMapper.writeValue(out, new WorkerState(disabled.get()));
+            return null;
+          }
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Failed to persist state file[%s].", stateFile);
+    }
+  }
+
   private void initAssignedTasks() throws IOException
   {
     File assignedTaskDir = getAssignedTaskDir();
@@ -517,18 +587,20 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
   public void workerEnabled()
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.SECONDS), "not started");
-
-    if (disabled.compareAndSet(true, false)) {
-      changeHistory.addChangeRequest(new WorkerHistoryItem.Metadata(false));
-    }
+    setDisabled(false);
   }
 
   public void workerDisabled()
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.SECONDS), "not started");
+    setDisabled(true);
+  }
 
-    if (disabled.compareAndSet(false, true)) {
-      changeHistory.addChangeRequest(new WorkerHistoryItem.Metadata(true));
+  private void setDisabled(boolean newValue)
+  {
+    if (disabled.compareAndSet(!newValue, newValue)) {
+      changeHistory.addChangeRequest(new WorkerHistoryItem.Metadata(newValue));
+      writeStateFile();
     }
   }
 
@@ -656,6 +728,10 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)).values(), TaskAnnouncement::getTaskDataSource);
   }
 
+  record WorkerState(@JsonProperty("disabled") boolean disabled)
+  {
+  }
+
   private static class TaskDetails
   {
     private final Task task;
@@ -704,8 +780,6 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
               "Got run notice for task [%s] that I am already running or completed...",
               task.getId()
           );
-
-          taskStarted(task.getId());
           return;
         }
 
@@ -723,9 +797,6 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
         cleanupAssignedTask(task);
         log.info("Task[%s] started.", task.getId());
       }
-
-      taskAnnouncementChanged(announcement);
-      taskStarted(task.getId());
     }
   }
 
@@ -777,7 +848,6 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
         moveFromRunningToCompleted(task.getId(), latest);
 
         changeHistory.addChangeRequest(new WorkerHistoryItem.TaskUpdate(latest));
-        taskAnnouncementChanged(latest);
         log.info(
             "Task [%s] completed with status [%s].",
             task.getId(),
@@ -825,24 +895,8 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
           );
 
           changeHistory.addChangeRequest(new WorkerHistoryItem.TaskUpdate(latest));
-          taskAnnouncementChanged(latest);
         }
       }
     }
-  }
-
-  // ZK_CLEANUP_TODO :
-  //Note: Following abstract methods exist only to support WorkerTaskMonitor that
-  //watches task assignments and updates task statuses inside Zookeeper. When the transition to HTTP is complete
-  //in Overlord as well as MiddleManagers then WorkerTaskMonitor should be deleted, this class should no longer be abstract
-  //and the methods below should be removed.
-  protected void taskStarted(String taskId)
-  {
-
-  }
-
-  protected void taskAnnouncementChanged(TaskAnnouncement announcement)
-  {
-
   }
 }

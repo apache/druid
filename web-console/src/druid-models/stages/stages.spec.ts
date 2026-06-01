@@ -422,6 +422,63 @@ describe('Stages', () => {
       // Worker 1 has output/shuffle data, so it's active even though input is zero
       expect(inactiveCount).toBe(1);
     });
+
+    it('counts worker as active if it has wall time but no channel activity yet', () => {
+      const customStages = new Stages(
+        [
+          {
+            stageNumber: 0,
+            definition: {
+              id: 'test-stage',
+              input: [
+                {
+                  type: 'external',
+                  inputSource: { type: 'http', uris: [] },
+                  inputFormat: { type: 'json' },
+                  signature: [],
+                },
+              ],
+              processor: { type: 'scan' },
+              signature: [],
+              maxWorkerCount: 2,
+            },
+            phase: 'READING_INPUT',
+            workerCount: 2,
+            partitionCount: 1,
+          },
+        ],
+        {
+          '0': {
+            '0': {
+              // Worker 0 has wall time but no channel activity yet
+              input0: {
+                type: 'channel',
+                rows: [0],
+              },
+              cpu: {
+                type: 'cpus',
+                main: {
+                  type: 'cpu',
+                  cpu: 500000,
+                  wall: 1000000,
+                },
+              },
+            },
+            '1': {
+              // Worker 1 is truly inactive - no wall time, no channel activity
+              input0: {
+                type: 'channel',
+                rows: [0],
+              },
+            },
+          },
+        },
+      );
+
+      const inactiveCount = customStages.getInactiveWorkerCount(customStages.stages[0]);
+      // Worker 0 has wall time, so only worker 1 is inactive
+      expect(inactiveCount).toBe(1);
+    });
   });
 
   describe('#getByPartitionCountersForStage', () => {
@@ -438,8 +495,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 39742,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
         ]
@@ -459,8 +518,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 888,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -473,8 +534,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 995,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -487,8 +550,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 1419,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -501,8 +566,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 905,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -515,8 +582,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 590,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -529,8 +598,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 652,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -543,8 +614,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 322,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -557,8 +630,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 247,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -571,8 +646,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 236,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -585,8 +662,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 309,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -599,8 +678,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 256,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -613,8 +694,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 260,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -627,8 +710,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 440,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -641,8 +726,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 876,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -655,8 +742,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 1394,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -669,8 +758,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 892,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -683,8 +774,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 3595,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -697,8 +790,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 6522,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -711,8 +806,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 4525,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -725,8 +822,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 4326,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -739,8 +838,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 4149,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -753,8 +854,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 2561,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -767,8 +870,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 1914,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
           {
@@ -781,8 +886,10 @@ describe('Stages', () => {
               "loadFiles": 0,
               "loadTime": 0,
               "loadWait": 0,
+              "queries": 0,
               "rows": 1452,
               "totalFiles": 0,
+              "totalQueries": 0,
             },
           },
         ]

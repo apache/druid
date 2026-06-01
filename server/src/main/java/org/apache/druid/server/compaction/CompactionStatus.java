@@ -59,7 +59,7 @@ public class CompactionStatus
 {
   private static final Logger log = new Logger(CompactionStatus.class);
 
-  private static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, null, null, null);
+  private static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, null, null, null, null);
   public static final String NEVER_COMPACTED_REASON = "not compacted yet";
 
   public enum State
@@ -93,20 +93,28 @@ public class CompactionStatus
 
   private final State state;
   private final String reason;
+
+  @Nullable
   private final CompactionStatistics compactedStats;
+  @Nullable
   private final CompactionStatistics uncompactedStats;
+  @Nullable
+  private final List<DataSegment> uncompactedSegments;
+
 
   private CompactionStatus(
       State state,
       String reason,
-      CompactionStatistics compactedStats,
-      CompactionStatistics uncompactedStats
+      @Nullable CompactionStatistics compactedStats,
+      @Nullable CompactionStatistics uncompactedStats,
+      @Nullable List<DataSegment> uncompactedSegments
   )
   {
     this.state = state;
     this.reason = reason;
     this.compactedStats = compactedStats;
     this.uncompactedStats = uncompactedStats;
+    this.uncompactedSegments = uncompactedSegments;
   }
 
   public boolean isComplete()
@@ -139,6 +147,11 @@ public class CompactionStatus
     return uncompactedStats;
   }
 
+  public List<DataSegment> getUncompactedSegments()
+  {
+    return uncompactedSegments;
+  }
+
   @Override
   public String toString()
   {
@@ -152,12 +165,13 @@ public class CompactionStatus
 
   public static CompactionStatus pending(String reasonFormat, Object... args)
   {
-    return new CompactionStatus(State.PENDING, StringUtils.format(reasonFormat, args), null, null);
+    return new CompactionStatus(State.PENDING, StringUtils.format(reasonFormat, args), null, null, null);
   }
 
   public static CompactionStatus pending(
       CompactionStatistics compactedStats,
       CompactionStatistics uncompactedStats,
+      List<DataSegment> uncompactedSegments,
       String reasonFormat,
       Object... args
   )
@@ -166,8 +180,17 @@ public class CompactionStatus
         State.PENDING,
         StringUtils.format(reasonFormat, args),
         compactedStats,
-        uncompactedStats
+        uncompactedStats,
+        uncompactedSegments
     );
+  }
+
+  public static CompactionStatus complete(
+      CompactionStatistics compactionStatistics,
+      CompactionStatistics uncompactedStats
+  )
+  {
+    return new CompactionStatus(State.COMPLETE, null, compactionStatistics, uncompactedStats, null);
   }
 
   /**
@@ -244,12 +267,12 @@ public class CompactionStatus
 
   public static CompactionStatus skipped(String reasonFormat, Object... args)
   {
-    return new CompactionStatus(State.SKIPPED, StringUtils.format(reasonFormat, args), null, null);
+    return new CompactionStatus(State.SKIPPED, StringUtils.format(reasonFormat, args), null, null, null);
   }
 
   public static CompactionStatus running(String message)
   {
-    return new CompactionStatus(State.RUNNING, message, null, null);
+    return new CompactionStatus(State.RUNNING, message, null, null, null);
   }
 
   /**
@@ -424,11 +447,12 @@ public class CompactionStatus
       }
 
       if (reasonsForCompaction.isEmpty()) {
-        return COMPLETE;
+        return CompactionStatus.complete(createStats(this.compactedSegments), createStats(this.uncompactedSegments));
       } else {
         return CompactionStatus.pending(
             createStats(this.compactedSegments),
-            createStats(uncompactedSegments),
+            createStats(this.uncompactedSegments),
+            this.uncompactedSegments,
             reasonsForCompaction.get(0)
         );
       }
@@ -467,9 +491,9 @@ public class CompactionStatus
         // Cannot evaluate further without a fingerprint mapper
         uncompactedSegments.addAll(
             mismatchedFingerprintToSegmentMap.values()
-                                            .stream()
-                                            .flatMap(List::stream)
-                                            .toList()
+                                             .stream()
+                                             .flatMap(List::stream)
+                                             .toList()
         );
         return CompactionStatus.pending("Segments have a mismatched fingerprint and no fingerprint mapper is available");
       }
@@ -493,7 +517,8 @@ public class CompactionStatus
                 }
                 segments.addAll(e.getValue());
                 return segments;
-              });
+              }
+          );
         }
       }
 
@@ -582,7 +607,8 @@ public class CompactionStatus
       } else if (existingPartionsSpec instanceof DynamicPartitionsSpec) {
         existingPartionsSpec = new DynamicPartitionsSpec(
             existingPartionsSpec.getMaxRowsPerSegment(),
-            ((DynamicPartitionsSpec) existingPartionsSpec).getMaxTotalRowsOr(Long.MAX_VALUE));
+            ((DynamicPartitionsSpec) existingPartionsSpec).getMaxTotalRowsOr(Long.MAX_VALUE)
+        );
       }
       return CompactionStatus.completeIfNullOrEqual(
           "partitionsSpec",
@@ -810,7 +836,13 @@ public class CompactionStatus
       final Set<Interval> segmentIntervals =
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet());
       final long totalBytes = segments.stream().mapToLong(DataSegment::getSize).sum();
-      return CompactionStatistics.create(totalBytes, segments.size(), segmentIntervals.size());
+      final Long totalRows;
+      if (segments.stream().allMatch(s -> s.getTotalRows() != null)) {
+        totalRows = segments.stream().mapToLong(DataSegment::getTotalRows).sum();
+      } else {
+        totalRows = null;
+      }
+      return CompactionStatistics.create(totalBytes, totalRows, segments.size(), segmentIntervals.size());
     }
   }
 }

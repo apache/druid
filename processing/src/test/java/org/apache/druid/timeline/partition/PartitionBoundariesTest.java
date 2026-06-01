@@ -23,9 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.ISE;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -40,7 +40,7 @@ public class PartitionBoundariesTest
   private StringTuple[] values;
   private List<StringTuple> expected;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     values = new StringTuple[]{
@@ -56,32 +56,35 @@ public class PartitionBoundariesTest
   @Test
   public void hasCorrectValues()
   {
-    Assert.assertEquals(expected, target);
+    Assertions.assertEquals(expected, target);
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void isImmutable()
   {
-    target.add(StringTuple.create("should fail"));
+    Assertions.assertThrows(
+        UnsupportedOperationException.class,
+        () -> target.add(StringTuple.create("should fail"))
+    );
   }
 
   @Test
   public void cannotBeIndirectlyModified()
   {
     values[1] = StringTuple.create("changed");
-    Assert.assertEquals(expected, target);
+    Assertions.assertEquals(expected, target);
   }
 
   @Test
   public void handlesNoValues()
   {
-    Assert.assertEquals(Collections.emptyList(), new PartitionBoundaries());
+    Assertions.assertEquals(Collections.emptyList(), new PartitionBoundaries());
   }
 
   @Test
   public void handlesRepeatedValue()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList(null, null),
         new PartitionBoundaries(
             StringTuple.create("a"),
@@ -96,7 +99,7 @@ public class PartitionBoundariesTest
   {
     String serialized = serialize(target);
     Object deserialized = deserialize(serialized, target.getClass());
-    Assert.assertEquals(serialized, serialize(deserialized));
+    Assertions.assertEquals(serialized, serialize(deserialized));
   }
 
   @Test
@@ -110,7 +113,7 @@ public class PartitionBoundariesTest
 
     String json = serialize(original);
     PartitionBoundaries deserialized = deserialize(json, PartitionBoundaries.class);
-    Assert.assertEquals(original, deserialized);
+    Assertions.assertEquals(original, deserialized);
   }
 
   @Test
@@ -125,13 +128,13 @@ public class PartitionBoundariesTest
 
     // Verify that the serializable object is a List<StringTuple>
     Object serializableObject = multiDimBoundaries.getSerializableObject();
-    Assert.assertTrue(serializableObject instanceof List);
+    Assertions.assertInstanceOf(List.class, serializableObject);
     assertThatItemsAreNullOr(StringTuple.class, (List<?>) serializableObject);
 
     // Verify the output of getSerializableObject can be serialized/deserialized
     String json = serialize(serializableObject);
     PartitionBoundaries deserialized = deserialize(json, PartitionBoundaries.class);
-    Assert.assertEquals(multiDimBoundaries, deserialized);
+    Assertions.assertEquals(multiDimBoundaries, deserialized);
   }
 
   @Test
@@ -146,13 +149,13 @@ public class PartitionBoundariesTest
 
     // Verify that the serializable object is a List<String>
     Object serializableObject = singleDimBoundaries.getSerializableObject();
-    Assert.assertTrue(serializableObject instanceof List);
+    Assertions.assertInstanceOf(List.class, serializableObject);
     assertThatItemsAreNullOr(String.class, (List<?>) serializableObject);
 
     // Verify the output of getSerializableObject can be serialized/deserialized
     String json = serialize(serializableObject);
     PartitionBoundaries deserialized = deserialize(json, PartitionBoundaries.class);
-    Assert.assertEquals(singleDimBoundaries, deserialized);
+    Assertions.assertEquals(singleDimBoundaries, deserialized);
   }
 
   @Test
@@ -160,7 +163,7 @@ public class PartitionBoundariesTest
   {
     String json = "[null, \"a\", null]";
     PartitionBoundaries deserialized = deserialize(json, PartitionBoundaries.class);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new PartitionBoundaries(
             null,
             StringTuple.create("a"),
@@ -175,7 +178,7 @@ public class PartitionBoundariesTest
   {
     String json = "[null, [\"a\",\"10\"], null]";
     PartitionBoundaries deserialized = deserialize(json, PartitionBoundaries.class);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new PartitionBoundaries(
             null,
             StringTuple.create("a", "10"),
@@ -188,7 +191,7 @@ public class PartitionBoundariesTest
   @Test
   public void testGetNumBucketsOfNonEmptyPartitionBoundariesReturningCorrectSize()
   {
-    Assert.assertEquals(2, target.getNumBuckets());
+    Assertions.assertEquals(2, target.getNumBuckets());
   }
 
   @Test
@@ -209,7 +212,7 @@ public class PartitionBoundariesTest
 
     for (Object item : list) {
       if (item != null) {
-        Assert.assertSame(clazz, item.getClass());
+        Assertions.assertSame(clazz, item.getClass());
       }
     }
   }

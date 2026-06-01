@@ -164,6 +164,7 @@ public class SqlExecutionReporter
       stmt.sqlToolbox.requestLogger.logSqlQuery(
           RequestLogLine.forSql(
               stmt.queryPlus.sql(),
+              stmt.queryPlus.sqlParameters(),
               queryContext,
               DateTimes.utc(startMs),
               remoteAddress,

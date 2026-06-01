@@ -19,13 +19,25 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.SdkClientException;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.common.aws.AWSClientConfig;
+import org.apache.druid.common.aws.AWSEndpointConfig;
+import org.easymock.Capture;
+import org.easymock.CaptureType;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Error;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class S3UtilsTest
 {
@@ -57,8 +69,10 @@ public class S3UtilsTest
               if (count.incrementAndGet() >= 2) {
                 return "hey";
               } else {
-                AmazonS3Exception s3Exception = new AmazonS3Exception("a 403 s3 exception");
-                s3Exception.setStatusCode(403);
+                S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                    .message("a 403 s3 exception")
+                    .statusCode(403)
+                    .build();
                 throw new IOException(s3Exception);
               }
             },
@@ -77,8 +91,10 @@ public class S3UtilsTest
           if (count.incrementAndGet() >= maxRetries) {
             return "hey";
           } else {
-            AmazonS3Exception s3Exception = new AmazonS3Exception("a 5xx s3 exception");
-            s3Exception.setStatusCode(500);
+            S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                .message("a 5xx s3 exception")
+                .statusCode(500)
+                .build();
             throw new IOException(s3Exception);
           }
         },
@@ -99,8 +115,10 @@ public class S3UtilsTest
               if (count.incrementAndGet() > maxRetries) {
                 return "hey";
               } else {
-                AmazonS3Exception s3Exception = new AmazonS3Exception("a 5xx s3 exception");
-                s3Exception.setStatusCode(500);
+                S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                    .message("a 5xx s3 exception")
+                    .statusCode(500)
+                    .build();
                 throw new IOException(s3Exception);
               }
             },
@@ -120,10 +138,12 @@ public class S3UtilsTest
           if (count.incrementAndGet() >= maxRetries) {
             return "hey";
           } else {
-            throw new SdkClientException(
-                "Unable to find a region via the region provider chain. "
-                + "Must provide an explicit region in the builder or setup environment to supply a region."
-            );
+            throw SdkClientException.builder()
+                .message(
+                    "Unable to find a region via the region provider chain. "
+                    + "Must provide an explicit region in the builder or setup environment to supply a region."
+                )
+                .build();
           }
         },
         maxRetries
@@ -132,7 +152,7 @@ public class S3UtilsTest
   }
 
   @Test
-  public void testRetryWithAmazonS3InternalError() throws Exception
+  public void testRetryWithS3InternalError() throws Exception
   {
     final int maxRetries = 3;
     final AtomicInteger count = new AtomicInteger();
@@ -141,8 +161,10 @@ public class S3UtilsTest
           if (count.incrementAndGet() >= maxRetries) {
             return "donezo";
           } else {
-            AmazonS3Exception s3Exception = new AmazonS3Exception("We encountered an internal error. Please try again. (Service: Amazon S3; Status Code: 200; Error Code: InternalError; Request ID: some-id)");
-            s3Exception.setStatusCode(200);
+            S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                .message("We encountered an internal error. Please try again. (Service: Amazon S3; Status Code: 200; Error Code: InternalError; Request ID: some-id)")
+                .statusCode(200)
+                .build();
             throw s3Exception;
           }
         },
@@ -152,7 +174,7 @@ public class S3UtilsTest
   }
 
   @Test
-  public void testRetryWithAmazonS3SlowDown() throws Exception
+  public void testRetryWithS3SlowDown() throws Exception
   {
     final int maxRetries = 3;
     final AtomicInteger count = new AtomicInteger();
@@ -161,8 +183,10 @@ public class S3UtilsTest
           if (count.incrementAndGet() >= maxRetries) {
             return "success";
           } else {
-            AmazonS3Exception s3Exception = new AmazonS3Exception("Please reduce your request rate. SlowDown");
-            s3Exception.setStatusCode(200);
+            S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                .message("Please reduce your request rate. SlowDown")
+                .statusCode(200)
+                .build();
             throw s3Exception;
           }
         },
@@ -172,7 +196,7 @@ public class S3UtilsTest
   }
 
   @Test
-  public void testNoRetryWithAmazonS3InternalErrorNon200Status()
+  public void testNoRetryWithS3InternalErrorNon200Status()
   {
     final AtomicInteger count = new AtomicInteger();
     Assert.assertThrows(
@@ -180,8 +204,10 @@ public class S3UtilsTest
         () -> S3Utils.retryS3Operation(
             () -> {
               count.incrementAndGet();
-              AmazonS3Exception s3Exception = new AmazonS3Exception("InternalError occurred");
-              s3Exception.setStatusCode(403);
+              S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                  .message("InternalError occurred")
+                  .statusCode(403)
+                  .build();
               throw s3Exception;
             },
             3
@@ -191,7 +217,7 @@ public class S3UtilsTest
   }
 
   @Test
-  public void testNoRetryWithAmazonS3SlowDownNon200Status()
+  public void testNoRetryWithS3SlowDownNon200Status()
   {
     final AtomicInteger count = new AtomicInteger();
     Assert.assertThrows(
@@ -199,8 +225,10 @@ public class S3UtilsTest
         () -> S3Utils.retryS3Operation(
             () -> {
               count.incrementAndGet();
-              AmazonS3Exception s3Exception = new AmazonS3Exception("SlowDown message");
-              s3Exception.setStatusCode(404);
+              S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                  .message("SlowDown message")
+                  .statusCode(404)
+                  .build();
               throw s3Exception;
             },
             3
@@ -210,7 +238,7 @@ public class S3UtilsTest
   }
 
   @Test
-  public void testRetryWithAmazonS3Status200ButDifferentError()
+  public void testRetryWithS3Status200ButDifferentError()
   {
     final AtomicInteger count = new AtomicInteger();
     Assert.assertThrows(
@@ -218,13 +246,181 @@ public class S3UtilsTest
         () -> S3Utils.retryS3Operation(
             () -> {
               count.incrementAndGet();
-              AmazonS3Exception s3Exception = new AmazonS3Exception("Some other error message");
-              s3Exception.setStatusCode(200);
+              S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                  .message("Some other error message")
+                  .statusCode(200)
+                  .build();
               throw s3Exception;
             },
             3
         )
     );
     Assert.assertEquals(1, count.get());
+  }
+
+  @Test
+  public void testDeleteBucketKeysSuccess() throws Exception
+  {
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
+    DeleteObjectsResponse successResponse = DeleteObjectsResponse.builder().build();
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class)))
+            .andReturn(successResponse)
+            .once();
+    EasyMock.replay(s3Client);
+
+    List<ObjectIdentifier> keys = List.of(
+        ObjectIdentifier.builder().key("a").build(),
+        ObjectIdentifier.builder().key("b").build()
+    );
+    S3Utils.deleteBucketKeys(s3Client, "bucket", keys, 3);
+    EasyMock.verify(s3Client);
+  }
+
+  @Test
+  public void testDeleteBucketKeysRetriesOnlyFailedKeys() throws Exception
+  {
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
+
+    // First call: key "b" fails
+    DeleteObjectsResponse firstResponse = DeleteObjectsResponse.builder()
+        .errors(S3Error.builder().key("b").code("InternalError").message("err").build())
+        .build();
+    // Second call (retry): only "b" is sent, succeeds
+    DeleteObjectsResponse secondResponse = DeleteObjectsResponse.builder().build();
+
+    Capture<DeleteObjectsRequest> capturedRequests = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.capture(capturedRequests)))
+            .andReturn(firstResponse)
+            .andReturn(secondResponse);
+    EasyMock.replay(s3Client);
+
+    List<ObjectIdentifier> keys = List.of(
+        ObjectIdentifier.builder().key("a").build(),
+        ObjectIdentifier.builder().key("b").build()
+    );
+    S3Utils.deleteBucketKeys(s3Client, "bucket", keys, 3);
+    EasyMock.verify(s3Client);
+
+    // First request should have both keys
+    List<String> firstKeys = capturedRequests.getValues().get(0).delete().objects()
+                                 .stream().map(ObjectIdentifier::key).collect(Collectors.toList());
+    Assert.assertEquals(List.of("a", "b"), firstKeys);
+
+    // Second request should only have the failed key
+    List<String> secondKeys = capturedRequests.getValues().get(1).delete().objects()
+                                  .stream().map(ObjectIdentifier::key).collect(Collectors.toList());
+    Assert.assertEquals(List.of("b"), secondKeys);
+  }
+
+  @Test
+  public void testDeleteBucketKeysThrowsAfterAllRetriesExhausted()
+  {
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
+
+    DeleteObjectsResponse errorResponse = DeleteObjectsResponse.builder()
+        .errors(S3Error.builder().key("a").code("InternalError").message("err").build())
+        .build();
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class)))
+            .andReturn(errorResponse)
+            .anyTimes();
+    EasyMock.replay(s3Client);
+
+    List<ObjectIdentifier> keys = List.of(ObjectIdentifier.builder().key("a").build());
+    S3MultiObjectDeleteException thrown = Assert.assertThrows(
+        S3MultiObjectDeleteException.class,
+        () -> S3Utils.deleteBucketKeys(s3Client, "bucket", keys, 2)
+    );
+    Assert.assertEquals(1, thrown.getErrors().size());
+    Assert.assertEquals("a", thrown.getErrors().get(0).key());
+    EasyMock.verify(s3Client);
+  }
+
+  @Test
+  public void testDeleteBucketKeysPartialFailureRetriesAlsoFail()
+  {
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createMock(ServerSideEncryptingAmazonS3.class);
+
+    // First call: key "b" fails; second call (retry of "b"): still fails
+    DeleteObjectsResponse firstResponse = DeleteObjectsResponse.builder()
+        .errors(S3Error.builder().key("b").code("InternalError").message("err").build())
+        .build();
+    DeleteObjectsResponse retryResponse = DeleteObjectsResponse.builder()
+        .errors(S3Error.builder().key("b").code("InternalError").message("err").build())
+        .build();
+
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class)))
+            .andReturn(firstResponse)
+            .andReturn(retryResponse);
+    EasyMock.replay(s3Client);
+
+    List<ObjectIdentifier> keys = List.of(
+        ObjectIdentifier.builder().key("a").build(),
+        ObjectIdentifier.builder().key("b").build()
+    );
+    S3MultiObjectDeleteException thrown = Assert.assertThrows(
+        S3MultiObjectDeleteException.class,
+        () -> S3Utils.deleteBucketKeys(s3Client, "bucket", keys, 1)
+    );
+    Assert.assertEquals(1, thrown.getErrors().size());
+    Assert.assertEquals("b", thrown.getErrors().get(0).key());
+    EasyMock.verify(s3Client);
+  }
+
+  @Test
+  public void testRetryWithS3MultiObjectDeleteException() throws Exception
+  {
+    final int maxRetries = 3;
+    final AtomicInteger count = new AtomicInteger();
+    S3Utils.retryS3Operation(
+        () -> {
+          if (count.incrementAndGet() >= maxRetries) {
+            return "success";
+          } else {
+            throw new S3MultiObjectDeleteException(
+                List.of(S3Error.builder().key("x").code("InternalError").message("err").build())
+            );
+          }
+        },
+        maxRetries
+    );
+    Assert.assertEquals(maxRetries, count.get());
+  }
+
+  private static final ObjectMapper JSON = new ObjectMapper();
+
+  private static AWSEndpointConfig endpointWith(String json) throws IOException
+  {
+    return JSON.readValue(json, AWSEndpointConfig.class);
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigSchemelessEndpointReturnsTrue() throws IOException
+  {
+    Assert.assertTrue(S3Utils.useHttps(null, endpointWith("{\"url\":\"s3.example.com\"}")));
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigHttpEndpointReturnsFalse() throws IOException
+  {
+    Assert.assertFalse(S3Utils.useHttps(null, endpointWith("{\"url\":\"http://s3.example.com\"}")));
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigHttpsEndpointReturnsTrue() throws IOException
+  {
+    Assert.assertTrue(S3Utils.useHttps(null, endpointWith("{\"url\":\"https://s3.example.com\"}")));
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigNullEndpointUrlReturnsTrue() throws IOException
+  {
+    Assert.assertTrue(S3Utils.useHttps(null, new AWSEndpointConfig()));
+  }
+
+  @Test
+  public void testUseHttpsDefaultClientConfigSchemelessEndpointReturnsTrue() throws IOException
+  {
+    // Sanity check: default AWSClientConfig protocol is "https"; schemeless URL inherits "https".
+    Assert.assertTrue(S3Utils.useHttps(new AWSClientConfig(), endpointWith("{\"url\":\"s3.example.com\"}")));
   }
 }

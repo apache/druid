@@ -32,6 +32,7 @@ import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.ws.rs.core.Response;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -76,6 +77,27 @@ public class StatusResourceTest
   public void testHiddenPropertiesContain() throws Exception
   {
     testHiddenPropertiesWithPropertyFileName("status.resource.test.runtime.hpc.properties");
+  }
+
+  @Test
+  public void testGetReadyReturns200WhenReady()
+  {
+    final ServiceAnnouncementState state = new ServiceAnnouncementState();
+    state.markReady();
+    final StatusResource resource = new StatusResource(new Properties(), null, null, null, state);
+    final Response response = resource.getReady();
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(true, response.getEntity());
+  }
+
+  @Test
+  public void testGetReadyReturns503WhenNotReady()
+  {
+    final ServiceAnnouncementState state = new ServiceAnnouncementState();
+    final StatusResource resource = new StatusResource(new Properties(), null, null, null, state);
+    final Response response = resource.getReady();
+    Assert.assertEquals(503, response.getStatus());
+    Assert.assertEquals(false, response.getEntity());
   }
 
   private void testHiddenPropertiesWithPropertyFileName(String fileName) throws Exception

@@ -38,6 +38,8 @@ import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -313,6 +315,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   )
                   .build();
 
+  public static final Map<String, Object> USE_COMBINER_MSQ_CONTEXT =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(MultiStageQueryContext.CTX_USE_COMBINER, true)
+                  .build();
+
   public static final Map<String, Object> FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
@@ -333,6 +341,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final String DEFAULT = "default";
   public static final String PARALLEL_MERGE = "parallel_merge";
   public static final String SUPERUSER = "superuser";
+  public static final String USE_COMBINER = "use_combiner";
 
   protected File localFileStorageDir;
   protected LocalFileStorageConnector localFileStorageConnector;
@@ -356,7 +365,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(makeTestWorkerMemoryParameters());
   protected static final String TEST_CONTROLLER_TASK_ID = "query-test-query";
   // Fields in the query context to ignore during assertion.
-  protected Set<String> ignoreFields = Set.of(MultiStageQueryContext.CTX_START_TIME);
+  protected Set<String> ignoreFields = Set.of(
+      MultiStageQueryContext.CTX_START_TIME,
+      MultiStageQueryContext.CTX_QUERY_DEADLINE
+  );
 
   protected static class MSQBaseComponentSupplier extends StandardComponentSupplier
   {
@@ -566,7 +578,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new SegmentWranglerModule(),
         new HllSketchModule(),
         binder -> binder.bind(Bouncer.class).toInstance(new Bouncer(1)),
-        binder -> binder.bind(PolicyEnforcer.class).toInstance(NoopPolicyEnforcer.instance())
+        binder -> binder.bind(PolicyEnforcer.class).toInstance(NoopPolicyEnforcer.instance()),
+        binder -> binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class).in(LazySingleton.class)
     );
     // adding node role injection to the modules, since CliPeon would also do that through run method
     injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))

@@ -200,7 +200,7 @@ public class Druids
 
     public TimeseriesQueryBuilder virtualColumns(VirtualColumn... virtualColumns)
     {
-      return virtualColumns(VirtualColumns.create(Arrays.asList(virtualColumns)));
+      return virtualColumns(VirtualColumns.create(virtualColumns));
     }
 
     public TimeseriesQueryBuilder filters(String dimensionName, String value)
@@ -445,7 +445,7 @@ public class Druids
 
     public SearchQueryBuilder virtualColumns(VirtualColumn... vc)
     {
-      virtualColumns = VirtualColumns.create(Arrays.asList(vc));
+      virtualColumns = VirtualColumns.create(vc);
       return this;
     }
 
@@ -906,7 +906,7 @@ public class Druids
 
     public ScanQueryBuilder virtualColumns(VirtualColumn... virtualColumns)
     {
-      return virtualColumns(VirtualColumns.create(Arrays.asList(virtualColumns)));
+      return virtualColumns(VirtualColumns.create(virtualColumns));
     }
 
     public ScanQueryBuilder context(Map<String, Object> c)

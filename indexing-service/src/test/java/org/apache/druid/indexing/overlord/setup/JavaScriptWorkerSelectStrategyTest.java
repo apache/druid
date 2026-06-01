@@ -25,12 +25,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
-import org.apache.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
+import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.js.JavaScriptConfig;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
-import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -58,10 +57,10 @@ public class JavaScriptWorkerSelectStrategyTest
       + " var worker = sortedWorkers[i];\n"
       + "  var zkWorker = zkWorkers.get(worker);\n"
       + "  if (zkWorker.canRunTask(task, parallelIndexTaskSlotRatio) && zkWorker.isValidVersion(minWorkerVer)) {\n"
-      + "    if (task.getType() == 'index_hadoop' && batch_workers.contains(worker)) {\n"
+      + "    if (task.getType() == 'index_parallel' && batch_workers.contains(worker)) {\n"
       + "      return worker;\n"
       + "    } else {\n"
-      + "      if (task.getType() != 'index_hadoop' && !batch_workers.contains(worker)) {\n"
+      + "      if (task.getType() != 'index_parallel' && !batch_workers.contains(worker)) {\n"
       + "        return worker;\n"
       + "      }\n"
       + "    }\n"
@@ -123,15 +122,15 @@ public class JavaScriptWorkerSelectStrategyTest
     );
 
     ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
-        createMockTask("index_hadoop")
+        createMockTask("index_parallel")
     );
     // batch tasks should be sent to worker1
     Assert.assertEquals(worker1, workerForBatchTask);
 
     ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
         createMockTask("other_type")
     );
@@ -147,7 +146,7 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.2", createMockWorker(1, true, true)
     );
     ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
         createMockTask("other_type")
     );
@@ -162,14 +161,14 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.4", createMockWorker(1, true, false)
     );
     ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
-        createMockTask("index_hadoop")
+        createMockTask("index_parallel")
     );
     Assert.assertNull(workerForBatchTask);
 
     ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
         createMockTask("otherTask")
     );
@@ -185,14 +184,14 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.4", createMockWorker(1, false, true)
     );
     ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
-        createMockTask("index_hadoop")
+        createMockTask("index_parallel")
     );
     Assert.assertNull(workerForBatchTask);
 
     ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
         createMockTask("otherTask")
     );
@@ -209,9 +208,9 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.2", createMockWorker(5, true, true)
     );
     ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
-        createMockTask("index_hadoop")
+        createMockTask("index_parallel")
     );
     Assert.assertEquals(workerMap.get("10.0.0.2"), workerForBatchTask);
 

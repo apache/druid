@@ -36,6 +36,7 @@ import org.apache.druid.guice.JavaScriptModule;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.MetadataConfigModule;
+import org.apache.druid.guice.PartialLoadSpecModule;
 import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.StartupLoggingModule;
@@ -96,16 +97,6 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
 
   public CoreInjectorBuilder forServer()
   {
-    forServerWithoutJetty();
-    add(JettyServerModule.class);
-    return this;
-  }
-
-  /**
-   * Needed for Hadoop indexing that needs server-like Injector but can't run jetty 12
-   */
-  public CoreInjectorBuilder forServerWithoutJetty()
-  {
     withLogging();
     withLifecycle();
     add(
@@ -132,6 +123,7 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new DerbyMetadataStorageDruidModule(),
         new JacksonConfigManagerModule(),
         new LocalDataStorageDruidModule(),
+        new PartialLoadSpecModule(),
         new TombstoneDataStorageModule(),
         new JavaScriptModule(),
         new AuthenticatorModule(),
@@ -144,7 +136,8 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new ServiceClientModule(),
         new StorageConnectorModule(),
         new CatalogCoreModule(),
-        new DefaultServerHolderModule()
+        new DefaultServerHolderModule(),
+        JettyServerModule.class
     );
     return this;
   }

@@ -36,10 +36,12 @@ import java.util.Set;
 
 public class PreferredTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
+  public static final String TYPE = "preferred";
   private static final Logger log = new Logger(PreferredTierSelectorStrategy.class);
 
   private final String preferredTier;
   private final TierSelectorStrategy priorityStrategy;
+  private final PreferredTierSelectorStrategyConfig config;
 
   public PreferredTierSelectorStrategy(
       @JacksonInject ServerSelectorStrategy serverSelectorStrategy,
@@ -47,6 +49,7 @@ public class PreferredTierSelectorStrategy extends AbstractTierSelectorStrategy
   )
   {
     super(serverSelectorStrategy);
+    this.config = config;
     this.preferredTier = config.getTier();
 
     if (config.getPriority() == null) {
@@ -110,5 +113,18 @@ public class PreferredTierSelectorStrategy extends AbstractTierSelectorStrategy
     }
 
     return picks;
+  }
+
+  public PreferredTierSelectorStrategyConfig getConfig()
+  {
+    return config;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "PreferredTierSelectorStrategy{" +
+           "config=" + config +
+           '}';
   }
 }

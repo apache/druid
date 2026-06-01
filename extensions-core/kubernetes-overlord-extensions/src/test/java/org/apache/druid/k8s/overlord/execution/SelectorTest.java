@@ -26,8 +26,8 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -52,7 +52,7 @@ public class SelectorTest
         new HashSet<>()
     );
 
-    Assert.assertTrue(selector.evaluate(task));
+    Assertions.assertTrue(selector.evaluate(task));
   }
 
   @Test
@@ -72,7 +72,7 @@ public class SelectorTest
         Sets.newHashSet(datasource)
     );
 
-    Assert.assertTrue(selector.evaluate(task));
+    Assertions.assertTrue(selector.evaluate(task));
   }
 
   @Test
@@ -90,7 +90,7 @@ public class SelectorTest
         Sets.newHashSet(datasource)
     );
 
-    Assert.assertTrue(selector.evaluate(task));
+    Assertions.assertTrue(selector.evaluate(task));
   }
 
   @Test
@@ -110,7 +110,7 @@ public class SelectorTest
         Sets.newHashSet(dataSource)
     );
 
-    Assert.assertTrue(selector.evaluate(task));
+    Assertions.assertTrue(selector.evaluate(task));
   }
 
   @Test
@@ -129,7 +129,7 @@ public class SelectorTest
         Sets.newHashSet(dataSource)
     );
 
-    Assert.assertFalse(selector.evaluate(task));
+    Assertions.assertFalse(selector.evaluate(task));
   }
 
   @Test
@@ -150,7 +150,7 @@ public class SelectorTest
         Sets.newHashSet(dataSource)
     );
 
-    Assert.assertFalse(selector.evaluate(task));
+    Assertions.assertFalse(selector.evaluate(task));
   }
 
   @Test
@@ -169,7 +169,7 @@ public class SelectorTest
         Sets.newHashSet("my_table")
     );
 
-    Assert.assertFalse(selector.evaluate(task));
+    Assertions.assertFalse(selector.evaluate(task));
   }
 
   @Test
@@ -188,7 +188,7 @@ public class SelectorTest
         Sets.newHashSet("my_table")
     );
 
-    Assert.assertFalse(selector.evaluate(task));
+    Assertions.assertFalse(selector.evaluate(task));
   }
 
   @Test
@@ -204,7 +204,7 @@ public class SelectorTest
         null
     );
 
-    Assert.assertTrue(selector.evaluate(task));
+    Assertions.assertTrue(selector.evaluate(task));
   }
 
   @Test
@@ -225,6 +225,6 @@ public class SelectorTest
         objectMapper.writeValueAsBytes(selector),
         Selector.class
     );
-    Assert.assertEquals(selector, selector2);
+    Assertions.assertEquals(selector, selector2);
   }
 }

@@ -22,8 +22,8 @@ package org.apache.druid.segment;
 import com.google.common.collect.Iterators;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  */
@@ -50,18 +50,18 @@ public class DictionaryMergingIteratorTest
         false
     );
 
-    Assert.assertArrayEquals(new String[]{"a", "b", "c", "d", "e", "f"}, Iterators.toArray(iterator, String.class));
+    Assertions.assertArrayEquals(new String[]{"a", "b", "c", "d", "e", "f"}, Iterators.toArray(iterator, String.class));
 
-    Assert.assertArrayEquals(new int[] {0, 2, 3, 4}, iterator.conversions[0].array());
-    Assert.assertArrayEquals(new int[] {1, 2, 4}, iterator.conversions[1].array());
-    Assert.assertArrayEquals(new int[] {0, 3, 5}, iterator.conversions[2].array());
-    Assert.assertArrayEquals(new int[] {0, 1, 2}, iterator.conversions[3].array());
-    Assert.assertArrayEquals(new int[] {0, 1, 2, 3, 4, 5}, iterator.conversions[4].array());
+    Assertions.assertArrayEquals(new int[] {0, 2, 3, 4}, iterator.conversions[0].array());
+    Assertions.assertArrayEquals(new int[] {1, 2, 4}, iterator.conversions[1].array());
+    Assertions.assertArrayEquals(new int[] {0, 3, 5}, iterator.conversions[2].array());
+    Assertions.assertArrayEquals(new int[] {0, 1, 2}, iterator.conversions[3].array());
+    Assertions.assertArrayEquals(new int[] {0, 1, 2, 3, 4, 5}, iterator.conversions[4].array());
 
-    Assert.assertTrue(iterator.needConversion(0));
-    Assert.assertTrue(iterator.needConversion(1));
-    Assert.assertTrue(iterator.needConversion(2));
-    Assert.assertFalse(iterator.needConversion(3));
-    Assert.assertFalse(iterator.needConversion(4));
+    Assertions.assertTrue(iterator.needConversion(0));
+    Assertions.assertTrue(iterator.needConversion(1));
+    Assertions.assertTrue(iterator.needConversion(2));
+    Assertions.assertFalse(iterator.needConversion(3));
+    Assertions.assertFalse(iterator.needConversion(4));
   }
 }

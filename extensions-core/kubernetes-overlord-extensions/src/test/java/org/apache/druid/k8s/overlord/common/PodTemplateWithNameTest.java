@@ -22,10 +22,8 @@ package org.apache.druid.k8s.overlord.common;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.PodTemplateBuilder;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateWithName;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class PodTemplateWithNameTest
 {
@@ -38,10 +36,10 @@ public class PodTemplateWithNameTest
     );
     PodTemplateWithName podTemplateWithName2 = podTemplateWithName;
 
-    assertEquals(podTemplateWithName, podTemplateWithName2);
-    assertNotEquals(podTemplateWithName, null);
-    assertNotEquals(podTemplateWithName, "string");
-    assertEquals(podTemplateWithName.hashCode(), podTemplateWithName2.hashCode());
+    Assertions.assertEquals(podTemplateWithName, podTemplateWithName2);
+    Assertions.assertNotEquals(podTemplateWithName, null);
+    Assertions.assertNotEquals(podTemplateWithName, "string");
+    Assertions.assertEquals(podTemplateWithName.hashCode(), podTemplateWithName2.hashCode());
   }
 
   @Test
@@ -54,7 +52,7 @@ public class PodTemplateWithNameTest
         podTemplate
     );
 
-    assertEquals(name, podTemplateWithName.getName());
-    assertEquals(podTemplate, podTemplateWithName.getPodTemplate());
+    Assertions.assertEquals(name, podTemplateWithName.getName());
+    Assertions.assertEquals(podTemplate, podTemplateWithName.getPodTemplate());
   }
 }

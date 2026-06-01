@@ -31,8 +31,8 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -83,23 +83,23 @@ public class JsonLineReaderTest
       int numActualIterations = 0;
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
-        Assert.assertEquals(DateTimes.of("2019-01-01"), row.getTimestamp());
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("tree_baz")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("tree_omg")));
+        Assertions.assertEquals(DateTimes.of("2019-01-01"), row.getTimestamp());
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("tree_baz")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("tree_omg")));
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("tree_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("tree_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assertions.assertTrue(row.getDimension("tree_baz2").isEmpty());
+        Assertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        Assertions.assertTrue(row.getDimension("tree_omg2").isEmpty());
         numActualIterations++;
       }
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -140,15 +140,15 @@ public class JsonLineReaderTest
       int numActualIterations = 0;
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
-        Assert.assertEquals("test", Iterables.getOnlyElement(row.getDimension("bar")));
+        Assertions.assertEquals("test", Iterables.getOnlyElement(row.getDimension("bar")));
         // Since foo is in the JSONPathSpec it comes as an array of [null]
         // row.getRaw("foo") and row.getDimension("foo") return an array of nulls
-        Assert.assertEquals(Collections.singletonList(null), row.getRaw("foo"));
-        Assert.assertEquals(Collections.singletonList(null), row.getDimension("foo"));
-        Assert.assertTrue(row.getDimension("baz").isEmpty());
+        Assertions.assertEquals(Collections.singletonList(null), row.getRaw("foo"));
+        Assertions.assertEquals(Collections.singletonList(null), row.getDimension("foo"));
+        Assertions.assertTrue(row.getDimension("baz").isEmpty());
         numActualIterations++;
       }
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -187,14 +187,14 @@ public class JsonLineReaderTest
       int numActualIterations = 0;
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
-        Assert.assertEquals(Arrays.asList("path_omg", "tree_omg", "bar", "foo"), row.getDimensions());
-        Assert.assertTrue(row.getDimension("bar").isEmpty());
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertTrue(row.getDimension("path_omg").isEmpty());
-        Assert.assertTrue(row.getDimension("tree_omg").isEmpty());
+        Assertions.assertEquals(Arrays.asList("path_omg", "tree_omg", "bar", "foo"), row.getDimensions());
+        Assertions.assertTrue(row.getDimension("bar").isEmpty());
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertTrue(row.getDimension("path_omg").isEmpty());
+        Assertions.assertTrue(row.getDimension("tree_omg").isEmpty());
         numActualIterations++;
       }
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -233,14 +233,14 @@ public class JsonLineReaderTest
       int numActualIterations = 0;
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
-        Assert.assertEquals(Arrays.asList("path_omg", "tree_omg", "bar", "foo"), row.getDimensions());
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("bar")));
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("a", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("a", Iterables.getOnlyElement(row.getDimension("tree_omg")));
+        Assertions.assertEquals(Arrays.asList("path_omg", "tree_omg", "bar", "foo"), row.getDimensions());
+        Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("bar")));
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("a", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("a", Iterables.getOnlyElement(row.getDimension("tree_omg")));
         numActualIterations++;
       }
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -279,14 +279,14 @@ public class JsonLineReaderTest
       int numActualIterations = 0;
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
-        Assert.assertEquals(Arrays.asList("path_omg", "tree_omg", "foo"), row.getDimensions());
-        Assert.assertTrue(row.getDimension("bar").isEmpty());
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("a", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("a", Iterables.getOnlyElement(row.getDimension("tree_omg")));
+        Assertions.assertEquals(Arrays.asList("path_omg", "tree_omg", "foo"), row.getDimensions());
+        Assertions.assertTrue(row.getDimension("bar").isEmpty());
+        Assertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assertions.assertEquals("a", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assertions.assertEquals("a", Iterables.getOnlyElement(row.getDimension("tree_omg")));
         numActualIterations++;
       }
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      Assertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 }

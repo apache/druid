@@ -31,6 +31,8 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.inject.util.Modules;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
@@ -56,7 +58,6 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
-import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.InlineDataSource;
@@ -218,10 +219,14 @@ public class MSQTaskQueryMakerTest
         new SegmentWranglerModule(),
         new LookylooModule(),
         new MSQIndexingModule(),
-        binder -> binder.bind(WireTransferableContext.class).toInstance(FrameTestUtil.WT_CONTEXT_LEGACY)
+        binder -> {
+          binder.bind(WireTransferableContext.class).toInstance(FrameTestUtil.WT_CONTEXT_LEGACY);
+          binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
+        }
     );
     Injector injector = Guice.createInjector(defaultModule, BoundFieldModule.of(this));
     DruidSecondaryModule.setupJackson(injector, objectMapper, Collections.emptyMap(), true);
+    new MSQIndexingModule().getJacksonModules().forEach(objectMapper::registerModule);
 
     // Populate loadedSegmentMetadata from walker segments so CoordinatorClient.fetchSegment() can find them
     List<ImmutableSegmentLoadInfo> loadedSegmentMetadata = new ArrayList<>();
@@ -679,10 +684,8 @@ public class MSQTaskQueryMakerTest
         ingestDestination,
         fakeOverlordClient,
         plannerContextMock,
-        objectMapper,
         fieldMapping,
-        terminalStageSpecFactory,
-        new MSQTaskQueryKitSpecFactory(new DruidProcessingConfig())
+        terminalStageSpecFactory
     );
   }
 }

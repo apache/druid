@@ -30,7 +30,10 @@ import java.util.Map;
  */
 public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
+  public static final String TYPE = "custom";
+
   private final Comparator<Integer> comparator;
+  private final CustomTierSelectorStrategyConfig config;
 
   @JsonCreator
   public CustomTierSelectorStrategy(
@@ -39,6 +42,7 @@ public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
   )
   {
     super(serverSelectorStrategy);
+    this.config = config;
 
     final Map<Integer, Integer> lookup = new HashMap<>();
     int pos = 0;
@@ -72,5 +76,18 @@ public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
   public Comparator<Integer> getComparator()
   {
     return comparator;
+  }
+
+  public CustomTierSelectorStrategyConfig getConfig()
+  {
+    return config;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "CustomTierSelectorStrategy{" +
+           "config=" + config +
+           '}';
   }
 }

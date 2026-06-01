@@ -70,7 +70,13 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
         return (
           <div className="execution-details-pane-general">
             <p>
-              General info for <Tag minimal>{execution.id}</Tag>
+              General info for execution ID: <Tag minimal>{execution.id}</Tag>
+              {execution.sqlQueryId && (
+                <>
+                  {' '}
+                  (SQL ID <Tag minimal>{execution.sqlQueryId}</Tag>)
+                </>
+              )}
               {ingestDatasource && (
                 <>
                   {' '}

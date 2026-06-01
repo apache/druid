@@ -154,7 +154,9 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     );
 
     // Mount directories used by this container for easier debugging with service logs
-    this.containerDirectory = cluster.getTestFolder().getOrCreateFolder(name);
+    final File clusterDirectory = new File("druid-container-logs", cluster.getTestClassName());
+    this.containerDirectory = new File(clusterDirectory, name);
+    cleanDirectory(containerDirectory);
 
     final File logDirectory = new File(containerDirectory, "log");
     this.serviceLogsDirectory = new MountedDir(new File("/opt/druid/log"), logDirectory);
@@ -179,7 +181,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
 
     log.info(
         "Starting Druid container[%s] with image[%s], exposed ports[%s] and mounted directory[%s].",
-        name, imageName, Arrays.toString(command.getExposedPorts()), containerDirectory
+        name, imageName, Arrays.toString(command.getExposedPorts()), containerDirectory.getAbsolutePath()
     );
 
     setCommonProperties(container);
@@ -229,6 +231,16 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     try {
       FileUtils.mkdirp(dir);
       Files.setPosixFilePermissions(dir.toPath(), PosixFilePermissions.fromString("rwxrwxrwx"));
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static void cleanDirectory(File dir)
+  {
+    try {
+      FileUtils.deleteDirectory(dir);
     }
     catch (Exception e) {
       throw new RuntimeException(e);

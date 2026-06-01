@@ -25,9 +25,6 @@ title: "Apache Avro"
 This Apache Druid extension enables Druid to ingest and parse the Apache Avro data format as follows:
 - [Avro stream input format](../../ingestion/data-formats.md#avro-stream) for Kafka and Kinesis.
 - [Avro OCF input format](../../ingestion/data-formats.md#avro-ocf) for native batch ingestion.
-- [Avro Hadoop Parser](../../ingestion/data-formats.md#avro-hadoop-parser).
-
-The [Avro Stream Parser](../../ingestion/data-formats.md#avro-stream-parser) is deprecated.
 
 ## Load the Avro extension
 
@@ -42,7 +39,7 @@ Druid has two modes for supporting `union` types.
 
 The default mode treats unions as a single value regardless of the type of data populating the union.
 
-If you want to operate on individual members of a union, set `extractUnionsByType` on the Avro parser. This configuration expands union values into nested objects according to the following rules:
+If you want to operate on individual members of a union, set `extractUnionsByType` on the Avro input format. This configuration expands union values into nested objects according to the following rules:
 - Primitive types and unnamed complex types are keyed by their type name, such as `int` and `string`.
 - Complex named types are keyed by their names, this includes `record`, `fixed`, and `enum`.
 - The Avro null type is elided as its value can only ever be null.
@@ -52,13 +49,13 @@ This is safe because an Avro union can only contain a single member of each unna
 You can then access the members of the union with a [flattenSpec](../../ingestion/data-formats.md#flattenspec) like you would for other nested types.
 
 ### Binary types
-The extension returns `bytes` and `fixed` Avro types as base64 encoded strings by default. To decode these types as UTF-8 strings, enable the `binaryAsString` option on the Avro parser.
+The extension returns `bytes` and `fixed` Avro types as base64 encoded strings by default. To decode these types as UTF-8 strings, enable the `binaryAsString` option on the Avro input format.
 
 ### Enums
 The extension returns `enum` types as `string` of the enum symbol.
 
 ### Complex types
-You can ingest `record` and `map` types representing nested data with a [flattenSpec](../../ingestion/data-formats.md#flattenspec) on the parser.
+You can ingest `record` and `map` types representing nested data with a [flattenSpec](../../ingestion/data-formats.md#flattenspec) on the input format.
 
 ### Logical types
 Druid does not currently support Avro logical types. It ignores them and handles fields according to the underlying primitive type.

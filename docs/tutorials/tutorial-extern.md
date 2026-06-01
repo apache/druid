@@ -167,7 +167,7 @@ Druid supports Amazon S3 or Google Cloud Storage (GCS) as cloud storage destinat
     ```sql
     INSERT INTO
     EXTERN(
-      s3(bucket => 'your_bucket', prefix => 'prefix/to/files'))
+      s3(bucket => 'your_bucket', prefix => 'prefix/to/files', assumeRoleArn => 'arn:aws:iam::some-role'))
     AS CSV
     SELECT "channel",
     SUM("delta") AS "changes"

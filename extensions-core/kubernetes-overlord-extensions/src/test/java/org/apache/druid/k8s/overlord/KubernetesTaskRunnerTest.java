@@ -38,22 +38,26 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.execution.DefaultKubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -65,15 +69,12 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 @SuppressWarnings("DoNotMock")
 public class KubernetesTaskRunnerTest extends EasyMockSupport
 {
@@ -92,7 +93,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   private KubernetesTaskRunner runner;
   private Task task;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     staticConfig = KubernetesTaskRunnerConfig.builder()
@@ -166,8 +167,35 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertNotNull(runner.tasks);
-    Assert.assertEquals(1, runner.tasks.size());
+    Assertions.assertNotNull(runner.tasks);
+    Assertions.assertEquals(1, runner.tasks.size());
+  }
+
+  @Test
+  public void test_stop_doesNotShutDownSharedExecutor()
+  {
+    final ThreadPoolExecutor sharedExecutor = new ThreadPoolExecutor(
+        1,
+        1,
+        0L,
+        TimeUnit.MILLISECONDS,
+        new LinkedBlockingQueue<>()
+    );
+    final KubernetesTaskRunner sharedExecutorRunner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter,
+        sharedExecutor,
+        configManager
+    );
+
+    sharedExecutorRunner.stop();
+
+    Assertions.assertFalse(sharedExecutor.isShutdown());
+    sharedExecutor.shutdownNow();
   }
 
   @Test
@@ -225,8 +253,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertNotNull(runner.tasks);
-    Assert.assertEquals(1, runner.tasks.size());
+    Assertions.assertNotNull(runner.tasks);
+    Assertions.assertEquals(1, runner.tasks.size());
   }
 
   @Test
@@ -264,15 +292,15 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertNotNull(runner.tasks);
-    Assert.assertEquals(0, runner.tasks.size());
+    Assertions.assertNotNull(runner.tasks);
+    Assertions.assertEquals(0, runner.tasks.size());
   }
 
   @Test
   public void test_streamTaskLog_withoutExistingTask_returnsEmptyOptional()
   {
     Optional<InputStream> maybeInputStream = runner.streamTaskLog(task.getId(), 0L);
-    assertFalse(maybeInputStream.isPresent());
+    Assertions.assertFalse(maybeInputStream.isPresent());
   }
 
   @Test
@@ -291,8 +319,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Optional<InputStream> maybeInputStream = runner.streamTaskLog(task.getId(), 0L);
 
-    assertTrue(maybeInputStream.isPresent());
-    assertEquals("", IOUtils.toString(maybeInputStream.get(), StandardCharsets.UTF_8));
+    Assertions.assertTrue(maybeInputStream.isPresent());
+    Assertions.assertEquals("", IOUtils.toString(maybeInputStream.get(), StandardCharsets.UTF_8));
   }
 
   @Test
@@ -318,7 +346,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     replayAll();
 
     ListenableFuture<TaskStatus> future = runner.run(task);
-    Assert.assertEquals(taskStatus, future.get());
+    Assertions.assertEquals(taskStatus, future.get());
 
     verifyAll();
   }
@@ -331,7 +359,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     ListenableFuture<TaskStatus> future = runner.run(task);
 
-    assertEquals(workItem.getResult(), future);
+    Assertions.assertEquals(workItem.getResult(), future);
   }
 
   @Test
@@ -356,8 +384,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     ListenableFuture<TaskStatus> future = runner.run(task);
 
-    Exception e = Assert.assertThrows(ExecutionException.class, future::get);
-    Assert.assertTrue(e.getCause() instanceof RuntimeException);
+    Exception e = Assertions.assertThrows(ExecutionException.class, future::get);
+    Assertions.assertTrue(e.getCause() instanceof RuntimeException);
 
     verifyAll();
   }
@@ -372,7 +400,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     replayAll();
 
     KubernetesWorkItem workItem = runner.joinAsync(task);
-    Assert.assertEquals(taskStatus, workItem.getResult().get());
+    Assertions.assertEquals(taskStatus, workItem.getResult().get());
 
     verifyAll();
   }
@@ -385,7 +413,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     ListenableFuture<TaskStatus> future = runner.run(task);
 
-    assertEquals(workItem.getResult(), future);
+    Assertions.assertEquals(workItem.getResult(), future);
   }
 
   @Test
@@ -397,8 +425,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     KubernetesWorkItem workItem = runner.joinAsync(task);
 
-    Exception e = Assert.assertThrows(ExecutionException.class, () -> workItem.getResult().get());
-    Assert.assertTrue(e.getCause() instanceof RuntimeException);
+    Exception e = Assertions.assertThrows(ExecutionException.class, () -> workItem.getResult().get());
+    Assertions.assertTrue(e.getCause() instanceof RuntimeException);
 
     verifyAll();
   }
@@ -406,10 +434,10 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_doTask_whenShutdownRequested_throwsRuntimeException()
   {
-    Assert.assertThrows(
-        "Task [id] has been shut down",
+    Assertions.assertThrows(
         RuntimeException.class,
-        () -> runner.doTask(task, true)
+        () -> runner.doTask(task, true),
+        "Task [id] has been shut down"
     );
   }
 
@@ -426,7 +454,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     replayAll();
     runner.tasks.put(task.getId(), workItem);
     runner.shutdown(task.getId(), "");
-    Assert.assertTrue(runner.tasks.isEmpty());
+    Assertions.assertTrue(runner.tasks.isEmpty());
     verifyAll();
   }
 
@@ -443,7 +471,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     replayAll();
     runner.tasks.put(task.getId(), workItem);
     runner.shutdown(task.getId(), "");
-    Assert.assertEquals(1, runner.tasks.size());
+    Assertions.assertEquals(1, runner.tasks.size());
     verifyAll();
   }
 
@@ -476,8 +504,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Collection<? extends TaskRunnerWorkItem> tasks = runner.getKnownTasks();
 
-    assertEquals(1, tasks.size());
-    assertEquals(Collections.singletonList(workItem), runner.getKnownTasks());
+    Assertions.assertEquals(1, tasks.size());
+    Assertions.assertEquals(Collections.singletonList(workItem), runner.getKnownTasks());
   }
 
   @Test
@@ -505,8 +533,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Collection<? extends TaskRunnerWorkItem> tasks = runner.getRunningTasks();
 
-    assertEquals(1, tasks.size());
-    assertEquals(Collections.singletonList(runningWorkItem), tasks);
+    Assertions.assertEquals(1, tasks.size());
+    Assertions.assertEquals(Collections.singletonList(runningWorkItem), tasks);
   }
 
   @Test
@@ -534,14 +562,14 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Collection<? extends TaskRunnerWorkItem> tasks = runner.getPendingTasks();
 
-    assertEquals(1, tasks.size());
-    assertEquals(Collections.singletonList(pendingWorkItem), tasks);
+    Assertions.assertEquals(1, tasks.size());
+    Assertions.assertEquals(Collections.singletonList(pendingWorkItem), tasks);
   }
 
   @Test
   public void test_getRunnerTaskState_withoutExistingTask_returnsNull()
   {
-    Assert.assertNull(runner.getRunnerTaskState(task.getId()));
+    Assertions.assertNull(runner.getRunnerTaskState(task.getId()));
   }
 
   @Test
@@ -556,13 +584,13 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     };
     runner.tasks.put(task.getId(), workItem);
 
-    Assert.assertEquals(RunnerTaskState.NONE, runner.getRunnerTaskState(task.getId()));
+    Assertions.assertEquals(RunnerTaskState.NONE, runner.getRunnerTaskState(task.getId()));
   }
 
   @Test
   public void test_streamTaskReports_withExistingTask() throws Exception
   {
-    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
+    final KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
       @Override
       public TaskLocation getLocation()
       {
@@ -574,47 +602,23 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     EasyMock.expect(httpClient.go(
         EasyMock.anyObject(Request.class),
-        EasyMock.anyObject(InputStreamResponseHandler.class))
-    ).andReturn(Futures.immediateFuture(IOUtils.toInputStream("{}", StandardCharsets.UTF_8)));
+        EasyMock.anyObject(InputStreamFullResponseHandler.class))
+    ).andReturn(Futures.immediateFuture(taskReportResponse(HttpResponseStatus.OK, "{}")));
 
     replayAll();
 
-    Optional<InputStream> maybeInputStream = runner.streamTaskReports(task.getId());
+    final Optional<InputStream> maybeInputStream = runner.streamTaskReports(task.getId());
 
     verifyAll();
 
-    Assert.assertTrue(maybeInputStream.isPresent());
-    Assert.assertEquals("{}", IOUtils.toString(maybeInputStream.get(), StandardCharsets.UTF_8));
+    Assertions.assertTrue(maybeInputStream.isPresent());
+    Assertions.assertEquals("{}", IOUtils.toString(maybeInputStream.get(), StandardCharsets.UTF_8));
   }
 
   @Test
-  public void test_streamTaskReports_withoutExistingTask_returnsEmptyOptional() throws Exception
+  public void test_streamTaskReports_whenTaskReportsUnavailable_returnsEmptyOptional() throws Exception
   {
-    Optional<InputStream> maybeInputStream = runner.streamTaskReports(task.getId());
-    Assert.assertFalse(maybeInputStream.isPresent());
-  }
-
-  @Test
-  public void test_streamTaskReports_withUnknownTaskLocation_returnsEmptyOptional() throws Exception
-  {
-    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
-      @Override
-      public TaskLocation getLocation()
-      {
-        return TaskLocation.unknown();
-      }
-    };
-
-    runner.tasks.put(task.getId(), workItem);
-
-    Optional<InputStream> maybeInputStream = runner.streamTaskReports(task.getId());
-    Assert.assertFalse(maybeInputStream.isPresent());
-  }
-
-  @Test
-  public void test_streamTaskReports_whenInterruptedExceptionThrown_throwsRuntimeException()
-  {
-    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
+    final KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
       @Override
       public TaskLocation getLocation()
       {
@@ -624,7 +628,58 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     runner.tasks.put(task.getId(), workItem);
 
-    ListenableFuture<InputStream> future = new ListenableFuture<>()
+    EasyMock.expect(httpClient.go(
+        EasyMock.anyObject(Request.class),
+        EasyMock.anyObject(InputStreamFullResponseHandler.class))
+    ).andReturn(Futures.immediateFuture(taskReportResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, "error")));
+
+    replayAll();
+
+    final Optional<InputStream> maybeInputStream = runner.streamTaskReports(task.getId());
+
+    verifyAll();
+
+    Assertions.assertFalse(maybeInputStream.isPresent());
+  }
+
+  @Test
+  public void test_streamTaskReports_withoutExistingTask_returnsEmptyOptional() throws Exception
+  {
+    final Optional<InputStream> maybeInputStream = runner.streamTaskReports(task.getId());
+    Assertions.assertFalse(maybeInputStream.isPresent());
+  }
+
+  @Test
+  public void test_streamTaskReports_withUnknownTaskLocation_returnsEmptyOptional() throws Exception
+  {
+    final KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
+      @Override
+      public TaskLocation getLocation()
+      {
+        return TaskLocation.unknown();
+      }
+    };
+
+    runner.tasks.put(task.getId(), workItem);
+
+    final Optional<InputStream> maybeInputStream = runner.streamTaskReports(task.getId());
+    Assertions.assertFalse(maybeInputStream.isPresent());
+  }
+
+  @Test
+  public void test_streamTaskReports_whenInterruptedExceptionThrown_throwsRuntimeException()
+  {
+    final KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
+      @Override
+      public TaskLocation getLocation()
+      {
+        return TaskLocation.create("host", 0, 1, false);
+      }
+    };
+
+    runner.tasks.put(task.getId(), workItem);
+
+    final ListenableFuture<InputStreamFullResponseHolder> future = new ListenableFuture<>()
     {
       @Override
       public void addListener(Runnable runnable, Executor executor)
@@ -650,13 +705,13 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
       }
 
       @Override
-      public InputStream get() throws InterruptedException
+      public InputStreamFullResponseHolder get() throws InterruptedException
       {
         throw new InterruptedException();
       }
 
       @Override
-      public InputStream get(long timeout, TimeUnit unit) throws InterruptedException
+      public InputStreamFullResponseHolder get(long timeout, TimeUnit unit) throws InterruptedException
       {
         throw new InterruptedException();
       }
@@ -664,13 +719,13 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     EasyMock.expect(httpClient.go(
         EasyMock.anyObject(Request.class),
-        EasyMock.anyObject(InputStreamResponseHandler.class))
+        EasyMock.anyObject(InputStreamFullResponseHandler.class))
     ).andReturn(future);
 
     replayAll();
 
-    Exception e = Assert.assertThrows(RuntimeException.class, () -> runner.streamTaskReports(task.getId()));
-    Assert.assertTrue(e.getCause() instanceof InterruptedException);
+    final Exception e = Assertions.assertThrows(RuntimeException.class, () -> runner.streamTaskReports(task.getId()));
+    Assertions.assertTrue(e.getCause() instanceof InterruptedException);
 
     verifyAll();
   }
@@ -678,7 +733,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_streamTaskReports_whenExecutionExceptionThrown_throwsRuntimeException()
   {
-    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
+    final KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
       @Override
       public TaskLocation getLocation()
       {
@@ -690,12 +745,12 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     EasyMock.expect(httpClient.go(
         EasyMock.anyObject(Request.class),
-        EasyMock.anyObject(InputStreamResponseHandler.class))
+        EasyMock.anyObject(InputStreamFullResponseHandler.class))
     ).andReturn(Futures.immediateFailedFuture(new Exception()));
 
     replayAll();
 
-    Assert.assertThrows(RuntimeException.class, () -> runner.streamTaskReports(task.getId()));
+    Assertions.assertThrows(RuntimeException.class, () -> runner.streamTaskReports(task.getId()));
 
     verifyAll();
   }
@@ -736,7 +791,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     runner.tasks.put(task.getId(), workItem);
 
     TaskLocation taskLocation = runner.getTaskLocation(task.getId());
-    Assert.assertEquals(TaskLocation.create("host", 0, 1, false), taskLocation);
+    Assertions.assertEquals(TaskLocation.create("host", 0, 1, false), taskLocation);
   }
 
   @Test
@@ -754,31 +809,31 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     runner.tasks.put(task.getId(), workItem);
 
     TaskLocation taskLocation = runner.getTaskLocation(task.getId());
-    Assert.assertEquals(TaskLocation.unknown(), taskLocation);
+    Assertions.assertEquals(TaskLocation.unknown(), taskLocation);
   }
 
   @Test
   public void test_getTaskLocation_noTaskFound()
   {
     TaskLocation taskLocation = runner.getTaskLocation(task.getId());
-    Assert.assertEquals(TaskLocation.unknown(), taskLocation);
+    Assertions.assertEquals(TaskLocation.unknown(), taskLocation);
   }
 
   @Test
   public void test_getTotalCapacity()
   {
-    Assert.assertEquals(1, runner.getTotalCapacity());
+    Assertions.assertEquals(1, runner.getTotalCapacity());
   }
 
   @Test
   public void test_getUsedCapacity()
   {
-    Assert.assertEquals(0, runner.getUsedCapacity());
+    Assertions.assertEquals(0, runner.getUsedCapacity());
     KubernetesWorkItem workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle);
     runner.tasks.put(task.getId(), workItem);
-    Assert.assertEquals(1, runner.getUsedCapacity());
+    Assertions.assertEquals(1, runner.getUsedCapacity());
     runner.tasks.remove(task.getId());
-    Assert.assertEquals(0, runner.getUsedCapacity());
+    Assertions.assertEquals(0, runner.getUsedCapacity());
   }
 
   @Test
@@ -795,7 +850,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         configManager
     );
     kubernetesTaskRunner.stop();
-    Assert.assertThrows(RejectedExecutionException.class, () -> kubernetesTaskRunner.run(task));
+    Assertions.assertThrows(RejectedExecutionException.class, () -> kubernetesTaskRunner.run(task));
   }
 
   @Test
@@ -814,9 +869,9 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     tpeField.setAccessible(true);
     ThreadPoolExecutor executor = (ThreadPoolExecutor) tpeField.get(runner);
 
-    Assert.assertEquals(3, executor.getCorePoolSize());
-    Assert.assertEquals(3, executor.getMaximumPoolSize());
-    Assert.assertEquals(3, runner.getTotalCapacity());
+    Assertions.assertEquals(3, executor.getCorePoolSize());
+    Assertions.assertEquals(3, executor.getMaximumPoolSize());
+    Assertions.assertEquals(3, runner.getTotalCapacity());
   }
 
   @Test
@@ -837,9 +892,9 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     tpeField.setAccessible(true);
     ThreadPoolExecutor executor = (ThreadPoolExecutor) tpeField.get(runner);
 
-    Assert.assertEquals(2, executor.getCorePoolSize());
-    Assert.assertEquals(2, executor.getMaximumPoolSize());
-    Assert.assertEquals(2, runner.getTotalCapacity());
+    Assertions.assertEquals(2, executor.getCorePoolSize());
+    Assertions.assertEquals(2, executor.getMaximumPoolSize());
+    Assertions.assertEquals(2, runner.getTotalCapacity());
   }
 
   @Test
@@ -858,8 +913,21 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     tpeField.setAccessible(true);
     ThreadPoolExecutor executor = (ThreadPoolExecutor) tpeField.get(runner);
 
-    Assert.assertEquals(1, executor.getCorePoolSize());
-    Assert.assertEquals(1, executor.getMaximumPoolSize());
-    Assert.assertEquals(1, runner.getTotalCapacity());
+    Assertions.assertEquals(1, executor.getCorePoolSize());
+    Assertions.assertEquals(1, executor.getMaximumPoolSize());
+    Assertions.assertEquals(1, runner.getTotalCapacity());
+  }
+
+  private static InputStreamFullResponseHolder taskReportResponse(
+      final HttpResponseStatus status,
+      final String content
+  )
+  {
+    final InputStreamFullResponseHolder response = new InputStreamFullResponseHolder(
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, status)
+    );
+    response.addChunk(content.getBytes(StandardCharsets.UTF_8));
+    response.done();
+    return response;
   }
 }

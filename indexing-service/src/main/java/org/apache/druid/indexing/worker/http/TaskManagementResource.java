@@ -36,11 +36,10 @@ import org.apache.druid.indexing.worker.WorkerTaskManager;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
+import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
 import javax.servlet.AsyncContext;
-import javax.servlet.AsyncEvent;
-import javax.servlet.AsyncListener;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -129,32 +128,11 @@ public class TaskManagementResource
     final AsyncContext asyncContext = req.startAsync();
 
     asyncContext.addListener(
-        new AsyncListener()
-        {
-          @Override
-          public void onComplete(AsyncEvent event)
-          {
-          }
-
-          @Override
-          public void onTimeout(AsyncEvent event)
-          {
-
-            // HTTP 204 NO_CONTENT is sent to the client.
-            future.cancel(true);
-            event.getAsyncContext().complete();
-          }
-
-          @Override
-          public void onError(AsyncEvent event)
-          {
-          }
-
-          @Override
-          public void onStartAsync(AsyncEvent event)
-          {
-          }
-        }
+        ServletResourceUtils.createAsyncTimeoutListener(event -> {
+          // HTTP 204 NO_CONTENT is sent to the client.
+          future.cancel(true);
+          event.getAsyncContext().complete();
+        })
     );
 
     Futures.addCallback(

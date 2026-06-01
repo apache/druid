@@ -27,7 +27,6 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -68,7 +67,7 @@ public class FrameProcessorExecutor
 {
   private static final Logger log = new Logger(FrameProcessorExecutor.class);
 
-  private final ListeningExecutorService exec;
+  private final ExecutorService exec;
 
   private final Object lock = new Object();
 
@@ -97,7 +96,7 @@ public class FrameProcessorExecutor
   @GuardedBy("lock")
   private final Map<FrameProcessor<?>, Thread> runningProcessors = new IdentityHashMap<>();
 
-  public FrameProcessorExecutor(final ListeningExecutorService exec)
+  public FrameProcessorExecutor(final ExecutorService exec)
   {
     this.exec = exec;
   }
@@ -513,7 +512,7 @@ public class FrameProcessorExecutor
   /**
    * Returns the underlying executor service used by this executor.
    */
-  ListeningExecutorService getExecutorService()
+  ExecutorService getExecutorService()
   {
     return exec;
   }

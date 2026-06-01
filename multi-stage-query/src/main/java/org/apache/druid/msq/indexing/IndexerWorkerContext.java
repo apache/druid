@@ -22,7 +22,9 @@ package org.apache.druid.msq.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Smile;
@@ -46,10 +48,10 @@ import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.client.IndexerControllerClient;
 import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.client.WorkerChatHandler;
+import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
@@ -58,13 +60,17 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SpecificTaskRetryPolicy;
 import org.apache.druid.rpc.indexing.SpecificTaskServiceLocator;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.metrics.StorageMonitor;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.List;
+import java.util.Set;
 
 public class IndexerWorkerContext implements WorkerContext
 {
@@ -82,15 +88,18 @@ public class IndexerWorkerContext implements WorkerContext
   private final ServiceLocator controllerLocator;
   private final IndexIO indexIO;
   private final SegmentManager segmentManager;
+  private final StorageMonitor storageMonitor;
   @Nullable
   private final CoordinatorClient coordinatorClient;
   private final IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory;
   private final ServiceClientFactory clientFactory;
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
+  private final List<InputSliceReaderProvider> inputSliceReaderProviders;
   private final int maxConcurrentStages;
   private final boolean liveReportCounters;
   private final boolean includeAllCounters;
+  private final boolean debug;
   private final int threadCount;
 
   // Written under synchronized(this) using double-checked locking.
@@ -104,11 +113,13 @@ public class IndexerWorkerContext implements WorkerContext
       final ServiceLocator controllerLocator,
       final IndexIO indexIO,
       final SegmentManager segmentManager,
+      final StorageMonitor storageMonitor,
       @Nullable final CoordinatorClient coordinatorClient,
       final ServiceClientFactory clientFactory,
       final MemoryIntrospector memoryIntrospector,
       final ProcessingBuffersProvider processingBuffersProvider,
-      final IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory
+      final IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory,
+      final List<InputSliceReaderProvider> inputSliceReaderProviders
   )
   {
     this.task = task;
@@ -117,11 +128,13 @@ public class IndexerWorkerContext implements WorkerContext
     this.controllerLocator = controllerLocator;
     this.indexIO = indexIO;
     this.segmentManager = segmentManager;
+    this.storageMonitor = storageMonitor;
     this.coordinatorClient = coordinatorClient;
     this.clientFactory = clientFactory;
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
     this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
+    this.inputSliceReaderProviders = inputSliceReaderProviders;
 
     final QueryContext queryContext = QueryContext.of(task.getContext());
     this.maxConcurrentStages = MultiStageQueryContext.getMaxConcurrentStagesWithDefault(
@@ -130,6 +143,7 @@ public class IndexerWorkerContext implements WorkerContext
     );
     this.liveReportCounters = MultiStageQueryContext.getLiveReportCounters(queryContext, DEFAULT_LIVE_REPORT_COUNTERS);
     this.includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
+    this.debug = queryContext.isDebug();
     
     // Compute thread count once in constructor
     final int baseThreadCount = memoryIntrospector.numProcessingThreads();
@@ -152,10 +166,12 @@ public class IndexerWorkerContext implements WorkerContext
   )
   {
     final IndexIO indexIO = injector.getInstance(IndexIO.class);
-    final SegmentManager segmentManager = new SegmentManager(
+    final SegmentCacheManager cacheManager =
         injector.getInstance(SegmentCacheManagerFactory.class)
-                .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"), true)
-    );
+                .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"), true);
+    final SegmentManager segmentManager = new SegmentManager(cacheManager);
+    final StorageMonitor storageMonitor = new StorageMonitor(cacheManager.getLocations(), task::getMetricBuilder);
+    toolbox.addMonitor(storageMonitor);
     final ServiceClientFactory serviceClientFactory =
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
     final MemoryIntrospector memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
@@ -163,7 +179,8 @@ public class IndexerWorkerContext implements WorkerContext
         injector.getInstance(OverlordClient.class).withRetryPolicy(StandardRetryPolicy.unlimited());
     final ProcessingBuffersProvider processingBuffersProvider = injector.getInstance(ProcessingBuffersProvider.class);
     final ObjectMapper smileMapper = injector.getInstance(Key.get(ObjectMapper.class, Smile.class));
-    final QueryToolChestWarehouse warehouse = injector.getInstance(QueryToolChestWarehouse.class);
+    final Set<InputSliceReaderProvider> inputSliceReaderProviders =
+        injector.getInstance(Key.get(new TypeLiteral<>() {}, IndexingService.class));
 
     return new IndexerWorkerContext(
         task,
@@ -173,6 +190,7 @@ public class IndexerWorkerContext implements WorkerContext
         new SpecificTaskServiceLocator(task.getControllerTaskId(), overlordClient),
         indexIO,
         segmentManager,
+        storageMonitor,
         toolbox.getCoordinatorClient(),
         serviceClientFactory,
         memoryIntrospector,
@@ -180,9 +198,9 @@ public class IndexerWorkerContext implements WorkerContext
         new IndexerDataServerQueryHandlerFactory(
             toolbox.getCoordinatorClient(),
             serviceClientFactory,
-            smileMapper,
-            warehouse
-        )
+            smileMapper
+        ),
+        List.copyOf(inputSliceReaderProviders)
     );
   }
 
@@ -219,6 +237,12 @@ public class IndexerWorkerContext implements WorkerContext
   public Injector injector()
   {
     return injector;
+  }
+
+  @Override
+  public List<InputSliceReaderProvider> inputSliceReaderProviders()
+  {
+    return inputSliceReaderProviders;
   }
 
   @Override
@@ -297,7 +321,7 @@ public class IndexerWorkerContext implements WorkerContext
         indexIO,
         segmentManager,
         coordinatorClient,
-        processingBuffersSet.get().acquireForStage(workOrder.getStageDefinition()),
+        workOrder.getStageDefinition().getProcessor().usesProcessingBuffers() ? processingBuffersSet.get() : null,
         dataServerQueryHandlerFactory,
         memoryParameters,
         WorkerStorageParameters.createProductionInstance(injector, workOrder.getOutputChannelMode())
@@ -322,6 +346,12 @@ public class IndexerWorkerContext implements WorkerContext
     return includeAllCounters;
   }
 
+  @Override
+  public boolean isDebug()
+  {
+    return debug;
+  }
+
   public ServiceLocator controllerLocator()
   {
     return controllerLocator;
@@ -330,6 +360,7 @@ public class IndexerWorkerContext implements WorkerContext
   @Override
   public void close()
   {
+    toolbox.removeMonitor(storageMonitor);
     controllerLocator.close();
 
     synchronized (this) {

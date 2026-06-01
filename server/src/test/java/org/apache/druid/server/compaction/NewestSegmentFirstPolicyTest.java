@@ -773,8 +773,7 @@ public class NewestSegmentFirstPolicyTest
         null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final CompactionState compactionState
-        = new CompactionState(
+    final CompactionState compactionState = new CompactionState(
         partitionsSpec,
         null,
         null,
@@ -857,8 +856,7 @@ public class NewestSegmentFirstPolicyTest
         null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final CompactionState compactionState
-        = new CompactionState(
+    final CompactionState compactionState = new CompactionState(
         partitionsSpec,
         null,
         null,

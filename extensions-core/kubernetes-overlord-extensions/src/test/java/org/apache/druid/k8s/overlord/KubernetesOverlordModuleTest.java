@@ -35,7 +35,7 @@ import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
+import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -54,19 +54,19 @@ import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.DruidNode;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.net.URL;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class KubernetesOverlordModuleTest
 {
   @Mock
@@ -75,8 +75,6 @@ public class KubernetesOverlordModuleTest
   private TaskConfig taskConfig;
   @Mock
   private HttpClient httpClient;
-  @Mock
-  private RemoteTaskRunnerFactory remoteTaskRunnerFactory;
   @Mock
   private HttpRemoteTaskRunnerFactory httpRemoteTaskRunnerFactory;
   @Mock
@@ -91,7 +89,7 @@ public class KubernetesOverlordModuleTest
   private ConfigManager configManager;
   private Injector injector;
 
-  @Before
+  @BeforeEach
   public void setUpConfigManagerMock()
   {
     EasyMock.reset(configManager);
@@ -110,30 +108,34 @@ public class KubernetesOverlordModuleTest
   @Test
   public void testDefaultHttpRemoteTaskRunnerFactoryBindSuccessfully()
   {
-    injector = makeInjectorWithProperties(initializePropertes(false), false, true);
+    injector = makeInjectorWithProperties(initializePropertes(), true);
     KubernetesAndWorkerTaskRunnerFactory taskRunnerFactory = injector.getInstance(
         KubernetesAndWorkerTaskRunnerFactory.class);
-    Assert.assertNotNull(taskRunnerFactory);
+    Assertions.assertNotNull(taskRunnerFactory);
 
-    Assert.assertNotNull(taskRunnerFactory.build());
+    Assertions.assertNotNull(taskRunnerFactory.build());
   }
 
   @Test
-  public void testRemoteTaskRunnerFactoryBindSuccessfully()
+  public void testMultipleKubernetesTaskRunnerFactoryBindSuccessfully()
   {
-    injector = makeInjectorWithProperties(initializePropertes(true), true, false);
-    KubernetesAndWorkerTaskRunnerFactory taskRunnerFactory = injector.getInstance(
-        KubernetesAndWorkerTaskRunnerFactory.class);
-    Assert.assertNotNull(taskRunnerFactory);
+    final Properties props = initializePropertes();
+    props.setProperty("druid.indexer.runner.type", MultipleKubernetesTaskRunnerFactory.TYPE_NAME);
+    props.setProperty("druid.indexer.runner.clusters[0].taskNamespace", "NAMESPACE");
+    injector = makeInjectorWithProperties(props, true);
 
-    Assert.assertNotNull(taskRunnerFactory.build());
+    final TaskRunnerFactory<?> taskRunnerFactory = injector.getInstance(TaskRunnerFactory.class);
+
+    Assertions.assertInstanceOf(MultipleKubernetesTaskRunnerFactory.class, taskRunnerFactory);
   }
 
-  @Test(expected = ProvisionException.class)
+  @Test
   public void testExceptionThrownIfNoTaskRunnerFactoryBind()
   {
-    injector = makeInjectorWithProperties(initializePropertes(false), false, false);
-    injector.getInstance(KubernetesAndWorkerTaskRunnerFactory.class);
+    Assertions.assertThrows(ProvisionException.class, () -> {
+      injector = makeInjectorWithProperties(initializePropertes(), false);
+      injector.getInstance(KubernetesAndWorkerTaskRunnerFactory.class);
+    });
   }
 
   @Test
@@ -143,12 +145,12 @@ public class KubernetesOverlordModuleTest
     props.setProperty("druid.indexer.runner.k8s.adapter.type", "overlordMultiContainer");
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
 
-    injector = makeInjectorWithProperties(props, false, true);
+    injector = makeInjectorWithProperties(props, true);
     TaskAdapter taskAdapter = injector.getInstance(
         TaskAdapter.class);
 
-    Assert.assertNotNull(taskAdapter);
-    Assert.assertTrue(taskAdapter instanceof MultiContainerTaskAdapter);
+    Assertions.assertNotNull(taskAdapter);
+    Assertions.assertTrue(taskAdapter instanceof MultiContainerTaskAdapter);
   }
 
   @Test
@@ -157,12 +159,12 @@ public class KubernetesOverlordModuleTest
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.k8s.adapter.type", "overlordSingleContainer");
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
-    injector = makeInjectorWithProperties(props, false, true);
+    injector = makeInjectorWithProperties(props, true);
     TaskAdapter taskAdapter = injector.getInstance(
         TaskAdapter.class);
 
-    Assert.assertNotNull(taskAdapter);
-    Assert.assertTrue(taskAdapter instanceof SingleContainerTaskAdapter);
+    Assertions.assertNotNull(taskAdapter);
+    Assertions.assertTrue(taskAdapter instanceof SingleContainerTaskAdapter);
   }
 
   @Test
@@ -172,12 +174,12 @@ public class KubernetesOverlordModuleTest
     props.setProperty("druid.indexer.runner.k8s.adapter.type", "overlordSingleContainer");
     props.setProperty("druid.indexer.runner.sidecarSupport", "true");
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
-    injector = makeInjectorWithProperties(props, false, true);
+    injector = makeInjectorWithProperties(props, true);
 
-    Assert.assertThrows(
-        "Invalid pod adapter [overlordSingleContainer], only pod adapter [overlordMultiContainer] can be specified when sidecarSupport is enabled",
+    Assertions.assertThrows(
         ProvisionException.class,
-        () -> injector.getInstance(TaskAdapter.class)
+        () -> injector.getInstance(TaskAdapter.class),
+        "Invalid pod adapter [overlordSingleContainer], only pod adapter [overlordMultiContainer] can be specified when sidecarSupport is enabled"
     );
   }
 
@@ -187,13 +189,13 @@ public class KubernetesOverlordModuleTest
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.sidecarSupport", "true");
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
-    injector = makeInjectorWithProperties(props, false, true);
+    injector = makeInjectorWithProperties(props, true);
 
 
     TaskAdapter adapter = injector.getInstance(TaskAdapter.class);
 
-    Assert.assertNotNull(adapter);
-    Assert.assertTrue(adapter instanceof MultiContainerTaskAdapter);
+    Assertions.assertNotNull(adapter);
+    Assertions.assertTrue(adapter instanceof MultiContainerTaskAdapter);
   }
 
   @Test
@@ -202,12 +204,12 @@ public class KubernetesOverlordModuleTest
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.sidecarSupport", "false");
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
-    injector = makeInjectorWithProperties(props, false, true);
+    injector = makeInjectorWithProperties(props, true);
 
     TaskAdapter adapter = injector.getInstance(TaskAdapter.class);
 
-    Assert.assertNotNull(adapter);
-    Assert.assertTrue(adapter instanceof SingleContainerTaskAdapter);
+    Assertions.assertNotNull(adapter);
+    Assertions.assertTrue(adapter instanceof SingleContainerTaskAdapter);
   }
 
   @Test
@@ -219,13 +221,13 @@ public class KubernetesOverlordModuleTest
     props.setProperty("druid.indexer.runner.k8s.adapter.type", "customTemplateAdapter");
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", url.getPath());
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
-    injector = makeInjectorWithProperties(props, false, true);
+    injector = makeInjectorWithProperties(props, true);
 
 
     TaskAdapter adapter = injector.getInstance(TaskAdapter.class);
 
-    Assert.assertNotNull(adapter);
-    Assert.assertTrue(adapter instanceof PodTemplateTaskAdapter);
+    Assertions.assertNotNull(adapter);
+    Assertions.assertTrue(adapter instanceof PodTemplateTaskAdapter);
   }
 
   @Test
@@ -235,12 +237,12 @@ public class KubernetesOverlordModuleTest
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
     // Don't set httpClientType - should default to vertx
 
-    injector = makeInjectorWithProperties(props, false, true);
+    injector = makeInjectorWithProperties(props, true);
     DruidKubernetesHttpClientFactory factory = injector.getInstance(DruidKubernetesHttpClientFactory.class);
 
-    Assert.assertNotNull(factory);
-    Assert.assertTrue("Should default to Vertx HTTP client",
-                     factory instanceof DruidKubernetesVertxHttpClientFactory);
+    Assertions.assertNotNull(factory);
+    Assertions.assertTrue(factory instanceof DruidKubernetesVertxHttpClientFactory,
+                     "Should default to Vertx HTTP client");
   }
 
   @Test
@@ -250,12 +252,12 @@ public class KubernetesOverlordModuleTest
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
     props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "okhttp");
 
-    injector = makeInjectorWithProperties(props, false, true);
+    injector = makeInjectorWithProperties(props, true);
     DruidKubernetesHttpClientFactory factory = injector.getInstance(DruidKubernetesHttpClientFactory.class);
 
-    Assert.assertNotNull(factory);
-    Assert.assertTrue("Should select OkHttp HTTP client",
-                     factory instanceof DruidKubernetesOkHttpHttpClientFactory);
+    Assertions.assertNotNull(factory);
+    Assertions.assertTrue(factory instanceof DruidKubernetesOkHttpHttpClientFactory,
+                     "Should select OkHttp HTTP client");
   }
 
   @Test
@@ -265,12 +267,12 @@ public class KubernetesOverlordModuleTest
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
     props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "vertx");
 
-    injector = makeInjectorWithProperties(props, false, true);
+    injector = makeInjectorWithProperties(props, true);
     DruidKubernetesHttpClientFactory factory = injector.getInstance(DruidKubernetesHttpClientFactory.class);
 
-    Assert.assertNotNull(factory);
-    Assert.assertTrue("Should explicitly select Vertx HTTP client",
-                     factory instanceof DruidKubernetesVertxHttpClientFactory);
+    Assertions.assertNotNull(factory);
+    Assertions.assertTrue(factory instanceof DruidKubernetesVertxHttpClientFactory,
+                     "Should explicitly select Vertx HTTP client");
   }
 
   @Test
@@ -280,23 +282,25 @@ public class KubernetesOverlordModuleTest
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
     props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "javaStandardHttp");
 
-    injector = makeInjectorWithProperties(props, false, true);
+    injector = makeInjectorWithProperties(props, true);
     DruidKubernetesHttpClientFactory factory = injector.getInstance(DruidKubernetesHttpClientFactory.class);
 
-    Assert.assertNotNull(factory);
-    Assert.assertTrue("Should select JDK HTTP client",
-                     factory instanceof DruidKubernetesJdkHttpClientFactory);
+    Assertions.assertNotNull(factory);
+    Assertions.assertTrue(factory instanceof DruidKubernetesJdkHttpClientFactory,
+                     "Should select JDK HTTP client");
   }
 
-  @Test(expected = ProvisionException.class)
+  @Test
   public void test_httpClientFactory_invalidTypeThrowsException()
   {
-    Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
-    props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "invalid");
+    Assertions.assertThrows(ProvisionException.class, () -> {
+      Properties props = new Properties();
+      props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+      props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "invalid");
 
-    injector = makeInjectorWithProperties(props, false, true);
-    injector.getInstance(DruidKubernetesHttpClientFactory.class);
+      injector = makeInjectorWithProperties(props, true);
+      injector.getInstance(DruidKubernetesHttpClientFactory.class);
+    });
   }
 
   @Test
@@ -306,17 +310,16 @@ public class KubernetesOverlordModuleTest
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
     // Don't set httpClientType - should default to vertx
 
-    injector = makeInjectorWithProperties(props, false, true);
+    injector = makeInjectorWithProperties(props, true);
     DruidKubernetesClient client = injector.getInstance(DruidKubernetesClient.class);
 
-    Assert.assertNotNull("DruidKubernetesClient should be created successfully", client);
-    Assert.assertNotNull("Underlying Kubernetes client should be created", client.getClient());
+    Assertions.assertNotNull(client, "DruidKubernetesClient should be created successfully");
+    Assertions.assertNotNull(client.getClient(), "Underlying Kubernetes client should be created");
   }
 
   private Injector makeInjectorWithProperties(
       final Properties props,
-      boolean isWorkerTypeRemote,
-      boolean isWorkerTypeHttpRemote
+      boolean bindHttpRemoteTaskRunnerFactory
   )
   {
     return Guice.createInjector(
@@ -332,10 +335,7 @@ public class KubernetesOverlordModuleTest
               binder.bind(DruidNode.class)
                     .annotatedWith(Self.class)
                     .toInstance(new DruidNode("test-inject", null, false, null, null, true, false));
-              if (isWorkerTypeRemote) {
-                binder.bind(RemoteTaskRunnerFactory.class).toInstance(remoteTaskRunnerFactory);
-              }
-              if (isWorkerTypeHttpRemote) {
+              if (bindHttpRemoteTaskRunnerFactory) {
                 binder.bind(HttpRemoteTaskRunnerFactory.class).toInstance(httpRemoteTaskRunnerFactory);
               }
               binder.bind(
@@ -356,14 +356,11 @@ public class KubernetesOverlordModuleTest
         ));
   }
 
-  private static Properties initializePropertes(boolean isWorkerTypeRemote)
+  private static Properties initializePropertes()
   {
     final Properties props = new Properties();
     props.put("druid.indexer.runner.namespace", "NAMESPACE");
     props.put("druid.indexer.runner.k8sAndWorker.runnerStrategy.type", "k8s");
-    if (isWorkerTypeRemote) {
-      props.put("druid.indexer.runner.k8sAndWorker.runnerStrategy.workerType", "remote");
-    }
     return props;
   }
 }

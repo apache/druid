@@ -30,11 +30,11 @@ import java.util.Objects;
 /**
  * InputSpec for {@link ClientCompactionIOConfig}.
  * <p>
- * Should be synchronized with org.apache.druid.indexing.common.task.CompactionIntervalSpec.
+ * Should be synchronized with org.apache.druid.indexing.common.task.CompactionIntervalSpec and org.apache.druid.indexing.common.task.UncompactedInputSpec.
  */
-public class ClientCompactionIntervalSpec
+public class ClientCompactionIntervalSpec implements ClientCompactionInputSpec
 {
-  private static final String TYPE = "interval";
+  public static final String TYPE = "interval";
 
   private final Interval interval;
   @Nullable
@@ -53,12 +53,7 @@ public class ClientCompactionIntervalSpec
     this.sha256OfSortedSegmentIds = sha256OfSortedSegmentIds;
   }
 
-  @JsonProperty
-  public String getType()
-  {
-    return TYPE;
-  }
-
+  @Override
   @JsonProperty
   public Interval getInterval()
   {

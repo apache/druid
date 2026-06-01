@@ -22,7 +22,6 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.CachingQueryRunner;
 import org.apache.druid.client.cache.Cache;
@@ -90,7 +89,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.ObjLongConsumer;
 import java.util.stream.Collectors;
 
 /**
@@ -106,13 +104,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       DefaultQueryMetrics.QUERY_WAIT_TIME,
       DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME
   );
-
-  private static final Map<String, ObjLongConsumer<? super QueryMetrics<?>>> METRICS_TO_REPORT =
-      ImmutableMap.of(
-          DefaultQueryMetrics.QUERY_SEGMENT_TIME, QueryMetrics::reportSegmentTime,
-          DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME, QueryMetrics::reportSegmentAndCacheTime,
-          DefaultQueryMetrics.QUERY_WAIT_TIME, QueryMetrics::reportWaitTime
-      );
 
   private final String dataSource;
 
@@ -539,17 +530,11 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                 for (Map.Entry<String, SegmentMetrics> segmentAndMetrics : segmentMetricsAccumulator.entrySet()) {
                   queryMetrics.segment(segmentAndMetrics.getKey());
 
-                  for (Map.Entry<String, ObjLongConsumer<? super QueryMetrics<?>>> reportMetric : METRICS_TO_REPORT.entrySet()) {
-                    final String metricName = reportMetric.getKey();
-                    switch (metricName) {
-                      case DefaultQueryMetrics.QUERY_SEGMENT_TIME:
-                        reportMetric.getValue().accept(queryMetrics, segmentAndMetrics.getValue().getSegmentTime());
-                      case DefaultQueryMetrics.QUERY_WAIT_TIME:
-                        reportMetric.getValue().accept(queryMetrics, segmentAndMetrics.getValue().getWaitTime());
-                      case DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME:
-                        reportMetric.getValue().accept(queryMetrics, segmentAndMetrics.getValue().getSegmentAndCacheTime());
-                    }
-                  }
+                  final SegmentMetrics segmentMetrics = segmentAndMetrics.getValue();
+
+                  queryMetrics.reportSegmentTime(segmentMetrics.getSegmentTime());
+                  queryMetrics.reportWaitTime(segmentMetrics.getWaitTime());
+                  queryMetrics.reportSegmentAndCacheTime(segmentMetrics.getSegmentAndCacheTime());
 
                   try {
                     queryMetrics.emit(emitter);

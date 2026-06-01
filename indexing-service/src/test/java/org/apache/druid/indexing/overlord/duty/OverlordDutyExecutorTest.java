@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.duty;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -48,7 +49,7 @@ public class OverlordDutyExecutorTest
            .thenReturn(executorService);
 
     OverlordDutyExecutor dutyExecutor =
-        new OverlordDutyExecutor(executorFactory, ImmutableSet.of(testDuty1, testDuty2));
+        new OverlordDutyExecutor(executorFactory, new StubServiceEmitter(), ImmutableSet.of(testDuty1, testDuty2));
 
     // Invoke start multiple times
     dutyExecutor.start();
@@ -81,7 +82,7 @@ public class OverlordDutyExecutorTest
 
     ScheduledExecutorFactory executorFactory = Mockito.mock(ScheduledExecutorFactory.class);
     OverlordDutyExecutor dutyExecutor =
-        new OverlordDutyExecutor(executorFactory, Collections.singleton(testDuty));
+        new OverlordDutyExecutor(executorFactory, new StubServiceEmitter(), Collections.singleton(testDuty));
 
     dutyExecutor.start();
 

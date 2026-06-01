@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.querykit.groupby;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -27,15 +28,23 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.input.LoadableSegment;
 import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
 import org.apache.druid.msq.querykit.ReadableInput;
+import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,6 +52,14 @@ import java.util.List;
 public class GroupByPreShuffleStageProcessor extends BaseLeafStageProcessor
 {
   private final GroupByQuery query;
+
+  @JacksonInject
+  @Nullable
+  private GroupingEngine groupingEngine;
+
+  @JacksonInject
+  @Nullable
+  private QueryToolChestWarehouse warehouse;
 
   @JsonCreator
   public GroupByPreShuffleStageProcessor(@JsonProperty("query") GroupByQuery query)
@@ -68,13 +85,31 @@ public class GroupByPreShuffleStageProcessor extends BaseLeafStageProcessor
   {
     return new GroupByPreShuffleFrameProcessor(
         query,
-        frameContext.groupingEngine(),
+        groupingEngine,
+        warehouse != null ? warehouse.getToolChest(query) : null,
         frameContext.processingBuffers().getBufferPool(),
         baseInput,
         segmentMapFn,
         outputChannelHolder,
         frameWriterFactoryHolder
     );
+  }
+
+  @Override
+  protected void configureStageRunner(
+      final StandardStageRunner<Object, Long> stageRunner,
+      final ExecutionContext context
+  )
+  {
+    if (MultiStageQueryContext.isUseCombiner(context.workOrder().getWorkerContext())) {
+      final RowSignature intermediateSignature =
+          context.workOrder().getStageDefinition().getSignature();
+      final List<AggregatorFactory> aggregatorFactories = query.getAggregatorSpecs();
+      final int aggregatorStart = query.getResultRowAggregatorStart();
+      stageRunner.setCombiner(
+          () -> new GroupByFrameCombiner(intermediateSignature, aggregatorFactories, aggregatorStart)
+      );
+    }
   }
 
   @Override

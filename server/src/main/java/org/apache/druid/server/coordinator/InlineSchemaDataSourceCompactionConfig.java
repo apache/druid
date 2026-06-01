@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -48,8 +49,8 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
   }
 
   /**
-   * The number of input segments is limited because the byte size of a serialized task spec is limited by
-   * org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig.maxZnodeBytes.
+   * The number of input segments is limited because the byte size of a serialized task spec is bounded by the
+   * maximum payload size accepted by the task runner.
    */
   @Nullable
   private final Integer maxRowsPerSegment;
@@ -226,6 +227,12 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
   public Granularity getSegmentGranularity()
   {
     return granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
+  }
+
+  @Override
+  public CompactionConfigValidationResult validate(ClusterCompactionConfig clusterCompactionConfig)
+  {
+    return ClientCompactionRunnerInfo.validateCompactionConfig(this, clusterCompactionConfig.getEngine());
   }
 
   @Override

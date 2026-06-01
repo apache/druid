@@ -87,15 +87,13 @@ public class NestedDataTestUtils
 
   public static final ObjectMapper JSON_MAPPER;
 
-  public static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("timestamp", null, null);
-
   public static final DimensionsSpec AUTO_DISCOVERY =
       DimensionsSpec.builder()
                     .useSchemaDiscovery(true)
                     .build();
 
   public static final InputRowSchema AUTO_SCHEMA = new InputRowSchema(
-      TIMESTAMP_SPEC,
+      TimestampSpec.DEFAULT,
       AUTO_DISCOVERY,
       null
   );
@@ -174,7 +172,7 @@ public class NestedDataTestUtils
     private List<InputSource> inputSources =
         List.of(ResourceInputSource.of(NestedDataTestUtils.class.getClassLoader(), SIMPLE_DATA_FILE));
     private InputFormat inputFormat = TestIndex.DEFAULT_JSON_INPUT_FORMAT;
-    private TimestampSpec timestampSpec = TIMESTAMP_SPEC;
+    private TimestampSpec timestampSpec = TimestampSpec.DEFAULT;
     private DimensionsSpec dimensionsSpec = AUTO_DISCOVERY;
     private TransformSpec transformSpec = TransformSpec.NONE;
     private AggregatorFactory[] aggregators = COUNT;

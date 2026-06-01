@@ -67,7 +67,7 @@ The distribution directory contains `LICENSE` and `NOTICE` files and subdirector
 ## Start up Druid services
 
 Start up Druid services using the automatic single-machine configuration.
-This configuration includes default settings that are appropriate for this tutorial, such as loading the `druid-multi-stage-query` extension by default so that you can use the MSQ task engine.
+This configuration includes default settings that are appropriate for this tutorial.
 
 You can view the default settings in the configuration files located in `conf/druid/auto`.
 
@@ -112,7 +112,7 @@ After starting the Druid services, open the [web console](../operations/web-cons
 
 It may take a few seconds for all Druid services to finish starting, including the [Druid router](../design/router.md), which serves the console. If you attempt to open the web console before startup is complete, you may see errors in the browser. Wait a few moments and try again.
 
-In this quickstart, you use the the web console to perform ingestion. The MSQ task engine specifically uses the **Query** view to edit and run SQL queries.
+In this quickstart, you use the web console to perform ingestion. The MSQ task engine specifically uses the **Query** view to edit and run SQL queries.
 For a complete walkthrough of the **Query** view as it relates to the multi-stage query architecture and the MSQ task engine, see [UI walkthrough](../operations/web-console.md).
 
 ## Load data

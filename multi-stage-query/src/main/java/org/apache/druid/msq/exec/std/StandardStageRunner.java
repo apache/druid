@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.processor.BlockingQueueOutputChannelFactory;
+import org.apache.druid.frame.processor.FrameCombinerFactory;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.java.util.common.UOE;
@@ -32,10 +33,12 @@ import org.apache.druid.msq.counters.CpuCounters;
 import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.StageProcessor;
-import org.apache.druid.msq.indexing.CountingOutputChannelFactory;
+import org.apache.druid.msq.indexing.ChannelCountingOutputChannelFactory;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+
+import javax.annotation.Nullable;
 
 /**
  * Runner for {@link StageProcessor} that build a {@link ProcessorsAndChannels} for some shuffle-agnostic work.
@@ -51,6 +54,9 @@ public class StandardStageRunner<T, R>
   private final int threadCount;
   private final FrameContext frameContext;
 
+  @Nullable
+  private FrameCombinerFactory combinerFactory;
+
   @MonotonicNonNull
   private OutputChannelFactory workOutputChannelFactory;
   @MonotonicNonNull
@@ -63,6 +69,15 @@ public class StandardStageRunner<T, R>
     this.executionContext = executionContext;
     this.threadCount = executionContext.threadCount();
     this.frameContext = executionContext.frameContext();
+  }
+
+  /**
+   * Set a combiner for sorted shuffle.
+   */
+  public StandardStageRunner<T, R> setCombiner(@Nullable final FrameCombinerFactory combinerFactory)
+  {
+    this.combinerFactory = combinerFactory;
+    return this;
   }
 
   /**
@@ -113,7 +128,7 @@ public class StandardStageRunner<T, R>
       baseOutputChannelFactory = executionContext.outputChannelFactory();
     }
 
-    workOutputChannelFactory = new CountingOutputChannelFactory(
+    workOutputChannelFactory = new ChannelCountingOutputChannelFactory(
         baseOutputChannelFactory,
         executionContext.counters().channel(CounterNames.outputChannel())
     );
@@ -162,11 +177,11 @@ public class StandardStageRunner<T, R>
   private void makeAndRunShuffleProcessors()
   {
     final ShuffleSpec shuffleSpec = executionContext.workOrder().getStageDefinition().getShuffleSpec();
-    final StandardShuffleOperations stageOperations = new StandardShuffleOperations(executionContext);
+    final StandardShuffleOperations stageOperations = new StandardShuffleOperations(executionContext, combinerFactory);
 
     pipelineFuture = stageOperations.gatherResultKeyStatisticsIfNeeded(pipelineFuture);
 
-    final OutputChannelFactory stageOutputChannelFactory = new CountingOutputChannelFactory(
+    final OutputChannelFactory stageOutputChannelFactory = new ChannelCountingOutputChannelFactory(
         executionContext.outputChannelFactory(),
         executionContext.counters().channel(CounterNames.shuffleChannel())
     );

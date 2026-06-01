@@ -26,9 +26,9 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,7 +39,7 @@ public class ScanResultValueTimestampComparatorTest
 {
   private static QuerySegmentSpec intervalSpec;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup()
   {
     intervalSpec = new MultipleIntervalSegmentSpec(
@@ -83,7 +83,7 @@ public class ScanResultValueTimestampComparatorTest
         events2
     );
 
-    Assert.assertEquals(1, comparator.compare(s1, s2));
+    Assertions.assertEquals(1, comparator.compare(s1, s2));
   }
 
   @Test
@@ -120,7 +120,7 @@ public class ScanResultValueTimestampComparatorTest
         events2
     );
 
-    Assert.assertEquals(-1, comparator.compare(s1, s2));
+    Assertions.assertEquals(-1, comparator.compare(s1, s2));
   }
 
   @Test
@@ -155,7 +155,7 @@ public class ScanResultValueTimestampComparatorTest
         events2
     );
 
-    Assert.assertEquals(1, comparator.compare(s1, s2));
+    Assertions.assertEquals(1, comparator.compare(s1, s2));
   }
 
   @Test
@@ -190,6 +190,6 @@ public class ScanResultValueTimestampComparatorTest
         events2
     );
 
-    Assert.assertEquals(-1, comparator.compare(s1, s2));
+    Assertions.assertEquals(-1, comparator.compare(s1, s2));
   }
 }

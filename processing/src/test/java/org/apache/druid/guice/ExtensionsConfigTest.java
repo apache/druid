@@ -22,8 +22,8 @@ package org.apache.druid.guice;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 
@@ -44,11 +44,9 @@ public class ExtensionsConfigTest
         ExtensionsConfig.class
     );
 
-    Assert.assertTrue(config.searchCurrentClassloader());
-    Assert.assertEquals("extensions", config.getDirectory());
-    Assert.assertEquals("hadoop-dependencies", config.getHadoopDependenciesDir());
-    Assert.assertNull(config.getHadoopContainerDruidClasspath());
-    Assert.assertNull(config.getLoadList());
+    Assertions.assertTrue(config.searchCurrentClassloader());
+    Assertions.assertEquals("extensions", config.getDirectory());
+    Assertions.assertNull(config.getLoadList());
   }
 
   @Test
@@ -57,8 +55,6 @@ public class ExtensionsConfigTest
     String json = "{\n"
                   + "  \"searchCurrentClassloader\": false,\n"
                   + "  \"directory\": \"testExtensions\",\n"
-                  + "  \"hadoopDependenciesDir\": \"testHadoopDependenciesDir\",\n"
-                  + "  \"hadoopContainerDruidClasspath\": \"testHadoopContainerClasspath\",\n"
                   + "  \"loadList\": [\"b\",\"a\"]\n"
                   + "}";
     ObjectMapper mapper = TestHelper.makeJsonMapper();
@@ -70,11 +66,9 @@ public class ExtensionsConfigTest
         ExtensionsConfig.class
     );
 
-    Assert.assertFalse(config.searchCurrentClassloader());
-    Assert.assertEquals("testExtensions", config.getDirectory());
-    Assert.assertEquals("testHadoopDependenciesDir", config.getHadoopDependenciesDir());
-    Assert.assertEquals("testHadoopContainerClasspath", config.getHadoopContainerDruidClasspath());
-    Assert.assertEquals(ImmutableList.of("b", "a"), new ArrayList<>(config.getLoadList()));
+    Assertions.assertFalse(config.searchCurrentClassloader());
+    Assertions.assertEquals("testExtensions", config.getDirectory());
+    Assertions.assertEquals(ImmutableList.of("b", "a"), new ArrayList<>(config.getLoadList()));
   }
   @Test
   public void testLoadList() throws Exception
@@ -82,8 +76,6 @@ public class ExtensionsConfigTest
     String json = "{\n"
             + "  \"searchCurrentClassloader\": false,\n"
             + "  \"directory\": \"testExtensions\",\n"
-            + "  \"hadoopDependenciesDir\": \"testHadoopDependenciesDir\",\n"
-            + "  \"hadoopContainerDruidClasspath\": \"testHadoopContainerClasspath\",\n"
             + "  \"loadList\": [\"b\",\"b\",\"a\",\"c\",\"d\",\"a\"]\n"
             + "}";
     ObjectMapper mapper = TestHelper.makeJsonMapper();
@@ -95,7 +87,7 @@ public class ExtensionsConfigTest
             ExtensionsConfig.class
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
             ImmutableList.of("b", "a", "c", "d"),
             new ArrayList<>(config.getLoadList())
     );

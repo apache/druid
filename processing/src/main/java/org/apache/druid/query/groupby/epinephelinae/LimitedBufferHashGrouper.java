@@ -458,6 +458,18 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     }
   }
 
+  @Override
+  public long getMaxMergeBufferUsedBytes()
+  {
+    if (!initialized) {
+      return 0L;
+    }
+
+    long hashTableUsage = super.getMaxMergeBufferUsedBytes();
+    long offSetHeapUsage = offsetHeap.getMaxMergeBufferUsedBytes();
+    return hashTableUsage + offSetHeapUsage;
+  }
+
   private class AlternatingByteBufferHashTable extends ByteBufferHashTable
   {
     // The base buffer is split into two alternating halves, with one sub-buffer in use at a given time.
@@ -509,6 +521,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     public void reset()
     {
       size = 0;
+      updateMaxMergeBufferUsedBytes();
       growthCount = 0;
       // clear the used bits of the first buffer
       for (int i = 0; i < maxBuckets; i++) {
@@ -570,6 +583,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       }
 
       size = numCopied;
+      updateMaxMergeBufferUsedBytes();
       tableBuffer = newTableBuffer;
       growthCount++;
     }

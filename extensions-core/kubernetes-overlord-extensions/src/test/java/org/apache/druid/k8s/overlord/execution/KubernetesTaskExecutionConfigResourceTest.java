@@ -25,14 +25,13 @@ import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.easymock.EasyMock;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class KubernetesTaskExecutionConfigResourceTest
 {
@@ -41,7 +40,7 @@ public class KubernetesTaskExecutionConfigResourceTest
   private HttpServletRequest req;
   private KubernetesTaskRunnerDynamicConfig dynamicConfig;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     configManager = EasyMock.createMock(JacksonConfigManager.class);
@@ -74,7 +73,7 @@ public class KubernetesTaskExecutionConfigResourceTest
     EasyMock.replay(configManager, auditManager, dynamicConfig);
 
     Response result = testedResource.setExecutionConfig(dynamicConfig, req);
-    assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
   }
 
   @Test
@@ -101,7 +100,7 @@ public class KubernetesTaskExecutionConfigResourceTest
     EasyMock.replay(configManager, auditManager, dynamicConfig);
 
     Response result = testedResource.setExecutionConfig(dynamicConfig, req);
-    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), result.getStatus());
+    Assertions.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), result.getStatus());
   }
 
   @Test
@@ -139,7 +138,7 @@ public class KubernetesTaskExecutionConfigResourceTest
     EasyMock.replay(configManager, auditManager);
 
     Response result = testedResource.setExecutionConfig(requestConfig, req);
-    assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
   }
 
   @Test
@@ -176,7 +175,7 @@ public class KubernetesTaskExecutionConfigResourceTest
     EasyMock.replay(configManager, auditManager);
 
     Response result = testedResource.setExecutionConfig(requestConfig, req);
-    assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
   }
 
   @Test
@@ -213,6 +212,6 @@ public class KubernetesTaskExecutionConfigResourceTest
     EasyMock.replay(configManager, auditManager);
 
     Response result = testedResource.setExecutionConfig(requestConfig, req);
-    assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
   }
 }

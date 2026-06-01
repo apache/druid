@@ -35,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -141,7 +142,7 @@ public class ChangeRequestHistory<T>
     Counter lastCounter = getLastCounter();
 
     if (counter.counter == lastCounter.counter) {
-      if (!counter.matches(lastCounter)) {
+      if (!counter.equals(lastCounter)) {
         ChangeRequestsSnapshot<T> reset = ChangeRequestsSnapshot.fail(
             StringUtils.format("counter[%s] failed to match with [%s]", counter, lastCounter)
         );
@@ -170,7 +171,7 @@ public class ChangeRequestHistory<T>
     if (counter.counter == lastCounter.counter) {
       // We don't want to trigger a counter reset if the client counter matches the last counter! Return an empty list
       // of changes instead.
-      if (counter.matches(lastCounter)) {
+      if (counter.equals(lastCounter)) {
         return ChangeRequestsSnapshot.success(counter, new ArrayList<>());
       } else {
         return ChangeRequestsSnapshot.fail(
@@ -199,7 +200,7 @@ public class ChangeRequestHistory<T>
       int changeStartIndex = (int) (counter.counter + changes.size() - lastCounter.counter);
 
       Counter counterToMatch = counter.counter == 0 ? Counter.ZERO : changes.get(changeStartIndex - 1).counter;
-      if (!counterToMatch.matches(counter)) {
+      if (!counterToMatch.equals(counter)) {
         return ChangeRequestsSnapshot.fail(
             StringUtils.format(
                 "counter[%s] failed to match with [%s]",
@@ -296,9 +297,23 @@ public class ChangeRequestHistory<T>
       return new Counter(counter + 1);
     }
 
-    public boolean matches(Counter other)
+    @Override
+    public boolean equals(Object object)
     {
-      return this.counter == other.counter && this.hash == other.hash;
+      if (this == object) {
+        return true;
+      }
+      if (object == null || getClass() != object.getClass()) {
+        return false;
+      }
+      Counter other = (Counter) object;
+      return counter == other.counter && hash == other.hash;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(counter, hash);
     }
 
     @Override

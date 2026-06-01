@@ -21,7 +21,6 @@ package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -30,7 +29,7 @@ import org.apache.druid.server.RequestLogLine;
 
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
-import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -50,7 +49,7 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
   private long sqlQueryTimeThresholdMs = 0;
 
   @JsonProperty
-  private List<String> mutedQueryTypes = ImmutableList.of();
+  private Set<String> mutedQueryTypes = Set.of();
 
   @Override
   public RequestLogger get()
@@ -70,13 +69,13 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
     private final RequestLogger logger;
     private final long queryTimeThresholdMs;
     private final long sqlQueryTimeThresholdMs;
-    private final List<String> mutedQueryTypes;
+    private final Set<String> mutedQueryTypes;
 
     public FilteredRequestLogger(
         RequestLogger logger,
         long queryTimeThresholdMs,
         long sqlQueryTimeThresholdMs,
-        List<String> mutedQueryTypes
+        Set<String> mutedQueryTypes
     )
     {
       this.logger = logger;

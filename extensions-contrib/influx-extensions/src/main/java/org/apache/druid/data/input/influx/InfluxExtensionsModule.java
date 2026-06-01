@@ -40,7 +40,7 @@ public class InfluxExtensionsModule implements DruidModule
     return Collections.singletonList(
         new SimpleModule("InfluxInputRowParserModule")
             .registerSubtypes(
-                new NamedType(InfluxParseSpec.class, "influx")
+                new NamedType(InfluxInputFormat.class, InfluxInputFormat.TYPE_KEY)
             )
     );
   }

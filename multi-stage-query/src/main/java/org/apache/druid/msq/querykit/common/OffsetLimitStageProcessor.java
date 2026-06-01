@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.std.BasicStageProcessor;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
+import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.querykit.QueryKitUtils;
@@ -113,10 +114,11 @@ public class OffsetLimitStageProcessor extends BasicStageProcessor
       throw new RuntimeException(e);
     }
 
+    final StandardPartitionReader partitionReader = new StandardPartitionReader(context);
     final Supplier<FrameProcessor<Object>> workerSupplier = () -> {
       final Iterable<ReadableInput> readableInputs = Iterables.transform(
           slice.getPartitions(),
-          readablePartition -> QueryKitUtils.readPartition(context, readablePartition)
+          readablePartition -> QueryKitUtils.readPartition(partitionReader, readablePartition)
       );
 
       // Note: OffsetLimitFrameProcessor does not use allocator from the outputChannel; it uses unlimited instead.

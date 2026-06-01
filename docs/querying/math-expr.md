@@ -110,14 +110,37 @@ The following built-in functions are available.
 
 |name|description|
 |----|-----------|
+|now|now() returns the current system timestamp in milliseconds since epoch (1970-01-01 00:00:00 UTC). This function is evaluated for each row at processing time. It's recommended to use this only for troubleshooting issues - see [Using now() in ingestion](#using-now-in-ingestion).|
 |timestamp|timestamp(expr[,format-string]) parses string expr into date then returns milliseconds from java epoch. without 'format-string' it's regarded as ISO datetime format |
-|unix_timestamp|same with 'timestamp' function but returns seconds instead |
+|unix_timestamp|unix_timestamp(expr[,format-string]) same with 'timestamp' function but returns seconds instead |
 |timestamp_ceil|timestamp_ceil(expr, period, \[origin, \[timezone\]\]) rounds up a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
 |timestamp_floor|timestamp_floor(expr, period, \[origin, [timezone\]\]) rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
 |timestamp_shift|timestamp_shift(expr, period, step, \[timezone\]) shifts a timestamp by a period (step times), returning it as a new timestamp. Period can be any ISO8601 period. Step may be negative. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
 |timestamp_extract|timestamp_extract(expr, unit, \[timezone\]) extracts a time part from expr, returning it as a number. Unit can be EPOCH (number of seconds since 1970-01-01 00:00:00 UTC), SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00"|
 |timestamp_parse|timestamp_parse(string expr, \[pattern, [timezone\]\]) parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat). If the pattern is not provided, this parses time strings in either ISO8601 or SQL format. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00", and will be used as the time zone for strings that do not include a time zone offset. Pattern and time zone must be literals. Strings that cannot be parsed as timestamps will be returned as nulls.|
 |timestamp_format|timestamp_format(expr, \[pattern, \[timezone\]\]) formats a timestamp as a string with a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat), or ISO8601 if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". Pattern and time zone must be literals.|
+
+### Using `now()` in ingestion
+
+:::warning
+`now()` is non-deterministic — replicated streaming tasks and task replays evaluate it at
+different wall-clock times, producing inconsistent results across replicas. Use `now()` to
+populate regular columns (e.g. ingestion time, lag metrics), but Druid rejects mapping
+`__time` to `now()`. For Kafka, prefer
+[`kafka.timestamp`](../ingestion/data-formats.md#kafka) as the `__time` source.
+:::
+
+To troubleshoot end-to-end pipeline delays, store `now()` or `now() - __time` as a separate
+dimension via a [`transformSpec`](../ingestion/ingestion-spec.md#transformspec):
+
+```json
+"transformSpec": {
+  "transforms": [
+    { "type": "expression", "name": "druid_ingestion_time", "expression": "now()" },
+    { "type": "expression", "name": "ingestion_lag_ms", "expression": "now() - __time" }
+  ]
+}
+```
 
 ## Math functions
 

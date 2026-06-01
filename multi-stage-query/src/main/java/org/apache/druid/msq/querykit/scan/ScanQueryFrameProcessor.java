@@ -19,11 +19,14 @@
 
 package org.apache.druid.msq.querykit.scan;
 
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
@@ -67,13 +70,13 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
+import org.apache.druid.segment.AsyncCursorHolder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.VirtualColumn;
@@ -99,6 +102,9 @@ import java.util.stream.Collectors;
  */
 public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 {
+  public static final JavaType SCAN_RESULT_VALUE_TYPE =
+      TypeFactory.defaultInstance().constructType(ScanResultValue.class);
+
   private static final Logger log = new Logger(ScanQueryFrameProcessor.class);
   private static final int NO_LIMIT = -1;
 
@@ -114,6 +120,14 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   private final Closer closer = Closer.create();
 
   private Cursor cursor;
+  /**
+   * In-flight {@link CursorFactory#makeCursorHolderAsync} handle for the current segment, when {@link #cursor} has not
+   * yet been derived. Registered on {@link #closer} as soon as it is created so the produced {@link CursorHolder} is
+   * always disposed regardless of where the underlying load is in its lifecycle. Cleared after the holder is consumed
+   * and ownership transitions to {@link #cursorCloser}.
+   */
+  @Nullable
+  private AsyncCursorHolder asyncCursorHolder;
   private ListenableFuture<DataServerQueryResult<Object[]>> dataServerQueryResultFuture;
   private Closeable cursorCloser;
   /**
@@ -230,6 +244,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         dataServerQueryResultFuture =
             dataServerQueryHandler.fetchRowsFromDataServer(
                 preparedQuery,
+                ScanQueryFrameProcessor.SCAN_RESULT_VALUE_TYPE,
                 ScanQueryFrameProcessor::mappingFunction,
                 closer
             );
@@ -292,35 +307,36 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentReferenceHolder segmentHolder) throws IOException
   {
     if (cursor == null) {
-      final SegmentReference segmentReference = closer.register(mapSegment(segmentHolder.getSegmentReferenceOnce()));
-      if (segmentReference == null) {
-        throw DruidException.defensive("Missing segmentReference for[%s]", segmentHolder.getDescriptor());
-      }
+      if (asyncCursorHolder == null) {
+        final Segment segment = mapSegment(segmentHolder, closer);
+        final CursorFactory cursorFactory = segment.as(CursorFactory.class);
+        if (cursorFactory == null) {
+          throw DruidException.defensive(
+              "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
+          );
+        }
 
-      final Segment segment = segmentReference.getSegmentReference().orElse(null);
-      if (segment == null) {
-        throw DruidException.defensive("Missing segment for[%s]", segmentHolder.getDescriptor());
-      }
-
-      final CursorFactory cursorFactory = segment.as(CursorFactory.class);
-      if (cursorFactory == null) {
-        throw new ISE(
-            "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
+        asyncCursorHolder = closer.register(
+            cursorFactory.makeCursorHolderAsync(
+                ScanQueryEngine.makeCursorBuildSpec(
+                    query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
+                    null
+                )
+            )
         );
       }
 
-      if (segmentHolder.getInputCounters() != null) {
-        final int rowCount = getSegmentRowCount(segmentReference);
-        closer.register(() -> segmentHolder.getInputCounters().addFile(rowCount, 0));
+      if (!asyncCursorHolder.isReady()) {
+        final SettableFuture<?> awaitFuture = SettableFuture.create();
+        asyncCursorHolder.addReadyCallback(() -> awaitFuture.set(null));
+        return ReturnOrAwait.awaitAllFutures(ImmutableList.of(awaitFuture));
       }
 
-      final CursorHolder nextCursorHolder =
-          cursorFactory.makeCursorHolder(
-              ScanQueryEngine.makeCursorBuildSpec(
-                  query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
-                  null
-              )
-          );
+      // Transfer ownership of the holder out of the AsyncCursorHolder; setNextCursor manages the holder's lifecycle
+      // from here on. The wrapper stays registered on closer (close() is now a no-op since release was called) so
+      // we don't need to track it further.
+      final CursorHolder nextCursorHolder = asyncCursorHolder.release();
+      asyncCursorHolder = null;
 
       final Cursor nextCursor;
 

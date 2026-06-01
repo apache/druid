@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.FloatFirstAggregatorFactory;
@@ -35,13 +36,13 @@ import org.apache.druid.segment.data.IncrementalIndexTest;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,10 +57,10 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   private IndexIO indexIO;
   private IndexSpec indexSpec;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  private Path tempDir;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     indexMerger = TestHelper
@@ -91,7 +92,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
             ))
     );
 
-    final File tempDir = temporaryFolder.newFolder();
+    final File tempDir = FileUtils.createTempDirInLocation(this.tempDir, "rollup");
 
     List<QueryableIndex> indexes = new ArrayList<>();
     Instant time = Instant.now();
@@ -106,7 +107,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
     File indexFile = indexMerger
         .mergeQueryableIndex(indexes, true, aggregatorFactories, tempDir, indexSpec, null, -1);
     try (QueryableIndex mergedIndex = indexIO.loadIndex(indexFile)) {
-      Assert.assertEquals("Number of rows should be 1", 1, mergedIndex.getNumRows());
+      Assertions.assertEquals(1, mergedIndex.getNumRows(), "Number of rows should be 1");
     }
   }
 

@@ -28,6 +28,7 @@ import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.processor.FrameChannelMerger;
 import org.apache.druid.frame.processor.FrameChannelMixer;
+import org.apache.druid.frame.processor.FrameCombinerFactory;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriters;
@@ -63,6 +64,8 @@ public class StandardPartitionReader
   @Nullable
   private final CounterTracker counters;
   private final MemoryAllocatorFactory allocatorFactory;
+  @Nullable
+  private FrameCombinerFactory combinerFactory;
 
   public StandardPartitionReader(ExecutionContext executionContext)
   {
@@ -93,6 +96,15 @@ public class StandardPartitionReader
     this.cancellationId = cancellationId;
     this.counters = counters;
     this.allocatorFactory = allocatorFactory;
+  }
+
+  /**
+   * Set a combiner for sorted merges.
+   */
+  public StandardPartitionReader setCombiner(@Nullable final FrameCombinerFactory combinerFactory)
+  {
+    this.combinerFactory = combinerFactory;
+    return this;
   }
 
   public ReadableFrameChannel openChannel(final ReadablePartition readablePartition) throws IOException
@@ -142,6 +154,7 @@ public class StandardPartitionReader
               frameWriterSpec.getRemoveNullBytes()
           ),
           stageDefinition.getSortKey(),
+          combinerFactory != null ? combinerFactory.newCombiner() : null,
           null,
           -1
       );

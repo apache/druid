@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
+import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -48,7 +50,7 @@ import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.UnknownFault;
-import org.apache.druid.msq.input.InputSpecSlicer;
+import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -66,7 +68,9 @@ import org.apache.druid.storage.StorageConnectorProvider;
 import java.io.File;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -90,6 +94,7 @@ public class IndexerControllerContext implements ControllerContext
   private final ServiceClientFactory clientFactory;
   private final OverlordClient overlordClient;
   private final MemoryIntrospector memoryIntrospector;
+  private final List<InputSpecSlicerProvider> inputSpecSlicerProviders;
 
   public IndexerControllerContext(
       final MSQControllerTask task,
@@ -110,6 +115,9 @@ public class IndexerControllerContext implements ControllerContext
     this.memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
     final StorageConnectorProvider storageConnectorProvider = injector.getInstance(Key.get(StorageConnectorProvider.class, MultiStageQuery.class));
     final StorageConnector storageConnector = storageConnectorProvider.createStorageConnector(toolbox.getIndexingTmpDir());
+    final Set<InputSpecSlicerProvider> inputSpecSlicerProviders =
+        injector.getInstance(Key.get(new TypeLiteral<>() {}, IndexingService.class));
+    this.inputSpecSlicerProviders = List.copyOf(inputSpecSlicerProviders);
     this.injector = injector.createChildInjector(
         binder -> binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
                         .toInstance(storageConnector));
@@ -174,15 +182,9 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public InputSpecSlicer newTableInputSpecSlicer(final WorkerManager workerManager)
+  public List<InputSpecSlicerProvider> inputSpecSlicerProviders()
   {
-    final SegmentSource includeSegmentSource =
-        MultiStageQueryContext.getSegmentSources(taskQuerySpecContext, DEFAULT_SEGMENT_SOURCE);
-    return new IndexerTableInputSpecSlicer(
-        toolbox.getCoordinatorClient(),
-        toolbox.getTaskActionClient(),
-        includeSegmentSource
-    );
+    return inputSpecSlicerProviders;
   }
 
   @Override
@@ -231,6 +233,7 @@ public class IndexerControllerContext implements ControllerContext
         makeTaskContext(querySpec, queryKernelConfig, taskContext),
         // 10 minutes +- 2 minutes jitter
         TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L),
+        task.getQuerySpec().getTuningConfig().getMaxNumWorkers(),
         new MSQWorkerTaskLauncherConfig()
     );
   }
@@ -239,6 +242,29 @@ public class IndexerControllerContext implements ControllerContext
   public File taskTempDir()
   {
     return toolbox.getIndexingTmpDir();
+  }
+
+  @Override
+  public int maxNonLeafWorkerCount()
+  {
+    return task.getQuerySpec().getTuningConfig().getMaxNumWorkers();
+  }
+
+  @Override
+  public int targetPartitionsPerWorker()
+  {
+    // Assume tasks are symmetric: workers have the same number of processors available as a controller.
+    // Create one partition per processor per worker, for maximum parallelism.
+    return MultiStageQueryContext.getTargetPartitionsPerWorkerWithDefault(
+        taskQuerySpecContext,
+        memoryIntrospector.numProcessingThreads()
+    );
+  }
+
+  @Override
+  public boolean isDebug()
+  {
+    return taskQuerySpecContext.isDebug();
   }
 
   /**

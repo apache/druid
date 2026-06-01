@@ -31,8 +31,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.nio.ByteBuffer;
@@ -72,7 +72,7 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
   @Test
   public void testKeySize()
   {
-    Assert.assertEquals(Integer.BYTES, createStrategy().getGroupingKeySizeBytes());
+    Assertions.assertEquals(Integer.BYTES, createStrategy().getGroupingKeySizeBytes());
   }
 
   @Test
@@ -90,11 +90,11 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
       // While adding the values for the first time, the initialisation should have a non-zero footprint, apart from the
       // row with the null value
       if (DATASOURCE_ROWS.get(rowNum)[0] == null) {
-        Assert.assertEquals(0, sz);
+        Assertions.assertEquals(0, sz);
       } else {
-        Assert.assertTrue(sz > 0);
+        Assertions.assertTrue(sz > 0);
       }
-      Assert.assertEquals(DICT_IDS[rowNum], valuess[0]);
+      Assertions.assertEquals(DICT_IDS[rowNum], valuess[0]);
 
       cursor.advance();
       ++rowNum;
@@ -106,8 +106,8 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
     while (!cursor.isDone()) {
       int sz = strategy.initColumnValues(columnValueSelector, 0, valuess);
       // While adding the values for the first time, the initialisation should have a non-zero footprint
-      Assert.assertEquals(0, sz);
-      Assert.assertEquals(DICT_IDS[rowNum], valuess[0]);
+      Assertions.assertEquals(0, sz);
+      Assertions.assertEquals(DICT_IDS[rowNum], valuess[0]);
 
       cursor.advance();
       ++rowNum;
@@ -128,15 +128,15 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
     while (!cursor.isDone()) {
       int sz = strategy.writeToKeyBuffer(0, columnValueSelector, BUFFER1);
       if (DATASOURCE_ROWS.get(rowNum)[0] == null) {
-        Assert.assertEquals(0, sz);
+        Assertions.assertEquals(0, sz);
       } else {
-        Assert.assertTrue(sz > 0);
+        Assertions.assertTrue(sz > 0);
       }
       // null is represented by GROUP_BY_MISSING_VALUE on the buffer, even though it gets its own dictionaryId in the dictionary
-      Assert.assertEquals(DICT_IDS[rowNum], BUFFER1.getInt(0));
+      Assertions.assertEquals(DICT_IDS[rowNum], BUFFER1.getInt(0));
       // Readback the value
       strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
-      Assert.assertEquals(DATASOURCE_ROWS.get(rowNum)[0], resultRow.get(0));
+      Assertions.assertEquals(DATASOURCE_ROWS.get(rowNum)[0], resultRow.get(0));
 
       cursor.advance();
       ++rowNum;
@@ -154,9 +154,9 @@ public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNu
 
     // Test nulls
     strategy.initGroupingKeyColumnValue(0, 0, -1, BUFFER1, stack);
-    Assert.assertEquals(0, stack[0]);
+    Assertions.assertEquals(0, stack[0]);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
-    Assert.assertNull(resultRow.get(0));
+    Assertions.assertNull(resultRow.get(0));
   }
 
   // test reset works fine

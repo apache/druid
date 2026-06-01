@@ -24,6 +24,7 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
@@ -52,7 +53,7 @@ import java.util.Collections;
 public class KinesisIndexTaskSerdeTest
 {
   private static final DataSchema DATA_SCHEMA =
-      DataSchema.builder().withDataSource("dataSource").build();
+      DataSchema.builder().withDataSource("dataSource").withTimestamp(TimestampSpec.DEFAULT).build();
   private static final KinesisIndexTaskTuningConfig TUNING_CONFIG = new KinesisIndexTaskTuningConfig(
       null,
       null,
@@ -126,6 +127,7 @@ public class KinesisIndexTaskSerdeTest
         IO_CONFIG,
         null,
         false,
+        null,
         null
     );
     ObjectMapper objectMapper = createObjectMapper();
@@ -136,6 +138,7 @@ public class KinesisIndexTaskSerdeTest
     Assert.assertEquals(ACCESS_KEY, awsCredentialsConfig.getAccessKey().getPassword());
     Assert.assertEquals(SECRET_KEY, awsCredentialsConfig.getSecretKey().getPassword());
     Assert.assertEquals(FILE_SESSION_CREDENTIALS, awsCredentialsConfig.getFileSessionCredentials());
+    Assert.assertNotNull(target.getPeonProcessingModuleConfig());
     Assert.assertEquals(
         Collections.singleton(
             new ResourceAction(new Resource(

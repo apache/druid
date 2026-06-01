@@ -19,13 +19,6 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.ClientConfigurationFactory;
-import com.amazonaws.Protocol;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.base.Supplier;
@@ -43,8 +36,16 @@ import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
+import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 
+import javax.annotation.Nullable;
+import java.net.URI;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -122,36 +123,79 @@ public class S3StorageDruidModule implements DruidModule
 
   // This provides ServerSideEncryptingAmazonS3.Builder with default configs from Guice injection initially set.
   // However, this builder can then be modified and have configuration(s) inside
-  // AmazonS3ClientBuilder and/or S3StorageConfig overridden before being built.
+  // S3ClientBuilder and/or S3StorageConfig overridden before being built.
   @Provides
   public ServerSideEncryptingAmazonS3.Builder getServerSideEncryptingAmazonS3Builder(
-      AWSCredentialsProvider provider,
+      AwsCredentialsProvider provider,
       AWSProxyConfig proxyConfig,
       AWSEndpointConfig endpointConfig,
       AWSClientConfig clientConfig,
       S3StorageConfig storageConfig
   )
   {
-    final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
-    final Protocol protocol = S3Utils.determineProtocol(clientConfig, endpointConfig);
-    final AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3Client
-        .builder()
-        .withCredentials(provider)
-        .withClientConfiguration(S3Utils.setProxyConfig(configuration, proxyConfig).withProtocol(protocol))
-        .withChunkedEncodingDisabled(clientConfig.isDisableChunkedEncoding())
-        .withPathStyleAccessEnabled(clientConfig.isEnablePathStyleAccess())
-        .withForceGlobalBucketAccessEnabled(clientConfig.isForceGlobalBucketAccessEnabled());
-
-    if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
-      amazonS3ClientBuilder.setEndpointConfiguration(
-          new EndpointConfiguration(endpointConfig.getUrl(), endpointConfig.getSigningRegion())
+    if (clientConfig.isForceGlobalBucketAccessEnabled() != null) {
+      log.warn(
+          "Configuration 'druid.s3.client.forceGlobalBucketAccessEnabled' is deprecated and will be removed in a future release. "
+          + "Please use 'druid.s3.client.crossRegionAccessEnabled' instead.%s",
+          clientConfig.getCrossRegionAccessEnabled() != null
+              ? " Note: 'crossRegionAccessEnabled' is also set and will take precedence. Removing the legacy config will stop this warning from showing up."
+              : ""
       );
     }
+    return ServerSideEncryptingAmazonS3.builder(
+        provider,
+        storageConfig,
+        proxyConfig,
+        endpointConfig,
+        clientConfig,
+        null,
+        null
+    );
+  }
 
-    return ServerSideEncryptingAmazonS3.builder()
-                                       .setAmazonS3ClientBuilder(amazonS3ClientBuilder)
-                                       .setS3StorageConfig(storageConfig);
+  public enum AsyncHttpClientType
+  {
+    CRT {
+      @Override
+      public SdkAsyncHttpClient.Builder<?> buildBuilder(AWSClientConfig clientConfig)
+      {
+        // AwsCrtAsyncHttpClient.Builder does not expose readTimeout in SDK 2.40.0.
+        return AwsCrtAsyncHttpClient.builder()
+                                    .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeoutMillis()))
+                                    .maxConcurrency(clientConfig.getMaxConnections());
+      }
+    },
+    NETTY {
+      @Override
+      public SdkAsyncHttpClient.Builder<?> buildBuilder(AWSClientConfig clientConfig)
+      {
+        return NettyNioAsyncHttpClient.builder()
+                                      .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeoutMillis()))
+                                      .readTimeout(Duration.ofMillis(clientConfig.getSocketTimeoutMillis()))
+                                      .maxConcurrency(clientConfig.getMaxConnections());
+      }
+    };
 
+    public abstract SdkAsyncHttpClient.Builder<?> buildBuilder(AWSClientConfig clientConfig);
+
+    public static AsyncHttpClientType fromString(String value)
+    {
+      for (AsyncHttpClientType type : values()) {
+        if (type.name().equals(StringUtils.upperCase(value))) {
+          return type;
+        }
+      }
+      throw new ISE("Invalid druid.storage.transfer.asyncHttpClientType[%s]. Must be 'crt' or 'netty'.", value);
+    }
+  }
+
+  @Nullable
+  private static URI buildEndpointOverride(AWSEndpointConfig endpointConfig, boolean useHttps)
+  {
+    if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
+      return URI.create(S3Utils.ensureEndpointHasScheme(endpointConfig.getUrl(), useHttps));
+    }
+    return null;
   }
 
   // This provides ServerSideEncryptingAmazonS3 built with all default configs from Guice injection

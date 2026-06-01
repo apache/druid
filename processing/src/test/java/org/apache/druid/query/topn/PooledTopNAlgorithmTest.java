@@ -21,7 +21,7 @@ package org.apache.druid.query.topn;
 
 import org.apache.druid.collections.ResourceHolder;
 import org.easymock.EasyMock;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 

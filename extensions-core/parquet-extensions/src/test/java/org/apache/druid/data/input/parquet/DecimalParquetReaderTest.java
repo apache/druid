@@ -38,9 +38,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
-/**
- * Duplicate of {@link DecimalParquetInputTest} but for {@link ParquetReader} instead of Hadoop
- */
 public class DecimalParquetReaderTest extends BaseParquetReaderTest
 {
   @Test

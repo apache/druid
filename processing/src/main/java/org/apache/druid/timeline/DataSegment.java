@@ -39,6 +39,7 @@ import org.apache.druid.jackson.CommaListJoinDeserializer;
 import org.apache.druid.jackson.CommaListJoinSerializer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
@@ -59,6 +60,23 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
 {
 
   public static final String TOMBSTONE_LOADSPEC_TYPE = "tombstone";
+
+  public static Interner<String> stringInterner()
+  {
+    return STRING_INTERNER;
+  }
+
+  /**
+   * Shared canonical interner for {@link org.apache.druid.segment.VirtualColumn} instances embedded in segment-side
+   * metadata that lives in broker/coordinator memory. Used by callers that carry virtual columns through
+   * {@link DataSegment}'s wire form (clustering virtual columns on {@link ClusterGroupTuples},
+   * {@link org.apache.druid.timeline.partition.BaseDimensionRangeShardSpec}'s range-clustering virtual columns) so
+   * identical VC definitions across segments collapse to a single instance in memory.
+   */
+  public static Interner<VirtualColumn> virtualColumnInterner()
+  {
+    return VIRTUAL_COLUMN_INTERNER;
+  }
 
   /*
    * The difference between this class and org.apache.druid.segment.Segment is that this class contains the segment
@@ -88,6 +106,8 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private static final Interner<List<String>> DIMENSIONS_INTERNER = Interners.newWeakInterner();
   private static final Interner<List<String>> METRICS_INTERNER = Interners.newWeakInterner();
   private static final Interner<List<String>> PROJECTIONS_INTERNER = Interners.newWeakInterner();
+  private static final Interner<ClusterGroupTuples> CLUSTER_GROUPS_INTERNER = Interners.newWeakInterner();
+  private static final Interner<VirtualColumn> VIRTUAL_COLUMN_INTERNER = Interners.newWeakInterner();
   private static final Interner<CompactionState> COMPACTION_STATE_INTERNER = Interners.newWeakInterner();
   private static final Map<String, Object> PRUNED_LOAD_SPEC = ImmutableMap.of(
       "load spec is pruned, because it's not needed on Brokers, but eats a lot of heap space",
@@ -101,6 +121,13 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private final List<String> dimensions;
   private final List<String> metrics;
   private final List<String> projections;
+  /**
+   * Typed clustering tuples for clustered base-table segments, or {@code null} for non-clustered segments. Each tuple
+   * is one cluster group's clustering-column values in the order declared by
+   * {@link ClusterGroupTuples#getClusteringColumns()}. Consumed by cluster-group partial-load matchers.
+   */
+  @Nullable
+  private final ClusterGroupTuples clusterGroups;
   private final ShardSpec shardSpec;
 
   /**
@@ -149,6 +176,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         dimensions,
         metrics,
         null,
+        null,
         shardSpec,
         null,
         binaryVersion,
@@ -184,6 +212,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         dimensions,
         metrics,
         null,
+        null,
         shardSpec,
         lastCompactionState,
         binaryVersion,
@@ -191,6 +220,46 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         null,
         null,
         PruneSpecsHolder.DEFAULT
+    );
+  }
+
+  /**
+   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
+   */
+  @Deprecated
+  public DataSegment(
+      String dataSource,
+      Interval interval,
+      String version,
+      @Nullable Map<String, Object> loadSpec,
+      @Nullable List<String> dimensions,
+      @Nullable List<String> metrics,
+      @Nullable List<String> projections,
+      @Nullable ShardSpec shardSpec,
+      @Nullable CompactionState lastCompactionState,
+      Integer binaryVersion,
+      long size,
+      Integer totalRows,
+      String indexingStateFingerprint,
+      PruneSpecsHolder pruneSpecsHolder
+  )
+  {
+    this(
+        dataSource,
+        interval,
+        version,
+        loadSpec,
+        dimensions,
+        metrics,
+        projections,
+        null,
+        shardSpec,
+        lastCompactionState,
+        binaryVersion,
+        size,
+        totalRows,
+        indexingStateFingerprint,
+        pruneSpecsHolder
     );
   }
 
@@ -207,6 +276,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       @JsonProperty("metrics") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable List<String> metrics,
       @JsonProperty("projections") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable
       List<String> projections,
+      @JsonProperty("clusterGroups") @Nullable ClusterGroupTuples clusterGroups,
       @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
@@ -224,6 +294,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         dimensions,
         metrics,
         projections,
+        clusterGroups,
         shardSpec,
         lastCompactionState,
         binaryVersion,
@@ -242,6 +313,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       @Nullable List<String> dimensions,
       @Nullable List<String> metrics,
       @Nullable List<String> projections,
+      @Nullable ClusterGroupTuples clusterGroups,
       @Nullable ShardSpec shardSpec,
       @Nullable CompactionState lastCompactionState,
       Integer binaryVersion,
@@ -259,6 +331,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     // A null value for projections means that this segment is not aware of projections (launched in druid 32).
     // An empty list means that this segment is projection-aware, but has no projections.
     this.projections = projections == null ? null : prepareWithInterner(projections, PROJECTIONS_INTERNER);
+    this.clusterGroups = prepareClusterGroups(clusterGroups);
     this.shardSpec = (shardSpec == null) ? new NumberedShardSpec(0, 1) : shardSpec;
     this.lastCompactionState = pruneSpecsHolder.pruneLastCompactionState
                                ? null
@@ -324,6 +397,14 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   public List<String> getProjections()
   {
     return projections;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public ClusterGroupTuples getClusterGroups()
+  {
+    return clusterGroups;
   }
 
   @JsonProperty
@@ -456,6 +537,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return builder(this).projections(projections).build();
   }
 
+  public DataSegment withClusterGroups(@Nullable ClusterGroupTuples clusterGroups)
+  {
+    return builder(this).clusterGroups(clusterGroups).build();
+  }
+
   public DataSegment withShardSpec(ShardSpec newSpec)
   {
     return builder(this).shardSpec(newSpec).build();
@@ -522,6 +608,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
            ", dimensions=" + dimensions +
            ", metrics=" + metrics +
            ", projections=" + projections +
+           ", clusterGroups=" + clusterGroups +
            ", shardSpec=" + shardSpec +
            ", lastCompactionState=" + lastCompactionState +
            ", size=" + size +
@@ -552,6 +639,15 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       return null;
     }
     return COMPACTION_STATE_INTERNER.intern(lastCompactionState);
+  }
+
+  @Nullable
+  private static ClusterGroupTuples prepareClusterGroups(@Nullable ClusterGroupTuples clusterGroups)
+  {
+    if (clusterGroups == null) {
+      return null;
+    }
+    return CLUSTER_GROUPS_INTERNER.intern(clusterGroups);
   }
 
   /**
@@ -601,6 +697,8 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     private List<String> dimensions;
     private List<String> metrics;
     private List<String> projections;
+    @Nullable
+    private ClusterGroupTuples clusterGroups;
     private ShardSpec shardSpec;
     private CompactionState lastCompactionState;
     private Integer binaryVersion;
@@ -646,6 +744,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.dimensions = segment.getDimensions();
       this.metrics = segment.getMetrics();
       this.projections = segment.getProjections();
+      this.clusterGroups = segment.getClusterGroups();
       this.shardSpec = segment.getShardSpec();
       this.lastCompactionState = segment.getLastCompactionState();
       this.binaryVersion = segment.getBinaryVersion();
@@ -663,6 +762,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.dimensions = segmentBuilder.dimensions;
       this.metrics = segmentBuilder.metrics;
       this.projections = segmentBuilder.projections;
+      this.clusterGroups = segmentBuilder.clusterGroups;
       this.shardSpec = segmentBuilder.shardSpec;
       this.lastCompactionState = segmentBuilder.lastCompactionState;
       this.binaryVersion = segmentBuilder.binaryVersion;
@@ -710,6 +810,12 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     public Builder projections(List<String> projections)
     {
       this.projections = projections;
+      return this;
+    }
+
+    public Builder clusterGroups(@Nullable ClusterGroupTuples clusterGroups)
+    {
+      this.clusterGroups = clusterGroups;
       return this;
     }
 
@@ -765,6 +871,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
           dimensions,
           metrics,
           projections,
+          clusterGroups,
           shardSpec,
           lastCompactionState,
           binaryVersion,

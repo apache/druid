@@ -36,6 +36,7 @@ import React, { useState } from 'react';
 
 import {
   AboutDialog,
+  BrokerDynamicConfigDialog,
   CompactionDynamicConfigDialog,
   CoordinatorDynamicConfigDialog,
   DoctorDialog,
@@ -75,6 +76,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
   const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);
   const [coordinatorDynamicConfigDialogOpen, setCoordinatorDynamicConfigDialogOpen] =
     useState(false);
+  const [brokerDynamicConfigDialogOpen, setBrokerDynamicConfigDialogOpen] = useState(false);
   const [overlordDynamicConfigDialogOpen, setOverlordDynamicConfigDialogOpen] = useState(false);
   const [compactionDynamicConfigDialogOpen, setCompactionDynamicConfigDialogOpen] = useState(false);
   const [webConsoleConfigDialogOpen, setWebConsoleConfigDialogOpen] = useState(false);
@@ -131,6 +133,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         disabled={!capabilities.hasSql()}
         selected={activeView === 'explore'}
         target="_blank"
+        rel="noopener noreferrer"
       />
     </Menu>
   );
@@ -138,24 +141,33 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
   const helpMenu = (
     <Menu>
       <MenuItem icon={IconNames.GRAPH} text="About" onClick={() => setAboutDialogOpen(true)} />
-      <MenuItem icon={IconNames.TH} text="Docs" href={getLink('DOCS')} target="_blank" />
+      <MenuItem
+        icon={IconNames.TH}
+        text="Docs"
+        href={getLink('DOCS')}
+        target="_blank"
+        rel="noopener noreferrer"
+      />
       <MenuItem
         icon={IconNames.USER}
         text="User group"
         href={getLink('USER_GROUP')}
         target="_blank"
+        rel="noopener noreferrer"
       />
       <MenuItem
         icon={IconNames.CHAT}
         text="Slack channel"
         href={getLink('SLACK')}
         target="_blank"
+        rel="noopener noreferrer"
       />
       <MenuItem
         icon={IconNames.GIT_BRANCH}
         text="GitHub"
         href={getLink('GITHUB')}
         target="_blank"
+        rel="noopener noreferrer"
       />
     </Menu>
   );
@@ -182,6 +194,12 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         icon={IconNames.SETTINGS}
         text="Coordinator dynamic config"
         onClick={() => setCoordinatorDynamicConfigDialogOpen(true)}
+        disabled={!capabilities.hasCoordinatorAccess()}
+      />
+      <MenuItem
+        icon={IconNames.APPLICATIONS}
+        text="Broker dynamic config"
+        onClick={() => setBrokerDynamicConfigDialogOpen(true)}
         disabled={!capabilities.hasCoordinatorAccess()}
       />
       <MenuItem
@@ -399,6 +417,9 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         <CoordinatorDynamicConfigDialog
           onClose={() => setCoordinatorDynamicConfigDialogOpen(false)}
         />
+      )}
+      {brokerDynamicConfigDialogOpen && (
+        <BrokerDynamicConfigDialog onClose={() => setBrokerDynamicConfigDialogOpen(false)} />
       )}
       {overlordDynamicConfigDialogOpen && (
         <OverlordDynamicConfigDialog onClose={() => setOverlordDynamicConfigDialogOpen(false)} />

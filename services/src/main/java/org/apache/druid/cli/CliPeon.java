@@ -43,7 +43,6 @@ import io.netty.util.SuppressForbidden;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.CacheModule;
@@ -68,7 +67,6 @@ import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.indexer.HadoopIndexTaskModule;
 import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
@@ -125,7 +123,6 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
@@ -173,8 +170,6 @@ public class CliPeon extends GuiceRunnable
   @Option(name = "--nodeType", title = "nodeType", description = "Set the node type to expose on ZK")
   public String serverType = "indexer-executor";
 
-  private boolean isZkEnabled = true;
-
   /**
    * <p> This option is deprecated, see {@link #loadBroadcastDatasourcesMode} option. </p>
    *
@@ -212,7 +207,6 @@ public class CliPeon extends GuiceRunnable
   public void configure(Properties properties)
   {
     this.properties = properties;
-    isZkEnabled = ZkEnablementConfig.isEnabled(properties);
   }
 
   @Override
@@ -351,7 +345,6 @@ public class CliPeon extends GuiceRunnable
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
-        new HadoopIndexTaskModule(),
         new ChatHandlerServerModule(properties),
         new LookupModule(),
         new MSQIndexingModule(),
@@ -563,12 +556,8 @@ public class CliPeon extends GuiceRunnable
     public void configure(Binder binder)
     {
       binder.bind(SegmentManager.class).in(LazySingleton.class);
-      binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
       Jerseys.addResource(binder, HistoricalResource.class);
 
-      if (isZkEnabled) {
-        LifecycleModule.register(binder, ZkCoordinator.class);
-      }
       LifecycleModule.register(binder, SegmentCacheBootstrapper.class);
     }
 

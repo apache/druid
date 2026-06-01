@@ -42,7 +42,7 @@ import org.apache.druid.testing.embedded.TestFolder;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.apache.druid.testing.embedded.docker.DruidContainerResource;
 import org.apache.druid.testing.embedded.indexing.Resources;
-import org.apache.druid.testing.tools.ITRetryUtil;
+import org.apache.druid.testing.embedded.utils.ITRetryUtil;
 import org.testcontainers.k3s.K3sContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
@@ -209,6 +209,15 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   protected void waitUntilPodsAreReady(String namespace)
   {
     client.pods().inNamespace(namespace).resources().forEach(this::waitUntilPodIsReady);
+  }
+
+  /**
+   * Exposes the fabric8 {@link KubernetesClient} for tests that need to interact
+   * with the cluster directly (e.g. discover task-launched peon pods).
+   */
+  public KubernetesClient getKubernetesClient()
+  {
+    return client;
   }
 
   @Override

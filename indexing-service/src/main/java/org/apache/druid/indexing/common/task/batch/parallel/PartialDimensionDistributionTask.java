@@ -80,7 +80,6 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   public static final String CTX_BLOOM_FILTER_EXPECTED_INSERTIONS = "bloomFilterExpectedInsertions";
 
   // Do not skip nulls as StringDistribution can handle null values.
-  // This behavior is different from hadoop indexing.
   private static final boolean SKIP_NULL = false;
 
   private final int numAttempts;

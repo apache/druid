@@ -150,7 +150,22 @@ public abstract class IcebergCatalog
         }
       }
 
-      handleResidualFilter(detectedResidual, residualFilterMode);
+      if (detectedResidual == null) {
+        String message = StringUtils.format(
+            "Iceberg filter produced residual expression that requires row-level filtering. "
+            + "This typically means the filter is on a non-partition column. "
+            + "Residual rows may be ingested unless filtered by transformSpec. "
+            + "Residual filter: [%s]",
+            detectedResidual
+        );
+
+        if (residualFilterMode == ResidualFilterMode.FAIL) {
+          throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                              .build(message);
+        }
+        log.warn(message);
+      }
 
       long duration = System.currentTimeMillis() - start;
       log.info("Data file scan and fetch took [%d ms] time for [%d] tasks", duration, tasks.size());
@@ -221,25 +236,3 @@ public abstract class IcebergCatalog
         .map(t -> t.file().path().toString())
         .collect(Collectors.toList());
   }
-
-  private void handleResidualFilter(Expression detectedResidual, ResidualFilterMode residualFilterMode)
-  {
-    if (detectedResidual == null) {
-      return;
-    }
-    String message = StringUtils.format(
-        "Iceberg filter produced residual expression that requires row-level filtering. "
-        + "This typically means the filter is on a non-partition column. "
-        + "Residual rows may be ingested unless filtered by transformSpec. "
-        + "Residual filter: [%s]",
-        detectedResidual
-    );
-
-    if (residualFilterMode == ResidualFilterMode.FAIL) {
-      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
-                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                          .build(message);
-    }
-    log.warn(message);
-  }
-}

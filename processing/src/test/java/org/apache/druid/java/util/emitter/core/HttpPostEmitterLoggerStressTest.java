@@ -26,22 +26,37 @@ import org.apache.logging.log4j.Level;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
 import org.asynchttpclient.Response;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class HttpPostEmitterLoggerStressTest
 {
-  @Rule
   public LoggerCaptureRule logCapture = new LoggerCaptureRule(HttpPostEmitter.class);
 
   private final MockHttpClient httpClient = new MockHttpClient();
 
-  @Test(timeout = 20_000L)
+  @BeforeEach
+  public void setUpLogCapture()
+  {
+    logCapture.before();
+  }
+
+  @AfterEach
+  public void tearDownLogCapture()
+  {
+    logCapture.after();
+  }
+
+  @Test
+  @Timeout(value = 20_000L, unit = TimeUnit.MILLISECONDS)
   public void testBurstFollowedByQuietPeriod() throws InterruptedException, IOException
   {
     HttpEmitterConfig config = new HttpEmitterConfig.Builder("http://foo.bar")
@@ -74,8 +89,8 @@ public class HttpPostEmitterLoggerStressTest
       for (int i = 0; i < 1000; i++) {
         emitter.emit(smallEvent);
 
-        Assert.assertTrue(emitter.getTotalFailedBuffers() <= 10);
-        Assert.assertTrue(emitter.getBuffersToEmit() <= 12);
+        Assertions.assertTrue(emitter.getTotalFailedBuffers() <= 10);
+        Assertions.assertTrue(emitter.getBuffersToEmit() <= 12);
       }
 
       // by the end of this test, there should be no outstanding failed buffers
@@ -100,14 +115,14 @@ public class HttpPostEmitterLoggerStressTest
       // duration of the test
       long limitTimeoutEvents = 1000;
 
-      Assert.assertTrue(
+      Assertions.assertTrue(
+          countOfTimeouts < limitTimeoutEvents,
           String.format(
               Locale.getDefault(),
               "too many timeouts (%d), expect less than (%d)",
               countOfTimeouts,
               limitTimeoutEvents
-          ),
-          countOfTimeouts < limitTimeoutEvents
+          )
       );
     }
   }

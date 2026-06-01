@@ -21,10 +21,10 @@ package org.apache.druid.segment.writeout;
 
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -37,14 +37,14 @@ public class TmpFileSegmentWriteOutMediumTest
   private volatile TmpFileSegmentWriteOutMedium writeOutMedium;
   private ExecutorService executorService;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     writeOutMedium = new TmpFileSegmentWriteOutMedium(FileUtils.createTempDir());
     executorService = Execs.multiThreaded(3, "writeOutMedium-%d");
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     executorService.shutdownNow();
@@ -60,7 +60,7 @@ public class TmpFileSegmentWriteOutMediumTest
       executorService.submit(
           () -> {
             WriteOutBytes writeOutBytes = writeOutMedium.makeWriteOutBytes();
-            Assert.assertEquals(0, writeOutMedium.getNumLocallyCreated());
+            Assertions.assertEquals(0, writeOutMedium.getNumLocallyCreated());
             try {
               latch.countDown();
               latch.await();
@@ -70,11 +70,11 @@ public class TmpFileSegmentWriteOutMediumTest
             catch (Exception e) {
               throw new RuntimeException(e);
             }
-            Assert.assertEquals(1, writeOutMedium.getNumLocallyCreated());
+            Assertions.assertEquals(1, writeOutMedium.getNumLocallyCreated());
           }
       );
     }
     executorService.awaitTermination(15, TimeUnit.SECONDS);
-    Assert.assertEquals(threadCount, writeOutMedium.getFilesCreated());
+    Assertions.assertEquals(threadCount, writeOutMedium.getFilesCreated());
   }
 }

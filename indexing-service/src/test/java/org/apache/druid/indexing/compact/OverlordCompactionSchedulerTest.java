@@ -32,6 +32,7 @@ import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -70,6 +71,7 @@ import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatistics;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.Table;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -384,6 +386,27 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
+  public void test_validateCompactionConfig_delegatesToCascadingReindexingTemplate()
+  {
+    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        dataSource,
+        null,
+        null,
+        InlineReindexingRuleProvider.builder().build(),
+        null,
+        null,
+        null,
+        Granularities.DAY,
+        new DynamicPartitionsSpec(null, null),
+        null,
+        null
+    );
+
+    final CompactionConfigValidationResult result = scheduler.validateCompactionConfig(template);
+    Assert.assertTrue(result.isValid());
+  }
+
+  @Test
   public void test_startCompaction_enablesTaskSubmission_forDatasource()
   {
     createSegments(1, Granularities.DAY, JAN_20);
@@ -394,7 +417,7 @@ public class OverlordCompactionSchedulerTest
     runCompactionTasks(1);
 
     final AutoCompactionSnapshot.Builder expectedSnapshot = AutoCompactionSnapshot.builder(dataSource);
-    expectedSnapshot.incrementWaitingStats(CompactionStatistics.create(100_000_000, 1, 1));
+    expectedSnapshot.incrementWaitingStats(CompactionStatistics.create(100_000_000, null, 1, 1));
 
     Assert.assertEquals(
         expectedSnapshot.build(),
@@ -478,6 +501,27 @@ public class OverlordCompactionSchedulerTest
     Assert.assertTrue(simulateResultWhenDisabled.getCompactionStates().isEmpty());
 
     scheduler.stopBeingLeader();
+  }
+
+  @Test
+  public void test_getAllCompactionSnapshots_returnsEmpty_beforeFirstRun()
+  {
+    Assert.assertTrue(scheduler.isEnabled());
+    Assert.assertFalse(scheduler.isRunning());
+
+    Assert.assertTrue(scheduler.getAllCompactionSnapshots().isEmpty());
+  }
+
+  @Test
+  public void test_getCompactionSnapshot_returnsAwaitingFirstRunWithActiveSupervisor_beforeFirstRun()
+  {
+    scheduler.startCompaction(dataSource, createSupervisorWithInlineSpec());
+
+    AutoCompactionSnapshot snapshot = scheduler.getCompactionSnapshot(dataSource);
+    Assert.assertEquals(
+        AutoCompactionSnapshot.ScheduleStatus.AWAITING_FIRST_RUN,
+        snapshot.getScheduleStatus()
+    );
   }
 
   private void createSegments(int numSegments, Granularity granularity, DateTime firstSegmentStart)

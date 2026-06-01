@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.common.actions.LockListAction;
@@ -67,7 +68,11 @@ public class TombstoneHelperTest
     GranularitySpec granularitySpec = new UniformGranularitySpec(Granularities.DAY, null, false,
                                                                  Collections.singletonList(interval)
     );
-    DataSchema dataSchema = DataSchema.builder().withDataSource("test").withGranularity(granularitySpec).build();
+    DataSchema dataSchema = DataSchema.builder()
+                                      .withDataSource("test")
+                                      .withTimestamp(TimestampSpec.DEFAULT)
+                                      .withGranularity(granularitySpec)
+                                      .build();
     // no segments will be pushed when all rows are thrown away, assume that:
     List<DataSegment> pushedSegments = Collections.emptyList();
 
@@ -92,7 +97,11 @@ public class TombstoneHelperTest
     GranularitySpec granularitySpec = new UniformGranularitySpec(Granularities.DAY, null, false,
                                                                  Collections.singletonList(interval)
     );
-    DataSchema dataSchema = DataSchema.builder().withDataSource("test").withGranularity(granularitySpec).build();
+    DataSchema dataSchema = DataSchema.builder()
+                                      .withDataSource("test")
+                                      .withTimestamp(TimestampSpec.DEFAULT)
+                                      .withGranularity(granularitySpec)
+                                      .build();
     // no segments will be pushed when all rows are thrown away, assume that:
     List<DataSegment> pushedSegments = Collections.emptyList();
 

@@ -26,7 +26,7 @@ import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
-import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTask;
@@ -212,7 +212,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
         new EqualDistributionWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
+        new HttpRemoteTaskRunnerConfig(),
         WORKERS_FOR_TIER_TESTS,
         taskWithSupervisor
     );
@@ -241,7 +241,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
         new EqualDistributionWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
+        new HttpRemoteTaskRunnerConfig(),
         WORKERS_FOR_TIER_TESTS,
         taskWithSupervisor
     );
@@ -271,7 +271,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
         new EqualDistributionWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
+        new HttpRemoteTaskRunnerConfig(),
         WORKERS_FOR_TIER_TESTS,
         taskWithSupervisor
     );
@@ -286,7 +286,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
         new EqualDistributionWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
+        new HttpRemoteTaskRunnerConfig(),
         WORKERS_FOR_TIER_TESTS,
         NoopTask.forDatasource("ds1")
     );
@@ -306,7 +306,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
         null,
         DataSchema.builder()
           .withDataSource(datasource)
-          .withTimestamp(new TimestampSpec(null, null, null))
+          .withTimestamp(TimestampSpec.DEFAULT)
           .withDimensions(new DimensionsSpec(Collections.emptyList()))
           .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), Collections.emptyList()))
           .build(),
