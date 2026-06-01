@@ -239,6 +239,8 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
     EasyMock.expect(supervisorManager.shouldUpdateSupervisor(spec)).andReturn(false);
+    // No restart, but the changed spec is still persisted.
+    EasyMock.expect(supervisorManager.updateSupervisorSpecWithoutRestart(spec)).andReturn(true);
 
     setupMockRequest();
 
@@ -1771,6 +1773,12 @@ public class SupervisorResourceTest extends EasyMockSupport
     )
     {
       return null;
+    }
+
+    @Override
+    public Builder<?> toBuilder()
+    {
+      throw new UnsupportedOperationException();
     }
 
     @JsonIgnore

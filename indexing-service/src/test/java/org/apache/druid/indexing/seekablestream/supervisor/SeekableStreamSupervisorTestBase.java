@@ -446,6 +446,54 @@ public abstract class SeekableStreamSupervisorTestBase
     {
       return null;
     }
+
+    @Override
+    public Builder toBuilder()
+    {
+      return new Builder().supervisor(supervisor).copyFrom(this);
+    }
+
+    static class Builder extends SeekableStreamSupervisorSpec.Builder<Builder>
+    {
+      private SeekableStreamSupervisor supervisor;
+
+      Builder supervisor(SeekableStreamSupervisor supervisor)
+      {
+        this.supervisor = supervisor;
+        return this;
+      }
+
+      @Override
+      protected Builder self()
+      {
+        return this;
+      }
+
+      @Override
+      public TestSeekableStreamSupervisorSpec build()
+      {
+        final SeekableStreamSupervisorIngestionSpec ingestionSchema =
+            new SeekableStreamSupervisorIngestionSpec(dataSchema, ioConfig, tuningConfig)
+            {
+            };
+        return new TestSeekableStreamSupervisorSpec(
+            ingestionSchema,
+            context,
+            suspended,
+            taskStorage,
+            taskMaster,
+            indexerMetadataStorageCoordinator,
+            indexTaskClientFactory,
+            mapper,
+            emitter,
+            monitorSchedulerConfig,
+            rowIngestionMetersFactory,
+            supervisorStateManagerConfig,
+            supervisor,
+            id
+        );
+      }
+    }
   }
 
   protected static SeekableStreamSupervisorTuningConfig getTuningConfig()
@@ -559,28 +607,19 @@ public abstract class SeekableStreamSupervisorTestBase
       AutoScalerConfig autoScalerConfig
   )
   {
-    return new SeekableStreamSupervisorIOConfig(
-        STREAM,
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
-        taskCount,
-        new Period("PT1H"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        autoScalerConfig,
-        LagAggregator.DEFAULT,
-        null,
-        null,
-        null,
-        null,
-        null
-    )
-    {
-    };
+    return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream(STREAM)
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withReplicas(1)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period("PT1H"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withAutoScalerConfig(autoScalerConfig)
+        .withLagAggregator(LagAggregator.DEFAULT)
+        .build();
   }
 
   public static AutoScalerConfig lagBasedAutoScalerConfig(int taskCountMin, int taskCountMax, Integer taskCountStart)

@@ -216,4 +216,42 @@ public class RabbitStreamSupervisorSpec extends SeekableStreamSupervisorSpec
         ", suspend=" + isSuspended() +
         '}';
   }
+
+  @Override
+  public Builder toBuilder()
+  {
+    return new Builder().copyFrom(this);
+  }
+
+  public static class Builder extends SeekableStreamSupervisorSpec.Builder<Builder>
+  {
+    @Override
+    protected Builder self()
+    {
+      return this;
+    }
+
+    @Override
+    public RabbitStreamSupervisorSpec build()
+    {
+      return new RabbitStreamSupervisorSpec(
+          id,
+          null,
+          dataSchema,
+          (RabbitStreamSupervisorTuningConfig) tuningConfig,
+          (RabbitStreamSupervisorIOConfig) ioConfig,
+          context,
+          suspended,
+          taskStorage,
+          taskMaster,
+          indexerMetadataStorageCoordinator,
+          (RabbitStreamIndexTaskClientFactory) indexTaskClientFactory,
+          mapper,
+          emitter,
+          monitorSchedulerConfig,
+          rowIngestionMetersFactory,
+          supervisorStateManagerConfig
+      );
+    }
+  }
 }

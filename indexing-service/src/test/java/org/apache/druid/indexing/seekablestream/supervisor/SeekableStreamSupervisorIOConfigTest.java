@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
@@ -570,5 +571,46 @@ public class SeekableStreamSupervisorIOConfigTest
 
     Assert.assertFalse(config.isBounded());
     Assert.assertNull(config.getBoundedStreamConfig());
+  }
+
+  private static SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder ioConfigBuilder()
+  {
+    return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withReplicas(1)
+        .withTaskCount(2)
+        .withTaskDuration(new Period("PT1H"))
+        .withLagAggregator(LagAggregator.DEFAULT);
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    final SeekableStreamSupervisorIOConfig config = ioConfigBuilder().build();
+    Assert.assertEquals(config, ioConfigBuilder().build());
+    Assert.assertEquals(config.hashCode(), ioConfigBuilder().build().hashCode());
+    Assert.assertNotEquals(config, null);
+    Assert.assertNotEquals(config, "not an io config");
+    Assert.assertNotEquals(config, ioConfigBuilder().withStream("other").build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withReplicas(9).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withTaskCount(9).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withStopTaskCount(7).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withIdleConfig(new IdleConfig(true, 5L)).build());
+  }
+
+  @Test
+  public void testIdleConfigEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(IdleConfig.class).usingGetClass().verify();
+  }
+
+  @Test
+  public void testDefaultLagAggregatorEquals()
+  {
+    final LagAggregator aggregator = new LagAggregator.DefaultLagAggregator();
+    Assert.assertEquals(aggregator, new LagAggregator.DefaultLagAggregator());
+    Assert.assertEquals(aggregator.hashCode(), new LagAggregator.DefaultLagAggregator().hashCode());
+    Assert.assertNotEquals(aggregator, null);
+    Assert.assertNotEquals(aggregator, "not a lag aggregator");
   }
 }
