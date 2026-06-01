@@ -213,7 +213,7 @@ public class IndexerControllerContext implements ControllerContext
         taskDataSource,
         toolbox.getAuthorizerMapper()
     );
-    toolbox.getChatHandlerProvider().register(controller.queryId(), chatHandler, false);
+    toolbox.getChatHandlerProvider().register(controller.queryId(), chatHandler);
     closer.register(() -> toolbox.getChatHandlerProvider().unregister(controller.queryId()));
   }
 

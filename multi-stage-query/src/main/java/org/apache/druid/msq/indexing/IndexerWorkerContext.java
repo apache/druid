@@ -258,7 +258,7 @@ public class IndexerWorkerContext implements WorkerContext
   {
     final WorkerChatHandler chatHandler =
         new WorkerChatHandler(worker, toolbox.getAuthorizerMapper(), task.getDataSource());
-    toolbox.getChatHandlerProvider().register(worker.id(), chatHandler, false);
+    toolbox.getChatHandlerProvider().register(worker.id(), chatHandler);
     closer.register(() -> toolbox.getChatHandlerProvider().unregister(worker.id()));
   }
 
