@@ -22,7 +22,13 @@ package org.apache.druid.indexing.rabbitstream.supervisor;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.rabbitstream.RabbitStreamIndexTaskModule;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Duration;
@@ -31,6 +37,8 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import static org.easymock.EasyMock.createMock;
 
 public class RabbitStreamSupervisorIOConfigTest
 {
@@ -245,6 +253,35 @@ public class RabbitStreamSupervisorIOConfigTest
     Assert.assertEquals(config.hashCode(), RabbitStreamSupervisorTuningConfig.defaultConfig().hashCode());
     Assert.assertNotEquals(config, null);
     Assert.assertNotEquals(config, "not a tuning config");
+  }
+
+  /**
+   * Drift guard for this class's own fields (base fields are covered by SeekableStreamSupervisorIOConfigTest):
+   * a field omitted from {@code equals} would let a changed spec persist without restarting the supervisor.
+   */
+  @Test
+  public void testEqualsContractCoversAllFields()
+  {
+    EqualsVerifier.forClass(RabbitStreamSupervisorIOConfig.class)
+                  .usingGetClass()
+                  .withRedefinedSuperclass()
+                  .withIgnoredFields("taskCountExplicit", "autoScalerEnabled")
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .withPrefabValues(Optional.class, Optional.of("a"), Optional.of("b"))
+                  .withPrefabValues(InputFormat.class, createMock(InputFormat.class), createMock(InputFormat.class))
+                  .withPrefabValues(AutoScalerConfig.class, createMock(AutoScalerConfig.class), createMock(AutoScalerConfig.class))
+                  .withPrefabValues(LagAggregator.class, createMock(LagAggregator.class), createMock(LagAggregator.class))
+                  .verify();
+  }
+
+  @Test
+  public void testTuningConfigEqualsContractCoversAllFields()
+  {
+    EqualsVerifier.forClass(RabbitStreamSupervisorTuningConfig.class)
+                  .usingGetClass()
+                  .withRedefinedSuperclass()
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .verify();
   }
 
 }

@@ -165,29 +165,36 @@ public class SupervisorResource
                            .build();
           }
 
-          if (Boolean.TRUE.equals(skipRestartIfUnmodified) && !manager.shouldUpdateSupervisor(spec)) {
-            // No restart needed, but still persist the spec if it actually changed (e.g. a taskCount
-            // change under autoscaling) so the metadata store reflects the latest submission.
-            manager.updateSupervisorSpecWithoutRestart(spec);
-            return Response.ok(ImmutableMap.of("id", spec.getId(), "restarted", false)).build();
+          // Decide and apply atomically so the restart decision cannot go stale under a concurrent POST.
+          final SupervisorManager.SpecUpdateOutcome outcome =
+              manager.createOrUpdateAndStartSupervisor(spec, Boolean.TRUE.equals(skipRestartIfUnmodified));
+
+          // Audit any path that mutated the persisted spec; a no-op UNCHANGED submission is not audited.
+          if (outcome != SupervisorManager.SpecUpdateOutcome.UNCHANGED) {
+            auditSupervisorUpdate(spec, req);
           }
 
-          manager.createOrUpdateAndStartSupervisor(spec);
-
-          final String auditPayload
-              = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
-          auditManager.doAudit(
-              AuditEntry.builder()
-                        .key(spec.getId())
-                        .type("supervisor")
-                        .auditInfo(AuthorizationUtils.buildAuditInfo(req))
-                        .request(AuthorizationUtils.buildRequestInfo("overlord", req))
-                        .payload(auditPayload)
-                        .build()
-          );
-
-          return Response.ok(ImmutableMap.of("id", spec.getId(), "restarted", true)).build();
+          final boolean restarted = outcome == SupervisorManager.SpecUpdateOutcome.RESTARTED;
+          return Response.ok(ImmutableMap.of("id", spec.getId(), "restarted", restarted)).build();
         }
+    );
+  }
+
+  /**
+   * Records a supervisor-update audit entry, for every {@link #specPost} path that mutates the persisted spec.
+   */
+  private void auditSupervisorUpdate(final SupervisorSpec spec, final HttpServletRequest req)
+  {
+    final String auditPayload
+        = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
+    auditManager.doAudit(
+        AuditEntry.builder()
+                  .key(spec.getId())
+                  .type("supervisor")
+                  .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                  .request(AuthorizationUtils.buildRequestInfo("overlord", req))
+                  .payload(auditPayload)
+                  .build()
     );
   }
 

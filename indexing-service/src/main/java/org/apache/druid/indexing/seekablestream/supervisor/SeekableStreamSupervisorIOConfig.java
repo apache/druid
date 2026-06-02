@@ -376,9 +376,11 @@ public abstract class SeekableStreamSupervisorIOConfig
   }
 
   /**
-   * Returns a builder pre-populated with this config's values, so callers can produce a modified
-   * copy (for example with a different {@code taskCount}) without mutating this instance. Subclasses
-   * override this to return their own builder type carrying stream-specific fields.
+   * Returns a builder pre-populated with this config's values, for producing a modified copy without
+   * mutating this instance. Subclasses <strong>must</strong> override to return their own builder: the
+   * default builder's {@code build()} yields a generic instance whose {@code getClass()} differs from any
+   * subclass, so a non-overriding subclass would never {@link #equals} its original and {@link
+   * SeekableStreamSupervisorSpec#requireRestart} would conservatively force a restart (safe, but unnecessary).
    */
   public SupervisorIOConfigBuilder<?, ?> toBuilder()
   {

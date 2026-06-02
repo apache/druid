@@ -256,7 +256,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void testUpdateSupervisorSpecWithoutRestartPersistsChangedSpecAndDoesNotRestart()
+  public void testCreateOrUpdateSkipRestart_changedNoRestart_persistsWithoutRestart()
   {
     final Capture<TestSupervisorSpec> capturedInsert = Capture.newInstance();
     final Map<String, SupervisorSpec> existingSpecs =
@@ -269,25 +269,62 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
 
     manager.start();
+    // version differs (byte change) but requireRestart() is false.
     final SupervisorSpec updated = new VersionedTestSupervisorSpec("id1", supervisor1, 2);
-    Assert.assertTrue(manager.updateSupervisorSpecWithoutRestart(updated));
+    Assert.assertEquals(
+        SupervisorManager.SpecUpdateOutcome.PERSISTED_WITHOUT_RESTART,
+        manager.createOrUpdateAndStartSupervisor(updated, true)
+    );
     Assert.assertSame(updated, capturedInsert.getValue());
     Assert.assertSame(updated, manager.getSupervisorSpec("id1").get());
     verifyAll();
   }
 
   @Test
-  public void testUpdateSupervisorSpecWithoutRestartIsNoopForIdenticalSpec()
+  public void testCreateOrUpdateSkipRestart_identicalSpec_isNoop()
   {
     final Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", new TestSupervisorSpec("id1", supervisor1));
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
     EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
-    // No insert expected for an identical spec.
+    // No insert and no stop expected for an identical spec.
     replayAll();
 
     manager.start();
-    Assert.assertFalse(manager.updateSupervisorSpecWithoutRestart(new TestSupervisorSpec("id1", supervisor1)));
+    Assert.assertEquals(
+        SupervisorManager.SpecUpdateOutcome.UNCHANGED,
+        manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec("id1", supervisor1), true)
+    );
+    verifyAll();
+  }
+
+  @Test
+  public void testCreateOrUpdateSkipRestart_changedRequiringRestart_restartsAndPersists()
+  {
+    final Map<String, SupervisorSpec> existingSpecs =
+        ImmutableMap.of("id1", new VersionedTestSupervisorSpec("id1", supervisor1, 1));
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    replayAll();
+    manager.start();
+    verifyAll();
+
+    resetAll();
+    // A changed spec that requires a restart must be fully applied (stop + recreate + persist), even on the
+    // skip-restart path — it must never be silently dropped or persisted without restarting.
+    supervisor1.stop(true);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.anyObject());
+    replayAll();
+
+    final SupervisorSpec updated = new VersionedTestSupervisorSpec("id1", supervisor1, 2, true);
+    Assert.assertEquals(
+        SupervisorManager.SpecUpdateOutcome.RESTARTED,
+        manager.createOrUpdateAndStartSupervisor(updated, true)
+    );
+    Assert.assertSame(updated, manager.getSupervisorSpec("id1").get());
     verifyAll();
   }
 
@@ -1477,17 +1514,34 @@ public class SupervisorManagerTest extends EasyMockSupport
   private static class VersionedTestSupervisorSpec extends TestSupervisorSpec
   {
     private final int version;
+    private final boolean requireRestart;
 
     VersionedTestSupervisorSpec(String id, Supervisor supervisor, int version)
     {
+      this(id, supervisor, version, false);
+    }
+
+    VersionedTestSupervisorSpec(String id, Supervisor supervisor, int version, boolean requireRestart)
+    {
       super(id, supervisor);
       this.version = version;
+      this.requireRestart = requireRestart;
     }
 
     @JsonProperty
     public int getVersion()
     {
       return version;
+    }
+
+    /**
+     * Lets a test model either a no-restart change (default) or a restart-requiring change. (The default
+     * {@link SupervisorSpec#requireRestart} is conservative and returns true.)
+     */
+    @Override
+    public boolean requireRestart(SupervisorSpec old)
+    {
+      return requireRestart;
     }
   }
 }
