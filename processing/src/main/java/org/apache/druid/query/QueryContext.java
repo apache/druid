@@ -38,6 +38,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -235,6 +236,19 @@ public class QueryContext
   public <E extends Enum<E>> E getEnum(String key, Class<E> clazz, E defaultValue)
   {
     return QueryContexts.getAsEnum(key, get(key), clazz, defaultValue);
+  }
+
+  /**
+   * Return a value as a {@link Set} of strings, returning {@code null} if the
+   * context value is not set. The context value may be a JSON array-like
+   * {@link java.util.Collection} or a single string.
+   *
+   * @throws BadQueryContextException for an invalid value
+   */
+  @Nullable
+  public Set<String> getStringSet(final String key)
+  {
+    return QueryContexts.getAsStringSet(key, get(key));
   }
 
   public Granularity getGranularity(String key, ObjectMapper jsonMapper)
@@ -619,6 +633,12 @@ public class QueryContext
         CloneQueryMode.class,
         QueryContexts.DEFAULT_CLONE_QUERY_MODE
     );
+  }
+
+  @Nullable
+  public Set<String> getQueryableHistoricalTiers()
+  {
+    return getStringSet(QueryContexts.QUERYABLE_HISTORICAL_TIERS);
   }
 
   public boolean getEnableRewriteJoinToFilter()
