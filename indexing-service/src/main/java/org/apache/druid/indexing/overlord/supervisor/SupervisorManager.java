@@ -199,12 +199,27 @@ public class SupervisorManager implements SupervisorStatsProvider
   }
 
   /**
-   * Persists a changed spec and updates the in-memory spec reference <em>without</em> stopping or
-   * recreating the running supervisor. Used when a re-submitted spec does not require a restart (see
-   * {@link #shouldUpdateSupervisor}) but should still be recorded so the metadata store reflects the
-   * latest submission. No-op (returns false) if the spec is byte-identical to the running spec.
+   * Outcome of {@link #createOrUpdateAndStartSupervisor(SupervisorSpec, boolean)}.
    */
-  public boolean updateSupervisorSpecWithoutRestart(SupervisorSpec spec)
+  public enum SpecUpdateOutcome
+  {
+    /** Spec was byte-identical to the running spec and {@code skipRestartIfUnmodified} was set: nothing done. */
+    UNCHANGED,
+    /** Spec changed but did not require a restart: persisted to metadata, running supervisor left in place. */
+    PERSISTED_WITHOUT_RESTART,
+    /** Supervisor was (re)created and started; spec persisted if it changed. */
+    RESTARTED
+  }
+
+  /**
+   * Decides whether the submitted spec needs a restart and applies it under a single lock, so the decision
+   * cannot go stale between deciding and acting (which would let a concurrent POST drop a write or persist a
+   * spec that the running supervisor needs to be recreated for). With {@code skipRestartIfUnmodified} set, an
+   * unchanged spec is a no-op and a changed spec whose {@link SupervisorSpec#requireRestart} is false (e.g. a
+   * taskCount change under autoscaling) is persisted without recreating the supervisor; otherwise the
+   * supervisor is stopped and recreated (the only behavior when the flag is false).
+   */
+  public SpecUpdateOutcome createOrUpdateAndStartSupervisor(SupervisorSpec spec, boolean skipRestartIfUnmodified)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(spec, "spec");
@@ -214,13 +229,28 @@ public class SupervisorManager implements SupervisorStatsProvider
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
       final Pair<Supervisor, SupervisorSpec> current = supervisors.get(spec.getId());
-      if (current == null || current.rhs == null || !isSpecChangedAndValidate(spec)) {
-        return false;
+      final boolean isNew = current == null || current.rhs == null;
+      final boolean specChanged = isSpecChangedAndValidate(spec);
+
+      if (skipRestartIfUnmodified && !isNew) {
+        if (!specChanged) {
+          return SpecUpdateOutcome.UNCHANGED;
+        }
+        if (!spec.requireRestart(current.rhs)) {
+          // Changed but no restart needed: persist and swap the in-memory reference, leaving the running
+          // supervisor in place.
+          spec.merge(current.rhs);
+          metadataSupervisorManager.insert(spec.getId(), spec);
+          supervisors.put(spec.getId(), Pair.of(current.lhs, spec));
+          return SpecUpdateOutcome.PERSISTED_WITHOUT_RESTART;
+        }
       }
-      spec.merge(current.rhs);
-      metadataSupervisorManager.insert(spec.getId(), spec);
-      supervisors.put(spec.getId(), Pair.of(current.lhs, spec));
-      return true;
+
+      // Restart path: stop+recreate, persisting the spec when it changed.
+      final SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
+      spec.merge(existingSpec);
+      createAndStartSupervisorInternal(spec, specChanged);
+      return SpecUpdateOutcome.RESTARTED;
     }
   }
 
@@ -242,6 +272,8 @@ public class SupervisorManager implements SupervisorStatsProvider
       }
     }
     catch (JsonProcessingException ex) {
+      // Treat an unserializable spec as changed (and skip validateSpecUpdateTo, since we cannot diff);
+      // matches prior behavior.
       log.warn("Failed to write spec as bytes for spec_id[%s]", spec.getId());
       return true;
     }

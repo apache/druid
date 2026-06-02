@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream.supervisor;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
@@ -602,6 +603,26 @@ public class SeekableStreamSupervisorIOConfigTest
   public void testIdleConfigEqualsAndHashCode()
   {
     EqualsVerifier.forClass(IdleConfig.class).usingGetClass().verify();
+  }
+
+  /**
+   * Drift guard: the supervisor restart decision is equality-based, so any field omitted from
+   * {@code equals} would let a changed spec persist without restarting. EqualsVerifier reflects over the
+   * fields and fails automatically on a newly-added unused field — only abstract field types need prefab
+   * values. {@code taskCountExplicit}/{@code autoScalerEnabled} are derived hints (ignored); {@code taskCount}
+   * is mutable (NONFINAL_FIELDS suppressed).
+   */
+  @Test
+  public void testEqualsContractCoversAllFields()
+  {
+    EqualsVerifier.forClass(SeekableStreamSupervisorIOConfig.class)
+                  .usingGetClass()
+                  .withIgnoredFields("taskCountExplicit", "autoScalerEnabled")
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .withPrefabValues(InputFormat.class, mock(InputFormat.class), mock(InputFormat.class))
+                  .withPrefabValues(AutoScalerConfig.class, mock(AutoScalerConfig.class), mock(AutoScalerConfig.class))
+                  .withPrefabValues(LagAggregator.class, mock(LagAggregator.class), mock(LagAggregator.class))
+                  .verify();
   }
 
   @Test

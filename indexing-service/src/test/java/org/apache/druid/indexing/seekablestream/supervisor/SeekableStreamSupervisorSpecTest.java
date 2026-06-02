@@ -1489,6 +1489,30 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     Assert.assertTrue(seed.toBuilder().build().requireRestart(new NoopSupervisorSpec("id", ImmutableList.of("ds"))));
   }
 
+  @Test
+  public void testRequireRestart_disablingAutoscalerWithTaskCountChangeRestarts()
+  {
+    // The old spec has autoscaling enabled, so taskCount is neutralized in the comparison. The new
+    // spec disables autoscaling and bumps taskCount; the autoScalerConfig difference must still force
+    // a restart even though the taskCount difference alone would not.
+    final SeekableStreamSupervisorSpec oldSpec =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null))).toBuilder().build();
+    final SeekableStreamSupervisorSpec newSpec =
+        buildSpecWithIoConfig("id", createIOConfig(5, null)).toBuilder().build();
+    Assert.assertTrue(newSpec.requireRestart(oldSpec));
+  }
+
+  @Test
+  public void testRequireRestart_tuningConfigChangeRestarts()
+  {
+    // No autoscaler, so taskCount is not neutralized; only the tuningConfig differs between the specs.
+    final TestSeekableStreamSupervisorSpec seed = buildSpecWithIoConfig("id", createIOConfig(2, null));
+    final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().build();
+    final SeekableStreamSupervisorSpec newSpec =
+        seed.toBuilder().tuningConfig(EasyMock.mock(SeekableStreamSupervisorTuningConfig.class)).build();
+    Assert.assertTrue(newSpec.requireRestart(oldSpec));
+  }
+
   private void assertMergeResult(
       @Nullable TestSeekableStreamSupervisorSpec existingSpec,
       TestSeekableStreamSupervisorSpec newSpec,
