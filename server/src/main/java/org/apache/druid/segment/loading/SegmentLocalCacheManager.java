@@ -1767,24 +1767,32 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   /**
    * A {@link ListeningExecutorService} that caps the number of concurrently-running submitted tasks at a semaphore's
-   * permit count, acquiring a permit (uninterruptibly, on the worker thread) before each task body runs and releasing
-   * it after. Used to bound concurrent virtual-storage on-demand loads when the backing executor is an unbounded
-   * thread-per-virtual-thread executor: the permit count is the concurrency bound, not the thread count, and the wait
-   * for a permit parks a virtual thread rather than blocking the submitter.
+   * permit count, acquiring a permit (on the worker thread) before each task body runs and releasing it after. Used to
+   * bound concurrent virtual-storage on-demand loads when the backing executor is an unbounded thread-per-virtual-thread
+   * executor: the permit count is the concurrency bound, not the thread count, and the wait for a permit parks a virtual
+   * thread rather than blocking the submitter.
    * <p>
-   * Only {@code execute}/{@code submit} are bounded; the only submission paths on-demand load work uses (including
-   * the {@link PartialBundleAcquirer#getDownloadExec} column-download path). {@code invokeAll}/{@code invokeAny} throw
-   * {@link UnsupportedOperationException} so the concurrency bound can never be silently bypassed by a future caller.
+   * The permit wait is <b>interruptible</b>: a task whose future is canceled with {@code mayInterruptIfRunning} (or a
+   * {@code shutdownNow}) while it is parked on the permit is interrupted out of the wait and aborts before running its
+   * body. Canceling a query stops not only its queued column downloads but also those blocked on the permit,
+   * before any deep-storage I/O begins. A task that has already passed the permit and started its body runs to
+   * completion (aborting in-flight reads is handled separately by the task itself, not here).
+   * <p>
+   * Only {@code execute}/{@code submit} are bounded; those are the only submission paths on-demand load work uses
+   * (including the {@link PartialBundleAcquirer#getDownloadExec} column-download path). {@code invokeAll}/
+   * {@code invokeAny} throw {@link UnsupportedOperationException} so the concurrency bound can never be silently
+   * bypassed by a future caller.
    * <p>
    * Callers must not submit a task that itself blocks on another task submitted to this executor while holding a
    * permit, or all permits could be exhausted by waiters; the on-demand load tasks here never nest submissions.
    */
-  private static final class PermitBoundedListeningExecutorService extends ForwardingListeningExecutorService
+  @VisibleForTesting
+  static final class PermitBoundedListeningExecutorService extends ForwardingListeningExecutorService
   {
     private final ListeningExecutorService delegate;
     private final Semaphore permits;
 
-    private PermitBoundedListeningExecutorService(ListeningExecutorService delegate, Semaphore permits)
+    PermitBoundedListeningExecutorService(ListeningExecutorService delegate, Semaphore permits)
     {
       this.delegate = delegate;
       this.permits = permits;
@@ -1847,7 +1855,16 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     private Runnable withPermit(Runnable task)
     {
       return () -> {
-        permits.acquireUninterruptibly();
+        try {
+          permits.acquire();
+        }
+        catch (InterruptedException e) {
+          // Interrupted while waiting for a permit (e.g. the task's future was canceled with mayInterruptIfRunning).
+          // Abort before running the body. Restore the flag and surface as a failure rather than a silent success;
+          // if the future was canceled it already reports as such, so this only matters for a stray interrupt.
+          Thread.currentThread().interrupt();
+          throw new RuntimeException(e);
+        }
         try {
           task.run();
         }
@@ -1860,7 +1877,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     private <T> Callable<T> withPermit(Callable<T> task)
     {
       return () -> {
-        permits.acquireUninterruptibly();
+        permits.acquire();
         try {
           return task.call();
         }

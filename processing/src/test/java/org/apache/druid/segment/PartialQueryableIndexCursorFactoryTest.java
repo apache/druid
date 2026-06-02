@@ -20,8 +20,11 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ForwardingListeningExecutorService;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
@@ -59,14 +62,17 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
@@ -256,7 +262,9 @@ class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
       rangeReader.resetCount();
 
       // Hold the executor with a pre-queued blocker so the actual download task can't start.
-      gatedExec.submit(() -> {
+      // assign the blocker future to an (intentionally unused) local so errorprone's CheckReturnValue is satisfied
+      @SuppressWarnings("unused")
+      ListenableFuture<?> unused = gatedExec.submit(() -> {
         try {
           gate.await();
         }
@@ -605,7 +613,9 @@ class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
     try (IndexAndMapper opened = openIndex(rangeReader, "close_before_ready")) {
       final PartialQueryableIndex index = opened.index();
       // Queue the gate first so the download task can't start until we release it.
-      gatedExec.submit(() -> {
+      // assign the blocker future to an (intentionally unused) local so errorprone's CheckReturnValue is satisfied
+      @SuppressWarnings("unused")
+      ListenableFuture<?> unused = gatedExec.submit(() -> {
         try {
           gate.await();
         }
@@ -635,6 +645,78 @@ class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
     finally {
       gatedExec.shutdownNow();
       rawExec.shutdownNow();
+    }
+  }
+
+  @Test
+  void testCloseBeforeReadyCancelsColumnDownloadsAndReleasesHoldOnce() throws IOException
+  {
+    // When the awaiter closes the holder before it's ready (query cancel/timeout), the canceler must cancel every
+    // submitted column-download future and release the bundle hold exactly once (the canceler and the resulting
+    // failure callback both try to release it). A recording executor captures each submitted task as a future that
+    // never completes and never runs the task, so the holder stays not-ready and we can observe the cancellation.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "cancel_before_ready")) {
+      final PartialQueryableIndex index = opened.index();
+
+      final List<ListenableFuture<?>> submitted = new ArrayList<>();
+      final ListeningExecutorService recordingExec = new ForwardingListeningExecutorService()
+      {
+        @Override
+        protected ListeningExecutorService delegate()
+        {
+          return realExec; // never used; only submit(Callable) is overridden
+        }
+
+        @Override
+        public <T> ListenableFuture<T> submit(Callable<T> task)
+        {
+          final SettableFuture<T> future = SettableFuture.create();
+          submitted.add(future);
+          return future; // never run the task, so the download stays pending
+        }
+      };
+
+      // A bundle hold whose releases we count, to assert exactly-once release across the canceler + failure callback.
+      final AtomicInteger holdReleases = new AtomicInteger(0);
+      final PartialBundleAcquirer acquirer = new PartialBundleAcquirer()
+      {
+        @Override
+        public Closeable acquire(String bundleName)
+        {
+          return holdReleases::incrementAndGet;
+        }
+
+        @Override
+        public ListeningExecutorService getDownloadExec()
+        {
+          return recordingExec;
+        }
+      };
+
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          V10TimeBoundaryInspector.forBaseProjection(index.getBaseProjectionMetadata(), index.getDataInterval()),
+          acquirer
+      );
+
+      final AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
+
+      // Downloads were submitted but never complete, so the holder is not ready and the hold is still held.
+      Assertions.assertFalse(asyncHolder.isReady(), "downloads never complete, so the holder must not be ready");
+      Assertions.assertFalse(submitted.isEmpty(), "at least one column download should have been submitted");
+      submitted.forEach(f -> Assertions.assertFalse(f.isCancelled(), "futures must not be cancelled before close"));
+      Assertions.assertEquals(0, holdReleases.get(), "hold must still be held while the cursor is loading");
+
+      // Awaiter cancels (closes) before the holder is ready: every pending download is cancelled and the hold drops.
+      asyncHolder.close();
+
+      submitted.forEach(f -> Assertions.assertTrue(f.isCancelled(), "pending column downloads must be cancelled"));
+      Assertions.assertEquals(
+          1,
+          holdReleases.get(),
+          "bundle hold must be released exactly once across the canceler and the failure callback"
+      );
     }
   }
 }

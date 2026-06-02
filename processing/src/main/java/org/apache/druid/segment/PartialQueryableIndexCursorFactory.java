@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Partial-aware {@link CursorFactory} for {@link PartialQueryableIndex}.
@@ -112,6 +113,14 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     // the cursor closes, allowing the cache to later evict the bundle if needed.
     // PartialBundleAcquirer.acquire() throws DruidException on failure.
     final Closeable bundleHold = bundleAcquirer.acquire(bundleName);
+    // Release the bundle hold at most once: the canceler, the success-path holder close, and the failure callback can
+    // all race to release it.
+    final AtomicBoolean holdReleased = new AtomicBoolean(false);
+    final Closeable releaseHoldOnce = () -> {
+      if (holdReleased.compareAndSet(false, true)) {
+        bundleHold.close();
+      }
+    };
 
     try {
       // Submit one materialization task per column so a multi-threaded download executor can fan them out
@@ -124,11 +133,18 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
         }));
       }
 
-      // No canceler: downloads are allowed to complete even if the awaiter cancels. Once they complete and the inner
-      // CursorHolder is handed to asyncHolder.set(), it's owned by the asyncHolder until the awaiter takes one of
-      // two paths: asyncHolder.close() (cancel, closes the held holder) or asyncHolder.release() (success, transfers
-      // ownership to the caller). Either way the holder is drained and nothing leaks.
-      final AsyncCursorHolder asyncHolder = new AsyncCursorHolder(null);
+      // Canceler runs if the awaiter closes this holder before it's ready (e.g. query cancel/timeout). cancel(true)
+      // stops column downloads that haven't begun their deep-storage read yet: queued tasks are skipped, and tasks
+      // parked on the download executor's permit are interrupted out of the (interruptible) wait before doing any I/O.
+      // A download already in its read/write loop runs to completion. After canceling, release the bundle hold. Once
+      // the holder is produced and handed to set(), ownership transfers to the awaiter, which drains it via
+      // close() (cancel) or release() (success); the once-guard keeps the hold release safe across all of these paths.
+      final AsyncCursorHolder asyncHolder = new AsyncCursorHolder(() -> {
+        for (ListenableFuture<?> columnDownload : columnDownloads) {
+          columnDownload.cancel(true);
+        }
+        CloseableUtils.closeAndSuppressExceptions(releaseHoldOnce, ignored -> {});
+      });
       Futures.addCallback(
           Futures.allAsList(columnDownloads),
           new FutureCallback<>()
@@ -136,24 +152,32 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
             @Override
             public void onSuccess(List<Object> ignored)
             {
+              final CursorHolder holder;
               try {
                 final CursorHolder inner = delegate.makeCursorHolderForProjection(spec, matched);
-                final CursorHolder holder = wrapWithBundleRelease(inner, bundleHold);
-                if (!asyncHolder.set(holder)) {
-                  // wrapper was closed while we were producing the holder; close it ourselves so it doesn't leak.
-                  holder.close();
-                }
+                // wrapWithBundleRelease takes ownership of both inner and the bundle hold; from here, closing holder
+                // releases both. Only the makeCursorHolderForProjection build above can throw (the wrap cannot), so
+                // the catch only needs to release the still-unowned bundle hold — no inner holder can escape it.
+                holder = wrapWithBundleRelease(inner, releaseHoldOnce);
               }
               catch (Throwable t) {
-                CloseableUtils.closeAndSuppressExceptions(bundleHold, t::addSuppressed);
+                CloseableUtils.closeAndSuppressExceptions(releaseHoldOnce, t::addSuppressed);
                 asyncHolder.setException(t);
+                return;
+              }
+              if (!asyncHolder.set(holder)) {
+                // wrapper was closed (awaiter cancelled) while we were producing the holder; close it ourselves so
+                // the holder, its inner, and the bundle hold don't leak.
+                holder.close();
               }
             }
 
             @Override
             public void onFailure(Throwable t)
             {
-              CloseableUtils.closeAndSuppressExceptions(bundleHold, t::addSuppressed);
+              // Includes the cancellation case: the canceler's cancel(true) makes Futures.allAsList complete
+              // exceptionally with a CancellationException. releaseHoldOnce is a no-op if the canceler already ran.
+              CloseableUtils.closeAndSuppressExceptions(releaseHoldOnce, t::addSuppressed);
               asyncHolder.setException(t);
             }
           },
@@ -165,10 +189,10 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     }
     catch (Throwable t) {
       // Failure between acquire and the addCallback wiring (getDownloadExec, downloadExec.submit shut-down rejection,
-      // Futures.addCallback rejecting on a bad executor, etc.). Ownership of bundleHold hasn't transferred to the
+      // Futures.addCallback rejecting on a bad executor, etc.). Ownership of the bundle hold hasn't transferred to the
       // callback yet, so release it here. Already-submitted download tasks will complete with no callback wired,
       // their captured row-selector refs drop naturally.
-      throw CloseableUtils.closeAndWrapInCatch(t, bundleHold);
+      throw CloseableUtils.closeAndWrapInCatch(t, releaseHoldOnce);
     }
   }
 

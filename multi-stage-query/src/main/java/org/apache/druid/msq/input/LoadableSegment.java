@@ -71,6 +71,11 @@ public interface LoadableSegment
    * when finished with it. If the returned {@link Optional} is empty, the segment is not cached and the caller
    * should use {@link #acquire()} to load it.
    *
+   * The returned {@link Segment} is mounted but, for a partial-download (virtual storage) segment, may not be fully
+   * downloaded yet: its data is fetched on demand at cursor-build time. Callers must therefore access it through the
+   * async API ({@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync}) rather than the
+   * synchronous {@code makeCursorHolder}, which refuses to download on a processing thread.
+   *
    * @return an Optional containing the cached Segment if available, or empty if not cached
    */
   Optional<Segment> acquireIfCached();
@@ -78,6 +83,11 @@ public interface LoadableSegment
   /**
    * Acquire the actual segment. Non-blocking operation. Once this is called, callers are responsible for closing the
    * {@link AcquireSegmentAction}.
+   *
+   * The returned {@link Segment} is mounted but, for a partial-download (virtual storage) segment, may not be fully
+   * downloaded yet: its data is fetched on demand at cursor-build time. Callers must therefore access it through the
+   * async API ({@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync}) rather than the
+   * synchronous {@code makeCursorHolder}, which refuses to download on a processing thread.
    *
    * @throws DruidException if the segment has already been acquired
    */
