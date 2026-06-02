@@ -22,7 +22,6 @@ package org.apache.druid.iceberg.input;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -32,15 +31,12 @@ import org.apache.druid.data.input.InputSourceFactory;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.InputStats;
-import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.iceberg.Table;
-import org.apache.iceberg.TableScan;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -50,45 +46,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
-/**
- * Inputsource to ingest data managed by the Iceberg table format.
- * This inputsource talks to the configured catalog, executes any configured filters and retrieves the data file paths upto the latest snapshot associated with the iceberg table.
- * The data file paths are then provided to a native {@link SplittableInputSource} implementation depending on the warehouse source defined.
- */
-public class IcebergInputSource implements SplittableInputSource<List<String>>
+public class IcebergInputSource extends AbstractIcebergInputSource
+    implements SplittableInputSource<List<String>>
 {
   public static final String TYPE_KEY = "iceberg";
   private static final Logger log = new Logger(IcebergInputSource.class);
 
   @JsonProperty
-  private final String tableName;
-
-  @JsonProperty
-  private final String namespace;
-
-  @JsonProperty
-  private IcebergCatalog icebergCatalog;
-
-  @JsonProperty
-  private IcebergFilter icebergFilter;
-
-  @JsonProperty
-  private InputSourceFactory warehouseSource;
-
-  @JsonProperty
-  private final DateTime snapshotTime;
-
-  @JsonProperty
-  private final ResidualFilterMode residualFilterMode;
-
-  @JsonProperty
-  private final boolean useArrowReader;
-
-  @JsonProperty
-  private final int arrowBatchSize;
+  private final InputSourceFactory warehouseSource;
 
   private boolean isLoaded = false;
-
   private SplittableInputSource delegateInputSource;
 
   @JsonCreator
@@ -100,21 +67,26 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       @JsonProperty("warehouseSource") InputSourceFactory warehouseSource,
       @JsonProperty("snapshotTime") @Nullable DateTime snapshotTime,
       @JsonProperty("residualFilterMode") @Nullable ResidualFilterMode residualFilterMode,
+      // deprecated: use type "iceberg_arrow" instead. retained for spec back-compat.
       @JsonProperty("useArrowReader") @Nullable Boolean useArrowReader,
       @JsonProperty("arrowBatchSize") @Nullable Integer arrowBatchSize
   )
   {
-    this.tableName = Preconditions.checkNotNull(tableName, "tableName cannot be null");
-    this.namespace = Preconditions.checkNotNull(namespace, "namespace cannot be null");
-    this.icebergCatalog = Preconditions.checkNotNull(icebergCatalog, "icebergCatalog cannot be null");
-    this.icebergFilter = icebergFilter;
+    super(tableName, namespace, icebergFilter, icebergCatalog, snapshotTime, residualFilterMode);
     this.warehouseSource = Preconditions.checkNotNull(warehouseSource, "warehouseSource cannot be null");
-    this.snapshotTime = snapshotTime;
-    this.residualFilterMode = Configs.valueOrDefault(residualFilterMode, ResidualFilterMode.IGNORE);
-    this.useArrowReader = useArrowReader != null && useArrowReader;
-    this.arrowBatchSize = arrowBatchSize != null && arrowBatchSize > 0
-                          ? arrowBatchSize
-                          : IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE;
+    if (useArrowReader != null && useArrowReader) {
+      log.warn(
+          "useArrowReader on type[iceberg] is deprecated and ignored; "
+          + "switch to type[%s] for Arrow vectorized reads",
+          IcebergArrowInputSource.TYPE_KEY
+      );
+    }
+  }
+
+  @JsonProperty("warehouseSource")
+  public InputSourceFactory getWarehouseSource()
+  {
+    return warehouseSource;
   }
 
   @Override
@@ -130,23 +102,6 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       File temporaryDirectory
   )
   {
-    if (useArrowReader) {
-      final Table table = icebergCatalog.retrieveTable(namespace, tableName);
-      if (icebergFilter != null) {
-        final TableScan filteredScan = icebergFilter.filter(
-            table.newScan().caseSensitive(icebergCatalog.isCaseSensitive())
-        );
-        icebergCatalog.enforceResidualMode(filteredScan, getResidualFilterMode());
-      }
-      return new IcebergArrowInputSourceReader(
-          table,
-          icebergFilter,
-          snapshotTime,
-          icebergCatalog.isCaseSensitive(),
-          inputRowSchema,
-          arrowBatchSize
-      );
-    }
     if (!isLoaded) {
       retrieveIcebergDatafiles();
     }
@@ -159,15 +114,6 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       @Nullable SplitHintSpec splitHintSpec
   ) throws IOException
   {
-    if (useArrowReader) {
-      log.info(
-          "useArrowReader=true: input source is non-splittable; "
-          + "subtasks will not be created for table[%s.%s]",
-          namespace,
-          tableName
-      );
-      return Stream.of(new InputSplit<>(Collections.emptyList()));
-    }
     if (!isLoaded) {
       retrieveIcebergDatafiles();
     }
@@ -177,9 +123,6 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   @Override
   public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException
   {
-    if (useArrowReader) {
-      return 1;
-    }
     if (!isLoaded) {
       retrieveIcebergDatafiles();
     }
@@ -189,68 +132,13 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   @Override
   public InputSource withSplit(InputSplit<List<String>> inputSplit)
   {
-    if (useArrowReader) {
-      return this;
-    }
     return getDelegateInputSource().withSplit(inputSplit);
   }
 
   @Override
   public SplitHintSpec getSplitHintSpecOrDefault(@Nullable SplitHintSpec splitHintSpec)
   {
-    if (useArrowReader) {
-      return splitHintSpec == null ? new MaxSizeSplitHintSpec(null, null) : splitHintSpec;
-    }
     return getDelegateInputSource().getSplitHintSpecOrDefault(splitHintSpec);
-  }
-
-  @JsonProperty
-  public String getTableName()
-  {
-    return tableName;
-  }
-
-  @JsonProperty
-  public String getNamespace()
-  {
-    return namespace;
-  }
-
-  @JsonProperty
-  public IcebergCatalog getIcebergCatalog()
-  {
-    return icebergCatalog;
-  }
-
-  @JsonProperty
-  public IcebergFilter getIcebergFilter()
-  {
-    return icebergFilter;
-  }
-
-  @Nullable
-  @JsonProperty
-  public DateTime getSnapshotTime()
-  {
-    return snapshotTime;
-  }
-
-  @JsonProperty
-  public ResidualFilterMode getResidualFilterMode()
-  {
-    return residualFilterMode;
-  }
-
-  @JsonProperty
-  public boolean isUseArrowReader()
-  {
-    return useArrowReader;
-  }
-
-  @JsonProperty
-  public int getArrowBatchSize()
-  {
-    return arrowBatchSize;
   }
 
   public SplittableInputSource getDelegateInputSource()
@@ -260,7 +148,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
 
   protected void retrieveIcebergDatafiles()
   {
-    List<String> snapshotDataFiles = icebergCatalog.extractSnapshotDataFiles(
+    final List<String> snapshotDataFiles = icebergCatalog.extractSnapshotDataFiles(
         getNamespace(),
         getTableName(),
         getIcebergFilter(),
@@ -275,11 +163,6 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     isLoaded = true;
   }
 
-  /**
-   * This input source is used in place of a delegate input source if there are no input file paths.
-   * Certain input sources cannot be instantiated with an empty input file list and so composing input sources such as IcebergInputSource
-   * may use this input source as delegate in such cases.
-   */
   private static class EmptyInputSource implements SplittableInputSource
   {
     @Override
@@ -306,15 +189,13 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
         @Override
         public CloseableIterator<InputRow> read(InputStats inputStats)
         {
-          return CloseableIterators.wrap(Collections.emptyIterator(), () -> {
-          });
+          return CloseableIterators.wrap(Collections.emptyIterator(), () -> {});
         }
 
         @Override
         public CloseableIterator<InputRowListPlusRawValues> sample()
         {
-          return CloseableIterators.wrap(Collections.emptyIterator(), () -> {
-          });
+          return CloseableIterators.wrap(Collections.emptyIterator(), () -> {});
         }
       };
     }
@@ -337,7 +218,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     @Override
     public InputSource withSplit(InputSplit split)
     {
-      return null;
+      return this;
     }
   }
 }
