@@ -21,10 +21,8 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.inject.ProvisionException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.StorageNodeModule;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -61,12 +59,12 @@ public class StorageLoadingThreadPool
 
     if (config.isVirtualStorage()) {
       if (config.getVirtualStorageLoadThreads() <= 0) {
-        throw new ProvisionException(
-            StringUtils.format(
-                "virtualStorageLoadThreads must be greater than 0, got [%d]",
-                config.getVirtualStorageLoadThreads()
-            )
-        );
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                "virtualStorageLoadThreads must be greater than 0, got [%d]",
+                                config.getVirtualStorageLoadThreads()
+                            );
       }
       if (config.isVirtualStorageUseVirtualThreads()) {
         log.info(

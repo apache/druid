@@ -136,6 +136,13 @@ public class RegularLoadableSegment implements LoadableSegment
     final Optional<Segment> cachedSegment = segmentManager.acquireCachedSegment(segmentId);
     if (cachedSegment.isPresent()) {
       acquired = true;
+
+      // Update counters in the manner of LoadableSegmentUtils#countedLoad (which we aren't using here).
+      if (inputCounters != null) {
+        final int rowCount = LoadableSegmentUtils.getSegmentRowCount(cachedSegment.get());
+        final long byteCount = cachedDataSegment != null ? cachedDataSegment.getSize() : 0;
+        inputCounters.addFile(rowCount, byteCount);
+      }
     }
     return cachedSegment;
   }

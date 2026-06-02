@@ -160,6 +160,7 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.external.StorageLocationVirtualStorageManager;
 import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -854,6 +855,18 @@ public class MSQTestBase extends BaseCalciteQueryTest
         50,
         10_000_000,
         10_000_000
+    );
+  }
+
+  /**
+   * Creates an non-functional {@link VirtualStorageManager} suitable for tests.
+   */
+  public static VirtualStorageManager makeNilVirtualStorageManager()
+  {
+    return new StorageLocationVirtualStorageManager(
+        ImmutableList.of(),
+        new LeastBytesUsedStorageLocationSelectorStrategy(ImmutableList.of()),
+        StorageLoadingThreadPool.none()
     );
   }
 
