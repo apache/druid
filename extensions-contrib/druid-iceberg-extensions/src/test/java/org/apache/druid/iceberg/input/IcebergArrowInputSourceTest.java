@@ -89,6 +89,31 @@ public class IcebergArrowInputSourceTest
   }
 
   @Test
+  public void testReadWithNullInputStatsDoesNotNpe() throws IOException
+  {
+    final IcebergArrowInputSource src = new IcebergArrowInputSource(
+        TABLENAME,
+        NAMESPACE,
+        null,
+        testCatalog,
+        null,
+        null,
+        1024
+    );
+    final InputRowSchema schemaWithMissingTs = new InputRowSchema(
+        new TimestampSpec(null, null, org.apache.druid.java.util.common.DateTimes.utc(0L)),
+        DimensionsSpec.builder().build(),
+        ColumnsFilter.all()
+    );
+    final InputSourceReader reader = src.reader(schemaWithMissingTs, null, FileUtils.createTempDir());
+    try (org.apache.druid.java.util.common.parsers.CloseableIterator<org.apache.druid.data.input.InputRow> it = reader.read()) {
+      while (it.hasNext()) {
+        Assert.assertNotNull(it.next());
+      }
+    }
+  }
+
+  @Test
   public void testIsNotSplittable()
   {
     final IcebergArrowInputSource src = new IcebergArrowInputSource(
