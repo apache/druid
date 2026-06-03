@@ -76,19 +76,21 @@ public class StorageLocationVirtualStorageManager implements VirtualStorageManag
   @Override
   public CachedFile get(String identifier)
   {
-    PopulationLock lock = populationLocks.get(identifier);
+    // We only consult the lock to discover which location the entry was resolved to. No need for synchronization,
+    // because we don't intend to populate it.
+    final PopulationLock lock = populationLocks.get(identifier);
     if (lock == null) {
       return null;
     }
 
-    StorageLocation resolvedLocation = lock.getResolvedLocation();
+    final StorageLocation resolvedLocation = lock.getResolvedLocation();
     if (resolvedLocation == null) {
       // Population is still in flight: the lock exists but doesn't have a location yet.
       // Return that the file doesn't exist instead of blocking.
       return null;
     }
 
-    StorageLocation.ReservationHold<CacheEntry> hold =
+    final StorageLocation.ReservationHold<CacheEntry> hold =
         resolvedLocation.addWeakReservationHoldIfExists(new StringCacheEntryIdentifier(identifier));
     return hold == null ? null : new CachedFile(hold, identifier);
   }
@@ -104,49 +106,50 @@ public class StorageLocationVirtualStorageManager implements VirtualStorageManag
     final PopulationLock lock = populationLocks.computeIfAbsent(identifier, ignored -> new PopulationLock());
 
     synchronized (lock) {
-      StringCacheEntryIdentifier cacheId = new StringCacheEntryIdentifier(identifier);
+      final StringCacheEntryIdentifier cacheId = new StringCacheEntryIdentifier(identifier);
 
       // If multiple threads are trying to reserve the same location, the first one will update the state on the lock
       // so check that first.
-      StorageLocation resolvedLocation = lock.getResolvedLocation();
+      final StorageLocation resolvedLocation = lock.getResolvedLocation();
       if (resolvedLocation == null) {
         // Determining the size often requires an external system call, so we use this supplier to defer it until
         // we absolutely need it
-        long sizeBytes = sizeSupplier.getAsLong();
+        final long sizeBytes = sizeSupplier.getAsLong();
 
         // Try to reserve in each location according to strategy
-        Iterator<StorageLocation> locationIter = strategy.getLocations();
+        final Iterator<StorageLocation> locationIter = strategy.getLocations();
         Throwable lastException = null;
 
         while (locationIter.hasNext()) {
-          StorageLocation location = locationIter.next();
-
-          File locationFile = location.getPath();
+          final StorageLocation location = locationIter.next();
+          final File locationFile = location.getPath();
           try {
-            // Create cache entry that will call populator on mount
-            DownloadableCacheEntry entry = new DownloadableCacheEntry(cacheId, sizeBytes, populator, locationFile)
-            {
-              final AtomicBoolean mounted = new AtomicBoolean(false);
+            // Reserve space and acquire a hold, using a cache entry that will call the populator on mount.
+            final StorageLocation.ReservationHold<CacheEntry> hold = location.addWeakReservationHold(
+                cacheId,
+                () -> new DownloadableCacheEntry(cacheId, sizeBytes, populator, locationFile)
+                {
+                  final AtomicBoolean mounted = new AtomicBoolean(false);
 
-              @Override
-              public void mount(StorageLocation location)
-              {
-                super.mount(location);
-                mounted.set(true);
-              }
+                  @Override
+                  public void mount(StorageLocation location)
+                  {
+                    super.mount(location);
+                    mounted.set(true);
+                  }
 
-              @Override
-              public void unmount()
-              {
-                if (mounted.get()) {
-                  populationLocks.remove(identifier, lock);
+                  @Override
+                  public void unmount()
+                  {
+                    if (mounted.get()) {
+                      populationLocks.remove(identifier, lock);
+                    }
+                    super.unmount();
+                  }
                 }
-                super.unmount();
-              }
-            };
+            );
 
-            // Try to reserve weak space
-            if (!location.reserveWeak(entry)) {
+            if (hold == null) {
               log.debug(
                   "Failed to reserve [%d] bytes for [%s] in location [%s], trying next",
                   sizeBytes,
@@ -158,28 +161,16 @@ public class StorageLocationVirtualStorageManager implements VirtualStorageManag
 
             // Mount the entry (calls populator)
             try {
-              entry.mount(location);
+              hold.getEntry().mount(location);
             }
             catch (Throwable e) {
               try {
-                // Note: Even though the entry is unmounted, space reserved by location.reserveWeak(entry) remains
-                // reserved (albeit unheld). It should be reclaimed eventually if there is space pressure.
-                entry.unmount();
+                hold.close();
               }
               catch (Throwable e2) {
                 e.addSuppressed(e2);
               }
               throw e;
-            }
-
-            // Get a hold on the newly created entry
-            StorageLocation.ReservationHold<CacheEntry> hold =
-                location.addWeakReservationHoldIfExists(entry.getId());
-
-            if (hold == null) {
-              throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                                  .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                                  .build("Entry [%s] disappeared after mounting", identifier);
             }
 
             // Store the resolved location for anything that is waiting on this same lock

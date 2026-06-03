@@ -26,6 +26,7 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.AsyncCursorHolder;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
@@ -41,7 +42,8 @@ import java.util.concurrent.Future;
  * instead of {@link Future}.
  *
  * <p>In addition to {@link #get()}, there is also {@link #release()}. Releasing is not allowed by instances
- * of this class, but may be allowed by subclasses.
+ * of this class, but may be allowed by subclasses. When releasing is allowed, it enables an ownership-transfer
+ * model. See {@link #release()} for more information on this model.
  */
 public class SettableAsyncResource<T> implements AsyncResource<T>
 {
@@ -205,6 +207,13 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
    * Take ownership of the underlying object. After this returns, {@link #close()} on this
    * {@link AsyncResource} is a no-op; the caller is responsible for closing the returned {@code T}. Useful when
    * passing the resource to something else that prefers to take full ownership of it.
+   *
+   * <p>This method enables a resource-transfer model. It is exposed by certain subclasses, such as
+   * {@link AsyncCursorHolder}, where the resource is itself {@link Closeable} and where that close method
+   * encapsulates all necessary resource releasing logic. It is provided for convenience of certain callers,
+   * although note that you must avoid releasing if you intend to use combinators such as
+   * {@link AsyncResources#collect}, {@link AsyncResources#transform}, etc. These combinators will fail to properly
+   * encapsulate resource lifecycle if resources have been released.
    *
    * <p>Throws {@link DruidException} if the holder is not yet ready, has already been released, or if
    * {@link #close()} has been called.

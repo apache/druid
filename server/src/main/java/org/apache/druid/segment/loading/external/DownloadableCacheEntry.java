@@ -193,6 +193,19 @@ class DownloadableCacheEntry implements CacheEntry
     return new File(locationPath, sanitized);
   }
 
+  /**
+   * Converts an arbitrary cache entry identifier (typically a URI or file path) into a filename. The result has
+   * the form {@code <prefix>-<hash>-<suffix>}. The purpose of this sanitization is to provide identifiers for
+   * external paths that filesystem-safe (hence the removal of special characters and shortening of the overall
+   * name), non-colliding (hence the inclusion of a hash), and human-recognizable (hence the inclusion of prefix
+   * and suffix).
+   *
+   * <p>Typically the prefix and suffix are of equal length. However, care is taken to preserve extensions, which
+   * means that the suffix may end up longer than the prefix if this is required to avoid mangling an extension.
+   * This allows downstream code to e.g. detect format or compression based on file extension.
+   *
+   * @throws DruidException if the identifier sanitizes to an empty string
+   */
   static String sanitizePath(final String originalPath)
   {
     String path = originalPath;
@@ -235,7 +248,7 @@ class DownloadableCacheEntry implements CacheEntry
 
     final String result = sanitized.toString();
     if (result.isEmpty()) {
-      throw new IllegalArgumentException("Identifier resulted in empty path after sanitization");
+      throw DruidException.defensive("Identifier resulted in empty path after sanitization");
     }
 
     return result;
