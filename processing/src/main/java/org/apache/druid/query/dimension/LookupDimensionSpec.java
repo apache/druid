@@ -30,12 +30,15 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.query.lookup.LookupExtractorFactory;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.RetainedLookupExtractor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Optional;
 
 public class LookupDimensionSpec implements DimensionSpec
 {
@@ -136,18 +139,31 @@ public class LookupDimensionSpec implements DimensionSpec
   @Override
   public ExtractionFn getExtractionFn()
   {
-    final LookupExtractor lookupExtractor;
+    final LookupExtractor lookupExtractor = getLookupExtractor();
+    return makeLookupExtractionFn(lookupExtractor);
+  }
 
+  private LookupExtractor getLookupExtractor()
+  {
     if (Strings.isNullOrEmpty(name)) {
-      lookupExtractor = this.lookup;
-    } else {
-      lookupExtractor = lookupExtractorFactoryContainerProvider
-          .get(name)
-          .orElseThrow(() -> new ISE("Lookup [%s] not found", name))
-          .getLookupExtractorFactory()
-          .get();
+      return this.lookup;
     }
 
+    final LookupExtractorFactory lookupExtractorFactory = lookupExtractorFactoryContainerProvider
+        .get(name)
+        .orElseThrow(() -> new ISE("Lookup [%s] not found", name))
+        .getLookupExtractorFactory();
+
+    final Optional<RetainedLookupExtractor> retainedLookupExtractor =
+        lookupExtractorFactory.acquireRetainedLookupExtractor();
+
+    // ExtractionFn has no close hook. The RetainedLookupExtractor cleaner releases this reference when the
+    // LookupExtractionFn that owns it becomes unreachable.
+    return retainedLookupExtractor.<LookupExtractor>map(retained -> retained).orElseGet(lookupExtractorFactory);
+  }
+
+  private LookupExtractionFn makeLookupExtractionFn(final LookupExtractor lookupExtractor)
+  {
     return new LookupExtractionFn(
         lookupExtractor,
         retainMissingValue,

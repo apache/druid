@@ -21,10 +21,11 @@ package org.apache.druid.segment.join.lookup;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.query.lookup.LookupExtractorFactory;
+import org.apache.druid.query.lookup.RetainedLookupExtractor;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -41,6 +42,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 
 public class LookupJoinable implements Joinable
 {
@@ -49,16 +51,31 @@ public class LookupJoinable implements Joinable
       LookupColumnSelectorFactory.VALUE_COLUMN
   );
 
+  @Nullable
   private final LookupExtractor extractor;
+  @Nullable
+  private final LookupExtractorFactory lookupExtractorFactory;
 
   private LookupJoinable(LookupExtractor extractor)
   {
     this.extractor = extractor;
+    this.lookupExtractorFactory = null;
+  }
+
+  private LookupJoinable(LookupExtractorFactory lookupExtractorFactory)
+  {
+    this.extractor = null;
+    this.lookupExtractorFactory = lookupExtractorFactory;
   }
 
   public static LookupJoinable wrap(final LookupExtractor extractor)
   {
     return new LookupJoinable(extractor);
+  }
+
+  public static LookupJoinable wrap(final LookupExtractorFactory lookupExtractorFactory)
+  {
+    return new LookupJoinable(lookupExtractorFactory);
   }
 
   @Override
@@ -92,43 +109,52 @@ public class LookupJoinable implements Joinable
       Closer closer
   )
   {
-    return LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, remainderNeeded);
+    final Optional<RetainedLookupExtractor> maybeRetained = acquireRetainedLookupExtractor();
+    final LookupExtractor lookupExtractor = maybeRetained.isPresent() ? maybeRetained.get() : getLookupExtractor();
+
+    maybeRetained.ifPresent(closer::register);
+
+    return LookupJoinMatcher.create(lookupExtractor, leftSelectorFactory, condition, remainderNeeded);
   }
 
   @Override
   public ColumnValuesWithUniqueFlag getMatchableColumnValues(String columnName, boolean includeNull, int maxNumValues)
   {
-    if (LookupColumnSelectorFactory.KEY_COLUMN.equals(columnName) && extractor.supportsAsMap()) {
-      final Set<String> keys = extractor.asMap().keySet();
+    return withLookupExtractor(extractor -> {
+      if (LookupColumnSelectorFactory.KEY_COLUMN.equals(columnName) && extractor.supportsAsMap()) {
+        final Set<String> keys = extractor.asMap().keySet();
 
-      final Set<String> nonMatchingValues;
+        final Set<String> nonMatchingValues;
 
-      if (includeNull) {
-        nonMatchingValues = Collections.emptySet();
-      } else {
-        nonMatchingValues = new HashSet<>();
-        nonMatchingValues.add(null);
-      }
-
-      // size() of Sets.difference is slow; avoid it.
-      int matchingKeys = keys.size();
-
-      for (String value : nonMatchingValues) {
-        if (keys.contains(value)) {
-          matchingKeys--;
+        if (includeNull) {
+          nonMatchingValues = Collections.emptySet();
+        } else {
+          nonMatchingValues = new HashSet<>();
+          nonMatchingValues.add(null);
         }
-      }
 
-      if (matchingKeys > maxNumValues) {
-        return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
-      } else if (matchingKeys == keys.size()) {
-        return new ColumnValuesWithUniqueFlag(keys, true);
+        // size() of Sets.difference is slow; avoid it.
+        int matchingKeys = keys.size();
+
+        for (String value : nonMatchingValues) {
+          if (keys.contains(value)) {
+            matchingKeys--;
+          }
+        }
+
+        if (matchingKeys > maxNumValues) {
+          return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
+        } else if (matchingKeys == keys.size()) {
+          return new ColumnValuesWithUniqueFlag(new HashSet<>(keys), true);
+        } else {
+          final Set<String> matchingValues = new HashSet<>(keys);
+          matchingValues.removeAll(nonMatchingValues);
+          return new ColumnValuesWithUniqueFlag(matchingValues, true);
+        }
       } else {
-        return new ColumnValuesWithUniqueFlag(Sets.difference(keys, nonMatchingValues), true);
+        return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
       }
-    } else {
-      return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
-    }
+    });
   }
 
   @Override
@@ -140,36 +166,38 @@ public class LookupJoinable implements Joinable
       boolean allowNonKeyColumnSearch
   )
   {
-    if (!ALL_COLUMNS.contains(searchColumnName) || !ALL_COLUMNS.contains(retrievalColumnName)) {
-      return Optional.empty();
-    }
-    InDimFilter.ValuesSet correlatedValues;
-    if (LookupColumnSelectorFactory.KEY_COLUMN.equals(searchColumnName)) {
-      if (LookupColumnSelectorFactory.KEY_COLUMN.equals(retrievalColumnName)) {
-        correlatedValues = InDimFilter.ValuesSet.of(searchColumnValue);
-      } else {
-        // This should not happen in practice because the column to be joined on must be a key.
-        correlatedValues = InDimFilter.ValuesSet.of(extractor.apply(searchColumnValue));
-      }
-    } else {
-      if (!allowNonKeyColumnSearch) {
+    return withLookupExtractor(extractor -> {
+      if (!ALL_COLUMNS.contains(searchColumnName) || !ALL_COLUMNS.contains(retrievalColumnName)) {
         return Optional.empty();
       }
-      if (LookupColumnSelectorFactory.VALUE_COLUMN.equals(retrievalColumnName)) {
-        // This should not happen in practice because the column to be joined on must be a key.
-        correlatedValues = InDimFilter.ValuesSet.of(searchColumnValue);
-      } else {
-        // Lookup extractor unapply only provides a list of strings, so we can't respect
-        // maxCorrelationSetSize easily. This should be handled eventually.
-        final Iterator<String> unapplied = extractor.unapplyAll(Collections.singleton(searchColumnValue));
-        if (unapplied != null) {
-          correlatedValues = InDimFilter.ValuesSet.copyOf(unapplied);
+      InDimFilter.ValuesSet correlatedValues;
+      if (LookupColumnSelectorFactory.KEY_COLUMN.equals(searchColumnName)) {
+        if (LookupColumnSelectorFactory.KEY_COLUMN.equals(retrievalColumnName)) {
+          correlatedValues = InDimFilter.ValuesSet.of(searchColumnValue);
         } else {
+          // This should not happen in practice because the column to be joined on must be a key.
+          correlatedValues = InDimFilter.ValuesSet.of(extractor.apply(searchColumnValue));
+        }
+      } else {
+        if (!allowNonKeyColumnSearch) {
           return Optional.empty();
         }
+        if (LookupColumnSelectorFactory.VALUE_COLUMN.equals(retrievalColumnName)) {
+          // This should not happen in practice because the column to be joined on must be a key.
+          correlatedValues = InDimFilter.ValuesSet.of(searchColumnValue);
+        } else {
+          // Lookup extractor unapply only provides a list of strings, so we can't respect
+          // maxCorrelationSetSize easily. This should be handled eventually.
+          final Iterator<String> unapplied = extractor.unapplyAll(Collections.singleton(searchColumnValue));
+          if (unapplied != null) {
+            correlatedValues = InDimFilter.ValuesSet.copyOf(unapplied);
+          } else {
+            return Optional.empty();
+          }
+        }
       }
-    }
-    return Optional.of(correlatedValues);
+      return Optional.of(correlatedValues);
+    });
   }
 
   @Override
@@ -177,5 +205,35 @@ public class LookupJoinable implements Joinable
   {
     // nothing to close for lookup joinables, they are managed externally and have no per query accounting of usage
     return Optional.of(() -> {});
+  }
+
+  private <T> T withLookupExtractor(Function<LookupExtractor, T> fn)
+  {
+    final Optional<RetainedLookupExtractor> maybeRetained = acquireRetainedLookupExtractor();
+    if (maybeRetained.isPresent()) {
+      try (RetainedLookupExtractor retainedLookupExtractor = maybeRetained.get()) {
+        return fn.apply(retainedLookupExtractor);
+      }
+    }
+
+    return fn.apply(getLookupExtractor());
+  }
+
+  private Optional<RetainedLookupExtractor> acquireRetainedLookupExtractor()
+  {
+    return lookupExtractorFactory == null ? Optional.empty() : lookupExtractorFactory.acquireRetainedLookupExtractor();
+  }
+
+  private LookupExtractor getLookupExtractor()
+  {
+    if (extractor != null) {
+      return extractor;
+    }
+
+    if (lookupExtractorFactory != null) {
+      return lookupExtractorFactory.get();
+    }
+
+    throw new IllegalStateException("LookupJoinable has no lookup extractor");
   }
 }

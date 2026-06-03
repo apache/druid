@@ -57,7 +57,7 @@ public class LookupJoinableFactory implements JoinableFactory
     if (condition.canHashJoin()) {
       final String lookupName = lookupDataSource.getLookupName();
       return lookupProvider.get(lookupName)
-                           .map(c -> LookupJoinable.wrap(c.getLookupExtractorFactory().get()));
+                           .map(c -> LookupJoinable.wrap(c.getLookupExtractorFactory()));
     } else {
       return Optional.empty();
     }
