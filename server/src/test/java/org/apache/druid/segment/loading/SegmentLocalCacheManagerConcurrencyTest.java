@@ -175,6 +175,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     manager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         jsonMapper
@@ -182,6 +183,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     virtualStorageManager = new SegmentLocalCacheManager(
         storageLocations,
         vsfLoaderConfig,
+        StorageLoadingThreadPool.createFromConfig(vsfLoaderConfig),
         new RoundRobinStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         jsonMapper

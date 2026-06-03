@@ -95,7 +95,7 @@ public class CalciteMSQTestsHelper
     public SegmentCacheManager provideSegmentCacheManager(ObjectMapper testMapper, TempDirProducer tempDirProducer)
     {
       return new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testMapper)
-          .manufacturate(tempDirProducer.newTempFolder("test"), true);
+          .manufacturate(tempDirProducer.newTempFolder("test"), null, true);
     }
 
     @Provides

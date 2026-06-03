@@ -132,6 +132,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     manager = new SegmentLocalCacheManager(
         ImmutableList.of(),
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(ImmutableList.of()),
         TestIndex.INDEX_IO,
         jsonMapper
@@ -145,9 +146,11 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     final ImmutableList<StorageLocation> locations = ImmutableList.of(
         new StorageLocation(localSegmentCacheDir, 10000000000L, null)
     );
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         locations,
-        new SegmentLoaderConfig(),
+        loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(locations),
         TestIndex.INDEX_IO,
         jsonMapper
@@ -158,9 +161,11 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   @Test
   public void testCanHandleSegmentsWithEmptyLocationsAndConfigLocations()
   {
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         ImmutableList.of(),
-        new SegmentLoaderConfig(),
+        loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(ImmutableList.of()),
         TestIndex.INDEX_IO,
         jsonMapper
@@ -171,9 +176,11 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   @Test
   public void testGetCachedSegmentsWhenCanHandleSegmentsIsFalse()
   {
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         null,
-        new SegmentLoaderConfig(),
+        loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(null),
         TestIndex.INDEX_IO,
         jsonMapper
@@ -361,6 +368,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         locations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(locations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -412,6 +420,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -449,7 +458,8 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
-        new SegmentLoaderConfig().setLocations(locations),
+        loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -489,7 +499,8 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
-        new SegmentLoaderConfig().setLocations(locations),
+        loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -528,7 +539,8 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
-        new SegmentLoaderConfig().setLocations(locations),
+        loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -580,9 +592,11 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
       );
     }
 
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().setLocations(locationConfigs);
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         locations,
-        new SegmentLoaderConfig().setLocations(locationConfigs),
+        loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new RoundRobinStorageLocationSelectorStrategy(locations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -661,6 +675,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
         new SegmentLoaderConfig().setLocations(locations),
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -743,6 +758,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         locations,
         segmentLoaderConfig,
+        StorageLoadingThreadPool.createFromConfig(segmentLoaderConfig),
         new RandomStorageLocationSelectorStrategy(locations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -824,6 +840,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -861,6 +878,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -908,6 +926,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -977,6 +996,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
             () -> new SegmentLocalCacheManager(
                 storageLocations,
                 loaderConfig,
+                StorageLoadingThreadPool.createFromConfig(loaderConfig),
                 new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
                 TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
                 jsonMapper
@@ -1023,6 +1043,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -1084,6 +1105,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -1172,6 +1194,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -1256,6 +1279,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     final SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -1380,6 +1404,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     return new SegmentLocalCacheManager(
         locations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(locations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper

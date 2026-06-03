@@ -34,7 +34,7 @@ public class SegmentLoaderConfigTest
     Assert.assertFalse(config.isVirtualStorageEphemeral());
 
     // Set both to true
-    config.setVirtualStorage(true, true);
+    config.setVirtualStorage(true).setVirtualStorageIsEphemeral(true);
 
     // Verify both fields are set
     Assert.assertTrue(config.isVirtualStorage());

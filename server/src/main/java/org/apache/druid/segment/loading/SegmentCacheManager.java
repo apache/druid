@@ -144,4 +144,9 @@ public interface SegmentCacheManager
    * Returns the storage locations backing this cache manager.
    */
   List<StorageLocation> getLocations();
+
+  /**
+   * Returns the loading thread pool backing this cache manager.
+   */
+  StorageLoadingThreadPool getLoadingThreadPool();
 }
