@@ -293,15 +293,15 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
           (KafkaSupervisorIOConfig) ioConfig,
           context,
           suspended,
-          taskStorage,
-          taskMaster,
-          indexerMetadataStorageCoordinator,
-          (KafkaIndexTaskClientFactory) indexTaskClientFactory,
-          mapper,
-          emitter,
-          monitorSchedulerConfig,
-          rowIngestionMetersFactory,
-          supervisorStateManagerConfig
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
       );
     }
   }

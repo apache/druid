@@ -70,8 +70,6 @@ public abstract class SeekableStreamSupervisorIngestionSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    // Compares via getters so subclasses (which only narrow the component types) are covered without
-    // their own overrides; the getClass() check keeps different stream types unequal.
     SeekableStreamSupervisorIngestionSpec that = (SeekableStreamSupervisorIngestionSpec) o;
     return Objects.equals(getDataSchema(), that.getDataSchema())
            && Objects.equals(getIOConfig(), that.getIOConfig())

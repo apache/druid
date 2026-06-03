@@ -248,6 +248,11 @@ public abstract class SupervisorIOConfigBuilder<
           boundedStreamConfig
       )
       {
+        @Override
+        public SupervisorIOConfigBuilder<?, ?> toBuilder()
+        {
+          return new DefaultSupervisorIOConfigBuilder().copyFromBase(this);
+        }
       };
     }
   }

@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.hamcrest.MatcherAssert;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -54,7 +55,7 @@ public class SeekableStreamSupervisorIOConfigTest
     LagAggregator lagAggregator = mock(LagAggregator.class);
     InputFormat inputFormat = mock(InputFormat.class);
 
-    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         inputFormat,
         null,
@@ -131,7 +132,7 @@ public class SeekableStreamSupervisorIOConfigTest
       boolean expectedExplicit
   )
   {
-    final SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+    final SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         2,
@@ -164,7 +165,7 @@ public class SeekableStreamSupervisorIOConfigTest
 
     IAE ex = Assert.assertThrows(
         IAE.class,
-        () -> new SeekableStreamSupervisorIOConfig(
+        () -> new TestableSeekableStreamSupervisorIOConfig(
             "stream",
             null,
             null,
@@ -200,7 +201,7 @@ public class SeekableStreamSupervisorIOConfigTest
   {
     DruidException ex = Assert.assertThrows(
         DruidException.class,
-        () -> new SeekableStreamSupervisorIOConfig(
+        () -> new TestableSeekableStreamSupervisorIOConfig(
             "stream",
             null,
             null,
@@ -234,7 +235,7 @@ public class SeekableStreamSupervisorIOConfigTest
     LagAggregator lagAggregator = mock(LagAggregator.class);
 
     // Autoscaler disabled, stopTaskCount unset
-    SeekableStreamSupervisorIOConfig config1 = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config1 = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -259,7 +260,7 @@ public class SeekableStreamSupervisorIOConfigTest
     Assert.assertEquals(7, config1.getMaxAllowedStops());
 
     // Autoscaler disabled, stopTaskCount set
-    SeekableStreamSupervisorIOConfig config2 = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config2 = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -296,7 +297,7 @@ public class SeekableStreamSupervisorIOConfigTest
     when(autoScalerConfig.getTaskCountStart()).thenReturn(10);
     when(autoScalerConfig.getStopTaskCountRatio()).thenReturn(0.5);
 
-    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -330,7 +331,7 @@ public class SeekableStreamSupervisorIOConfigTest
     when(autoScalerConfig.getTaskCountStart()).thenReturn(10);
     when(autoScalerConfig.getStopTaskCountRatio()).thenReturn(null);
 
-    SeekableStreamSupervisorIOConfig config2 = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config2 = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -361,7 +362,7 @@ public class SeekableStreamSupervisorIOConfigTest
     when(autoScalerConfig.getTaskCountStart()).thenReturn(10);
     when(autoScalerConfig.getStopTaskCountRatio()).thenReturn(null);
 
-    SeekableStreamSupervisorIOConfig config3 = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config3 = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -449,7 +450,7 @@ public class SeekableStreamSupervisorIOConfigTest
 
   private SeekableStreamSupervisorIOConfig makeSeekableStreamSupervisorIOConfig(@Nullable Integer replicas, @Nullable Map<Integer, Integer> serverPriorityToReplicas)
   {
-    return new SeekableStreamSupervisorIOConfig(
+    return new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         replicas,
@@ -482,7 +483,7 @@ public class SeekableStreamSupervisorIOConfigTest
 
     LagAggregator lagAggregator = mock(LagAggregator.class);
 
-    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -515,7 +516,7 @@ public class SeekableStreamSupervisorIOConfigTest
   {
     LagAggregator lagAggregator = mock(LagAggregator.class);
 
-    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -547,7 +548,7 @@ public class SeekableStreamSupervisorIOConfigTest
   {
     LagAggregator lagAggregator = mock(LagAggregator.class);
 
-    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -628,10 +629,67 @@ public class SeekableStreamSupervisorIOConfigTest
   @Test
   public void testDefaultLagAggregatorEquals()
   {
-    final LagAggregator aggregator = new LagAggregator.DefaultLagAggregator();
-    Assert.assertEquals(aggregator, new LagAggregator.DefaultLagAggregator());
-    Assert.assertEquals(aggregator.hashCode(), new LagAggregator.DefaultLagAggregator().hashCode());
+    // The default aggregator is a stateless singleton; instance() always returns DEFAULT.
+    final LagAggregator aggregator = LagAggregator.DefaultLagAggregator.instance();
+    Assert.assertSame(LagAggregator.DEFAULT, aggregator);
+    Assert.assertEquals(aggregator, LagAggregator.DefaultLagAggregator.instance());
     Assert.assertNotEquals(aggregator, null);
     Assert.assertNotEquals(aggregator, "not a lag aggregator");
+  }
+
+  /**
+   * Concrete subclass for tests that exercise the abstract base directly. Implements the now-abstract
+   * {@link SeekableStreamSupervisorIOConfig#toBuilder()} via the generic builder.
+   */
+  private static class TestableSeekableStreamSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
+  {
+    TestableSeekableStreamSupervisorIOConfig(
+        String stream,
+        InputFormat inputFormat,
+        Integer replicas,
+        Integer taskCount,
+        Period taskDuration,
+        Period startDelay,
+        Period period,
+        Boolean useEarliestSequenceNumber,
+        Period completionTimeout,
+        Period lateMessageRejectionPeriod,
+        Period earlyMessageRejectionPeriod,
+        AutoScalerConfig autoScalerConfig,
+        LagAggregator lagAggregator,
+        DateTime lateMessageRejectionStartDateTime,
+        IdleConfig idleConfig,
+        Integer stopTaskCount,
+        Map<Integer, Integer> serverPriorityToReplicas,
+        BoundedStreamConfig boundedStreamConfig
+    )
+    {
+      super(
+          stream,
+          inputFormat,
+          replicas,
+          taskCount,
+          taskDuration,
+          startDelay,
+          period,
+          useEarliestSequenceNumber,
+          completionTimeout,
+          lateMessageRejectionPeriod,
+          earlyMessageRejectionPeriod,
+          autoScalerConfig,
+          lagAggregator,
+          lateMessageRejectionStartDateTime,
+          idleConfig,
+          stopTaskCount,
+          serverPriorityToReplicas,
+          boundedStreamConfig
+      );
+    }
+
+    @Override
+    public SupervisorIOConfigBuilder<?, ?> toBuilder()
+    {
+      return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder().copyFromBase(this);
+    }
   }
 }

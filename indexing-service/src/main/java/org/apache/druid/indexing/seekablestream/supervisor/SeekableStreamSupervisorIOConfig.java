@@ -328,8 +328,7 @@ public abstract class SeekableStreamSupervisorIOConfig
       return false;
     }
     SeekableStreamSupervisorIOConfig that = (SeekableStreamSupervisorIOConfig) o;
-    // taskCountExplicit and the derived autoScalerEnabled flag are intentionally excluded; they are
-    // transient construction hints, not part of the config's logical identity.
+    // taskCountExplicit and autoScalerEnabled are construction hints, not part of logical identity.
     return taskCount == that.taskCount
            && useEarliestSequenceNumber == that.useEarliestSequenceNumber
            && Objects.equals(stream, that.stream)
@@ -375,15 +374,5 @@ public abstract class SeekableStreamSupervisorIOConfig
     );
   }
 
-  /**
-   * Returns a builder pre-populated with this config's values, for producing a modified copy without
-   * mutating this instance. Subclasses <strong>must</strong> override to return their own builder: the
-   * default builder's {@code build()} yields a generic instance whose {@code getClass()} differs from any
-   * subclass, so a non-overriding subclass would never {@link #equals} its original and {@link
-   * SeekableStreamSupervisorSpec#requireRestart} would conservatively force a restart (safe, but unnecessary).
-   */
-  public SupervisorIOConfigBuilder<?, ?> toBuilder()
-  {
-    return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder().copyFromBase(this);
-  }
+  public abstract SupervisorIOConfigBuilder<?, ?> toBuilder();
 }

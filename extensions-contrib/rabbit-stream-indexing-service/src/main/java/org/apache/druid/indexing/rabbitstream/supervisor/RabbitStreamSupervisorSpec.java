@@ -242,15 +242,15 @@ public class RabbitStreamSupervisorSpec extends SeekableStreamSupervisorSpec
           (RabbitStreamSupervisorIOConfig) ioConfig,
           context,
           suspended,
-          taskStorage,
-          taskMaster,
-          indexerMetadataStorageCoordinator,
-          (RabbitStreamIndexTaskClientFactory) indexTaskClientFactory,
-          mapper,
-          emitter,
-          monitorSchedulerConfig,
-          rowIngestionMetersFactory,
-          supervisorStateManagerConfig
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
       );
     }
   }

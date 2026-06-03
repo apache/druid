@@ -297,40 +297,26 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     }
   }
 
-  /**
-   * Common restart decision shared by all seekable-stream supervisors. A copy of the proposed spec
-   * ({@code this}) is taken, differences that do not require a restart ("ignore cases") are
-   * neutralized on that copy, and the result is compared to the running {@code old} spec for
-   * equality. Returns {@code true} when a restart is needed.
-   * <p>
-   * Ignore cases work on a copy so the proposed spec — which may be persisted — is never mutated:
-   * <ul>
-   *   <li>{@code ioConfig.taskCount} when autoscaling is enabled on either spec, since it is
-   *       overridden at runtime.</li>
-   * </ul>
-   * Everything else (dataSchema, tuningConfig, the rest of ioConfig, context, suspended) must match,
-   * as determined by {@link #equals(Object)}. Subclasses may add type-specific rules by calling
-   * {@code super.requireRestart(old)} first.
-   */
   @Override
-  public boolean requireRestart(SupervisorSpec old)
+  public boolean requireRestart(SupervisorSpec proposedSpec)
   {
-    if (!(old instanceof SeekableStreamSupervisorSpec other)) {
+    if (!(proposedSpec instanceof SeekableStreamSupervisorSpec proposed)) {
       return true;
     }
 
-    // Start from a builder initialized with this (proposed) spec, neutralize the ignore-case fields
-    // via builder setters, then build and compare. The builder produces a copy, so the proposed spec
-    // — which may be persisted — is never mutated.
-    final Builder<?> proposed = toBuilder();
-
-    // Ignore case: taskCount is overridden at runtime when autoscaling is enabled, so align it to
-    // the existing spec's value.
-    if (isAutoScalerEnabled() || other.isAutoScalerEnabled()) {
-      proposed.taskCount(other.getIoConfig().getTaskCount());
+    final Builder<?> proposedCopy;
+    try {
+      proposedCopy = proposed.toBuilder();
+    }
+    catch (UnsupportedOperationException e) {
+      return true;
     }
 
-    return !proposed.build().equals(other);
+    if (isAutoScalerEnabled() || proposed.isAutoScalerEnabled()) {
+      proposedCopy.taskCount(getIoConfig().getTaskCount());
+    }
+
+    return !proposedCopy.build().equals(this);
   }
 
   private boolean isAutoScalerEnabled()
@@ -349,8 +335,6 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       return false;
     }
     SeekableStreamSupervisorSpec that = (SeekableStreamSupervisorSpec) o;
-    // Injected services (taskStorage, mapper, emitter, etc.) are excluded; only the user-defined
-    // spec content determines equality.
     return suspended == that.suspended
            && Objects.equals(id, that.id)
            && Objects.equals(ingestionSchema, that.ingestionSchema)
@@ -372,17 +356,13 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   );
 
   /**
-   * Returns a builder pre-populated with this spec's values (including injected services), so callers
-   * can produce a modified copy without mutating this instance. Subclasses return their own builder.
+   * Copy builder for restart comparison. Subclasses override; default requires restart on any change.
    */
-  public abstract Builder<?> toBuilder();
+  public Builder<?> toBuilder()
+  {
+    throw new UnsupportedOperationException("toBuilder() not implemented");
+  }
 
-  /**
-   * Self-typed builder for {@link SeekableStreamSupervisorSpec} and its subclasses. Holds the spec's
-   * components and injected services; subclasses implement {@link #self()} and {@link #build()} to
-   * reconstruct the concrete spec. Setter methods correspond to fields a restart comparison may
-   * neutralize (see {@link #requireRestart}).
-   */
   @SuppressFBWarnings(
       value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
       justification = "Fields are populated via copyFrom() and read by build() in concrete subclasses, which "
@@ -396,23 +376,11 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     protected SeekableStreamSupervisorTuningConfig tuningConfig;
     protected Map<String, Object> context;
     protected Boolean suspended;
-    protected TaskStorage taskStorage;
-    protected TaskMaster taskMaster;
-    protected IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
-    protected SeekableStreamIndexTaskClientFactory indexTaskClientFactory;
-    protected ObjectMapper mapper;
-    protected ServiceEmitter emitter;
-    protected DruidMonitorSchedulerConfig monitorSchedulerConfig;
-    protected RowIngestionMetersFactory rowIngestionMetersFactory;
-    protected SupervisorStateManagerConfig supervisorStateManagerConfig;
 
     protected abstract T self();
 
     public abstract SeekableStreamSupervisorSpec build();
 
-    /**
-     * Copies all fields (components and injected services) from an existing spec into this builder.
-     */
     public T copyFrom(SeekableStreamSupervisorSpec spec)
     {
       this.id = spec.id;
@@ -421,15 +389,6 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       this.tuningConfig = spec.getTuningConfig();
       this.context = spec.context;
       this.suspended = spec.suspended;
-      this.taskStorage = spec.taskStorage;
-      this.taskMaster = spec.taskMaster;
-      this.indexerMetadataStorageCoordinator = spec.indexerMetadataStorageCoordinator;
-      this.indexTaskClientFactory = spec.indexTaskClientFactory;
-      this.mapper = spec.mapper;
-      this.emitter = spec.emitter;
-      this.monitorSchedulerConfig = spec.monitorSchedulerConfig;
-      this.rowIngestionMetersFactory = spec.rowIngestionMetersFactory;
-      this.supervisorStateManagerConfig = spec.supervisorStateManagerConfig;
       return self();
     }
 
@@ -470,7 +429,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     }
 
     /**
-     * Sets {@code ioConfig.taskCount} on a copy of the current ioConfig (never mutates the original).
+     * Sets {@code ioConfig.taskCount} on a copy (does not mutate the builder's current ioConfig reference).
      */
     public T taskCount(int taskCount)
     {
