@@ -42,3 +42,4 @@ export * from './supervisor-table-action-dialog/supervisor-table-action-dialog';
 export * from './table-action-dialog/table-action-dialog';
 export * from './task-group-handoff-dialog/task-group-handoff-dialog';
 export * from './task-table-action-dialog/task-table-action-dialog';
+export * from './supervisor-to-sql-dialog';
