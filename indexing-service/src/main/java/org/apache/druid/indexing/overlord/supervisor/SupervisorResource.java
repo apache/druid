@@ -166,16 +166,20 @@ public class SupervisorResource
           }
 
           // Decide and apply atomically so the restart decision cannot go stale under a concurrent POST.
-          final SupervisorManager.SpecUpdateOutcome outcome =
+          final SupervisorManager.SpecUpdateResult updateResult =
               manager.createOrUpdateAndStartSupervisor(spec, Boolean.TRUE.equals(skipRestartIfUnmodified));
 
-          // Audit any path that mutated the persisted spec; a no-op UNCHANGED submission is not audited.
-          if (outcome != SupervisorManager.SpecUpdateOutcome.UNCHANGED) {
+          if (updateResult.isModified() || updateResult.isRestarted()) {
             auditSupervisorUpdate(spec, req);
           }
 
-          final boolean restarted = outcome == SupervisorManager.SpecUpdateOutcome.RESTARTED;
-          return Response.ok(ImmutableMap.of("id", spec.getId(), "restarted", restarted)).build();
+          return Response.ok(
+              ImmutableMap.of(
+                  "id", spec.getId(),
+                  "modified", updateResult.isModified(),
+                  "restarted", updateResult.isRestarted()
+              )
+          ).build();
         }
     );
   }

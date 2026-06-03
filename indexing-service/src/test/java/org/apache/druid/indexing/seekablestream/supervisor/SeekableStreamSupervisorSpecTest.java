@@ -899,16 +899,16 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
       }
 
       @Override
-      protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend)
+      protected SeekableStreamSupervisorSpec toggleSuspend(final boolean suspend)
       {
         return null;
       }
 
       @Override
       public SeekableStreamSupervisorSpec createBackfillSpec(
-          String backfillId,
-          BoundedStreamConfig boundedStreamConfig,
-          @Nullable Integer taskCount
+          final String backfillId,
+          final BoundedStreamConfig boundedStreamConfig,
+          @Nullable final Integer taskCount
       )
       {
         return null;
@@ -1487,6 +1487,65 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     final TestSeekableStreamSupervisorSpec seed =
         buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
     Assert.assertTrue(seed.toBuilder().build().requireRestart(new NoopSupervisorSpec("id", ImmutableList.of("ds"))));
+  }
+
+  @Test
+  public void testRequireRestart_withoutBuilderFallsBackToRestart()
+  {
+    final TestSeekableStreamSupervisorSpec seed =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
+    final SeekableStreamSupervisorSpec specWithoutBuilder = new SeekableStreamSupervisorSpec(
+        seed.getId(),
+        seed.getSpec(),
+        seed.getContext(),
+        seed.isSuspended(),
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig
+    )
+    {
+      @Override
+      public Supervisor createSupervisor()
+      {
+        return supervisor4;
+      }
+
+      @Override
+      public String getType()
+      {
+        return "testNoBuilder";
+      }
+
+      @Override
+      public String getSource()
+      {
+        return getIoConfig().getStream();
+      }
+
+      @Override
+      protected SeekableStreamSupervisorSpec toggleSuspend(final boolean suspend)
+      {
+        return this;
+      }
+
+      @Override
+      public SeekableStreamSupervisorSpec createBackfillSpec(
+          final String backfillId,
+          final BoundedStreamConfig boundedStreamConfig,
+          @Nullable final Integer taskCount
+      )
+      {
+        return this;
+      }
+    };
+
+    Assert.assertTrue(specWithoutBuilder.requireRestart(seed));
   }
 
   @Test

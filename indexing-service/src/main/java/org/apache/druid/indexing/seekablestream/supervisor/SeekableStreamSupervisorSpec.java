@@ -322,7 +322,13 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     // Start from a builder initialized with this (proposed) spec, neutralize the ignore-case fields
     // via builder setters, then build and compare. The builder produces a copy, so the proposed spec
     // — which may be persisted — is never mutated.
-    final Builder<?> proposed = toBuilder();
+    final Builder<?> proposed;
+    try {
+      proposed = toBuilder();
+    }
+    catch (final UnsupportedOperationException e) {
+      return true;
+    }
 
     // Ignore case: taskCount is overridden at runtime when autoscaling is enabled, so align it to
     // the existing spec's value.
@@ -375,13 +381,15 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
    * Returns a builder pre-populated with this spec's values (including injected services), so callers
    * can produce a modified copy without mutating this instance. Subclasses return their own builder.
    */
-  public abstract Builder<?> toBuilder();
+  public Builder<?> toBuilder()
+  {
+    throw new UnsupportedOperationException("No builder is available for this supervisor spec.");
+  }
 
   /**
    * Self-typed builder for {@link SeekableStreamSupervisorSpec} and its subclasses. Holds the spec's
    * components and injected services; subclasses implement {@link #self()} and {@link #build()} to
-   * reconstruct the concrete spec. Setter methods correspond to fields a restart comparison may
-   * neutralize (see {@link #requireRestart}).
+   * reconstruct the concrete spec. Setter methods cover fields commonly copied or adjusted by callers.
    */
   @SuppressFBWarnings(
       value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",

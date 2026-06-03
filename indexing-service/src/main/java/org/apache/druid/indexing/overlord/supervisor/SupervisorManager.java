@@ -199,16 +199,34 @@ public class SupervisorManager implements SupervisorStatsProvider
   }
 
   /**
-   * Outcome of {@link #createOrUpdateAndStartSupervisor(SupervisorSpec, boolean)}.
+   * Result of applying a submitted supervisor spec. {@code modified} means the persisted spec changed;
+   * {@code restarted} means the running supervisor was stopped and recreated.
    */
-  public enum SpecUpdateOutcome
+  public static final class SpecUpdateResult
   {
-    /** Spec was byte-identical to the running spec and {@code skipRestartIfUnmodified} was set: nothing done. */
-    UNCHANGED,
-    /** Spec changed but did not require a restart: persisted to metadata, running supervisor left in place. */
-    PERSISTED_WITHOUT_RESTART,
-    /** Supervisor was (re)created and started; spec persisted if it changed. */
-    RESTARTED
+    private final boolean modified;
+    private final boolean restarted;
+
+    private SpecUpdateResult(final boolean modified, final boolean restarted)
+    {
+      this.modified = modified;
+      this.restarted = restarted;
+    }
+
+    public static SpecUpdateResult of(final boolean modified, final boolean restarted)
+    {
+      return new SpecUpdateResult(modified, restarted);
+    }
+
+    public boolean isModified()
+    {
+      return modified;
+    }
+
+    public boolean isRestarted()
+    {
+      return restarted;
+    }
   }
 
   /**
@@ -219,8 +237,15 @@ public class SupervisorManager implements SupervisorStatsProvider
    * taskCount change under autoscaling) is persisted without recreating the supervisor; otherwise the
    * supervisor is stopped and recreated (the only behavior when the flag is false).
    */
-  public SpecUpdateOutcome createOrUpdateAndStartSupervisor(SupervisorSpec spec, boolean skipRestartIfUnmodified)
+  public SpecUpdateResult createOrUpdateAndStartSupervisor(
+      final SupervisorSpec spec,
+      final boolean skipRestartIfUnmodified
+  )
   {
+    if (!skipRestartIfUnmodified) {
+      return SpecUpdateResult.of(createOrUpdateAndStartSupervisor(spec), true);
+    }
+
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(spec, "spec");
     Preconditions.checkNotNull(spec.getId(), "spec.getId()");
@@ -230,27 +255,34 @@ public class SupervisorManager implements SupervisorStatsProvider
       Preconditions.checkState(started, "SupervisorManager not started");
       final Pair<Supervisor, SupervisorSpec> current = supervisors.get(spec.getId());
       final boolean isNew = current == null || current.rhs == null;
-      final boolean specChanged = isSpecChangedAndValidate(spec);
 
-      if (skipRestartIfUnmodified && !isNew) {
-        if (!specChanged) {
-          return SpecUpdateOutcome.UNCHANGED;
-        }
-        if (!spec.requireRestart(current.rhs)) {
-          // Changed but no restart needed: persist and swap the in-memory reference, leaving the running
-          // supervisor in place.
-          spec.merge(current.rhs);
-          metadataSupervisorManager.insert(spec.getId(), spec);
-          supervisors.put(spec.getId(), Pair.of(current.lhs, spec));
-          return SpecUpdateOutcome.PERSISTED_WITHOUT_RESTART;
-        }
+      if (isNew) {
+        spec.merge(null);
+        createAndStartSupervisorInternal(spec, true);
+        return SpecUpdateResult.of(true, true);
+      }
+
+      if (!isSpecChangedAndValidate(spec)) {
+        return SpecUpdateResult.of(false, false);
+      }
+
+      // Compare and apply the effective spec after carrying forward fields from the running spec. Otherwise an
+      // omitted field that merge() would preserve (for example, taskCount) can cause an unnecessary restart.
+      spec.merge(current.rhs);
+      final boolean specChanged = isSpecChangedAndValidate(spec);
+      if (!specChanged) {
+        return SpecUpdateResult.of(false, false);
+      }
+      if (!spec.requireRestart(current.rhs)) {
+        metadataSupervisorManager.insert(spec.getId(), spec);
+        supervisors.put(spec.getId(), Pair.of(current.lhs, spec));
+        return SpecUpdateResult.of(true, false);
       }
 
       // Restart path: stop+recreate, persisting the spec when it changed.
-      final SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
-      spec.merge(existingSpec);
+      possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
       createAndStartSupervisorInternal(spec, specChanged);
-      return SpecUpdateOutcome.RESTARTED;
+      return SpecUpdateResult.of(specChanged, true);
     }
   }
 
