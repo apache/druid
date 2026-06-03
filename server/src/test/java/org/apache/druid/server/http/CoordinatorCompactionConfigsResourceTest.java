@@ -234,12 +234,13 @@ public class CoordinatorCompactionConfigsResourceTest
     );
 
     verifyStatus(Response.Status.PRECONDITION_FAILED, response);
-    Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
+    @SuppressWarnings("unchecked")
+    final Map<String, String> entity = (Map<String, String>) response.getEntity();
     Assert.assertEquals(
         "If-Match requires druid.manager.config.enableCompareAndSwap to be enabled for key["
         + DruidCompactionConfig.CONFIG_KEY
         + "]",
-        ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
+        entity.get("error")
     );
     Assert.assertTrue(configManager.getCurrentCompactionConfig().getCompactionConfigs().isEmpty());
   }

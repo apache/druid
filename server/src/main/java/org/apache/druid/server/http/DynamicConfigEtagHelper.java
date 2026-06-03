@@ -22,6 +22,8 @@ package org.apache.druid.server.http;
 import com.google.common.base.Throwables;
 import org.apache.druid.common.config.ConfigEtag;
 import org.apache.druid.common.config.ConfigManager.SetResult;
+
+import java.util.Map;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
 import org.apache.druid.error.InvalidInput;
@@ -107,5 +109,17 @@ public final class DynamicConfigEtagHelper
     return Response.status(status)
                    .entity(ServletResourceUtils.sanitizeException(result.getException()))
                    .build();
+  }
+
+  /**
+   * Build a write response from a {@link SetResult}, using the same success and
+   * error shapes as other dynamic-config endpoints.
+   */
+  public static Response buildSetResultUpdateResponse(SetResult result)
+  {
+    if (result.isOk()) {
+      return Response.ok(Map.of("success", true)).build();
+    }
+    return toErrorResponse(result);
   }
 }

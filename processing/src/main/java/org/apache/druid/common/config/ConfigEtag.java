@@ -32,6 +32,14 @@ import java.util.Base64;
 public final class ConfigEtag
 {
   private static final int ETAG_HASH_BYTES = 16;
+  private static final ThreadLocal<MessageDigest> SHA_256 = ThreadLocal.withInitial(() -> {
+    try {
+      return MessageDigest.getInstance("SHA-256");
+    }
+    catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 not available", e);
+    }
+  });
 
   private ConfigEtag()
   {
@@ -48,16 +56,11 @@ public final class ConfigEtag
     if (bytes == null) {
       return null;
     }
-    try {
-      MessageDigest md = MessageDigest.getInstance("SHA-256");
-      byte[] full = md.digest(bytes);
-      byte[] truncated = Arrays.copyOf(full, ETAG_HASH_BYTES);
-      return "\"" + Base64.getUrlEncoder().withoutPadding().encodeToString(truncated) + "\"";
-    }
-    catch (NoSuchAlgorithmException e) {
-      // SHA-256 is required by every JRE.
-      throw new IllegalStateException("SHA-256 not available", e);
-    }
+    final MessageDigest md = SHA_256.get();
+    md.reset();
+    final byte[] full = md.digest(bytes);
+    final byte[] truncated = Arrays.copyOf(full, ETAG_HASH_BYTES);
+    return "\"" + Base64.getUrlEncoder().withoutPadding().encodeToString(truncated) + "\"";
   }
 
   /**
@@ -65,7 +68,7 @@ public final class ConfigEtag
    * Wildcard {@code *} matches any existing value. A comma-separated list is
    * satisfied if any element matches.
    */
-  public static boolean matches(String ifMatchHeader, @Nullable byte[] currentBytes)
+  public static boolean matches(@Nullable String ifMatchHeader, @Nullable byte[] currentBytes)
   {
     if (ifMatchHeader == null) {
       return true;

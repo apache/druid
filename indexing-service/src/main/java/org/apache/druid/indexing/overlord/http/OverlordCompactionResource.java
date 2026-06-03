@@ -122,14 +122,19 @@ public class OverlordCompactionResource
       @Context HttpServletRequest req
   )
   {
-    final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
-    return ServletResourceUtils.buildUpdateResponse(
-        () -> configManager.updateClusterCompactionConfig(
-            updatePayload,
-            DynamicConfigEtagHelper.getIfMatch(req),
-            auditInfo
-        )
-    );
+    try {
+      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
+      return DynamicConfigEtagHelper.buildSetResultUpdateResponse(
+          configManager.updateClusterCompactionConfig(
+              updatePayload,
+              DynamicConfigEtagHelper.getIfMatch(req),
+              auditInfo
+          )
+      );
+    }
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
+    }
   }
 
   @GET

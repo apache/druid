@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.Futures;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.config.ConfigEtag;
+import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.CompactionEngine;
@@ -160,7 +161,7 @@ public class OverlordCompactionResourceTest
         EasyMock.anyObject(),
         EasyMock.anyObject()
     ))
-            .andReturn(true)
+            .andReturn(ConfigManager.SetResult.ok())
             .once();
 
     setupMockRequestForAudit();

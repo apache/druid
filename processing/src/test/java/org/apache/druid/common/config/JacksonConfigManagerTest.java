@@ -287,6 +287,35 @@ public class JacksonConfigManagerTest
   }
 
   @Test
+  public void testSetIfMatchCasConflictReturnsPreconditionFailed()
+  {
+    final String key = "key";
+    final TestConfig val = new TestConfig("v", "s", 1);
+    final AuditInfo auditInfo = new AuditInfo("a", "i", "c", "ip");
+    final byte[] currentBytes = "current".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+    Mockito.when(mockConfigManager.isCompareAndSwapEnabled()).thenReturn(true);
+    Mockito.when(mockConfigManager.getCurrentBytes(key)).thenReturn(currentBytes);
+    Mockito.when(mockConfigManager.set(
+        Mockito.eq(key),
+        Mockito.any(ConfigSerde.class),
+        Mockito.eq(currentBytes),
+        Mockito.eq(val)
+    )).thenReturn(ConfigManager.SetResult.retryableFailure(new IllegalStateException("Config value has changed")));
+
+    final ConfigManager.SetResult result = jacksonConfigManager.setIfMatch(
+        key,
+        ConfigEtag.compute(currentBytes),
+        val,
+        auditInfo
+    );
+
+    Assertions.assertFalse(result.isOk());
+    Assertions.assertTrue(result.isPreconditionFailed());
+    Assertions.assertFalse(result.isRetryable());
+  }
+
+  @Test
   public void testConvertByteToConfigWithNullConfigInByte()
   {
     TestConfig defaultExpected = new TestConfig("version", null, 3);

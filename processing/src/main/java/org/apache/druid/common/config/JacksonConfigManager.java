@@ -177,15 +177,7 @@ public class JacksonConfigManager
           new IllegalStateException("If-Match precondition failed for key[" + key + "]")
       );
     }
-    final SetResult result = set(key, currentBytes, newValue, auditInfo);
-    // Retryable CAS failure here = concurrent writer between our read and CAS;
-    // surface as precondition failed since the caller asked us to reject that.
-    if (!result.isOk() && result.isRetryable()) {
-      return SetResult.preconditionFailed(
-          new IllegalStateException("If-Match precondition failed (concurrent update) for key[" + key + "]")
-      );
-    }
-    return result;
+    return casConflictAsPreconditionFailed(set(key, currentBytes, newValue, auditInfo), key);
   }
 
   /**
@@ -225,8 +217,18 @@ public class JacksonConfigManager
     if (ifMatchEtag == null) {
       return set(key, newValue, auditInfo);
     }
-    final SetResult result = set(key, currentBytes, newValue, auditInfo);
-    if (!result.isOk() && result.isRetryable()) {
+    return casConflictAsPreconditionFailed(set(key, currentBytes, newValue, auditInfo), key);
+  }
+
+  /**
+   * Maps a CAS-conflict ({@link SetResult#isRetryable() retryable}) outcome to a
+   * precondition failure. A conditional write that loses the CAS means another
+   * writer committed between our read and write, so the supplied {@code If-Match}
+   * no longer describes the stored value — the caller must re-read and retry.
+   */
+  private static SetResult casConflictAsPreconditionFailed(SetResult result, String key)
+  {
+    if (result.isRetryable()) {
       return SetResult.preconditionFailed(
           new IllegalStateException("If-Match precondition failed (concurrent update) for key[" + key + "]")
       );

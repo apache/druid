@@ -22,6 +22,7 @@ package org.apache.druid.server.http;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditInfo;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
@@ -84,15 +85,20 @@ public class CoordinatorCompactionConfigsResource
       return ServletResourceUtils.buildUpdateResponse(() -> true);
     }
 
-    final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
-    return ServletResourceUtils.buildUpdateResponse(
-        () -> configManager.updateCompactionTaskSlots(
-            compactionTaskSlotRatio,
-            maxCompactionTaskSlots,
-            DynamicConfigEtagHelper.getIfMatch(req),
-            auditInfo
-        )
-    );
+    try {
+      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
+      return DynamicConfigEtagHelper.buildSetResultUpdateResponse(
+          configManager.updateCompactionTaskSlots(
+              compactionTaskSlotRatio,
+              maxCompactionTaskSlots,
+              DynamicConfigEtagHelper.getIfMatch(req),
+              auditInfo
+          )
+      );
+    }
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
+    }
   }
 
   @POST
@@ -103,16 +109,24 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
-    return ServletResourceUtils.buildUpdateResponse(() -> {
-      final String ifMatch = DynamicConfigEtagHelper.getIfMatch(req);
+    try {
+      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
       if (newConfig.getEngine() == CompactionEngine.MSQ) {
         throw InvalidInput.exception(
             "MSQ engine is supported only with supervisor-based compaction on the Overlord."
         );
       }
-      return configManager.updateDatasourceCompactionConfig(newConfig, ifMatch, auditInfo);
-    });
+      return DynamicConfigEtagHelper.buildSetResultUpdateResponse(
+          configManager.updateDatasourceCompactionConfig(
+              newConfig,
+              DynamicConfigEtagHelper.getIfMatch(req),
+              auditInfo
+          )
+      );
+    }
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
+    }
   }
 
   @GET
@@ -147,13 +161,18 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
-    return ServletResourceUtils.buildUpdateResponse(
-        () -> configManager.deleteDatasourceCompactionConfig(
-            dataSource,
-            DynamicConfigEtagHelper.getIfMatch(req),
-            auditInfo
-        )
-    );
+    try {
+      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
+      return DynamicConfigEtagHelper.buildSetResultUpdateResponse(
+          configManager.deleteDatasourceCompactionConfig(
+              dataSource,
+              DynamicConfigEtagHelper.getIfMatch(req),
+              auditInfo
+          )
+      );
+    }
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
+    }
   }
 }
