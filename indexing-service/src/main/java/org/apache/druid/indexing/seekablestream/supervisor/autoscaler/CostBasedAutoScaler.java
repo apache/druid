@@ -78,6 +78,14 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    */
   static final int MAX_IDLENESS_PARTITION_LAG = 10_000;
 
+  /**
+   * Adjacent candidate task counts whose gap exceeds this value are split with intermediate
+   * candidates so the cost model has finer-grained options to evaluate.
+   */
+  static final int MAX_CANDIDATE_GAP = 100;
+
+  static final double[] INTERPOLATION_FRACTIONS = new double[]{0.33, 0.66};
+
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
   private final ServiceEmitter emitter;
@@ -326,7 +334,31 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         result.add(taskCount);
       }
     }
-    return result.toIntArray();
+
+    int[] candidates = result.toIntArray();
+    Arrays.sort(candidates);
+
+    // The partition-per-task candidates can be far apart (for example 250 -> 500), leaving the
+    // cost model with no options in between. Wherever two adjacent candidates differ by more than
+    // MAX_CANDIDATE_GAP, split that interval with deterministic intermediate task counts.
+    boolean enriched = false;
+    for (int i = 0; i < candidates.length - 1; i++) {
+      final int lower = candidates[i];
+      final int upper = candidates[i + 1];
+      if (upper - lower > MAX_CANDIDATE_GAP) {
+        for (double fraction : INTERPOLATION_FRACTIONS) {
+          result.add(Math.toIntExact(Math.round(lower + fraction * (upper - lower))));
+        }
+        enriched = true;
+      }
+    }
+    if (enriched) {
+      candidates = result.toIntArray();
+      Arrays.sort(candidates);
+    }
+
+    // Sorted ascending because computeOptimalTaskCount relies on Arrays.binarySearch.
+    return candidates;
   }
 
   /**
