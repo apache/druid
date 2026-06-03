@@ -97,25 +97,6 @@ public class CoordinatorConfigManager
     );
   }
 
-  public ConfigManager.SetResult setDynamicConfig(CoordinatorDynamicConfig config, AuditInfo auditInfo)
-  {
-    return setDynamicConfig(config, null, auditInfo);
-  }
-
-  public ConfigManager.SetResult setDynamicConfig(
-      CoordinatorDynamicConfig config,
-      @Nullable String ifMatchEtag,
-      AuditInfo auditInfo
-  )
-  {
-    return jacksonConfigManager.setIfMatch(
-        CoordinatorDynamicConfig.CONFIG_KEY,
-        ifMatchEtag,
-        config,
-        auditInfo
-    );
-  }
-
   public ConfigManager.SetResult updateDynamicConfig(
       UnaryOperator<CoordinatorDynamicConfig> operator,
       @Nullable String ifMatchEtag,
@@ -205,14 +186,22 @@ public class CoordinatorConfigManager
 
     if (current.equals(updated)) {
       return ConfigManager.SetResult.ok();
-    } else {
-      return jacksonConfigManager.set(
-          DruidCompactionConfig.CONFIG_KEY,
-          currentBytes,
-          updated,
-          auditInfo
+    }
+    final ConfigManager.SetResult result = jacksonConfigManager.set(
+        DruidCompactionConfig.CONFIG_KEY,
+        currentBytes,
+        updated,
+        auditInfo
+    );
+    // Under If-Match, a lost CAS means a concurrent writer committed between our
+    // read and write: the precondition no longer holds, so report it as such
+    // rather than as a retryable failure (conditional writes must not auto-retry).
+    if (ifMatchEtag != null && result.isRetryable()) {
+      return ConfigManager.SetResult.preconditionFailed(
+          new IllegalStateException("If-Match precondition failed (concurrent update) for compaction config")
       );
     }
+    return result;
   }
 
   public DruidCompactionConfig convertBytesToCompactionConfig(@Nullable byte[] bytes)
@@ -255,14 +244,6 @@ public class CoordinatorConfigManager
     };
 
     return updateConfigHelper(operator, ifMatchEtag, auditInfo);
-  }
-
-  public boolean updateClusterCompactionConfig(
-      ClusterCompactionConfig config,
-      AuditInfo auditInfo
-  )
-  {
-    return updateClusterCompactionConfig(config, null, auditInfo);
   }
 
   public boolean updateClusterCompactionConfig(
@@ -380,17 +361,18 @@ public class CoordinatorConfigManager
       AuditInfo auditInfo
   )
   {
-    int attemps = 0;
+    int attempts = 0;
     ConfigManager.SetResult setResult = null;
-    // When the caller has supplied an If-Match precondition, do not retry on CAS failure.
-    final int maxAttempts = ifMatchEtag != null ? 1 : MAX_UPDATE_RETRIES;
+    // Only an unconditional write can be retried: getAndUpdateCompactionConfig converts a lost
+    // CAS under If-Match into a (non-retryable) precondition failure, so conditional writes exit
+    // this loop on the first attempt rather than silently retrying past the caller's precondition.
     try {
-      while (attemps < maxAttempts) {
+      while (attempts < MAX_UPDATE_RETRIES) {
         setResult = getAndUpdateCompactionConfig(configUpdateOperator, ifMatchEtag, auditInfo);
         if (setResult.isOk() || !setResult.isRetryable()) {
           break;
         }
-        attemps++;
+        attempts++;
         updateRetryDelay();
       }
     }
@@ -409,18 +391,14 @@ public class CoordinatorConfigManager
       return true;
     }
 
-    // With If-Match, a retryable CAS failure means a concurrent writer beat us
-    // between the precondition check and the CAS — surface as 412 too.
-    final boolean preconditionFailed = setResult.isPreconditionFailed()
-                                       || (ifMatchEtag != null && setResult.isRetryable());
-    if (preconditionFailed) {
+    // getAndUpdateCompactionConfig already converts a lost CAS under If-Match into
+    // a precondition failure, so a retryable result here is only a genuine
+    // (non-conditional) CAS conflict that exhausted its retries.
+    if (setResult.isPreconditionFailed()) {
       log.info("If-Match precondition failed on compaction config update");
-      final String message = setResult.isPreconditionFailed()
-          ? setResult.getException().getMessage()
-          : "If-Match precondition failed (concurrent update) on compaction config";
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.PRECONDITION_FAILED)
-                          .build(message);
+                          .build(setResult.getException().getMessage());
     }
 
     if (setResult.getException() instanceof NoSuchElementException) {

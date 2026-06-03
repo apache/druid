@@ -283,11 +283,27 @@ public class ConfigManager
 
   public static class SetResult
   {
-    private static final SetResult SUCCESS = new SetResult(null, false, false);
-    private final Exception exception;
+    /**
+     * Outcome of a {@link #set} attempt. Mutually exclusive, so callers never
+     * have to reconcile overlapping flags.
+     */
+    private enum Status
+    {
+      /** The write committed. */
+      OK,
+      /** A concurrent writer won the CAS; the caller may re-read and retry. */
+      RETRYABLE,
+      /** A client-supplied precondition (e.g. {@code If-Match}) failed; maps to HTTP 412. */
+      PRECONDITION_FAILED,
+      /** A non-retryable failure (bad input, manager not started, etc.). */
+      FAILURE
+    }
 
-    private final boolean retryableException;
-    private final boolean preconditionFailed;
+    private static final SetResult SUCCESS = new SetResult(Status.OK, null);
+
+    private final Status status;
+    @Nullable
+    private final Exception exception;
 
     public static SetResult ok()
     {
@@ -296,42 +312,42 @@ public class ConfigManager
 
     public static SetResult failure(Exception e)
     {
-      return new SetResult(e, false, false);
+      return new SetResult(Status.FAILURE, e);
     }
 
     public static SetResult retryableFailure(Exception e)
     {
-      return new SetResult(e, true, false);
+      return new SetResult(Status.RETRYABLE, e);
     }
 
     /** Client-supplied precondition (e.g. {@code If-Match}) failed; maps to HTTP 412. */
     public static SetResult preconditionFailed(Exception e)
     {
-      return new SetResult(e, false, true);
+      return new SetResult(Status.PRECONDITION_FAILED, e);
     }
 
-    private SetResult(@Nullable Exception exception, boolean retryableException, boolean preconditionFailed)
+    private SetResult(Status status, @Nullable Exception exception)
     {
+      this.status = status;
       this.exception = exception;
-      this.retryableException = retryableException;
-      this.preconditionFailed = preconditionFailed;
     }
 
     public boolean isOk()
     {
-      return exception == null;
+      return status == Status.OK;
     }
 
     public boolean isRetryable()
     {
-      return retryableException;
+      return status == Status.RETRYABLE;
     }
 
     public boolean isPreconditionFailed()
     {
-      return preconditionFailed;
+      return status == Status.PRECONDITION_FAILED;
     }
 
+    @Nullable
     public Exception getException()
     {
       return exception;

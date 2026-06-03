@@ -65,7 +65,7 @@ public final class ConfigEtag
    * Wildcard {@code *} matches any existing value. A comma-separated list is
    * satisfied if any element matches.
    */
-  public static boolean matches(String ifMatchHeader, @Nullable byte[] currentBytes)
+  public static boolean matches(@Nullable String ifMatchHeader, @Nullable byte[] currentBytes)
   {
     if (ifMatchHeader == null) {
       return true;
