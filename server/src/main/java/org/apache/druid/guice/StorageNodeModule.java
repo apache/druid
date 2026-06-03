@@ -21,7 +21,6 @@ package org.apache.druid.guice;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
-import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
@@ -34,7 +33,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationSelectorStrategy;
@@ -143,12 +141,9 @@ public class StorageNodeModule implements Module
 
   @Provides
   @LazySingleton
-  @Nullable
-  public StorageMonitor provideStorageMonitor(
-      Injector injector
-  )
+  public StorageMonitor provideStorageMonitor(List<StorageLocation> locations)
   {
-    return new StorageMonitor(injector.getInstance(SegmentCacheManager.class), null);
+    return new StorageMonitor(locations, null);
   }
 
   /**

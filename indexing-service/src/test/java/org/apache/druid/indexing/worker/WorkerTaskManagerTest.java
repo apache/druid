@@ -54,7 +54,7 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -174,7 +174,7 @@ public class WorkerTaskManagerTest
                 new NoopTestTaskReportFileWriter(),
                 null,
                 AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-                new NoopChatHandlerProvider(),
+                new ChatHandlerProvider(),
                 testUtils.getRowIngestionMetersFactory(),
                 new TestAppenderatorsManager(),
                 overlordClient,
@@ -192,18 +192,7 @@ public class WorkerTaskManagerTest
         taskConfig,
         workerConfig,
         overlordClient
-    )
-    {
-      @Override
-      protected void taskStarted(String taskId)
-      {
-      }
-
-      @Override
-      protected void taskAnnouncementChanged(TaskAnnouncement announcement)
-      {
-      }
-    };
+    );
   }
 
   @Before

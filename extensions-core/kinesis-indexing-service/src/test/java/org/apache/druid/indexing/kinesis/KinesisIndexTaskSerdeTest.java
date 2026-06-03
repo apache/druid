@@ -35,7 +35,6 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -160,7 +159,7 @@ public class KinesisIndexTaskSerdeTest
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8000);
               binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(9000);
-              binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
+              binder.bind(ChatHandlerProvider.class).toInstance(new ChatHandlerProvider());
               binder.bind(RowIngestionMetersFactory.class).toInstance(new DropwizardRowIngestionMetersFactory());
               binder.bind(AppenderatorsManager.class).toInstance(new TestAppenderatorsManager());
             }

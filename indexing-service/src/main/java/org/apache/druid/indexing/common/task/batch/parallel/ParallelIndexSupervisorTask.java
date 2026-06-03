@@ -522,7 +522,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
         Preconditions.checkNotNull(toolbox.getChatHandlerProvider(), "chatHandlerProvider").getClass().getName()
     );
     authorizerMapper = toolbox.getAuthorizerMapper();
-    toolbox.getChatHandlerProvider().register(getId(), this, false);
+    toolbox.getChatHandlerProvider().register(getId(), this);
 
     // the lineage-based segment allocation protocol must be used as the legacy protocol has a critical bug
     // (see SinglePhaseParallelIndexTaskRunner.allocateNewSegment()). However, we tell subtasks to use

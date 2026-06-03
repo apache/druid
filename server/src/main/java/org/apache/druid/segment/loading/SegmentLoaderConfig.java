@@ -94,6 +94,17 @@ public class SegmentLoaderConfig
   @JsonProperty("virtualStorageIsEphemeral")
   private boolean virtualStorageIsEphemeral = false;
 
+  /**
+   * Up-front size reservation (in bytes) used when mounting a partial-segment metadata cache entry. The entry
+   * range-reads the V10 header from deep storage at mount time, then calls
+   * {@link StorageLocation#adjustReservation} to shrink to the actual on-disk size. If the actual header exceeds this
+   * estimate, the mount fails with an operator-facing error directing them to raise this value. Defaults to 16 MiB,
+   * which comfortably covers the metadata of typical V10 segments; outliers with many columns and/or projections may
+   * need a higher value.
+   */
+  @JsonProperty("virtualStorageMetadataReservationEstimate")
+  private long virtualStorageMetadataReservationEstimate = 16L * 1024L * 1024L;
+
   private long combinedMaxSize = 0;
 
   public List<StorageLocationConfig> getLocations()
@@ -181,6 +192,11 @@ public class SegmentLoaderConfig
     return virtualStorageIsEphemeral;
   }
 
+  public long getVirtualStorageMetadataReservationEstimate()
+  {
+    return virtualStorageMetadataReservationEstimate;
+  }
+
   public SegmentLoaderConfig setLocations(List<StorageLocationConfig> locations)
   {
     this.locations = Lists.newArrayList(locations);
@@ -234,6 +250,7 @@ public class SegmentLoaderConfig
            ", virtualStorageLoadThreads=" + virtualStorageLoadThreads +
            ", virtualStorageUseVirtualThreads=" + virtualStorageUseVirtualThreads +
            ", virtualStorageIsEphemeral=" + virtualStorageIsEphemeral +
+           ", virtualStorageMetadataReservationEstimate=" + virtualStorageMetadataReservationEstimate +
            ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }

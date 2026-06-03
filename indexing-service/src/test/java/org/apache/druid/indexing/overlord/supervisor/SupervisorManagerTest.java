@@ -19,6 +19,9 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
@@ -26,6 +29,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.InvalidInput;
@@ -35,7 +40,11 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIngestionSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -43,6 +52,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.metrics.SupervisorStatsProvider;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -59,6 +69,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Collections;
@@ -1068,6 +1079,186 @@ public class SupervisorManagerTest extends EasyMockSupport
     );
   }
 
+  @Test
+  public void testResetToLatestAndBackfill() throws Exception
+  {
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
+    replayAll();
+    manager.start();
+
+    final ConcurrentHashMap<String, Pair<Supervisor, SupervisorSpec>> supervisorsMap = getSupervisorsMap();
+    final SeekableStreamSupervisorSpec streamSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
+    final SeekableStreamSupervisor streamSupervisor = EasyMock.createNiceMock(SeekableStreamSupervisor.class);
+    final SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createNiceMock(SeekableStreamSupervisorIOConfig.class);
+
+    // non-SeekableStream supervisor → IAE
+    // Use a concrete anonymous Supervisor (not a mock) to reliably fail instanceof SeekableStreamSupervisor
+    final Supervisor nonStreamSupervisor = new Supervisor()
+    {
+      @Override
+      public void start()
+      {
+      }
+
+      @Override
+      public void stop(boolean stopGracefully)
+      {
+      }
+
+      @Override
+      public SupervisorReport getStatus()
+      {
+        return null;
+      }
+
+      @Override
+      public SupervisorStateManager.State getState()
+      {
+        return null;
+      }
+
+      @Override
+      public void reset(DataSourceMetadata dataSourceMetadata)
+      {
+      }
+    };
+    supervisorsMap.put("id1", Pair.of(nonStreamSupervisor, streamSpec));
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+
+    // useEarliestSequenceNumber=true → IAE
+    supervisorsMap.put("id1", Pair.of(streamSupervisor, streamSpec));
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(true).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // useConcurrentLocks not set (null context) → IAE
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(null).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // useConcurrentLocks=false → IAE
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", false)).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // useConcurrentLocks="true" (string) → accepted, fails at next guard (not RUNNING)
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", "true")).once();
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.SUSPENDED).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // taskLockType=APPEND → accepted, fails at next guard (not RUNNING)
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("taskLockType", "APPEND")).once();
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.SUSPENDED).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // supervisor not RUNNING → IAE
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", true)).once();
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.SUSPENDED).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // empty latest offsets → ISE
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", true)).once();
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.RUNNING).once();
+    streamSupervisor.updatePartitionLagFromStream();
+    EasyMock.expectLastCall().once();
+    EasyMock.expect(streamSupervisor.getLatestSequencesFromStream()).andReturn(ImmutableMap.of()).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalStateException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // empty start offsets from metadata → ISE
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", true)).once();
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.RUNNING).once();
+    streamSupervisor.updatePartitionLagFromStream();
+    EasyMock.expectLastCall().once();
+    EasyMock.expect(streamSupervisor.getLatestSequencesFromStream()).andReturn(ImmutableMap.of("0", 100L)).once();
+    EasyMock.expect(streamSupervisor.getOffsetsFromMetadataStorage()).andReturn(ImmutableMap.of()).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalStateException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+
+    verifyAll();
+  }
+
+  @Test
+  public void testCreateBackfillSpec()
+  {
+    final TestBackfillSupervisorSpec.IOConfig ioConfig = new TestBackfillSupervisorSpec.IOConfig("test-stream", null, null);
+    final TestBackfillSupervisorSpec.IngestionSpec ingestionSpec = new TestBackfillSupervisorSpec.IngestionSpec(ioConfig);
+    final SeekableStreamSupervisorSpec sourceSpec = new TestBackfillSupervisorSpec("original-id", ingestionSpec);
+
+    final BoundedStreamConfig boundedStreamConfig = new BoundedStreamConfig(
+        ImmutableMap.of("0", 100L),
+        ImmutableMap.of("0", 200L)
+    );
+
+    // Without overriding taskCount
+    final SupervisorSpec backfillSpec = sourceSpec.createBackfillSpec("backfill-id", boundedStreamConfig, null);
+    Assert.assertEquals("backfill-id", backfillSpec.getId());
+    final TestBackfillSupervisorSpec backfillCast = (TestBackfillSupervisorSpec) backfillSpec;
+    final BoundedStreamConfig actualConfig = backfillCast.getIoConfig().getBoundedStreamConfig();
+    Assert.assertNotNull(actualConfig);
+    Assert.assertEquals(ImmutableMap.of("0", 100L), actualConfig.getStartSequenceNumbers());
+    Assert.assertEquals(ImmutableMap.of("0", 200L), actualConfig.getEndSequenceNumbers());
+    Assert.assertEquals(1, backfillCast.getIoConfig().getTaskCount());
+
+    // With overriding taskCount
+    final SupervisorSpec backfillSpecWithCount = sourceSpec.createBackfillSpec("backfill-id-2", boundedStreamConfig, 5);
+    Assert.assertEquals("backfill-id-2", backfillSpecWithCount.getId());
+    final TestBackfillSupervisorSpec backfillWithCount = (TestBackfillSupervisorSpec) backfillSpecWithCount;
+    Assert.assertEquals(5, backfillWithCount.getIoConfig().getTaskCount());
+  }
+
   private static class TestSupervisorSpec implements SupervisorSpec
   {
     private final String id;
@@ -1135,6 +1326,105 @@ public class SupervisorManagerTest extends EasyMockSupport
     public List<String> getDataSources()
     {
       return Collections.singletonList(id);
+    }
+  }
+
+  @JsonTypeName("testBackfill")
+  private static class TestBackfillSupervisorSpec extends SeekableStreamSupervisorSpec
+  {
+    @JsonCreator
+    TestBackfillSupervisorSpec(
+        @JsonProperty("id") String id,
+        @JsonProperty("spec") IngestionSpec ingestionSpec
+    )
+    {
+      super(
+          id,
+          ingestionSpec,
+          ImmutableMap.of("useConcurrentLocks", true),
+          false,
+          null, null, null, null,
+          MAPPER,
+          null, null, null, null
+      );
+    }
+
+    @Override
+    public Supervisor createSupervisor()
+    {
+      return null;
+    }
+
+    @Override
+    public String getType()
+    {
+      return "testBackfill";
+    }
+
+    @Override
+    public String getSource()
+    {
+      return "test-stream";
+    }
+
+    @Override
+    protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend)
+    {
+      return this;
+    }
+
+    @Override
+    public SeekableStreamSupervisorSpec createBackfillSpec(
+        String backfillId,
+        BoundedStreamConfig boundedStreamConfig,
+        @Nullable Integer taskCount
+    )
+    {
+      return new TestBackfillSupervisorSpec(
+          backfillId,
+          new IngestionSpec(new IOConfig(getIoConfig().getStream(), taskCount, boundedStreamConfig))
+      );
+    }
+
+    @Override
+    public SeekableStreamSupervisorIOConfig getIoConfig()
+    {
+      return getSpec().getIOConfig();
+    }
+
+    @JsonTypeName("testBackfillIngestionSpec")
+    static class IngestionSpec extends SeekableStreamSupervisorIngestionSpec
+    {
+      @JsonCreator
+      IngestionSpec(
+          @JsonProperty("ioConfig") IOConfig ioConfig
+      )
+      {
+        super(
+            new DataSchema(
+                "testDS",
+                new TimestampSpec("time", "auto", null),
+                new DimensionsSpec(Collections.emptyList()),
+                null, null, null, null, null
+            ),
+            ioConfig,
+            null
+        );
+      }
+    }
+
+    @JsonTypeName("testBackfillIOConfig")
+    static class IOConfig extends SeekableStreamSupervisorIOConfig
+    {
+      @JsonCreator
+      IOConfig(
+          @JsonProperty("stream") String stream,
+          @JsonProperty("taskCount") Integer taskCount,
+          @JsonProperty("boundedStreamConfig") BoundedStreamConfig boundedStreamConfig
+      )
+      {
+        super(stream, null, 1, taskCount, null, null, null, false, null, null, null, null, LagAggregator.DEFAULT, null, null, null, null, boundedStreamConfig);
+      }
     }
   }
 }

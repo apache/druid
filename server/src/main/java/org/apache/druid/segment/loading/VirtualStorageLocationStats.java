@@ -86,4 +86,23 @@ public interface VirtualStorageLocationStats
    * Number of operations which could not be loaded due to insufficient space during the measurement period
    */
   long getRejectCount();
+
+  /**
+   * Whether any stats are nonzero.
+   */
+  default boolean hasStats()
+  {
+    return getUsedBytes() != 0
+           || getHoldCount() != 0
+           || getHoldBytes() != 0
+           || getHitCount() != 0
+           || getHitBytes() != 0
+           || getLoadBeginCount() != 0
+           || getLoadBeginBytes() != 0
+           || getLoadCount() != 0
+           || getLoadBytes() != 0
+           || getEvictionCount() != 0
+           || getEvictionBytes() != 0
+           || getRejectCount() != 0;
+  }
 }

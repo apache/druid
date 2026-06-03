@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.loading.SegmentRangeReader;
 import org.apache.druid.utils.CloseableUtils;
@@ -83,7 +84,13 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class PartialSegmentFileMapperV10 implements SegmentFileMapper
 {
-  static final String METADATA_HEADER_SUFFIX = ".header";
+  private static final Logger LOG = new Logger(PartialSegmentFileMapperV10.class);
+
+  /**
+   * Suffix appended to the target filename to form the local header file. Public so cache-manager components can
+   * recognize the partial-download on-disk layout during bootstrap restore and reservation cleanup.
+   */
+  public static final String METADATA_HEADER_SUFFIX = ".header";
 
   /**
    * Create (or restore) a lazy mapper for the main segment file with attached external file mappers. If persisted state
@@ -146,9 +153,16 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
         bitmapBuffer = mmapBitmap(headerFile, result);
       }
       catch (Exception e) {
-        // corrupted file (partial write, truncated bitmap, bad JSON, etc.) — delete and re-fetch
+        // corrupted file (partial write, truncated bitmap, bad JSON, etc.), delete and re-fetch
         result = null;
-        headerFile.delete();
+        if (!headerFile.delete()) {
+          LOG.warn(
+              e,
+              "Failed to delete corrupted header file[%s] for [%s]; will be overwritten by re-fetch",
+              headerFile,
+              targetFilename
+          );
+        }
       }
     }
 
@@ -167,7 +181,32 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
         bitmapBuffer
     );
 
-    // restore downloaded files from the bitmap
+    // bitmap-vs-container repair pre-pass: if the bitmap claims a file is downloaded but its container file is
+    // missing on disk, the bitmap is lying (e.g. partial-cache eviction that cleared containers but couldn't atomically
+    // clear bits, or external file-system damage). Clear those bits before the restore loop so we don't spuriously
+    // sparse-allocate empty containers in the restore loop's ensureContainerInitialized call and treat their files as
+    // downloaded.
+    for (int i = 0; i < mapper.sortedFileNames.size(); i++) {
+      final int byteIndex = i / 8;
+      final int bitMask = 1 << (i % 8);
+      if ((bitmapBuffer.get(byteIndex) & bitMask) == 0) {
+        continue;
+      }
+      final String name = mapper.sortedFileNames.get(i);
+      final SegmentInternalFileMetadata fileMetadata = result.getMetadata().getFiles().get(name);
+      if (fileMetadata == null) {
+        continue;
+      }
+      final File containerFile = new File(
+          localCacheDir,
+          StringUtils.format("%s.container.%05d", targetFilename, fileMetadata.getContainer())
+      );
+      if (!containerFile.exists()) {
+        bitmapBuffer.put(byteIndex, (byte) (bitmapBuffer.get(byteIndex) & ~bitMask));
+      }
+    }
+
+    // restore downloaded files from the (now-repaired) bitmap
     for (int i = 0; i < mapper.sortedFileNames.size(); i++) {
       final int byteIndex = i / 8;
       final int bitIndex = i % 8;
@@ -249,6 +288,57 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     return metadata;
   }
 
+  /**
+   * Names of the external segment files attached to this mapper (each one is its own {@link PartialSegmentFileMapperV10}
+   * accessible via {@link #getExternalMapper}). Empty for mappers with no externals.
+   */
+  public Set<String> getExternalFilenames()
+  {
+    return externalMappers.keySet();
+  }
+
+  /**
+   * Look up the child mapper for an external segment file. Returns {@code null} if no external with that name is
+   * attached. Cache-layer callers use this to walk external files' {@link SegmentFileMetadata} and route
+   * {@link #initializeContainer} / {@link #evictContainer} calls to the right physical file.
+   */
+  @Nullable
+  public PartialSegmentFileMapperV10 getExternalMapper(String externalFilename)
+  {
+    return externalMappers.get(externalFilename);
+  }
+
+  /**
+   * Resolve {@code this} when {@code externalFilename} is null (main file), otherwise the named external child
+   * mapper. Throws if the external is not attached. Useful for routing container operations from cache-layer code
+   * that holds {@code (externalFilename, containerIndex)} refs.
+   */
+  public PartialSegmentFileMapperV10 mapperForContainer(@Nullable String externalFilename)
+  {
+    if (externalFilename == null) {
+      return this;
+    }
+    final PartialSegmentFileMapperV10 external = externalMappers.get(externalFilename);
+    if (external == null) {
+      throw DruidException.defensive(
+          "External mapper[%s] is not attached to this mapper for [%s]",
+          externalFilename,
+          targetFilename
+      );
+    }
+    return external;
+  }
+
+  /**
+   * The {@code targetFilename} this mapper writes/reads to/from inside the cache directory. For the entry-point
+   * mapper this is e.g. {@link org.apache.druid.segment.IndexIO#V10_FILE_NAME}; for an external child mapper it's
+   * the external file's name.
+   */
+  public String getTargetFilename()
+  {
+    return targetFilename;
+  }
+
   @Override
   public Set<String> getInternalFilenames()
   {
@@ -290,8 +380,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
 
   /**
    * Pre-download a set of internal files so that subsequent {@link #mapFile(String)} calls for these files will not
-   * trigger individual downloads. Files that are already downloaded are skipped. This is useful for batch-downloading
-   * all files for a projection at once.
+   * trigger individual downloads. Files that are already downloaded are skipped. Useful for batch-downloading all
+   * files in a bundle at once (see {@link SegmentFileBuilder#startFileBundle}).
    */
   public void ensureFilesAvailable(Set<String> fileNames) throws IOException
   {
@@ -301,6 +391,27 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
         ensureFileDownloaded(name, fileMetadata);
       }
     }
+  }
+
+  /**
+   * Total on-disk size of the header file(s) backing this mapper, summed across the main file and any external file
+   * mappers. This is the actual reservation size that should be charged against the local cache once the metadata has
+   * been fetched and persisted; callers can compare it against an up-front pessimistic estimate to decide whether to
+   * shrink the reservation.
+   */
+  public long getOnDiskHeaderSize()
+  {
+    long total = headerFileSize(localCacheDir, targetFilename);
+    for (PartialSegmentFileMapperV10 ext : externalMappers.values()) {
+      total += headerFileSize(ext.localCacheDir, ext.targetFilename);
+    }
+    return total;
+  }
+
+  private static long headerFileSize(File dir, String filename)
+  {
+    final File header = new File(dir, filename + METADATA_HEADER_SUFFIX);
+    return header.exists() ? header.length() : 0;
   }
 
   /**
@@ -381,6 +492,104 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     finally {
       lock.unlock();
       fileLocks.remove(name, lock);
+    }
+  }
+
+  /**
+   * Public entry point for cache-layer code that wants to ensure a container is materialized before any data is
+   * downloaded into it (e.g. when a per-bundle cache entry is mounted, the entry pre-allocates its container files
+   * so that subsequent {@link #mapFile} calls have somewhere to write into and the cache layer can charge the
+   * reservation up front).
+   */
+  public void initializeContainer(int containerIndex) throws IOException
+  {
+    checkClosed();
+    ensureContainerInitialized(containerIndex);
+  }
+
+  /**
+   * Reverse of {@link #initializeContainer(int)}: unmap the in-memory view of the container, delete the local
+   * container file, and clear the bitmap bits + {@link #downloadedFiles} entries for every internal file that lived
+   * in this container.
+   * <p>
+   * Used by per-bundle cache entries on unmount/eviction to release the disk and memory footprint of one bundle
+   * without affecting other bundles sharing the same {@link PartialSegmentFileMapperV10}. After eviction, subsequent
+   * {@link #mapFile} calls for files in this container will re-trigger downloads via {@link #initializeContainer}
+   * and the bitmap will be repopulated incrementally.
+   * <p>
+   * <b>Concurrency contract.</b> The caller is responsible for ensuring no concurrent {@link #mapFile} (or
+   * {@link #ensureFilesAvailable}) call is in flight for any file in this container. This is enforced one layer up
+   * by the cache-entry refcount: {@code PartialSegmentBundleCacheEntry} only invokes {@code evictContainer} from its
+   * {@code doActualUnmount} callback, which fires only after every reference acquired via {@code acquireReference()}
+   * has been closed. Bypassing that gate is dangerous, {@link ByteBufferUtils#unmap} frees the off-heap mapping, so a
+   * {@link ByteBuffer#slice} from a concurrent reader is a JVM SIGSEGV, not a recoverable error.
+   * <p>
+   * No-op if the container has not been initialized.
+   */
+  public void evictContainer(int containerIndex)
+  {
+    checkClosed();
+    containerLocks[containerIndex].lock();
+    try {
+      final MappedByteBuffer existing = containers[containerIndex];
+      if (existing != null) {
+        ByteBufferUtils.unmap(existing);
+        containers[containerIndex] = null;
+      }
+      // Try the cached containerFiles[i] first. If it's null, the container was never initialized in this mapper
+      // instance (typical right after create() with an empty bitmap), but the on-disk file may still exist from a
+      // previous run. Fall back to the deterministic path so eviction is always effective.
+      File containerFile = containerFiles[containerIndex];
+      if (containerFile == null) {
+        containerFile = new File(
+            localCacheDir,
+            StringUtils.format("%s.container.%05d", targetFilename, containerIndex)
+        );
+      }
+      if (containerFile.exists() && !containerFile.delete()) {
+        LOG.warn(
+            "Failed to delete container file[%s] during eviction of container[%d] for [%s]; leaking on disk",
+            containerFile,
+            containerIndex,
+            targetFilename
+        );
+      }
+      containerFiles[containerIndex] = null;
+    }
+    finally {
+      containerLocks[containerIndex].unlock();
+    }
+
+    // clear bitmap bits + downloadedFiles entries for files that lived in this container. Iterates
+    // metadata.getFiles() without external synchronization: SegmentFileMetadata is constructed once at mapper
+    // creation and its file map is effectively immutable for the mapper's lifetime, so concurrent iteration is safe.
+    for (Map.Entry<String, SegmentInternalFileMetadata> entry : metadata.getFiles().entrySet()) {
+      if (entry.getValue().getContainer() != containerIndex) {
+        continue;
+      }
+      final String fileName = entry.getKey();
+      if (downloadedFiles.remove(fileName)) {
+        downloadedBytes.addAndGet(-entry.getValue().getSize());
+      }
+      clearBitmapBit(fileName);
+    }
+  }
+
+  private void clearBitmapBit(String name)
+  {
+    final Integer index = fileNameToIndex.get(name);
+    if (index == null) {
+      return;
+    }
+    final int byteIndex = index / 8;
+    final int bitMask = 1 << (index % 8);
+    bitmapLock.lock();
+    try {
+      final byte existing = bitmapBuffer.get(byteIndex);
+      bitmapBuffer.put(byteIndex, (byte) (existing & ~bitMask));
+    }
+    finally {
+      bitmapLock.unlock();
     }
   }
 
