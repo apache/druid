@@ -204,16 +204,16 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
           (KinesisSupervisorIOConfig) ioConfig,
           context,
           suspended,
-          taskStorage,
-          taskMaster,
-          indexerMetadataStorageCoordinator,
-          (KinesisIndexTaskClientFactory) indexTaskClientFactory,
-          mapper,
-          emitter,
-          monitorSchedulerConfig,
-          rowIngestionMetersFactory,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
           awsCredentialsConfig,
-          supervisorStateManagerConfig
+          null
       );
     }
   }

@@ -141,20 +141,10 @@ public interface SupervisorSpec
   }
 
   /**
-   * Given the currently-running {@code old} spec, returns whether replacing it with this spec
-   * requires the supervisor to be restarted (re-submitted). This is distinct from asking whether
-   * the two specs are equal: implementations may return {@code false} for differences that do not
-   * affect the running supervisor (for example, a {@code taskCount} change while autoscaling is
-   * enabled, since that field is overridden at runtime).
-   * <p>
-   * Only consulted once the two specs are known to differ (see
-   * {@link SupervisorManager#shouldUpdateSupervisor}); the conservative default treats any
-   * such difference as requiring a restart.
-   *
-   * @param old the currently-running supervisor spec
-   * @return true if the supervisor must be restarted to apply this spec
+   * Returns true if replacing this (running) spec with {@code proposedSpec} requires a supervisor restart.
+   * Invoked on the running spec; default is conservative (always restart).
    */
-  default boolean requireRestart(SupervisorSpec old)
+  default boolean requireRestart(SupervisorSpec proposedSpec)
   {
     return true;
   }

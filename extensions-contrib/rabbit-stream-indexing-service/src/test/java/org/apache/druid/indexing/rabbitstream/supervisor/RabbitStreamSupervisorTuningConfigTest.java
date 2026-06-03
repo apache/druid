@@ -21,9 +21,17 @@ package org.apache.druid.indexing.rabbitstream.supervisor;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.rabbitstream.RabbitStreamIndexTaskModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -44,6 +52,17 @@ public class RabbitStreamSupervisorTuningConfigTest
 
   @Rule
   public final ExpectedException exception = ExpectedException.none();
+
+  @Test
+  public void testRequireRestartWhenRabbitTaskTuningChanges()
+  {
+    final RabbitStreamSupervisorSpec oldSpec = supervisorSpec(tuningConfig(15, 16, 17));
+
+    // requireRestart is invoked on the running (old) spec with the proposed spec as argument.
+    Assert.assertTrue(oldSpec.requireRestart(supervisorSpec(tuningConfig(20, 16, 17))));
+    Assert.assertTrue(oldSpec.requireRestart(supervisorSpec(tuningConfig(15, 20, 17))));
+    Assert.assertTrue(oldSpec.requireRestart(supervisorSpec(tuningConfig(15, 16, 20))));
+  }
 
   @Test
   public void testSerdeWithDefaults() throws Exception
@@ -120,6 +139,60 @@ public class RabbitStreamSupervisorTuningConfigTest
     Assert.assertEquals(Duration.standardSeconds(15), config.getHttpTimeout());
     Assert.assertEquals(Duration.standardSeconds(95), config.getShutdownTimeout());
     Assert.assertEquals(Duration.standardSeconds(120), config.getRepartitionTransitionDuration());
+  }
+
+  private RabbitStreamSupervisorSpec supervisorSpec(final RabbitStreamSupervisorTuningConfig tuningConfig)
+  {
+    return new RabbitStreamSupervisorSpec.Builder()
+        .id("id")
+        .dataSchema(dataSchema())
+        .ioConfig(ioConfig())
+        .tuningConfig(tuningConfig)
+        .build();
+  }
+
+  private DataSchema dataSchema()
+  {
+    return DataSchema.builder()
+                     .withDataSource("testDS")
+                     .withTimestamp(new TimestampSpec("timestamp", "iso", null))
+                     .withDimensions(DimensionsSpec.EMPTY)
+                     .withAggregators(new CountAggregatorFactory("rows"))
+                     .withGranularity(
+                         new UniformGranularitySpec(
+                             Granularities.HOUR,
+                             Granularities.NONE,
+                             ImmutableList.of()
+                         )
+                     )
+                     .build();
+  }
+
+  private RabbitStreamSupervisorIOConfig ioConfig()
+  {
+    return new RabbitStreamIOConfigBuilder()
+        .withStream("stream")
+        .withUri("rabbit://localhost")
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT1H"))
+        .build();
+  }
+
+  private RabbitStreamSupervisorTuningConfig tuningConfig(
+      final Integer recordBufferSize,
+      final Integer recordBufferOfferTimeout,
+      final Integer maxRecordsPerPoll
+  )
+  {
+    return mapper.convertValue(
+        ImmutableMap.of(
+            "type", "rabbit",
+            "recordBufferSize", recordBufferSize,
+            "recordBufferOfferTimeout", recordBufferOfferTimeout,
+            "maxRecordsPerPoll", maxRecordsPerPoll
+        ),
+        RabbitStreamSupervisorTuningConfig.class
+    );
   }
 
 }

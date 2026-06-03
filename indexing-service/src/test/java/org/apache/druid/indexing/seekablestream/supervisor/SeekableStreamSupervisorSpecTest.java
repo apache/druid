@@ -899,16 +899,16 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
       }
 
       @Override
-      protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend)
+      protected SeekableStreamSupervisorSpec toggleSuspend(final boolean suspend)
       {
         return null;
       }
 
       @Override
       public SeekableStreamSupervisorSpec createBackfillSpec(
-          String backfillId,
-          BoundedStreamConfig boundedStreamConfig,
-          @Nullable Integer taskCount
+          final String backfillId,
+          final BoundedStreamConfig boundedStreamConfig,
+          @Nullable final Integer taskCount
       )
       {
         return null;
@@ -1429,7 +1429,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
     final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().build();
     final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().build();
-    Assert.assertFalse(newSpec.requireRestart(oldSpec));
+    Assert.assertFalse(oldSpec.requireRestart(newSpec));
   }
 
   @Test
@@ -1439,7 +1439,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
     final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().taskCount(2).build();
     final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().taskCount(5).build();
-    Assert.assertFalse(newSpec.requireRestart(oldSpec));
+    Assert.assertFalse(oldSpec.requireRestart(newSpec));
   }
 
   @Test
@@ -1448,7 +1448,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     final TestSeekableStreamSupervisorSpec seed = buildSpecWithIoConfig("id", createIOConfig(2, null));
     final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().taskCount(2).build();
     final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().taskCount(5).build();
-    Assert.assertTrue(newSpec.requireRestart(oldSpec));
+    Assert.assertTrue(oldSpec.requireRestart(newSpec));
   }
 
   @Test
@@ -1458,7 +1458,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
     final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().build();
     final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().context(ImmutableMap.of("k", "v")).build();
-    Assert.assertTrue(newSpec.requireRestart(oldSpec));
+    Assert.assertTrue(oldSpec.requireRestart(newSpec));
   }
 
   @Test
@@ -1468,7 +1468,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
     final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().suspended(false).build();
     final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().suspended(true).build();
-    Assert.assertTrue(newSpec.requireRestart(oldSpec));
+    Assert.assertTrue(oldSpec.requireRestart(newSpec));
   }
 
   @Test
@@ -1478,7 +1478,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
     final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().build();
     final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().dataSchema(getDataSchema("other-datasource")).build();
-    Assert.assertTrue(newSpec.requireRestart(oldSpec));
+    Assert.assertTrue(oldSpec.requireRestart(newSpec));
   }
 
   @Test
@@ -1499,7 +1499,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null))).toBuilder().build();
     final SeekableStreamSupervisorSpec newSpec =
         buildSpecWithIoConfig("id", createIOConfig(5, null)).toBuilder().build();
-    Assert.assertTrue(newSpec.requireRestart(oldSpec));
+    Assert.assertTrue(oldSpec.requireRestart(newSpec));
   }
 
   @Test
@@ -1510,7 +1510,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().build();
     final SeekableStreamSupervisorSpec newSpec =
         seed.toBuilder().tuningConfig(EasyMock.mock(SeekableStreamSupervisorTuningConfig.class)).build();
-    Assert.assertTrue(newSpec.requireRestart(oldSpec));
+    Assert.assertTrue(oldSpec.requireRestart(newSpec));
   }
 
   private void assertMergeResult(
