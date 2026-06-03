@@ -24,6 +24,7 @@ import com.google.common.base.Suppliers;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
@@ -34,6 +35,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Offset;
+import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 import org.apache.druid.segment.projections.ClusterGroupQueryPlan;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.ClusteringColumnSelectorFactory;
@@ -43,6 +45,7 @@ import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.segment.vector.ConcatenatingVectorCursor;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -304,9 +307,14 @@ public class QueryableIndexCursorFactory implements CursorFactory
         vectorWrapperFactory
     );
 
-    // canVectorize() is determined by the per-group holders. Probe the first one (lazily, `Suppliers.memoize`
-    // means this opens it once and is reused by ConcatenatingVectorCursor).
-    final boolean canVectorize = holderSuppliers.get(0).get().canVectorize();
+    // each group gets a different rewritten filter, so the conservative thing to do here is require the original query
+    // filter's value matcher to be vectorizable. This works because every per-group filter is a sub-structure of the
+    // original filter (clustering leaves fold to constant TRUE/FALSE, other leaves pass through unchanged)
+    final Filter queryFilter = spec.getFilter();
+    final boolean filterCanVectorize =
+        queryFilter == null || queryFilter.canVectorizeMatcher(spec.getVirtualColumns().wrapInspector(this));
+    // we still check that the first holder is vectorizable to make sure all the non-filter parts can be vectorized
+    final boolean canVectorize = filterCanVectorize && holderSuppliers.get(0).get().canVectorize();
 
     return new CursorHolder()
     {
@@ -430,6 +438,8 @@ public class QueryableIndexCursorFactory implements CursorFactory
   {
     static final EmptyClusteredCursorHolder INSTANCE = new EmptyClusteredCursorHolder();
 
+    private static final ColumnSelectorFactory NIL_SELECTOR_FACTORY = new AllNullColumnSelectorFactory();
+
     @Override
     public Cursor asCursor()
     {
@@ -438,9 +448,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
         @Override
         public ColumnSelectorFactory getColumnSelectorFactory()
         {
-          throw DruidException.defensive(
-              "No column selector factory available on an empty cluster-group cursor"
-          );
+          return NIL_SELECTOR_FACTORY;
         }
 
         @Override
@@ -475,7 +483,112 @@ public class QueryableIndexCursorFactory implements CursorFactory
     @Override
     public boolean canVectorize()
     {
-      return false;
+      return true;
+    }
+
+    @Override
+    public VectorCursor asVectorCursor()
+    {
+      final ReadableVectorInspector inspector = new ReadableVectorInspector()
+      {
+        @Override
+        public int getId()
+        {
+          return 0;
+        }
+
+        @Override
+        public int getMaxVectorSize()
+        {
+          return QueryContexts.DEFAULT_VECTOR_SIZE;
+        }
+
+        @Override
+        public int getCurrentVectorSize()
+        {
+          return 0;
+        }
+      };
+      final VectorColumnSelectorFactory nilFactory = new VectorColumnSelectorFactory()
+      {
+        @Override
+        public ReadableVectorInspector getReadableVectorInspector()
+        {
+          return inspector;
+        }
+
+        @Override
+        public SingleValueDimensionVectorSelector makeSingleValueDimensionSelector(DimensionSpec dimensionSpec)
+        {
+          return NilVectorSelector.create(inspector);
+        }
+
+        @Override
+        public MultiValueDimensionVectorSelector makeMultiValueDimensionSelector(DimensionSpec dimensionSpec)
+        {
+          // Only valid on columns whose capabilities report multi-value strings; this factory reports null
+          // capabilities for every column, so engines should never route here.
+          throw DruidException.defensive(
+              "Cannot make multi-value dimension selector for column[%s] on an empty cluster-group cursor",
+              dimensionSpec.getDimension()
+          );
+        }
+
+        @Override
+        public VectorValueSelector makeValueSelector(String column)
+        {
+          return NilVectorSelector.create(inspector);
+        }
+
+        @Override
+        public VectorObjectSelector makeObjectSelector(String column)
+        {
+          return NilVectorSelector.create(inspector);
+        }
+
+        @Nullable
+        @Override
+        public ColumnCapabilities getColumnCapabilities(String column)
+        {
+          return null;
+        }
+      };
+      return new VectorCursor()
+      {
+        @Override
+        public VectorColumnSelectorFactory getColumnSelectorFactory()
+        {
+          return nilFactory;
+        }
+
+        @Override
+        public void advance()
+        {
+        }
+
+        @Override
+        public boolean isDone()
+        {
+          return true;
+        }
+
+        @Override
+        public void reset()
+        {
+        }
+
+        @Override
+        public int getMaxVectorSize()
+        {
+          return inspector.getMaxVectorSize();
+        }
+
+        @Override
+        public int getCurrentVectorSize()
+        {
+          return 0;
+        }
+      };
     }
 
     @Override

@@ -79,7 +79,8 @@ public final class ConcatenatingCursor implements Cursor
 
   /**
    * Open the next group whose cursor has at least one row. Sets {@code currentCursor = null} when all groups are
-   * exhausted.
+   * exhausted. The wrapper deliberately keeps the last group's delegate at exhaustion: selector values are
+   * undefined after {@link #isDone()} anyway, but factory metadata (getColumnCapabilities) must stay answerable.
    */
   private void advanceToNextNonEmptyGroup()
   {
@@ -106,8 +107,7 @@ public final class ConcatenatingCursor implements Cursor
   @Override
   public void advance()
   {
-    initializeIfNeeded();
-    if (currentCursor == null) {
+    if (isDone()) {
       return;
     }
     currentCursor.advance();
@@ -119,8 +119,7 @@ public final class ConcatenatingCursor implements Cursor
   @Override
   public void advanceUninterruptibly()
   {
-    initializeIfNeeded();
-    if (currentCursor == null) {
+    if (isDone()) {
       return;
     }
     currentCursor.advanceUninterruptibly();

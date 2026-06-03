@@ -225,14 +225,15 @@ class TableClusterGroupSpecTest
   @Test
   void testJsonShapeIsOnlyClusteringValueIds() throws JsonProcessingException
   {
-    // Spec carries only clusteringValueIds (+ type tag); summary-owned fields must not leak in.
+    // Spec carries only the clustering value ids (+ type tag); summary-owned fields must not leak in. The
+    // per-group fields use compact wire names ("groups", "ids") since group entries repeat per group.
     final Built b = buildSummary(TENANT_CLUSTER_SIGNATURE, List.of(tuple(VAL_ACME)));
     final String json = JSON_MAPPER.writeValueAsString(b.schema());
-    Assertions.assertTrue(json.contains("\"clusterGroups\""), "summary serializes clusterGroups");
+    Assertions.assertTrue(json.contains("\"groups\""), "summary serializes groups");
     Assertions.assertTrue(json.contains("\"clusteringDictionaries\""), "summary serializes clusteringDictionaries");
-    Assertions.assertTrue(json.contains("\"clusteringValueIds\":[0]"), "spec carries clusteringValueIds");
+    Assertions.assertTrue(json.contains("\"ids\":[0]"), "spec carries clustering value ids");
     // Any of the summary-only fields appearing inside the spec object would mean we duplicated them.
-    final int specStart = json.indexOf("\"clusterGroups\":[");
+    final int specStart = json.indexOf("\"groups\":[");
     final int specEnd = json.indexOf("]", specStart);
     final String specJson = json.substring(specStart, specEnd + 1);
     Assertions.assertFalse(specJson.contains("\"columns\""), "spec must not carry columns");

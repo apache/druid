@@ -83,7 +83,9 @@ public final class ConcatenatingVectorCursor implements VectorCursor
 
   /**
    * Open the next group whose vector cursor has at least one row. Skips empty groups. Sets {@code currentCursor =
-   * null} when all groups are exhausted.
+   * null} when all groups are exhausted. The wrapper deliberately keeps the last group's delegate at exhaustion:
+   * selector values are undefined after {@link #isDone()} anyway, but factory metadata (getColumnCapabilities)
+   * must stay answerable.
    */
   private void advanceToNextNonEmptyGroup()
   {

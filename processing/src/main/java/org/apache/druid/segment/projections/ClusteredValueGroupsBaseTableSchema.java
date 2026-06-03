@@ -80,7 +80,7 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
       @JsonProperty("clusteringColumns") RowSignature clusteringColumns,
       @JsonProperty("sharedColumns") @Nullable List<String> sharedColumns,
       @JsonProperty("clusteringDictionaries") @Nullable ClusteringDictionaries clusteringDictionaries,
-      @JsonProperty("clusterGroups") @Nullable List<TableClusterGroupSpec> clusterGroups
+      @JsonProperty("groups") @Nullable List<TableClusterGroupSpec> clusterGroups
   )
   {
     if (CollectionUtils.isNullOrEmpty(columns)) {
@@ -263,7 +263,7 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
    * this order yields rows in the segment's full declared ordering (clustering values monotonically advance
    * across groups; within each group, rows follow the segment ordering with the clustering prefix dropped).
    */
-  @JsonProperty
+  @JsonProperty("groups")
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<TableClusterGroupSpec> getClusterGroups()
   {

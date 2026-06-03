@@ -64,7 +64,7 @@ public class TableClusterGroupSpec
 
   @JsonCreator
   public TableClusterGroupSpec(
-      @JsonProperty("clusteringValueIds") List<Integer> clusteringValueIds,
+      @JsonProperty("ids") List<Integer> clusteringValueIds,
       @JsonProperty("numRows") @Nullable Integer numRows
   )
   {
@@ -128,7 +128,7 @@ public class TableClusterGroupSpec
   /**
    * Dictionary ids identifying this group, one per clustering column.
    */
-  @JsonProperty
+  @JsonProperty("ids")
   public List<Integer> getClusteringValueIds()
   {
     return clusteringValueIds;

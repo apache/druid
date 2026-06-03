@@ -31,12 +31,15 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.TypedInFilter;
+import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
@@ -52,6 +55,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.AndFilter;
+import org.apache.druid.segment.filter.OrFilter;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.projections.ClusteredQueryableIndexTestFixture;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -64,6 +69,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * End-to-end coverage for {@link QueryableIndexCursorFactory}'s clustered dispatch, uses a
@@ -335,9 +342,130 @@ class QueryableIndexCursorFactoryClusteredTest
 
     final Filter filter = new EqualityFilter("tenant", ColumnType.STRING, "initech", null);
     try (CursorHolder holder = factory.makeCursorHolder(specWith(filter))) {
-      // Empty cluster-group cursor — no surviving group, the holder doesn't even expose a selector factory.
-      Assertions.assertTrue(holder.asCursor().isDone());
+      // Empty cluster-group cursor — no surviving group, so the cursor is already done.
+      final Cursor cursor = holder.asCursor();
+      Assertions.assertTrue(cursor.isDone());
+      // Query engines commonly create selectors from a non-null cursor before checking isDone(); the selector
+      // factory must hand out harmless nil selectors rather than throwing so the engine sees an empty result.
+      final DimensionSelector tenantSel =
+          cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("tenant"));
+      Assertions.assertNotNull(tenantSel);
+      Assertions.assertNotNull(cursor.getColumnSelectorFactory().makeColumnValueSelector("count"));
+      Assertions.assertNull(cursor.getColumnSelectorFactory().getColumnCapabilities("tenant"));
     }
+  }
+
+  @Test
+  void testMultiGroupCanVectorizeAccountsForEveryGroupRewrite()
+  {
+    fixture = standardTwoGroup();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        fixture.segmentIndex(),
+        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+    );
+
+    // OR(tenant=acme, nonVectorizable(region=us-east-1)) — both groups survive (UNKNOWN keeps globex), but the
+    // rewrites differ: acme folds to TRUE (null filter, trivially vectorizable) while globex keeps the
+    // non-vectorizable residual leaf. The combined holder must NOT report canVectorize even though the first
+    // group's holder would, otherwise the engine picks the vector path and the later group blows up.
+    final LinkedHashSet<Filter> children = new LinkedHashSet<>();
+    children.add(new EqualityFilter("tenant", ColumnType.STRING, "acme", null));
+    children.add(new NonVectorizableFilter(new EqualityFilter("region", ColumnType.STRING, "us-east-1", null)));
+    try (CursorHolder holder = factory.makeCursorHolder(specWith(new OrFilter(children)))) {
+      Assertions.assertFalse(holder.canVectorize());
+      // The non-vector path still works and only acme rows + the matching globex row would pass the residual; the
+      // acme group's TRUE rewrite keeps all of its rows.
+      final List<List<String>> rows = collectTenantRegionRows(holder.asCursor());
+      Assertions.assertEquals(
+          List.of(
+              List.of("acme", "us-east-1"),
+              List.of("acme", "us-west-2")
+          ),
+          rows
+      );
+    }
+
+    // Control: the same shape with a vectorizable residual leaf keeps the vector path available.
+    final LinkedHashSet<Filter> vectorizableChildren = new LinkedHashSet<>();
+    vectorizableChildren.add(new EqualityFilter("tenant", ColumnType.STRING, "acme", null));
+    vectorizableChildren.add(new EqualityFilter("region", ColumnType.STRING, "us-east-1", null));
+    try (CursorHolder holder = factory.makeCursorHolder(specWith(new OrFilter(vectorizableChildren)))) {
+      Assertions.assertTrue(holder.canVectorize());
+    }
+  }
+
+  /**
+   * Filter wrapper whose value matcher cannot vectorize and which exposes no bitmap index, forcing the matcher
+   * path. The cluster-group filter walker doesn't recognize the wrapper, so it passes through rewrites unchanged.
+   */
+  private static final class NonVectorizableFilter implements Filter
+  {
+    private final Filter delegate;
+
+    private NonVectorizableFilter(Filter delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
+    {
+      return null;
+    }
+
+    @Override
+    public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+    {
+      return delegate.makeMatcher(factory);
+    }
+
+    @Override
+    public Set<String> getRequiredColumns()
+    {
+      return delegate.getRequiredColumns();
+    }
+  }
+
+  @Test
+  void testAllGroupsPrunedTimeseriesReturnsEmptyResult()
+  {
+    fixture = standardTwoGroup();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        fixture.segmentIndex(),
+        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+    );
+
+    // End-to-end version of the selector-on-done-cursor contract: a real engine runs a query whose filter prunes
+    // every cluster group and must come back with an empty result (for timeseries with ALL granularity, a single
+    // zero-count bucket) rather than an error from selector creation on the done cursor.
+    final TimeseriesQuery query = newTimeseries()
+        .filters(new EqualityFilter("tenant", ColumnType.STRING, "initech", null))
+        .build();
+    final List<Result<TimeseriesResultValue>> results = timeseriesEngine.process(query, factory, null, null).toList();
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(0L, results.get(0).getValue().getLongMetric("count").longValue());
+  }
+
+  @Test
+  void testAllGroupsPrunedSupportsForceVectorize()
+  {
+    fixture = standardTwoGroup();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        fixture.segmentIndex(),
+        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+    );
+
+    // The empty holder must report canVectorize and serve a (done) vector cursor — otherwise "vectorize": "force"
+    // queries fail outright when the filter prunes every cluster group, instead of returning an empty result.
+    final TimeseriesQuery query = newTimeseries()
+        .filters(new EqualityFilter("tenant", ColumnType.STRING, "initech", null))
+        .context(Map.of(QueryContexts.VECTORIZE_KEY, "force"))
+        .build();
+    final List<Result<TimeseriesResultValue>> results = timeseriesEngine.process(query, factory, null, null).toList();
+    Assertions.assertTrue(
+        results.isEmpty() || results.get(0).getValue().getLongMetric("count").longValue() == 0L,
+        () -> "expected empty result, got " + results
+    );
   }
 
   @Test

@@ -1086,11 +1086,11 @@ public class IndexIO
 
       for (String column : projectionSpec.getSchema().getColumnNames()) {
         final String smooshName = Projections.getProjectionSegmentInternalFileName(projectionSpec.getSchema(), column);
-        final ByteBuffer colBuffer = segmentFileMapper.mapFile(smooshName);
         final ColumnDescriptor columnDescriptor = metadata.getColumnDescriptors().get(smooshName);
         if (columnDescriptor == null) {
           continue;
         }
+        final ByteBuffer colBuffer = segmentFileMapper.mapFile(smooshName);
 
         final BaseColumnHolder parentColumn;
         if (parentColumns.containsKey(column)) {
@@ -1149,11 +1149,11 @@ public class IndexIO
 
       for (String column : summary.getGroupColumnNames()) {
         final String smooshName = Projections.getClusterGroupSegmentInternalFileName(clusteringValueIds, column);
-        final ByteBuffer colBuffer = segmentFileMapper.mapFile(smooshName);
         final ColumnDescriptor columnDescriptor = metadata.getColumnDescriptors().get(smooshName);
         if (columnDescriptor == null) {
           continue;
         }
+        final ByteBuffer colBuffer = segmentFileMapper.mapFile(smooshName);
 
         final String internedColumnName = SmooshedFileMapper.STRING_INTERNER.intern(column);
         groupColumns.put(
