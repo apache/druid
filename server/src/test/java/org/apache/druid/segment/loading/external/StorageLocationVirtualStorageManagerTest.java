@@ -122,6 +122,12 @@ public class StorageLocationVirtualStorageManagerTest
       Assertions.assertEquals(1, location.getWeakStats().getHoldCount());
       Assertions.assertEquals(1, location.getWeakEntryCount());
 
+      // Validate that both load begin and load complete were tracked
+      Assertions.assertEquals(1, location.getWeakStats().getLoadBeginCount());
+      Assertions.assertEquals(content.length(), location.getWeakStats().getLoadBeginBytes());
+      Assertions.assertEquals(1, location.getWeakStats().getLoadCount());
+      Assertions.assertEquals(content.length(), location.getWeakStats().getLoadBytes());
+
       File file = cachedFile.getFile();
       Assertions.assertNotNull(file);
       Assertions.assertTrue(file.exists());
@@ -156,6 +162,10 @@ public class StorageLocationVirtualStorageManagerTest
     Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
     Assertions.assertEquals(1, location.getWeakEntryCount());
 
+    // Initial populate counts as a completed load
+    Assertions.assertEquals(1, location.getWeakStats().getLoadCount());
+    Assertions.assertEquals(content.length(), location.getWeakStats().getLoadBytes());
+
     // Then get
     try (CachedFile cachedFile = manager.get(identifier)) {
       Assertions.assertNotNull(cachedFile);
@@ -163,6 +173,11 @@ public class StorageLocationVirtualStorageManagerTest
 
       // Hold should be re-acquired
       Assertions.assertEquals(1, location.getWeakStats().getHoldCount());
+
+      // A hit does not count as another load
+      Assertions.assertEquals(1, location.getWeakStats().getLoadCount());
+      Assertions.assertEquals(content.length(), location.getWeakStats().getLoadBytes());
+      Assertions.assertEquals(1, location.getWeakStats().getHitCount());
 
       String readContent = new String(
           Files.readAllBytes(cachedFile.getFile().toPath()),
@@ -384,6 +399,10 @@ public class StorageLocationVirtualStorageManagerTest
 
         Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
 
+        // Only the first call counts as a load
+        Assertions.assertEquals(1, location.getWeakStats().getLoadCount());
+        Assertions.assertEquals(content1.length(), location.getWeakStats().getLoadBytes());
+
         // Should have first content, not second
         String readContent = new String(
             Files.readAllBytes(cachedFile2.getFile().toPath()),
@@ -488,6 +507,11 @@ public class StorageLocationVirtualStorageManagerTest
     // Note: The entry may still be in the cache but in an unmounted state.
     // StorageLocation will eventually evict it. The important thing is that
     // the exception was properly thrown and the file was not successfully created.
+
+    // A failed populate counts as a load begin, but not as a completed load.
+    Assertions.assertEquals(1, location.getWeakStats().getLoadBeginCount());
+    Assertions.assertEquals(0, location.getWeakStats().getLoadCount());
+    Assertions.assertEquals(0, location.getWeakStats().getLoadBytes());
   }
 
   @Test

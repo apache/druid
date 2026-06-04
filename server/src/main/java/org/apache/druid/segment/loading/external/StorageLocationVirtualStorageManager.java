@@ -135,7 +135,9 @@ public class StorageLocationVirtualStorageManager implements VirtualStorageManag
                   public void mount(StorageLocation location)
                   {
                     super.mount(location);
-                    mounted.set(true);
+                    if (mounted.compareAndSet(false, true)) {
+                      location.trackWeakLoad(getSize());
+                    }
                   }
 
                   @Override
