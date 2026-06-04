@@ -96,7 +96,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
     // Cluster-group dispatch runs after aggregate-projection match, before the regular base-table fallback
     final ClusteredValueGroupsBaseTableSchema clusterSummary = index.getClusteredBaseSummary();
     if (clusterSummary != null) {
-      return makeClusteredCursorHolder(spec, clusterSummary);
+      return makeClusteredCursorHolder(spec);
     }
 
     // No projections, no clustering, regular full-segment cursor.
@@ -148,7 +148,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
     };
   }
 
-  private CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec, ClusteredValueGroupsBaseTableSchema clusterSummary)
+  private CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec)
   {
     final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
         new ArrayList<>(index.getClusterGroupSchemas()),
@@ -160,7 +160,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
     }
 
     if (plan.survivingGroups().size() == 1) {
-      return makeSingleGroupClusteredCursorHolder(spec, plan, plan.survivingGroups().get(0));
+      return makeSingleGroupClusteredCursorHolder(spec, plan, plan.survivingGroups().getFirst());
     }
     return makeMultiGroupClusteredCursorHolder(spec, plan);
   }
