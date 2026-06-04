@@ -84,7 +84,7 @@ public class SqlEntity implements InputEntity
   }
 
   @Override
-  public InputStream open()
+  public InputStream openRaw()
   {
     throw new UnsupportedOperationException("Please use fetch() instead");
   }

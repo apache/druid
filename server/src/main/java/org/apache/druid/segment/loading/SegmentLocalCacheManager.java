@@ -22,10 +22,8 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
-import com.google.common.util.concurrent.ForwardingListeningExecutorService;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
@@ -40,7 +38,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.PartialBundleAcquirer;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
@@ -57,20 +54,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
@@ -124,15 +116,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private final IndexIO indexIO;
 
-  /**
-   * Executor for on-demand load work (partial metadata mounts, full downloads, and per-cursor column downloads).
-   * Concurrency is bounded by the executor itself: in the virtual-thread path it is a
-   * {@link PermitBoundedListeningExecutorService} wrapping an unbounded thread-per-virtual-thread executor (so the
-   * permit count, not the thread count, is the bound); in the fixed-pool path the pool size is the bound. Every
-   * on-demand-load submission, including those routed through {@link PartialBundleAcquirer#getDownloadExec}, is
-   * therefore bounded without callers having to acquire a permit themselves.
-   */
-  private final ListeningExecutorService virtualStorageLoadOnDemandExec;
+  private final StorageLoadingThreadPool virtualStorageLoadingThreadPool;
   private ExecutorService loadOnBootstrapExec = null;
   private ExecutorService loadOnDownloadExec = null;
 
@@ -140,69 +124,29 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   public SegmentLocalCacheManager(
       List<StorageLocation> locations,
       SegmentLoaderConfig config,
+      StorageLoadingThreadPool virtualStorageLoadingThreadPool,
       @Nonnull StorageLocationSelectorStrategy strategy,
       IndexIO indexIO,
       @Json ObjectMapper mapper
   )
   {
-    this.config = config;
-    this.jsonMapper = mapper;
     this.locations = locations;
+    this.config = config;
+    this.virtualStorageLoadingThreadPool = virtualStorageLoadingThreadPool;
     this.strategy = strategy;
     this.indexIO = indexIO;
+    this.jsonMapper = mapper;
 
     log.info("Using storage location strategy[%s].", this.strategy.getClass().getSimpleName());
 
     if (config.isVirtualStorage()) {
       if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() > 0) {
-        throw DruidException.defensive("Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnDownload");
+        throw DruidException.defensive(
+            "Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnDownload");
       }
       if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
-        throw DruidException.defensive("Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnBootstrap");
-      }
-      if (config.getVirtualStorageLoadThreads() <= 0) {
-        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build(
-                                "virtualStorageLoadThreads must be greater than 0, got [%d]",
-                                config.getVirtualStorageLoadThreads()
-                            );
-      }
-      if (config.isVirtualStorageEphemeral()) {
-        for (StorageLocation location : locations) {
-          location.setAreWeakEntriesEphemeral(true);
-        }
-      }
-      if (config.isVirtualStorageUseVirtualThreads()) {
-        log.info(
-            "Using virtual storage mode with virtual threads - max concurrent on demand loads: [%d].",
-            config.getVirtualStorageLoadThreads()
-        );
-        // Unbounded thread-per-virtual-thread executor bounded to getVirtualStorageLoadThreads() concurrently-running
-        // tasks via a semaphore baked into the executor: the permit is acquired on the worker thread inside each task,
-        // so waiting parks a virtual thread rather than blocking the submitter.
-        virtualStorageLoadOnDemandExec = new PermitBoundedListeningExecutorService(
-            MoreExecutors.listeningDecorator(
-                Executors.newThreadPerTaskExecutor(
-                    Thread.ofVirtual()
-                          .name("VirtualStorageOnDemandLoadingThread-", 0)
-                          .factory()
-                )
-            ),
-            new Semaphore(config.getVirtualStorageLoadThreads())
-        );
-      } else {
-        log.info(
-            "Using virtual storage mode with fixed platform thread pool - on demand load threads: [%d].",
-            config.getVirtualStorageLoadThreads()
-        );
-        // Fixed pool size is itself the concurrency bound, so no permit wrapping is needed.
-        virtualStorageLoadOnDemandExec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(
-                config.getVirtualStorageLoadThreads(),
-                Execs.makeThreadFactory("VirtualStorageOnDemandLoadingThread-%s")
-            )
-        );
+        throw DruidException.defensive(
+            "Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnBootstrap");
       }
     } else {
       log.info(
@@ -224,7 +168,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             Execs.makeThreadFactory("LoadSegmentsIntoPageCacheOnDownload-%s")
         );
       }
-      virtualStorageLoadOnDemandExec = null;
     }
   }
 
@@ -375,7 +318,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               IndexIO.V10_FILE_NAME,
               List.of(),
               jsonMapper,
-              virtualStorageLoadOnDemandExec,
+              virtualStorageLoadingThreadPool.getExecutorService(),
               location
           );
           cachedSegments.add(segment);
@@ -619,7 +562,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    * <p>
    * Slow path: under the per-segment lock, {@link #findOrReservePartial} reuses an existing not-yet-usable entry or
    * reserves a fresh weak one, and the action submits mount (+ optional ensureAllDownloaded) to
-   * {@link #virtualStorageLoadOnDemandExec} so callers that yield on the future never block a processing thread on
+   * {@link #virtualStorageLoadingThreadPool} so callers that yield on the future never block a processing thread on
    * deep-storage I/O.
    */
   private AcquireSegmentAction acquirePartialInternal(
@@ -661,7 +604,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               // until the executor picks up the task. loadTime then covers mount (+ ensureAllDownloaded for the
               // full-download path).
               final long submitNanos = System.nanoTime();
-              return virtualStorageLoadOnDemandExec.submit(() -> {
+              return virtualStorageLoadingThreadPool.getExecutorService().submit(() -> {
                 // The executor bounds concurrency itself (permit acquired inside the task on the worker thread), so
                 // waitNanos measures both the queue delay and any permit wait until this task actually starts.
                 final long taskStartNanos = System.nanoTime();
@@ -828,7 +771,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               List.of(),
               rangeReader,
               jsonMapper,
-              virtualStorageLoadOnDemandExec,
+              virtualStorageLoadingThreadPool.getExecutorService(),
               config.getVirtualStorageMetadataReservationEstimate()
           )
       );
@@ -1117,9 +1060,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     if (loadOnDownloadExec != null) {
       loadOnDownloadExec.shutdown();
     }
-    if (virtualStorageLoadOnDemandExec != null) {
-      virtualStorageLoadOnDemandExec.shutdown();
-    }
   }
 
   @VisibleForTesting
@@ -1132,6 +1072,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   public List<StorageLocation> getLocations()
   {
     return locations;
+  }
+
+  @Override
+  public StorageLoadingThreadPool getLoadingThreadPool()
+  {
+    return virtualStorageLoadingThreadPool;
   }
 
   /**
@@ -1208,7 +1154,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return Suppliers.memoize(
         () -> {
           final long startTime = System.nanoTime();
-          return virtualStorageLoadOnDemandExec.submit(
+          return virtualStorageLoadingThreadPool.getExecutorService().submit(
               () -> {
                 final long execStartTime = System.nanoTime();
                 final long waitTime = execStartTime - startTime;
@@ -1819,129 +1765,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     {
       closed = true;
       holds.close();
-    }
-  }
-
-  /**
-   * A {@link ListeningExecutorService} that caps the number of concurrently-running submitted tasks at a semaphore's
-   * permit count, acquiring a permit (on the worker thread) before each task body runs and releasing it after. Used to
-   * bound concurrent virtual-storage on-demand loads when the backing executor is an unbounded thread-per-virtual-thread
-   * executor: the permit count is the concurrency bound, not the thread count, and the wait for a permit parks a virtual
-   * thread rather than blocking the submitter.
-   * <p>
-   * The permit wait is <b>interruptible</b>: a task whose future is canceled with {@code mayInterruptIfRunning} (or a
-   * {@code shutdownNow}) while it is parked on the permit is interrupted out of the wait and aborts before running its
-   * body. Canceling a query stops not only its queued column downloads but also those blocked on the permit,
-   * before any deep-storage I/O begins. A task that has already passed the permit and started its body runs to
-   * completion (aborting in-flight reads is handled separately by the task itself, not here).
-   * <p>
-   * Only {@code execute}/{@code submit} are bounded; those are the only submission paths on-demand load work uses
-   * (including the {@link PartialBundleAcquirer#getDownloadExec} column-download path). {@code invokeAll}/
-   * {@code invokeAny} throw {@link UnsupportedOperationException} so the concurrency bound can never be silently
-   * bypassed by a future caller.
-   * <p>
-   * Callers must not submit a task that itself blocks on another task submitted to this executor while holding a
-   * permit, or all permits could be exhausted by waiters; the on-demand load tasks here never nest submissions.
-   */
-  @VisibleForTesting
-  static final class PermitBoundedListeningExecutorService extends ForwardingListeningExecutorService
-  {
-    private final ListeningExecutorService delegate;
-    private final Semaphore permits;
-
-    PermitBoundedListeningExecutorService(ListeningExecutorService delegate, Semaphore permits)
-    {
-      this.delegate = delegate;
-      this.permits = permits;
-    }
-
-    @Override
-    protected ListeningExecutorService delegate()
-    {
-      return delegate;
-    }
-
-    @Override
-    public void execute(Runnable command)
-    {
-      delegate.execute(withPermit(command));
-    }
-
-    @Override
-    public <T> ListenableFuture<T> submit(Callable<T> task)
-    {
-      return delegate.submit(withPermit(task));
-    }
-
-    @Override
-    public ListenableFuture<?> submit(Runnable task)
-    {
-      return delegate.submit(withPermit(task));
-    }
-
-    @Override
-    public <T> ListenableFuture<T> submit(Runnable task, T result)
-    {
-      return delegate.submit(withPermit(task), result);
-    }
-
-    @Override
-    public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
-    {
-      throw new UnsupportedOperationException("invokeAll is not permit-bounded; use submit");
-    }
-
-    @Override
-    public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-    {
-      throw new UnsupportedOperationException("invokeAll is not permit-bounded; use submit");
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
-    {
-      throw new UnsupportedOperationException("invokeAny is not permit-bounded; use submit");
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-    {
-      throw new UnsupportedOperationException("invokeAny is not permit-bounded; use submit");
-    }
-
-    private Runnable withPermit(Runnable task)
-    {
-      return () -> {
-        try {
-          permits.acquire();
-        }
-        catch (InterruptedException e) {
-          // Interrupted while waiting for a permit (e.g. the task's future was canceled with mayInterruptIfRunning).
-          // Abort before running the body. Restore the flag and surface as a failure rather than a silent success;
-          // if the future was canceled it already reports as such, so this only matters for a stray interrupt.
-          Thread.currentThread().interrupt();
-          throw new RuntimeException(e);
-        }
-        try {
-          task.run();
-        }
-        finally {
-          permits.release();
-        }
-      };
-    }
-
-    private <T> Callable<T> withPermit(Callable<T> task)
-    {
-      return () -> {
-        permits.acquire();
-        try {
-          return task.call();
-        }
-        finally {
-          permits.release();
-        }
-      };
     }
   }
 }

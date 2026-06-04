@@ -181,11 +181,12 @@ class SegmentLocalCacheManagerPartialAcquireTest
     final StorageLocationConfig locConfig = new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null);
     final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
         .setLocations(List.of(locConfig))
-        .setVirtualStorage(true, false);
+        .setVirtualStorage(true);
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     manager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -419,12 +420,13 @@ class SegmentLocalCacheManagerPartialAcquireTest
     final StorageLocationConfig locConfig = new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null);
     final SegmentLoaderConfig disabledConfig = new SegmentLoaderConfig()
         .setLocations(List.of(locConfig))
-        .setVirtualStorage(true, false)
+        .setVirtualStorage(true)
         .setVirtualStoragePartialDownloadsEnabled(false);
     final List<StorageLocation> storageLocations = disabledConfig.toStorageLocations();
     final SegmentLocalCacheManager disabledManager = new SegmentLocalCacheManager(
         storageLocations,
         disabledConfig,
+        StorageLoadingThreadPool.createFromConfig(disabledConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper

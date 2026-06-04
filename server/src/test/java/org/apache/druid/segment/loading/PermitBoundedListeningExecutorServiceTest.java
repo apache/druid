@@ -23,7 +23,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.segment.loading.SegmentLocalCacheManager.PermitBoundedListeningExecutorService;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool.PermitBoundedListeningExecutorService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

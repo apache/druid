@@ -225,14 +225,19 @@ public class SegmentLoaderConfig
   }
 
   /**
-   * Sets {@link #virtualStorage} and {@link #virtualStorageIsEphemeral}.
+   * Sets {@link #virtualStorage}.
    */
-  public SegmentLoaderConfig setVirtualStorage(
-      boolean virtualStorage,
-      boolean virtualStorageFabricEphemeral
-  )
+  public SegmentLoaderConfig setVirtualStorage(boolean virtualStorage)
   {
     this.virtualStorage = virtualStorage;
+    return this;
+  }
+
+  /**
+   * Sets {@link #virtualStorageIsEphemeral}.
+   */
+  public SegmentLoaderConfig setVirtualStorageIsEphemeral(boolean virtualStorageFabricEphemeral)
+  {
     this.virtualStorageIsEphemeral = virtualStorageFabricEphemeral;
     return this;
   }
@@ -246,9 +251,19 @@ public class SegmentLoaderConfig
   {
     return this.getLocations()
                .stream()
-               .map(locationConfig -> new StorageLocation(locationConfig.getPath(),
-                                                          locationConfig.getMaxSize(),
-                                                          locationConfig.getFreeSpacePercent()))
+               .map(locationConfig -> {
+                 final StorageLocation location = new StorageLocation(
+                     locationConfig.getPath(),
+                     locationConfig.getMaxSize(),
+                     locationConfig.getFreeSpacePercent()
+                 );
+
+                 if (isVirtualStorageEphemeral()) {
+                   location.setAreWeakEntriesEphemeral(true);
+                 }
+
+                 return location;
+               })
                .collect(Collectors.toList());
   }
 

@@ -17,24 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.server.initialization;
+package org.apache.druid.math.expr;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.junit.After;
+import org.junit.Before;
 
 /**
+ * Re-runs every {@link VectorExprResultConsistencyTest} case with the SIMD ({@code jdk.incubator.vector}) expression
+ * vector processors enabled, ensuring the SIMD specializations agree with the non-vectorized reference.
  */
-public class CuratorDiscoveryConfig
+public class VectorExprResultConsistencyVectorApiTest extends VectorExprResultConsistencyTest
 {
-  @JsonProperty
-  private String path = "/druid/discovery";
-
-  public String getPath()
+  @Before
+  public void enableVectorApi()
   {
-    return path;
+    ExpressionProcessing.initializeForVectorApiTests();
   }
 
-  public boolean useDiscovery()
+  @After
+  public void resetExpressionProcessing()
   {
-    return path != null;
+    ExpressionProcessing.initializeForTests();
   }
 }

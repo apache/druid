@@ -96,7 +96,6 @@ import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.DruidNode;
@@ -628,7 +627,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             .addValue(ExprMacroTable.class, LookupEnabledTestExprMacroTable.INSTANCE)
             .addValue(IndexIO.class, indexIO)
             .addValue(ObjectMapper.class, objectMapper)
-            .addValue(ChatHandlerProvider.class, new NoopChatHandlerProvider())
+            .addValue(ChatHandlerProvider.class, new ChatHandlerProvider())
             .addValue(AuthConfig.class, new AuthConfig())
             .addValue(AuthorizerMapper.class, null)
             .addValue(RowIngestionMetersFactory.class, new DropwizardRowIngestionMetersFactory())
@@ -685,7 +684,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .taskReportFileWriter(new SingleFileTaskReportFileWriter(reportsFile))
         .policyEnforcer(NoopPolicyEnforcer.instance())
         .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
-        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .chatHandlerProvider(new ChatHandlerProvider())
         .rowIngestionMetersFactory(new TestUtils().getRowIngestionMetersFactory())
         .appenderatorsManager(new TestAppenderatorsManager())
         .overlordClient(indexingServiceClient)

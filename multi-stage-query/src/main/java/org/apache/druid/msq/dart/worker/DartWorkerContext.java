@@ -51,6 +51,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.utils.CloseableUtils;
@@ -81,6 +82,7 @@ public class DartWorkerContext implements WorkerContext
   private final DartWorkerClient workerClient;
   private final SegmentWrangler segmentWrangler;
   private final SegmentManager segmentManager;
+  private final VirtualStorageManager virtualStorageManager;
   private final CoordinatorClient coordinatorClient;
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
@@ -109,6 +111,7 @@ public class DartWorkerContext implements WorkerContext
       final DruidProcessingConfig processingConfig,
       final SegmentWrangler segmentWrangler,
       final SegmentManager segmentManager,
+      final VirtualStorageManager virtualStorageManager,
       final CoordinatorClient coordinatorClient,
       final MemoryIntrospector memoryIntrospector,
       final ProcessingBuffersProvider processingBuffersProvider,
@@ -131,6 +134,7 @@ public class DartWorkerContext implements WorkerContext
     this.workerClient = workerClient;
     this.segmentWrangler = segmentWrangler;
     this.segmentManager = segmentManager;
+    this.virtualStorageManager = virtualStorageManager;
     this.coordinatorClient = coordinatorClient;
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
@@ -258,6 +262,7 @@ public class DartWorkerContext implements WorkerContext
         FrameWriterSpec.fromContext(workOrder.getWorkerContext()),
         segmentWrangler,
         segmentManager,
+        virtualStorageManager,
         coordinatorClient,
         workOrder.getStageDefinition().getProcessor().usesProcessingBuffers() ? processingBuffersSet.get() : null,
         memoryParameters,

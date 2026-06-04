@@ -35,10 +35,8 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -54,7 +52,6 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
-import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -132,8 +129,6 @@ public class DruidCoordinator
   private final List<DutiesRunnable> dutiesRunnables = new ArrayList<>();
   private final LoadQueueTaskMaster taskMaster;
   private final SegmentLoadQueueManager loadQueueManager;
-  private final ServiceAnnouncer serviceAnnouncer;
-  private final DruidNode self;
   private final CoordinatorCustomDutyGroups customDutyGroups;
   private final BalancerStrategyFactory balancerStrategyFactory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
@@ -183,8 +178,6 @@ public class DruidCoordinator
       OverlordClient overlordClient,
       LoadQueueTaskMaster taskMaster,
       SegmentLoadQueueManager loadQueueManager,
-      ServiceAnnouncer serviceAnnouncer,
-      @Self DruidNode self,
       CoordinatorCustomDutyGroups customDutyGroups,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
@@ -202,8 +195,6 @@ public class DruidCoordinator
     this.emitter = emitter;
     this.overlordClient = overlordClient;
     this.taskMaster = taskMaster;
-    this.serviceAnnouncer = serviceAnnouncer;
-    this.self = self;
     this.customDutyGroups = customDutyGroups;
 
     this.executorFactory = scheduledExecutorFactory;
@@ -449,7 +440,6 @@ public class DruidCoordinator
       metadataManager.onLeaderStart();
       taskMaster.onLeaderStart();
       lookupCoordinatorManager.start();
-      serviceAnnouncer.announce(self);
       if (coordinatorSegmentMetadataCache != null) {
         coordinatorSegmentMetadataCache.onLeaderStart();
       }
@@ -538,7 +528,6 @@ public class DruidCoordinator
       taskMaster.onLeaderStop();
       coordinatorDynamicConfigSyncer.onLeaderStop();
       brokerDynamicConfigSyncer.onLeaderStop();
-      serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();
       metadataManager.onLeaderStop();
       stopAllDutyGroups();

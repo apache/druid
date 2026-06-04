@@ -52,7 +52,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
@@ -364,7 +364,7 @@ public class SeekableStreamIndexTaskRunnerTest
         .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
         .rowIngestionMetersFactory(NoopRowIngestionMeters::new)
         .indexMerger(testUtils.getIndexMergerV9Factory().create(true))
-        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .chatHandlerProvider(new ChatHandlerProvider())
         .dataNodeService(new DataNodeService(DruidServer.DEFAULT_TIER, 100L, null, ServerType.HISTORICAL, 1))
         .lookupNodeService(new LookupNodeService(DruidServer.DEFAULT_TIER))
         .appenderatorsManager(new TestAppenderatorsManager())

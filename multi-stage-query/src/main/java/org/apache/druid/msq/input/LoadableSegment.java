@@ -22,7 +22,6 @@ package org.apache.druid.msq.input;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
@@ -50,13 +49,6 @@ public interface LoadableSegment
    * important: it acts as a filter on the underlying segment.
    */
   SegmentDescriptor descriptor();
-
-  /**
-   * Returns input counters that should be updated as this segment is queried, or null if it is not necessary
-   * to update input counters.
-   */
-  @Nullable
-  ChannelCounters inputCounters();
 
   /**
    * User-oriented description, suitable for inclusion in log or error messages.

@@ -55,6 +55,7 @@ import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
@@ -164,12 +165,13 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     cacheDir = tempDir.resolve("cache").toFile();
     final SegmentLoaderConfig virtualLoaderConfig = new SegmentLoaderConfig()
         .setLocations(ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null)))
-        .setVirtualStorage(true, true);
+        .setVirtualStorage(true).setVirtualStorageIsEphemeral(true);
     final List<StorageLocation> virtualLocations = virtualLoaderConfig.toStorageLocations();
     segmentManagerDynamic = new SegmentManager(
         new SegmentLocalCacheManager(
             virtualLocations,
             virtualLoaderConfig,
+            StorageLoadingThreadPool.createFromConfig(virtualLoaderConfig),
             new LeastBytesUsedStorageLocationSelectorStrategy(virtualLocations),
             TestIndex.INDEX_IO,
             jsonMapper
@@ -185,6 +187,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
         new SegmentLocalCacheManager(
             localLocations,
             localLoaderConfig,
+            StorageLoadingThreadPool.createFromConfig(localLoaderConfig),
             new LeastBytesUsedStorageLocationSelectorStrategy(localLocations),
             TestIndex.INDEX_IO,
             jsonMapper

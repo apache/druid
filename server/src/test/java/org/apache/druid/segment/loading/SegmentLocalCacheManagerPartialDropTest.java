@@ -161,6 +161,7 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
     manager = new SegmentLocalCacheManager(
         locations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(locations),
         TestHelper.getTestIndexIO(JSON_MAPPER, ColumnConfig.DEFAULT),
         JSON_MAPPER

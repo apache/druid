@@ -81,7 +81,6 @@ import org.apache.druid.quidem.ProjectPathUtils;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.LocalQuerySegmentWalker;
@@ -911,7 +910,7 @@ public class SqlTestFramework
     @Provides
     ChatHandlerProvider getChatHandlerProvider()
     {
-      return new NoopChatHandlerProvider();
+      return new ChatHandlerProvider();
     }
 
     @Override
