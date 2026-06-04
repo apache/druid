@@ -63,7 +63,7 @@ public class S3ExportStorageProviderTest
   {
     Assert.assertEquals(
         "s3://export-bucket/export/table/file1",
-        new S3ExportStorageProvider("export-bucket", "export/table").getFilePathForManifest("file1")
+        new S3ExportStorageProvider("export-bucket", "export/table", null, null).getFilePathForManifest("file1")
     );
   }
 }

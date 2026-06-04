@@ -322,7 +322,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   }
 
   @Override
-  protected RabbitStreamDataSourceMetadata createDataSourceMetaDataForReset(String topic, Map<String, Long> map)
+  public RabbitStreamDataSourceMetadata createDataSourceMetaDataForReset(String topic, Map<String, Long> map)
   {
     return new RabbitStreamDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, map));
   }
@@ -408,7 +408,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   }
 
   @Override
-  protected void updatePartitionLagFromStream()
+  public void updatePartitionLagFromStream()
   {
     getRecordSupplierLock().lock();
 
@@ -435,7 +435,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   }
 
   @Override
-  protected Map<String, Long> getLatestSequencesFromStream()
+  public Map<String, Long> getLatestSequencesFromStream()
   {
     return latestSequenceFromStream != null ? latestSequenceFromStream : new HashMap<>();
   }

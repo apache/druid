@@ -121,6 +121,11 @@ public class DiskNormalizedCostBalancerStrategyTest
 
   public static DataSegment getSegment(int index, String dataSource, Interval interval)
   {
+    return getSegment(index, dataSource, interval, index * 100L);
+  }
+
+  public static DataSegment getSegment(int index, String dataSource, Interval interval, long size)
+  {
     // Not using EasyMock as it hampers the performance of multithreads.
     DataSegment segment = new DataSegment(
         dataSource,
@@ -131,7 +136,7 @@ public class DiskNormalizedCostBalancerStrategyTest
         new ArrayList<>(),
         null,
         0,
-        index * 100L
+        size
     );
     return segment;
   }
@@ -180,6 +185,16 @@ public class DiskNormalizedCostBalancerStrategyTest
     List<DataSegment> segments = IntStream.range(baseIndex, baseIndex + segmentCount)
         .mapToObj(DiskNormalizedCostBalancerStrategyTest::getSegment)
         .collect(Collectors.toList());
+    return buildServer(name, maxSize, sizeUsed, segments);
+  }
+
+  private static ServerHolder buildServer(
+      String name,
+      long maxSize,
+      long sizeUsed,
+      List<DataSegment> segments
+  )
+  {
     ImmutableDruidDataSource ds =
         new ImmutableDruidDataSource("DUMMY", Collections.emptyMap(), segments);
     return new ServerHolder(
@@ -228,8 +243,8 @@ public class DiskNormalizedCostBalancerStrategyTest
         newCostStrategy().findServersToLoadSegment(proposal, servers).next().getServer().getName()
     );
 
-    // DiskNormalized: A = 10 * 0.9 = 9.0, B = 60 * 0.1 = 6.0.
-    // The emptier server must win.
+    // DiskNormalized uses projected headroom: A ~= 10K / 0.09, B ~= 60K / 0.89.
+    // The emptier server wins despite the higher raw cost.
     Assert.assertEquals(
         "DiskNormalizedCostBalancerStrategy must prefer the emptier server",
         "B",
@@ -263,8 +278,8 @@ public class DiskNormalizedCostBalancerStrategyTest
     );
 
     // DiskNormalizedCostBalancerStrategy (default 5% threshold):
-    //   A: 38K * 0.80 * 0.95 = 28.88K
-    //   B: 40K * 0.20        =  8.00K
+    //   A: 38K / 0.20 * 0.95 = 180.5K
+    //   B: 40K / 0.80        =  50.0K
     // B wins decisively and the segment moves, reducing the skew.
     final ServerHolder diskNormalizedResult =
         newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, heavy, servers);
@@ -280,7 +295,7 @@ public class DiskNormalizedCostBalancerStrategyTest
   {
     final long maxSize = 10_000_000L;
     final ServerHolder source = buildServer("SOURCE", maxSize, 8_000_000L, 0, 20);
-    final ServerHolder dest = buildServer("DEST", maxSize, 7_400_000L, 100, 20);
+    final ServerHolder dest = buildServer("DEST", maxSize, 7_830_000L, 100, 20);
 
     final DataSegment segmentToMove = getSegment(0);
     final List<ServerHolder> servers = new ArrayList<>();
@@ -293,15 +308,140 @@ public class DiskNormalizedCostBalancerStrategyTest
         newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers)
     );
 
-    // threshold=0 removes the discount; the same marginal difference now
-    // triggers the move. This proves the threshold is what blocks it above.
-    final BalancerStrategy noDiscount = new DiskNormalizedCostBalancerStrategy(
+    // Lowering the threshold to 1% reduces the discount; the same marginal
+    // difference now triggers the move. This proves the threshold is what
+    // blocks it above.
+    final BalancerStrategy onePercentThreshold = new DiskNormalizedCostBalancerStrategy(
         MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d")),
         0.01
     );
-    final ServerHolder movedTo = noDiscount.findDestinationServerToMoveSegment(segmentToMove, source, servers);
+    final ServerHolder movedTo = onePercentThreshold.findDestinationServerToMoveSegment(segmentToMove, source, servers);
     Assert.assertNotNull("With threshold=0.01, the marginal move should fire", movedTo);
     Assert.assertEquals("DEST", movedTo.getServer().getName());
+  }
+
+  @Test
+  public void testNearFullServerIsNotChosenForNewSegmentLoad()
+  {
+    final long maxSize = 10_000_000L;
+    // A: 95% full, 5 same-DS DAY segments -> raw cost = 10 * K (low, few co-located segs)
+    final ServerHolder nearFull = buildServer("A", maxSize, 9_500_000L, 0, 5);
+    // B: 70% full, 20 same-DS DAY segments -> raw cost = 40 * K (higher, more co-located)
+    final ServerHolder partial = buildServer("B", maxSize, 7_000_000L, 100, 20);
+
+    final DataSegment newSegment = getSegment(1000);
+    final List<ServerHolder> servers = new ArrayList<>();
+    servers.add(nearFull);
+    servers.add(partial);
+
+    // CostBalancerStrategy picks A because raw cost 10K < 40K.
+    Assert.assertEquals(
+        "Pure CostBalancerStrategy must pick the near-full server (lower raw cost)",
+        "A",
+        newCostStrategy().findServersToLoadSegment(newSegment, servers).next().getServer().getName()
+    );
+
+    // DiskNormalized uses projected headroom: A_norm = 10K / 0.04 = 250K,
+    // B_norm = 40K / 0.29 = 138K -> B wins.
+    Assert.assertEquals(
+        "DiskNormalized must prefer the emptier server despite its higher raw cost",
+        "B",
+        newDiskNormalizedStrategy().findServersToLoadSegment(newSegment, servers).next().getServer().getName()
+    );
+  }
+
+  @Test
+  public void testProjectedSegmentSizeIsUsedForNewSegmentLoad()
+  {
+    final long maxSize = 1_000_000L;
+    // A has the lower raw cost, but the 250 KB proposal would leave only 5% headroom.
+    final ServerHolder almostFullAfterLoad = buildServer("A", maxSize, 700_000L, 0, 5);
+    // B has more co-located segments, but keeps 25% headroom after the proposal.
+    final ServerHolder moreHeadroomAfterLoad = buildServer("B", maxSize, 500_000L, 100, 20);
+
+    final DataSegment largeSegment = getSegment(1000, "DUMMY", DAY, 250_000L);
+    final List<ServerHolder> servers = new ArrayList<>();
+    servers.add(almostFullAfterLoad);
+    servers.add(moreHeadroomAfterLoad);
+
+    // CostBalancerStrategy picks A because raw cost 10K < 40K.
+    Assert.assertEquals(
+        "Pure CostBalancerStrategy must pick the lower raw-cost server",
+        "A",
+        newCostStrategy().findServersToLoadSegment(largeSegment, servers).next().getServer().getName()
+    );
+
+    // If diskNormalized used current headroom, A would also win:
+    //   A_current = 10K / 0.30, B_current = 40K / 0.50.
+    // With projected headroom, B wins:
+    //   A_projected = 10K / 0.05, B_projected = 40K / 0.25.
+    Assert.assertEquals(
+        "DiskNormalized must account for the proposal size before choosing a server",
+        "B",
+        newDiskNormalizedStrategy().findServersToLoadSegment(largeSegment, servers).next().getServer().getName()
+    );
+  }
+
+  @Test
+  public void testNearFullServerIsNotChosenAsMoveDestination()
+  {
+    final long maxSize = 10_000_000L;
+    // SOURCE: 70% full, 20 same-DS DAY segments; segmentToMove is one of them.
+    final ServerHolder source = buildServer("SOURCE", maxSize, 7_000_000L, 0, 20);
+    // DEST: 95% full, 5 same-DS DAY segments -> raw cost 10K < SOURCE's 38K.
+    final ServerHolder nearFullDest = buildServer("DEST", maxSize, 9_500_000L, 100, 5);
+
+    final DataSegment segmentToMove = getSegment(0);
+    final List<ServerHolder> servers = new ArrayList<>();
+    servers.add(source);
+    servers.add(nearFullDest);
+
+    // CostBalancerStrategy: DEST raw cost (10K) < SOURCE raw cost (38K) -> recommends the move.
+    final ServerHolder costResult =
+        newCostStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers);
+    Assert.assertNotNull("CostBalancerStrategy must recommend moving to the near-full DEST", costResult);
+    Assert.assertEquals("DEST", costResult.getServer().getName());
+
+    // DiskNormalized: DEST_norm = 10K / 0.05 = 200K > SOURCE_norm = 38K / 0.30 * 0.95 ≈ 120K.
+    // Near-full DEST is too expensive after normalization -> no move.
+    Assert.assertNull(
+        "DiskNormalized must block the move to the near-full server",
+        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers)
+    );
+  }
+
+  @Test
+  public void testProjectedSegmentSizePreventsMoveThatWouldFillDestination()
+  {
+    final long maxSize = 10_000_000L;
+    final DataSegment largeSegment = getSegment(0, "DUMMY", DAY, 2_500_000L);
+    final List<DataSegment> sourceSegments = new ArrayList<>();
+    sourceSegments.add(largeSegment);
+    IntStream.range(1, 20)
+             .mapToObj(DiskNormalizedCostBalancerStrategyTest::getSegment)
+             .forEach(sourceSegments::add);
+
+    // SOURCE is fuller before the move, but already projects the segment.
+    final ServerHolder source = buildServer("SOURCE", maxSize, 8_000_000L, sourceSegments);
+    // DEST has low raw cost, but loading the 2.5 MB segment would leave only 5% headroom.
+    final ServerHolder dest = buildServer("DEST", maxSize, 7_000_000L, 100, 5);
+
+    final List<ServerHolder> servers = new ArrayList<>();
+    servers.add(source);
+    servers.add(dest);
+
+    // CostBalancerStrategy recommends the move because DEST raw cost (10K) < SOURCE raw cost (38K).
+    final ServerHolder costResult =
+        newCostStrategy().findDestinationServerToMoveSegment(largeSegment, source, servers);
+    Assert.assertNotNull("CostBalancerStrategy must recommend moving to the lower raw-cost DEST", costResult);
+    Assert.assertEquals("DEST", costResult.getServer().getName());
+
+    // If diskNormalized used current headroom, DEST would win: 10K / 0.30 < 38K / 0.20 * 0.95.
+    // With projected headroom, DEST is too full after placement: 10K / 0.05 > 38K / 0.20 * 0.95.
+    Assert.assertNull(
+        "DiskNormalized must not move a large segment to a server that would become too full",
+        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(largeSegment, source, servers)
+    );
   }
 
   @Test

@@ -141,8 +141,12 @@ public interface SegmentCacheManager
   void shutdown();
 
   /**
-   * Collect {@link StorageStats}, if available.
+   * Returns the storage locations backing this cache manager.
    */
-  @Nullable
-  StorageStats getStorageStats();
+  List<StorageLocation> getLocations();
+
+  /**
+   * Returns the loading thread pool backing this cache manager.
+   */
+  StorageLoadingThreadPool getLoadingThreadPool();
 }

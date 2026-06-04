@@ -22,6 +22,7 @@ package org.apache.druid.segment.file;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -30,30 +31,29 @@ import java.util.Objects;
  * Starting offset and size of a 'container' stored in a V10 segment file; think the V10 equivalent of V9's external
  * 'smoosh' files, e.g. 00000.smoosh.
  * <p>
- * Each container holds internal files belonging to at most one named file group, as declared at write time via
- * {@link SegmentFileBuilder#startFileGroup}. The {@link #fileGroup} field records that name so readers can attribute
- * a container to its group without parsing internal-file names. The field is {@code null} for containers written
- * without a {@code startFileGroup} call (or with {@code startFileGroup(null)}), and for containers from segments
- * produced by writers that pre-date this field; null serializes as a Jackson-omitted property so old segments
- * round-trip unchanged.
+ * Each container holds internal files belonging to exactly one named bundle, as declared at write time via
+ * {@link SegmentFileBuilder#startFileBundle}. The {@link #bundle} field records that name so readers can attribute a
+ * container to its bundle without parsing internal-file names. Containers written without an explicit
+ * {@code startFileBundle} call are tagged with {@link SegmentFileBuilder#ROOT_BUNDLE_NAME}; that default value is
+ * omitted from JSON output, so segments produced by writers pre-dating this field deserialize cleanly (missing
+ * property normalizes to the default in the constructor).
  */
 public class SegmentFileContainerMetadata
 {
   private final long startOffset;
   private final long size;
-  @Nullable
-  private final String fileGroup;
+  private final String bundle;
 
   @JsonCreator
   public SegmentFileContainerMetadata(
       @JsonProperty("startOffset") long startOffset,
       @JsonProperty("size") long size,
-      @JsonProperty("fileGroup") @Nullable String fileGroup
+      @JsonProperty("bundle") @Nullable String bundle
   )
   {
     this.startOffset = startOffset;
     this.size = size;
-    this.fileGroup = fileGroup;
+    this.bundle = bundle == null ? SegmentFileBuilder.ROOT_BUNDLE_NAME : bundle;
   }
 
   @JsonProperty
@@ -69,11 +69,10 @@ public class SegmentFileContainerMetadata
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  @Nullable
-  public String getFileGroup()
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = DefaultBundleFilter.class)
+  public String getBundle()
   {
-    return fileGroup;
+    return bundle;
   }
 
   @Override
@@ -88,13 +87,13 @@ public class SegmentFileContainerMetadata
     SegmentFileContainerMetadata that = (SegmentFileContainerMetadata) o;
     return startOffset == that.startOffset
            && size == that.size
-           && Objects.equals(fileGroup, that.fileGroup);
+           && Objects.equals(bundle, that.bundle);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(startOffset, size, fileGroup);
+    return Objects.hash(startOffset, size, bundle);
   }
 
   @Override
@@ -103,7 +102,32 @@ public class SegmentFileContainerMetadata
     return "SegmentFileContainerMetadata{"
            + "startOffset=" + startOffset
            + ", size=" + size
-           + ", fileGroup=" + fileGroup
+           + ", bundle=" + bundle
            + '}';
+  }
+
+  /**
+   * Jackson {@code valueFilter} that omits the {@code bundle} field from JSON when it carries the
+   * {@link SegmentFileBuilder#ROOT_BUNDLE_NAME} default. Jackson invokes {@code equals(value)} against the filter
+   * instance with the property value (a {@link String} here, not another filter): returning {@code true} means
+   * "value equals default, omit it." The asymmetric equals contract is intentional and required by Jackson's filter
+   * API, so the standard same-class check would defeat the mechanism.
+   */
+  static final class DefaultBundleFilter
+  {
+
+    @Override
+    @SuppressWarnings("EqualsDoesntCheckParameterClass")
+    @SuppressFBWarnings("EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS")
+    public boolean equals(Object value)
+    {
+      return SegmentFileBuilder.ROOT_BUNDLE_NAME.equals(value);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return 0;
+    }
   }
 }

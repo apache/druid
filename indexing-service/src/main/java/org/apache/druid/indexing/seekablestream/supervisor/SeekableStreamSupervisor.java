@@ -2195,7 +2195,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final boolean metadataUpdateSuccess;
     final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(supervisorId);
     if (metadata == null) {
-      log.info("Checkpointed metadata in null for supervisor[%s] for dataSource[%s] - inserting metadata[%s]", supervisorId, dataSource, resetMetadata);
+      log.info("Checkpointed metadata is null for supervisor[%s] for dataSource[%s] - inserting metadata[%s]", supervisorId, dataSource, resetMetadata);
       metadataUpdateSuccess = indexerMetadataStorageCoordinator.insertDataSourceMetadata(supervisorId, resetMetadata);
     } else {
       if (!checkSourceMetadataMatch(metadata)) {
@@ -3311,7 +3311,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   /**
    * gets mapping of partitions in stream to their latest offsets.
    */
-  protected Map<PartitionIdType, SequenceOffsetType> getLatestSequencesFromStream()
+  public Map<PartitionIdType, SequenceOffsetType> getLatestSequencesFromStream()
   {
     return new HashMap<>();
   }
@@ -4589,7 +4589,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  protected Map<PartitionIdType, SequenceOffsetType> getOffsetsFromMetadataStorage()
+  public Map<PartitionIdType, SequenceOffsetType> getOffsetsFromMetadataStorage()
   {
     final DataSourceMetadata dataSourceMetadata = retrieveDataSourceMetadata();
     if (dataSourceMetadata instanceof SeekableStreamDataSourceMetadata
@@ -4976,7 +4976,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     coalesceAndAwait(futures);
   }
 
-  protected abstract void updatePartitionLagFromStream();
+  public abstract void updatePartitionLagFromStream();
 
   /**
    * Gets 'lag' of currently processed offset behind latest offset as a measure of difference between offsets.
@@ -5233,7 +5233,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @param map    partitionId -> sequence
    * @return specific instance of datasource metadata
    */
-  protected abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetaDataForReset(
+  public abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetaDataForReset(
       String stream,
       Map<PartitionIdType, SequenceOffsetType> map
   );

@@ -24,7 +24,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
@@ -53,10 +52,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -117,13 +114,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private final IndexIO indexIO;
 
-  private final ListeningExecutorService virtualStorageLoadOnDemandExec;
-  /**
-   * Bounds the number of in-flight on-demand loads when running with virtual threads. Null when virtual storage is
-   * disabled or when the legacy fixed-pool path is selected (the pool size is the implicit limit there).
-   */
-  @Nullable
-  private final Semaphore virtualStorageLoadOnDemandPermits;
+  private final StorageLoadingThreadPool virtualStorageLoadingThreadPool;
   private ExecutorService loadOnBootstrapExec = null;
   private ExecutorService loadOnDownloadExec = null;
 
@@ -131,64 +122,29 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   public SegmentLocalCacheManager(
       List<StorageLocation> locations,
       SegmentLoaderConfig config,
+      StorageLoadingThreadPool virtualStorageLoadingThreadPool,
       @Nonnull StorageLocationSelectorStrategy strategy,
       IndexIO indexIO,
       @Json ObjectMapper mapper
   )
   {
-    this.config = config;
-    this.jsonMapper = mapper;
     this.locations = locations;
+    this.config = config;
+    this.virtualStorageLoadingThreadPool = virtualStorageLoadingThreadPool;
     this.strategy = strategy;
     this.indexIO = indexIO;
+    this.jsonMapper = mapper;
 
     log.info("Using storage location strategy[%s].", this.strategy.getClass().getSimpleName());
 
     if (config.isVirtualStorage()) {
       if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() > 0) {
-        throw DruidException.defensive("Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnDownload");
+        throw DruidException.defensive(
+            "Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnDownload");
       }
       if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
-        throw DruidException.defensive("Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnBootstrap");
-      }
-      if (config.getVirtualStorageLoadThreads() <= 0) {
-        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build(
-                                "virtualStorageLoadThreads must be greater than 0, got [%d]",
-                                config.getVirtualStorageLoadThreads()
-                            );
-      }
-      if (config.isVirtualStorageEphemeral()) {
-        for (StorageLocation location : locations) {
-          location.setAreWeakEntriesEphemeral(true);
-        }
-      }
-      if (config.isVirtualStorageUseVirtualThreads()) {
-        log.info(
-            "Using virtual storage mode with virtual threads - max concurrent on demand loads: [%d].",
-            config.getVirtualStorageLoadThreads()
-        );
-        virtualStorageLoadOnDemandPermits = new Semaphore(config.getVirtualStorageLoadThreads());
-        virtualStorageLoadOnDemandExec = MoreExecutors.listeningDecorator(
-            Executors.newThreadPerTaskExecutor(
-                Thread.ofVirtual()
-                      .name("VirtualStorageOnDemandLoadingThread-", 0)
-                      .factory()
-            )
-        );
-      } else {
-        log.info(
-            "Using virtual storage mode with fixed platform thread pool - on demand load threads: [%d].",
-            config.getVirtualStorageLoadThreads()
-        );
-        virtualStorageLoadOnDemandPermits = null;
-        virtualStorageLoadOnDemandExec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(
-                config.getVirtualStorageLoadThreads(),
-                Execs.makeThreadFactory("VirtualStorageOnDemandLoadingThread-%s")
-            )
-        );
+        throw DruidException.defensive(
+            "Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnBootstrap");
       }
     } else {
       log.info(
@@ -210,8 +166,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             Execs.makeThreadFactory("LoadSegmentsIntoPageCacheOnDownload-%s")
         );
       }
-      virtualStorageLoadOnDemandExec = null;
-      virtualStorageLoadOnDemandPermits = null;
     }
   }
 
@@ -473,16 +427,16 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       return acquireExisting;
     }
 
+    if (!config.isVirtualStorage()) {
+      return AcquireSegmentAction.missingSegment();
+    }
+
     final ReferenceCountingLock lock = lock(dataSegment);
     synchronized (lock) {
       try {
         final AcquireSegmentAction retryAcquireExisting = acquireExistingSegment(identifier);
         if (retryAcquireExisting != null) {
           return retryAcquireExisting;
-        }
-
-        if (!config.isVirtualStorage()) {
-          return AcquireSegmentAction.missingSegment();
         }
 
         final Iterator<StorageLocation> iterator = strategy.getLocations();
@@ -699,34 +653,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     if (loadOnDownloadExec != null) {
       loadOnDownloadExec.shutdown();
     }
-    if (virtualStorageLoadOnDemandExec != null) {
-      virtualStorageLoadOnDemandExec.shutdown();
-    }
-  }
-
-  @Nullable
-  @Override
-  public StorageStats getStorageStats()
-  {
-    if (config.isVirtualStorage()) {
-      final Map<String, VirtualStorageLocationStats> locationStats = new HashMap<>();
-      for (StorageLocation location : locations) {
-        locationStats.put(location.getPath().toString(), location.resetWeakStats());
-      }
-      return new StorageStats(
-          Map.of(),
-          locationStats
-      );
-    } else {
-      final Map<String, StorageLocationStats> locationStats = new HashMap<>();
-      for (StorageLocation location : locations) {
-        locationStats.put(location.getPath().toString(), location.resetStaticStats());
-      }
-      return new StorageStats(
-          locationStats,
-          Map.of()
-      );
-    }
   }
 
   @VisibleForTesting
@@ -735,10 +661,16 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return segmentLocks;
   }
 
-  @VisibleForTesting
-  List<StorageLocation> getLocations()
+  @Override
+  public List<StorageLocation> getLocations()
   {
     return locations;
+  }
+
+  @Override
+  public StorageLoadingThreadPool getLoadingThreadPool()
+  {
+    return virtualStorageLoadingThreadPool;
   }
 
   /**
@@ -815,12 +747,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return Suppliers.memoize(
         () -> {
           final long startTime = System.nanoTime();
-          return virtualStorageLoadOnDemandExec.submit(
+          return virtualStorageLoadingThreadPool.getExecutorService().submit(
               () -> {
                 // Acquire a permit inside the task so that waiting parks the (virtual) thread instead of blocking the
                 // submitter. In fixed-pool mode permits is null and the pool size itself bounds concurrency.
-                if (virtualStorageLoadOnDemandPermits != null) {
-                  virtualStorageLoadOnDemandPermits.acquireUninterruptibly();
+                final Semaphore loadingPermits = virtualStorageLoadingThreadPool.getPermits();
+                if (loadingPermits != null) {
+                  loadingPermits.acquireUninterruptibly();
                 }
                 try {
                   final long execStartTime = System.nanoTime();
@@ -834,8 +767,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   );
                 }
                 finally {
-                  if (virtualStorageLoadOnDemandPermits != null) {
-                    virtualStorageLoadOnDemandPermits.release();
+                  if (loadingPermits != null) {
+                    loadingPermits.release();
                   }
                 }
               }

@@ -33,7 +33,6 @@ import org.apache.curator.test.TestingServer;
 import org.apache.curator.test.Timing;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
-import org.apache.druid.curator.discovery.LatchableServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -115,7 +114,6 @@ public class OverlordTest
   private GlobalTaskLockbox taskLockbox;
   private TaskStorage taskStorage;
   private TaskActionClientFactory taskActionClientFactory;
-  private CountDownLatch announcementLatch;
   private DruidNode druidNode;
   private OverlordResource overlordResource;
   private Map<String, CountDownLatch> taskCompletionCountDownLatches;
@@ -195,7 +193,6 @@ public class OverlordTest
     taskCompletionCountDownLatches = new HashMap<>();
     taskCompletionCountDownLatches.put(taskId0, new CountDownLatch(1));
     taskCompletionCountDownLatches.put(taskId1, new CountDownLatch(1));
-    announcementLatch = new CountDownLatch(1);
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
@@ -251,9 +248,7 @@ public class OverlordTest
         taskLockbox,
         taskStorage,
         taskActionClientFactory,
-        druidNode,
         taskRunnerFactory,
-        new LatchableServiceAnnouncer(announcementLatch, null),
         new CoordinatorOverlordServiceConfig(null, null),
         serviceEmitter,
         supervisorManager,
@@ -274,9 +269,7 @@ public class OverlordTest
   {
     // basic task master lifecycle test
     overlord.start();
-    announcementLatch.await();
     while (!overlord.isLeader()) {
-      // I believe the control will never reach here and thread will never sleep but just to be on safe side
       Thread.sleep(10);
     }
     Assert.assertEquals(overlord.getCurrentLeader(), druidNode.getHostAndPort());

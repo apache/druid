@@ -37,9 +37,10 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.file.CountingRangeReader;
+import org.apache.druid.segment.file.DirectoryBackedRangeReader;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.loading.SegmentRangeReader;
 import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -49,19 +50,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
 
 class PartialQueryableIndexTest extends InitializedNullHandlingTest
 {
@@ -421,7 +417,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
     // verify that the partial index produces the same schema info as the eager (full) index
     final IndexIO indexIO = TestHelper.getTestIndexIO();
     final File cacheDir = newCacheDir("match_eager");
-    final DirectoryRangeReader rangeReader = new DirectoryRangeReader(segmentDir);
+    final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(segmentDir);
 
     try (
         QueryableIndex eagerIndex = indexIO.loadIndex(segmentDir);
@@ -469,63 +465,5 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
     final File dir = new File(sharedTempDir, name + "_" + ThreadLocalRandom.current().nextInt());
     FileUtils.mkdirp(dir);
     return dir;
-  }
-
-  static class DirectoryRangeReader implements SegmentRangeReader
-  {
-    private final File directory;
-
-    DirectoryRangeReader(File directory)
-    {
-      this.directory = directory;
-    }
-
-    @Override
-    public InputStream readRange(String filename, long offset, long length) throws IOException
-    {
-      File target = new File(directory, filename);
-      try (RandomAccessFile raf = new RandomAccessFile(target, "r")) {
-        final int available = (int) Math.min(length, Math.max(0, raf.length() - offset));
-        byte[] data = new byte[available];
-        raf.seek(offset);
-        raf.readFully(data);
-        return new ByteArrayInputStream(data);
-      }
-    }
-  }
-
-  static class CountingRangeReader extends DirectoryRangeReader
-  {
-    private final AtomicInteger readCount = new AtomicInteger(0);
-    private final Set<String> readFilenames = ConcurrentHashMap.newKeySet();
-
-    CountingRangeReader(File directory)
-    {
-      super(directory);
-    }
-
-    int getReadCount()
-    {
-      return readCount.get();
-    }
-
-    Set<String> getReadFilenames()
-    {
-      return Set.copyOf(readFilenames);
-    }
-
-    void resetCount()
-    {
-      readCount.set(0);
-      readFilenames.clear();
-    }
-
-    @Override
-    public InputStream readRange(String filename, long offset, long length) throws IOException
-    {
-      readCount.incrementAndGet();
-      readFilenames.add(filename);
-      return super.readRange(filename, offset, length);
-    }
   }
 }

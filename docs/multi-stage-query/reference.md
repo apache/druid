@@ -138,7 +138,7 @@ Pass all arguments for `s3()` as named parameters with their values enclosed in 
 ```sql
 INSERT INTO
   EXTERN(
-    s3(bucket => 'your_bucket', prefix => 'prefix/to/files')
+    s3(bucket => 'your_bucket', prefix => 'prefix/to/files', assumeRoleArn => 'arn:aws:iam::some-role')
   )
 AS CSV
 SELECT
@@ -152,6 +152,8 @@ Supported arguments for the function:
 |---|---|---|---|
 | `bucket` | Yes  | S3 bucket destination for exported files. You must add the bucket and prefix combination to the `druid.export.storage.s3.allowedExportPaths` allow list. | n/a |
 | `prefix` | Yes  | Destination path in the bucket to create exported files. The export query expects the destination path to be empty. If the location includes other files, the query will fail. You must add the bucket and prefix combination to the `druid.export.storage.s3.allowedExportPaths` allow list. | n/a |
+| `assumeRoleArn` | No | ARN of the role to assume before exporting data. If not provided, the default credentials configured for the Druid process are used. | n/a |
+| `assumeRoleExternalId` | No | External ID to use when assuming the role specified in assumeRoleArn. This provides an additional layer of security for role assumption. Only used when assumeRoleArn is set. | n/a |
 
 Configure the following runtime parameters to export to an S3 destination:
 
@@ -415,6 +417,7 @@ The following table lists the context parameters for the MSQ task engine:
 | `includeAllCounters` | SELECT, INSERT or REPLACE<br /><br />Whether to include counters that were added in Druid 31 or later. This is a backwards compatibility option that must be set to `false` during a rolling update from versions prior to Druid 31. | `true` |
 | `maxFrameSize` | SELECT, INSERT or REPLACE<br /><br />Size of frames used for data transfer within the MSQ engine. You generally do not need to change this unless you have very large rows. | `1000000` (1 MB) |
 | `maxInputFilesPerWorker` | SELECT, INSERT, REPLACE<br /><br />Maximum number of input files or segments per worker. If a single worker would need to read more than this number of files, the query fails with a `TooManyInputFiles` error. In this case, you should either increase this limit if your tasks have enough memory to handle more files, add more workers by increasing `maxNumTasks`, or split your query into smaller queries that process fewer files. | 10,000 |
+| `backgroundFetchExternalFiles` | SELECT, INSERT, REPLACE<br /><br />Controls how workers read cloud storage files (e.g. `s3`, `gs`, `azure`) referenced by [`EXTERN`](#extern-function). When `true` (the default), each worker fetches its input files asynchronously when possible before reading them. This overlaps downloading with processing, which generally improves throughput when reading larger numbers of files. Otherwise, workers stream each file directly from cloud storage while processing it.<br /><br />This setting has no effect for input sources that use `prefix`, or input sources that request [system fields](../ingestion/input-sources.md). | `true` |
 | `maxPartitions` | SELECT, INSERT, REPLACE<br /><br />Maximum number of output partitions for any single stage. For INSERT or REPLACE queries, this controls the maximum number of segments that can be generated. If the query would exceed this limit, it fails with a `TooManyPartitions` error. You can increase this limit if needed, break your query into smaller queries, or use a larger target segment size (via `rowsPerSegment`). | 25,000 |
 | `maxThreads` | SELECT, INSERT or REPLACE<br /><br />Maximum number of threads to use for processing. This only has an effect if it is greater than zero and less than the default thread count based on system configuration. Otherwise, it is ignored, and workers use the default thread count. | Not set (use default thread count) |
 

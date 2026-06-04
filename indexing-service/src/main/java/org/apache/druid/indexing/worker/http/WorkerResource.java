@@ -25,14 +25,11 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.worker.Worker;
-import org.apache.druid.indexing.worker.WorkerCuratorCoordinator;
 import org.apache.druid.indexing.worker.WorkerTaskManager;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -41,7 +38,6 @@ import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 
-import javax.annotation.Nullable;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -60,35 +56,21 @@ import java.io.InputStream;
 public class WorkerResource
 {
   private static final Logger log = new Logger(WorkerResource.class);
-  private static String DISABLED_VERSION = "";
 
   private final Worker enabledWorker;
-
-  @Nullable // Null, if zk is disabled
-  private final WorkerCuratorCoordinator curatorCoordinator;
-
   private final TaskRunner taskRunner;
   private final WorkerTaskManager workerTaskManager;
 
   @Inject
   public WorkerResource(
       Worker worker,
-      Provider<WorkerCuratorCoordinator> curatorCoordinatorProvider,
       TaskRunner taskRunner,
-      WorkerTaskManager workerTaskManager,
-      ZkEnablementConfig zkEnablementConfig
-
+      WorkerTaskManager workerTaskManager
   )
   {
     this.enabledWorker = worker;
     this.taskRunner = taskRunner;
     this.workerTaskManager = workerTaskManager;
-
-    if (zkEnablementConfig.isEnabled()) {
-      this.curatorCoordinator = curatorCoordinatorProvider.get();
-    } else {
-      this.curatorCoordinator = null;
-    }
   }
 
 
@@ -99,20 +81,6 @@ public class WorkerResource
   public Response doDisable()
   {
     try {
-      if (curatorCoordinator != null) {
-        // Dual-write disabled signal: legacy version="" for old overlords + disabled=true for new overlords.
-        // TODO: Safe to drop DISABLED_VERSION once backward compatibility with overlords is no longer required.
-        final Worker disabledWorker = new Worker(
-            enabledWorker.getScheme(),
-            enabledWorker.getHost(),
-            enabledWorker.getIp(),
-            enabledWorker.getCapacity(),
-            DISABLED_VERSION,
-            enabledWorker.getCategory(),
-            true
-        );
-        curatorCoordinator.updateWorkerAnnouncement(disabledWorker);
-      }
       workerTaskManager.workerDisabled();
       return Response.ok(ImmutableMap.of(enabledWorker.getHost(), "disabled")).build();
     }
@@ -128,9 +96,6 @@ public class WorkerResource
   public Response doEnable()
   {
     try {
-      if (curatorCoordinator != null) {
-        curatorCoordinator.updateWorkerAnnouncement(enabledWorker);
-      }
       workerTaskManager.workerEnabled();
       return Response.ok(ImmutableMap.of(enabledWorker.getHost(), "enabled")).build();
     }

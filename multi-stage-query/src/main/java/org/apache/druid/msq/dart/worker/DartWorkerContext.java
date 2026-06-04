@@ -43,20 +43,22 @@ import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
+import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.io.File;
+import java.util.List;
 
 /**
  * Dart implementation of {@link WorkerContext}.
@@ -79,8 +81,8 @@ public class DartWorkerContext implements WorkerContext
   private final Injector injector;
   private final DartWorkerClient workerClient;
   private final SegmentWrangler segmentWrangler;
-  private final GroupingEngine groupingEngine;
   private final SegmentManager segmentManager;
+  private final VirtualStorageManager virtualStorageManager;
   private final CoordinatorClient coordinatorClient;
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
@@ -96,6 +98,7 @@ public class DartWorkerContext implements WorkerContext
   @MonotonicNonNull
   private volatile ResourceHolder<ProcessingBuffersSet> processingBuffersSet;
   private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
+  private final List<InputSliceReaderProvider> inputSliceReaderProviders;
 
   DartWorkerContext(
       final String queryId,
@@ -107,8 +110,8 @@ public class DartWorkerContext implements WorkerContext
       final DartWorkerClient workerClient,
       final DruidProcessingConfig processingConfig,
       final SegmentWrangler segmentWrangler,
-      final GroupingEngine groupingEngine,
       final SegmentManager segmentManager,
+      final VirtualStorageManager virtualStorageManager,
       final CoordinatorClient coordinatorClient,
       final MemoryIntrospector memoryIntrospector,
       final ProcessingBuffersProvider processingBuffersProvider,
@@ -116,7 +119,8 @@ public class DartWorkerContext implements WorkerContext
       final File tempDir,
       final QueryContext queryContext,
       final DataServerQueryHandlerFactory dataServerQueryHandlerFactory,
-      final ServiceEmitter emitter
+      final ServiceEmitter emitter,
+      final List<InputSliceReaderProvider> inputSliceReaderProviders
   )
   {
     this.queryId = queryId;
@@ -129,8 +133,8 @@ public class DartWorkerContext implements WorkerContext
     this.injector = injector;
     this.workerClient = workerClient;
     this.segmentWrangler = segmentWrangler;
-    this.groupingEngine = groupingEngine;
     this.segmentManager = segmentManager;
+    this.virtualStorageManager = virtualStorageManager;
     this.coordinatorClient = coordinatorClient;
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
@@ -138,6 +142,7 @@ public class DartWorkerContext implements WorkerContext
     this.tempDir = tempDir;
     this.queryContext = Preconditions.checkNotNull(queryContext, "queryContext");
     this.emitter = emitter;
+    this.inputSliceReaderProviders = inputSliceReaderProviders;
 
     // Compute thread count once in constructor
     final int baseThreadCount = processingConfig.getNumThreads();
@@ -173,6 +178,12 @@ public class DartWorkerContext implements WorkerContext
   public Injector injector()
   {
     return injector;
+  }
+
+  @Override
+  public List<InputSliceReaderProvider> inputSliceReaderProviders()
+  {
+    return inputSliceReaderProviders;
   }
 
   @Override
@@ -251,6 +262,7 @@ public class DartWorkerContext implements WorkerContext
         FrameWriterSpec.fromContext(workOrder.getWorkerContext()),
         segmentWrangler,
         segmentManager,
+        virtualStorageManager,
         coordinatorClient,
         workOrder.getStageDefinition().getProcessor().usesProcessingBuffers() ? processingBuffersSet.get() : null,
         memoryParameters,

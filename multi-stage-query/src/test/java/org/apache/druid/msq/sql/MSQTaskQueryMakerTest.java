@@ -31,6 +31,8 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.inject.util.Modules;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
@@ -91,6 +93,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
@@ -217,7 +220,11 @@ public class MSQTaskQueryMakerTest
         new SegmentWranglerModule(),
         new LookylooModule(),
         new MSQIndexingModule(),
-        binder -> binder.bind(WireTransferableContext.class).toInstance(FrameTestUtil.WT_CONTEXT_LEGACY)
+        binder -> {
+          binder.bind(WireTransferableContext.class).toInstance(FrameTestUtil.WT_CONTEXT_LEGACY);
+          binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
+          binder.bind(VirtualStorageManager.class).toInstance(MSQTestBase.makeNilVirtualStorageManager());
+        }
     );
     Injector injector = Guice.createInjector(defaultModule, BoundFieldModule.of(this));
     DruidSecondaryModule.setupJackson(injector, objectMapper, Collections.emptyMap(), true);

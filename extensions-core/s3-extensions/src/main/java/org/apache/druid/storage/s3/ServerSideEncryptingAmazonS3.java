@@ -19,13 +19,32 @@
 
 package org.apache.druid.storage.s3;
 
+import com.google.common.base.Strings;
+import org.apache.druid.common.aws.AWSClientConfig;
+import org.apache.druid.common.aws.AWSEndpointConfig;
+import org.apache.druid.common.aws.AWSProxyConfig;
+import org.apache.druid.data.input.s3.S3InputSourceConfig;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.storage.s3.S3StorageDruidModule.AsyncHttpClientType;
+import org.apache.druid.storage.s3.output.S3ExportStorageProvider;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
@@ -52,13 +71,21 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.Type;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.StsClientBuilder;
+import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
+import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.FileUpload;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.InputStream;
+import java.net.URI;
+import java.time.Duration;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 /**
@@ -286,6 +313,161 @@ public class ServerSideEncryptingAmazonS3
     }
   }
 
+  public static ServerSideEncryptingAmazonS3.Builder builder(
+      AwsCredentialsProvider awsCredentialsProvider,
+      S3StorageConfig s3StorageConfig,
+      @Nullable AWSProxyConfig awsProxyConfig,
+      @Nullable AWSEndpointConfig awsEndpointConfig,
+      @Nullable AWSClientConfig awsClientConfig,
+      @Nullable S3InputSourceConfig s3InputSourceConfig,
+      @Nullable S3ExportStorageProvider s3ExportStorageProvider
+  )
+  {
+    if (s3InputSourceConfig != null && s3ExportStorageProvider != null) {
+      throw DruidException.defensive("Cannot set both s3InputSourceConfig and s3ExportStorageProvider!");
+    }
+    final String assumeRoleArn;
+    final String assumeRoleExternalId;
+    if (s3InputSourceConfig != null) {
+      assumeRoleArn = s3InputSourceConfig.getAssumeRoleArn();
+      assumeRoleExternalId = s3InputSourceConfig.getAssumeRoleExternalId();
+    } else if (s3ExportStorageProvider != null) {
+      assumeRoleArn = s3ExportStorageProvider.getAssumeRoleArn();
+      assumeRoleExternalId = s3ExportStorageProvider.getAssumeRoleExternalId();
+    } else {
+      assumeRoleArn = null;
+      assumeRoleExternalId = null;
+    }
+
+    // Build a custom S3Client with the provided configuration
+    S3ClientBuilder clientBuilder = S3Client.builder();
+    S3AsyncClientBuilder asyncClientBuilder = S3AsyncClient.builder();
+
+    // Configure endpoint and region
+    if (awsEndpointConfig != null) {
+      if (!Strings.isNullOrEmpty(awsEndpointConfig.getUrl())) {
+        String endpointUrl = awsEndpointConfig.getUrl();
+        // Ensure endpoint URL has a scheme
+        if (!endpointUrl.startsWith("http://") && !endpointUrl.startsWith("https://")) {
+          boolean useHttps = S3Utils.useHttps(awsClientConfig, awsEndpointConfig);
+          endpointUrl = S3Utils.ensureEndpointHasScheme(endpointUrl, useHttps);
+        }
+        URI endpointOverride = URI.create(endpointUrl);
+        clientBuilder.endpointOverride(endpointOverride);
+        asyncClientBuilder.endpointOverride(endpointOverride);
+      }
+      if (!Strings.isNullOrEmpty(awsEndpointConfig.getSigningRegion())) {
+        Region region = Region.of(awsEndpointConfig.getSigningRegion());
+        clientBuilder.region(region);
+        asyncClientBuilder.region(region);
+      }
+    }
+
+    ApacheHttpClient.Builder httpClientBuilder = ApacheHttpClient.builder();
+
+    // Configure S3-specific settings
+    if (awsClientConfig != null) {
+      httpClientBuilder.connectionTimeout(Duration.ofMillis(awsClientConfig.getConnectionTimeoutMillis()))
+                       .socketTimeout(Duration.ofMillis(awsClientConfig.getSocketTimeoutMillis()))
+                       .maxConnections(awsClientConfig.getMaxConnections());
+      S3Configuration s3Config = S3Configuration.builder()
+                                                .chunkedEncodingEnabled(!awsClientConfig.isDisableChunkedEncoding())
+                                                .build();
+      clientBuilder.serviceConfiguration(s3Config)
+                   .forcePathStyle(awsClientConfig.isEnablePathStyleAccess())
+                   .crossRegionAccessEnabled(awsClientConfig.isCrossRegionAccessEnabled());
+      asyncClientBuilder.forcePathStyle(awsClientConfig.isEnablePathStyleAccess())
+                        .crossRegionAccessEnabled(awsClientConfig.isCrossRegionAccessEnabled())
+                        .httpClientBuilder(AsyncHttpClientType.fromString(s3StorageConfig.getS3TransferConfig().getAsyncHttpClientType()).buildBuilder(awsClientConfig))
+                        .multipartEnabled(true);
+    }
+
+    // Configure HTTP client with proxy if needed
+    if (awsProxyConfig != null) {
+      ProxyConfiguration proxyConfig = S3Utils.buildProxyConfiguration(awsProxyConfig);
+      if (proxyConfig != null) {
+        httpClientBuilder.proxyConfiguration(proxyConfig);
+      }
+    }
+    clientBuilder.httpClientBuilder(httpClientBuilder);
+
+    // Configure credentials
+    AwsCredentialsProvider credentialsProvider;
+    if (s3InputSourceConfig != null && s3InputSourceConfig.isCredentialsConfigured()) {
+      credentialsProvider = createStaticCredentialsProvider(s3InputSourceConfig);
+    } else {
+      credentialsProvider = awsCredentialsProvider;
+    }
+
+    // Apply assume role if configured
+    if (!Strings.isNullOrEmpty(assumeRoleArn)) {
+      credentialsProvider = createAssumeRoleCredentialsProvider(
+          assumeRoleArn,
+          assumeRoleExternalId,
+          awsEndpointConfig,
+          credentialsProvider
+      );
+    }
+
+    clientBuilder.credentialsProvider(credentialsProvider);
+    asyncClientBuilder.credentialsProvider(credentialsProvider);
+
+    // Build and wrap in ServerSideEncryptingAmazonS3
+    return ServerSideEncryptingAmazonS3.builder()
+                                       .setS3ClientSupplier(clientBuilder::build)
+                                       .setS3AsyncClientSupplier(asyncClientBuilder::build)
+                                       .setS3StorageConfig(s3StorageConfig);
+  }
+
+  @Nonnull
+  private static StaticCredentialsProvider createStaticCredentialsProvider(S3InputSourceConfig s3InputSourceConfig)
+  {
+    if (s3InputSourceConfig.getSessionToken() != null) {
+      AwsSessionCredentials sessionCredentials = AwsSessionCredentials.create(
+          s3InputSourceConfig.getAccessKeyId().getPassword(),
+          s3InputSourceConfig.getSecretAccessKey().getPassword(),
+          s3InputSourceConfig.getSessionToken().getPassword()
+      );
+      return StaticCredentialsProvider.create(sessionCredentials);
+    } else {
+      return StaticCredentialsProvider.create(
+          AwsBasicCredentials.create(
+              s3InputSourceConfig.getAccessKeyId().getPassword(),
+              s3InputSourceConfig.getSecretAccessKey().getPassword()
+          )
+      );
+    }
+  }
+
+  public static AwsCredentialsProvider createAssumeRoleCredentialsProvider(
+      String assumeRoleArn,
+      @Nullable String assumeRoleExternalId,
+      @Nullable AWSEndpointConfig awsEndpointConfig,
+      AwsCredentialsProvider baseCredentialsProvider
+  )
+  {
+    String roleSessionName = StringUtils.format("druid-s3-%s", UUID.randomUUID().toString());
+
+    StsClientBuilder stsBuilder = StsClient.builder().credentialsProvider(baseCredentialsProvider);
+    // If we have endpoint config, use its region for STS too
+    if (awsEndpointConfig != null && awsEndpointConfig.getSigningRegion() != null) {
+      stsBuilder.region(Region.of(awsEndpointConfig.getSigningRegion()));
+    }
+
+    AssumeRoleRequest.Builder assumeRoleRequestBuilder =
+        AssumeRoleRequest.builder().roleArn(assumeRoleArn).roleSessionName(roleSessionName).durationSeconds(3600);
+    if (assumeRoleExternalId != null) {
+      assumeRoleRequestBuilder.externalId(assumeRoleExternalId);
+    }
+
+    return StsAssumeRoleCredentialsProvider.builder()
+                                           .stsClient(stsBuilder.build())
+                                           .refreshRequest(assumeRoleRequestBuilder.build())
+                                           .asyncCredentialUpdateEnabled(true)
+                                           .staleTime(Duration.ofMinutes(3))
+                                           .build();
+  }
+
   public static class Builder
   {
     private Supplier<S3Client> s3ClientSupplier;
@@ -316,6 +498,19 @@ public class ServerSideEncryptingAmazonS3
       return this.s3StorageConfig;
     }
 
+    /**
+     * Builds a new {@link ServerSideEncryptingAmazonS3} instance.
+     *
+     * <p><b>Resource leak warning:</b> Each instance created by this method holds internal resources such as thread
+     * pools and connection pools. {@link ServerSideEncryptingAmazonS3} is not {@link java.io.Closeable}, so there is
+     * currently no way for callers to release these resources when the instance is no longer needed. Avoid calling
+     * this method repeatedly (e.g., once per file or per task) when a single shared instance would suffice. Consider
+     * memoizing the result, as {@link org.apache.druid.data.input.s3.S3InputSource} does, to ensure the client is
+     * created at most once per configuration.
+     *
+     * <p>The long-term fix is to make {@link ServerSideEncryptingAmazonS3} implement {@link java.io.Closeable} and
+     * arrange for {@code close()} to be called appropriately, but that is a larger change deferred for the future.
+     */
     public ServerSideEncryptingAmazonS3 build()
     {
       if (s3ClientSupplier == null) {

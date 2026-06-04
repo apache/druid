@@ -30,6 +30,7 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
@@ -92,6 +93,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.server.security.Escalator;
@@ -237,6 +239,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
         new SegmentWranglerModule(),
         new LookylooModule(),
         new MSQIndexingModule(),
+        binder -> binder.bind(CoordinatorClient.class).toInstance(coordinatorClient),
         binder -> binder.bind(PolicyEnforcer.class).toInstance(NoopPolicyEnforcer.instance()),
         binder -> binder.bind(WireTransferableContext.class).toInstance(new WireTransferableContext(null, null, true)),
         binder -> binder.bind(DataSegmentPusher.class)
@@ -247,6 +250,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
                         .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool"))),
         binder -> binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(objectMapper),
         binder -> binder.bind(SegmentCacheManager.class).toInstance(segmentCacheManager),
+        binder -> binder.bind(VirtualStorageManager.class).toInstance(MSQTestBase.makeNilVirtualStorageManager()),
         binder -> binder.bind(GroupingEngine.class).toInstance(groupingEngine)
     );
     injector = Guice.createInjector(modules);

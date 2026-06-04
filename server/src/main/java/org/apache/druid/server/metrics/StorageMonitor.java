@@ -25,16 +25,15 @@ import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
-import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationStats;
-import org.apache.druid.segment.loading.StorageStats;
 import org.apache.druid.segment.loading.VirtualStorageLocationStats;
 
 import javax.annotation.Nullable;
-import java.util.Map;
+import java.util.List;
 
 /**
- * Monitor to emit output of {@link SegmentCacheManager#getStorageStats()}
+ * Monitor to emit stats from {@link StorageLocation}.
  */
 @LoadScope(roles = {
     NodeRole.BROKER_JSON_NAME,
@@ -150,41 +149,38 @@ public class StorageMonitor extends AbstractMonitor
    */
   public static final String VSF_REJECT_COUNT = "storage/virtual/reject/count";
 
-  private final SegmentCacheManager cacheManager;
+  private final List<StorageLocation> locations;
   private final Supplier<ServiceMetricEvent.Builder> builderSupplier;
 
   public StorageMonitor(
-      SegmentCacheManager cacheManager,
+      List<StorageLocation> locations,
       @Nullable Supplier<ServiceMetricEvent.Builder> builderSupplier
   )
   {
-    this.cacheManager = cacheManager;
+    this.locations = locations;
     this.builderSupplier = builderSupplier == null ? ServiceMetricEvent.Builder::new : builderSupplier;
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    final StorageStats stats = cacheManager.getStorageStats();
+    for (StorageLocation location : locations) {
+      final String label = location.getPath().toString();
 
-    if (stats != null) {
-      for (Map.Entry<String, StorageLocationStats> location : stats.getLocationStats().entrySet()) {
-        final StorageLocationStats staticStats = location.getValue();
-        final ServiceMetricEvent.Builder builder = builderSupplier.get()
-                                                                  .setDimension(LOCATION_DIMENSION, location.getKey());
+      final StorageLocationStats staticStats = location.resetStaticStats();
+      final ServiceMetricEvent.Builder builder = builderSupplier.get().setDimension(LOCATION_DIMENSION, label);
+      if (staticStats.hasStats()) {
         emitter.emit(builder.setMetric(USED_BYTES, staticStats.getUsedBytes()));
-        emitter.emit(builder.setMetric(LOAD_BEGIN_COUNT, staticStats.getLoadBeginCount()));
-        emitter.emit(builder.setMetric(LOAD_BEGIN_BYTES, staticStats.getLoadBeginBytes()));
         emitter.emit(builder.setMetric(LOAD_COUNT, staticStats.getLoadCount()));
         emitter.emit(builder.setMetric(LOAD_BYTES, staticStats.getLoadBytes()));
+        emitter.emit(builder.setMetric(LOAD_BEGIN_COUNT, staticStats.getLoadBeginCount()));
+        emitter.emit(builder.setMetric(LOAD_BEGIN_BYTES, staticStats.getLoadBeginBytes()));
         emitter.emit(builder.setMetric(DROP_COUNT, staticStats.getDropCount()));
         emitter.emit(builder.setMetric(DROP_BYTES, staticStats.getDropBytes()));
       }
 
-      for (Map.Entry<String, VirtualStorageLocationStats> location : stats.getVirtualLocationStats().entrySet()) {
-        final VirtualStorageLocationStats weakStats = location.getValue();
-        final ServiceMetricEvent.Builder builder = builderSupplier.get()
-                                                                  .setDimension(LOCATION_DIMENSION, location.getKey());
+      final VirtualStorageLocationStats weakStats = location.resetWeakStats();
+      if (weakStats.hasStats()) {
         emitter.emit(builder.setMetric(VSF_USED_BYTES, weakStats.getUsedBytes()));
         emitter.emit(builder.setMetric(VSF_HOLD_COUNT, weakStats.getHoldCount()));
         emitter.emit(builder.setMetric(VSF_HOLD_BYTES, weakStats.getHoldBytes()));
