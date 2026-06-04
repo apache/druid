@@ -440,11 +440,6 @@
                 <version>${arrow.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.apache.arrow</groupId>
-                <artifactId>arrow-memory-netty</artifactId>
-                <version>${arrow.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.apache.iceberg</groupId>
                 <artifactId>iceberg-arrow</artifactId>
                 <version>${iceberg.core.version}</version>

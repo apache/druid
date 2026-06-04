@@ -764,6 +764,12 @@
       <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-arrow</artifactId>
       <version>${iceberg.core.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.arrow</groupId>
+          <artifactId>arrow-memory-netty</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.arrow</groupId>
