@@ -17,35 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime;
+package org.apache.druid.segment.loading.external;
 
-import com.google.common.base.Optional;
+import org.apache.druid.segment.loading.CacheEntryIdentifier;
 
 /**
+ * Simple CacheEntryIdentifier implementation that wraps a string.
  */
-public class NoopChatHandlerProvider implements ChatHandlerProvider
+public record StringCacheEntryIdentifier(String value) implements CacheEntryIdentifier
 {
   @Override
-  public void register(String key, ChatHandler handler)
+  public String toString()
   {
-    // do nothing
-  }
-
-  @Override
-  public void register(String key, ChatHandler handler, boolean announce)
-  {
-    // do nothing
-  }
-
-  @Override
-  public void unregister(String key)
-  {
-    // do nothing
-  }
-
-  @Override
-  public Optional<ChatHandler> get(String key)
-  {
-    return Optional.absent();
+    return value;
   }
 }

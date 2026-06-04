@@ -37,10 +37,10 @@ import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SegmentManager;
 
@@ -61,8 +61,8 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
   private final ServiceClientFactory serviceClientFactory;
   private final DruidProcessingConfig processingConfig;
   private final SegmentWrangler segmentWrangler;
-  private final GroupingEngine groupingEngine;
   private final SegmentManager segmentManager;
+  private final VirtualStorageManager virtualStorageManager;
   private final CoordinatorClient coordinatorClient;
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
@@ -81,8 +81,8 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
       @EscalatedGlobal ServiceClientFactory serviceClientFactory,
       DruidProcessingConfig processingConfig,
       SegmentWrangler segmentWrangler,
-      GroupingEngine groupingEngine,
       SegmentManager segmentManager,
+      VirtualStorageManager virtualStorageManager,
       CoordinatorClient coordinatorClient,
       MemoryIntrospector memoryIntrospector,
       @Dart ProcessingBuffersProvider processingBuffersProvider,
@@ -101,8 +101,8 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
     this.processingConfig = processingConfig;
     this.segmentWrangler = segmentWrangler;
     this.coordinatorClient = coordinatorClient;
-    this.groupingEngine = groupingEngine;
     this.segmentManager = segmentManager;
+    this.virtualStorageManager = virtualStorageManager;
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
     this.outbox = outbox;
@@ -130,6 +130,7 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
         processingConfig,
         segmentWrangler,
         segmentManager,
+        virtualStorageManager,
         coordinatorClient,
         memoryIntrospector,
         processingBuffersProvider,

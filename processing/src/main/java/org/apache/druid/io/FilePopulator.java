@@ -17,32 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.cli.convert;
+package org.apache.druid.io;
 
-import com.google.common.collect.ImmutableMap;
-
-import java.util.Map;
-import java.util.Properties;
+import java.io.File;
+import java.io.IOException;
 
 /**
+ * Lambda interface for populating a file with downloaded content.
  */
-public class ChatHandlerConverter implements PropertyConverter
+@FunctionalInterface
+public interface FilePopulator
 {
-
-  private static final String PROPERTY = "druid.indexer.chathandler.publishDiscovery";
-
-  @Override
-  public boolean canHandle(String property)
-  {
-    return PROPERTY.equals(property);
-  }
-
-  @Override
-  public Map<String, String> convert(Properties properties)
-  {
-    if (Boolean.parseBoolean(properties.getProperty(PROPERTY))) {
-      return ImmutableMap.of("druid.indexer.task.chathandler.type", "curator");
-    }
-    return ImmutableMap.of();
-  }
+  /**
+   * Populate the given file with content.
+   * The file's parent directory is guaranteed to exist.
+   *
+   * @param file The file to populate
+   * @throws IOException if population fails
+   */
+  void populate(File file) throws IOException;
 }

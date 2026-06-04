@@ -138,7 +138,6 @@ import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
@@ -305,7 +304,7 @@ public class CompactionTaskTest
             List.of(
                 binder -> {
                   binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
-                  binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
+                  binder.bind(ChatHandlerProvider.class).toInstance(new ChatHandlerProvider());
                   binder.bind(RowIngestionMetersFactory.class).toInstance(TEST_UTILS.getRowIngestionMetersFactory());
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
                   binder.bind(SegmentCacheManagerFactory.class)
@@ -2025,7 +2024,7 @@ public class CompactionTaskTest
         ))
         .taskReportFileWriter(new NoopTestTaskReportFileWriter())
         .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
-        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .chatHandlerProvider(new ChatHandlerProvider())
         .rowIngestionMetersFactory(TEST_UTILS.getRowIngestionMetersFactory())
         .appenderatorsManager(new TestAppenderatorsManager())
         .coordinatorClient(COORDINATOR_CLIENT)

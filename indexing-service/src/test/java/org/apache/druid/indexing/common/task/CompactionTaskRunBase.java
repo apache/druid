@@ -101,12 +101,13 @@ import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -1263,7 +1264,7 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -1375,7 +1376,7 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -1492,7 +1493,7 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), compactSegment.getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
 
     List<String> rowsFromSegment = new ArrayList<>();
     segmentCacheManager.load(compactSegment);
@@ -1714,6 +1715,7 @@ public abstract class CompactionTaskRunBase
     final SegmentCacheManager cacheManager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         objectMapper
@@ -1734,7 +1736,7 @@ public abstract class CompactionTaskRunBase
         .indexMerger(testUtils.getIndexMergerV9Factory().create(true))
         .taskReportFileWriter(new SingleFileTaskReportFileWriter(reportsFile))
         .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
-        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .chatHandlerProvider(new ChatHandlerProvider())
         .rowIngestionMetersFactory(testUtils.getRowIngestionMetersFactory())
         .appenderatorsManager(new TestAppenderatorsManager())
         .overlordClient(overlordClient)
@@ -1748,7 +1750,7 @@ public abstract class CompactionTaskRunBase
   protected List<String> getCSVFormatRowsFromSegments(List<DataSegment> segments) throws Exception
   {
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {

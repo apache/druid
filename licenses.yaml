@@ -1900,7 +1900,6 @@ libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
   - org.apache.curator: curator-recipes
-  - org.apache.curator: curator-x-discovery
 notices:
   - curator-client: |
       Curator Client
@@ -1910,9 +1909,6 @@ notices:
       Copyright 2011-2022 The Apache Software Foundation
   - curator-recipes: |
       Curator Recipes
-      Copyright 2011-2022 The Apache Software Foundation
-  - curator-x-discovery: |
-      Curator Service Discovery
       Copyright 2011-2022 The Apache Software Foundation
 
 ---

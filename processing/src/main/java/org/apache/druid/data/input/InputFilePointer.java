@@ -17,36 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.curator.discovery;
+package org.apache.druid.data.input;
 
-import org.apache.druid.server.DruidNode;
+import org.apache.druid.io.FilePopulator;
+
+import java.net.URI;
+import java.util.function.LongSupplier;
 
 /**
- * This class is deprecated, Add service to {@link org.apache.druid.discovery.DruidNodeAnnouncer} node announcement instead.
+ * Pointer to a file that may be on remote storage.
  *
- * Announces our ability to serve a particular function. Multiple users may announce the same service, in which
- * case they are treated as interchangeable instances of that service.
+ * @param uri          URI of the file
+ * @param sizeSupplier supplier for the size of the file. If the file is compressed, this is the compressed size
+ * @param populator    populator that knows how to fetch the file. If the file is compressed, this fetches the
+ *                     compressed file
  */
-@Deprecated
-public interface ServiceAnnouncer
+public record InputFilePointer(URI uri, LongSupplier sizeSupplier, FilePopulator populator)
 {
-  void announce(DruidNode node);
-
-  void unannounce(DruidNode node);
-
-  class Noop implements ServiceAnnouncer
-  {
-
-    @Override
-    public void announce(DruidNode node)
-    {
-
-    }
-
-    @Override
-    public void unannounce(DruidNode node)
-    {
-
-    }
-  }
 }

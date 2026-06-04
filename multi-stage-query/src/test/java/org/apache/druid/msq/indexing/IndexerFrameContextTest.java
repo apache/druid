@@ -135,6 +135,7 @@ public class IndexerFrameContextTest
         null,
         null,
         null,
+        null,
         processingBuffersSet,
         null,
         null,

@@ -155,10 +155,14 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
+import org.apache.druid.segment.loading.external.StorageLocationVirtualStorageManager;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -466,7 +470,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
 
     segmentCacheManager =
-        new SegmentCacheManagerFactory(indexIO, objectMapper).manufacturate(newTempFolder("cacheManager"), true);
+        new SegmentCacheManagerFactory(indexIO, objectMapper).manufacturate(newTempFolder("cacheManager"), null, true);
 
     testSegmentManager = new TestSegmentManager();
 
@@ -556,6 +560,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
         // Requirement of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
         binder -> binder.bind(AppenderatorsManager.class).toProvider(() -> null),
         binder -> binder.bind(SegmentManager.class).toInstance(testSegmentManager.getSegmentManager()),
+        binder -> binder.bind(VirtualStorageManager.class).toInstance(
+            new StorageLocationVirtualStorageManager(
+                segmentCacheManager.getLocations(),
+                new LeastBytesUsedStorageLocationSelectorStrategy(segmentCacheManager.getLocations()),
+                segmentCacheManager.getLoadingThreadPool()
+            )
+        ),
         new JoinableFactoryModule(),
         new IndexingServiceTuningConfigModule(),
         Modules.override(new MSQSqlModule()).with(
@@ -797,7 +808,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       testSegmentManager.addSegment(dataSegment, segment);
       acquiredSegment = testSegmentManager.getSegment(segmentId);
     }
-    return AdaptedLoadableSegment.create(acquiredSegment, descriptor.getInterval(), null, counters);
+    return AdaptedLoadableSegment.fromUnmanagedSegment(acquiredSegment, descriptor, null, counters);
   }
 
   public SelectTester testSelectQuery()
@@ -844,6 +855,18 @@ public class MSQTestBase extends BaseCalciteQueryTest
         50,
         10_000_000,
         10_000_000
+    );
+  }
+
+  /**
+   * Creates an non-functional {@link VirtualStorageManager} suitable for tests.
+   */
+  public static VirtualStorageManager makeNilVirtualStorageManager()
+  {
+    return new StorageLocationVirtualStorageManager(
+        ImmutableList.of(),
+        new LeastBytesUsedStorageLocationSelectorStrategy(ImmutableList.of()),
+        StorageLoadingThreadPool.none()
     );
   }
 
