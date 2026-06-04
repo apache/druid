@@ -21,6 +21,8 @@ package org.apache.druid.server.security;
 
 import com.google.common.base.Function;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
@@ -209,6 +211,173 @@ public class AuthorizationUtilsTest
     Assert.assertTrue(result.allowBasicAccess());
     // Verify that the policy was captured for the READ action
     Assert.assertEquals(Map.of("test", Optional.of(policy)), result.getPolicyMap());
+  }
+
+  @Test
+  public void testAuthorizeAllResourceActions_emitsOnDeny()
+  {
+    final String authorizerName = "testAuthorizer";
+    final AuthenticationResult authenticationResult = new AuthenticationResult(
+        "someUser",
+        authorizerName,
+        "authenticator",
+        null
+    );
+    final Authorizer denyAll = (authResult, resource, action) -> Access.DENIED;
+
+    final Map<String, Authorizer> authorizerMap = new HashMap<>();
+    authorizerMap.put(authorizerName, denyAll);
+
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
+    final AuthorizerMapper mapper = new AuthorizerMapper(authorizerMap, emitter);
+
+    final ResourceAction resourceAction = new ResourceAction(
+        new Resource("myDatasource", ResourceType.DATASOURCE),
+        Action.READ
+    );
+
+    final AuthorizationResult result = AuthorizationUtils.authorizeAllResourceActions(
+        authenticationResult,
+        Collections.singletonList(resourceAction),
+        mapper
+    );
+
+    Assert.assertFalse(result.allowBasicAccess());
+
+    final List<ServiceMetricEvent> events = emitter.getMetricEvents("auth/accessDenied");
+    Assert.assertEquals(1, events.size());
+    final Map<String, Object> dims = events.get(0).getUserDims();
+    Assert.assertEquals("someUser", dims.get("identity"));
+    Assert.assertEquals(authorizerName, dims.get("authorizerName"));
+    Assert.assertEquals("myDatasource", dims.get("resourceName"));
+    Assert.assertEquals(ResourceType.DATASOURCE, dims.get("resourceType"));
+    Assert.assertEquals(Action.READ.toString(), dims.get("action"));
+  }
+
+  @Test
+  public void testAuthorizeAllResourceActions_noEmitOnAllow()
+  {
+    final String authorizerName = "testAuthorizer";
+    final AuthenticationResult authenticationResult = new AuthenticationResult(
+        "someUser",
+        authorizerName,
+        "authenticator",
+        null
+    );
+    final Authorizer allowAll = (authResult, resource, action) -> Access.OK;
+
+    final Map<String, Authorizer> authorizerMap = new HashMap<>();
+    authorizerMap.put(authorizerName, allowAll);
+
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
+    final AuthorizerMapper mapper = new AuthorizerMapper(authorizerMap, emitter);
+
+    final AuthorizationResult result = AuthorizationUtils.authorizeAllResourceActions(
+        authenticationResult,
+        Collections.singletonList(
+            new ResourceAction(new Resource("myDatasource", ResourceType.DATASOURCE), Action.READ)
+        ),
+        mapper
+    );
+
+    Assert.assertTrue(result.allowBasicAccess());
+    Assert.assertEquals(0, emitter.getMetricEventCount("auth/accessDenied"));
+  }
+
+  @Test
+  public void testAuthorizeAllResourceActions_noEmitWhenEmitterNull()
+  {
+    final String authorizerName = "testAuthorizer";
+    final AuthenticationResult authenticationResult = new AuthenticationResult(
+        "someUser",
+        authorizerName,
+        "authenticator",
+        null
+    );
+    final Authorizer denyAll = (authResult, resource, action) -> Access.DENIED;
+
+    final Map<String, Authorizer> authorizerMap = new HashMap<>();
+    authorizerMap.put(authorizerName, denyAll);
+
+    // no emitter — default constructor
+    final AuthorizerMapper mapper = new AuthorizerMapper(authorizerMap);
+
+    final AuthorizationResult result = AuthorizationUtils.authorizeAllResourceActions(
+        authenticationResult,
+        Collections.singletonList(
+            new ResourceAction(new Resource("myDatasource", ResourceType.DATASOURCE), Action.READ)
+        ),
+        mapper
+    );
+
+    Assert.assertFalse(result.allowBasicAccess());
+    Assert.assertNull(mapper.getServiceEmitter());
+  }
+
+  @Test
+  public void testAuthorizeAllResourceActions_emitsExceptionOnPolicyForNonReadAction()
+  {
+    final String authorizerName = "testAuthorizer";
+    final AuthenticationResult authResult = new AuthenticationResult("someUser", authorizerName, "authenticator", null);
+    final Map<String, Authorizer> authorizerMap = new HashMap<>();
+    // Broken authorizer: returns a policy for a WRITE action (should never happen)
+    authorizerMap.put(authorizerName, (ar, resource, action) -> Access.allowWithRestriction(NoRestrictionPolicy.instance()));
+
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
+    final AuthorizerMapper mapper = new AuthorizerMapper(authorizerMap, emitter);
+    final ResourceAction resourceAction =
+        new ResourceAction(new Resource("myDatasource", ResourceType.DATASOURCE), Action.WRITE);
+
+    Assert.assertThrows(
+        DruidException.class,
+        () -> AuthorizationUtils.authorizeAllResourceActions(
+            authResult,
+            Collections.singletonList(resourceAction),
+            mapper
+        )
+    );
+
+    Assert.assertEquals(1, emitter.getMetricEventCount("auth/exception"));
+    Assert.assertEquals(0, emitter.getMetricEventCount("auth/accessDenied"));
+    final Map<String, Object> dims = emitter.getMetricEvents("auth/exception").get(0).getUserDims();
+    Assert.assertEquals("someUser", dims.get("identity"));
+    Assert.assertEquals(authorizerName, dims.get("authorizerName"));
+    Assert.assertEquals("myDatasource", dims.get("resourceName"));
+    Assert.assertEquals(Action.WRITE.toString(), dims.get("action"));
+  }
+
+  @Test
+  public void testAuthorizeAllResourceActions_emitsExceptionOnUnexpectedAuthorizerBehavior()
+  {
+    final String authorizerName = "testAuthorizer";
+    final AuthenticationResult authResult = new AuthenticationResult("someUser", authorizerName, "authenticator", null);
+    final Map<String, Authorizer> authorizerMap = new HashMap<>();
+    // Broken authorizer: returns a policy for a WRITE action (should never happen)
+    authorizerMap.put(authorizerName, (ar, resource, action) -> Access.allowWithRestriction(NoRestrictionPolicy.instance()));
+
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
+    final AuthorizerMapper mapper = new AuthorizerMapper(authorizerMap, emitter);
+    final ResourceAction resourceAction =
+        new ResourceAction(new Resource("myDatasource", ResourceType.DATASOURCE), Action.WRITE);
+
+    final DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> AuthorizationUtils.authorizeAllResourceActions(
+            authResult,
+            Collections.singletonList(resourceAction),
+            mapper
+        )
+    );
+
+    final List<ServiceMetricEvent> events = emitter.getMetricEvents("auth/exception");
+    Assert.assertEquals(1, events.size());
+    Assert.assertEquals(0, emitter.getMetricEventCount("auth/accessDenied"));
+    final Map<String, Object> dims = events.get(0).getUserDims();
+    Assert.assertEquals("someUser", dims.get("identity"));
+    Assert.assertEquals(authorizerName, dims.get("authorizerName"));
+    Assert.assertEquals("myDatasource", dims.get("resourceName"));
+    Assert.assertEquals(Action.WRITE.toString(), dims.get("action"));
+    Assert.assertEquals(e.getMessage(), dims.get("errorMessage"));
   }
 
   @Test
