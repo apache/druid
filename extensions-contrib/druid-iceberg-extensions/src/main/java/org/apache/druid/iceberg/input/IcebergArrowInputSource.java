@@ -84,9 +84,12 @@ public class IcebergArrowInputSource extends AbstractIcebergInputSource implemen
   {
     final Table table = retrieveTable();
     if (icebergFilter != null) {
-      final TableScan filteredScan = icebergFilter.filter(
+      TableScan filteredScan = icebergFilter.filter(
           table.newScan().caseSensitive(icebergCatalog.isCaseSensitive())
       );
+      if (getSnapshotTime() != null) {
+        filteredScan = filteredScan.asOfTime(getSnapshotTime().getMillis());
+      }
       icebergCatalog.enforceResidualMode(filteredScan, getResidualFilterMode());
     }
     return new IcebergArrowInputSourceReader(

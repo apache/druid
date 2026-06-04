@@ -30,6 +30,7 @@ import org.apache.druid.iceberg.filter.IcebergEqualsFilter;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.Files;
+import org.apache.iceberg.PartitionKey;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
@@ -159,24 +160,82 @@ public class IcebergArrowInputSourceTest
     );
   }
 
+  @Test
+  public void testResidualFilterModeFailUsesSnapshotTime() throws Exception
+  {
+    final String filterId = (String) tableData.get("id");
+    dropTableFromCatalog(tableIdentifier);
+    final PartitionSpec partitionSpec = PartitionSpec.builderFor(tableSchema)
+                                                     .identity("id")
+                                                     .build();
+    final Table table = testCatalog.retrieveCatalog().createTable(tableIdentifier, tableSchema, partitionSpec);
+    appendRow(table, partitionSpec, tableData);
+
+    final long afterPartitionedSnapshot = System.currentTimeMillis();
+    Thread.sleep(10);
+
+    table.updateSpec().removeField("id").commit();
+    appendRow(table, table.spec(), ImmutableMap.of("id", filterId, "name", "Bar"));
+
+    final IcebergArrowInputSource src = new IcebergArrowInputSource(
+        TABLENAME,
+        NAMESPACE,
+        new IcebergEqualsFilter("id", filterId),
+        testCatalog,
+        org.apache.druid.java.util.common.DateTimes.utc(afterPartitionedSnapshot),
+        ResidualFilterMode.FAIL,
+        1024
+    );
+    final InputRowSchema inputRowSchema = new InputRowSchema(
+        new TimestampSpec(null, null, org.apache.druid.java.util.common.DateTimes.utc(0L)),
+        DimensionsSpec.builder().build(),
+        ColumnsFilter.all()
+    );
+
+    final InputSourceReader reader = src.reader(inputRowSchema, null, FileUtils.createTempDir());
+    reader.read().close();
+  }
+
   private void createAndLoadTable(TableIdentifier id) throws IOException
   {
     final Table table = testCatalog.retrieveCatalog().createTable(id, tableSchema, PartitionSpec.unpartitioned());
+    appendRow(table, PartitionSpec.unpartitioned(), tableData);
+  }
+
+  private void appendRow(Table table, PartitionSpec partitionSpec, Map<String, Object> rowData) throws IOException
+  {
     final String fname = UUID.randomUUID() + ".parquet";
-    final File datafile = new File(warehouseDir.getAbsolutePath() + "/" + fname);
-    Assert.assertTrue(datafile.createNewFile());
-    final OutputFile out = Files.localOutput(datafile);
-    final DataWriter<Record> writer = Parquet.writeData(out)
-                                             .schema(tableSchema)
-                                             .createWriterFunc(GenericParquetWriter::create)
-                                             .overwrite()
-                                             .withSpec(PartitionSpec.unpartitioned())
-                                             .build();
+    final File dataFile = new File(warehouseDir.getAbsolutePath() + "/" + fname);
+    Assert.assertTrue(dataFile.createNewFile());
+    final OutputFile out = Files.localOutput(dataFile);
     final GenericRecord row = GenericRecord.create(tableSchema);
-    row.setField("id", tableData.get("id"));
-    row.setField("name", tableData.get("name"));
-    writer.write(row);
-    writer.close();
+    row.setField("id", rowData.get("id"));
+    row.setField("name", rowData.get("name"));
+    final DataWriter<Record> writer;
+    if (partitionSpec.isUnpartitioned()) {
+      writer = Parquet.writeData(out)
+                      .schema(tableSchema)
+                      .createWriterFunc(GenericParquetWriter::create)
+                      .overwrite()
+                      .withSpec(partitionSpec)
+                      .build();
+    } else {
+      final PartitionKey partitionKey = new PartitionKey(partitionSpec, tableSchema);
+      partitionKey.partition(row);
+      writer = Parquet.writeData(out)
+                      .schema(tableSchema)
+                      .createWriterFunc(GenericParquetWriter::create)
+                      .overwrite()
+                      .withSpec(partitionSpec)
+                      .withPartition(partitionKey)
+                      .build();
+    }
+    try {
+      writer.write(row);
+    }
+    finally {
+      writer.close();
+    }
     final DataFile df = writer.toDataFile();
     table.newAppend().appendFile(df).commit();
   }
