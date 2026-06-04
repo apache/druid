@@ -32,6 +32,7 @@ import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -183,6 +184,17 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
       return taskQueue.get().getRunningTaskCount();
+    } else {
+      return Collections.emptyMap();
+    }
+  }
+
+  @Override
+  public Map<String, Map<RowKey, Long>> getRunningTaskCountByCategory()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getRunningTaskCountByCategory();
     } else {
       return null;
     }

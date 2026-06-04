@@ -1701,6 +1701,19 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     return getWorkers().stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
   }
 
+  @Override
+  @SuppressWarnings("GuardedBy") // Read on tasks is safe
+  public Map<String, Collection<? extends TaskRunnerWorkItem>> getRunningTasksByCategory()
+  {
+    final Map<String, List<HttpRemoteTaskRunnerWorkItem>> grouped = new HashMap<>();
+    for (final HttpRemoteTaskRunnerWorkItem item : tasks.values()) {
+      if (item.getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING && item.getWorker() != null) {
+        grouped.computeIfAbsent(item.getWorker().getCategory(), k -> new ArrayList<>()).add(item);
+      }
+    }
+    return new HashMap<>(grouped);
+  }
+
 
   /**
    * Retrieves the maximum capacity of the task runner when autoscaling is enabled.*
