@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.loading.external;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.asyncresource.AsyncResource;
@@ -230,23 +229,9 @@ public class StorageLocationVirtualStorageManager implements VirtualStorageManag
     }
 
     if (loadingThreadPool.isAvailable()) {
-      final SettableAsyncResource<CachedFile> resource = new SettableAsyncResource<>();
-      final ListenableFuture<?> future = loadingThreadPool.getExecutorService().submit(
-          () -> {
-            try {
-              final CachedFile theCachedFile = reserveAndPopulate(identifier, sizeSupplier, populator);
-              if (!resource.set(ResourceHolder.fromCloseable(theCachedFile))) {
-                theCachedFile.close();
-              }
-            }
-            catch (Throwable e) {
-              resource.setException(e);
-            }
-          }
+      return loadingThreadPool.submitCloseableAsyncResource(
+          () -> reserveAndPopulate(identifier, sizeSupplier, populator)
       );
-
-      resource.setCanceler(() -> future.cancel(true));
-      return resource;
     } else {
       final SettableAsyncResource<CachedFile> resource = new SettableAsyncResource<>();
       try {

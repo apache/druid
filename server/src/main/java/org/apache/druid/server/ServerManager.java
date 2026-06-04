@@ -70,6 +70,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.VirtualPlaceholderSegment;
@@ -280,8 +281,8 @@ public class ServerManager implements QuerySegmentWalker
   }
 
   /**
-   * Given a list of {@link DataSegmentAndDescriptor}, uses {@link SegmentManager#acquireSegment(DataSegment)} for each
-   * to obtain a 'reference' to segments in the cache (or load from deep storage if necessary/supported by the
+   * Given a list of {@link DataSegmentAndDescriptor}, uses {@link SegmentManager#acquireSegment(DataSegment, AcquireMode)}
+   * for each to obtain a 'reference' to segments in the cache (or load from deep storage if necessary/supported by the
    * storage layer).
    * <p>
    * For each of these segments, we then apply a {@link SegmentMapFunction} to prepare for processing. The returned
@@ -307,7 +308,7 @@ public class ServerManager implements QuerySegmentWalker
         if (segment.getDataSegment() == null) {
           actions.add(safetyNet.register(AcquireSegmentAction.missingSegment()));
         } else {
-          actions.add(safetyNet.register(segmentManager.acquireSegment(segment.getDataSegment())));
+          actions.add(safetyNet.register(segmentManager.acquireSegment(segment.getDataSegment(), AcquireMode.FULL)));
         }
       }
     }

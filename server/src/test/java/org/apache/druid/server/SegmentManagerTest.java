@@ -41,6 +41,7 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.TestSegmentUtils;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
@@ -489,7 +490,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
         )
     );
 
-    final AcquireSegmentAction action = virtualSegmentManager.acquireSegment(toLoad);
+    final AcquireSegmentAction action = virtualSegmentManager.acquireSegment(toLoad, AcquireMode.FULL);
     AcquireSegmentResult result = action.getSegmentFuture().get();
     Assert.assertNotNull(result);
     Assert.assertEquals(1L, result.getLoadSizeBytes());

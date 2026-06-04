@@ -20,7 +20,6 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -82,7 +81,7 @@ public final class PartialSegmentCacheBootstrap
    * @param targetFilename    the V10 entry-point filename
    * @param externalFilenames any external segment file names that were registered as children of the entry-point file
    * @param jsonMapper        used by the metadata entry's mount path to parse the header
-   * @param downloadExec      executor for on-demand column downloads driven by the async cursor path (which bounds
+   * @param storagePool       thread pool the async cursor path submits on-demand column downloads to (which bounds
    *                          load concurrency itself); may be null in tests that never invoke the cursor factory
    * @param location          the storage location to reserve the metadata entry on
    * @return the reserved {@link PartialSegmentMetadataCacheEntry}; the caller is responsible for mounting it
@@ -94,7 +93,7 @@ public final class PartialSegmentCacheBootstrap
       String targetFilename,
       List<String> externalFilenames,
       ObjectMapper jsonMapper,
-      @Nullable ListeningExecutorService downloadExec,
+      @Nullable StorageLoadingThreadPool storagePool,
       StorageLocation location
   )
   {
@@ -116,7 +115,7 @@ public final class PartialSegmentCacheBootstrap
         externalFilenames,
         BootstrapRangeReader.INSTANCE,
         jsonMapper,
-        downloadExec,
+        storagePool,
         actualMetadataSize
     );
 

@@ -19,15 +19,16 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.common.asyncresource.AsyncResource;
 
 import java.io.Closeable;
+import java.util.concurrent.Callable;
 
 /**
  * Context object that bundles together pieces of cache-layer machinery needed to do on-demand partial segment loading:
  * <ol>
  *   <li>A hook for acquiring a hold on the cache-layer bundle.</li>
- *   <li>The executor on which partial downloads should run.</li>
+ *   <li>A hook for submitting bundle download tasks.</li>
  * </ol>
  */
 public interface PartialBundleAcquirer
@@ -41,8 +42,10 @@ public interface PartialBundleAcquirer
   Closeable acquire(String bundleName);
 
   /**
-   * Executor which callers use to submit bundle download tasks. The executor is responsible for bounding the
-   * concurrency of on-demand load work, so callers may submit as many tasks as needed.
+   * Submit a bundle download task, returning an {@link AsyncResource} that becomes ready when the task completes.
+   * Closing the returned resource before completion cancels the task. The underlying executor bounds the concurrency
+   * of on-demand load work, so callers may submit as many tasks as needed. The task must return a non-null value
+   * (it may be a completion token if the work is purely a side effect), since {@link AsyncResource} cannot hold null.
    */
-  ListeningExecutorService getDownloadExec();
+  <T> AsyncResource<T> submitDownload(Callable<T> task);
 }

@@ -38,6 +38,7 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -137,12 +138,12 @@ public class SegmentManager
    * present in the cache on demand.
    * <p>
    * What this means mechanically, is that for each {@link DataSegmentAndDescriptor} we check if it is already cached
-   * with {@link #acquireCachedSegment(DataSegment)} to add to {@link LeafSegmentsBundle#cachedSegments}, else if
-   * {@link #canLoadSegmentOnDemand(DataSegment)} is true it is added to {@link LeafSegmentsBundle#loadableSegments} or
-   * {@link LeafSegmentsBundle#missingSegments} if not.
+   * with {@link #acquireCachedSegment(DataSegment, AcquireMode)} to add to {@link LeafSegmentsBundle#cachedSegments},
+   * else if {@link #canLoadSegmentOnDemand(DataSegment)} is true it is added to
+   * {@link LeafSegmentsBundle#loadableSegments} or {@link LeafSegmentsBundle#missingSegments} if not.
    * <p>
    * The segments in {@link LeafSegmentsBundle#loadableSegments} can be retrieved with
-   * {@link #acquireSegment(DataSegment)} to ensure they are loaded from deep storage.
+   * {@link #acquireSegment(DataSegment, AcquireMode)} to ensure they are loaded from deep storage.
    */
   public LeafSegmentsBundle getSegmentsBundle(
       List<DataSegmentAndDescriptor> segments,
@@ -162,7 +163,7 @@ public class SegmentManager
           missingSegments.add(segment.getDescriptor());
           continue;
         }
-        final Optional<Segment> ref = acquireCachedSegment(dataSegment);
+        final Optional<Segment> ref = acquireCachedSegment(dataSegment, AcquireMode.FULL);
         if (ref.isPresent()) {
           try {
             final Optional<Segment> mapped = segmentMapFunction.apply(ref).map(safetyNet::register);
@@ -195,19 +196,23 @@ public class SegmentManager
   /**
    * Returns a {@link Segment}, if it is available in the cache. The returned {@link Segment} must be closed when the
    * caller is finished doing segment things. This method will not download a {@link DataSegment} if it is not already
-   * present in {@link #cacheManager}, use {@link #acquireSegment(DataSegment)} instead.
+   * present in {@link #cacheManager}, use {@link #acquireSegment(DataSegment, AcquireMode)} instead.
+   * <p>
+   * With {@link AcquireMode#PARTIAL} the returned segment may not be fully loaded, and callers must use async methods
+   * like {@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync} to download data on-demand; the
+   * synchronous {@code makeCursorHolder} will fail if anything is still missing. See {@link AcquireMode}.
    */
-  public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
+  public Optional<Segment> acquireCachedSegment(SegmentId segmentId, AcquireMode acquireMode)
   {
-    return cacheManager.acquireCachedSegment(segmentId);
+    return cacheManager.acquireCachedSegment(segmentId, acquireMode);
   }
 
   /**
-   * Convenience overload of {@link #acquireCachedSegment(SegmentId)} that accepts a {@link DataSegment}.
+   * Convenience overload of {@link #acquireCachedSegment(SegmentId, AcquireMode)} that accepts a {@link DataSegment}.
    */
-  public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
+  public Optional<Segment> acquireCachedSegment(DataSegment dataSegment, AcquireMode acquireMode)
   {
-    return acquireCachedSegment(dataSegment.getId());
+    return acquireCachedSegment(dataSegment.getId(), acquireMode);
   }
 
   /**
@@ -218,36 +223,15 @@ public class SegmentManager
    * Calling this method is treated as an intent to acquire and use the segment via resolving the future, and cache
    * manager implementations will place a hold on this segment until the 'loadCleanup' closer is closed - typically
    * after resolving the future to acquire the reference to the actual {@link Segment} object.
+   * <p>
+   * With {@link AcquireMode#PARTIAL} the action resolves to a partial-load capable segment (when the segment supports
+   * range reads), and callers must use async methods like
+   * {@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync} to download data on-demand. See
+   * {@link AcquireMode}.
    */
-  public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
+  public AcquireSegmentAction acquireSegment(DataSegment dataSegment, AcquireMode acquireMode)
   {
-    return cacheManager.acquireSegment(dataSegment);
-  }
-
-  /**
-   * Partial-load variant of {@link #acquireCachedSegment(SegmentId)}, returns a {@link Segment} when the cache holds
-   * an entry for the id; empty otherwise. The returned segment may not be fully loaded, callers must use async methods
-   * like {@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync} to download data on-demand. If the
-   * returned segment is only partially loaded, the synchronous methods like {@code makeCursorHolder} will fail if
-   * anything is still missing. If the segment is fully loaded, or not capable of partial loading, this method will
-   * still return a segment if it is present in cache and any async methods will function properly and return
-   * immediately.
-   */
-  public Optional<Segment> acquireCachedPartialSegment(SegmentId segmentId)
-  {
-    return cacheManager.acquireCachedPartialSegment(segmentId);
-  }
-
-  /**
-   * Partial-load variant of {@link #acquireSegment(DataSegment)}, returns an {@link AcquireSegmentAction} that
-   * resolves to a partial-load capable {@link Segment}. Cache managers that don't support partial loading (or segments
-   * whose {@code LoadSpec} can't supply range reads) fall back to the eager {@link #acquireSegment(DataSegment)}
-   * behavior. If the returned segment is only partially loaded, callers must use async methods like
-   * {@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync} to download data on-demand.
-   */
-  public AcquireSegmentAction acquirePartialSegment(DataSegment dataSegment)
-  {
-    return cacheManager.acquirePartialSegment(dataSegment);
+    return cacheManager.acquireSegment(dataSegment, acquireMode);
   }
 
   /**
@@ -360,7 +344,8 @@ public class SegmentManager
             );
 
             long numOfRows = 0;
-            final Optional<Segment> loadedSegment = cacheManager.acquireCachedSegment(dataSegment.getId());
+            final Optional<Segment> loadedSegment =
+                cacheManager.acquireCachedSegment(dataSegment.getId(), AcquireMode.FULL);
             if (loadedSegment.isPresent()) {
               final Segment segment = loadedSegment.get();
               final IndexedTable table = segment.as(IndexedTable.class);
@@ -427,7 +412,8 @@ public class SegmentManager
 
             if (oldSegmentRef != null) {
               try (final Closer closer = Closer.create()) {
-                final Optional<Segment> oldSegment = cacheManager.acquireCachedSegment(oldSegmentRef.getId());
+                final Optional<Segment> oldSegment =
+                    cacheManager.acquireCachedSegment(oldSegmentRef.getId(), AcquireMode.FULL);
                 long numberOfRows = oldSegment.map(segment -> {
                   closer.register(segment);
                   final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);

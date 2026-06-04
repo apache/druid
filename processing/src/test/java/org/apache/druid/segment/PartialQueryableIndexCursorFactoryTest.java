@@ -20,11 +20,12 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.ForwardingListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.common.asyncresource.AsyncResource;
+import org.apache.druid.common.asyncresource.AsyncResources;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
@@ -62,6 +63,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -72,8 +74,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 
 class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
 {
@@ -193,9 +197,9 @@ class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public ListeningExecutorService getDownloadExec()
+      public <T> AsyncResource<T> submitDownload(Callable<T> task)
       {
-        return downloadExec;
+        return AsyncResources.fromFutureUnmanaged(downloadExec.submit(task));
       }
     };
   }
@@ -659,25 +663,10 @@ class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
     try (IndexAndMapper opened = openIndex(rangeReader, "cancel_before_ready")) {
       final PartialQueryableIndex index = opened.index();
 
+      // submitDownload records each task's never-completing future and returns it as an AsyncResource, so the holder
+      // stays not-ready and we can observe the cancellation. A bundle hold whose releases we count asserts
+      // exactly-once release across the canceler + failure callback.
       final List<ListenableFuture<?>> submitted = new ArrayList<>();
-      final ListeningExecutorService recordingExec = new ForwardingListeningExecutorService()
-      {
-        @Override
-        protected ListeningExecutorService delegate()
-        {
-          return realExec; // never used; only submit(Callable) is overridden
-        }
-
-        @Override
-        public <T> ListenableFuture<T> submit(Callable<T> task)
-        {
-          final SettableFuture<T> future = SettableFuture.create();
-          submitted.add(future);
-          return future; // never run the task, so the download stays pending
-        }
-      };
-
-      // A bundle hold whose releases we count, to assert exactly-once release across the canceler + failure callback.
       final AtomicInteger holdReleases = new AtomicInteger(0);
       final PartialBundleAcquirer acquirer = new PartialBundleAcquirer()
       {
@@ -688,9 +677,11 @@ class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
         }
 
         @Override
-        public ListeningExecutorService getDownloadExec()
+        public <T> AsyncResource<T> submitDownload(Callable<T> task)
         {
-          return recordingExec;
+          final SettableFuture<T> future = SettableFuture.create();
+          submitted.add(future);
+          return AsyncResources.fromFutureUnmanaged(future);
         }
       };
 
@@ -717,6 +708,99 @@ class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
           holdReleases.get(),
           "bundle hold must be released exactly once across the canceler and the failure callback"
       );
+    }
+  }
+
+  @Test
+  void testCancelWhileDownloadMidMapFileDefersHoldReleaseUntilBodyFinishes() throws Exception
+  {
+    // Eviction-during-download safety: releasing the bundle hold makes the bundle entry evictable, and eviction unmaps
+    // its containers. A column download still inside mapFile() would then read an unmapped region (a JVM SIGSEGV). So
+    // when the awaiter cancels while a download is mid-mapFile(), the canceler must NOT release the hold; the last
+    // in-flight body releases it only after its read has finished.
+    final ReentrantLock gate = new ReentrantLock();
+    final CountDownLatch readStarted = new CountDownLatch(1);
+    final AtomicBoolean blockedOnce = new AtomicBoolean(false);
+    // Park the first read issued from a download-executor thread, modeling a body parked inside mapFile() while holding
+    // the in-flight count. The mapper's create() reads (header + metadata) run on this thread during openIndex and
+    // must pass through untouched, so discriminate by thread identity rather than offset. gate.lock() is
+    // uninterruptible, modeling the mapper's non-interruptible traditional I/O: future.cancel(true) cannot abort it.
+    final Thread mainThread = Thread.currentThread();
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir)
+    {
+      @Override
+      public InputStream readRange(String filename, long offset, long length) throws IOException
+      {
+        if (Thread.currentThread() != mainThread && blockedOnce.compareAndSet(false, true)) {
+          readStarted.countDown();
+          gate.lock();
+          gate.unlock();
+        }
+        return super.readRange(filename, offset, length);
+      }
+    };
+
+    final ExecutorService rawExec = Execs.singleThreaded("partial-cursor-evict-race-%d");
+    final ListeningExecutorService blockingExec = MoreExecutors.listeningDecorator(rawExec);
+    final AtomicInteger holdReleases = new AtomicInteger(0);
+    final CountDownLatch released = new CountDownLatch(1);
+
+    gate.lock(); // hold the gate so the first column download parks inside its read
+    try (IndexAndMapper opened = openIndex(rangeReader, "evict_during_download")) {
+      final PartialQueryableIndex index = opened.index();
+      final PartialBundleAcquirer acquirer = new PartialBundleAcquirer()
+      {
+        @Override
+        public Closeable acquire(String bundleName)
+        {
+          return () -> {
+            holdReleases.incrementAndGet();
+            released.countDown();
+          };
+        }
+
+        @Override
+        public <T> AsyncResource<T> submitDownload(Callable<T> task)
+        {
+          return AsyncResources.fromFutureUnmanaged(blockingExec.submit(task));
+        }
+      };
+
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          V10TimeBoundaryInspector.forBaseProjection(index.getBaseProjectionMetadata(), index.getDataInterval()),
+          acquirer
+      );
+
+      final AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
+
+      // A download body is now parked mid-mapFile(), holding the in-flight count; the hold is still held.
+      Assertions.assertTrue(readStarted.await(5, TimeUnit.SECONDS), "a column download must reach mapFile()");
+      Assertions.assertFalse(asyncHolder.isReady(), "download is parked, so the holder must not be ready");
+      Assertions.assertEquals(0, holdReleases.get(), "hold must still be held while a download is mid-mapFile");
+
+      // Awaiter cancels while the body is parked inside mapFile().
+      asyncHolder.close();
+
+      // The hold must NOT be released yet: the in-flight body is still touching the bundle's container, so releasing
+      // now would let eviction unmap it mid-read.
+      Assertions.assertEquals(
+          0,
+          holdReleases.get(),
+          "bundle hold must stay held until the in-flight mapFile() body finishes"
+      );
+
+      // Let the parked body finish its read; the last body out then releases the hold exactly once.
+      gate.unlock();
+      Assertions.assertTrue(released.await(5, TimeUnit.SECONDS), "hold must be released once the in-flight body finishes");
+      Assertions.assertEquals(1, holdReleases.get(), "bundle hold must be released exactly once");
+    }
+    finally {
+      if (gate.isHeldByCurrentThread()) {
+        gate.unlock();
+      }
+      blockingExec.shutdownNow();
+      rawExec.shutdownNow();
     }
   }
 }

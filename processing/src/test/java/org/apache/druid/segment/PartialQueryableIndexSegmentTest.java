@@ -21,6 +21,8 @@ package org.apache.druid.segment;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.common.asyncresource.AsyncResource;
+import org.apache.druid.common.asyncresource.AsyncResources;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -52,6 +54,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 
 class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
@@ -139,9 +142,9 @@ class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
   }
 
   /**
-   * No-op bundle acquirer for tests: every {@code acquire(...)} returns a noop {@link Closeable}; {@code getDownloadExec()}
-   * returns the supplied executor. Production callers go through {@code PartialSegmentMetadataCacheEntry.makeBundleAcquirer}
-   * instead.
+   * No-op bundle acquirer for tests: every {@code acquire(...)} returns a noop {@link Closeable};
+   * {@code submitDownload(...)} runs the task on the supplied executor and wraps the future as an
+   * {@link AsyncResource}. Production callers go through {@code PartialSegmentMetadataCacheEntry}'s bundle acquirer.
    */
   private static PartialBundleAcquirer noOpAcquirer(ListeningExecutorService downloadExec)
   {
@@ -154,9 +157,9 @@ class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public ListeningExecutorService getDownloadExec()
+      public <T> AsyncResource<T> submitDownload(Callable<T> task)
       {
-        return downloadExec;
+        return AsyncResources.fromFutureUnmanaged(downloadExec.submit(task));
       }
     };
   }

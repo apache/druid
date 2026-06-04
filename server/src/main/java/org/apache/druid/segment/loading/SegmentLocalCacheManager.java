@@ -318,7 +318,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               IndexIO.V10_FILE_NAME,
               List.of(),
               jsonMapper,
-              virtualStorageLoadingThreadPool.getExecutorService(),
+              virtualStorageLoadingThreadPool,
               location
           );
           cachedSegments.add(segment);
@@ -415,19 +415,24 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public Optional<Segment> acquireCachedSegment(final SegmentId segmentId)
+  public Optional<Segment> acquireCachedSegment(final SegmentId segmentId, final AcquireMode acquireMode)
   {
-    return acquireCachedInternal(segmentId, true);
+    // PARTIAL accepts a mounted-but-not-fully-downloaded entry; FULL (and PARTIAL when partial downloads are disabled)
+    // requires a behaviorally fully-materialized entry.
+    final boolean requireFullyDownloaded =
+        acquireMode == AcquireMode.FULL || !config.isVirtualStoragePartialDownloadsEnabled();
+    return acquireCachedInternal(segmentId, requireFullyDownloaded);
   }
 
   @Override
-  public AcquireSegmentAction acquireSegment(final DataSegment dataSegment)
+  public AcquireSegmentAction acquireSegment(final DataSegment dataSegment, final AcquireMode acquireMode)
   {
-    // Partial-eligible segments route through the partial machinery with force-full-download to satisfy the contract
-    // of this method
+    // Partial-eligible segments route through the partial machinery: PARTIAL mounts lazily (header only, bundles load
+    // on demand), FULL force-downloads everything up front. Partial-ineligible segments fall through to the eager path
+    // below for both modes.
     final SegmentRangeReader rangeReader = tryOpenRangeReader(dataSegment);
     if (rangeReader != null) {
-      return acquirePartialInternal(dataSegment, rangeReader, true);
+      return acquirePartialInternal(dataSegment, rangeReader, acquireMode == AcquireMode.FULL);
     }
 
     final SegmentCacheEntryIdentifier identifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
@@ -491,37 +496,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
-  @Override
-  public Optional<Segment> acquireCachedPartialSegment(SegmentId segmentId)
-  {
-    if (!config.isVirtualStoragePartialDownloadsEnabled()) {
-      return acquireCachedSegment(segmentId);
-    }
-    return acquireCachedInternal(segmentId, false);
-  }
-
-  @Override
-  public AcquireSegmentAction acquirePartialSegment(DataSegment dataSegment)
-  {
-    final SegmentRangeReader rangeReader = tryOpenRangeReader(dataSegment);
-    if (rangeReader == null) {
-      // Storage backend doesn't support range reads for this segment (e.g. V9 format or zipped)
-      return acquireSegment(dataSegment);
-    }
-    return acquirePartialInternal(dataSegment, rangeReader, false);
-  }
-
-
   /**
-   * Shared implementation for {@link #acquireCachedSegment} and {@link #acquireCachedPartialSegment}. Walks the
-   * storage locations checking for existing entries.
+   * Shared implementation for {@link #acquireCachedSegment}. Walks the storage locations checking for existing entries.
    * <p>
    * When {@code requireFullyDownloaded} is {@code true} the entry must also report
-   * {@link SegmentCacheEntry#isFullyDownloaded()} (the contract for {@link #acquireCachedSegment}), which never
-   * hands back an entry that isn't behaviorally fully-materialized. When {@code false} a mounted entry is
-   * sufficient ({@link #acquireCachedPartialSegment}'s lazy-mount contract), even if some bundles are still
-   * not yet on disk. In either case {@link SegmentCacheEntry#acquireReference(Closeable)} composes the weak-entry hold
-   * into the returned segment's close lifecycle.
+   * {@link SegmentCacheEntry#isFullyDownloaded()} ({@link AcquireMode#FULL}), which never hands back an entry that
+   * isn't behaviorally fully-materialized. When {@code false} a mounted entry is sufficient
+   * ({@link AcquireMode#PARTIAL}'s lazy-mount contract), even if some bundles are still not yet on disk. In either case
+   * {@link SegmentCacheEntry#acquireReference(Closeable)} composes the weak-entry hold into the returned segment's close
+   * lifecycle.
    */
   private Optional<Segment> acquireCachedInternal(SegmentId segmentId, boolean requireFullyDownloaded)
   {
@@ -550,9 +533,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   /**
-   * Shared scaffolding for both partial acquire APIs. {@code fullDownload=false} powers
-   * {@link #acquirePartialSegment} (lazy mount, header bytes only; bundles mount on demand at query time);
-   * {@code fullDownload=true} powers the partial-eligible branch of {@link #acquireSegment} (mount +
+   * Shared scaffolding for the partial-eligible branch of {@link #acquireSegment}. {@code fullDownload=false} powers
+   * {@link AcquireMode#PARTIAL} (lazy mount, header bytes only; bundles mount on demand at query time);
+   * {@code fullDownload=true} powers {@link AcquireMode#FULL} (mount +
    * {@link PartialSegmentFileMapperV10#ensureAllDownloaded} so the returned segment is fully-materialized).
    * <p>
    * Fast path: {@link #findExistingPartialWithHold} locates an existing entry across locations under a hold. If the
@@ -718,9 +701,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   /**
    * Try to open a range reader for the given segment's {@link LoadSpec}; returns {@code null} when the backend
    * doesn't support range reads (e.g. zipped storage), or when partial downloads are disabled via
-   * {@link SegmentLoaderConfig#isVirtualStoragePartialDownloadsEnabled}. Used to gate the partial-eligible branches in
-   * both {@link #acquireSegment} and {@link #acquirePartialSegment}; a null result causes both call sites to fall
-   * through to the eager extraction path.
+   * {@link SegmentLoaderConfig#isVirtualStoragePartialDownloadsEnabled}. Used to gate the partial-eligible branch of
+   * {@link #acquireSegment}; a null result causes that call site to fall through to the eager extraction path.
    */
   @Nullable
   private SegmentRangeReader tryOpenRangeReader(DataSegment dataSegment)
@@ -771,7 +753,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               List.of(),
               rangeReader,
               jsonMapper,
-              virtualStorageLoadingThreadPool.getExecutorService(),
+              virtualStorageLoadingThreadPool,
               config.getVirtualStorageMetadataReservationEstimate()
           )
       );

@@ -107,10 +107,10 @@ public class SegmentLoaderConfig
 
   /**
    * When true (the default), partial-eligible V10 segments are mounted via the partial machinery and
-   * {@link SegmentCacheManager#acquirePartialSegment} returns a metadata-anchored segment whose columns are downloaded
-   * on demand. When false, the partial-aware acquire methods fall back to their eager counterparts so the entire
-   * segment is downloaded up front (matching pre-partial-download behavior). Provided as an operator escape hatch if
-   * partial downloads cause problems in a given deployment.
+   * {@link SegmentCacheManager#acquireSegment} with {@link AcquireMode#PARTIAL} returns a metadata-anchored segment
+   * whose columns are downloaded on demand. When false, {@link AcquireMode#PARTIAL} falls back to
+   * {@link AcquireMode#FULL} so the entire segment is downloaded up front (matching pre-partial-download behavior).
+   * Provided as an operator escape hatch if partial downloads cause problems in a given deployment.
    */
   @JsonProperty("virtualStoragePartialDownloadsEnabled")
   private boolean virtualStoragePartialDownloadsEnabled = true;

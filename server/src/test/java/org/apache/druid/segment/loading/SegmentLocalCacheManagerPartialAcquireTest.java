@@ -193,12 +193,14 @@ class SegmentLocalCacheManagerPartialAcquireTest
     )
     {
       // Tripwire: the partial-aware acquire paths should be self-contained; they must not fall through to the
-      // eager-extract acquireCachedSegment API (which is the non-partial branch of acquireCachedSegment-style lookups).
+      // eager-extract cached lookup (AcquireMode.FULL, the non-partial branch of acquireCachedSegment).
       @Override
-      public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
+      public Optional<Segment> acquireCachedSegment(SegmentId segmentId, AcquireMode acquireMode)
       {
-        Assertions.fail("should not fallback to acquireCachedSegment");
-        return super.acquireCachedSegment(segmentId);
+        if (acquireMode == AcquireMode.FULL) {
+          Assertions.fail("should not fall back to FULL acquireCachedSegment");
+        }
+        return super.acquireCachedSegment(segmentId, acquireMode);
       }
     };
 
@@ -228,7 +230,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
   @Test
   void testAcquirePartialSegmentReturnsPartialAwareSegment() throws ExecutionException, InterruptedException, IOException
   {
-    try (AcquireSegmentAction action = manager.acquirePartialSegment(partialSegment)) {
+    try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
       final AcquireSegmentResult result = action.getSegmentFuture().get();
       try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
         Assertions.assertEquals(SEGMENT_ID, segment.getId());
@@ -249,7 +251,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
   void testAcquirePartialAsyncCursorHolderProducesWorkingCursor()
       throws ExecutionException, InterruptedException, IOException
   {
-    try (AcquireSegmentAction action = manager.acquirePartialSegment(partialSegment)) {
+    try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
       final AcquireSegmentResult result = action.getSegmentFuture().get();
       try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
         final CursorFactory factory = segment.as(CursorFactory.class);
@@ -274,14 +276,14 @@ class SegmentLocalCacheManagerPartialAcquireTest
   @Test
   void testSecondAcquireReturnsCachedSegment() throws ExecutionException, InterruptedException, IOException
   {
-    try (AcquireSegmentAction first = manager.acquirePartialSegment(partialSegment)) {
+    try (AcquireSegmentAction first = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
       try (Segment ignored = first.getSegmentFuture().get().getReferenceProvider().acquireReference().orElseThrow()) {
         // entry is registered + mounted
       }
     }
 
     // Second acquire should find the existing mounted entry (cached fast path).
-    final Optional<Segment> cached = manager.acquireCachedPartialSegment(SEGMENT_ID);
+    final Optional<Segment> cached = manager.acquireCachedSegment(SEGMENT_ID, AcquireMode.PARTIAL);
     try {
       Assertions.assertTrue(cached.isPresent(), "second acquire should hit the cached fast path");
     }
@@ -301,7 +303,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
     );
     final long initialHoldBytes = loc.getWeakStats().getHoldBytes();
 
-    try (AcquireSegmentAction action = manager.acquirePartialSegment(partialSegment)) {
+    try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
       final AcquireSegmentResult result = action.getSegmentFuture().get();
       // The action holds a SIEVE-protective hold on the metadata entry for its entire lifetime.
       Assertions.assertTrue(
@@ -341,7 +343,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
   void testAsyncCursorBuildMountsMatchedProjectionBundle()
       throws ExecutionException, InterruptedException, IOException
   {
-    try (AcquireSegmentAction action = manager.acquirePartialSegment(partialSegment)) {
+    try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
       final AcquireSegmentResult result = action.getSegmentFuture().get();
       try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
         // base-table cursor: drives the base bundle to mount via the cache layer
@@ -380,7 +382,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
         new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME);
     final PartialSegmentBundleCacheEntryIdentifier aggBundleId =
         new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
-    try (AcquireSegmentAction action = manager.acquireSegment(partialSegment)) {
+    try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.FULL)) {
       final AcquireSegmentResult result = action.getSegmentFuture().get();
       try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
         Assertions.assertInstanceOf(PartialQueryableIndexSegment.class, segment);
@@ -433,13 +435,13 @@ class SegmentLocalCacheManagerPartialAcquireTest
     );
 
     try {
-      try (AcquireSegmentAction action = disabledManager.acquirePartialSegment(partialSegment)) {
+      try (AcquireSegmentAction action = disabledManager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
         final AcquireSegmentResult result = action.getSegmentFuture().get();
         try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
           Assertions.assertEquals(SEGMENT_ID, segment.getId());
           Assertions.assertFalse(
               segment instanceof PartialQueryableIndexSegment,
-              "partial downloads disabled, acquirePartialSegment must fall back to eager and return a non-partial segment"
+              "partial downloads disabled, acquireSegment(PARTIAL) must fall back to FULL and return a non-partial segment"
           );
         }
       }
@@ -452,11 +454,11 @@ class SegmentLocalCacheManagerPartialAcquireTest
       );
 
       // Cached lookup via the partial API also degrades to the eager cached path.
-      try (Segment cached = disabledManager.acquireCachedPartialSegment(SEGMENT_ID).orElseThrow()) {
+      try (Segment cached = disabledManager.acquireCachedSegment(SEGMENT_ID, AcquireMode.PARTIAL).orElseThrow()) {
         Assertions.assertEquals(SEGMENT_ID, cached.getId());
         Assertions.assertFalse(
             cached instanceof PartialQueryableIndexSegment,
-            "partial downloads disabled, acquireCachedPartialSegment must return the eager cached segment"
+            "partial downloads disabled, acquireCachedSegment(PARTIAL) must return the eager cached segment"
         );
       }
     }

@@ -22,9 +22,9 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.common.asyncresource.AsyncResource;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -50,6 +50,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -96,13 +97,8 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   private final ObjectMapper jsonMapper;
   private final long reservationEstimate;
 
-  // Executor passed through to the constructed PartialQueryableIndexSegment for on-demand column downloads driven by
-  // the async cursor path. Concurrency bounding lives inside this executor (see SegmentLocalCacheManager's
-  // PermitBoundedListeningExecutorService), so column-download tasks submitted to it are bounded without the cursor
-  // factory acquiring a permit itself. May be null for entries that are only used for metadata-layer operations
-  // (e.g. drop tests, bundle-level tests) where acquireReference() is never invoked.
   @Nullable
-  private final ListeningExecutorService downloadExec;
+  private final StorageLoadingThreadPool storagePool;
 
   // ReentrantLock instead of synchronized to avoid pinning virtual threads pre-JEP 491
   private final ReentrantLock entryLock = new ReentrantLock();
@@ -157,7 +153,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       List<String> externalFilenames,
       SegmentRangeReader rangeReader,
       ObjectMapper jsonMapper,
-      @Nullable ListeningExecutorService downloadExec,
+      @Nullable StorageLoadingThreadPool storagePool,
       long reservationEstimate
   )
   {
@@ -175,7 +171,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     this.externalFilenames = List.copyOf(externalFilenames);
     this.rangeReader = rangeReader;
     this.jsonMapper = jsonMapper;
-    this.downloadExec = downloadExec;
+    this.storagePool = storagePool;
     this.reservationEstimate = reservationEstimate;
     this.currentSize = reservationEstimate;
     this.bundleAcquirer = createBundleAcquirer();
@@ -510,7 +506,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
    * entry isn't mounted. The segment internally acquires one {@link #acquireMetadataReference} so that closing the
    * segment is what releases the metadata-layer reference.
    *
-   * @throws DruidException if {@code downloadExec} was not supplied at construction time (this entry is
+   * @throws DruidException if no {@code storagePool} was supplied at construction time (this entry is
    *                        metadata-only and cannot produce a queryable segment)
    */
   @Override
@@ -550,10 +546,10 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     finally {
       entryLock.unlock();
     }
-    if (downloadExec == null) {
+    if (!hasStoragePool()) {
       CloseableUtils.closeAndSuppressExceptions(extraOnClose, ignored -> {});
       throw DruidException.defensive(
-          "Cannot build segment for partial entry[%s]; no download executor was supplied at construction",
+          "Cannot build segment for partial entry[%s]; no storage loading thread pool was supplied at construction",
           id
       );
     }
@@ -692,20 +688,30 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     return bundleAcquirer;
   }
 
+  /**
+   * Whether a usable {@link StorageLoadingThreadPool} was supplied at construction. When false, this entry can serve
+   * schema/metadata but cannot mount bundles or submit column-load tasks (e.g. a metadata-only stub entry).
+   */
+  private boolean hasStoragePool()
+  {
+    return storagePool != null && storagePool.isAvailable();
+  }
+
   private PartialBundleAcquirer createBundleAcquirer()
   {
     return new PartialBundleAcquirer()
     {
       @Override
-      public ListeningExecutorService getDownloadExec()
+      public <T> AsyncResource<T> submitDownload(Callable<T> task)
       {
-        if (downloadExec == null) {
+        if (!hasStoragePool()) {
           throw DruidException.defensive(
-              "No download executor was supplied at construction for partial entry[%s]; cannot serve column-load tasks",
+              "No storage loading thread pool was supplied at construction for partial entry[%s]; cannot serve "
+              + "column-load tasks",
               id
           );
         }
-        return downloadExec;
+        return storagePool.submitUnmanagedAsyncResource(task);
       }
 
       @Override

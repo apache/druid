@@ -19,7 +19,12 @@
 
 package org.apache.druid.common.asyncresource;
 
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.io.Closeable;
 import java.util.List;
@@ -52,6 +57,79 @@ public class AsyncResources
   {
     final SettableAsyncResource<T> retVal = new SettableAsyncResource<>();
     retVal.set(ResourceHolder.fromCloseable(object));
+    return retVal;
+  }
+
+  /**
+   * Returns an {@link AsyncResource} backed by a {@link ListenableFuture}: it becomes ready when the future
+   * completes, exposing the future's (non-null) result via {@link AsyncResource#get()}. Closing the returned
+   * resource before the future completes cancels the future ({@code cancel(true)}).
+   * <p>
+   * The result object must <b>not</b> have a lifecycle; closing the resource does not close the result. Use this for
+   * futures whose result is a plain value or a completion signal; use {@link #fromFutureCloseable} or
+   * {@link #ofCloseable} if the result has a lifecycle of its own.
+   */
+  public static <T> AsyncResource<T> fromFutureUnmanaged(final ListenableFuture<T> future)
+  {
+    final SettableAsyncResource<T> retVal = new SettableAsyncResource<>();
+    retVal.setCanceler(() -> future.cancel(true));
+    Futures.addCallback(
+        future,
+        new FutureCallback<>()
+        {
+          @Override
+          public void onSuccess(T result)
+          {
+            retVal.set(result, null);
+          }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            retVal.setException(t);
+          }
+        },
+        MoreExecutors.directExecutor()
+    );
+    return retVal;
+  }
+
+  /**
+   * Returns an {@link AsyncResource} backed by a {@link ListenableFuture} whose result <b>owns a lifecycle</b>: it
+   * becomes ready when the future completes, exposing the result via {@link AsyncResource#get()}, and the result is
+   * managed as a {@link Closeable}. Closing the resource closes the result, and a result that completes <i>after</i>
+   * the resource was already closed (a cancel/close-vs-completion race) is closed rather than leaked. Closing the
+   * returned resource before the future completes cancels the future ({@code cancel(true)}).
+   *
+   * <p>This is the managed counterpart of {@link #fromFutureUnmanaged}; use that for a future whose result is a plain
+   * value or a completion signal with no lifecycle.
+   */
+  public static <T extends Closeable> AsyncResource<T> fromFutureCloseable(final ListenableFuture<T> future)
+  {
+    final SettableAsyncResource<T> retVal = new SettableAsyncResource<>();
+    retVal.setCanceler(() -> future.cancel(true));
+    Futures.addCallback(
+        future,
+        new FutureCallback<>()
+        {
+          @Override
+          public void onSuccess(T result)
+          {
+            // Lost the race with close()/cancel(): the resource is already closed, so set() returns false and we own
+            // closing the now-orphaned result.
+            if (!retVal.set(ResourceHolder.fromCloseable(result))) {
+              CloseableUtils.closeAndSuppressExceptions(result, ignored -> {});
+            }
+          }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            retVal.setException(t);
+          }
+        },
+        MoreExecutors.directExecutor()
+    );
     return retVal;
   }
 

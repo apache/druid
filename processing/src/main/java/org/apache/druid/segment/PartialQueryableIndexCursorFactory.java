@@ -19,11 +19,8 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.common.asyncresource.AsyncResource;
+import org.apache.druid.common.asyncresource.AsyncResources;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Order;
@@ -44,6 +41,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Partial-aware {@link CursorFactory} for {@link PartialQueryableIndex}.
@@ -108,91 +106,56 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     final Set<String> requiredColumns = requiredColumns(rowSelector, matched, spec);
     final String bundleName = matched != null ? matched.getName() : Projections.BASE_TABLE_PROJECTION_NAME;
 
-    // Mount the cache-layer bundle BEFORE submitting downloads. This sparse-allocates the bundle's container files
-    // and reserves the disk-usage accounting at bundle granularity. The returned Closeable releases the hold when
-    // the cursor closes, allowing the cache to later evict the bundle if needed.
-    // PartialBundleAcquirer.acquire() throws DruidException on failure.
-    final Closeable bundleHold = bundleAcquirer.acquire(bundleName);
-    // Release the bundle hold at most once: the canceler, the success-path holder close, and the failure callback can
-    // all race to release it.
-    final AtomicBoolean holdReleased = new AtomicBoolean(false);
-    final Closeable releaseHoldOnce = () -> {
-      if (holdReleased.compareAndSet(false, true)) {
-        bundleHold.close();
-      }
-    };
+    // Mount the cache-layer bundle before submitting downloads. Released on the cancel/failure paths (requestRelease)
+    // or handed to the produced cursor holder on success (releaser), exactly once, and never while an in-flight column
+    // download is mid-mapFile(). See BundleHoldRelease.
+    final BundleHoldRelease holdRelease = new BundleHoldRelease(bundleAcquirer.acquire(bundleName));
 
     try {
-      // Submit one materialization task per column so a multi-threaded download executor can fan them out
-      final ListeningExecutorService downloadExec = bundleAcquirer.getDownloadExec();
-      final List<ListenableFuture<?>> columnDownloads = new ArrayList<>(requiredColumns.size());
+      // submit one materialization task per column so a multi-threaded download executor can fan them out
+      final List<AsyncResource<String>> columnDownloads = new ArrayList<>(requiredColumns.size());
       for (String column : requiredColumns) {
-        columnDownloads.add(downloadExec.submit(() -> {
-          rowSelector.getColumnHolder(column);
-          return null;
-        }));
+        columnDownloads.add(submitColumnDownload(rowSelector, column, holdRelease));
       }
+      final AsyncResource<List<String>> downloaded = AsyncResources.collect(columnDownloads);
 
-      // Canceler runs if the awaiter closes this holder before it's ready (e.g. query cancel/timeout). cancel(true)
-      // stops column downloads that haven't begun their deep-storage read yet: queued tasks are skipped, and tasks
-      // parked on the download executor's permit are interrupted out of the (interruptible) wait before doing any I/O.
-      // A download already in its read/write loop runs to completion. After canceling, release the bundle hold. Once
-      // the holder is produced and handed to set(), ownership transfers to the awaiter, which drains it via
-      // close() (cancel) or release() (success); the once-guard keeps the hold release safe across all of these paths.
+      // Canceler runs if the awaiter closes this holder before it's ready (e.g. query cancel/timeout). Close the
+      // collected resource to cancel every column download that hasn't begun its deep-storage read yet (queued tasks
+      // are skipped; tasks parked on the download executor's permit are interrupted out of the interruptible wait
+      // before doing any I/O), then request the hold release through the handshake. Once the holder is produced and
+      // handed to set(), ownership transfers to the awaiter, which drains it via close() (cancel) or release()
+      // (success); the once-guard keeps the hold release safe across all of these paths.
       final AsyncCursorHolder asyncHolder = new AsyncCursorHolder(() -> {
-        for (ListenableFuture<?> columnDownload : columnDownloads) {
-          columnDownload.cancel(true);
-        }
-        CloseableUtils.closeAndSuppressExceptions(releaseHoldOnce, ignored -> {});
+        CloseableUtils.closeAndSuppressExceptions(downloaded, ignored -> {});
+        holdRelease.requestRelease();
       });
-      Futures.addCallback(
-          Futures.allAsList(columnDownloads),
-          new FutureCallback<>()
-          {
-            @Override
-            public void onSuccess(List<Object> ignored)
-            {
-              final CursorHolder holder;
-              try {
-                final CursorHolder inner = delegate.makeCursorHolderForProjection(spec, matched);
-                // wrapWithBundleRelease takes ownership of both inner and the bundle hold; from here, closing holder
-                // releases both. Only the makeCursorHolderForProjection build above can throw (the wrap cannot), so
-                // the catch only needs to release the still-unowned bundle hold — no inner holder can escape it.
-                holder = wrapWithBundleRelease(inner, releaseHoldOnce);
-              }
-              catch (Throwable t) {
-                CloseableUtils.closeAndSuppressExceptions(releaseHoldOnce, t::addSuppressed);
-                asyncHolder.setException(t);
-                return;
-              }
-              if (!asyncHolder.set(holder)) {
-                // wrapper was closed (awaiter cancelled) while we were producing the holder; close it ourselves so
-                // the holder, its inner, and the bundle hold don't leak.
-                holder.close();
-              }
-            }
-
-            @Override
-            public void onFailure(Throwable t)
-            {
-              // Includes the cancellation case: the canceler's cancel(true) makes Futures.allAsList complete
-              // exceptionally with a CancellationException. releaseHoldOnce is a no-op if the canceler already ran.
-              CloseableUtils.closeAndSuppressExceptions(releaseHoldOnce, t::addSuppressed);
-              asyncHolder.setException(t);
-            }
-          },
-          // Run the cursor-build callback inline on whichever download thread finishes last. The build itself does no
-          // I/O (columns are already materialized), so it doesn't need to round-trip through the download executor.
-          MoreExecutors.directExecutor()
-      );
+      downloaded.addReadyCallback(() -> {
+        final CursorHolder holder;
+        try {
+          downloaded.get(); // surfaces any column-download failure (or cancellation) as the cause
+          final CursorHolder inner = delegate.makeCursorHolderForProjection(spec, matched);
+          // The produced holder takes ownership of both inner and the bundle hold; from here, closing it releases both
+          holder = wrapWithBundleRelease(inner, holdRelease.releaser());
+        }
+        catch (Throwable t) {
+          // A column download failed or was canceled, this branch can fire while a sibling download is still
+          // mid-mapFile(), so the hold release must go through the handshake rather than dropping it here directly.
+          holdRelease.requestRelease();
+          asyncHolder.setException(t);
+          return;
+        }
+        if (!asyncHolder.set(holder)) {
+          // wrapper was closed (awaiter canceled) while we were producing the holder; close it ourselves so the
+          // holder, its inner, and the bundle hold don't leak.
+          holder.close();
+        }
+      });
       return asyncHolder;
     }
     catch (Throwable t) {
-      // Failure between acquire and the addCallback wiring (getDownloadExec, downloadExec.submit shut-down rejection,
-      // Futures.addCallback rejecting on a bad executor, etc.). Ownership of the bundle hold hasn't transferred to the
-      // callback yet, so release it here. Already-submitted download tasks will complete with no callback wired,
-      // their captured row-selector refs drop naturally.
-      throw CloseableUtils.closeAndWrapInCatch(t, releaseHoldOnce);
+      // Failure between acquire and wiring up the downloads (submitDownload shut-down rejection, etc.). Ownership of
+      // the bundle hold hasn't transferred to the holder yet, so release it here.
+      throw CloseableUtils.closeAndWrapInCatch(t, holdRelease.releaser());
     }
   }
 
@@ -209,6 +172,25 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     return delegate.getColumnCapabilities(column);
   }
 
+  /**
+   * Submit one column's materialization as a download task, running its body under the bundle-hold handshake (see
+   * {@link BundleHoldRelease#runDownloadBody}) so the hold stays alive until this body's
+   * {@link QueryableIndex#getColumnHolder} (and the
+   * {@link org.apache.druid.segment.file.PartialSegmentFileMapperV10#mapFile} it triggers) has finished. The returned
+   * token (the column name) is unused, the task's effect is the side effect of materializing the column into the file
+   * mapper.
+   */
+  private AsyncResource<String> submitColumnDownload(
+      QueryableIndex rowSelector,
+      String column,
+      BundleHoldRelease holdRelease
+  )
+  {
+    return bundleAcquirer.submitDownload(() -> {
+      holdRelease.runDownloadBody(() -> rowSelector.getColumnHolder(column));
+      return column;
+    });
+  }
 
   /**
    * Determine the set of physical column names to required from the chosen row selector given a {@link CursorBuildSpec}
@@ -300,5 +282,79 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
         CloseableUtils.closeAndWrapExceptions(closer);
       }
     };
+  }
+
+  /**
+   * Owns a bundle hold's release for one {@link #makeCursorHolderAsync} build, guarding the file mapper's
+   * evict-vs-mapFile contract: releasing the hold makes the bundle entry eligible for eviction, which unmaps the
+   * bundle's containers, so a column download still inside {@code mapFile()} would then read (and slice a ByteBuffer
+   * from) an unmapped region resulting in a JVM SIGSEGV. The hold is released exactly once (CAS-guarded) and only once
+   * a release has been {@link #requestRelease() requested} (the awaiter canceled, or a download failed) AND no
+   * download body is executing, so an in-flight {@code mapFile()} always finishes under the hold. On the success path
+   * the produced cursor holder takes ownership of the hold via {@link #releaser()} and the request/in-flight handshake
+   * is unused.
+   */
+  private static final class BundleHoldRelease
+  {
+    private final Closeable releaseHoldOnce;
+    private final AtomicInteger bodiesInFlight = new AtomicInteger(0);
+    private final AtomicBoolean releaseRequested = new AtomicBoolean(false);
+
+    BundleHoldRelease(Closeable bundleHold)
+    {
+      // Release the bundle hold at most once: the canceler, the success-path holder close, the failure callback, and
+      // the last download body can all race to release it.
+      final AtomicBoolean released = new AtomicBoolean(false);
+      this.releaseHoldOnce = () -> {
+        if (released.compareAndSet(false, true)) {
+          bundleHold.close();
+        }
+      };
+    }
+
+    /**
+     * Run one column-materialization body under the in-flight count. {@code incrementAndGet}-before-read pairs with
+     * {@code releaseRequested.set(true)}-before-read in {@link #requestRelease()}: whichever thread observes the
+     * other's write takes responsibility for the hold release, so it happens exactly once and never while a
+     * {@code mapFile()} is in flight. A body that observes a release request before starting skips the read entirely
+     * (its containers are about to be released and may be evicted); the last body to finish after a release request
+     * releases the hold.
+     */
+    void runDownloadBody(Runnable read)
+    {
+      bodiesInFlight.incrementAndGet();
+      try {
+        if (!releaseRequested.get()) {
+          read.run();
+        }
+      }
+      finally {
+        if (bodiesInFlight.decrementAndGet() == 0 && releaseRequested.get()) {
+          CloseableUtils.closeAndSuppressExceptions(releaseHoldOnce, ignored -> {});
+        }
+      }
+    }
+
+    /**
+     * Request the hold release because the awaiter cancelled or a download failed. Releases now only if no download
+     * body is executing; otherwise the last body out (see {@link #runDownloadBody}) releases it once its
+     * {@code mapFile()} has finished. Idempotent.
+     */
+    void requestRelease()
+    {
+      releaseRequested.set(true);
+      if (bodiesInFlight.get() == 0) {
+        CloseableUtils.closeAndSuppressExceptions(releaseHoldOnce, ignored -> {});
+      }
+    }
+
+    /**
+     * The success-path releaser: ownership transfers to the produced cursor holder, whose close releases the bundle
+     * hold. The once-guard keeps it safe against the cancel/failure paths.
+     */
+    Closeable releaser()
+    {
+      return releaseHoldOnce;
+    }
   }
 }

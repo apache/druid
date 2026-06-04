@@ -24,6 +24,8 @@ import com.google.common.util.concurrent.ForwardingListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.common.asyncresource.AsyncResource;
+import org.apache.druid.common.asyncresource.AsyncResources;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -33,6 +35,7 @@ import org.apache.druid.segment.PartialBundleAcquirer;
 import org.apache.druid.segment.loading.external.VirtualStorageManager;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -122,8 +125,8 @@ public class StorageLoadingThreadPool
    * Executor for on-demand load work. Concurrency is bounded by the executor itself: in the virtual-thread path it is
    * a {@link PermitBoundedListeningExecutorService} wrapping an unbounded thread-per-virtual-thread executor (so the
    * permit count, not the thread count, is the bound); in the fixed-pool path the pool size is the bound. Every
-   * on-demand-load submission, including those routed through {@link PartialBundleAcquirer#getDownloadExec}, is
-   * therefore bounded without callers having to acquire a permit themselves.
+   * on-demand-load submission, including those routed through {@link #submitUnmanagedAsyncResource}, is therefore
+   * bounded without callers having to acquire a permit themselves.
    */
   public ListeningExecutorService getExecutorService()
   {
@@ -131,6 +134,36 @@ public class StorageLoadingThreadPool
       throw DruidException.defensive("No exec set, we thought we wouldn't need this");
     }
     return exec;
+  }
+
+  /**
+   * Submit a task to the pool and hand back an {@link AsyncResource} that becomes ready when the task completes,
+   * exposing the task's (non-null) result. The result is treated as a plain value with no lifecycle: closing the
+   * returned resource does not close the result; closing it before completion cancels the task.
+   *
+   * <p>This is the unmanaged counterpart of {@link #submitCloseableAsyncResource}; use that when the task's result
+   * owns a lifecycle.
+   *
+   * @see AsyncResources#fromFutureUnmanaged(ListenableFuture)
+   */
+  public <T> AsyncResource<T> submitUnmanagedAsyncResource(Callable<T> task)
+  {
+    return AsyncResources.fromFutureUnmanaged(getExecutorService().submit(task));
+  }
+
+  /**
+   * Submit a task whose result <b>owns a lifecycle</b> and hand back an {@link AsyncResource} that manages it: closing
+   * the returned resource closes the result, a result produced after a cancel/close race is closed rather than leaked,
+   * and closing it before completion cancels the task.
+   *
+   * <p>This is the managed counterpart of {@link #submitUnmanagedAsyncResource}; use that when the task's result is a
+   * plain value with no lifecycle.
+   *
+   * @see AsyncResources#fromFutureCloseable(ListenableFuture)
+   */
+  public <T extends Closeable> AsyncResource<T> submitCloseableAsyncResource(Callable<T> task)
+  {
+    return AsyncResources.fromFutureCloseable(getExecutorService().submit(task));
   }
 
   @LifecycleStop
@@ -155,7 +188,7 @@ public class StorageLoadingThreadPool
    * completion (aborting in-flight reads is handled separately by the task itself, not here).
    * <p>
    * Only {@code execute}/{@code submit} are bounded; those are the only submission paths on-demand load work uses
-   * (including the {@link PartialBundleAcquirer#getDownloadExec} column-download path). {@code invokeAll}/
+   * (including the {@link PartialBundleAcquirer#submitDownload} column-download path). {@code invokeAll}/
    * {@code invokeAny} throw {@link UnsupportedOperationException} so the concurrency bound can never be silently
    * bypassed by a future caller.
    * <p>
