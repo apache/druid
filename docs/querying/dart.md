@@ -73,6 +73,7 @@ For Historicals, you can set the following configs:
 |---|---|---|
 | `druid.msq.dart.worker.concurrentQueries` | Maximum number of query workers that can run concurrently on a Historical. We recommend leaving this config at the default value. If need to change this value, set it to a value equal to or larger than `druid.msq.dart.controller.concurrentQueries` on your Brokers. If you don't, queries can get stuck waiting for each other. Don't set it to a value higher than the number of merge buffers. | Equal to the number of merge buffers |
 | `druid.msq.dart.worker.heapFraction` | Maximum amount of heap available for use across all Dart queries as a decimal. | 0.35 (35% of heap) |
+| `druid.msq.dart.worker.segmentLoadAheadCount` | Number of segments a worker will prefetch ahead of processing them. This lets tiers with different hardware tune prefetch independently. When set, it acts as a floor: the effective value is the larger of this and any value supplied in the query context (`segmentLoadAheadCount`), so a query can request more but not less. Non-positive values are treated as unset. | Unset (uses twice the number of processing threads) |
 
 
 ## Run a Dart query

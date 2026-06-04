@@ -21,6 +21,9 @@ package org.apache.druid.msq.dart.guice;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.msq.exec.MemoryIntrospector;
+import org.apache.druid.msq.querykit.ReadableInputQueue;
+
+import javax.annotation.Nullable;
 
 /**
  * Runtime configuration for workers (which run on Historicals).
@@ -41,6 +44,22 @@ public class DartWorkerConfig
   @JsonProperty("heapFraction")
   private double heapFraction = DEFAULT_HEAP_FRACTION;
 
+  /**
+   * Worker-local value for the segment load-ahead count used to size segment prefetch in {@link ReadableInputQueue}.
+   * <p>
+   * Defaults to null (unset), which leaves the value to query context (client or controller-default supplied) and the
+   * built-in {@code 2 * threadCount} fallback. When set to a positive value, it acts as a worker-local floor: the
+   * effective count becomes the larger of this value and any value present in the query context, so a query can still
+   * request more, but never less than this floor. Non-positive values are treated as unset.
+   *
+   * This is per-worker-process configuration, set independently on each worker. It lets workers with different
+   * hardware (for example, separate tiers with more or less memory and storage bandwidth) tune their own prefetch
+   * depth, rather than relying solely on a single cluster-wide query-context default.
+   */
+  @JsonProperty("segmentLoadAheadCount")
+  @Nullable
+  private Integer segmentLoadAheadCount = null;
+
   public int getConcurrentQueries()
   {
     return concurrentQueries;
@@ -49,5 +68,11 @@ public class DartWorkerConfig
   public double getHeapFraction()
   {
     return heapFraction;
+  }
+
+  @Nullable
+  public Integer getSegmentLoadAheadCount()
+  {
+    return segmentLoadAheadCount;
   }
 }
