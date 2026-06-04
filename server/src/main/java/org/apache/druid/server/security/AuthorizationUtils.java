@@ -53,6 +53,9 @@ public class AuthorizationUtils
       ResourceType.DATASOURCE
   );
 
+  private static final String METRIC_ACCESS_DENIED = "auth/accessDenied";
+  private static final String METRIC_EXCEPTION = "auth/exception";
+
   /**
    * Performs authorization check on a single resource-action based on the authentication fields from the request.
    * <p>
@@ -97,7 +100,7 @@ public class AuthorizationUtils
           authorizerMapper.getServiceEmitter(),
           authenticationResultFromRequest(req),
           resourceAction,
-          "auth/accessDenied",
+          METRIC_ACCESS_DENIED,
           authResult.getErrorMessage()
       );
       throw new ForbiddenException(authResult.getErrorMessage());
@@ -196,7 +199,7 @@ public class AuthorizationUtils
     if (authorizer == null) {
       final String msg =
           StringUtils.format("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
-      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, "auth/exception", null);
+      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, METRIC_EXCEPTION, null);
       throw new ISE(msg);
     }
 
@@ -214,7 +217,7 @@ public class AuthorizationUtils
           resourceAction.getAction()
       );
       if (!access.isAllowed()) {
-        emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, resourceAction, "auth/accessDenied", access.getMessage());
+        emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, resourceAction, METRIC_ACCESS_DENIED, access.getMessage());
         return AuthorizationResult.deny(access.getMessage());
       } else {
         resultCache.add(resourceAction);
@@ -232,7 +235,7 @@ public class AuthorizationUtils
                 prevPolicy,
                 access.getPolicy()
             );
-            emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, resourceAction, "auth/exception", twoPoliciesMsg);
+            emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, resourceAction, METRIC_EXCEPTION, twoPoliciesMsg);
             throw DruidException.defensive(twoPoliciesMsg);
           }
         } else if (access.getPolicy().isPresent()) {
@@ -240,7 +243,7 @@ public class AuthorizationUtils
               "Policy should only present when reading a table, but was present for a different kind of resource action [%s]",
               resourceAction
           );
-          emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, resourceAction, "auth/exception", policyPresentMsg);
+          emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, resourceAction, METRIC_EXCEPTION, policyPresentMsg);
           throw DruidException.defensive(policyPresentMsg);
         } else {
           // Not a read table action, access doesn't have a filter, do nothing.
@@ -286,7 +289,7 @@ public class AuthorizationUtils
     final AuthenticationResult authenticationResult = authenticationResultFromRequest(request);
     if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
       final String msg = "Request already had authorization check.";
-      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, "auth/exception", msg);
+      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, METRIC_EXCEPTION, msg);
       throw new ISE(msg);
     }
 
@@ -350,7 +353,7 @@ public class AuthorizationUtils
     final AuthenticationResult authenticationResult = authenticationResultFromRequest(request);
     if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
       final String msg = "Request already had authorization check.";
-      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, "auth/exception", msg);
+      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, METRIC_EXCEPTION, msg);
       throw new ISE(msg);
     }
 
@@ -393,7 +396,7 @@ public class AuthorizationUtils
     final Authorizer authorizer = authorizerMapper.getAuthorizer(authenticationResult.getAuthorizerName());
     if (authorizer == null) {
       final String msg = StringUtils.format("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
-      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, "auth/exception", msg);
+      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, METRIC_EXCEPTION, msg);
       throw new ISE(msg);
     }
 
@@ -460,7 +463,7 @@ public class AuthorizationUtils
     final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(request);
     if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
       final String msg = "Request already had authorization check.";
-      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, "auth/exception", msg);
+      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, METRIC_EXCEPTION, msg);
       throw new ISE(msg);
     }
 
