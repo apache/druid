@@ -34,7 +34,7 @@ For the full release notes for a specific version, see the [releases page](https
 
 #### Java 17
 
-The Druid 38.0.0, the next planned release, requires either Java 21 or 25 (recommended). Support for Java 17 will be dropped.
+Druid 38.0.0, the next planned release, requires either Java 21 or 25 (recommended). Support for Java 17 will be dropped.
 
 [#19304](https://github.com/apache/druid/pull/19304)
 

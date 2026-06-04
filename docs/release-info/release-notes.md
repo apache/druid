@@ -65,6 +65,12 @@ Use one of Druid's other supported ingestion methods, such as SQL-based ingestio
 
 [#19109](https://github.com/apache/druid/pull/19109)
 
+### Java 17
+
+Druid 38.0.0, the next planned release, requires either Java 21 or 25 (recommended). Support for Java 17 will be dropped.
+
+[#19304](https://github.com/apache/druid/pull/19304)
+
 ### Query blocklist
 
 You can now use the Broker API (`/druid/coordinator/v1/config/broker`) to create a query blocklist to dynamically block queries by datasource, query type, or query context. The blocklist takes effect without a restarting Druid. Block rules use `AND` logic, which means all criteria must match.
@@ -516,7 +522,7 @@ Added support for `lz4` compression. As part of this change, the following metri
 
 #### Java 17
 
-The Druid 38.0.0, the next planned release, requires either Java 21 or 25 (recommended). Support for Java 17 will be dropped.
+Druid 38.0.0, the next planned release, requires either Java 21 or 25 (recommended). Support for Java 17 will be dropped.
 
 [#19304](https://github.com/apache/druid/pull/19304)
 
