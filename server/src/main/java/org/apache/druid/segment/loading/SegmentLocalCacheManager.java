@@ -649,6 +649,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         // or reserve a fresh weak entry with a hold if none exists. The metadata entry's mount-future dedup makes a
         // no-op cheap when the entry is already mounted (the typical re-find case after the fast path closed its hold).
         final ReservedPartial reserved = findOrReservePartial(dataSegment, rangeReader);
+        // holdHolder holds the metadata reservation hold immediately; the full-download path adds a hold for every
+        // bundle it mounts, all released together when the AcquireSegmentAction closes.
+        final HoldHolder holdHolder = new HoldHolder(reserved.hold);
         return new AcquireSegmentAction(
             // Memoized so repeat getSegmentFuture() calls return the same future rather than scheduling duplicate
             // executor tasks. The entry's own mount-future dedup would prevent the actual work from being duplicated,
@@ -698,6 +701,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                     // Delta of internal-file bytes downloaded by this task. The small header range-read isn't
                     // counted in getDownloadedBytes; it's the negligible mount cost.
                     final long downloadedBefore = mapper.getDownloadedBytes();
+                    // Mount every bundle so the containers it owns are reserved on the location, SIEVE-evictable, and
+                    // deleted on drop. Writing through the file mapper alone (ensureAllDownloaded) would leave those
+                    // containers unmanaged by any cache entry. Each acquire returns a hold added to loadCleanup, so
+                    // the fully-materialized segment stays resident for the eager (sync-cursor) caller until the
+                    // action closes; on later eviction acquireCachedSegment returns empty and the caller re-downloads.
+                    // acquire() mounts each bundle's parents first, so iteration order doesn't matter.
+                    for (String bundleName : PartialSegmentBundleCacheEntry.bundleNames(mapper)) {
+                      holdHolder.add(reserved.metadata.getBundleAcquirer().acquire(bundleName));
+                    }
                     mapper.ensureAllDownloaded();
                     loadSizeBytes = mapper.getDownloadedBytes() - downloadedBefore;
                   } else {
@@ -718,7 +730,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                 }
               });
             }),
-            reserved.hold
+            holdHolder
         );
       }
       finally {
@@ -1762,6 +1774,51 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     public int hashCode()
     {
       return Objects.hashCode(dataSegment);
+    }
+  }
+
+  /**
+   * The {@link AcquireSegmentAction#close()} cleanup for a partial acquire: a set of cache holds that keep the
+   * acquired segment's entries resident for the action's lifetime. Seeded with the metadata reservation hold at
+   * construction; the full-download path {@link #add adds} a hold per bundle it mounts while the load future runs.
+   * Closing releases everything (LIFO).
+   * <p>
+   * Thread-safe because the future that {@link #add}s bundle holds runs on the load executor while a different thread
+   * may close the action (query cancel / timeout racing a blocked {@code getSegmentFuture().get()}). A hold added
+   * after the action has already been closed is closed immediately rather than leaked.
+   */
+  private static final class HoldHolder implements Closeable
+  {
+    @GuardedBy("this")
+    private final Closer holds = Closer.create();
+    @GuardedBy("this")
+    private boolean closed = false;
+
+    private HoldHolder(Closeable initialHold)
+    {
+      holds.register(initialHold);
+    }
+
+    private void add(Closeable hold)
+    {
+      final boolean alreadyClosed;
+      synchronized (this) {
+        alreadyClosed = closed;
+        if (!alreadyClosed) {
+          holds.register(hold);
+        }
+      }
+      if (alreadyClosed) {
+        // the action was closed while the load future was still running; release the late hold rather than leak it
+        CloseableUtils.closeAndSuppressExceptions(hold, ignored -> {});
+      }
+    }
+
+    @Override
+    public synchronized void close() throws IOException
+    {
+      closed = true;
+      holds.close();
     }
   }
 

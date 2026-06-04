@@ -36,7 +36,7 @@ public interface PartialBundleAcquirer
    * Acquire a hold on the cache-layer bundle with the given name. The returned {@link Closeable} releases the hold
    * when closed (the bundle itself stays in the cache for re-use by subsequent acquires).
    * <p>
-   * Implementations should be safe to call concurrently for different bundle names.
+   * Implementations must be safe to call concurrently.
    */
   Closeable acquire(String bundleName);
 

@@ -196,6 +196,20 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     }
   }
 
+  @Override
+  public RowSignature getRowSignature()
+  {
+    return delegate.getRowSignature();
+  }
+
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    return delegate.getColumnCapabilities(column);
+  }
+
+
   /**
    * Determine the set of physical column names to required from the chosen row selector given a {@link CursorBuildSpec}
    */
@@ -208,7 +222,7 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     final CursorBuildSpec effective = matched != null ? matched.getCursorBuildSpec() : originalSpec;
     if (effective.getPhysicalColumns() != null) {
       final Set<String> required = new LinkedHashSet<>(effective.getPhysicalColumns());
-      // physicalColumns enumerates the SELECTED columns, but QueryableIndexCursorHolder also reads __time while
+      // physicalColumns enumerates the selected columns, but QueryableIndexCursorHolder also reads __time while
       // building the cursor, independent of physicalColumns: unconditionally for a time-ordered index (its
       // interval-checking offset reads timestamps), and via a synthesized __time range filter for a non-time-ordered
       // index whose data extends past the query interval. That read happens after the cursor holder is handed back,
@@ -224,19 +238,6 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     final Set<String> all = new LinkedHashSet<>(rowSelector.getColumnNames());
     all.add(ColumnHolder.TIME_COLUMN_NAME);
     return all;
-  }
-
-  @Override
-  public RowSignature getRowSignature()
-  {
-    return delegate.getRowSignature();
-  }
-
-  @Nullable
-  @Override
-  public ColumnCapabilities getColumnCapabilities(String column)
-  {
-    return delegate.getColumnCapabilities(column);
   }
 
   /**

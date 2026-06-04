@@ -374,6 +374,11 @@ class SegmentLocalCacheManagerPartialAcquireTest
   {
     // acquireSegment (eager API) on a partial-eligible segment should route through the partial machinery and
     // force-download every internal file so the returned segment supports sync makeCursorHolder.
+    final StorageLocation loc = manager.getLocations().get(0);
+    final PartialSegmentBundleCacheEntryIdentifier baseBundleId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME);
+    final PartialSegmentBundleCacheEntryIdentifier aggBundleId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
     try (AcquireSegmentAction action = manager.acquireSegment(partialSegment)) {
       final AcquireSegmentResult result = action.getSegmentFuture().get();
       try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
@@ -386,10 +391,16 @@ class SegmentLocalCacheManagerPartialAcquireTest
           Assertions.assertNotNull(holder);
         }
       }
+
+      // The eager path must download into proper bundle cache entries (reserved + evictable + cleaned-up on drop),
+      // not write the containers unmanaged through the file mapper. While the action is held, every bundle the
+      // segment owns is registered + held on the location.
+      Assertions.assertTrue(loc.isWeakReserved(baseBundleId), "eager download must create the base bundle entry");
+      Assertions.assertTrue(loc.isWeakReserved(aggBundleId), "eager download must create the projection bundle entry");
+      Assertions.assertTrue(loc.getWeakStats().getHoldBytes() > 0, "the action must hold the bundles it mounted");
     }
 
     // Confirm the metadata entry exists on the location and reports fully downloaded.
-    final StorageLocation loc = manager.getLocations().get(0);
     final CacheEntry entry = loc.getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID));
     Assertions.assertInstanceOf(PartialSegmentMetadataCacheEntry.class, entry);
     Assertions.assertTrue(
