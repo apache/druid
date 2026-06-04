@@ -1,26 +1,20 @@
 {
   "license": "Apache-2.0",
   "scripts": {
-    "examples": "docusaurus-examples",
     "start": "docusaurus start",
     "build": "docusaurus build",
-    "publish-gh-pages": "docusaurus-publish",
-    "write-translations": "docusaurus-write-translations",
-    "version": "docusaurus-version",
-    "rename-version": "docusaurus-rename-version",
     "compile-scss": "sass scss/custom.scss > static/css/custom.css",
     "link-lint": "node script/link-lint.js",
     "spellcheck": "mdspell --en-us --ignore-numbers --report '../docs/**/*.md' || (./script/notify-spellcheck-issues && false)",
     "swizzle": "docusaurus swizzle",
-    "deploy": "docusaurus deploy",
     "docusaurus": "docusaurus",
     "clear": "docusaurus clear"
   },
   "engines": {
-    "node": ">=18.0"
+    "node": ">=22.0"
   },
   "volta": {
-    "node": "18.20.7",
+    "node": ">=22.0",
     "npm": "10.8.2"
   },
   "devDependencies": {
