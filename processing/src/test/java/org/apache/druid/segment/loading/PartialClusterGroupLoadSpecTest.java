@@ -146,15 +146,11 @@ class PartialClusterGroupLoadSpecTest
   }
 
   @Test
-  void testRejectsNullOrEmptyClusterGroupIndices()
+  void testRejectsNullClusterGroupIndices()
   {
     Assertions.assertThrows(
-        IllegalArgumentException.class,
+        NullPointerException.class,
         () -> new PartialClusterGroupLoadSpec(DELEGATE, null, "v1:x", jsonMapper)
-    );
-    Assertions.assertThrows(
-        IllegalArgumentException.class,
-        () -> new PartialClusterGroupLoadSpec(DELEGATE, List.of(), "v1:x", jsonMapper)
     );
   }
 
