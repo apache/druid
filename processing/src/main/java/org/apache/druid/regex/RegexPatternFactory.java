@@ -19,17 +19,90 @@
 
 package org.apache.druid.regex;
 
+
 public class RegexPatternFactory
 {
   public static RegexPattern compile(RegexEngineType type, String regex)
   {
     switch (type) {
       case RE2J:
-        return new Re2jRegexPattern(regex);
+        return compileRe2j(regex);
 
       case JAVA:
       default:
-        return new JavaRegexPattern(regex);
+        return compileJava(regex);
     }
+  }
+
+  private static RegexPattern compileJava(String regex)
+  {
+    final java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(regex);
+
+    return input -> {
+      final java.util.regex.Matcher matcher = pattern.matcher(input);
+
+      return new RegexMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          return matcher.matches();
+        }
+
+        @Override
+        public boolean find()
+        {
+          return matcher.find();
+        }
+
+        @Override
+        public String group(int group)
+        {
+          return matcher.group(group);
+        }
+
+        @Override
+        public int groupCount()
+        {
+          return matcher.groupCount();
+        }
+      };
+    };
+  }
+
+  private static RegexPattern compileRe2j(String regex)
+  {
+    final com.google.re2j.Pattern pattern = com.google.re2j.Pattern.compile(regex);
+
+    return input -> {
+      final com.google.re2j.Matcher matcher = pattern.matcher(input);
+
+      return new RegexMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          return matcher.matches();
+        }
+
+        @Override
+        public boolean find()
+        {
+          return matcher.find();
+        }
+
+        @Override
+        public String group(int group)
+        {
+          return matcher.group(group);
+        }
+
+        @Override
+        public int groupCount()
+        {
+          return matcher.groupCount();
+        }
+      };
+    };
   }
 }

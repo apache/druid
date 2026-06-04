@@ -19,6 +19,7 @@
 
 package org.apache.druid.regex;
 
+@FunctionalInterface
 public interface RegexPattern
 {
   RegexMatcher matcher(String input);

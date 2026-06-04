@@ -179,7 +179,6 @@ public class CliCoordinator extends ServerRunnable
       modules.add(new QueryableModule());
     }
 
-    modules.add(new RegexEngineModule());
     modules.add(
         new Module()
         {
@@ -312,6 +311,7 @@ public class CliCoordinator extends ServerRunnable
       modules.add(new MSQIndexingModule());
       modules.add(new MSQDurableStorageModule());
       modules.add(new MSQExternalDataSourceModule());
+      modules.add(new RegexEngineModule());
     }
 
     return modules;
