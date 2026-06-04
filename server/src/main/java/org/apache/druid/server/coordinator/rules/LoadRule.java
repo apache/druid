@@ -64,9 +64,10 @@ public abstract class LoadRule implements Rule
   }
 
   @Override
-  public void run(DataSegment segment, SegmentActionHandler handler)
+  public RuleRunResult run(DataSegment segment, SegmentActionHandler handler)
   {
     handler.replicateSegment(segment, getTieredReplicants());
+    return RuleRunResult.OK;
   }
 
 

@@ -20,6 +20,7 @@
 package org.apache.druid.timeline;
 
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -56,4 +57,15 @@ public interface TimelineLookup<VersionType, ObjectType extends Overshadowable<O
    */
   @Nullable
   PartitionChunk<ObjectType> findChunk(Interval interval, VersionType version, int partitionNum);
+
+  /**
+   * Finds the visible chunks in the shard group for the given time interval and version. Unlike
+   * {@link #lookup(Interval)} this does not filter by partition-holder completeness, so transient mid-publish
+   * groups are returned as-is. Returns {@code null} if no entry exists for the given (interval, version).
+   *
+   * <p>The returned {@link PartitionHolder} is a defensive copy made under the timeline's read lock, so callers
+   * can iterate it without holding the lock.
+   */
+  @Nullable
+  PartitionHolder<ObjectType> findChunks(Interval interval, VersionType version);
 }

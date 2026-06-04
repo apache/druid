@@ -21,16 +21,22 @@ package org.apache.druid.server.coordinator.rules;
 
 import org.apache.druid.timeline.DataSegment;
 
-/**
- * DropRules indicate when segments should be completely removed from the cluster.
- */
-public abstract class DropRule implements Rule
-{
-  @Override
-  public RuleRunResult run(DataSegment segment, SegmentActionHandler handler)
-  {
-    handler.deleteSegment(segment);
-    return RuleRunResult.OK;
-  }
+import java.util.Map;
 
+/**
+ * Signal returned by {@link Rule#run} that the entire shard group containing {@link #matchedSegment} should be
+ * inspected for uniform partial-load placement. The {@code RunRules} duty collects these and, after all rules have
+ * run, dispatches {@link PartialLoadMatcher#emptyMatch} loads to siblings that did not get a positive match from
+ * the same {@link #matcher}.
+ *
+ * <p>Used to handle asymmetric matchers (e.g. {@link ClusterGroupPartialLoadMatcher} over range-partitioned segments)
+ * where different partitions of a shard group resolve to different load specs and the broker would otherwise drop
+ * the group as incomplete via {@code PartitionHolder.isComplete()}.
+ */
+public record ShardGroupFollowup(
+    DataSegment matchedSegment,
+    PartialLoadMatcher matcher,
+    Map<String, Integer> tieredReplicants
+) implements RuleRunResult
+{
 }

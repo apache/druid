@@ -305,6 +305,30 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     }
   }
 
+  @Override
+  @Nullable
+  public PartitionHolder<ObjectType> findChunks(Interval interval, VersionType version)
+  {
+    lock.readLock().lock();
+    try {
+      for (Entry<Interval, TreeMap<VersionType, TimelineEntry>> entry : allTimelineEntries.entrySet()) {
+        if (entry.getKey().equals(interval) || entry.getKey().contains(interval)) {
+          TimelineEntry foundEntry = entry.getValue().get(version);
+          if (foundEntry != null) {
+            // Return a defensive copy made under the lock so callers can iterate the holder outside the lock
+            // without racing with concurrent timeline mutations. Matches the lookup() pattern.
+            return PartitionHolder.copyWithOnlyVisibleChunks(foundEntry.getPartitionHolder());
+          }
+        }
+      }
+
+      return null;
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+  }
+
   /**
    * Does a lookup for the objects representing the given time interval.  Will *only* return
    * PartitionHolders that are {@linkplain PartitionHolder#isComplete() complete}.

@@ -69,5 +69,5 @@ public interface Rule
     return true;
   }
 
-  void run(DataSegment segment, SegmentActionHandler segmentHandler);
+  RuleRunResult run(DataSegment segment, SegmentActionHandler segmentHandler);
 }

@@ -19,18 +19,20 @@
 
 package org.apache.druid.server.coordinator.rules;
 
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.server.coordinator.duty.RunRules;
 
 /**
- * DropRules indicate when segments should be completely removed from the cluster.
+ * Result of a {@link Rule#run} invocation. Rules return {@link #OK} when there is nothing for the {@link RunRules}
+ * duty to do beyond the actions the rule has already queued on the {@link SegmentActionHandler}. Rules that need
+ * follow-up coordination across siblings in a shard group return a typed implementation (today only
+ * {@link ShardGroupFollowup}); the {@link RunRules} duty dispatches on the concrete type and applies it at an
+ * appropriate point during iteration.
+ * <p>
+ * To add a new kind of post-processing, implement this interface and add a dispatch branch in {@link RunRules}.
  */
-public abstract class DropRule implements Rule
+public interface RuleRunResult
 {
-  @Override
-  public RuleRunResult run(DataSegment segment, SegmentActionHandler handler)
+  RuleRunResult OK = new RuleRunResult()
   {
-    handler.deleteSegment(segment);
-    return RuleRunResult.OK;
-  }
-
+  };
 }

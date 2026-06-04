@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import org.apache.druid.utils.CollectionUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -72,10 +71,11 @@ public class PartialClusterGroupLoadSpec extends PartialLoadSpec
   )
   {
     super(delegate, fingerprint, jsonMapper);
-    Preconditions.checkArgument(
-        !CollectionUtils.isNullOrEmpty(clusterGroupIndices),
-        "clusterGroupIndices must not be null or empty"
-    );
+    // An empty index list is the wire form of the matcher's "empty match", used when a cluster-group matcher matches
+    // some siblings of a shard group but not this one. The historical-side partial loader honors this by performing
+    // no cluster-group-specific data download, keeping the shard group uniformly populated for broker-side
+    // completeness.
+    Preconditions.checkNotNull(clusterGroupIndices, "clusterGroupIndices");
     this.clusterGroupIndices = List.copyOf(clusterGroupIndices);
   }
 

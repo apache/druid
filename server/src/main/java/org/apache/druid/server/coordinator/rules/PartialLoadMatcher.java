@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
+import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -49,6 +50,37 @@ public interface PartialLoadMatcher
    */
   @Nullable
   MatchResult match(DataSegment segment, Map<String, Object> baseLoadSpec);
+
+  /**
+   * Returns the "empty" {@link MatchResult} this matcher produces for the given segment when {@link #match} would
+   * return {@code null}, or {@code null} if this matcher has no meaningful empty form.
+   *
+   * <p>An empty match is the matcher's way of saying "I do not match this segment's content, but I am willing to
+   * partial-load it with a zero-content load spec so the broker's shard-group completeness check still treats the
+   * group as queryable." The {@link RunRules} duty applies this in a post-pass: when at least one sibling in the
+   * same shard group (same dataSource, interval, version) had a positive match from this matcher, {@code RunRules}
+   * dispatches {@code emptyMatch} loads for the unmatched siblings. The post-pass only fires when there's a real
+   * positive match somewhere in the group.
+   *
+   * <p>Matchers that produce uniform per-segment decisions across a shard group don't need this and can leave the
+   * default null. Matchers that resolve per-segment within a shard group must implement this to opt into the post-pass.
+   *
+   * <p>The returned wire form should:
+   * <ul>
+   *   <li>use the same {@code type} and structural shape as {@link #match}'s output, so the historical's
+   *       {@code PartialLoadSpec} subtype can deserialize it without special-casing.</li>
+   *   <li>carry a stable, deterministic fingerprint so the coordinator's reconciler doesn't churn replicas across
+   *       runs when the same matcher produces the same empty result on the same segment.</li>
+   *   <li>describe a load that's actually empty on the historical side (e.g. an empty list of projections or
+   *       cluster-group indices). The historical-side {@code PartialLoadSpec} subtype must accept this form and
+   *       perform no scheme-specific data download.</li>
+   * </ul>
+   */
+  @Nullable
+  default MatchResult emptyMatch(DataSegment segment, Map<String, Object> baseLoadSpec)
+  {
+    return null;
+  }
 
   /**
    * Output of {@link #match(DataSegment, Map)} when the matcher applies. Carries the wrapped load-spec map (ready to

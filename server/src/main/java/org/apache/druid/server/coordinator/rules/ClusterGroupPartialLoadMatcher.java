@@ -24,8 +24,10 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import org.apache.druid.segment.loading.PartialClusterGroupLoadSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.PartitionHolder;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -64,6 +66,24 @@ public abstract class ClusterGroupPartialLoadMatcher implements PartialLoadMatch
     }
     final String fingerprint = computeFingerprint(resolved);
     return new MatchResult(PartialClusterGroupLoadSpec.wireForm(baseLoadSpec, resolved, fingerprint), fingerprint);
+  }
+
+  /**
+   * Opts cluster-group matchers into the sibling-aware "empty load" fallback. Cluster-group resolution can legitimately
+   * diverge across partitions of a shard group (range-partitioned segments may contain different cluster tuples), so
+   * when a matcher matches some siblings but not this one the rule layer needs an empty form to keep the group
+   * uniformly placed and let the broker's {@link PartitionHolder} treat the group as complete.
+   * <p>
+   * The wire form is the same {@code partialClusterGroup} shape with an empty index list and the deterministic
+   * fingerprint of the empty list, so the same empty-load on the same segment produces the same fingerprint across
+   * coordinator runs and reconciliation doesn't churn replicas.
+   */
+  @Override
+  public MatchResult emptyMatch(DataSegment segment, Map<String, Object> baseLoadSpec)
+  {
+    final List<Integer> emptyIndices = Collections.emptyList();
+    final String fingerprint = computeFingerprint(emptyIndices);
+    return new MatchResult(PartialClusterGroupLoadSpec.wireForm(baseLoadSpec, emptyIndices, fingerprint), fingerprint);
   }
 
   static String computeFingerprint(List<Integer> sortedDedupedIndices)

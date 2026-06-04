@@ -25,9 +25,10 @@ public abstract class BroadcastDistributionRule implements Rule
 {
 
   @Override
-  public void run(DataSegment segment, SegmentActionHandler handler)
+  public RuleRunResult run(DataSegment segment, SegmentActionHandler handler)
   {
     handler.broadcastSegment(segment);
+    return RuleRunResult.OK;
   }
 
 }

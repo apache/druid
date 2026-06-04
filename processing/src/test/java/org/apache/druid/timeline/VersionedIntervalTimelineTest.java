@@ -80,6 +80,85 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
     );
   }
 
+  @Test
+  public void testFindChunksReturnsHolderForMatchingIntervalAndVersion()
+  {
+    add("2011-01-01/2011-01-10", "1", makeNumbered("1", 0, 7));
+    add("2011-01-01/2011-01-10", "1", makeNumbered("1", 1, 8));
+    add("2011-01-01/2011-01-10", "1", makeNumbered("1", 2, 9));
+
+    PartitionHolder<OvershadowableInteger> holder =
+        timeline.findChunks(Intervals.of("2011-01-01/2011-01-10"), "1");
+
+    Assert.assertNotNull(holder);
+    Assert.assertEquals(
+        ImmutableList.of(
+            new OvershadowableInteger("1", 0, 7),
+            new OvershadowableInteger("1", 1, 8),
+            new OvershadowableInteger("1", 2, 9)
+        ),
+        ImmutableList.copyOf(holder.payloads())
+    );
+  }
+
+  @Test
+  public void testFindChunksReturnsNullForUnknownVersion()
+  {
+    add("2011-01-01/2011-01-10", "1", 1);
+
+    Assert.assertNull(timeline.findChunks(Intervals.of("2011-01-01/2011-01-10"), "no-such-version"));
+  }
+
+  @Test
+  public void testFindChunksReturnsNullForUnknownInterval()
+  {
+    add("2011-01-01/2011-01-10", "1", 1);
+
+    Assert.assertNull(timeline.findChunks(Intervals.of("2050-01-01/2050-01-10"), "1"));
+  }
+
+  @Test
+  public void testFindChunksMatchesContainedQueryInterval()
+  {
+    // findChunks mirrors findChunk's matching semantics: a query interval fully contained inside a timeline key
+    // interval still resolves to that key's entry.
+    add("2011-01-01/2011-01-10", "1", makeNumbered("1", 0, 1));
+    add("2011-01-01/2011-01-10", "1", makeNumbered("1", 1, 2));
+
+    PartitionHolder<OvershadowableInteger> holder =
+        timeline.findChunks(Intervals.of("2011-01-02T02/2011-01-04"), "1");
+
+    Assert.assertNotNull(holder);
+    Assert.assertEquals(
+        ImmutableList.of(
+            new OvershadowableInteger("1", 0, 1),
+            new OvershadowableInteger("1", 1, 2)
+        ),
+        ImmutableList.copyOf(holder.payloads())
+    );
+  }
+
+  @Test
+  public void testFindChunksSelectsByVersionWhenMultipleCoexist()
+  {
+    add("2011-01-01/2011-01-10", "1", makeSingle("1", 0, 1));
+    add("2011-01-01/2011-01-10", "2", makeSingle("2", 0, 2));
+
+    PartitionHolder<OvershadowableInteger> v1 = timeline.findChunks(Intervals.of("2011-01-01/2011-01-10"), "1");
+    PartitionHolder<OvershadowableInteger> v2 = timeline.findChunks(Intervals.of("2011-01-01/2011-01-10"), "2");
+
+    Assert.assertNotNull(v1);
+    Assert.assertNotNull(v2);
+    Assert.assertEquals(
+        ImmutableList.of(new OvershadowableInteger("1", 0, 1)),
+        ImmutableList.copyOf(v1.payloads())
+    );
+    Assert.assertEquals(
+        ImmutableList.of(new OvershadowableInteger("2", 0, 2)),
+        ImmutableList.copyOf(v2.payloads())
+    );
+  }
+
   //   1|----|
   //      1|----|
   @Test(expected = UnsupportedOperationException.class)

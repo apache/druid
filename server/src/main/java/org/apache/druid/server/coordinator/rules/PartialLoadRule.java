@@ -88,23 +88,29 @@ public abstract class PartialLoadRule extends LoadRule
   }
 
   @Override
-  public void run(DataSegment segment, SegmentActionHandler handler)
+  public RuleRunResult run(DataSegment segment, SegmentActionHandler handler)
   {
     final PartialLoadMatcher.MatchResult result = matcher.match(segment, segment.getLoadSpec());
     if (result != null) {
-      // Matcher resolved: route through the partial-load handler. The wrappedLoadSpec map carries scheme-specific
-      // data that the historical-side wrapper deserializes.
       handler.replicateSegmentPartially(
           segment,
           PartialLoadProfile.forRequest(result.wrappedLoadSpec(), result.fingerprint()),
           getTieredReplicants()
       );
-    } else {
-      // Matcher does not apply, but the rule still applies because onCannotMatch == FULL_LOAD (FALL_THROUGH would
-      // have caused appliesTo to return false, so run wouldn't be invoked). Route through the regular full-load
-      // handler.
-      handler.replicateSegment(segment, getTieredReplicants());
+      // Flag the shard group for a post-pass: if the matcher resolves asymmetrically across siblings, RunRules will
+      // dispatch emptyMatch loads to the unmatched ones so the broker's PartitionHolder.isComplete() check still
+      // treats the group as queryable. Matchers without an emptyMatch (the default) make the post-pass a no-op.
+      // Only the core partition group has an atomic-replace completeness requirement on the broker, segments with
+      // no core partitions (e.g. append-only streaming) don't need sibling reconciliation.
+      if (segment.getShardSpec().getNumCorePartitions() > 0) {
+        return new ShardGroupFollowup(segment, matcher, getTieredReplicants());
+      }
+      return RuleRunResult.OK;
     }
+    // Matcher does not apply, but the rule still applies because onCannotMatch == FULL_LOAD (FALL_THROUGH would
+    // have caused appliesTo to return false, so run wouldn't be invoked).
+    handler.replicateSegment(segment, getTieredReplicants());
+    return RuleRunResult.OK;
   }
 
   @Override

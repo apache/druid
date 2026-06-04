@@ -427,6 +427,56 @@ class WildcardClusterGroupPartialLoadMatcherTest
     Assertions.assertFalse(json.contains("virtualColumns"), () -> "did not expect virtualColumns in JSON: " + json);
   }
 
+  @Test
+  void testEmptyMatchProducesPartialClusterGroupWireFormWithNoIndices()
+  {
+    // The sibling-aware "empty match" fallback used by PartialLoadRule when this matcher resolves to nothing on a
+    // segment but at least one sibling matches positively. The wire form is still partialClusterGroup, but the
+    // clusterGroupIndices list is empty.
+    final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("tenant", "nonexistent")),
+        null
+    );
+    final PartialLoadMatcher.MatchResult result = matcher.emptyMatch(threeGroupSegment(), BASE_LOAD_SPEC);
+
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals("partialClusterGroup", result.wrappedLoadSpec().get("type"));
+    Assertions.assertEquals(List.of(), result.wrappedLoadSpec().get("clusterGroupIndices"));
+    // base load-spec carried under the "delegate" key, unchanged.
+    Assertions.assertEquals(BASE_LOAD_SPEC, result.wrappedLoadSpec().get("delegate"));
+    Assertions.assertNotNull(result.fingerprint());
+  }
+
+  @Test
+  void testEmptyMatchFingerprintIsStableAcrossInvocations()
+  {
+    // Same matcher, same segment, two invocations: fingerprints must match so coordinator reconciliation doesn't churn
+    // replicas between runs.
+    final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("tenant", "acme")),
+        null
+    );
+    final PartialLoadMatcher.MatchResult a = matcher.emptyMatch(threeGroupSegment(), BASE_LOAD_SPEC);
+    final PartialLoadMatcher.MatchResult b = matcher.emptyMatch(threeGroupSegment(), BASE_LOAD_SPEC);
+    Assertions.assertEquals(a.fingerprint(), b.fingerprint());
+    Assertions.assertTrue(a.fingerprint().startsWith(ClusterGroupPartialLoadMatcher.FINGERPRINT_VERSION + ":"));
+  }
+
+  @Test
+  void testEmptyMatchFingerprintDiffersFromNonEmptyMatch()
+  {
+    // A positive match and an empty match must produce different fingerprints; otherwise the coordinator can't tell
+    // a real partial load from the empty stub for the same segment.
+    final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("tenant", "acme")),
+        null
+    );
+    final PartialLoadMatcher.MatchResult real = matcher.match(threeGroupSegment(), BASE_LOAD_SPEC);
+    final PartialLoadMatcher.MatchResult empty = matcher.emptyMatch(threeGroupSegment(), BASE_LOAD_SPEC);
+    Assertions.assertNotNull(real);
+    Assertions.assertNotEquals(real.fingerprint(), empty.fingerprint());
+  }
+
   private static VirtualColumns lowerTenantVcs(String outputName)
   {
     return VirtualColumns.create(new ExpressionVirtualColumn(

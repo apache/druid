@@ -318,6 +318,48 @@ public class PartialLoadRuleTest
   }
 
   @Test
+  void testRunWithMatchReturnsShardGroupFollowupWhenCorePartitionsExist()
+  {
+    // Segment in a 2-core-partition group with a positive match. run() must return a ShardGroupFollowup so
+    // RunRules can post-pass for sibling reconciliation.
+    PeriodPartialLoadRule rule = new PeriodPartialLoadRule(
+        new Period("P30D"),
+        false,
+        tier(2),
+        null,
+        exact("a"),
+        null
+    );
+    DataSegment segment = segmentWithProjectionsAndCorePartitions(IN_WINDOW, List.of("a", "b"), 2);
+    RecordingHandler handler = new RecordingHandler();
+    RuleRunResult result = rule.run(segment, handler);
+    Assertions.assertEquals(1, handler.replicatePartialCalls);
+    Assertions.assertInstanceOf(ShardGroupFollowup.class, result);
+  }
+
+  @Test
+  void testRunWithMatchSkipsFollowupWhenNoCorePartitions()
+  {
+    // numCorePartitions=0: the shard group has no atomic-replace completeness requirement on the broker, so the
+    // sibling-aware post-pass would be wasted. run() still dispatches the positive load but returns OK, not a
+    // ShardGroupFollowup.
+    PeriodPartialLoadRule rule = new PeriodPartialLoadRule(
+        new Period("P30D"),
+        false,
+        tier(2),
+        null,
+        exact("a"),
+        null
+    );
+    DataSegment segment = segmentWithProjectionsAndCorePartitions(IN_WINDOW, List.of("a", "b"), 0);
+    RecordingHandler handler = new RecordingHandler();
+    RuleRunResult result = rule.run(segment, handler);
+    Assertions.assertEquals(1, handler.replicatePartialCalls);
+    Assertions.assertEquals(0, handler.replicateCalls);
+    Assertions.assertSame(RuleRunResult.OK, result);
+  }
+
+  @Test
   void testRunWithFullLoadFallbackRoutesToReplicateSegment()
   {
     // Matcher does not apply but the rule's onCannotMatch is FULL_LOAD, so run() falls back to the regular full-load
@@ -373,6 +415,27 @@ public class PartialLoadRuleTest
   {
     return DataSegment
         .builder(SegmentId.of("test", interval, DateTimes.nowUtc().toString(), new NumberedShardSpec(0, 0)))
+        .loadSpec(Map.of("type", "local", "path", "/var/druid/segments/foo"))
+        .projections(projections)
+        .size(0)
+        .build();
+  }
+
+  /**
+   * Like {@link #segmentWithProjections} but with an explicit core-partition count so callers can exercise the
+   * core-partition guard in {@link PartialLoadRule#run}. Sets the shardSpec on the builder (the SegmentId's
+   * shardSpec doesn't propagate by default).
+   */
+  private static DataSegment segmentWithProjectionsAndCorePartitions(
+      Interval interval,
+      List<String> projections,
+      int numCorePartitions
+  )
+  {
+    final NumberedShardSpec shardSpec = new NumberedShardSpec(0, numCorePartitions);
+    return DataSegment
+        .builder(SegmentId.of("test", interval, DateTimes.nowUtc().toString(), shardSpec))
+        .shardSpec(shardSpec)
         .loadSpec(Map.of("type", "local", "path", "/var/druid/segments/foo"))
         .projections(projections)
         .size(0)
