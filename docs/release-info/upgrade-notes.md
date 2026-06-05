@@ -32,6 +32,12 @@ For the full release notes for a specific version, see the [releases page](https
 
 ### Upgrade notes
 
+#### Java 17
+
+Druid 38.0.0, the next planned release, requires either Java 21 or 25 (recommended). Support for Java 17 will be dropped.
+
+[#19304](https://github.com/apache/druid/pull/19304)
+
 #### Hadoop-based ingestion
 
 Support for Hadoop-based ingestion has been removed. The feature was deprecated in Druid 34.
