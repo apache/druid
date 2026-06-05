@@ -31,7 +31,7 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.transform.BaseTransformSpec;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -56,7 +56,7 @@ class StreamChunkReader<RecordType extends ByteEntity>
   StreamChunkReader(
       InputFormat inputFormat,
       InputRowSchema inputRowSchema,
-      TransformSpec transformSpec,
+      BaseTransformSpec transformSpec,
       File indexingTmpDir,
       InputRowFilter rowFilter,
       RowIngestionMeters rowIngestionMeters,

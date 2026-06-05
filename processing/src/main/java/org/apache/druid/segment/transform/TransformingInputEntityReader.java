@@ -22,16 +22,18 @@ package org.apache.druid.segment.transform;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.IOException;
+import java.util.List;
 
 public class TransformingInputEntityReader implements InputEntityReader
 {
   private final InputEntityReader delegate;
-  private final Transformer transformer;
+  private final BaseTransformer transformer;
 
-  public TransformingInputEntityReader(InputEntityReader delegate, Transformer transformer)
+  public TransformingInputEntityReader(InputEntityReader delegate, BaseTransformer transformer)
   {
     this.delegate = delegate;
     this.transformer = transformer;
@@ -40,8 +42,15 @@ public class TransformingInputEntityReader implements InputEntityReader
   @Override
   public CloseableIterator<InputRow> read() throws IOException
   {
+    if (transformer.hasMultiRowTransform()) {
+      return delegate.read().flatMap(row -> {
+        final List<InputRow> rows = transformer.transformToList(row);
+        return CloseableIterators.withEmptyBaggage(rows.iterator());
+      });
+    }
     return delegate.read().map(transformer::transform);
   }
+
 
   @Override
   public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException

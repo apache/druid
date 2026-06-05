@@ -23,16 +23,18 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.IOException;
+import java.util.List;
 
 public class TransformingInputSourceReader implements InputSourceReader
 {
   private final InputSourceReader delegate;
-  private final Transformer transformer;
+  private final BaseTransformer transformer;
 
-  TransformingInputSourceReader(InputSourceReader delegate, Transformer transformer)
+  TransformingInputSourceReader(InputSourceReader delegate, BaseTransformer transformer)
   {
     this.delegate = delegate;
     this.transformer = transformer;
@@ -41,6 +43,12 @@ public class TransformingInputSourceReader implements InputSourceReader
   @Override
   public CloseableIterator<InputRow> read(InputStats inputStats) throws IOException
   {
+    if (transformer.hasMultiRowTransform()) {
+      return delegate.read(inputStats).flatMap(row -> {
+        final List<InputRow> rows = transformer.transformToList(row);
+        return CloseableIterators.withEmptyBaggage(rows.iterator());
+      });
+    }
     return delegate.read(inputStats).map(transformer::transform);
   }
 
