@@ -21,6 +21,7 @@ package org.apache.druid.benchmark.query;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
@@ -113,6 +114,9 @@ public class TopNBenchmark
   @Param({"all", "hour"})
   private String queryGranularity;
 
+  @Param({"false", "force"})
+  private String vectorize;
+
   private static final Logger log = new Logger(TopNBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -161,6 +165,7 @@ public class TopNBenchmark
           .dimension("dimSequential")
           .metric("sumFloatNormal")
           .intervals(intervalSpec)
+          .context(ImmutableMap.of("vectorize", vectorize))
           .aggregators(queryAggs);
 
       basicQueries.put("A", queryBuilderA);
@@ -177,6 +182,7 @@ public class TopNBenchmark
           .dimension("dimUniform")
           .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
           .intervals(intervalSpec)
+          .context(ImmutableMap.of("vectorize", vectorize))
           .aggregators(queryAggs);
 
       basicQueries.put("numericSort", queryBuilderA);
@@ -193,6 +199,7 @@ public class TopNBenchmark
           .dimension("dimUniform")
           .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
           .intervals(intervalSpec)
+          .context(ImmutableMap.of("vectorize", vectorize))
           .aggregators(queryAggs);
 
       basicQueries.put("alphanumericSort", queryBuilderA);
