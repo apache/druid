@@ -31,8 +31,8 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.transform.FilteredInputRow;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.transform.Transformer;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -65,15 +65,14 @@ class StreamChunkReader<RecordType extends ByteEntity>
   )
   {
     InvalidInput.notNull(inputFormat, "inputFormat");
+    final Transformer transformer = transformSpec.toTransformer();
     this.byteEntityReader = new SettableByteEntityReader<>(
         inputFormat,
         inputRowSchema,
-        transformSpec,
+        transformer,
         indexingTmpDir
     );
-    this.rowFilter = transformSpec.getFilter() == null
-                     ? rowFilter
-                     : wrapFilterToPreserveTransformFilterReason(rowFilter);
+    this.rowFilter = transformer.hasFilter() ? withTransformFilter(transformer, rowFilter) : rowFilter;
     this.rowIngestionMeters = rowIngestionMeters;
     this.parseExceptionHandler = parseExceptionHandler;
   }
@@ -92,14 +91,11 @@ class StreamChunkReader<RecordType extends ByteEntity>
     this.parseExceptionHandler = parseExceptionHandler;
   }
 
-  private static InputRowFilter wrapFilterToPreserveTransformFilterReason(final InputRowFilter rowFilter)
+  private static InputRowFilter withTransformFilter(final Transformer transformer, final InputRowFilter rowFilter)
   {
-    return row -> {
-      if (row instanceof FilteredInputRow) {
-        return ((FilteredInputRow) row).getFilterResult();
-      }
-      return rowFilter.test(row);
-    };
+    final InputRowFilter transformFilter = row ->
+        transformer.rowMatchesFilter(row) ? InputRowFilterResult.ACCEPTED : InputRowFilterResult.CUSTOM_FILTER;
+    return transformFilter.and(rowFilter);
   }
 
   List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard) throws IOException

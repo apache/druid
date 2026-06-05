@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -64,7 +63,7 @@ public class TransformerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testTransformOrMarkFiltered()
+  public void testTransformWithoutFilter()
   {
     final Transformer transformer = new Transformer(
         new TransformSpec(new SelectorDimFilter("dim", "keep", null), null)
@@ -72,29 +71,31 @@ public class TransformerTest extends InitializedNullHandlingTest
     final InputRow keepRow = makeRow("keep");
     final InputRow dropRow = makeRow("drop");
 
-    Assert.assertSame(keepRow, transformer.transformOrMarkFiltered(keepRow));
-    final InputRow filteredRow = transformer.transformOrMarkFiltered(dropRow);
-    Assert.assertSame(FilteredInputRow.CUSTOM_FILTER, filteredRow);
-    Assert.assertEquals(InputRowFilterResult.CUSTOM_FILTER, ((FilteredInputRow) filteredRow).getFilterResult());
-    Assert.assertNull(transformer.transformOrMarkFiltered(null));
+    Assert.assertSame(keepRow, transformer.transformWithoutFilter(keepRow));
+    Assert.assertSame(dropRow, transformer.transformWithoutFilter(dropRow));
+    Assert.assertNull(transformer.transformWithoutFilter(null));
+
+    Assert.assertTrue(transformer.hasFilter());
+    Assert.assertTrue(transformer.rowMatchesFilter(keepRow));
+    Assert.assertFalse(transformer.rowMatchesFilter(dropRow));
+    Assert.assertTrue(transformer.rowMatchesFilter(null));
   }
 
   @Test
-  public void testTransformingInputEntityReaderPreservesFilteredRowsWhenRequested() throws IOException
+  public void testTransformingInputEntityReaderCanSkipFilter() throws IOException
   {
     final Transformer transformer = new Transformer(
         new TransformSpec(new SelectorDimFilter("dim", "keep", null), null)
     );
     final InputRow dropRow = makeRow("drop");
     final InputRow keepRow = makeRow("keep");
-    final TransformingInputEntityReader reader = new TransformingInputEntityReader(
+    final TransformingInputEntityReader reader = TransformingInputEntityReader.withoutFilter(
         new TestInputEntityReader(dropRow, keepRow),
-        transformer,
-        true
+        transformer
     );
 
     try (final CloseableIterator<InputRow> iterator = reader.read()) {
-      Assert.assertSame(FilteredInputRow.CUSTOM_FILTER, iterator.next());
+      Assert.assertSame(dropRow, iterator.next());
       Assert.assertSame(keepRow, iterator.next());
       Assert.assertFalse(iterator.hasNext());
     }
