@@ -132,6 +132,7 @@ import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
@@ -1978,7 +1979,7 @@ public class CompactionTaskTest
       }
 
       @Override
-      public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
+      public Optional<Segment> acquireCachedSegment(SegmentId segmentId, AcquireMode acquireMode)
       {
         for (Map.Entry<DataSegment, File> entry : segments.entrySet()) {
           if (entry.getKey().getId().equals(segmentId)) {
@@ -1991,7 +1992,7 @@ public class CompactionTaskTest
       }
 
       @Override
-      public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
+      public AcquireSegmentAction acquireSegment(DataSegment dataSegment, AcquireMode acquireMode)
       {
         final Segment segment =
             new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId());

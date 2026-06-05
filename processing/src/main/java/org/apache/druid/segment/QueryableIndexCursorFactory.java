@@ -61,6 +61,14 @@ public class QueryableIndexCursorFactory implements CursorFactory
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     QueryableProjection<QueryableIndex> projection = index.getProjection(spec);
+    return makeCursorHolderForProjection(spec, projection);
+  }
+
+  QueryableIndexCursorHolder makeCursorHolderForProjection(
+      CursorBuildSpec spec,
+      @Nullable QueryableProjection<QueryableIndex> projection
+  )
+  {
     if (projection == null) {
       // no projections, create regular cursor holder
       return new QueryableIndexCursorHolder(index, spec, timeBoundaryInspector);

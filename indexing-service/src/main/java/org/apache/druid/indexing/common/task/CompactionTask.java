@@ -95,6 +95,7 @@ import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
@@ -890,7 +891,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   {
     final Closer closer = Closer.create();
     try {
-      final AcquireSegmentAction acquireAction = closer.register(segmentCacheManager.acquireSegment(dataSegment));
+      final AcquireSegmentAction acquireAction =
+          closer.register(segmentCacheManager.acquireSegment(dataSegment, AcquireMode.FULL));
       final ReferenceCountedObjectProvider<Segment> segmentProvider =
           FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), true).getReferenceProvider();
       final Segment segment = segmentProvider.acquireReference().map(closer::register).get();

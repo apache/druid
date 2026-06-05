@@ -516,6 +516,45 @@ public class StorageLocation
   }
 
   /**
+   * Remove a {@link #weakCacheEntries} entry that currently has no outstanding holds, unlinking it from the SIEVE
+   * queue and terminating its phaser (which fires the underlying {@link CacheEntry#unmount}). No-op when the entry
+   * is absent, is a {@link #staticCacheEntries} entry, or still has outstanding holds.
+   * <p>
+   * This exists for callers that register a weak entry <em>without</em> a {@link ReservationHold} (the bootstrap
+   * reserve path uses {@link #reserveWeak}) and need to clean it up after a failed mount. The normal runtime path
+   * registers weak entries via {@link #addWeakReservationHold} and relies on the hold's release runnable to evict a
+   * never-mounted entry on close; an entry registered without a hold has no such cleanup, so a failed mount would
+   * otherwise leave it lingering (and un-re-mountable if its on-disk state was deleted by the mount rollback). The
+   * hold guard makes this safe to call unconditionally on any mount failure: a held entry (runtime path) is left to
+   * its holder's release runnable.
+   */
+  public void removeUnheldWeakEntry(CacheEntryIdentifier id)
+  {
+    lock.writeLock().lock();
+    try {
+      weakCacheEntries.computeIfPresent(
+          id,
+          (cacheEntryIdentifier, weakCacheEntry) -> {
+            if (weakCacheEntry.isHeld()) {
+              // a holder is responsible for cleanup when it releases; leave the entry in place
+              return weakCacheEntry;
+            }
+            final boolean isMounted = weakCacheEntry.cacheEntry.isMounted();
+            unlinkWeakEntry(weakCacheEntry);
+            weakCacheEntry.unmount(); // terminate the phaser; fires cacheEntry.unmount() (idempotent)
+            if (isMounted) {
+              weakStats.getAndUpdate(s -> s.evict(weakCacheEntry.cacheEntry.getSize()));
+            }
+            return null;
+          }
+      );
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
    * Creates a release runnable for a {@link WeakCacheEntry} that handles immediate eviction when configured.
    * If {@link #areWeakEntriesEphemeral} is true and there are no more holds after releasing, the entry is immediately
    * evicted from the cache. For new entries (isNewEntry=true), unmounted entries are also removed.

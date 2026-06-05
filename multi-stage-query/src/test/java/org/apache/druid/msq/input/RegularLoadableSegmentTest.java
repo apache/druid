@@ -48,6 +48,7 @@ import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
@@ -236,7 +237,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
               FutureUtils.transformAsync(
                   f,
                   ls -> {
-                    final AcquireSegmentAction acquireAction = ls.acquire();
+                    final AcquireSegmentAction acquireAction = ls.acquire(AcquireMode.PARTIAL);
                     return FutureUtils.transform(acquireAction.getSegmentFuture(), f2 -> Pair.of(acquireAction, f2));
                   }
               ),
@@ -307,7 +308,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
               FutureUtils.transformAsync(
                   f,
                   ls -> {
-                    final AcquireSegmentAction acquireAction = ls.acquire();
+                    final AcquireSegmentAction acquireAction = ls.acquire(AcquireMode.PARTIAL);
                     return FutureUtils.transform(acquireAction.getSegmentFuture(), f2 -> Pair.of(acquireAction, f2));
                   }
               ),
@@ -372,7 +373,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     );
 
     // acquireIfCached should return a segment since it's loaded
-    final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached();
+    final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached(AcquireMode.PARTIAL);
     Assertions.assertTrue(cachedSegment.isPresent());
 
     try (final Segment acquiredSegment = cachedSegment.get()) {
@@ -405,7 +406,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     );
 
     // acquireIfCached should return empty since it's not loaded locally
-    final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached();
+    final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached(AcquireMode.PARTIAL);
     Assertions.assertFalse(cachedSegment.isPresent());
   }
 
@@ -432,7 +433,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     Assertions.assertEquals(segment, fetchedDataSegment);
 
     // Verify segment acquisition works.
-    final AcquireSegmentAction acquireAction = loadableSegment.acquire();
+    final AcquireSegmentAction acquireAction = loadableSegment.acquire(AcquireMode.PARTIAL);
     final AcquireSegmentResult acquireResult = FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), false);
     final Optional<Segment> acquiredSegmentOptional = acquireResult.getReferenceProvider().acquireReference();
     Assertions.assertTrue(acquiredSegmentOptional.isPresent());
@@ -471,7 +472,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     Assertions.assertEquals(segment, fetchedDataSegment);
 
     // Verify segment acquisition works.
-    final AcquireSegmentAction acquireAction = loadableSegment.acquire();
+    final AcquireSegmentAction acquireAction = loadableSegment.acquire(AcquireMode.PARTIAL);
     final AcquireSegmentResult acquireResult = FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), false);
     final Optional<Segment> acquiredSegmentOptional = acquireResult.getReferenceProvider().acquireReference();
     Assertions.assertTrue(acquiredSegmentOptional.isPresent());
