@@ -46,13 +46,13 @@ public class DartWorkerContextSegmentLoadAheadTest
   }
 
   @Test
-  public void test_workerConfig_contextLower_usesWorkerConfigAsFloor()
+  public void test_workerConfig_contextLower_contextWins()
   {
-    assertEquals(128, DartWorkerContext.resolveSegmentLoadAheadCount(64, 128, THREAD_COUNT));
+    assertEquals(64, DartWorkerContext.resolveSegmentLoadAheadCount(64, 128, THREAD_COUNT));
   }
 
   @Test
-  public void test_workerConfig_contextHigher_honorsLargerContext()
+  public void test_workerConfig_contextHigher_contextWins()
   {
     assertEquals(256, DartWorkerContext.resolveSegmentLoadAheadCount(256, 128, THREAD_COUNT));
   }

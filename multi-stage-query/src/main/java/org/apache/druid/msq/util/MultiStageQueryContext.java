@@ -280,9 +280,8 @@ public class MultiStageQueryContext
   /**
    * Number of segments to load ahead of them being needed. Used when setting up {@link ReadableInputQueue}.
    * <p>
-   * A worker may be configured with a local minimum for this value. When it is,
-   * the effective count is the larger of this context value and the worker's configured minimum, so a context value
-   * below that minimum has no effect.
+   * A worker may be configured with a local default for this value. When this context value is set, it always wins;
+   * the worker-local default applies only when this context value is absent.
    */
   public static final String CTX_SEGMENT_LOAD_AHEAD_COUNT = "segmentLoadAheadCount";
 

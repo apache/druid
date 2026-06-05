@@ -96,7 +96,7 @@ public class DartWorkerContext implements WorkerContext
 
   /**
    * Worker-local segment load-ahead count from {@link DartWorkerConfig#getSegmentLoadAheadCount()}, or null if unset.
-   * Applied as a floor in {@link #segmentLoadAheadCount(WorkOrder)}.
+   * Used as the default in {@link #segmentLoadAheadCount(WorkOrder)} when the query context does not supply a value.
    */
   @Nullable
   private final Integer segmentLoadAheadCountConfig;
@@ -118,6 +118,7 @@ public class DartWorkerContext implements WorkerContext
       final Injector injector,
       final DartWorkerClient workerClient,
       final DruidProcessingConfig processingConfig,
+      final DartWorkerConfig workerConfig,
       final SegmentWrangler segmentWrangler,
       final SegmentManager segmentManager,
       final VirtualStorageManager virtualStorageManager,
@@ -158,8 +159,8 @@ public class DartWorkerContext implements WorkerContext
     final Integer maxThreads = MultiStageQueryContext.getMaxThreads(queryContext);
     this.threadCount = (maxThreads != null && maxThreads > 0) ? Math.min(baseThreadCount, maxThreads) : baseThreadCount;
 
-    // Worker-local segment load-ahead config, read once from this worker's DartWorkerConfig.
-    this.segmentLoadAheadCountConfig = injector.getInstance(DartWorkerConfig.class).getSegmentLoadAheadCount();
+    // Worker-local segment load-ahead config from this worker's DartWorkerConfig.
+    this.segmentLoadAheadCountConfig = workerConfig.getSegmentLoadAheadCount();
   }
 
   @Override
@@ -297,7 +298,10 @@ public class DartWorkerContext implements WorkerContext
   }
 
   /**
-   * Determine which of the three potential sources of segment load ahead count to use
+   * Determine which of the three potential sources of segment load ahead count to use.
+   * <p>
+   * Precedence is: a value supplied in the query context wins when set; otherwise the worker-local config is used
+   * when set to a positive value; lastly we fall back to {@code 2 * threadCount}.
    */
   static int resolveSegmentLoadAheadCount(
       @Nullable final Integer fromContext,
@@ -305,11 +309,11 @@ public class DartWorkerContext implements WorkerContext
       final int threadCount
   )
   {
-    final boolean hasWorkerConfig = workerConfig != null && workerConfig > 0;
-    if (!hasWorkerConfig) {
-      return fromContext != null ? fromContext : threadCount * 2;
+    if (fromContext != null) {
+      return fromContext;
     }
-    return fromContext != null ? Math.max(fromContext, workerConfig) : workerConfig;
+    final boolean hasWorkerConfig = workerConfig != null && workerConfig > 0;
+    return hasWorkerConfig ? workerConfig : threadCount * 2;
   }
 
   @Override
