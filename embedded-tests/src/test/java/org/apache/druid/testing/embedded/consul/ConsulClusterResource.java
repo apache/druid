@@ -31,7 +31,15 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.FileInputStream;
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.security.KeyStore;
 import java.time.Duration;
 
 /**
@@ -44,6 +52,8 @@ public class ConsulClusterResource extends TestcontainerResource<GenericContaine
   private static final int CONSUL_HTTP_PORT = 8500;
   private static final int CONSUL_HTTPS_PORT = 8501;
   private static final DockerImageName CONSUL_IMAGE = DockerImageName.parse("hashicorp/consul:1.18");
+  private static final Duration READINESS_TIMEOUT = Duration.ofSeconds(30);
+  private static final Duration READINESS_RETRY_DELAY = Duration.ofMillis(500);
 
   private final ConsulSecurityMode securityMode;
   private String consulHostForDruid;
@@ -68,6 +78,13 @@ public class ConsulClusterResource extends TestcontainerResource<GenericContaine
   public ConsulClusterResource(ConsulSecurityMode securityMode)
   {
     this.securityMode = securityMode;
+  }
+
+  @Override
+  public void start()
+  {
+    super.start();
+    waitForConsulApi();
   }
 
   @Override
@@ -104,6 +121,96 @@ public class ConsulClusterResource extends TestcontainerResource<GenericContaine
     catch (Exception e) {
       throw new RuntimeException("Failed to create Consul container", e);
     }
+  }
+
+  private void waitForConsulApi()
+  {
+    final long deadline = System.nanoTime() + READINESS_TIMEOUT.toNanos();
+    final HttpClient httpClient;
+    Exception lastException = null;
+
+    try {
+      httpClient = createHttpClient();
+    }
+    catch (Exception e) {
+      throw new RuntimeException("Failed to create Consul readiness client", e);
+    }
+
+    while (System.nanoTime() < deadline) {
+      try {
+        final HttpRequest request = HttpRequest.newBuilder(getHttpUri("/v1/status/leader"))
+                                               .timeout(Duration.ofSeconds(5))
+                                               .GET()
+                                               .build();
+        final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() == 200 && response.body() != null && !response.body().trim().isEmpty()) {
+          log.info("Consul API is ready at [%s].", getHttpUri("/v1/status/leader"));
+          return;
+        }
+        lastException = new RuntimeException(
+            StringUtils.format(
+                "Consul leader endpoint returned status[%d] body[%s]",
+                response.statusCode(),
+                response.body()
+            )
+        );
+      }
+      catch (Exception e) {
+        lastException = e;
+      }
+
+      try {
+        Thread.sleep(READINESS_RETRY_DELAY.toMillis());
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException("Interrupted while waiting for Consul API readiness", e);
+      }
+    }
+
+    throw new RuntimeException(
+        StringUtils.format("Consul API did not become ready within [%s]", READINESS_TIMEOUT),
+        lastException
+    );
+  }
+
+  private HttpClient createHttpClient() throws Exception
+  {
+    if (securityMode == ConsulSecurityMode.PLAIN) {
+      return HttpClient.newBuilder()
+                       .connectTimeout(Duration.ofSeconds(5))
+                       .build();
+    }
+
+    if (certBundle == null) {
+      throw new IllegalStateException("Consul TLS certificate bundle is not initialized");
+    }
+
+    final KeyStore trustStore = KeyStore.getInstance("PKCS12");
+    try (FileInputStream fis = new FileInputStream(certBundle.getTrustStorePath())) {
+      trustStore.load(fis, getStorePassword().toCharArray());
+    }
+
+    final TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+    tmf.init(trustStore);
+
+    KeyManagerFactory kmf = null;
+    if (securityMode == ConsulSecurityMode.MTLS) {
+      final KeyStore keyStore = KeyStore.getInstance("PKCS12");
+      try (FileInputStream fis = new FileInputStream(certBundle.getKeyStorePath())) {
+        keyStore.load(fis, getStorePassword().toCharArray());
+      }
+      kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+      kmf.init(keyStore, getStorePassword().toCharArray());
+    }
+
+    final SSLContext sslContext = SSLContext.getInstance("TLS");
+    sslContext.init(kmf == null ? null : kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+
+    return HttpClient.newBuilder()
+                     .sslContext(sslContext)
+                     .connectTimeout(Duration.ofSeconds(5))
+                     .build();
   }
 
   @Override
