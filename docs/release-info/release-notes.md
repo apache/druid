@@ -522,7 +522,7 @@ Added support for `lz4` compression. As part of this change, the following metri
 
 #### Java 17
 
-Druid 38.0.0, the next planned release, requires either Java 21 or 25 (recommended). Support for Java 17 will be dropped.
+Druid 38.0.0, the next planned release, requires either Java 21 or 25 (recommended). Support for Java 17 will be removed.
 
 [#19304](https://github.com/apache/druid/pull/19304)
 
