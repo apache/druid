@@ -81,12 +81,17 @@ class WildcardClusterGroupPartialLoadMatcherTest
 
   private static DataSegment segmentWithGroups(ClusterGroupTuples groups)
   {
+    return segmentWithGroupsAndShardSpec(groups, new NumberedShardSpec(0, 1));
+  }
+
+  private static DataSegment segmentWithGroupsAndShardSpec(ClusterGroupTuples groups, NumberedShardSpec shardSpec)
+  {
     return DataSegment.builder(SegmentId.of(
         "ds",
         Intervals.of("2026-01-01/2026-01-02"),
         "v",
-        new NumberedShardSpec(0, 1)
-    )).loadSpec(BASE_LOAD_SPEC).size(0).clusterGroups(groups).build();
+        shardSpec
+    )).shardSpec(shardSpec).loadSpec(BASE_LOAD_SPEC).size(0).clusterGroups(groups).build();
   }
 
   @Test
@@ -262,7 +267,10 @@ class WildcardClusterGroupPartialLoadMatcherTest
         List.of(Map.of("region", "null")),
         null
     );
-    Assertions.assertNull(matcher.match(segment, BASE_LOAD_SPEC));
+    // Segment is clustered, no pattern matches → empty load.
+    final PartialLoadMatcher.MatchResult result = matcher.match(segment, BASE_LOAD_SPEC);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(List.of(), result.wrappedLoadSpec().get("clusterGroupIndices"));
   }
 
   @Test
@@ -272,17 +280,25 @@ class WildcardClusterGroupPartialLoadMatcherTest
         List.of(Map.of("not_a_clustering_column", "anything")),
         null
     );
-    Assertions.assertNull(matcher.match(threeGroupSegment(), BASE_LOAD_SPEC));
+    // Segment is clustered, no pattern matches → empty load.
+    final PartialLoadMatcher.MatchResult result = matcher.match(threeGroupSegment(), BASE_LOAD_SPEC);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(List.of(), result.wrappedLoadSpec().get("clusterGroupIndices"));
   }
 
   @Test
-  void testNoMatchReturnsNull()
+  void testNoMatchReturnsEmptyWireForm()
   {
     final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
         List.of(Map.of("tenant", "nobody")),
         null
     );
-    Assertions.assertNull(matcher.match(threeGroupSegment(), BASE_LOAD_SPEC));
+    // Segment is clustered, no pattern matches → empty load (asymmetric handling). The matcher still applies.
+    final PartialLoadMatcher.MatchResult result = matcher.match(threeGroupSegment(), BASE_LOAD_SPEC);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals("partialClusterGroup", result.wrappedLoadSpec().get("type"));
+    Assertions.assertEquals(List.of(), result.wrappedLoadSpec().get("clusterGroupIndices"));
+    Assertions.assertEquals(BASE_LOAD_SPEC, result.wrappedLoadSpec().get("delegate"));
   }
 
   @Test
@@ -358,7 +374,10 @@ class WildcardClusterGroupPartialLoadMatcherTest
         null,
         operatorVcs
     );
-    Assertions.assertNull(matcher.match(vcClusteredSegment("acme"), BASE_LOAD_SPEC));
+    // Segment is clustered, pattern non-matching → empty load.
+    final PartialLoadMatcher.MatchResult result = matcher.match(vcClusteredSegment("acme"), BASE_LOAD_SPEC);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(List.of(), result.wrappedLoadSpec().get("clusterGroupIndices"));
   }
 
   @Test
@@ -380,8 +399,10 @@ class WildcardClusterGroupPartialLoadMatcherTest
     );
     // Segment that clusters directly on physical "tenant" (no segment VCs). The operator-VC shadowing rule means
     // we don't silently treat the pattern's "tenant" as the clustering column "tenant" — it's interpreted as the
-    // operator-VC, which has no equivalent on the segment → non-matching.
-    Assertions.assertNull(matcher.match(threeGroupSegment(), BASE_LOAD_SPEC));
+    // operator-VC, which has no equivalent on the segment → non-matching, so empty load.
+    final PartialLoadMatcher.MatchResult result = matcher.match(threeGroupSegment(), BASE_LOAD_SPEC);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(List.of(), result.wrappedLoadSpec().get("clusterGroupIndices"));
   }
 
   @Test
@@ -425,6 +446,98 @@ class WildcardClusterGroupPartialLoadMatcherTest
     );
     final String json = mapper.writeValueAsString(matcher);
     Assertions.assertFalse(json.contains("virtualColumns"), () -> "did not expect virtualColumns in JSON: " + json);
+  }
+
+  @Test
+  void testNoMatchOnAppendedSegmentReturnsNull()
+  {
+    // Appended segment (partitionNum=2, numCorePartitions=2): not part of the core partition group, so no
+    // empty load. The matcher returns null and the rule's cannot-match handling takes over.
+    final ClusterGroupTuples groups = new ClusterGroupTuples(
+        tenantRegion(),
+        List.of(List.of("acme", "us-east-1"))
+    );
+    final DataSegment appended = segmentWithGroupsAndShardSpec(groups, new NumberedShardSpec(2, 2));
+    final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("tenant", "nobody")),
+        null
+    );
+    Assertions.assertNull(matcher.match(appended, BASE_LOAD_SPEC));
+  }
+
+  @Test
+  void testNoMatchOnSegmentWithoutCorePartitionsReturnsNull()
+  {
+    // numCorePartitions == 0: append-only ingestion has no core partition group, so no completeness requirement.
+    // The matcher returns null and the rule's cannot-match handling takes over.
+    final ClusterGroupTuples groups = new ClusterGroupTuples(
+        tenantRegion(),
+        List.of(List.of("acme", "us-east-1"))
+    );
+    final DataSegment noCore = segmentWithGroupsAndShardSpec(groups, new NumberedShardSpec(0, 0));
+    final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("tenant", "nobody")),
+        null
+    );
+    Assertions.assertNull(matcher.match(noCore, BASE_LOAD_SPEC));
+  }
+
+  @Test
+  void testPositiveMatchOnAppendedSegmentStillReturnsWireForm()
+  {
+    // Positive match: the segment has the matcher's content. Even though it's an appended partition (no
+    // completeness requirement), the operator still wants the matching content on this tier — dispatch the
+    // partial load.
+    final ClusterGroupTuples groups = new ClusterGroupTuples(
+        tenantRegion(),
+        List.of(List.of("acme", "us-east-1"))
+    );
+    final DataSegment appended = segmentWithGroupsAndShardSpec(groups, new NumberedShardSpec(2, 2));
+    final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("tenant", "acme")),
+        null
+    );
+    final PartialLoadMatcher.MatchResult result = matcher.match(appended, BASE_LOAD_SPEC);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(List.of(0), result.wrappedLoadSpec().get("clusterGroupIndices"));
+  }
+
+  @Test
+  void testEmptyWireFormFingerprintIsStableAcrossInvocations()
+  {
+    // The empty-load (clustered segment, no patterns match) fingerprints must match across invocations so the
+    // coordinator's reconciliation doesn't churn replicas between runs.
+    final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("tenant", "nobody")),
+        null
+    );
+    final PartialLoadMatcher.MatchResult a = matcher.match(threeGroupSegment(), BASE_LOAD_SPEC);
+    final PartialLoadMatcher.MatchResult b = matcher.match(threeGroupSegment(), BASE_LOAD_SPEC);
+    Assertions.assertEquals(a.fingerprint(), b.fingerprint());
+    Assertions.assertTrue(
+        a.fingerprint().startsWith(ClusterGroupPartialLoadMatcher.FINGERPRINT_VERSION + ":")
+    );
+  }
+
+  @Test
+  void testEmptyWireFormFingerprintDiffersFromPositiveMatch()
+  {
+    // A positive match and an empty load must produce different fingerprints; otherwise the coordinator can't
+    // tell a real partial load from the empty stub for the same segment.
+    final WildcardClusterGroupPartialLoadMatcher acme = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("tenant", "acme")),
+        null
+    );
+    final WildcardClusterGroupPartialLoadMatcher nobody = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("tenant", "nobody")),
+        null
+    );
+    final PartialLoadMatcher.MatchResult real = acme.match(threeGroupSegment(), BASE_LOAD_SPEC);
+    final PartialLoadMatcher.MatchResult empty = nobody.match(threeGroupSegment(), BASE_LOAD_SPEC);
+    Assertions.assertNotNull(real);
+    Assertions.assertNotNull(empty);
+    Assertions.assertEquals(List.of(), empty.wrappedLoadSpec().get("clusterGroupIndices"));
+    Assertions.assertNotEquals(real.fingerprint(), empty.fingerprint());
   }
 
   private static VirtualColumns lowerTenantVcs(String outputName)

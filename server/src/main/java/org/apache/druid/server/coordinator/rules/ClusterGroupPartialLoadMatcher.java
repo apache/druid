@@ -24,6 +24,7 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import org.apache.druid.segment.loading.PartialClusterGroupLoadSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.ShardSpec;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -51,6 +52,24 @@ public abstract class ClusterGroupPartialLoadMatcher implements PartialLoadMatch
    */
   protected abstract List<Integer> resolveClusterGroupIndices(DataSegment segment);
 
+  /**
+   * Returns the load spec for the resolved cluster-group indices, or null when this matcher has nothing to
+   * contribute for the given segment.
+   *
+   * <p>Null is returned when:
+   * <ul>
+   *   <li>the segment is not clustered, or</li>
+   *   <li>no configured pattern matches the segment's tuples <em>and</em> the segment is not a core partition
+   *       (i.e. {@code partitionNum >= numCorePartitions}). The empty load is only useful to keep the broker's
+   *       shard-group completeness check happy, and that check applies only to the core partition group; appended
+   *       segments are queried individually and don't need an empty stub when no positive content matches.</li>
+   * </ul>
+   *
+   * <p>When the segment is a core partition of a clustered shard group and no pattern matches, returns the
+   * "empty" load (same {@code partialClusterGroup} type with an empty index list and {@link #EMPTY_LOAD_FINGERPRINT}).
+   * The historical-side loader honors it by performing no load, leaving the segment uniformly placed in the timeline
+   * alongside its positively-matched siblings so the broker treats the group as complete.
+   */
   @Override
   @Nullable
   public MatchResult match(DataSegment segment, Map<String, Object> baseLoadSpec)
@@ -59,10 +78,13 @@ public abstract class ClusterGroupPartialLoadMatcher implements PartialLoadMatch
       return null;
     }
     final List<Integer> resolved = resolveClusterGroupIndices(segment);
-    if (resolved.isEmpty()) {
+    final ShardSpec shardSpec = segment.getShardSpec();
+    if (resolved.isEmpty() && shardSpec.getPartitionNum() >= shardSpec.getNumCorePartitions()) {
+      // No patterns match and this segment isn't part of a core partition group, so no need for an empty load. Fall
+      // through to the cannot-match handling.
       return null;
     }
-    final String fingerprint = computeFingerprint(resolved);
+    final String fingerprint = resolved.isEmpty() ? EMPTY_LOAD_FINGERPRINT : computeFingerprint(resolved);
     return new MatchResult(PartialClusterGroupLoadSpec.wireForm(baseLoadSpec, resolved, fingerprint), fingerprint);
   }
 

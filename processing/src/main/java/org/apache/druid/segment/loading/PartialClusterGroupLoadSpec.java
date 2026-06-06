@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import org.apache.druid.utils.CollectionUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -72,10 +71,9 @@ public class PartialClusterGroupLoadSpec extends PartialLoadSpec
   )
   {
     super(delegate, fingerprint, jsonMapper);
-    Preconditions.checkArgument(
-        !CollectionUtils.isNullOrEmpty(clusterGroupIndices),
-        "clusterGroupIndices must not be null or empty"
-    );
+    // An empty index list is used when a cluster-group matcher applies to a (clustered) segment but no configured
+    // pattern matches its cluster groups. The historical-side partial loader honors this by loading nothing.
+    Preconditions.checkNotNull(clusterGroupIndices, "clusterGroupIndices");
     this.clusterGroupIndices = List.copyOf(clusterGroupIndices);
   }
 
