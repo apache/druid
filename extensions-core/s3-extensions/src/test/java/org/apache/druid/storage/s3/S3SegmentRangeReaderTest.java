@@ -45,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -161,9 +162,14 @@ public class S3SegmentRangeReaderTest
   }
 
   @Test
-  public void testReadRangeRejectsZeroLength()
+  public void testReadRangeReturnsEmptyStreamForZeroLengthWithoutContactingS3() throws IOException
   {
-    assertThrows(IllegalArgumentException.class, () -> reader.readRange("f", 0, 0));
+    // SegmentFileBuilderV10 allows zero-length internal-file entries; readRange must accept length=0 and return an
+    // empty stream without issuing an S3 GET (a closed range of bytes=N-(N-1) would 416).
+    try (InputStream stream = reader.readRange("f", 100, 0)) {
+      assertEquals(-1, stream.read());
+    }
+    verifyNoInteractions(s3Client);
   }
 
   @Test

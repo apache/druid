@@ -62,8 +62,12 @@ public class S3SegmentRangeReader implements SegmentRangeReader
   {
     Preconditions.checkNotNull(filename, "filename");
     Preconditions.checkArgument(offset >= 0, "offset must be non-negative, got [%s]", offset);
-    Preconditions.checkArgument(length > 0, "length must be positive, got [%s]", length);
+    Preconditions.checkArgument(length >= 0, "length must be non-negative, got [%s]", length);
 
+    if (length == 0) {
+      // SegmentFileBuilderV10 allows zero-length internal-file entries, short-circuit
+      return new ByteArrayInputStream(new byte[0]);
+    }
     return new RetryingInputStream<>(
         new RangeRequest(keyPrefix + filename, offset, length),
         new RangeOpenFunction(s3Client, bucket),
