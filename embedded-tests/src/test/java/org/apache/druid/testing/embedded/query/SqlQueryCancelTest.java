@@ -21,11 +21,11 @@ package org.apache.druid.testing.embedded.query;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.http.ClientSqlQuery;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -66,8 +66,8 @@ public class SqlQueryCancelTest extends QueryTestBase
 
     StatusResponseHolder queryResponce = f.get();
 
-    Assertions.assertEquals(HttpResponseStatus.ACCEPTED.getCode(), queryCancellationResponse.getStatus().getCode());
-    Assertions.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), queryResponce.getStatus().getCode());
+    Assertions.assertEquals(HttpResponseStatus.ACCEPTED.code(), queryCancellationResponse.getStatus().code());
+    Assertions.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), queryResponce.getStatus().code());
   }
 
   @Test
@@ -91,7 +91,7 @@ public class SqlQueryCancelTest extends QueryTestBase
 
     StatusResponseHolder queryResponse = f.get();
 
-    Assertions.assertEquals(HttpResponseStatus.NOT_FOUND.getCode(), queryCancellationResponse.getStatus().getCode());
-    Assertions.assertEquals(HttpResponseStatus.OK.getCode(), queryResponse.getStatus().getCode());
+    Assertions.assertEquals(HttpResponseStatus.NOT_FOUND.code(), queryCancellationResponse.getStatus().code());
+    Assertions.assertEquals(HttpResponseStatus.OK.code(), queryResponse.getStatus().code());
   }
 }

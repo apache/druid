@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -97,7 +98,6 @@ import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -659,7 +659,7 @@ public class DruidCoordinator
       final Throwable rootCause = Throwables.getRootCause(e);
       if (rootCause instanceof HttpResponseException) {
         HttpResponseStatus status = ((HttpResponseException) rootCause).getResponse().getStatus();
-        if (status.getCode() == 404) {
+        if (status.code() == 404) {
           log.warn(
               "Could not mark segments as unused since Overlord is on an older version."
               + " Upgrade the Overlord to a newer version to allow updating segments."

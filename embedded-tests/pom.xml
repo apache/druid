@@ -120,11 +120,6 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
       <artifactId>netty-common</artifactId>
       <scope>test</scope>
     </dependency>
@@ -899,6 +894,14 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <excludedGroups>docker-test,perf</excludedGroups>
+          <!-- Enable Netty 4 PARANOID leak detection in the embedded tests because this is where
+               real cross-node HTTP traffic exercises the migrated HttpClient code paths (chunked
+               responses, long-poll syncs, TLS, ByteBuf-bearing handlers). The Stage 1 CI workers
+               that happen to run embedded-tests classes pay a small overhead per class; in exchange
+               we catch ref-count regressions immediately rather than as a flaky off-heap leak. -->
+          <systemPropertyVariables>
+            <io.netty.leakDetection.level>PARANOID</io.netty.leakDetection.level>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>
@@ -945,6 +948,7 @@
                 -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                 -Daws.region=us-east-1
                 -Ddruid.test.stupidPool.poison=true
+                -Dio.netty.leakDetection.level=PARANOID
               </argLine>
             </configuration>
             <executions>

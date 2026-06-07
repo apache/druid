@@ -21,19 +21,21 @@ package org.apache.druid.rpc;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 
 import java.util.ArrayDeque;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Mock implementation of {@link ServiceClient}.
@@ -59,11 +61,32 @@ public class MockServiceClient implements ServiceClient
     );
 
     if (expectation.response.isValue()) {
-      final ClientResponse<FinalType> response =
-          handler.done(handler.handleResponse(expectation.response.valueOrThrow(), chunkNum -> 0));
+      ClientResponse<IntermediateType> interm =
+          handler.handleResponse(expectation.response.valueOrThrow(), chunkNum -> 0);
+      // Netty 4: body content arrives via HttpContent chunks after the initial HttpResponse.
+      if (expectation.content != null) {
+        interm = handler.handleChunk(
+            interm,
+            new DefaultHttpContent(Unpooled.wrappedBuffer(expectation.content)),
+            1
+        );
+      }
+      final ClientResponse<FinalType> response = handler.done(interm);
       return Futures.immediateFuture(response.getObj());
     } else {
-      return Futures.immediateFailedFuture(expectation.response.error());
+      final Throwable error = expectation.response.error();
+      if (error instanceof BlockingSentinel) {
+        try {
+          Thread.sleep(10_000);
+          return Futures.immediateFailedFuture(new RuntimeException("expected interruption did not happen"));
+        }
+        catch (InterruptedException e) {
+          ((BlockingSentinel) error).interruptedFlag.set(true);
+          Thread.currentThread().interrupt();
+          return Futures.immediateFailedFuture(e);
+        }
+      }
+      return Futures.immediateFailedFuture(error);
     }
   }
 
@@ -75,7 +98,7 @@ public class MockServiceClient implements ServiceClient
 
   public MockServiceClient expectAndRespond(final RequestBuilder request, final HttpResponse response)
   {
-    expectations.add(new Expectation(request, Either.value(response)));
+    expectations.add(new Expectation(request, Either.value(response), null));
     return this;
   }
 
@@ -90,16 +113,35 @@ public class MockServiceClient implements ServiceClient
     for (Map.Entry<String, String> headerEntry : headers.entrySet()) {
       response.headers().set(headerEntry.getKey(), headerEntry.getValue());
     }
-    if (content != null) {
-      response.setContent(ChannelBuffers.wrappedBuffer(content));
-    }
-    return expectAndRespond(request, response);
+    expectations.add(new Expectation(request, Either.value(response), content));
+    return this;
   }
 
   public MockServiceClient expectAndThrow(final RequestBuilder request, final Throwable e)
   {
-    expectations.add(new Expectation(request, Either.error(e)));
+    expectations.add(new Expectation(request, Either.error(e), null));
     return this;
+  }
+
+  /**
+   * Sleep on the request thread until interrupted; sets {@code interruptedFlag} when the thread is interrupted.
+   * Replaces the Netty-3 idiom of overriding {@code HttpResponse.getContent()} to block, which is no longer
+   * applicable in Netty 4 where the initial {@link HttpResponse} carries no body.
+   */
+  public MockServiceClient expectAndBlock(final RequestBuilder request, final AtomicBoolean interruptedFlag)
+  {
+    expectations.add(new Expectation(request, Either.error(new BlockingSentinel(interruptedFlag)), null));
+    return this;
+  }
+
+  private static class BlockingSentinel extends RuntimeException
+  {
+    private final AtomicBoolean interruptedFlag;
+
+    BlockingSentinel(AtomicBoolean interruptedFlag)
+    {
+      this.interruptedFlag = interruptedFlag;
+    }
   }
 
   public void verify()
@@ -111,11 +153,13 @@ public class MockServiceClient implements ServiceClient
   {
     private final RequestBuilder request;
     private final Either<Throwable, HttpResponse> response;
+    private final byte[] content;
 
-    public Expectation(RequestBuilder request, Either<Throwable, HttpResponse> response)
+    public Expectation(RequestBuilder request, Either<Throwable, HttpResponse> response, byte[] content)
     {
       this.request = request;
       this.response = response;
+      this.content = content;
     }
 
     @Override

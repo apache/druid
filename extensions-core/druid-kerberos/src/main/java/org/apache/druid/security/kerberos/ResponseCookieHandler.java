@@ -21,12 +21,12 @@ package org.apache.druid.security.kerberos;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import java.io.IOException;
 import java.net.CookieManager;
@@ -73,7 +73,7 @@ public class ResponseCookieHandler<Intermediate, Final> implements HttpResponseH
   @Override
   public ClientResponse<Intermediate> handleChunk(
       ClientResponse<Intermediate> clientResponse,
-      HttpChunk httpChunk,
+      HttpContent httpChunk,
       long chunkNum
   )
   {

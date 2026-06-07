@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.audit.AuditEntry;
@@ -68,7 +69,6 @@ import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -284,7 +284,7 @@ public class DataSourcesResource
       final Throwable rootCause = Throwables.getRootCause(e);
       if (rootCause instanceof HttpResponseException) {
         HttpResponseStatus status = ((HttpResponseException) rootCause).getResponse().getStatus();
-        if (status.getCode() == 404) {
+        if (status.code() == 404) {
           final String errorMessage = "Could not update segments since Overlord is on an older version.";
           log.error(errorMessage);
           return ServletResourceUtils.buildErrorResponseFrom(

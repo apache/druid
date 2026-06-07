@@ -22,6 +22,13 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -41,11 +48,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.timeline.DataSegment;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -158,13 +160,22 @@ public class TestHttpClient implements HttpClient
       );
       final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
       response.headers().add(QueryResource.HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
-      response.setContent(
-          HeapChannelBufferFactory.getInstance().getBuffer(serializedContent, 0, serializedContent.length)
-      );
       if (responseDelayMillis > 0) {
         Thread.sleep(responseDelayMillis);
       }
-      final ClientResponse<Intermediate> intermClientResponse = handler.handleResponse(response, NOOP_TRAFFIC_COP);
+      ClientResponse<Intermediate> intermClientResponse = handler.handleResponse(response, NOOP_TRAFFIC_COP);
+      // Netty 4: body content arrives via HttpContent chunks after the initial HttpResponse.
+      intermClientResponse = handler.handleChunk(
+          intermClientResponse,
+          new DefaultHttpContent(Unpooled.wrappedBuffer(serializedContent, 0, serializedContent.length)),
+          1
+      );
+      // Signal stream end so DirectDruidClient's handler sees the final chunk.
+      intermClientResponse = handler.handleChunk(
+          intermClientResponse,
+          LastHttpContent.EMPTY_LAST_CONTENT,
+          2
+      );
       final ClientResponse<Final> finalClientResponse = handler.done(intermClientResponse);
       if (future != null) {
         return future;

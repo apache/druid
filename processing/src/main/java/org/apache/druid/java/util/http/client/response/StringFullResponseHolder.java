@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
 
 import java.nio.charset.Charset;
 
@@ -27,13 +27,15 @@ public class StringFullResponseHolder extends FullResponseHolder<String>
 {
   private final StringBuilder builder;
 
+  @SuppressWarnings("unused")
   public StringFullResponseHolder(
       HttpResponse response,
       Charset charset
   )
   {
     super(response);
-    this.builder = new StringBuilder(response.getContent().toString(charset));
+    // Body content arrives via HttpContent chunks in Netty 4; initialize builder empty.
+    this.builder = new StringBuilder();
   }
 
   public StringFullResponseHolder addChunk(String chunk)

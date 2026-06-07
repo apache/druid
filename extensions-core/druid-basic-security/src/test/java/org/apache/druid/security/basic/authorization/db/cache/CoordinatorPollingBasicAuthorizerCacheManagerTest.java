@@ -21,6 +21,11 @@ package org.apache.druid.security.basic.authorization.db.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -36,13 +41,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -114,19 +112,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
 
     // Block the second user request so that it can be interrupted by stop()
     final AtomicBoolean isInterrupted = new AtomicBoolean(false);
-    expectHttpRequestAndAnswer(
-        "cachedSerializedUserMap",
-        () -> {
-          try {
-            Thread.sleep(10_000);
-            return userResponseHolder;
-          }
-          catch (InterruptedException e) {
-            isInterrupted.set(true);
-            throw e;
-          }
-        }
-    );
+    expectHttpRequestAndBlock("cachedSerializedUserMap", isInterrupted);
 
     replayAll();
 
@@ -162,19 +148,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
 
     // Block the second group request so that it can be interrupted by stop()
     final AtomicBoolean isInterrupted = new AtomicBoolean(false);
-    expectHttpRequestAndAnswer(
-        "cachedSerializedGroupMappingMap",
-        () -> {
-          try {
-            Thread.sleep(10_000);
-            return groupResponseHolder;
-          }
-          catch (InterruptedException e) {
-            isInterrupted.set(true);
-            throw e;
-          }
-        }
-    );
+    expectHttpRequestAndBlock("cachedSerializedGroupMappingMap", isInterrupted);
 
     replayAll();
 
@@ -197,21 +171,26 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
         "/druid-ext/basic-security/authorization/db/%s/%s",
         AUTHORIZER_NAME, path
     );
-    serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, fullPath),
-        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)
-        {
-          @Override
-          public ChannelBuffer getContent()
-          {
-            try {
-              return ChannelBuffers.wrappedBuffer(responseHolder.answer().getContent());
-            }
-            catch (Throwable e) {
-              throw new RuntimeException(e);
-            }
-          }
-        }
+    try {
+      final BytesFullResponseHolder holder = responseHolder.answer();
+      serviceClient.expectAndRespond(
+          new RequestBuilder(HttpMethod.GET, fullPath),
+          HttpResponseStatus.OK,
+          java.util.Collections.emptyMap(),
+          holder.getContent()
+      );
+    }
+    catch (Throwable e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private void expectHttpRequestAndBlock(String path, AtomicBoolean interruptedFlag)
+  {
+    final String fullPath = StringUtils.format(
+        "/druid-ext/basic-security/authorization/db/%s/%s",
+        AUTHORIZER_NAME, path
     );
+    serviceClient.expectAndBlock(new RequestBuilder(HttpMethod.GET, fullPath), interruptedFlag);
   }
 }
