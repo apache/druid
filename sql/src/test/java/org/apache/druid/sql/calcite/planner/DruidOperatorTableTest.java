@@ -113,8 +113,10 @@ public class DruidOperatorTableTest
       switch (operator.kind) {
         case FIRST_VALUE:
         case LAST_VALUE:
+          // These support framing natively.
+          continue;
         case NTILE:
-          // These are handled with DruidSqlValidator and a rewrite rule.
+          // Handled with DruidSqlValidator and a rewrite rule.
           continue;
         default:
           assertFalse(
