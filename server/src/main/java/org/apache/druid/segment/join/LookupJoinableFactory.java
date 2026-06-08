@@ -22,7 +22,11 @@ package org.apache.druid.segment.join;
 import com.google.inject.Inject;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.query.lookup.LookupExtractorFactory;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.RetainedLookupExtractor;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 
 import java.util.Optional;
@@ -57,9 +61,20 @@ public class LookupJoinableFactory implements JoinableFactory
     if (condition.canHashJoin()) {
       final String lookupName = lookupDataSource.getLookupName();
       return lookupProvider.get(lookupName)
-                           .map(c -> LookupJoinable.wrap(c.getLookupExtractorFactory()));
+                           .map(this::buildLookupJoinable);
     } else {
       return Optional.empty();
     }
+  }
+
+  private LookupJoinable buildLookupJoinable(final LookupExtractorFactoryContainer container)
+  {
+    final LookupExtractorFactory lookupExtractorFactory = container.getLookupExtractorFactory();
+    final Optional<RetainedLookupExtractor> retainedLookupExtractor =
+        lookupExtractorFactory.acquireRetainedLookupExtractor();
+    final LookupExtractor lookupExtractor = retainedLookupExtractor.<LookupExtractor>map(retained -> retained)
+                                                                   .orElseGet(lookupExtractorFactory);
+
+    return LookupJoinable.wrap(lookupExtractor);
   }
 }

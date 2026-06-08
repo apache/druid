@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.lookup.namespace.cache;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ForwardingConcurrentMap;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.Cleaners;
@@ -105,7 +104,9 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
         catch (Exception e) {
           t.addSuppressed(e);
         }
-        Throwables.propagateIfInstanceOf(t, Error.class);
+        if (t instanceof Error) {
+          throw (Error) t;
+        }
         // Must not throw exceptions in the cleaner thread, possibly run in the JVM.
         return false;
       }

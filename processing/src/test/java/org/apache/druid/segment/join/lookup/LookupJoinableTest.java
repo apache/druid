@@ -22,17 +22,11 @@ package org.apache.druid.segment.join.lookup;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.lookup.ImmutableLookupMap;
 import org.apache.druid.query.lookup.LookupExtractor;
-import org.apache.druid.query.lookup.LookupExtractorFactory;
-import org.apache.druid.query.lookup.RetainedLookupExtractor;
-import org.apache.druid.query.lookup.RetainingLookupExtractorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -45,7 +39,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class LookupJoinableTest extends InitializedNullHandlingTest
 {
@@ -270,64 +263,6 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
         true
     );
     Assert.assertEquals(Optional.of(ImmutableSet.of()), correlatedValues);
-  }
-
-  @Test
-  public void makeJoinMatcherShouldCloseRetainedLookupExtractorWhenCloserCloses() throws Exception
-  {
-    final AtomicInteger closeCount = new AtomicInteger();
-    final LookupExtractor extractor = ImmutableLookupMap.fromMap(Collections.singletonMap("foo", "bar"))
-                                                        .asLookupExtractor(false, () -> new byte[0]);
-    final LookupExtractorFactory lookupExtractorFactory = new RetainingLookupExtractorFactory(
-        () -> {
-          throw new AssertionError("Expected retained lookup extractor path");
-        },
-        () -> Optional.of(
-            RetainedLookupExtractor.create(
-                extractor,
-                closeCount::incrementAndGet
-            )
-        )
-    );
-    final LookupJoinable joinable = LookupJoinable.wrap(lookupExtractorFactory);
-    final JoinConditionAnalysis condition = JoinConditionAnalysis.forExpression("1", "j.", ExprMacroTable.nil());
-
-    final Closer closer = Closer.create();
-    joinable.makeJoinMatcher(null, condition, false, closer);
-
-    Assert.assertEquals(0, closeCount.get());
-    closer.close();
-    Assert.assertEquals(1, closeCount.get());
-  }
-
-  @Test
-  public void getMatchableColumnValuesShouldCloseRetainedLookupExtractorAfterCall()
-  {
-    final AtomicInteger closeCount = new AtomicInteger();
-    final LookupExtractor extractor = ImmutableLookupMap.fromMap(Collections.singletonMap("foo", "bar"))
-                                                        .asLookupExtractor(false, () -> new byte[0]);
-    final LookupJoinable joinable = LookupJoinable.wrap(
-        new RetainingLookupExtractorFactory(
-            () -> {
-              throw new AssertionError("Expected retained lookup extractor path");
-            },
-            () -> Optional.of(
-                RetainedLookupExtractor.create(
-                    extractor,
-                    closeCount::incrementAndGet
-                )
-            )
-        )
-    );
-
-    final Joinable.ColumnValuesWithUniqueFlag values = joinable.getMatchableColumnValues(
-        LookupColumnSelectorFactory.KEY_COLUMN,
-        false,
-        Integer.MAX_VALUE
-    );
-
-    Assert.assertEquals(Collections.singleton("foo"), values.getColumnValues());
-    Assert.assertEquals(1, closeCount.get());
   }
 
   @Test

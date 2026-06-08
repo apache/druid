@@ -237,13 +237,13 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   @Override
   public Optional<RetainedLookupExtractor> acquireRetainedLookupExtractor()
   {
-    for (int attemptsRemaining = MAX_RETAIN_ATTEMPTS; attemptsRemaining > 0; attemptsRemaining--) {
+    for (int attempt = 1; ; attempt++) {
       final CacheScheduler.VersionedCache versionedCache = getVersionedCache();
       try {
         return Optional.of(makeRetainedLookupExtractor(versionedCache, versionedCache.acquireReference()));
       }
       catch (ISE e) {
-        if (attemptsRemaining == 1) {
+        if (attempt == MAX_RETAIN_ATTEMPTS) {
           throw new ISE(
               e,
               "Failed to retain a live cache for [%s] after [%s] attempts",
@@ -253,7 +253,6 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
         }
       }
     }
-    throw new ISE("Unreachable");
   }
 
   private CacheScheduler.VersionedCache getVersionedCache()

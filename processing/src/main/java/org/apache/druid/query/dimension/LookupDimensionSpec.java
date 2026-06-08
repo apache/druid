@@ -143,16 +143,19 @@ public class LookupDimensionSpec implements DimensionSpec
     return makeLookupExtractionFn(lookupExtractor);
   }
 
+  @Override
+  public ExtractionFn getExtractionFnForMetadata()
+  {
+    return makeLookupExtractionFn(getLookupExtractorForMetadata());
+  }
+
   private LookupExtractor getLookupExtractor()
   {
     if (Strings.isNullOrEmpty(name)) {
       return this.lookup;
     }
 
-    final LookupExtractorFactory lookupExtractorFactory = lookupExtractorFactoryContainerProvider
-        .get(name)
-        .orElseThrow(() -> new ISE("Lookup [%s] not found", name))
-        .getLookupExtractorFactory();
+    final LookupExtractorFactory lookupExtractorFactory = getLookupExtractorFactory();
 
     final Optional<RetainedLookupExtractor> retainedLookupExtractor =
         lookupExtractorFactory.acquireRetainedLookupExtractor();
@@ -160,6 +163,23 @@ public class LookupDimensionSpec implements DimensionSpec
     // ExtractionFn has no close hook. The RetainedLookupExtractor cleaner releases this reference when the
     // LookupExtractionFn that owns it becomes unreachable.
     return retainedLookupExtractor.<LookupExtractor>map(retained -> retained).orElseGet(lookupExtractorFactory);
+  }
+
+  private LookupExtractor getLookupExtractorForMetadata()
+  {
+    if (Strings.isNullOrEmpty(name)) {
+      return this.lookup;
+    }
+
+    return getLookupExtractorFactory().get();
+  }
+
+  private LookupExtractorFactory getLookupExtractorFactory()
+  {
+    return lookupExtractorFactoryContainerProvider
+        .get(name)
+        .orElseThrow(() -> new ISE("Lookup [%s] not found", name))
+        .getLookupExtractorFactory();
   }
 
   private LookupExtractionFn makeLookupExtractionFn(final LookupExtractor lookupExtractor)
@@ -217,7 +237,7 @@ public class LookupDimensionSpec implements DimensionSpec
   @Override
   public boolean preservesOrdering()
   {
-    return getExtractionFn().preservesOrdering();
+    return getExtractionFnForMetadata().preservesOrdering();
   }
 
   @Override
