@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.Configs;
@@ -36,6 +37,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 
 public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
@@ -55,6 +57,62 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   private final String topic;
   private final String topicPattern;
   private final boolean emitTimeLagMetrics;
+  @Nullable
+  private final List<String> partitionFilterDimensions;
+
+  public KafkaSupervisorIOConfig(
+      String topic,
+      String topicPattern,
+      InputFormat inputFormat,
+      Integer replicas,
+      Integer taskCount,
+      Period taskDuration,
+      Map<String, Object> consumerProperties,
+      AutoScalerConfig autoScalerConfig,
+      LagAggregator lagAggregator,
+      Long pollTimeout,
+      Period startDelay,
+      Period period,
+      Boolean useEarliestOffset,
+      Period completionTimeout,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod,
+      DateTime lateMessageRejectionStartDateTime,
+      KafkaConfigOverrides configOverrides,
+      IdleConfig idleConfig,
+      Integer stopTaskCount,
+      Boolean emitTimeLagMetrics,
+      Map<Integer, Integer> serverPriorityToReplicas,
+      BoundedStreamConfig boundedStreamConfig
+  )
+  {
+    this(
+        topic,
+        topicPattern,
+        inputFormat,
+        replicas,
+        taskCount,
+        taskDuration,
+        consumerProperties,
+        autoScalerConfig,
+        lagAggregator,
+        pollTimeout,
+        startDelay,
+        period,
+        useEarliestOffset,
+        completionTimeout,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        lateMessageRejectionStartDateTime,
+        configOverrides,
+        idleConfig,
+        stopTaskCount,
+        emitTimeLagMetrics,
+        serverPriorityToReplicas,
+        boundedStreamConfig,
+        null
+    );
+  }
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
@@ -80,7 +138,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("stopTaskCount") Integer stopTaskCount,
       @Nullable @JsonProperty("emitTimeLagMetrics") Boolean emitTimeLagMetrics,
       @Nullable @JsonProperty("serverPriorityToReplicas") Map<Integer, Integer> serverPriorityToReplicas,
-      @Nullable @JsonProperty("boundedStreamConfig") BoundedStreamConfig boundedStreamConfig
+      @Nullable @JsonProperty("boundedStreamConfig") BoundedStreamConfig boundedStreamConfig,
+      @Nullable @JsonProperty("partitionFilterDimensions") List<String> partitionFilterDimensions
   )
   {
     super(
@@ -114,6 +173,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     this.topic = topic;
     this.topicPattern = topicPattern;
     this.emitTimeLagMetrics = Configs.valueOrDefault(emitTimeLagMetrics, false);
+    this.partitionFilterDimensions = partitionFilterDimensions;
   }
 
   /**
@@ -195,6 +255,14 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", idleConfig=" + getIdleConfig() +
            ", stopTaskCount=" + getStopTaskCount() +
            '}';
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<String> getPartitionFilterDimensions()
+  {
+    return partitionFilterDimensions;
   }
 
   private static String checkTopicArguments(String topic, String topicPattern)

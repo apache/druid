@@ -44,6 +44,7 @@ import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.StreamRangeShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.joda.time.DateTime;
@@ -69,6 +70,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class StreamAppenderatorDriverTest extends EasyMockSupport
 {
@@ -175,6 +177,46 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
     );
 
     Assert.assertEquals(3, segmentsAndCommitMetadata.getCommitMetadata());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testPublishReturnsAnnotatedShardSpecs() throws Exception
+  {
+    final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
+    Assert.assertNull(driver.startJob(null));
+    for (int i = 0; i < ROWS.size(); i++) {
+      committerSupplier.setMetadata(i + 1);
+      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
+    }
+
+    // Annotate function that swaps every segment to a StreamRangeShardSpec. The publisher echoes the annotated segments
+    // into the result, mimicking the metadata store recording the annotated spec.
+    final Function<Set<DataSegment>, Set<DataSegment>> toStreamRange =
+        segments -> segments.stream()
+            .map(s -> s.withShardSpec(new StreamRangeShardSpec(
+                s.getShardSpec().getPartitionNum(),
+                s.getShardSpec().getNumCorePartitions(),
+                ImmutableMap.of("dim1", ImmutableList.of("x"))
+            )))
+            .collect(Collectors.toSet());
+    final TransactionalSegmentPublisher echoPublisher =
+        makePublisher(segmentsToPublish -> SegmentPublishResult.ok(new HashSet<>(segmentsToPublish)));
+
+    final SegmentsAndCommitMetadata published = driver.publish(
+        echoPublisher,
+        committerSupplier.get(),
+        ImmutableList.of("dummy"),
+        toStreamRange
+    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+
+    Assert.assertFalse("Expected at least one published segment", published.getSegments().isEmpty());
+    for (DataSegment segment : published.getSegments()) {
+      Assert.assertTrue(
+          "Returned segment should carry the published StreamRangeShardSpec, not the pre-publish NumberedShardSpec; "
+          + "got " + segment.getShardSpec().getClass().getSimpleName(),
+          segment.getShardSpec() instanceof StreamRangeShardSpec
+      );
+    }
   }
 
   @Test

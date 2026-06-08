@@ -632,23 +632,28 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     segmentsAndCommitMetadata.getSegmentSchemaMapping()
                 );
                 if (publishResult.isSuccess()) {
+                  // Reconcile to the published shard specs (publishSegments may annotate them, e.g. StreamRangeShardSpec
+                  // or core-partition annotation) so logging/handoff reports the real spec, not the pre-publish one.
+                  final SegmentsAndCommitMetadata publishedMetadata =
+                      segmentsAndCommitMetadata.withPublishedSegments(publishResult.getSegments());
+
                   log.info(
                       "Published [%d] segments with commit metadata[%s].",
-                      segmentsAndCommitMetadata.getSegments().size(),
+                      publishedMetadata.getSegments().size(),
                       callerMetadata
                   );
-                  log.infoSegments(segmentsAndCommitMetadata.getSegments(), "Published segments");
+                  log.infoSegments(publishedMetadata.getSegments(), "Published segments");
 
                   // Log segments upgraded as a result of a concurrent replace
                   final Set<DataSegment> upgradedSegments = new HashSet<>(publishResult.getSegments());
-                  segmentsAndCommitMetadata.getSegments().forEach(upgradedSegments::remove);
+                  publishedMetadata.getSegments().forEach(upgradedSegments::remove);
                   if (!upgradedSegments.isEmpty()) {
                     log.info("Published [%d] upgraded segments.", upgradedSegments.size());
                     log.infoSegments(upgradedSegments, "Upgraded segments");
                   }
 
-                  log.info("Published segment schemas[%s].", segmentsAndCommitMetadata.getSegmentSchemaMapping());
-                  return segmentsAndCommitMetadata
+                  log.info("Published segment schemas[%s].", publishedMetadata.getSegmentSchemaMapping());
+                  return publishedMetadata
                       .withUpgradedSegments(upgradedSegments)
                       .withWasPublished(true);
                 } else {

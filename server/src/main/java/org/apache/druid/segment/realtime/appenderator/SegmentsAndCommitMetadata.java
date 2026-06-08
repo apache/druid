@@ -96,6 +96,30 @@ public class SegmentsAndCommitMetadata
     );
   }
 
+  /**
+   * Returns a copy whose segments are replaced (matched by id, preserving order) with the corresponding entries from
+   * {@code publishedSegments}, so the metadata carries the actually-published shard specs rather than the pre-publish
+   * ones. Ids not present in {@code publishedSegments} keep their original entry.
+   */
+  public SegmentsAndCommitMetadata withPublishedSegments(Set<DataSegment> publishedSegments)
+  {
+    final java.util.Map<org.apache.druid.timeline.SegmentId, DataSegment> byId = new java.util.HashMap<>();
+    for (DataSegment published : publishedSegments) {
+      byId.put(published.getId(), published);
+    }
+    final List<DataSegment> reconciled = new java.util.ArrayList<>(segments.size());
+    for (DataSegment original : segments) {
+      reconciled.add(byId.getOrDefault(original.getId(), original));
+    }
+    return new SegmentsAndCommitMetadata(
+        reconciled,
+        this.commitMetadata,
+        this.segmentSchemaMapping,
+        this.upgradedSegments,
+        this.wasPublished
+    );
+  }
+
   public SegmentsAndCommitMetadata withWasPublished(boolean wasPublished)
   {
     return new SegmentsAndCommitMetadata(

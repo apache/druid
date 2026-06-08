@@ -126,6 +126,7 @@ For configuration properties shared across all streaming ingestion methods, refe
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds.|No|100|
 |`useEarliestOffset`|Boolean|If a supervisor is managing a datasource for the first time, it obtains a set of starting offsets from Kafka. This flag determines whether the supervisor retrieves the earliest or latest offsets in Kafka. Under normal circumstances, subsequent tasks start from where the previous segments ended so this flag is only used on the first run.|No|`false`|
 |`idleConfig`|Object|Defines how and when the Kafka supervisor can become idle. See [Idle configuration](#idle-configuration) for more details.|No|null|
+|`partitionFilterDimensions`|List of String|Dimensions to track for query-time segment pruning. See [Partition filter dimensions](#partition-filter-dimensions) for details.|No|null|
 
 #### Ingest from multiple topics
 
@@ -262,6 +263,46 @@ The following example shows a supervisor spec with idle configuration enabled:
 }
 ```
 </details>
+
+#### Partition filter dimensions
+
+When you set `partitionFilterDimensions` in the IO config, the supervisor tracks the distinct values observed for each listed dimension during ingestion. At segment publish time, each segment is annotated with only the values it actually ingested. The broker then uses these annotations to skip segments at query time when the query filter doesn't intersect the segment's declared values.
+
+This enables segment pruning for streaming-ingested data without waiting for compaction to produce hash or range-partitioned segments.
+
+**Usage guidelines:**
+
+- Use only low-to-medium cardinality dimensions (for example, `tenant_id`, `region`, `environment`). High-cardinality dimensions bloat segment metadata with no pruning benefit.
+- Most effective when Kafka partitions are keyed by the tracked dimension (for example, using tenant ID as the message key). Each task naturally sees a subset of values, and segments get tight filter annotations.
+- Also works with multiple supervisors reading from separate topics into one datasource.
+- After compaction, the `StreamRangeShardSpec` annotations are replaced by the compaction output's shard spec (hash or range partitioning), which provides its own pruning.
+
+The following example configures a supervisor to track the `tenant` dimension:
+
+```json
+{
+  "type": "kafka",
+  "spec": {
+    "dataSchema": {
+      "dataSource": "multi_tenant_events",
+      "timestampSpec": {"column": "timestamp", "format": "iso"},
+      "dimensionsSpec": {"dimensions": ["tenant", "region", "event_type"]},
+      "granularitySpec": {"type": "uniform", "segmentGranularity": "HOUR", "queryGranularity": "NONE"}
+    },
+    "ioConfig": {
+      "type": "kafka",
+      "topic": "events",
+      "consumerProperties": {"bootstrap.servers": "localhost:9092"},
+      "inputFormat": {"type": "json"},
+      "taskCount": 4,
+      "taskDuration": "PT1H",
+      "partitionFilterDimensions": ["tenant"]
+    }
+  }
+}
+```
+
+With this configuration, a query like `SELECT * FROM multi_tenant_events WHERE tenant = 'acme'` skips segments that contain no rows for `acme`, reducing the number of segments scanned.
 
 #### Data format
 

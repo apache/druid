@@ -88,12 +88,15 @@ import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.StreamRangeShardSpec;
 import org.apache.druid.utils.CollectionUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
@@ -118,6 +121,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -250,6 +254,21 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile Throwable backgroundThreadException;
 
   private final Map<PartitionIdType, Long> partitionsThroughput = new HashMap<>();
+
+  /**
+   * Observed values per tracked dimension, keyed by segment identifier, used to stamp the {@link StreamRangeShardSpec}
+   * at publish time. A {@code null} element denotes an observed null/missing value (distinct from {@code ""}) so that
+   * {@code IS NULL} queries are not pruned. Inner sets permit null and are written by the run loop / read by the
+   * publish thread under their own monitor.
+   */
+  private final Map<String, Map<String, Set<String>>> observedDimensionValuesBySegment = new ConcurrentHashMap<>();
+
+  /**
+   * Segment identifiers restored from disk at startup (i.e. spanning a task restart). Their pre-restart rows are not
+   * re-read, so {@link #observedDimensionValuesBySegment} would under-include values; to avoid wrongly pruning them,
+   * such segments are published with a plain {@link NumberedShardSpec} instead of a {@link StreamRangeShardSpec}.
+   */
+  private final Set<String> restartSpannedSegments = ConcurrentHashMap.newKeySet();
 
   private volatile DateTime minMessageTime;
   private volatile DateTime maxMessageTime;
@@ -495,6 +514,23 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             }
           }
       );
+
+      // Segments restored from disk span a task restart; their pre-restart values can't be re-observed, so record them
+      // to fall back to a NumberedShardSpec (no pruning) at publish rather than stamping an incomplete filter.
+      final List<String> partitionFilterDims = ioConfig.getPartitionFilterDimensions();
+      if (!CollectionUtils.isNullOrEmpty(partitionFilterDims)) {
+        for (SegmentIdWithShardSpec restored : appenderator.getSegments()) {
+          restartSpannedSegments.add(restored.toString());
+        }
+        if (!restartSpannedSegments.isEmpty()) {
+          log.warn(
+              "Disabling partition-filter pruning for %d segment(s) restored across a task restart: %s",
+              restartSpannedSegments.size(),
+              restartSpannedSegments
+          );
+        }
+      }
+
       if (restoredMetadata == null) {
         // no persist has happened so far
         // so either this is a brand new task or replacement of a failed task
@@ -693,6 +729,28 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 );
 
                 if (addResult.isOk()) {
+                  // Accumulate observed dimension values per segment for StreamRangeShardSpec at publish time.
+                  final List<String> filterDims = ioConfig.getPartitionFilterDimensions();
+                  if (!CollectionUtils.isNullOrEmpty(filterDims)) {
+                    final String segmentId = addResult.getSegmentIdentifier().toString();
+                    final Map<String, Set<String>> segValues = observedDimensionValuesBySegment
+                        .computeIfAbsent(segmentId, k -> new ConcurrentHashMap<>());
+                    for (String dim : filterDims) {
+                      final Set<String> dimSet = segValues.computeIfAbsent(
+                          dim,
+                          k -> Collections.synchronizedSet(new HashSet<>())
+                      );
+                      // Empty getDimension result means a null/missing value; record null so IS NULL is not pruned
+                      // (distinct from "", which getDimension returns as ["" ]).
+                      final List<String> dimValues = row.getDimension(dim);
+                      if (dimValues == null || dimValues.isEmpty()) {
+                        dimSet.add(null);
+                      } else {
+                        dimSet.addAll(dimValues);
+                      }
+                    }
+                  }
+
                   // If the number of rows in the segment exceeds the threshold after adding a row,
                   // move the segment out from the active segments of BaseAppenderatorDriver to make a new segment.
                   final boolean isPushRequired = addResult.isPushRequired(
@@ -999,15 +1057,86 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     handOffWaitList.removeAll(handoffFinished);
   }
 
+  @VisibleForTesting
+  void recordObservedDimensionValueForTest(String segmentId, String dimension, @Nullable String value)
+  {
+    observedDimensionValuesBySegment
+        .computeIfAbsent(segmentId, k -> new ConcurrentHashMap<>())
+        .computeIfAbsent(dimension, k -> Collections.synchronizedSet(new HashSet<>()))
+        .add(value);
+  }
+
+  @VisibleForTesting
+  void markSegmentRestartSpannedForTest(String segmentId)
+  {
+    restartSpannedSegments.add(segmentId);
+  }
+
+  /**
+   * Stamps a segment with a {@link StreamRangeShardSpec} declaring its observed dimension values so the broker can
+   * prune it, or returns it unchanged when pruning would be unsafe or pointless (see the guard clauses). A null
+   * observed value is carried through (distinct from {@code ""}) so {@code IS NULL} queries are not pruned.
+   */
+  @VisibleForTesting
+  DataSegment annotateSegmentWithPartitionFilters(DataSegment s)
+  {
+    final List<String> filterDims = ioConfig.getPartitionFilterDimensions();
+    if (CollectionUtils.isNullOrEmpty(filterDims)) {
+      return s;
+    }
+    final String lookupKey = SegmentIdWithShardSpec.fromDataSegment(s).toString();
+    if (restartSpannedSegments.contains(lookupKey)) {
+      return s;
+    }
+    final Map<String, Set<String>> segObserved = observedDimensionValuesBySegment.get(lookupKey);
+    if (segObserved == null || segObserved.isEmpty()) {
+      return s;
+    }
+    final Map<String, List<String>> snapshotFilters = new HashMap<>();
+    for (String dim : filterDims) {
+      final Set<String> vals = segObserved.get(dim);
+      if (vals == null) {
+        continue;
+      }
+      // vals is a synchronized set written by the run loop; copy it under its monitor to iterate safely.
+      final List<String> snapshot;
+      synchronized (vals) {
+        if (vals.isEmpty()) {
+          continue;
+        }
+        snapshot = new ArrayList<>(vals);
+      }
+      snapshotFilters.put(dim, snapshot);
+    }
+    if (snapshotFilters.isEmpty()) {
+      return s;
+    }
+    return s.withShardSpec(
+        new StreamRangeShardSpec(
+            s.getShardSpec().getPartitionNum(),
+            s.getShardSpec().getNumCorePartitions(),
+            snapshotFilters
+        )
+    );
+  }
+
   private void publishAndRegisterHandoff(SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata)
   {
     log.debug("Publishing segments for sequence [%s].", sequenceMetadata);
+
+    // annotateSegmentWithPartitionFilters is a no-op (returns the segment unchanged) when partition filters are not
+    // configured, so it is always safe to apply here.
+    final java.util.function.Function<Set<DataSegment>, Set<DataSegment>> shardSpecAnnotator =
+        segments -> segments.stream()
+            .map(this::annotateSegmentWithPartitionFilters)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
 
     final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = Futures.transform(
         driver.publish(
             sequenceMetadata.createPublisher(this, toolbox, ioConfig.isUseTransaction()),
             sequenceMetadata.getCommitterSupplier(this, stream, lastPersistedOffsets).get(),
-            Collections.singletonList(sequenceMetadata.getSequenceName())
+            Collections.singletonList(sequenceMetadata.getSequenceName()),
+            shardSpecAnnotator
         ),
         publishedSegmentsAndMetadata -> {
           if (publishedSegmentsAndMetadata == null) {
@@ -1041,6 +1170,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 Preconditions.checkNotNull(publishedSegmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata")
             );
             log.infoSegments(publishedSegmentsAndCommitMetadata.getSegments(), "Published segments");
+
+            for (DataSegment segment : publishedSegmentsAndCommitMetadata.getSegments()) {
+              observedDimensionValuesBySegment.remove(
+                  SegmentIdWithShardSpec.fromDataSegment(segment).toString()
+              );
+            }
 
             publishedSequences.add(sequenceMetadata.getSequenceName());
             removeSequence(sequenceMetadata);

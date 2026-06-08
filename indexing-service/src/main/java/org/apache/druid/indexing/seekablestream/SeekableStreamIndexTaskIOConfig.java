@@ -29,6 +29,7 @@ import org.apache.druid.segment.indexing.IOConfig;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> implements IOConfig
 {
@@ -44,6 +45,18 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   private final InputFormat inputFormat;
   private final Long refreshRejectionPeriodsInMinutes;
   private final BoundedStreamConfig boundedStreamConfig;
+  /**
+   * Dimensions to observe during ingestion for query-time segment pruning via
+   * {@link org.apache.druid.timeline.partition.StreamRangeShardSpec}.
+   *
+   * <p>When set, each task records all distinct values seen <b>per segment</b> for each listed
+   * dimension. At publish time, each segment is stamped with only the values it actually ingested.
+   * The broker uses these to skip segments whose declared values don't intersect the query filter.
+   *
+   * <p>Null or empty means no pruning (segments get a plain NumberedShardSpec).
+   */
+  @Nullable
+  private final List<String> partitionFilterDimensions;
 
   public SeekableStreamIndexTaskIOConfig(
       @Nullable final Integer taskGroupId, // can be null for backward compabitility
@@ -58,6 +71,35 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
       @Nullable final BoundedStreamConfig boundedStreamConfig
   )
   {
+    this(
+        taskGroupId,
+        baseSequenceName,
+        startSequenceNumbers,
+        endSequenceNumbers,
+        useTransaction,
+        minimumMessageTime,
+        maximumMessageTime,
+        inputFormat,
+        refreshRejectionPeriodsInMinutes,
+        boundedStreamConfig,
+        null
+    );
+  }
+
+  public SeekableStreamIndexTaskIOConfig(
+      @Nullable final Integer taskGroupId,
+      final String baseSequenceName,
+      final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> startSequenceNumbers,
+      final SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> endSequenceNumbers,
+      @Nullable final Boolean useTransaction,
+      @Nullable final DateTime minimumMessageTime,
+      @Nullable final DateTime maximumMessageTime,
+      @Nullable final InputFormat inputFormat,
+      @Nullable final Long refreshRejectionPeriodsInMinutes,
+      @Nullable final BoundedStreamConfig boundedStreamConfig,
+      @Nullable final List<String> partitionFilterDimensions
+  )
+  {
     this.taskGroupId = taskGroupId;
     this.baseSequenceName = Preconditions.checkNotNull(baseSequenceName, "baseSequenceName");
     this.startSequenceNumbers = Preconditions.checkNotNull(startSequenceNumbers, "startSequenceNumbers");
@@ -68,6 +110,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
     this.inputFormat = inputFormat;
     this.refreshRejectionPeriodsInMinutes = refreshRejectionPeriodsInMinutes;
     this.boundedStreamConfig = boundedStreamConfig;
+    this.partitionFilterDimensions = partitionFilterDimensions;
 
     Preconditions.checkArgument(
         startSequenceNumbers.getStream().equals(endSequenceNumbers.getStream()),
@@ -154,5 +197,13 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   public BoundedStreamConfig getBoundedStreamConfig()
   {
     return boundedStreamConfig;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<String> getPartitionFilterDimensions()
+  {
+    return partitionFilterDimensions;
   }
 }
