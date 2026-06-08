@@ -1286,6 +1286,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
+  public boolean stopGracefullyOnNewSpec()
+  {
+    return true;
+  }
+
+  @Override
   public void stop(boolean stopGracefully)
   {
     synchronized (stateChangeLock) {

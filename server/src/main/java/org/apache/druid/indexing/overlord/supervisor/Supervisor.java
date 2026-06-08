@@ -48,6 +48,14 @@ public interface Supervisor
   void stop(boolean stopGracefully);
 
   /**
+   * Indicates whether this supervisor should be stopped gracefully when its spec is updated/suspended/resumed
+   */
+  default boolean stopGracefullyOnNewSpec()
+  {
+    return false;
+  }
+
+  /**
    * Starts non-graceful shutdown of the supervisor and returns a future that completes when shutdown is complete.
    */
   default ListenableFuture<Void> stopAsync()
@@ -94,6 +102,7 @@ public interface Supervisor
 
   /**
    * Resets any stored metadata by the supervisor.
+   *
    * @param dataSourceMetadata optional dataSource metadata.
    */
   void reset(@Nullable DataSourceMetadata dataSourceMetadata);
