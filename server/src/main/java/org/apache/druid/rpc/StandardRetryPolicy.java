@@ -136,7 +136,7 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
   @Override
   public boolean retryHttpResponse(final HttpResponse response)
   {
-    final int code = response.getStatus().code();
+    final int code = response.status().code();
 
     return code == HttpResponseStatus.BAD_GATEWAY.code()
            || code == HttpResponseStatus.SERVICE_UNAVAILABLE.code()
