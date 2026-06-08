@@ -147,7 +147,10 @@
       <groupId>com.opencsv</groupId>
       <artifactId>opencsv</artifactId>
     </dependency>
-
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-http</artifactId>
+    </dependency>
     <dependency>
       <groupId>javax.ws.rs</groupId>
       <artifactId>jsr311-api</artifactId>
