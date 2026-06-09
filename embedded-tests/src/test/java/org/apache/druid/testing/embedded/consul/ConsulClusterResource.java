@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.embedded.consul;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -35,6 +36,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -49,6 +51,7 @@ import java.time.Duration;
 public class ConsulClusterResource extends TestcontainerResource<GenericContainer<?>>
 {
   private static final Logger log = new Logger(ConsulClusterResource.class);
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
   private static final int CONSUL_HTTP_PORT = 8500;
   private static final int CONSUL_HTTPS_PORT = 8501;
   private static final DockerImageName CONSUL_IMAGE = DockerImageName.parse("hashicorp/consul:1.18");
@@ -143,7 +146,7 @@ public class ConsulClusterResource extends TestcontainerResource<GenericContaine
                                                .GET()
                                                .build();
         final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() == 200 && response.body() != null && !response.body().trim().isEmpty()) {
+        if (isConsulLeaderReady(response.statusCode(), response.body())) {
           log.info("Consul API is ready at [%s].", getHttpUri("/v1/status/leader"));
           return;
         }
@@ -172,6 +175,21 @@ public class ConsulClusterResource extends TestcontainerResource<GenericContaine
         StringUtils.format("Consul API did not become ready within [%s]", READINESS_TIMEOUT),
         lastException
     );
+  }
+
+  static boolean isConsulLeaderReady(int statusCode, @Nullable String body)
+  {
+    if (statusCode != 200 || body == null || body.trim().isEmpty()) {
+      return false;
+    }
+
+    try {
+      final String leader = JSON_MAPPER.readValue(body, String.class);
+      return leader != null && !leader.trim().isEmpty();
+    }
+    catch (IOException e) {
+      return false;
+    }
   }
 
   private HttpClient createHttpClient() throws Exception
