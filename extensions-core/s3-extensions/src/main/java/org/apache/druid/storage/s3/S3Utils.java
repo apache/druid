@@ -54,6 +54,8 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -63,6 +65,7 @@ public class S3Utils
 {
   private static final String SCHEME = S3StorageDruidModule.SCHEME;
   private static final Joiner JOINER = Joiner.on("/").skipNulls();
+  private static final Pattern S3_ARN = Pattern.compile("^arn:(aws|aws-cn|aws-us-gov):s3:[a-z0-9-]*:\\d{12}:accesspoint[:/][A-Za-z0-9.-]+$");
   private static final Logger log = new Logger(S3Utils.class);
 
   /**
@@ -127,6 +130,11 @@ public class S3Utils
   public static <T> T retryS3Operation(Task<T> f) throws Exception
   {
     return RetryUtils.retry(f, S3RETRY, RetryUtils.DEFAULT_MAX_TRIES);
+  }
+
+  public static boolean isS3Arn(String value)
+  {
+    return value != null && S3_ARN.matcher(value).matches();
   }
 
   /**
@@ -262,6 +270,20 @@ public class S3Utils
     }
 
     return null;
+  }
+
+  /**
+   * Normalizes a bucket name or ARN by replacing '/' with ':'.
+   * Some inputs may provide Access Point ARNs in the form
+   * arn:aws:s3::<account>:accesspoint/alias.mrap, which should be normalized to
+   * arn:aws:s3::<account>:accesspoint:alias.mrap.
+   */
+  public static String normalizeBucketName(String bucket)
+  {
+    return Optional.ofNullable(bucket)
+                   .filter(S3Utils::isS3Arn)
+                   .map(arn -> arn.replace('/', ':'))
+                   .orElse(bucket);
   }
 
   public static String extractS3Key(URI uri)

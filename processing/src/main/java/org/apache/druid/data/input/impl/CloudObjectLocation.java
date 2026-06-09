@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import java.net.URI;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 /**
  * Common type for 'bucket' and 'path' concept of cloud objects to allow code sharing between cloud specific
@@ -46,6 +47,8 @@ import java.util.Objects;
  */
 public class CloudObjectLocation
 {
+  private static final Pattern S3_ARN = Pattern.compile("^arn:(aws|aws-cn|aws-us-gov):s3:[a-z0-9-]*:\\d{12}:accesspoint[:/][A-Za-z0-9.-]+$");
+
   public static URI validateUriScheme(String scheme, URI uri)
   {
     if (!scheme.equalsIgnoreCase(uri.getScheme())) {
@@ -64,14 +67,20 @@ public class CloudObjectLocation
                  "bucket name cannot be null. Please verify if bucket name adheres to naming rules");
     this.path = Preconditions.checkNotNull(StringUtils.maybeRemoveLeadingSlash(path));
     Preconditions.checkArgument(
-        this.bucket.equals(StringUtils.urlEncode(this.bucket)),
-        "bucket must follow DNS-compliant naming conventions"
+      this.bucket.equals(StringUtils.urlEncode(this.bucket)) || isS3Arn(this.bucket),
+      "bucket must follow DNS-compliant naming conventions or be a valid S3 Access Point ARN"
+      + " or S3 Multi-Region Access Point ARN"
     );
   }
 
   public CloudObjectLocation(URI uri)
   {
     this(uri.getHost() != null ? uri.getHost() : uri.getAuthority(), uri.getPath());
+  }
+
+  private static boolean isS3Arn(String value)
+  {
+    return value != null && S3_ARN.matcher(value).matches();
   }
 
   /**

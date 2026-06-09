@@ -449,4 +449,32 @@ public class S3UtilsTest
     // Sanity check: default AWSClientConfig protocol is "https"; schemeless URL inherits "https".
     Assert.assertTrue(S3Utils.useHttps(new AWSClientConfig(), endpointWith("{\"url\":\"s3.example.com\"}")));
   }
+
+  @Test
+  public void testBucketNormalizationForMRAP()
+  {
+    String bucket = "arn:aws:s3::123456789123:accesspoint/bucket.mrap";
+    Assert.assertEquals("arn:aws:s3::123456789123:accesspoint:bucket.mrap", S3Utils.normalizeBucketName(bucket));
+  }
+
+  @Test
+  public void testBucketNormalizationForRegional()
+  {
+    String bucket = "arn:aws:s3:us-east-1:123456789123:accesspoint/bucket";
+    Assert.assertEquals("arn:aws:s3:us-east-1:123456789123:accesspoint:bucket", S3Utils.normalizeBucketName(bucket));
+  }
+
+  @Test
+  public void testAlreadyNormalizedBucket()
+  {
+    String bucket = "arn:aws:s3::123456789123:accesspoint:bucket.mrap";
+    Assert.assertEquals(bucket, S3Utils.normalizeBucketName(bucket));
+  }
+
+  @Test
+  public void testNonS3Bucket()
+  {
+    String bucket = "bucket/subpath";
+    Assert.assertEquals(bucket, S3Utils.normalizeBucketName(bucket));
+  }
 }
