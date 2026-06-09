@@ -31,6 +31,7 @@ public interface AuditManager
 
   String X_DRUID_AUTHOR = "X-Druid-Author";
   String X_DRUID_COMMENT = "X-Druid-Comment";
+  String X_DRUID_TRACE_ID = "X-Druid-Trace-Id";
 
   void doAudit(AuditEntry event);
 

@@ -20,6 +20,7 @@
 package org.apache.druid.server.security;
 
 import com.google.common.base.Function;
+import org.apache.druid.audit.RequestInfo;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
@@ -242,5 +243,58 @@ public class AuthorizationUtilsTest
         () -> AuthorizationUtils.authorizeAllResourceActions(authenticationResult, resourceActions, mapper)
     );
     Assert.assertTrue(exception.getMessage().contains("Policy should only present when reading a table"));
+  }
+
+  @Test
+  public void test_buildRequestInfo_capturesTraceIdFromFilterThreadLocal()
+  {
+    // RequestInfo.traceId is sourced from the filter's thread-local
+    // (RequestHeaderContext) so operator header remapping is honored.
+    MockHttpServletRequest request = newRequest("GET", "/druid/coordinator/v1/datasources");
+    org.apache.druid.server.audit.RequestHeaderContext.bind(
+        java.util.Collections.singletonMap("traceId", "trace-abc-123")
+    );
+    try {
+      RequestInfo info = AuthorizationUtils.buildRequestInfo("coordinator", request);
+
+      Assert.assertEquals("coordinator", info.getService());
+      Assert.assertEquals("GET", info.getMethod());
+      Assert.assertEquals("/druid/coordinator/v1/datasources", info.getUri());
+      Assert.assertEquals("trace-abc-123", info.getTraceId());
+    }
+    finally {
+      org.apache.druid.server.audit.RequestHeaderContext.clear();
+    }
+  }
+
+  @Test
+  public void test_buildRequestInfo_noTraceIdWhenContextEmpty()
+  {
+    // No header captured, no thread-local bound -> traceId is null.
+    MockHttpServletRequest request = newRequest("POST", "/druid/indexer/v1/task");
+
+    RequestInfo info = AuthorizationUtils.buildRequestInfo("overlord", request);
+
+    Assert.assertEquals("overlord", info.getService());
+    Assert.assertNull(info.getTraceId());
+  }
+
+  /**
+   * {@link MockHttpServletRequest#getQueryString()} throws by default; override to return null
+   * since these tests don't exercise query parameters.
+   */
+  private static MockHttpServletRequest newRequest(String method, String uri)
+  {
+    MockHttpServletRequest request = new MockHttpServletRequest()
+    {
+      @Override
+      public String getQueryString()
+      {
+        return null;
+      }
+    };
+    request.method = method;
+    request.requestUri = uri;
+    return request;
   }
 }

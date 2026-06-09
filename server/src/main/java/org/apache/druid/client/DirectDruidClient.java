@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.audit.RequestHeaderContextConfig;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -100,6 +101,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final String scheme;
   private final String host;
   private final ServiceEmitter emitter;
+  private final RequestHeaderContextConfig requestHeaderContextConfig;
 
   private final AtomicInteger openConnections;
   private final boolean isSmile;
@@ -132,6 +134,22 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       ScheduledExecutorService queryCancellationExecutor
   )
   {
+    this(conglomerate, queryWatcher, objectMapper, httpClient, scheme, host, emitter,
+         queryCancellationExecutor, new RequestHeaderContextConfig());
+  }
+
+  public DirectDruidClient(
+      QueryRunnerFactoryConglomerate conglomerate,
+      QueryWatcher queryWatcher,
+      ObjectMapper objectMapper,
+      HttpClient httpClient,
+      String scheme,
+      String host,
+      ServiceEmitter emitter,
+      ScheduledExecutorService queryCancellationExecutor,
+      RequestHeaderContextConfig requestHeaderContextConfig
+  )
+  {
     this.conglomerate = conglomerate;
     this.queryWatcher = queryWatcher;
     this.objectMapper = objectMapper;
@@ -143,6 +161,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
     this.openConnections = new AtomicInteger();
     this.queryCancellationExecutor = queryCancellationExecutor;
+    this.requestHeaderContextConfig = requestHeaderContextConfig;
   }
 
   public int getNumOpenConnections()
@@ -471,18 +490,18 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       // we can increment the count earlier so that we can route the request to a different server
       openConnections.getAndIncrement();
       try {
-        future = httpClient.go(
-            new Request(
-                HttpMethod.POST,
-                new URL(url)
-            ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
-             .setHeader(
-                 HttpHeaders.Names.CONTENT_TYPE,
-                 isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-             ),
-            responseHandler,
-            Duration.millis(timeLeft)
-        );
+        final Request outbound = new Request(HttpMethod.POST, new URL(url))
+            .setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
+            .setHeader(
+                HttpHeaders.Names.CONTENT_TYPE,
+                isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
+            );
+        // Propagate configured request-context headers onto the inter-Druid RPC so the
+        // receiving node's RequestHeaderContextFilter captures them just as if a client
+        // had set them. Enables cross-node trace ID propagation without trusting the
+        // values already serialized in the query JSON body (anti-spoof).
+        requestHeaderContextConfig.applyToOutboundRequest(query.getContext(), outbound::setHeader);
+        future = httpClient.go(outbound, responseHandler, Duration.millis(timeLeft));
       }
       catch (Exception e) {
         openConnections.getAndDecrement();

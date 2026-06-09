@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
+import org.apache.druid.audit.RequestHeaderContextConfig;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -49,6 +50,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.server.audit.RequestHeaderContext;
 import org.apache.druid.server.broker.PerSegmentTimeoutConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
@@ -104,6 +106,7 @@ public class QueryLifecycle
   private final PolicyEnforcer policyEnforcer;
   private final List<QueryBlocklistRule> queryBlocklist;
   private final Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig;
+  private final RequestHeaderContextConfig requestHeaderContextConfig;
   private final long startMs;
   private final long startNs;
 
@@ -128,6 +131,7 @@ public class QueryLifecycle
       final PolicyEnforcer policyEnforcer,
       final List<QueryBlocklistRule> queryBlocklist,
       final Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig,
+      final RequestHeaderContextConfig requestHeaderContextConfig,
       final long startMs,
       final long startNs
   )
@@ -143,6 +147,7 @@ public class QueryLifecycle
     this.policyEnforcer = policyEnforcer;
     this.queryBlocklist = queryBlocklist;
     this.perSegmentTimeoutConfig = perSegmentTimeoutConfig;
+    this.requestHeaderContextConfig = requestHeaderContextConfig;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -216,6 +221,12 @@ public class QueryLifecycle
     transition(State.NEW, State.INITIALIZED);
 
     userContextKeys = new HashSet<>(baseQuery.getContext().keySet());
+    // Reserved keys defined by RequestHeaderContextConfig are populated by the
+    // RequestHeaderContextFilter from inbound HTTP headers; values for these keys are
+    // server-managed (either filter-captured here or propagated from an upstream Druid
+    // node in a sub-query context) and should not count toward user context-key
+    // authorization.
+    userContextKeys.removeAll(requestHeaderContextConfig.getHeaderToContextKey().values());
     String queryId = baseQuery.getId();
     if (Strings.isNullOrEmpty(queryId)) {
       queryId = UUID.randomUUID().toString();
@@ -226,6 +237,28 @@ public class QueryLifecycle
     applyPerDatasourcePerSegmentTimeout(baseQuery, contextWithDefaults, queryId);
     Map<String, Object> finalContext = QueryContexts.override(contextWithDefaults, baseQuery.getContext());
     finalContext.put(BaseQuery.QUERY_ID, queryId);
+
+    // Anti-spoof + propagation. Strip user-supplied values for all reserved keys, then
+    // inject filter-captured values for headers actually present on this request. Reserved
+    // keys can ONLY originate from a filter-captured header — which means either a real
+    // client request (entry point) or an inter-Druid RPC where the upstream Druid node
+    // attached the header onto the wire (see DirectDruidClient.applyToOutboundRequest).
+    // Without the strip, a malicious client could supply {"context":{"traceId":"forged"}}
+    // in the query JSON body and have it survive into OpenLineage / Atlas / audit.
+    //
+    // Trade-off: if an intermediate L7 proxy strips the custom X- header between two
+    // Druid nodes, the propagated value is lost on the receiving node (no fallback to
+    // the body-context value, which was just stripped). Druid's internal RPCs are
+    // expected to be direct (broker→historical etc.) rather than mediated by a
+    // header-rewriting proxy. Operators running a mesh that strips custom X-* headers
+    // should add the configured headers to their mesh's allow-list.
+    for (String reservedKey : requestHeaderContextConfig.getHeaderToContextKey().values()) {
+      finalContext.remove(reservedKey);
+    }
+    final Map<String, String> captured = RequestHeaderContext.current();
+    if (!captured.isEmpty()) {
+      finalContext.putAll(captured);
+    }
 
     this.baseQuery = baseQuery.withOverriddenContext(finalContext);
     this.toolChest = conglomerate.getToolChest(this.baseQuery);

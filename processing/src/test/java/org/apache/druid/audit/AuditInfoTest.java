@@ -89,4 +89,44 @@ public class AuditInfoTest
     Assertions.assertEquals(requestInfo, deserialized);
   }
 
+  @Test
+  public void testRequestInfoTraceIdSerde() throws IOException
+  {
+    RequestInfo withTrace = new RequestInfo("overlord", "GET", "/uri", "a=b", "trace-abc-123");
+    RequestInfo deserialized = mapper.readValue(mapper.writeValueAsString(withTrace), RequestInfo.class);
+    Assertions.assertEquals(withTrace, deserialized);
+    Assertions.assertEquals("trace-abc-123", deserialized.getTraceId());
+  }
+
+  @Test
+  public void testRequestInfoNullTraceIdOmittedFromJson() throws IOException
+  {
+    RequestInfo withoutTrace = new RequestInfo("overlord", "GET", "/uri", "a=b", null);
+    String json = mapper.writeValueAsString(withoutTrace);
+    Assertions.assertFalse(
+        json.contains("traceId"),
+        "null traceId should be omitted from JSON for wire-size hygiene; got: " + json
+    );
+  }
+
+  @Test
+  public void testRequestInfoTraceIdBackwardsCompatible() throws IOException
+  {
+    // Old audit rows persisted before traceId existed must still deserialize.
+    String legacyJson = "{\"service\":\"overlord\",\"method\":\"GET\",\"uri\":\"/uri\",\"queryParams\":\"a=b\"}";
+    RequestInfo parsed = mapper.readValue(legacyJson, RequestInfo.class);
+    Assertions.assertEquals("overlord", parsed.getService());
+    Assertions.assertNull(parsed.getTraceId());
+  }
+
+  @Test
+  public void testRequestInfoEqualityConsidersTraceId()
+  {
+    RequestInfo a = new RequestInfo("s", "GET", "/u", "p", "trace-1");
+    RequestInfo b = new RequestInfo("s", "GET", "/u", "p", "trace-2");
+    RequestInfo c = new RequestInfo("s", "GET", "/u", "p", "trace-1");
+    Assertions.assertNotEquals(a, b);
+    Assertions.assertEquals(a, c);
+  }
+
 }

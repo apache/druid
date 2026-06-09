@@ -861,6 +861,7 @@ public class QueryLifecycleTest
         policyEnforcer,
         queryBlocklist,
         Collections.emptyMap(),
+        new org.apache.druid.audit.RequestHeaderContextConfig(),
         System.currentTimeMillis(),
         System.nanoTime()
     );
@@ -913,6 +914,7 @@ public class QueryLifecycleTest
         policyEnforcer,
         queryBlocklist,
         Collections.emptyMap(),
+        new org.apache.druid.audit.RequestHeaderContextConfig(),
         System.currentTimeMillis(),
         System.nanoTime()
     );

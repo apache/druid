@@ -777,6 +777,7 @@ public class QueryResourceTest
                 NoopPolicyEnforcer.instance(),
                 null,
                 Collections.emptyMap(),
+                new org.apache.druid.audit.RequestHeaderContextConfig(),
                 System.currentTimeMillis(),
                 System.nanoTime()
             )
