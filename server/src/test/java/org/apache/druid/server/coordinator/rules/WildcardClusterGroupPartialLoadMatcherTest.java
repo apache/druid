@@ -280,8 +280,45 @@ class WildcardClusterGroupPartialLoadMatcherTest
         List.of(Map.of("not_a_clustering_column", "anything")),
         null
     );
-    // Segment is clustered, no pattern matches → empty load.
-    final PartialLoadMatcher.MatchResult result = matcher.match(threeGroupSegment(), BASE_LOAD_SPEC);
+    // Pattern references a column the segment doesn't cluster on → matcher is incompatible with this segment's
+    // clustering scheme → null (opaque), rule falls back to cannot-match handling.
+    Assertions.assertNull(matcher.match(threeGroupSegment(), BASE_LOAD_SPEC));
+  }
+
+  @Test
+  void testIncompatibleClusteringReturnsNull()
+  {
+    // None of the matcher's pattern columns exist in the segment's clustering signature → the matcher is opaque to
+    // this segment. The base class returns null (no empty load), letting the rule's cannot-match handling run.
+    final RowSignature regionOnly = RowSignature.builder().add("region", ColumnType.STRING).build();
+    final DataSegment regionClustered = segmentWithGroups(new ClusterGroupTuples(
+        regionOnly,
+        List.of(List.of("us-east-1"))
+    ));
+    final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
+        List.of(Map.of("tenant", "acme")),
+        null
+    );
+    Assertions.assertNull(matcher.match(regionClustered, BASE_LOAD_SPEC));
+  }
+
+  @Test
+  void testCompatibleWhenAnyPatternResolves()
+  {
+    // Multi-pattern matcher where only one pattern's columns exist on the segment. At least one pattern resolves,
+    // so the matcher is compatible and (when no tuple matches) returns the empty load for asymmetric
+    // handling. Patterns that can't be resolved on this segment just don't contribute matches.
+    final RowSignature tenantOnly = RowSignature.builder().add("tenant", ColumnType.STRING).build();
+    final DataSegment tenantClustered = segmentWithGroups(new ClusterGroupTuples(
+        tenantOnly,
+        List.of(List.of("globex"))
+    ));
+    final WildcardClusterGroupPartialLoadMatcher matcher = new WildcardClusterGroupPartialLoadMatcher(
+        // pattern 1 resolves on tenant; pattern 2's "region" doesn't exist on this segment.
+        List.of(Map.of("tenant", "acme"), Map.of("region", "us-east-*")),
+        null
+    );
+    final PartialLoadMatcher.MatchResult result = matcher.match(tenantClustered, BASE_LOAD_SPEC);
     Assertions.assertNotNull(result);
     Assertions.assertEquals(List.of(), result.wrappedLoadSpec().get("clusterGroupIndices"));
   }
@@ -374,10 +411,9 @@ class WildcardClusterGroupPartialLoadMatcherTest
         null,
         operatorVcs
     );
-    // Segment is clustered, pattern non-matching → empty load.
-    final PartialLoadMatcher.MatchResult result = matcher.match(vcClusteredSegment("acme"), BASE_LOAD_SPEC);
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(List.of(), result.wrappedLoadSpec().get("clusterGroupIndices"));
+    // The operator's VC has no equivalent on the segment → pattern unresolvable → matcher is incompatible with
+    // this segment → null (opaque), rule falls back to cannot-match handling.
+    Assertions.assertNull(matcher.match(vcClusteredSegment("acme"), BASE_LOAD_SPEC));
   }
 
   @Test
@@ -399,10 +435,9 @@ class WildcardClusterGroupPartialLoadMatcherTest
     );
     // Segment that clusters directly on physical "tenant" (no segment VCs). The operator-VC shadowing rule means
     // we don't silently treat the pattern's "tenant" as the clustering column "tenant" — it's interpreted as the
-    // operator-VC, which has no equivalent on the segment → non-matching, so empty load.
-    final PartialLoadMatcher.MatchResult result = matcher.match(threeGroupSegment(), BASE_LOAD_SPEC);
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(List.of(), result.wrappedLoadSpec().get("clusterGroupIndices"));
+    // operator-VC, which has no equivalent on the segment → unresolvable → matcher is incompatible with this
+    // segment → null (opaque), rule falls back to cannot-match handling.
+    Assertions.assertNull(matcher.match(threeGroupSegment(), BASE_LOAD_SPEC));
   }
 
   @Test
