@@ -188,6 +188,118 @@ public class DruidNodeTest
     Assert.assertEquals(-1, node.getTlsPort());
   }
 
+  @Test
+  public void testAdvertisedPlaintextPort()
+  {
+    // When not set, advertisedPlaintextPort defaults to plaintextPort
+    DruidNode node = new DruidNode("test", "host", false, 8082, null, true, false);
+    Assert.assertEquals(8082, node.getPlaintextPort());
+    Assert.assertEquals(8082, node.getAdvertisedPlaintextPort());
+    Assert.assertEquals("host:8082", node.getHostAndPort());
+    Assert.assertEquals("host:8082", node.getHostAndPortToUse());
+
+    // When set, advertisedPlaintextPort overrides in getHostAndPort() but not getPlaintextPort()
+    node = new DruidNode("test", "host", false, 8082, null, 9443, true, false, 9443);
+    Assert.assertEquals(8082, node.getPlaintextPort());
+    Assert.assertEquals(9443, node.getAdvertisedPlaintextPort());
+    Assert.assertEquals("host:9443", node.getHostAndPort());
+    Assert.assertEquals("host:9443", node.getHostAndPortToUse());
+    // getPortToUse() still returns the bind port
+    Assert.assertEquals(8082, node.getPortToUse());
+  }
+
+  @Test
+  public void testAdvertisedPlaintextPortWithTls()
+  {
+    // advertisedPlaintextPort with TLS enabled — getHostAndPortToUse() prefers TLS
+    DruidNode node = new DruidNode("test", "host", false, 8082, null, 8443, true, true, 9443);
+    Assert.assertEquals(8082, node.getPlaintextPort());
+    Assert.assertEquals(9443, node.getAdvertisedPlaintextPort());
+    Assert.assertEquals(8443, node.getTlsPort());
+    Assert.assertEquals("host:9443", node.getHostAndPort());
+    Assert.assertEquals("host:8443", node.getHostAndTlsPort());
+    Assert.assertEquals("host:8443", node.getHostAndPortToUse());
+  }
+
+  @Test
+  public void testAdvertisedPlaintextPortDisabledPlaintext()
+  {
+    // When plaintext is disabled, advertisedPlaintextPort is -1 regardless
+    DruidNode node = new DruidNode("test", "host", false, null, null, 8443, false, true, 9443);
+    Assert.assertEquals(-1, node.getPlaintextPort());
+    Assert.assertEquals(-1, node.getAdvertisedPlaintextPort());
+    Assert.assertNull(node.getHostAndPort());
+  }
+
+  @Test
+  public void testAdvertisedPlaintextPortSerde() throws Exception
+  {
+    // Serialization roundtrip preserves advertisedPlaintextPort
+    DruidNode original = new DruidNode("service", "host", true, 8082, null, 5678, true, true, 9443);
+    DruidNode actual = mapper.readValue(mapper.writeValueAsString(original), DruidNode.class);
+    Assert.assertEquals(8082, actual.getPlaintextPort());
+    Assert.assertEquals(9443, actual.getAdvertisedPlaintextPort());
+    Assert.assertEquals(5678, actual.getTlsPort());
+    Assert.assertEquals("host:9443", actual.getHostAndPort());
+  }
+
+  @Test
+  public void testAdvertisedPlaintextPortBackwardCompatDeserialization() throws Exception
+  {
+    // Old JSON without advertisedPlaintextPort — should default to plaintextPort
+    String json = "{\n"
+                  + "  \"service\":\"service\",\n"
+                  + "  \"host\":\"host\",\n"
+                  + "  \"plaintextPort\":8082,\n"
+                  + "  \"enablePlaintextPort\":true,\n"
+                  + "  \"enableTlsPort\":false\n"
+                  + "}\n";
+    DruidNode actual = mapper.readValue(json, DruidNode.class);
+    Assert.assertEquals(8082, actual.getPlaintextPort());
+    Assert.assertEquals(8082, actual.getAdvertisedPlaintextPort());
+    Assert.assertEquals("host:8082", actual.getHostAndPort());
+  }
+
+  @Test
+  public void testAdvertisedPlaintextPortDeserialization() throws Exception
+  {
+    // JSON with advertisedPlaintextPort set
+    String json = "{\n"
+                  + "  \"service\":\"service\",\n"
+                  + "  \"host\":\"host\",\n"
+                  + "  \"plaintextPort\":8082,\n"
+                  + "  \"advertisedPlaintextPort\":9443,\n"
+                  + "  \"enablePlaintextPort\":true,\n"
+                  + "  \"enableTlsPort\":false\n"
+                  + "}\n";
+    DruidNode actual = mapper.readValue(json, DruidNode.class);
+    Assert.assertEquals(8082, actual.getPlaintextPort());
+    Assert.assertEquals(9443, actual.getAdvertisedPlaintextPort());
+    Assert.assertEquals("host:9443", actual.getHostAndPort());
+    Assert.assertEquals("host:9443", actual.getHostAndPortToUse());
+  }
+
+  @Test
+  public void testAdvertisedPlaintextPortWithService()
+  {
+    DruidNode node = new DruidNode("test", "host", false, 8082, null, 9443, true, false, 9443);
+    DruidNode copy = node.withService("other");
+    Assert.assertEquals("other", copy.getServiceName());
+    Assert.assertEquals(8082, copy.getPlaintextPort());
+    Assert.assertEquals(9443, copy.getAdvertisedPlaintextPort());
+  }
+
+  @Test
+  public void testAdvertisedPlaintextPortEquality()
+  {
+    DruidNode a = new DruidNode("test", "host", false, 8082, null, 9443, true, false, 9443);
+    DruidNode b = new DruidNode("test", "host", false, 8082, null, 9443, true, false, 9443);
+    DruidNode c = new DruidNode("test", "host", false, 8082, null, true, false);
+    Assert.assertEquals(a, b);
+    Assert.assertNotEquals(a, c);
+    Assert.assertEquals(a.hashCode(), b.hashCode());
+  }
+
   @Test(expected = IllegalArgumentException.class)
   public void testConflictingPorts()
   {
