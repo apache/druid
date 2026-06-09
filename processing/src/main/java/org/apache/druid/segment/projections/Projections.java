@@ -21,6 +21,7 @@ package org.apache.druid.segment.projections;
 
 import com.google.common.collect.RangeSet;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -30,19 +31,32 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.filter.AndFilter;
+import org.apache.druid.segment.filter.FalseFilter;
+import org.apache.druid.segment.filter.NotFilter;
+import org.apache.druid.segment.filter.OrFilter;
+import org.apache.druid.segment.filter.TrueFilter;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -55,7 +69,10 @@ public class Projections
 {
   public static final String BASE_TABLE_PROJECTION_NAME = "__base";
 
+  private static final String CLUSTER_GROUP_PREFIX = BASE_TABLE_PROJECTION_NAME + "$";
+
   private static final ConcurrentHashMap<byte[], Boolean> PERIOD_GRAN_CACHE = new ConcurrentHashMap<>();
+
 
   public static String validateProjectionName(@Nullable String name)
   {
@@ -529,6 +546,243 @@ public class Projections
   public static String getProjectionSegmentInternalFilePrefix(ProjectionSchema projectionSchema)
   {
     return projectionSchema.getName() + "/";
+  }
+
+  /**
+   * Check whether {@code type} is an allowed cluster group clustering-column type. Clustering is restricted to the
+   * primitive scalar types: {@link ValueType#STRING}, {@link ValueType#LONG}, {@link ValueType#DOUBLE},
+   * {@link ValueType#FLOAT}. Complex and array types are rejected.
+   */
+  public static boolean isAllowedClusteringType(@Nullable ColumnType type)
+  {
+    return type != null && type.anyOf(ValueType.STRING, ValueType.LONG, ValueType.DOUBLE, ValueType.FLOAT);
+  }
+
+  /**
+   * Segment internal file prefix + column for a cluster group's per-group column data:
+   * {@code __base$<id0>_<id1>...<idK>/<column>}
+   */
+  public static String getClusterGroupSegmentInternalFileName(List<Integer> clusteringValueIds, String column)
+  {
+    return getClusterGroupSegmentInternalFilePrefix(clusteringValueIds) + column;
+  }
+
+  public static String getClusterGroupSegmentInternalFilePrefix(List<Integer> clusteringValueIds)
+  {
+    if (clusteringValueIds == null || clusteringValueIds.isEmpty()) {
+      throw DruidException.defensive("clusteringValueIds must not be null or empty");
+    }
+    final StringBuilder sb = new StringBuilder(CLUSTER_GROUP_PREFIX);
+    for (int i = 0; i < clusteringValueIds.size(); i++) {
+      if (i > 0) {
+        sb.append('_');
+      }
+      sb.append(clusteringValueIds.get(i));
+    }
+    sb.append('/');
+    return sb.toString();
+  }
+
+  /**
+   * Build the per-query {@link ClusterGroupQueryPlan} for {@code groups} against a {@link CursorBuildSpec}. Walks the
+   * filter tree once per group via {@link #walkClusterGroupFilter}, folding clustering-column leaves to
+   * {@link TrueFilter} / {@link FalseFilter} against each group's constant clustering tuple and propagating those
+   * constants through AND / OR / NOT. Non-clustering filters remain in place so the per-group cursor evaluates them
+   * as expected. Query-VC-equivalent-to-clustering-VC resolution happens per-leaf via {@link #resolveClusteringIndex}.
+   * <p/>
+   * Output shape per group encodes the truth value: top-level {@link FalseFilter} = provably FALSE (group is
+   * pruned from {@link ClusterGroupQueryPlan#survivingGroups()}), top-level {@link TrueFilter} = provably TRUE
+   * (no residual filter needed at the cursor), anything else = UNKNOWN (residual filter passed to the per-group
+   * cursor). The walker's result is stashed on the plan so {@link ClusterGroupQueryPlan#rewriteFor} hands it back
+   * directly without re-walking.
+   */
+  public static ClusterGroupQueryPlan planClusterGroupQuery(
+      List<TableClusterGroupSpec> groups,
+      CursorBuildSpec cursorBuildSpec
+  )
+  {
+    final Filter queryFilter = cursorBuildSpec.getFilter();
+    final VirtualColumns queryVcs = cursorBuildSpec.getVirtualColumns();
+    if (groups.isEmpty() || queryFilter == null) {
+      // No filter (or no groups): every group survives, per-group rewrite is a no-op (null filter).
+      return new ClusterGroupQueryPlan(groups, group -> null);
+    }
+
+    // Every spec in the list shares one summary by construction (set once in the schema constructor), so
+    // clusteringColumns + groupVcs are loop-invariant, only the per-group clustering tuple changes.
+    final ClusteredValueGroupsBaseTableSchema summary = groups.getFirst().getSummary();
+    final RowSignature clusteringColumns = summary.getClusteringColumns();
+    final VirtualColumns groupVcs = summary.getVirtualColumns();
+
+    // Single walk per group: produces the rewritten filter, and a top-level FalseFilter means the group prunes.
+    // Cache the rewrite for every group (including pruned ones, where it's FalseFilter) so rewriteFor doesn't
+    // re-walk for either the cursor factory or callers that want to inspect a pruned group's outcome directly.
+    final List<TableClusterGroupSpec> kept = new ArrayList<>(groups.size());
+    final IdentityHashMap<TableClusterGroupSpec, Filter> rewriteCache = new IdentityHashMap<>();
+    for (TableClusterGroupSpec group : groups) {
+      final Filter rewritten = walkClusterGroupFilter(
+          queryFilter,
+          clusteringColumns,
+          group.lookupClusteringValues(),
+          queryVcs,
+          groupVcs
+      );
+      rewriteCache.put(group, rewritten);
+      if (!(rewritten instanceof FalseFilter)) {
+        kept.add(group);
+      }
+    }
+    return new ClusterGroupQueryPlan(kept, rewriteCache::get);
+  }
+
+  /**
+   * Walk the filter tree against {@code group}'s constant clustering tuple and return a rewritten filter where each
+   * leaf whose column resolves to a clustering column (physical or virtual) is folded to {@link TrueFilter} /
+   * {@link FalseFilter}, with those constants propagated through AND / OR / NOT. All other filters remain unchanged.
+   * <p/>
+   * Output shape encodes the truth value implicitly: a top-level {@link FalseFilter} means the filter is provably
+   * FALSE against this group's clustering tuple (the planner uses this to decide which groups to prune); a top-level
+   * {@link TrueFilter} means it's provably TRUE (no residual filter needed at the cursor); anything else means
+   * UNKNOWN and the rewritten filter exists to push down to the per-group cursor.
+   */
+  private static Filter walkClusterGroupFilter(
+      Filter filter,
+      RowSignature clusteringColumns,
+      Object[] clusteringValues,
+      VirtualColumns queryVcs,
+      VirtualColumns groupVcs
+  )
+  {
+    if (filter instanceof AndFilter andFilter) {
+      final List<Filter> kept = new ArrayList<>(andFilter.getFilters().size());
+      for (Filter sub : andFilter.getFilters()) {
+        final Filter rewritten =
+            walkClusterGroupFilter(sub, clusteringColumns, clusteringValues, queryVcs, groupVcs);
+        if (rewritten instanceof FalseFilter) {
+          return FalseFilter.instance();   // AND short-circuits on FALSE
+        }
+        if (rewritten instanceof TrueFilter) {
+          continue;   // drop TRUE children
+        }
+        kept.add(rewritten);
+      }
+      if (kept.isEmpty()) {
+        return TrueFilter.instance();
+      }
+      if (kept.size() == 1) {
+        return kept.get(0);
+      }
+      return new AndFilter(kept);
+    }
+
+    if (filter instanceof OrFilter orFilter) {
+      final List<Filter> kept = new ArrayList<>(orFilter.getFilters().size());
+      for (Filter sub : orFilter.getFilters()) {
+        final Filter rewritten =
+            walkClusterGroupFilter(sub, clusteringColumns, clusteringValues, queryVcs, groupVcs);
+        if (rewritten instanceof TrueFilter) {
+          return TrueFilter.instance();   // OR short-circuits on TRUE
+        }
+        if (rewritten instanceof FalseFilter) {
+          continue;   // drop FALSE children
+        }
+        kept.add(rewritten);
+      }
+      if (kept.isEmpty()) {
+        return FalseFilter.instance();
+      }
+      if (kept.size() == 1) {
+        return kept.get(0);
+      }
+      return new OrFilter(kept);
+    }
+
+    if (filter instanceof NotFilter notFilter) {
+      final Filter inner = walkClusterGroupFilter(
+          notFilter.getBaseFilter(),
+          clusteringColumns,
+          clusteringValues,
+          queryVcs,
+          groupVcs
+      );
+      if (inner instanceof TrueFilter) {
+        return FalseFilter.instance();
+      }
+      if (inner instanceof FalseFilter) {
+        return TrueFilter.instance();
+      }
+      return new NotFilter(inner);
+    }
+
+    if (filter instanceof NullFilter isNull) {
+      final int idx = resolveClusteringIndex(isNull.getColumn(), clusteringColumns, queryVcs, groupVcs);
+      if (idx < 0) {
+        return filter;
+      }
+      return clusteringValues[idx] == null ? TrueFilter.instance() : FalseFilter.instance();
+    }
+
+    if (filter instanceof EqualityFilter eq) {
+      final int idx = resolveClusteringIndex(eq.getColumn(), clusteringColumns, queryVcs, groupVcs);
+      if (idx < 0) {
+        return filter;
+      }
+      // EqualityFilter doesn't match nulls by design; the constructor also rejects null match values.
+      if (clusteringValues[idx] == null) {
+        return FalseFilter.instance();
+      }
+      return Objects.equals(clusteringValues[idx], eq.getMatchValue())
+             ? TrueFilter.instance()
+             : FalseFilter.instance();
+    }
+
+    if (filter instanceof TypedInFilter in) {
+      final int idx = resolveClusteringIndex(in.getColumn(), clusteringColumns, queryVcs, groupVcs);
+      if (idx < 0) {
+        return filter;
+      }
+      // TypedInFilter matches nulls if present in the values list. Iterate explicitly — immutable List impls
+      // (List.of, ImmutableList) NPE on contains(null).
+      final Object val = clusteringValues[idx];
+      for (Object v : in.getSortedValues()) {
+        if (Objects.equals(v, val)) {
+          return TrueFilter.instance();
+        }
+      }
+      return FalseFilter.instance();
+    }
+
+    // Anything else: not a recognized clustering-column leaf shape, leave as-is. The cursor will evaluate it per-row
+    // like any other non-clustering filter.
+    return filter;
+  }
+
+  /**
+   * Resolve a filter leaf's column name to a clustering-column index for this group's clustering tuple. Query-VC
+   * lookup wins first because query VC names are allowed to shadow physical/clustering column names: if a query VC
+   * by that name exists, the only path to a clustering column is via
+   * {@link VirtualColumns#findEquivalent(VirtualColumns.Node)} against the group's clustering VCs. Otherwise, fall
+   * through to a direct name lookup against the clustering signature. Returns {@code -1} when the leaf doesn't
+   * reference a clustering column — including the operator-VC-shadows-without-equivalence case, which is
+   * intentionally treated as "leave the leaf unchanged" so the cursor evaluates it through the query VCs as it
+   * would any other filter.
+   */
+  private static int resolveClusteringIndex(
+      String column,
+      RowSignature clusteringColumns,
+      VirtualColumns queryVcs,
+      VirtualColumns groupVcs
+  )
+  {
+    final VirtualColumns.Node queryNode = queryVcs.getNode(column);
+    if (queryNode != null) {
+      final VirtualColumn equivalent = groupVcs.findEquivalent(queryNode);
+      if (equivalent == null) {
+        return -1;
+      }
+      return clusteringColumns.indexOf(equivalent.getOutputName());
+    }
+    return clusteringColumns.indexOf(column);
   }
 
   /**

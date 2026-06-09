@@ -51,7 +51,6 @@ import org.apache.druid.msq.input.external.ExternalInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.planning.ExecutionVertex;
@@ -312,10 +311,11 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
     }
 
     final List<PhysicalInputSlice> filteredSlices = filterBaseInput(physicalInputSlices);
-    final Integer segmentLoadAheadCount =
-        MultiStageQueryContext.getSegmentLoadAheadCount(context.workOrder().getWorkerContext());
-    final int loadahead = segmentLoadAheadCount != null ? segmentLoadAheadCount : context.threadCount() * 2;
-    return makeReadableInputQueue(new StandardPartitionReader(context), filteredSlices, loadahead);
+    return makeReadableInputQueue(
+        new StandardPartitionReader(context),
+        filteredSlices,
+        context.segmentLoadAheadCount()
+    );
   }
 
   /**
