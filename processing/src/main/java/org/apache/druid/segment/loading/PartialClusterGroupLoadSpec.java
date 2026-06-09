@@ -33,7 +33,7 @@ import java.util.Objects;
 /**
  * A {@link PartialLoadSpec} that requests partial loading of a clustered segment's cluster groups. The base class
  * carries the common {@code fingerprint} and {@code delegate} wire fields; this subtype adds the resolved
- * {@code clusterGroupIndices} (positions into {@link org.apache.druid.timeline.ClusterGroupTuples#getTuples()}) that
+ * {@code clusterGroupIndices} (positions into {@link org.apache.druid.timeline.ClusterGroupTuples#tuples()}) that
  * the historical should range-read into the local segment.
  */
 @JsonTypeName(PartialClusterGroupLoadSpec.TYPE)
