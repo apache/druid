@@ -10,7 +10,7 @@ SELECT
   COUNT(*) AS "count",
   SUM("added") AS "sum_added",
   TIME_PARSE("timestamp", 'iso') AS "__time"
-FROM TABLE(EXTERN('{"type":"s3","uris":["s3://my-bucket/wikipedia/data/"],"objectGlob":"**.json"}', '{"type":"json"}', '[{"name":"timestamp","type":"string"},{"name":"channel","type":"string"},{"name":"user","type":"string"},{"name":"page","type":"string"},{"name":"namespace","type":"string"},{"name":"added","type":"string"}]'))
+FROM TABLE(EXTERN('{"type":"s3","uris":["s3://my-bucket/wikipedia/data/"],"objectGlob":"**.json"}', '{"type":"json"}', '[{"name":"timestamp","type":"STRING"},{"name":"channel","type":"STRING"},{"name":"user","type":"STRING"},{"name":"page","type":"STRING"},{"name":"namespace","type":"STRING"},{"name":"added","type":"LONG"}]'))
 GROUP BY TIME_PARSE("timestamp", 'iso'), "channel", "user", "page", "namespace"
 PARTITIONED BY DAY
 CLUSTERED BY "channel", "user"
@@ -24,7 +24,7 @@ SELECT
   "page",
   "namespace",
   TIME_PARSE("timestamp", 'iso') AS "__time"
-FROM TABLE(EXTERN('{"type":"s3","uris":["s3://my-bucket/wikipedia/data/"],"objectGlob":"**.json"}', '{"type":"json"}', '[{"name":"timestamp","type":"string"},{"name":"channel","type":"string"},{"name":"user","type":"string"},{"name":"page","type":"string"},{"name":"namespace","type":"string"}]'))
+FROM TABLE(EXTERN('{"type":"s3","uris":["s3://my-bucket/wikipedia/data/"],"objectGlob":"**.json"}', '{"type":"json"}', '[{"name":"timestamp","type":"STRING"},{"name":"channel","type":"STRING"},{"name":"user","type":"STRING"},{"name":"page","type":"STRING"},{"name":"namespace","type":"STRING"}]'))
 PARTITIONED BY DAY
 CLUSTERED BY "channel", "user"
 `;
@@ -49,7 +49,7 @@ SELECT
   DS_QUANTILES_SKETCH("added") AS "quantiles_added",
   APPROX_COUNT_DISTINCT_BUILTIN("user") AS "unique_user",
   TIME_PARSE("timestamp", 'iso') AS "__time"
-FROM TABLE(EXTERN('{"type":"s3","uris":["s3://my-bucket/wikipedia/data/"],"objectGlob":"**.json"}', '{"type":"json"}', '[{"name":"timestamp","type":"string"},{"name":"channel","type":"string"},{"name":"user","type":"string"},{"name":"page","type":"string"},{"name":"namespace","type":"string"},{"name":"added","type":"string"}]'))
+FROM TABLE(EXTERN('{"type":"s3","uris":["s3://my-bucket/wikipedia/data/"],"objectGlob":"**.json"}', '{"type":"json"}', '[{"name":"timestamp","type":"STRING"},{"name":"channel","type":"STRING"},{"name":"user","type":"STRING"},{"name":"page","type":"STRING"},{"name":"namespace","type":"STRING"},{"name":"added","type":"LONG"}]'))
 GROUP BY TIME_PARSE("timestamp", 'iso'), "channel", "user", "page", "namespace"
 PARTITIONED BY DAY
 CLUSTERED BY "channel", "user"
@@ -67,7 +67,7 @@ SELECT
   DS_QUANTILES_SKETCH("added", 256) AS "quantiles_added",
   EARLIEST("page", 1024) AS "first_page",
   TIME_PARSE("timestamp", 'iso') AS "__time"
-FROM TABLE(EXTERN('{"type":"s3","uris":["s3://my-bucket/wikipedia/data/"],"objectGlob":"**.json"}', '{"type":"json"}', '[{"name":"timestamp","type":"string"},{"name":"channel","type":"string"},{"name":"user","type":"string"},{"name":"page","type":"string"},{"name":"namespace","type":"string"},{"name":"added","type":"string"}]'))
+FROM TABLE(EXTERN('{"type":"s3","uris":["s3://my-bucket/wikipedia/data/"],"objectGlob":"**.json"}', '{"type":"json"}', '[{"name":"timestamp","type":"STRING"},{"name":"channel","type":"STRING"},{"name":"user","type":"STRING"},{"name":"page","type":"STRING"},{"name":"namespace","type":"STRING"},{"name":"added","type":"STRING"}]'))
 GROUP BY TIME_PARSE("timestamp", 'iso'), "channel", "user", "page", "namespace"
 PARTITIONED BY DAY
 CLUSTERED BY "channel", "user"

@@ -16,14 +16,23 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, FormGroup, Intent, Radio, RadioGroup, TextArea, InputGroup } from '@blueprintjs/core';
+import {
+  Button,
+  Classes,
+  Dialog,
+  FormGroup,
+  InputGroup,
+  Intent,
+  Radio,
+  RadioGroup,
+  TextArea,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
 import { ExternalLink } from '../../components';
 import { convertSupervisorToSql } from '../../helpers/supervisor-conversion';
-import { AppToaster } from '../../singletons';
-import { Api } from '../../singletons';
+import { Api, AppToaster } from '../../singletons';
 import { deepGet } from '../../utils';
 
 import './supervisor-to-sql-dialog.scss';
@@ -38,9 +47,9 @@ interface SupervisorSpec {
         format: string;
       };
       dimensionsSpec: {
-        dimensions: Array<string | { name: string; type: string }>;
+        dimensions: (string | { name: string; type: string })[];
       };
-      metricsSpec: Array<{ name?: string; fieldName?: string; type: string }>;
+      metricsSpec: { name?: string; fieldName?: string; type: string }[];
     };
     ioConfig?: {
       topic?: string;
@@ -54,7 +63,7 @@ interface SupervisorSpec {
 }
 
 export interface SupervisorToSqlDialogProps {
-  onConvert(sql: string): void;
+  onConvert(converted: { queryString: string; queryContext: any }, datasource?: string): void;
   onClose(): void;
 }
 
@@ -68,10 +77,10 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
   const [pastedSupervisor, setPastedSupervisor] = useState<string>('');
   const [availableSupervisors, setAvailableSupervisors] = useState<string[]>([]);
   const [supervisorSpec, setSupervisorSpec] = useState<SupervisorSpec | undefined>();
-  
+
   const [fileLocation, setFileLocation] = useState<string>('');
   const [fileType, setFileType] = useState<string>('json');
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
@@ -93,16 +102,16 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
 
   async function loadSupervisorSpec(supervisorId: string) {
     if (!supervisorId) return;
-    
+
     setLoading(true);
     setError(undefined);
-    
+
     try {
       const resp = await Api.instance.get<SupervisorSpec>(
         `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}`,
       );
       setSupervisorSpec(resp.data);
-      
+
       // Auto-populate file location from ioConfig if available
       const ioConfig = deepGet(resp.data, 'spec.ioConfig');
       if (ioConfig?.inputSource?.uris) {
@@ -119,14 +128,17 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
 
   function parsePastedSupervisor() {
     if (!pastedSupervisor.trim()) {
+      // Clear any previously parsed spec so a blank/cleared paste can't submit a stale supervisor
+      setSupervisorSpec(undefined);
+      setError(undefined);
       return;
     }
-    
+
     try {
       const parsed = JSON.parse(pastedSupervisor);
       setSupervisorSpec(parsed);
       setError(undefined);
-      
+
       // Auto-populate file location from ioConfig if available
       const ioConfig = deepGet(parsed, 'spec.ioConfig');
       if (ioConfig?.inputSource?.uris) {
@@ -175,20 +187,25 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
       message: 'Supervisor converted to SQL, please review',
       intent: Intent.SUCCESS,
     });
-    
-    onConvert(converted.queryString);
+
+    onConvert(converted, deepGet(supervisorSpec, 'spec.dataSchema.dataSource'));
   }
 
   React.useEffect(() => {
-    if (supervisorSource === 'select' && selectedSupervisor) {
+    if (supervisorSource !== 'select') return;
+    if (selectedSupervisor) {
       void loadSupervisorSpec(selectedSupervisor);
+    } else {
+      // No supervisor selected (e.g. none available); don't keep a spec from paste mode around
+      setSupervisorSpec(undefined);
     }
   }, [selectedSupervisor, supervisorSource]);
 
   React.useEffect(() => {
-    if (supervisorSource === 'paste' && pastedSupervisor) {
-      parsePastedSupervisor();
-    }
+    if (supervisorSource !== 'paste') return;
+    // Always reparse on entering paste mode or editing the text so a stale select-mode spec is
+    // dropped and a cleared paste disables Generate SQL
+    parsePastedSupervisor();
   }, [pastedSupervisor, supervisorSource]);
 
   return (
@@ -234,7 +251,10 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
             </div>
           </FormGroup>
         ) : (
-          <FormGroup label="Supervisor JSON" helperText="Paste the complete supervisor specification">
+          <FormGroup
+            label="Supervisor JSON"
+            helperText="Paste the complete supervisor specification"
+          >
             <TextArea
               value={pastedSupervisor}
               onChange={e => setPastedSupervisor(e.target.value)}
@@ -279,7 +299,7 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
         {!supervisorSpec && !loading && (
           <FormGroup>
             <div style={{ color: '#999', fontSize: '12px', fontStyle: 'italic' }}>
-              {supervisorSource === 'select' 
+              {supervisorSource === 'select'
                 ? 'Select a supervisor to continue...'
                 : 'Paste a supervisor JSON to continue...'}
             </div>

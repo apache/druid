@@ -203,6 +203,98 @@ describe('supervisor conversion', () => {
       expect(converted.queryString).toContain('*.csv');
     });
 
+    it('declares numeric metric and dimension columns with their native types', () => {
+      const supervisor = wikipediaSupervisor();
+      supervisor.spec.dataSchema.dimensionsSpec = {
+        dimensions: ['channel', { name: 'delta', type: 'long' }, { name: 'ratio', type: 'double' }],
+      };
+      supervisor.spec.dataSchema.metricsSpec = [
+        { name: 'sum_added', type: 'longSum', fieldName: 'added' },
+        { name: 'sum_value', type: 'doubleSum', fieldName: 'value' },
+        { name: 'unique_user', type: 'thetaSketch', fieldName: 'user' },
+      ];
+
+      const converted = convertSupervisorToSql(supervisor, {
+        fileLocation: 's3://my-bucket/wikipedia/data/',
+        fileType: 'json',
+      });
+
+      expect(converted.queryString).toContain('{"name":"delta","type":"LONG"}');
+      expect(converted.queryString).toContain('{"name":"ratio","type":"DOUBLE"}');
+      expect(converted.queryString).toContain('{"name":"added","type":"LONG"}');
+      expect(converted.queryString).toContain('{"name":"value","type":"DOUBLE"}');
+      // Sketch fields read from a string input column
+      expect(converted.queryString).toContain('{"name":"user","type":"STRING"}');
+    });
+
+    it('applies segment granularity to PARTITIONED BY and query granularity via TIME_FLOOR', () => {
+      const supervisor = wikipediaSupervisor();
+      supervisor.spec.dataSchema.granularitySpec = {
+        segmentGranularity: 'HOUR',
+        queryGranularity: 'hour',
+      };
+
+      const converted = convertSupervisorToSql(supervisor, {
+        fileLocation: 's3://my-bucket/wikipedia/data/',
+        fileType: 'json',
+      });
+
+      expect(converted.queryString).toContain('PARTITIONED BY HOUR');
+      expect(converted.queryString).toContain(`TIME_FLOOR(TIME_PARSE("timestamp", 'iso'), 'PT1H')`);
+      // The GROUP BY uses the same floored time expression
+      expect(converted.queryString).toContain(
+        `GROUP BY TIME_FLOOR(TIME_PARSE("timestamp", 'iso'), 'PT1H')`,
+      );
+    });
+
+    it('treats query granularity none as no TIME_FLOOR', () => {
+      const supervisor = wikipediaSupervisor();
+      supervisor.spec.dataSchema.granularitySpec = {
+        segmentGranularity: 'DAY',
+        queryGranularity: { type: 'none' },
+      };
+
+      const converted = convertSupervisorToSql(supervisor, {
+        fileLocation: 's3://my-bucket/wikipedia/data/',
+        fileType: 'json',
+      });
+
+      expect(converted.queryString).not.toContain('TIME_FLOOR');
+    });
+
+    it('preserves the supervisor input format settings, overriding only the type', () => {
+      const supervisor = wikipediaSupervisor();
+      supervisor.spec.ioConfig!.inputFormat = {
+        type: 'kafka',
+        valueFormat: { type: 'json', flattenSpec: { fields: [{ name: 'x', expr: '$.x' }] } },
+      };
+
+      const converted = convertSupervisorToSql(supervisor, {
+        fileLocation: 's3://my-bucket/wikipedia/data/',
+        fileType: 'csv',
+      });
+
+      expect(converted.queryString).toContain('flattenSpec');
+      expect(converted.queryString).toContain('"type":"csv"');
+      expect(converted.queryString).not.toContain('"type":"kafka"');
+    });
+
+    it('escapes single quotes in a custom timestamp format', () => {
+      const supervisor = wikipediaSupervisor();
+      supervisor.spec.dataSchema.timestampSpec = {
+        column: 'timestamp',
+        format: "yyyy-MM-dd'T'HH:mm:ss",
+      };
+
+      const converted = convertSupervisorToSql(supervisor, {
+        fileLocation: 's3://my-bucket/wikipedia/data/',
+        fileType: 'json',
+      });
+
+      // The literal single quotes around T must be doubled to be valid SQL
+      expect(converted.queryString).toContain(`'yyyy-MM-dd''T''HH:mm:ss'`);
+    });
+
     it('uses TIME_PARSE without a format when timestamp format is auto', () => {
       const supervisor = wikipediaSupervisor();
       supervisor.spec.dataSchema.timestampSpec = { column: 'timestamp', format: 'auto' };

@@ -513,8 +513,13 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
 
     return (
       <SupervisorToSqlDialog
-        onConvert={(sql: string) => {
-          this.handleQueryStringChange(sql);
+        onConvert={(converted, datasource) => {
+          this.handleNewTab(
+            WorkbenchQuery.blank()
+              .changeQueryString(converted.queryString)
+              .changeQueryContext(converted.queryContext || {}),
+            `Convert ${datasource || 'supervisor'}`,
+          );
           this.setState({ supervisorToSqlDialogOpen: false });
         }}
         onClose={() => this.setState({ supervisorToSqlDialogOpen: false })}
