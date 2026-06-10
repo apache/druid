@@ -1126,17 +1126,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     // annotateSegmentWithPartitionFilters is a no-op (returns the segment unchanged) when partition filters are not
     // configured, so it is always safe to apply here.
-    final java.util.function.Function<Set<DataSegment>, Set<DataSegment>> shardSpecAnnotator =
-        segments -> segments.stream()
-            .map(this::annotateSegmentWithPartitionFilters)
-            .collect(Collectors.toCollection(LinkedHashSet::new));
-
     final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = Futures.transform(
         driver.publish(
             sequenceMetadata.createPublisher(this, toolbox, ioConfig.isUseTransaction()),
             sequenceMetadata.getCommitterSupplier(this, stream, lastPersistedOffsets).get(),
             Collections.singletonList(sequenceMetadata.getSequenceName()),
-            shardSpecAnnotator
+            segments -> segments.stream()
+                                .map(this::annotateSegmentWithPartitionFilters)
+                                .collect(Collectors.toCollection(LinkedHashSet::new))
         ),
         publishedSegmentsAndMetadata -> {
           if (publishedSegmentsAndMetadata == null) {
@@ -1172,9 +1169,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             log.infoSegments(publishedSegmentsAndCommitMetadata.getSegments(), "Published segments");
 
             for (DataSegment segment : publishedSegmentsAndCommitMetadata.getSegments()) {
-              observedDimensionValuesBySegment.remove(
-                  SegmentIdWithShardSpec.fromDataSegment(segment).toString()
-              );
+              final String segmentId = SegmentIdWithShardSpec.fromDataSegment(segment).toString();
+              observedDimensionValuesBySegment.remove(segmentId);
+              restartSpannedSegments.remove(segmentId);
             }
 
             publishedSequences.add(sequenceMetadata.getSequenceName());
