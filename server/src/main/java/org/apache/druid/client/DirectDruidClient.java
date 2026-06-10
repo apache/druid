@@ -71,6 +71,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
+import java.net.URI;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.concurrent.BlockingQueue;
@@ -490,7 +491,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       // we can increment the count earlier so that we can route the request to a different server
       openConnections.getAndIncrement();
       try {
-        final Request outbound = new Request(HttpMethod.POST, new URL(url))
+        final Request outbound = new Request(HttpMethod.POST, URI.create(url).toURL())
             .setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
             .setHeader(
                 HttpHeaders.Names.CONTENT_TYPE,

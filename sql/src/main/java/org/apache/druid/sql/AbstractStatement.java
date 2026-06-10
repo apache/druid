@@ -21,6 +21,7 @@ package org.apache.druid.sql;
 
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.server.audit.RequestHeaderContext;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -90,6 +91,24 @@ public abstract class AbstractStatement implements Closeable
     this.authContextKeys = queryPlus.authContextKeys();
     this.queryContext = new HashMap<>(queryPlus.context());
     sqlToolbox.engine.initContextMap(this.queryContext);
+    // Anti-spoof + propagation for reserved request-header context keys, mirroring
+    // QueryLifecycle.initialize() on the native path. A client must not be able to set a
+    // value for one of these keys via the SQL body context; the only legitimate source is
+    // a filter-captured inbound header (RequestHeaderContext). Unlike the native path,
+    // queryContext here is a fresh mutable map that IS the authoritative context (it is not
+    // re-merged over the request body), so we can simply remove uncaptured keys rather than
+    // overriding them to null. This sanitizes both the SQL request log and the context handed
+    // to the planner; generated native sub-queries are additionally sanitized by
+    // QueryLifecycle.initialize().
+    final Map<String, String> capturedHeaders = RequestHeaderContext.current();
+    for (String reservedKey : sqlToolbox.requestHeaderContextConfig.getHeaderToContextKey().values()) {
+      final String capturedValue = capturedHeaders.get(reservedKey);
+      if (capturedValue != null) {
+        this.queryContext.put(reservedKey, capturedValue);
+      } else {
+        this.queryContext.remove(reservedKey);
+      }
+    }
     // "bySegment" results are never valid to use with SQL because the result format is incompatible
     // so, overwrite any user specified context to avoid exceptions down the line
     if (this.queryContext.remove(QueryContexts.BY_SEGMENT_KEY) != null) {

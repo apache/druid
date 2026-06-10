@@ -65,7 +65,13 @@ public class RequestHeaderContextConfig
       BaseQuery.SQL_QUERY_ID
   );
 
-  private final Map<String, String> headerToContextKey;
+  // @JsonProperty on the field is REQUIRED: JsonConfigurator.verifyClazzIsConfigurable()
+  // rejects config classes whose bean-property fields lack a Jackson field annotation, which
+  // would fail server startup (JettyServerModule binds this via JsonConfigProvider).
+  // Declared as ImmutableMap (not Map) so getHeaderToContextKey() can return the field
+  // reference directly without exposing a mutable internal representation (CodeQL).
+  @JsonProperty
+  private final ImmutableMap<String, String> headerToContextKey;
 
   public RequestHeaderContextConfig()
   {

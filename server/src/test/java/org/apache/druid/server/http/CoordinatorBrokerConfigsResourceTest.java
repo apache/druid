@@ -22,6 +22,7 @@ package org.apache.druid.server.http;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.audit.RequestInfo;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
@@ -166,8 +167,10 @@ public class CoordinatorBrokerConfigsResourceTest
     EasyMock.expect(
         configManager.set(
             EasyMock.anyObject(String.class),
+            EasyMock.anyObject(byte[].class),
             EasyMock.anyObject(BrokerDynamicConfig.class),
-            EasyMock.anyObject(AuditInfo.class)
+            EasyMock.anyObject(AuditInfo.class),
+            EasyMock.anyObject(RequestInfo.class)
         )
     ).andReturn(SetResult.ok()).once();
 
