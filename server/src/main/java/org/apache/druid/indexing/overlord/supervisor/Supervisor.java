@@ -102,7 +102,6 @@ public interface Supervisor
 
   /**
    * Resets any stored metadata by the supervisor.
-   *
    * @param dataSourceMetadata optional dataSource metadata.
    */
   void reset(@Nullable DataSourceMetadata dataSourceMetadata);

@@ -785,9 +785,10 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void testStopGracefullyOnNewSpecFalseUsesNonGracefulStop()
   {
-    SupervisorSpec spec = new TestSupervisorSpec("id1", supervisor1);
-    SupervisorSpec spec2 = new TestSupervisorSpec("id1", supervisor2);
-    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+    final RecordingSupervisor originalSupervisor = new RecordingSupervisor();
+    final SupervisorSpec spec = new TestSupervisorSpec("id1", originalSupervisor);
+    final SupervisorSpec spec2 = new TestSupervisorSpec("id1", supervisor2);
+    final Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
         "id3", new TestSupervisorSpec("id3", supervisor3)
     );
 
@@ -795,24 +796,21 @@ public class SupervisorManagerTest extends EasyMockSupport
     metadataSupervisorManager.insert("id1", spec);
     supervisor3.start();
     EasyMock.expect(supervisor3.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
-    supervisor1.start();
-    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     replayAll();
 
     manager.start();
     manager.createOrUpdateAndStartSupervisor(spec);
     verifyAll();
 
-    // spec update: supervisor1 opts out of graceful stop-on-new-spec, so it is stopped with stop(false), leaving its
-    // managed tasks running for the replacement supervisor to reconcile.
+    // spec update: originalSupervisor opts out of graceful stop-on-new-spec, so it is stopped with stop(false),
+    // leaving its managed tasks running for the replacement supervisor to reconcile.
     resetAll();
     supervisor2.start();
     EasyMock.expect(supervisor2.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
-    EasyMock.expect(supervisor1.stopGracefullyOnNewSpec()).andReturn(false);
-    supervisor1.stop(false);
     replayAll();
 
     manager.createOrUpdateAndStartSupervisor(spec2);
+    Assert.assertEquals(Boolean.FALSE, originalSupervisor.stopGracefully);
     verifyAll();
 
     // terminate always stops gracefully, regardless of the supervisor's new-spec stop policy, so that the terminate
@@ -831,8 +829,8 @@ public class SupervisorManagerTest extends EasyMockSupport
   {
     // suspend triggers the same stop path as a spec update, so it must also consult
     // stopGracefullyOnNewSpec() and stop with stop(false) when the supervisor opts out.
-    Capture<TestSupervisorSpec> capturedInsert = Capture.newInstance();
-    SupervisorSpec spec = new TestSupervisorSpec("id1", supervisor1, false, supervisor2);
+    final Capture<TestSupervisorSpec> capturedInsert = Capture.newInstance();
+    final SupervisorSpec spec = new TestSupervisorSpec("id1", supervisor1, false, supervisor2);
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
     metadataSupervisorManager.insert("id1", spec);
@@ -1405,6 +1403,39 @@ public class SupervisorManagerTest extends EasyMockSupport
     public List<String> getDataSources()
     {
       return Collections.singletonList(id);
+    }
+  }
+
+  private static class RecordingSupervisor implements Supervisor
+  {
+    private Boolean stopGracefully;
+
+    @Override
+    public void start()
+    {
+    }
+
+    @Override
+    public void stop(boolean stopGracefully)
+    {
+      this.stopGracefully = stopGracefully;
+    }
+
+    @Override
+    public SupervisorReport getStatus()
+    {
+      return null;
+    }
+
+    @Override
+    public SupervisorStateManager.State getState()
+    {
+      return SupervisorStateManager.BasicState.RUNNING;
+    }
+
+    @Override
+    public void reset(DataSourceMetadata dataSourceMetadata)
+    {
     }
   }
 

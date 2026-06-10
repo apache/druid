@@ -281,7 +281,7 @@ public class SupervisorManager implements SupervisorStatsProvider
     Preconditions.checkState(started, "SupervisorManager not started");
     List<ListenableFuture<Void>> stopFutures = new ArrayList<>();
     synchronized (lock) {
-      log.info("Stopping [%d] supervisors", supervisors.keySet().size());
+      log.info("Stopping [%d] supervisors", supervisors.size());
       for (String id : supervisors.keySet()) {
         try {
           stopFutures.add(supervisors.get(id).lhs.stopAsync());
