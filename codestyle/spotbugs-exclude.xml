@@ -82,7 +82,10 @@
         </And>
     </Match>
 
+    <Bug pattern="AT_NONATOMIC_64BIT_PRIMITIVE"/>
+    <Bug pattern="AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE"/>
     <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION"/>
+    <Bug pattern="AT_STALE_THREAD_WRITE_OF_PRIMITIVE"/>
     <Bug pattern="BC_UNCONFIRMED_CAST"/>
     <Bug pattern="BIT_SIGNED_CHECK_HIGH_BIT"/>
     <Bug pattern="BX_UNBOXING_IMMEDIATELY_REBOXED"/>
@@ -100,6 +103,7 @@
     <Bug pattern="ES_COMPARING_PARAMETER_STRING_WITH_EQ"/>
     <Bug pattern="FE_FLOATING_POINT_EQUALITY"/>
     <Bug pattern="HE_EQUALS_USE_HASHCODE"/>
+    <Bug pattern="HSM_HIDING_METHOD"/>
     <Bug pattern="IA_AMBIGUOUS_INVOCATION_OF_INHERITED_OR_OUTER_METHOD"/>
     <Bug pattern="ICAST_IDIV_CAST_TO_DOUBLE"/>
     <Bug pattern="ICAST_INT_CAST_TO_DOUBLE_PASSED_TO_CEIL"/>
