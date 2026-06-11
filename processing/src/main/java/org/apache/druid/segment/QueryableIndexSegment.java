@@ -91,7 +91,7 @@ public class QueryableIndexSegment implements Segment
       return (T) timeBoundaryInspector;
     } else if (Metadata.class.equals(clazz)) {
       return (T) index.getMetadata();
-    } else if (PhysicalSegmentInspector.class.equals(clazz)) {
+    } else if (PhysicalSegmentInspector.class.equals(clazz) || PhysicalSegmentColumnInspector.class.equals(clazz)) {
       return (T) new QueryableIndexPhysicalSegmentInspector(index);
     } else if (TopNOptimizationInspector.class.equals(clazz)) {
       return (T) new SimpleTopNOptimizationInspector(true);

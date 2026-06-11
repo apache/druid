@@ -22,21 +22,31 @@ package org.apache.druid.segment;
 import javax.annotation.Nullable;
 
 /**
- * Interface for methods describing physical segments such as {@link QueryableIndexSegment} and
+ * Interface for methods describing the columns of physical segments such as {@link QueryableIndexSegment} and
  * {@link IncrementalIndexSegment} that is not typically used at query time (outside of metadata queries).
  * <p>
- * For metadata information about specific columns, use {@link PhysicalSegmentColumnInspector}.
+ * For general metadata information about a segment that is not column specific, use {@link PhysicalSegmentInspector}
+ * instead.
  */
-public interface PhysicalSegmentInspector
+public interface PhysicalSegmentColumnInspector extends ColumnInspector
 {
   /**
-   * Returns {@link Metadata} which contains details about how the segment was created
+   * Returns the minimum value of the provided column, if known through an index, dictionary, or cache. Returns null
+   * if not known. Does not scan the column to find the minimum value.
    */
   @Nullable
-  Metadata getMetadata();
+  Comparable getMinValue(String column);
 
   /**
-   * Returns the number of rows in the segment
+   * Returns the minimum value of the provided column, if known through an index, dictionary, or cache. Returns null
+   * if not known. Does not scan the column to find the maximum value.
    */
-  int getNumRows();
+  @Nullable
+  Comparable getMaxValue(String column);
+
+  /**
+   * Returns the number of distinct values in a column, if known, or
+   * {@link DimensionDictionarySelector#CARDINALITY_UNKNOWN} if not.
+   */
+  int getDimensionCardinality(String column);
 }

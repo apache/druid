@@ -22,6 +22,7 @@ package org.apache.druid.segment.incremental;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.PhysicalSegmentColumnInspector;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -29,7 +30,8 @@ import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 
-public class IncrementalIndexPhysicalSegmentInspector implements PhysicalSegmentInspector
+public class IncrementalIndexPhysicalSegmentInspector
+    implements PhysicalSegmentInspector, PhysicalSegmentColumnInspector
 {
   static final ColumnCapabilities.CoercionLogic SNAPSHOT_COERCE_LOGIC =
       new ColumnCapabilities.CoercionLogic()

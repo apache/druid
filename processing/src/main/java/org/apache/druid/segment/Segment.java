@@ -68,6 +68,7 @@ public interface Segment extends Closeable
    *   <li> {@link IndexedTable}, table object, if this is a joinable indexed table.
    *   <li> {@link TimeBoundaryInspector}, inspector for min/max timestamps, if supported by this segment.
    *   <li> {@link PhysicalSegmentInspector}, inspector for physical segment details, if supported by this segment.
+   *   <li> {@link PhysicalSegmentColumnInspector}, inspector for physical segment column details, if supported by this segment.
    *   <li> {@link MaxIngestedEventTimeInspector}, inspector for {@link DataSourceMetadataResultValue#getMaxIngestedEventTime()}
    *   <li> {@link TopNOptimizationInspector}, inspector containing information for topN specific optimizations
    *   <li> {@link CloseableShapeshifter}, stepping stone to {@link org.apache.druid.query.rowsandcols.RowsAndColumns}.

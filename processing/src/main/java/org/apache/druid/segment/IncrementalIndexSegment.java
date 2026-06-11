@@ -64,7 +64,7 @@ public class IncrementalIndexSegment implements Segment
       return (T) new IncrementalIndexMaxIngestedEventTimeInspector(index);
     } else if (Metadata.class.equals(clazz)) {
       return (T) index.getMetadata();
-    } else if (PhysicalSegmentInspector.class.equals(clazz)) {
+    } else if (PhysicalSegmentInspector.class.equals(clazz) || PhysicalSegmentColumnInspector.class.equals(clazz)) {
       return (T) new IncrementalIndexPhysicalSegmentInspector(index);
     } else if (TopNOptimizationInspector.class.equals(clazz)) {
       return (T) new SimpleTopNOptimizationInspector(true);

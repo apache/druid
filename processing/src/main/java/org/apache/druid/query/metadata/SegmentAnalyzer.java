@@ -31,6 +31,7 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.PhysicalSegmentColumnInspector;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
@@ -90,8 +91,9 @@ public class SegmentAnalyzer
   {
     Preconditions.checkNotNull(segment, "segment");
     final PhysicalSegmentInspector segmentInspector = segment.as(PhysicalSegmentInspector.class);
+    final PhysicalSegmentColumnInspector columnInspector = segment.as(PhysicalSegmentColumnInspector.class);
 
-    // index is null for incremental-index-based segments, but segmentInspector should always be available
+    // index is null for incremental-index-based segments, but the inspectors should always be available
     final QueryableIndex index = segment.as(QueryableIndex.class);
     final CursorFactory cursorFactory = Objects.requireNonNull(segment.as(CursorFactory.class));
 
@@ -104,8 +106,8 @@ public class SegmentAnalyzer
     for (String columnName : rowSignature.getColumnNames()) {
       final ColumnCapabilities capabilities;
 
-      if (segmentInspector != null) {
-        capabilities = segmentInspector.getColumnCapabilities(columnName);
+      if (columnInspector != null) {
+        capabilities = columnInspector.getColumnCapabilities(columnName);
       } else {
         capabilities = null;
       }
@@ -135,7 +137,7 @@ public class SegmentAnalyzer
             if (index != null) {
               analysis = analyzeStringColumn(capabilities, index.getColumnHolder(columnName));
             } else {
-              analysis = analyzeStringColumn(capabilities, segmentInspector, cursorFactory, columnName);
+              analysis = analyzeStringColumn(capabilities, columnInspector, cursorFactory, columnName);
             }
             break;
           case ARRAY:
@@ -260,7 +262,7 @@ public class SegmentAnalyzer
 
   private ColumnAnalysis analyzeStringColumn(
       final ColumnCapabilities capabilities,
-      @Nullable final PhysicalSegmentInspector analysisInspector,
+      @Nullable final PhysicalSegmentColumnInspector analysisInspector,
       final CursorFactory cursorFactory,
       final String columnName
   )
