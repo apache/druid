@@ -33,7 +33,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Map;
 
 public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<KafkaTopicPartition, Long>
@@ -67,8 +66,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
       @JsonProperty("configOverrides") @Nullable KafkaConfigOverrides configOverrides,
       @JsonProperty("multiTopic") @Nullable Boolean multiTopic,
       @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes,
-      @JsonProperty("boundedStreamConfig") @Nullable BoundedStreamConfig boundedStreamConfig,
-      @JsonProperty("partitionFilterDimensions") @Nullable List<String> partitionFilterDimensions
+      @JsonProperty("boundedStreamConfig") @Nullable BoundedStreamConfig boundedStreamConfig
   )
   {
     super(
@@ -83,8 +81,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
         maximumMessageTime,
         inputFormat,
         refreshRejectionPeriodsInMinutes,
-        boundedStreamConfig,
-        partitionFilterDimensions
+        boundedStreamConfig
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
@@ -135,7 +132,6 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
         configOverrides,
         KafkaSupervisorIOConfig.DEFAULT_IS_MULTI_TOPIC,
         refreshRejectionPeriodsInMinutes,
-        null,
         null
     );
   }

@@ -24,8 +24,6 @@ import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
 import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SupervisorIOConfigBuilder;
 
-import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -37,8 +35,6 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
   private String topicPattern;
   private Map<String, Object> consumerProperties;
   private BoundedStreamConfig boundedStreamConfig;
-  @Nullable
-  private List<String> partitionFilterDimensions;
 
   public KafkaIOConfigBuilder withTopic(String topic)
   {
@@ -80,12 +76,6 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
     return this;
   }
 
-  public KafkaIOConfigBuilder withPartitionFilterDimensions(List<String> partitionFilterDimensions)
-  {
-    this.partitionFilterDimensions = partitionFilterDimensions;
-    return this;
-  }
-
   @Override
   public KafkaSupervisorIOConfig build()
   {
@@ -112,8 +102,7 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
         stopTaskCount,
         null,
         null,
-        boundedStreamConfig,
-        partitionFilterDimensions
+        boundedStreamConfig
     );
   }
 }

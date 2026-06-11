@@ -365,7 +365,8 @@ public class SeekableStreamIndexTaskRunnerTest
         Map.of("partition", "0"),
         Map.of("partition", "100")
     );
-    Mockito.when(task.getIOConfig().getPartitionFilterDimensions()).thenReturn(List.of("tenant"));
+    Mockito.when(task.getTuningConfig().getStreamingPartitionsSpec())
+           .thenReturn(new StreamingPartitionsSpec(List.of("tenant")));
 
     final DataSegment segment = createSingleSegment();
     final String lookupKey = SegmentIdWithShardSpec.fromDataSegment(segment).toString();
@@ -395,7 +396,8 @@ public class SeekableStreamIndexTaskRunnerTest
         ImmutableMap.of("partition", "0"),
         ImmutableMap.of("partition", "100")
     );
-    Mockito.when(task.getIOConfig().getPartitionFilterDimensions()).thenReturn(List.of("tenant"));
+    Mockito.when(task.getTuningConfig().getStreamingPartitionsSpec())
+           .thenReturn(new StreamingPartitionsSpec(List.of("tenant")));
 
     final DataSegment segment = createSingleSegment();
     final String lookupKey = SegmentIdWithShardSpec.fromDataSegment(segment).toString();
@@ -426,7 +428,8 @@ public class SeekableStreamIndexTaskRunnerTest
         ImmutableMap.of("partition", "0"),
         ImmutableMap.of("partition", "100")
     );
-    Mockito.when(task.getIOConfig().getPartitionFilterDimensions()).thenReturn(List.of("tenant", "region"));
+    Mockito.when(task.getTuningConfig().getStreamingPartitionsSpec())
+           .thenReturn(new StreamingPartitionsSpec(List.of("tenant", "region")));
 
     final DataSegment segment = createSingleSegment();
     final String lookupKey = SegmentIdWithShardSpec.fromDataSegment(segment).toString();
@@ -463,7 +466,8 @@ public class SeekableStreamIndexTaskRunnerTest
         ImmutableMap.of("partition", "0"),
         ImmutableMap.of("partition", "100")
     );
-    Mockito.when(task.getIOConfig().getPartitionFilterDimensions()).thenReturn(List.of("tenant"));
+    Mockito.when(task.getTuningConfig().getStreamingPartitionsSpec())
+           .thenReturn(new StreamingPartitionsSpec(List.of("tenant")));
 
     final DataSegment segment = createSingleSegment();
     final String lookupKey = SegmentIdWithShardSpec.fromDataSegment(segment).toString();

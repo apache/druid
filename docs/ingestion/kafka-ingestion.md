@@ -126,7 +126,6 @@ For configuration properties shared across all streaming ingestion methods, refe
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds.|No|100|
 |`useEarliestOffset`|Boolean|If a supervisor is managing a datasource for the first time, it obtains a set of starting offsets from Kafka. This flag determines whether the supervisor retrieves the earliest or latest offsets in Kafka. Under normal circumstances, subsequent tasks start from where the previous segments ended so this flag is only used on the first run.|No|`false`|
 |`idleConfig`|Object|Defines how and when the Kafka supervisor can become idle. See [Idle configuration](#idle-configuration) for more details.|No|null|
-|`partitionFilterDimensions`|List of String|Dimensions to track for query-time segment pruning. See [Partition filter dimensions](#partition-filter-dimensions) for details.|No|null|
 
 #### Ingest from multiple topics
 
@@ -264,17 +263,18 @@ The following example shows a supervisor spec with idle configuration enabled:
 ```
 </details>
 
-#### Partition filter dimensions
+#### Streaming partitions spec
 
-When you set `partitionFilterDimensions` in the IO config, the supervisor tracks the distinct values observed for each listed dimension during ingestion. At segment publish time, each segment is annotated with only the values it actually ingested. The broker then uses these annotations to skip segments at query time when the query filter doesn't intersect the segment's declared values.
+When you set `streamingPartitionsSpec.partitionDimensions` in the tuning config, the supervisor tracks the distinct values observed for each listed dimension during ingestion. At segment publish time, each segment is annotated with only the values it actually ingested. The broker then uses these annotations to skip segments at query time when the query filter doesn't intersect the segment's declared values.
 
-This enables segment pruning for streaming-ingested data without waiting for compaction to produce hash or range-partitioned segments.
+This enables segment pruning for streaming-ingested data without waiting for compaction to produce hash or range-partitioned segments. The `partitionDimensions` should be kept in sync with the compaction config's `partitionDimensions` for the same datasource.
 
 **Usage guidelines:**
 
 - Use only low-to-medium cardinality dimensions (for example, `tenant_id`, `region`, `environment`). High-cardinality dimensions bloat segment metadata with no pruning benefit.
 - Most effective when Kafka partitions are keyed by the tracked dimension (for example, using tenant ID as the message key). Each task naturally sees a subset of values, and segments get tight filter annotations.
 - Also works with multiple supervisors reading from separate topics into one datasource.
+- Use a range or hashed compaction `partitionsSpec`, not the dynamic strategy: dynamic compaction does not partition by dimension, so it cannot preserve pruning after compaction.
 - After compaction, the `StreamRangeShardSpec` annotations are replaced by the compaction output's shard spec (hash or range partitioning), which provides its own pruning.
 
 The following example configures a supervisor to track the `tenant` dimension:
@@ -295,8 +295,11 @@ The following example configures a supervisor to track the `tenant` dimension:
       "consumerProperties": {"bootstrap.servers": "localhost:9092"},
       "inputFormat": {"type": "json"},
       "taskCount": 4,
-      "taskDuration": "PT1H",
-      "partitionFilterDimensions": ["tenant"]
+      "taskDuration": "PT1H"
+    },
+    "tuningConfig": {
+      "type": "kafka",
+      "streamingPartitionsSpec": {"partitionDimensions": ["tenant"]}
     }
   }
 }
@@ -481,6 +484,7 @@ For configuration properties shared across all streaming ingestion methods, refe
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
 |`numPersistThreads`|Integer|The number of threads to use to create and persist incremental segments on the disk. Higher ingestion data throughput results in a larger number of incremental segments, causing significant CPU time to be spent on the creation of the incremental segments on the disk. For datasources with number of columns running into hundreds or thousands, creation of the incremental segments may take up significant time, in the order of multiple seconds. In both of these scenarios, ingestion can stall or pause frequently, causing it to fall behind. You can use additional threads to parallelize the segment creation without blocking ingestion as long as there are sufficient CPU resources available.|No|1|
+|`streamingPartitionsSpec`|Object|Configures query-time segment pruning for streaming-ingested segments. Contains a single property, `partitionDimensions` (List of String), the dimensions whose observed values each segment records so the broker can skip segments that can't match a query filter. See [Streaming partitions spec](#streaming-partitions-spec) for details.|No|null|
 
 ## Deployment notes on Kafka partitions and Druid segments
 

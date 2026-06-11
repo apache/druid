@@ -517,7 +517,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
       // Segments restored from disk span a task restart; their pre-restart values can't be re-observed, so record them
       // to fall back to a NumberedShardSpec (no pruning) at publish rather than stamping an incomplete filter.
-      final List<String> partitionFilterDims = ioConfig.getPartitionFilterDimensions();
+      final List<String> partitionFilterDims =
+          StreamingPartitionsSpec.getPartitionDimensionsOrEmpty(tuningConfig.getStreamingPartitionsSpec());
       if (!CollectionUtils.isNullOrEmpty(partitionFilterDims)) {
         for (SegmentIdWithShardSpec restored : appenderator.getSegments()) {
           restartSpannedSegments.add(restored.toString());
@@ -730,7 +731,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
                 if (addResult.isOk()) {
                   // Accumulate observed dimension values per segment for StreamRangeShardSpec at publish time.
-                  final List<String> filterDims = ioConfig.getPartitionFilterDimensions();
+                  final List<String> filterDims =
+                      StreamingPartitionsSpec.getPartitionDimensionsOrEmpty(tuningConfig.getStreamingPartitionsSpec());
                   if (!CollectionUtils.isNullOrEmpty(filterDims)) {
                     final String segmentId = addResult.getSegmentIdentifier().toString();
                     final Map<String, Set<String>> segValues = observedDimensionValuesBySegment
@@ -1080,7 +1082,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @VisibleForTesting
   DataSegment annotateSegmentWithPartitionFilters(DataSegment s)
   {
-    final List<String> filterDims = ioConfig.getPartitionFilterDimensions();
+    final List<String> filterDims =
+        StreamingPartitionsSpec.getPartitionDimensionsOrEmpty(tuningConfig.getStreamingPartitionsSpec());
     if (CollectionUtils.isNullOrEmpty(filterDims)) {
       return s;
     }

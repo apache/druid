@@ -31,6 +31,7 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
+import org.apache.druid.indexing.seekablestream.StreamingPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -206,7 +207,12 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
                                   .build()
                 )
         )
-        .withTuningConfig(t -> t.withMaxRowsPerSegment(1).withReleaseLocksOnHandoff(true))
+        .withTuningConfig(
+            t -> t.withMaxRowsPerSegment(1)
+                  .withReleaseLocksOnHandoff(true)
+                  // Track both a string dimension and a numeric dimension
+                  .withStreamingPartitionsSpec(new StreamingPartitionsSpec(List.of(COL_TENANT, colRegionCode)))
+        )
         .withIoConfig(
             ioConfig -> ioConfig
                 .withInputFormat(new CsvInputFormat(
@@ -219,8 +225,6 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
                 .withSupervisorRunPeriod(Period.millis(500))
                 .withCompletionTimeout(Period.seconds(5))
                 .withUseEarliestSequenceNumber(true)
-                // Track both a string dimension and a numeric dimension
-                .withPartitionFilterDimensions(List.of(COL_TENANT, colRegionCode))
         );
 
     cluster.callApi().postSupervisor(multiDimBuilder.withId(dataSource + "_supe_a").build(dataSource, topicA));
@@ -310,6 +314,7 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
                 .withMaxRowsPerSegment(100_000)
                 // Long enough that time-based persist/push doesn't fire during the test
                 .withIntermediatePersistPeriod(Period.hours(1))
+                .withStreamingPartitionsSpec(new StreamingPartitionsSpec(List.of(COL_TENANT)))
         )
         .withIoConfig(
             ioConfig -> ioConfig
@@ -324,7 +329,6 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
                 .withSupervisorRunPeriod(Period.millis(500))
                 .withCompletionTimeout(Period.seconds(30))
                 .withUseEarliestSequenceNumber(true)
-                .withPartitionFilterDimensions(List.of(COL_TENANT))
         )
         .withId(dataSource + "_supe")
         .build(dataSource, topic);
@@ -536,7 +540,7 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     records.add(record(topic, "%s,,val_9", DateTimes.of("2025-01-05T02:00:00")));
     kafkaServer.produceRecordsToTopic(records);
 
-    // Same layout as the partitioned test but with NO partitionFilterDimensions → plain NumberedShardSpec, no pruning.
+    // Same layout as the partitioned test but with NO streamingPartitionsSpec → plain NumberedShardSpec, no pruning.
     final KafkaSupervisorSpec spec = dayGranularitySupervisor(topic, List.of());
     cluster.callApi().postSupervisor(spec);
     awaitRowsProcessed(10);
@@ -826,6 +830,7 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
             tuningConfig -> tuningConfig
                 .withMaxRowsPerSegment(1)
                 .withReleaseLocksOnHandoff(true)
+                .withStreamingPartitionsSpec(new StreamingPartitionsSpec(List.of(COL_TENANT)))
         )
         .withIoConfig(
             ioConfig -> ioConfig
@@ -839,7 +844,6 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
                 .withSupervisorRunPeriod(Period.millis(500))
                 .withCompletionTimeout(Period.seconds(5))
                 .withUseEarliestSequenceNumber(true)
-                .withPartitionFilterDimensions(List.of(COL_TENANT))
         );
   }
 
@@ -860,21 +864,22 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
                 )
                 .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
         )
-        .withTuningConfig(t -> t.withMaxRowsPerSegment(1000).withReleaseLocksOnHandoff(true))
+        .withTuningConfig(t -> {
+          t.withMaxRowsPerSegment(1000).withReleaseLocksOnHandoff(true);
+          if (!partitionFilterDims.isEmpty()) {
+            t.withStreamingPartitionsSpec(new StreamingPartitionsSpec(partitionFilterDims));
+          }
+        })
         .withIoConfig(
-            ioConfig -> {
-              ioConfig.withInputFormat(new CsvInputFormat(
-                          List.of(COL_TIMESTAMP, COL_TENANT, COL_VALUE), null, null, false, 0, false))
-                      .withConsumerProperties(kafkaServer.consumerProperties())
-                      .withTaskDuration(Period.millis(500))
-                      .withStartDelay(Period.millis(10))
-                      .withSupervisorRunPeriod(Period.millis(500))
-                      .withCompletionTimeout(Period.seconds(5))
-                      .withUseEarliestSequenceNumber(true);
-              if (!partitionFilterDims.isEmpty()) {
-                ioConfig.withPartitionFilterDimensions(partitionFilterDims);
-              }
-            }
+            ioConfig -> ioConfig
+                .withInputFormat(new CsvInputFormat(
+                    List.of(COL_TIMESTAMP, COL_TENANT, COL_VALUE), null, null, false, 0, false))
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withTaskDuration(Period.millis(500))
+                .withStartDelay(Period.millis(10))
+                .withSupervisorRunPeriod(Period.millis(500))
+                .withCompletionTimeout(Period.seconds(5))
+                .withUseEarliestSequenceNumber(true)
         )
         .withId(dataSource + "_supe")
         .build(dataSource, topic);

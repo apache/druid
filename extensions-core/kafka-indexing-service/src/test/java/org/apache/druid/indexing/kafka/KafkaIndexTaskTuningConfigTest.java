@@ -24,6 +24,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaTuningConfigBuilder;
 import org.apache.druid.indexing.kafka.test.TestModifiedKafkaIndexTaskTuningConfig;
+import org.apache.druid.indexing.seekablestream.StreamingPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -36,6 +37,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 
 public class KafkaIndexTaskTuningConfigTest
 {
@@ -129,6 +131,36 @@ public class KafkaIndexTaskTuningConfigTest
   }
 
   @Test
+  public void testSerdeWithStreamingPartitionsSpec() throws Exception
+  {
+    final String jsonStr = "{\n"
+                           + "  \"type\": \"kafka\",\n"
+                           + "  \"streamingPartitionsSpec\": {\"partitionDimensions\": [\"tenant\", \"region\"]}\n"
+                           + "}";
+
+    final KafkaIndexTaskTuningConfig config = (KafkaIndexTaskTuningConfig) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonStr, TuningConfig.class)),
+        TuningConfig.class
+    );
+
+    Assert.assertEquals(
+        new StreamingPartitionsSpec(List.of("tenant", "region")),
+        config.getStreamingPartitionsSpec()
+    );
+    Assert.assertEquals(List.of("tenant", "region"), config.getStreamingPartitionsSpec().getPartitionDimensions());
+  }
+
+  @Test
+  public void testSerdeWithoutStreamingPartitionsSpecIsNull() throws Exception
+  {
+    final KafkaIndexTaskTuningConfig config = (KafkaIndexTaskTuningConfig) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue("{\"type\": \"kafka\"}", TuningConfig.class)),
+        TuningConfig.class
+    );
+    Assert.assertNull(config.getStreamingPartitionsSpec());
+  }
+
+  @Test
   public void testConvert()
   {
     KafkaSupervisorTuningConfig original = new KafkaTuningConfigBuilder()
@@ -186,7 +218,8 @@ public class KafkaIndexTaskTuningConfigTest
         42,
         2,
         -1,
-        false
+        false,
+        null
     );
 
     String serialized = mapper.writeValueAsString(base);
