@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import 'regenerator-runtime/runtime';
 import './bootstrap/ace';
 
 import { OverlaysProvider } from '@blueprintjs/core';

@@ -35,13 +35,13 @@
     "prettify-check": "prettier --check '{src,e2e-tests}/**/*.{ts,tsx,scss}' './*.js'",
     "generate-licenses-file": "license-checker --production --json --out licenses.json",
     "check-licenses": "license-checker --production --onlyAllow 'Apache-1.1;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD;MIT;ISC;CC0-1.0;OFL-1.1' --summary",
-    "start": "webpack serve"
+    "start": "vite"
   },
   "engines": {
     "node": ">=20"
   },
   "volta": {
-    "node": "20.9.0",
+    "node": "20.19.0",
     "npm": "10.9.0"
   },
   "browserslist": [
@@ -91,7 +91,6 @@
     "react-router": "^5.3.4",
     "react-router-dom": "^5.3.4",
     "react-table": "~6.11.5",
-    "regenerator-runtime": "^0.13.7",
     "tslib": "^2.8.0",
     "uuid": "^7.0.3",
     "zustand": "^4.5.5"
@@ -125,10 +124,10 @@
     "@types/react-router-dom": "^5.3.3",
     "@types/react-table": "6.8.5",
     "@types/uuid": "^7.0.2",
+    "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.20",
     "browserslist": "^4.24.0",
     "codecov": "^3.8.2",
-    "css-loader": "^5.2.1",
     "eslint": "^9.31.0",
     "eslint-plugin-notice": "^1.0.0",
     "eslint-plugin-react": "^7.37.1",
@@ -141,24 +140,18 @@
     "license-checker": "^25.0.1",
     "playwright-chromium": "^1.24.1",
     "postcss": "^8.4.47",
-    "postcss-loader": "^5.3.0",
     "postcss-preset-env": "^10.0.7",
     "prettier": "^2.5.1",
     "react-shallow-renderer": "^16.15.0",
     "replace": "^1.2.2",
-    "sass": "^1.59.3",
-    "sass-loader": "^13.2.0",
+    "sass": "^1.99.0",
     "snarkdown": "^2.0.0",
-    "style-loader": "^2.0.0",
     "stylelint": "^16.1.0",
     "ts-jest": "^29.2.5",
-    "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "typescript": "~5.5.4",
-    "webpack": "^5.89.0",
-    "webpack-bundle-analyzer": "^4.10.1",
-    "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.2.2"
+    "vite": "^8.0.8",
+    "vite-plugin-css-injected-by-js": "^5.0.0"
   },
   "overrides": {
     "@types/react": "$@types/react"
