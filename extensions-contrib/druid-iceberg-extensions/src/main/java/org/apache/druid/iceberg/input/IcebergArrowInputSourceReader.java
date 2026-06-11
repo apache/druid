@@ -84,6 +84,13 @@ import java.util.stream.Collectors;
  */
 public class IcebergArrowInputSourceReader implements InputSourceReader
 {
+  // Pin Arrow to Unsafe allocator: Netty backend fails on JDK 25 (EmptyByteBuf.memoryAddress UnsupportedOperationException).
+  static {
+    if (System.getProperty("arrow.allocation.manager.type") == null) {
+      System.setProperty("arrow.allocation.manager.type", "Unsafe");
+    }
+  }
+
   static final int DEFAULT_BATCH_SIZE = 1024;
 
   private final Table table;
@@ -113,7 +120,7 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
   }
 
   @Override
-  public CloseableIterator<InputRow> read(final InputStats inputStats) throws IOException
+  public CloseableIterator<InputRow> read(@Nullable final InputStats inputStats) throws IOException
   {
     final TableScan scan = buildScan();
     final CloseableIterable<CombinedScanTask> tasks = TableScanUtil.planTasks(
@@ -124,7 +131,12 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     );
     final ArrowReader arrowReader = new ArrowReader(scan, batchSize, true);
     final org.apache.iceberg.io.CloseableIterator<ColumnarBatch> batchIter = arrowReader.open(tasks);
-    return new ArrowInputRowIterator(batchIter, arrowReader, tasks, inputStats);
+    return new ArrowInputRowIterator(
+        batchIter,
+        arrowReader,
+        tasks,
+        inputStats != null ? inputStats : new NoopInputStats()
+    );
   }
 
   @Override

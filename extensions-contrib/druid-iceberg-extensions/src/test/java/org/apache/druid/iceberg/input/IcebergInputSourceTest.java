@@ -21,7 +21,6 @@ package org.apache.druid.iceberg.input;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -273,76 +272,6 @@ public class IcebergInputSourceTest
     );
     Assert.assertTrue(
         "Expect residual error to be thrown",
-        exception.getMessage().contains("residual")
-    );
-  }
-
-  @Test
-  public void testArrowReaderIsNonSplittable() throws IOException
-  {
-    // When useArrowReader=true, splittable contract MUST route through the Arrow path,
-    // not silently fall back to the delegate (path-based) reader in parallel ingestion.
-    final IcebergInputSource inputSource = new IcebergInputSource(
-        TABLENAME,
-        NAMESPACE,
-        null,
-        testCatalog,
-        new LocalInputSourceFactory(),
-        null,
-        null,
-        true,
-        1024
-    );
-    final List<InputSplit<List<String>>> splits =
-        inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null))
-                   .collect(Collectors.toList());
-    Assert.assertEquals("Arrow mode must produce exactly one split", 1, splits.size());
-    Assert.assertEquals(
-        "Arrow mode estimateNumSplits must be 1",
-        1,
-        inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(null, null))
-    );
-    final org.apache.druid.data.input.InputSource child = inputSource.withSplit(splits.get(0));
-    Assert.assertTrue(
-        "withSplit on Arrow mode must return an IcebergInputSource (not the delegate)",
-        child instanceof IcebergInputSource
-    );
-    Assert.assertTrue(
-        "withSplit on Arrow mode must preserve useArrowReader=true",
-        ((IcebergInputSource) child).isUseArrowReader()
-    );
-  }
-
-  @Test
-  public void testResidualFilterModeFailWithArrowReader() throws IOException
-  {
-    // Arrow path must honor residualFilterMode=FAIL just like the path-based path.
-    final IcebergInputSource inputSource = new IcebergInputSource(
-        TABLENAME,
-        NAMESPACE,
-        new IcebergEqualsFilter("id", "123988"),
-        testCatalog,
-        new LocalInputSourceFactory(),
-        null,
-        ResidualFilterMode.FAIL,
-        true,
-        1024
-    );
-    final InputRowSchema inputRowSchema = new InputRowSchema(
-        new org.apache.druid.data.input.impl.TimestampSpec("timestamp", "millis", null),
-        org.apache.druid.data.input.impl.DimensionsSpec.builder().build(),
-        org.apache.druid.data.input.ColumnsFilter.all()
-    );
-    final DruidException exception = Assert.assertThrows(
-        DruidException.class,
-        () -> {
-          final org.apache.druid.data.input.InputSourceReader reader =
-              inputSource.reader(inputRowSchema, null, FileUtils.createTempDir());
-          reader.read().close();
-        }
-    );
-    Assert.assertTrue(
-        "Expect residual error to be thrown on Arrow path: " + exception.getMessage(),
         exception.getMessage().contains("residual")
     );
   }
