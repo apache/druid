@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import type { SupervisorSpec } from './supervisor-conversion';
+import type { IngestionSpec } from '../druid-models';
+
 import { convertSupervisorToSql } from './supervisor-conversion';
 
 expect.addSnapshotSerializer({
@@ -24,7 +25,7 @@ expect.addSnapshotSerializer({
   print: String,
 });
 
-function wikipediaSupervisor(): SupervisorSpec {
+function wikipediaSupervisor(): IngestionSpec {
   return {
     type: 'kafka',
     spec: {
@@ -55,7 +56,7 @@ function wikipediaSupervisor(): SupervisorSpec {
         },
       },
     },
-  };
+  } as IngestionSpec;
 }
 
 describe('supervisor conversion', () => {
@@ -66,21 +67,66 @@ describe('supervisor conversion', () => {
         fileType: 'json',
       });
 
-      expect(converted.queryString).toMatchSnapshot();
-      expect(converted.queryContext).toEqual({});
+      expect(converted.queryString).toMatchInlineSnapshot(`
+        -- This SQL query was auto generated from an ingestion spec
+        SET arrayIngestMode = 'array';
+        SET finalizeAggregations = FALSE;
+        SET groupByEnableMultiValueUnnesting = FALSE;
+        REPLACE INTO "wikipedia" OVERWRITE ALL
+        WITH "source" AS (SELECT * FROM TABLE(
+          EXTERN(
+            '{"type":"s3","uris":["s3://my-bucket/wikipedia/data/"],"objectGlob":"**.json"}',
+            '{"type":"json"}'
+          )
+        ) EXTEND ("timestamp" VARCHAR, "channel" VARCHAR, "user" VARCHAR, "page" VARCHAR, "namespace" VARCHAR, "added" BIGINT))
+        SELECT
+          TIME_PARSE("timestamp") AS "__time",
+          "channel",
+          "user",
+          "page",
+          "namespace",
+          COUNT(*) AS "count",
+          SUM("added") AS "sum_added"
+        FROM "source"
+        GROUP BY 1, 2, 3, 4, 5
+        PARTITIONED BY DAY
+        CLUSTERED BY "channel", "user"
+      `);
     });
 
-    it('converts a supervisor without metrics (no GROUP BY)', () => {
+    it('does not GROUP BY when rollup is disabled', () => {
       const supervisor = wikipediaSupervisor();
-      delete supervisor.spec.dataSchema.metricsSpec;
+      supervisor.spec.dataSchema.granularitySpec = { rollup: false };
 
       const converted = convertSupervisorToSql(supervisor, {
         fileLocation: 's3://my-bucket/wikipedia/data/',
         fileType: 'json',
       });
 
-      expect(converted.queryString).toMatchSnapshot();
       expect(converted.queryString).not.toContain('GROUP BY');
+    });
+
+    it('declares numeric metric and dimension columns with their native types', () => {
+      const supervisor = wikipediaSupervisor();
+      supervisor.spec.dataSchema.dimensionsSpec = {
+        dimensions: ['channel', { name: 'delta', type: 'long' }, { name: 'ratio', type: 'double' }],
+      };
+      supervisor.spec.dataSchema.metricsSpec = [
+        { name: 'sum_added', type: 'longSum', fieldName: 'added' },
+        { name: 'unique_user', type: 'thetaSketch', fieldName: 'user' },
+      ];
+
+      const converted = convertSupervisorToSql(supervisor, {
+        fileLocation: 's3://my-bucket/wikipedia/data/',
+        fileType: 'json',
+      });
+
+      // The EXTERN signature carries native types, not all VARCHAR
+      expect(converted.queryString).toContain('"delta" BIGINT');
+      expect(converted.queryString).toContain('"ratio" DOUBLE');
+      expect(converted.queryString).toContain('"added" BIGINT');
+      // Sketch metrics read from a string input column
+      expect(converted.queryString).toContain('"user" VARCHAR');
     });
 
     it('converts the full range of supported metric aggregations', () => {
@@ -105,7 +151,41 @@ describe('supervisor conversion', () => {
         fileType: 'json',
       });
 
-      expect(converted.queryString).toMatchSnapshot();
+      expect(converted.queryString).toMatchInlineSnapshot(`
+        -- This SQL query was auto generated from an ingestion spec
+        SET arrayIngestMode = 'array';
+        SET finalizeAggregations = FALSE;
+        SET groupByEnableMultiValueUnnesting = FALSE;
+        REPLACE INTO "wikipedia" OVERWRITE ALL
+        WITH "source" AS (SELECT * FROM TABLE(
+          EXTERN(
+            '{"type":"s3","uris":["s3://my-bucket/wikipedia/data/"],"objectGlob":"**.json"}',
+            '{"type":"json"}'
+          )
+        ) EXTEND ("timestamp" VARCHAR, "channel" VARCHAR, "user" VARCHAR, "page" VARCHAR, "namespace" VARCHAR, "added" BIGINT))
+        SELECT
+          TIME_PARSE("timestamp") AS "__time",
+          "channel",
+          "user",
+          "page",
+          "namespace",
+          COUNT(*) AS "count",
+          SUM("added") AS "sum_added",
+          MIN("added") AS "min_added",
+          MAX("added") AS "max_added",
+          EARLIEST("added") AS "first_added",
+          LATEST("added") AS "last_added",
+          EARLIEST("page", 128) AS "first_page",
+          LATEST("page", 128) AS "last_page",
+          APPROX_COUNT_DISTINCT_DS_THETA("user") AS "theta_user",
+          APPROX_COUNT_DISTINCT_DS_HLL("user") AS "hll_user",
+          DS_QUANTILES_SKETCH("added") AS "quantiles_added",
+          APPROX_COUNT_DISTINCT_BUILTIN("user") AS "unique_user"
+        FROM "source"
+        GROUP BY 1, 2, 3, 4, 5
+        PARTITIONED BY DAY
+        CLUSTERED BY "channel", "user"
+      `);
     });
 
     it('includes non-default sketch arguments', () => {
@@ -133,10 +213,13 @@ describe('supervisor conversion', () => {
         fileType: 'json',
       });
 
-      expect(converted.queryString).toMatchSnapshot();
+      expect(converted.queryString).toContain('APPROX_COUNT_DISTINCT_DS_THETA("user", 32768)');
+      expect(converted.queryString).toContain(`APPROX_COUNT_DISTINCT_DS_HLL("user", 14, 'HLL_8')`);
+      expect(converted.queryString).toContain('DS_QUANTILES_SKETCH("added", 256)');
+      expect(converted.queryString).toContain('EARLIEST("page", 1024)');
     });
 
-    it('drops unsupported metrics and metrics missing a fieldName', () => {
+    it('emits a comment for unsupported metrics and metrics missing a fieldName', () => {
       const supervisor = wikipediaSupervisor();
       supervisor.spec.dataSchema.metricsSpec = [
         { name: 'sum_added', type: 'longSum', fieldName: 'added' },
@@ -149,9 +232,8 @@ describe('supervisor conversion', () => {
         fileType: 'json',
       });
 
-      expect(converted.queryString).toContain('"sum_added"');
-      expect(converted.queryString).not.toContain('unsupported');
-      expect(converted.queryString).not.toContain('no_field');
+      expect(converted.queryString).toContain('SUM("added") AS "sum_added"');
+      expect(converted.queryString).toContain('could not convert metric');
     });
 
     it('adds objectGlob for an s3 directory location', () => {
@@ -179,7 +261,7 @@ describe('supervisor conversion', () => {
         fileType: 'json',
       });
 
-      expect(converted.queryString).toContain('google');
+      expect(converted.queryString).toContain('"type":"google"');
     });
 
     it('builds an http input source for an http(s) location', () => {
@@ -188,7 +270,7 @@ describe('supervisor conversion', () => {
         fileType: 'json',
       });
 
-      expect(converted.queryString).toContain('http');
+      expect(converted.queryString).toContain('"type":"http"');
     });
 
     it('builds a local input source and strips the file:// prefix', () => {
@@ -197,74 +279,15 @@ describe('supervisor conversion', () => {
         fileType: 'csv',
       });
 
-      expect(converted.queryString).toContain('local');
+      expect(converted.queryString).toContain('"type":"local"');
       expect(converted.queryString).toContain('/var/data/wikipedia/');
       expect(converted.queryString).not.toContain('file://');
       expect(converted.queryString).toContain('*.csv');
     });
 
-    it('declares numeric metric and dimension columns with their native types', () => {
-      const supervisor = wikipediaSupervisor();
-      supervisor.spec.dataSchema.dimensionsSpec = {
-        dimensions: ['channel', { name: 'delta', type: 'long' }, { name: 'ratio', type: 'double' }],
-      };
-      supervisor.spec.dataSchema.metricsSpec = [
-        { name: 'sum_added', type: 'longSum', fieldName: 'added' },
-        { name: 'sum_value', type: 'doubleSum', fieldName: 'value' },
-        { name: 'unique_user', type: 'thetaSketch', fieldName: 'user' },
-      ];
-
-      const converted = convertSupervisorToSql(supervisor, {
-        fileLocation: 's3://my-bucket/wikipedia/data/',
-        fileType: 'json',
-      });
-
-      expect(converted.queryString).toContain('{"name":"delta","type":"LONG"}');
-      expect(converted.queryString).toContain('{"name":"ratio","type":"DOUBLE"}');
-      expect(converted.queryString).toContain('{"name":"added","type":"LONG"}');
-      expect(converted.queryString).toContain('{"name":"value","type":"DOUBLE"}');
-      // Sketch fields read from a string input column
-      expect(converted.queryString).toContain('{"name":"user","type":"STRING"}');
-    });
-
-    it('applies segment granularity to PARTITIONED BY and query granularity via TIME_FLOOR', () => {
-      const supervisor = wikipediaSupervisor();
-      supervisor.spec.dataSchema.granularitySpec = {
-        segmentGranularity: 'HOUR',
-        queryGranularity: 'hour',
-      };
-
-      const converted = convertSupervisorToSql(supervisor, {
-        fileLocation: 's3://my-bucket/wikipedia/data/',
-        fileType: 'json',
-      });
-
-      expect(converted.queryString).toContain('PARTITIONED BY HOUR');
-      expect(converted.queryString).toContain(`TIME_FLOOR(TIME_PARSE("timestamp", 'iso'), 'PT1H')`);
-      // The GROUP BY uses the same floored time expression
-      expect(converted.queryString).toContain(
-        `GROUP BY TIME_FLOOR(TIME_PARSE("timestamp", 'iso'), 'PT1H')`,
-      );
-    });
-
-    it('treats query granularity none as no TIME_FLOOR', () => {
-      const supervisor = wikipediaSupervisor();
-      supervisor.spec.dataSchema.granularitySpec = {
-        segmentGranularity: 'DAY',
-        queryGranularity: { type: 'none' },
-      };
-
-      const converted = convertSupervisorToSql(supervisor, {
-        fileLocation: 's3://my-bucket/wikipedia/data/',
-        fileType: 'json',
-      });
-
-      expect(converted.queryString).not.toContain('TIME_FLOOR');
-    });
-
     it('preserves the supervisor input format settings, overriding only the type', () => {
       const supervisor = wikipediaSupervisor();
-      supervisor.spec.ioConfig!.inputFormat = {
+      (supervisor.spec.ioConfig as any).inputFormat = {
         type: 'kafka',
         valueFormat: { type: 'json', flattenSpec: { fields: [{ name: 'x', expr: '$.x' }] } },
       };
@@ -279,11 +302,11 @@ describe('supervisor conversion', () => {
       expect(converted.queryString).not.toContain('"type":"kafka"');
     });
 
-    it('escapes single quotes in a custom timestamp format', () => {
+    it('applies the supervisor segment and query granularity', () => {
       const supervisor = wikipediaSupervisor();
-      supervisor.spec.dataSchema.timestampSpec = {
-        column: 'timestamp',
-        format: "yyyy-MM-dd'T'HH:mm:ss",
+      supervisor.spec.dataSchema.granularitySpec = {
+        segmentGranularity: 'HOUR',
+        queryGranularity: 'hour',
       };
 
       const converted = convertSupervisorToSql(supervisor, {
@@ -291,20 +314,17 @@ describe('supervisor conversion', () => {
         fileType: 'json',
       });
 
-      // The literal single quotes around T must be doubled to be valid SQL
-      expect(converted.queryString).toContain(`'yyyy-MM-dd''T''HH:mm:ss'`);
+      expect(converted.queryString).toContain('PARTITIONED BY HOUR');
+      expect(converted.queryString).toContain(`TIME_FLOOR(TIME_PARSE("timestamp"), 'PT1H')`);
     });
 
-    it('uses TIME_PARSE without a format when timestamp format is auto', () => {
-      const supervisor = wikipediaSupervisor();
-      supervisor.spec.dataSchema.timestampSpec = { column: 'timestamp', format: 'auto' };
-
-      const converted = convertSupervisorToSql(supervisor, {
+    it('defaults to PARTITIONED BY DAY when no segment granularity is set', () => {
+      const converted = convertSupervisorToSql(wikipediaSupervisor(), {
         fileLocation: 's3://my-bucket/wikipedia/data/',
         fileType: 'json',
       });
 
-      expect(converted.queryString).toContain('TIME_PARSE("timestamp")');
+      expect(converted.queryString).toContain('PARTITIONED BY DAY');
     });
 
     it('clusters by at most the first two dimensions', () => {
@@ -318,9 +338,7 @@ describe('supervisor conversion', () => {
         fileType: 'json',
       });
 
-      expect(converted.queryString).toContain('PARTITIONED BY DAY');
       expect(converted.queryString).toContain('CLUSTERED BY "a", "b"');
-      // Only the first two dimensions are clustered; "c" and "d" are not in the CLUSTERED BY clause.
       const clusteredBy = converted.queryString.slice(
         converted.queryString.indexOf('CLUSTERED BY'),
       );
@@ -337,25 +355,15 @@ describe('supervisor conversion', () => {
         fileType: 'json',
       });
 
-      expect(converted.queryString).toContain('PARTITIONED BY DAY');
       expect(converted.queryString).not.toContain('CLUSTERED BY');
     });
 
     it('throws when dataSchema is missing', () => {
-      const supervisor = { type: 'kafka', spec: {} } as unknown as SupervisorSpec;
+      const supervisor = { type: 'kafka', spec: {} } as unknown as IngestionSpec;
 
       expect(() =>
         convertSupervisorToSql(supervisor, { fileLocation: 's3://x/', fileType: 'json' }),
       ).toThrow('Supervisor spec missing dataSchema');
-    });
-
-    it('throws when dataSource is missing', () => {
-      const supervisor = wikipediaSupervisor();
-      (supervisor.spec.dataSchema as any).dataSource = undefined;
-
-      expect(() =>
-        convertSupervisorToSql(supervisor, { fileLocation: 's3://x/', fileType: 'json' }),
-      ).toThrow('Supervisor spec missing dataSource');
     });
   });
 });

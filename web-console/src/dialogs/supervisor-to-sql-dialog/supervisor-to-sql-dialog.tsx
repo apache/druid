@@ -23,6 +23,10 @@ import {
   FormGroup,
   InputGroup,
   Intent,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
   Radio,
   RadioGroup,
   TextArea,
@@ -31,39 +35,15 @@ import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
 import { ExternalLink } from '../../components';
+import type { IngestionSpec, QueryWithContext } from '../../druid-models';
 import { convertSupervisorToSql } from '../../helpers/supervisor-conversion';
 import { Api, AppToaster } from '../../singletons';
-import { deepGet } from '../../utils';
+import { deepGet, tickIcon } from '../../utils';
 
 import './supervisor-to-sql-dialog.scss';
 
-interface SupervisorSpec {
-  type: string;
-  spec: {
-    dataSchema: {
-      dataSource: string;
-      timestampSpec: {
-        column: string;
-        format: string;
-      };
-      dimensionsSpec: {
-        dimensions: (string | { name: string; type: string })[];
-      };
-      metricsSpec: { name?: string; fieldName?: string; type: string }[];
-    };
-    ioConfig?: {
-      topic?: string;
-      inputSource?: {
-        type: string;
-        uris?: string[];
-        baseDir?: string;
-      };
-    };
-  };
-}
-
 export interface SupervisorToSqlDialogProps {
-  onConvert(converted: { queryString: string; queryContext: any }, datasource?: string): void;
+  onConvert(converted: QueryWithContext, datasource?: string): void;
   onClose(): void;
 }
 
@@ -76,7 +56,7 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
   const [selectedSupervisor, setSelectedSupervisor] = useState<string>('');
   const [pastedSupervisor, setPastedSupervisor] = useState<string>('');
   const [availableSupervisors, setAvailableSupervisors] = useState<string[]>([]);
-  const [supervisorSpec, setSupervisorSpec] = useState<SupervisorSpec | undefined>();
+  const [supervisorSpec, setSupervisorSpec] = useState<IngestionSpec | undefined>();
 
   const [fileLocation, setFileLocation] = useState<string>('');
   const [fileType, setFileType] = useState<string>('json');
@@ -91,10 +71,8 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
   async function loadSupervisors() {
     try {
       const supervisors = await Api.instance.get<string[]>('/druid/indexer/v1/supervisor');
+      // Don't auto-select; leave the button showing "Select supervisor" until the user picks one
       setAvailableSupervisors(supervisors.data);
-      if (supervisors.data.length > 0) {
-        setSelectedSupervisor(supervisors.data[0]);
-      }
     } catch (e) {
       setError(`Failed to load supervisors: ${e.message}`);
     }
@@ -107,7 +85,7 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
     setError(undefined);
 
     try {
-      const resp = await Api.instance.get<SupervisorSpec>(
+      const resp = await Api.instance.get<IngestionSpec>(
         `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}`,
       );
       setSupervisorSpec(resp.data);
@@ -169,7 +147,7 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
       return;
     }
 
-    let converted: { queryString: string; queryContext: any };
+    let converted: QueryWithContext;
     try {
       converted = convertSupervisorToSql(supervisorSpec, {
         fileLocation,
@@ -218,11 +196,12 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
     >
       <div className={Classes.DIALOG_BODY}>
         <p>
-          Convert a streaming supervisor specification to an MSQ (Multi-Stage Query) ingestion SQL
-          statement.{' '}
+          Convert a streaming supervisor specification into an{' '}
           <ExternalLink href="https://druid.apache.org/docs/latest/multi-stage-query/">
-            Learn more
-          </ExternalLink>
+            MSQ (Multi-Stage Query)
+          </ExternalLink>{' '}
+          ingestion SQL statement. This generates a one-time batch ingestion that reads the supplied
+          files — it does not start a streaming ingestion and will not continuously ingest new data.
         </p>
 
         <FormGroup label="Supervisor source">
@@ -237,18 +216,28 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
 
         {supervisorSource === 'select' ? (
           <FormGroup label="Select supervisor">
-            <div className="bp4-select bp4-fill">
-              <select
-                value={selectedSupervisor}
-                onChange={e => setSelectedSupervisor(e.target.value)}
-              >
-                {availableSupervisors.map(name => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Popover
+              position={Position.BOTTOM_LEFT}
+              disabled={!availableSupervisors.length}
+              content={
+                <Menu>
+                  {availableSupervisors.map(name => (
+                    <MenuItem
+                      key={name}
+                      icon={tickIcon(name === selectedSupervisor)}
+                      text={name}
+                      onClick={() => setSelectedSupervisor(name)}
+                    />
+                  ))}
+                </Menu>
+              }
+            >
+              <Button
+                text={selectedSupervisor || 'Select supervisor'}
+                rightIcon={IconNames.CARET_DOWN}
+                disabled={!availableSupervisors.length}
+              />
+            </Popover>
           </FormGroup>
         ) : (
           <FormGroup

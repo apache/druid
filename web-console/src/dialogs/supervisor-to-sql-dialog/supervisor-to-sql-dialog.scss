@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .supervisor-to-sql-dialog {
   width: 650px;
 
@@ -27,15 +29,15 @@
     color: #ff7373;
   }
 
-  .bp4-form-group {
+  .#{$bp-ns}-form-group {
     margin-bottom: 20px;
   }
 
-  .bp4-radio-group {
+  .#{$bp-ns}-radio-group {
     margin-top: 5px;
   }
 
-  .bp4-text-area {
+  .#{$bp-ns}-text-area {
     font-family: monospace;
     font-size: 12px;
   }

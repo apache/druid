@@ -39,7 +39,7 @@ export * from './string-input-dialog/string-input-dialog';
 export * from './supervisor-reset-offsets-dialog/supervisor-reset-offsets-dialog';
 export * from './supervisor-reset-to-latest-dialog/supervisor-reset-to-latest-dialog';
 export * from './supervisor-table-action-dialog/supervisor-table-action-dialog';
+export * from './supervisor-to-sql-dialog/supervisor-to-sql-dialog';
 export * from './table-action-dialog/table-action-dialog';
 export * from './task-group-handoff-dialog/task-group-handoff-dialog';
 export * from './task-table-action-dialog/task-table-action-dialog';
-export * from './supervisor-to-sql-dialog';
