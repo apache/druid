@@ -321,7 +321,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.20.2
+version: 2.21.3
 libraries:
   - com.fasterxml.jackson.core: jackson-core
   - com.fasterxml.jackson.core: jackson-annotations
@@ -364,7 +364,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: "2.20"
+version: "2.21"
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
 
@@ -374,7 +374,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.20.2
+version: 2.21.3
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -424,7 +424,7 @@ name: Caffeine
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.9.3
+version: 3.2.4
 libraries:
   - com.github.ben-manes.caffeine: caffeine
 
@@ -434,7 +434,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.41.0
+version: 2.49.0
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -1002,7 +1002,7 @@ name: Jackson
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.20.2
+version: 2.21.3
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-properties
 notice: |
@@ -1104,6 +1104,16 @@ license_name: Apache License version 2.0
 version: 1.17.2
 libraries:
   - com.squareup.okio: okio
+
+---
+
+name: org.jspecify jspecify
+license_category: binary
+module: extensions-core/kubernetes-extensions
+license_name: Apache License version 2.0
+version: 1.0.0
+libraries:
+  - org.jspecify: jspecify
 
 ---
 
@@ -1890,7 +1900,6 @@ libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
   - org.apache.curator: curator-recipes
-  - org.apache.curator: curator-x-discovery
 notices:
   - curator-client: |
       Curator Client
@@ -1900,9 +1909,6 @@ notices:
       Copyright 2011-2022 The Apache Software Foundation
   - curator-recipes: |
       Curator Recipes
-      Copyright 2011-2022 The Apache Software Foundation
-  - curator-x-discovery: |
-      Curator Service Discovery
       Copyright 2011-2022 The Apache Software Foundation
 
 ---
@@ -3069,7 +3075,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.20.2
+version: 2.21.3
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0

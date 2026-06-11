@@ -247,7 +247,7 @@ public class TaskToolboxFactory
         .queryProcessingPool(queryProcessingPool)
         .joinableFactory(joinableFactory)
         .monitorSchedulerProvider(monitorSchedulerProvider)
-        .segmentCacheManager(segmentCacheManagerFactory.manufacturate(taskWorkDir, true))
+        .segmentCacheManager(segmentCacheManagerFactory.manufacturate(taskWorkDir, null, true))
         .jsonMapper(jsonMapper)
         .taskWorkDir(taskWorkDir)
         .indexIO(indexIO)

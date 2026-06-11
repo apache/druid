@@ -54,6 +54,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SegmentManager;
@@ -256,6 +257,12 @@ public class MSQTestWorkerContext implements WorkerContext
     public SegmentManager segmentManager()
     {
       return injector.getInstance(SegmentManager.class);
+    }
+
+    @Override
+    public VirtualStorageManager virtualStorageManager()
+    {
+      return injector.getInstance(VirtualStorageManager.class);
     }
 
     @Override

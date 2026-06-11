@@ -31,16 +31,17 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
+import org.apache.druid.msq.dart.guice.DartWorkerConfig;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SegmentManager;
 
@@ -60,9 +61,10 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
   private final Injector injector;
   private final ServiceClientFactory serviceClientFactory;
   private final DruidProcessingConfig processingConfig;
+  private final DartWorkerConfig workerConfig;
   private final SegmentWrangler segmentWrangler;
-  private final GroupingEngine groupingEngine;
   private final SegmentManager segmentManager;
+  private final VirtualStorageManager virtualStorageManager;
   private final CoordinatorClient coordinatorClient;
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
@@ -80,9 +82,10 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
       Injector injector,
       @EscalatedGlobal ServiceClientFactory serviceClientFactory,
       DruidProcessingConfig processingConfig,
+      DartWorkerConfig workerConfig,
       SegmentWrangler segmentWrangler,
-      GroupingEngine groupingEngine,
       SegmentManager segmentManager,
+      VirtualStorageManager virtualStorageManager,
       CoordinatorClient coordinatorClient,
       MemoryIntrospector memoryIntrospector,
       @Dart ProcessingBuffersProvider processingBuffersProvider,
@@ -99,10 +102,11 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
     this.injector = injector;
     this.serviceClientFactory = serviceClientFactory;
     this.processingConfig = processingConfig;
+    this.workerConfig = workerConfig;
     this.segmentWrangler = segmentWrangler;
     this.coordinatorClient = coordinatorClient;
-    this.groupingEngine = groupingEngine;
     this.segmentManager = segmentManager;
+    this.virtualStorageManager = virtualStorageManager;
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
     this.outbox = outbox;
@@ -128,8 +132,10 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
         injector,
         createWorkerClient(queryId),
         processingConfig,
+        workerConfig,
         segmentWrangler,
         segmentManager,
+        virtualStorageManager,
         coordinatorClient,
         memoryIntrospector,
         processingBuffersProvider,

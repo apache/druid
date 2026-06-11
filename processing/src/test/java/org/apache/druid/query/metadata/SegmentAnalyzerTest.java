@@ -422,6 +422,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
   {
     QueryableIndex mockIndex = EasyMock.createMock(QueryableIndex.class);
     EasyMock.expect(mockIndex.getNumRows()).andReturn(100).atLeastOnce();
+    EasyMock.expect(mockIndex.getClusteredBaseSummary()).andReturn(null).anyTimes();
     EasyMock.expect(mockIndex.getColumnNames()).andReturn(Collections.singletonList("x")).atLeastOnce();
     EasyMock.expect(mockIndex.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME))
             .andReturn(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG))

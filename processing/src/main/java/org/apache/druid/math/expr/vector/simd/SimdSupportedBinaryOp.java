@@ -17,32 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.cli.convert;
-
-import com.google.common.collect.ImmutableMap;
-
-import java.util.Map;
-import java.util.Properties;
+package org.apache.druid.math.expr.vector.simd;
 
 /**
+ * Identifies which binary math operations have a {@code jdk.incubator.vector} (SIMD) specialization. Used by
+ * {@link org.apache.druid.math.expr.vector.SimpleVectorMathBivariateProcessorFactory} subclasses to declare that
+ * their operation can be dispatched to a SIMD variant when the user enables
+ * {@link org.apache.druid.math.expr.ExpressionProcessingConfig#USE_VECTOR_API}.
+ *
+ * Deliberately does not reference any {@code jdk.incubator.vector} types so that callers wiring the enum into
+ * factories do not need the incubator module visible.
  */
-public class ChatHandlerConverter implements PropertyConverter
+public enum SimdSupportedBinaryOp
 {
-
-  private static final String PROPERTY = "druid.indexer.chathandler.publishDiscovery";
-
-  @Override
-  public boolean canHandle(String property)
-  {
-    return PROPERTY.equals(property);
-  }
-
-  @Override
-  public Map<String, String> convert(Properties properties)
-  {
-    if (Boolean.parseBoolean(properties.getProperty(PROPERTY))) {
-      return ImmutableMap.of("druid.indexer.task.chathandler.type", "curator");
-    }
-    return ImmutableMap.of();
-  }
+  ADD,
+  SUB,
+  MUL
 }

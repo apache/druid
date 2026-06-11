@@ -43,6 +43,7 @@ import {
   AsyncActionDialog,
   SpecDialog,
   SupervisorResetOffsetsDialog,
+  SupervisorResetToLatestDialog,
   SupervisorTableActionDialog,
   TaskGroupHandoffDialog,
 } from '../../dialogs';
@@ -195,6 +196,7 @@ export interface SupervisorsViewState {
   handoffSupervisorId?: string;
   resetOffsetsSupervisorInfo?: { id: string; type: string };
   resetSupervisorId?: string;
+  resetToLatestSupervisorId?: string;
   terminateSupervisorId?: string;
 
   showResumeAllSupervisors: boolean;
@@ -580,6 +582,12 @@ export class SupervisorsView extends React.PureComponent<
         onAction: () => this.setState({ resetSupervisorId: supervisor_id }),
       },
       {
+        icon: IconNames.FAST_FORWARD,
+        title: 'Reset to latest and backfill',
+        intent: Intent.DANGER,
+        onAction: () => this.setState({ resetToLatestSupervisorId: supervisor_id }),
+      },
+      {
         icon: IconNames.CROSS,
         title: 'Terminate',
         intent: Intent.DANGER,
@@ -723,6 +731,23 @@ export class SupervisorsView extends React.PureComponent<
           missing offsets.
         </p>
       </AsyncActionDialog>
+    );
+  }
+
+  renderResetToLatestSupervisorAction() {
+    const { resetToLatestSupervisorId } = this.state;
+    if (!resetToLatestSupervisorId) return;
+
+    return (
+      <SupervisorResetToLatestDialog
+        supervisorId={resetToLatestSupervisorId}
+        onClose={() => {
+          this.setState({ resetToLatestSupervisorId: undefined });
+        }}
+        onSuccess={() => {
+          this.supervisorQueryManager.rerunLastQuery();
+        }}
+      />
     );
   }
 
@@ -1332,6 +1357,7 @@ export class SupervisorsView extends React.PureComponent<
         {this.renderTaskGroupHandoffAction()}
         {this.renderResetOffsetsSupervisorAction()}
         {this.renderResetSupervisorAction()}
+        {this.renderResetToLatestSupervisorAction()}
         {this.renderTerminateSupervisorAction()}
         {supervisorSpecDialogOpen && (
           <SpecDialog

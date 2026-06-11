@@ -135,6 +135,7 @@ public class DartFrameContextTest
         null,
         null,
         null,
+        null,
         processingBuffersSet,
         null,
         null,

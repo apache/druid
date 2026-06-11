@@ -96,7 +96,7 @@
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.17.1.0</derby.version>
         <dropwizard.metrics.version>4.2.22</dropwizard.metrics.version>
-        <errorprone.version>2.41.0</errorprone.version>
+        <errorprone.version>2.49.0</errorprone.version>
         <fabric8.version>7.6.0</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>32.1.3-jre</guava.version>
@@ -106,7 +106,7 @@
         <arrow.version>15.0.2</arrow.version>
         <jetty.version>12.1.8</jetty.version>
         <jersey.version>1.19.4</jersey.version>
-        <jackson.version>2.20.2</jackson.version>
+        <jackson.version>2.21.3</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.25.4</log4j.version>
         <mysql.version>8.2.0</mysql.version>
@@ -126,7 +126,7 @@
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
         <aws.sdk.v1.version>1.12.793</aws.sdk.v1.version>
         <aws.sdk.v2.version>2.40.0</aws.sdk.v2.version>
-        <caffeine.version>2.9.3</caffeine.version>
+        <caffeine.version>3.2.4</caffeine.version>
         <jacoco.version>0.8.14</jacoco.version>
         <testcontainers.version>2.0.3</testcontainers.version>
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
@@ -165,6 +165,9 @@
 
             <!-- required for certain EqualsVerifier tests (not required in production) -->
             --add-opens=java.base/java.util=ALL-UNNAMED
+
+            <!-- required for SIMD for druid.expressions.useVectorApi -->
+            --add-modules=jdk.incubator.vector
         </jdk.strong.encapsulation.argLine>
         <jdk.security.manager.allow.argLine><!-- empty placeholder --></jdk.security.manager.allow.argLine>
         <repoOrgId>maven.org</repoOrgId>
@@ -606,17 +609,6 @@
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-recipes</artifactId>
                 <version>${apache.curator.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.curator</groupId>
-                <artifactId>curator-x-discovery</artifactId>
-                <version>${apache.curator.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-databind</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
@@ -1812,6 +1804,8 @@
                       <exclude>**/*_jmhType_*.class</exclude>
                       <exclude>**/*_jmhTest_*.class</exclude>
                       <exclude>**/*_generated*.class</exclude>
+                      <!-- forbidden-apis can't resolve jdk.incubator.vector classes from its own classpath -->
+                      <exclude>**/math/expr/vector/simd/Simd*.class</exclude>
                     </excludes>
                     <suppressAnnotations>
                         <annotation>**.SuppressForbidden</annotation>
@@ -2161,6 +2155,11 @@
 
                         <!-- HadoopFsWrapper javadocs cannot be generated due to missing annotations -->
                         <excludePackageNames>org.apache.hadoop.fs</excludePackageNames>
+
+                        <!-- required for SIMD expression vector processors that import jdk.incubator.vector -->
+                        <additionalOptions>
+                            <additionalOption>--add-modules=jdk.incubator.vector</additionalOption>
+                        </additionalOptions>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -2170,6 +2169,9 @@
                     <inherited>true</inherited>
                     <configuration>
                         <release>${maven.compiler.release}</release>
+                        <compilerArgs>
+                            <arg>--add-modules=jdk.incubator.vector</arg>
+                        </compilerArgs>
                     </configuration>
                 </plugin>
               <plugin>
@@ -2230,6 +2232,8 @@
                                 <arg>-J--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</arg>
                                 <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
                                 <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                                <arg>-J--add-modules=jdk.incubator.vector</arg>
+                                <arg>--add-modules=jdk.incubator.vector</arg>
                             </compilerArgs>
                               <annotationProcessorPaths>
                                 <path>
