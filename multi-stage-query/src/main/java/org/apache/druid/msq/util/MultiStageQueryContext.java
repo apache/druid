@@ -278,7 +278,10 @@ public class MultiStageQueryContext
   public static final String CTX_MAX_THREADS = "maxThreads";
 
   /**
-   * Maximum number of segments to load ahead of them being needed. Used when setting up {@link ReadableInputQueue}.
+   * Number of segments to load ahead of them being needed. Used when setting up {@link ReadableInputQueue}.
+   * <p>
+   * A worker may be configured with a local default for this value. When this context value is set, it always wins;
+   * the worker-local default applies only when this context value is absent.
    */
   public static final String CTX_SEGMENT_LOAD_AHEAD_COUNT = "segmentLoadAheadCount";
 
