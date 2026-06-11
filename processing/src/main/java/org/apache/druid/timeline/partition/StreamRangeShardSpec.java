@@ -33,8 +33,8 @@ import java.util.Objects;
 
 /**
  * A {@link NumberedShardSpec} that additionally declares, per dimension, the set of values a streaming segment
- * contains ({@link #partitionFilters}), letting the broker prune segments whose values cannot match a query filter
- * before compaction. A dimension absent from {@link #partitionFilters} is not pruned on.
+ * contains ({@link #partitionDimensionValues}), letting the broker prune segments whose values cannot match a query filter
+ * before compaction. A dimension absent from {@link #partitionDimensionValues} is not pruned on.
  */
 public class StreamRangeShardSpec extends NumberedShardSpec
 {
@@ -42,29 +42,29 @@ public class StreamRangeShardSpec extends NumberedShardSpec
    * Maps dimension name → exhaustive list of values that can appear in this shard for that dimension.
    * An absent dimension means "all values possible" (no pruning on that dimension).
    */
-  private final Map<String, List<String>> partitionFilters;
+  private final Map<String, List<String>> partitionDimensionValues;
 
   @JsonCreator
   public StreamRangeShardSpec(
       @JsonProperty("partitionNum") int partitionNum,
       @JsonProperty("partitions") int partitions,
-      @JsonProperty("partitionFilters") @Nullable Map<String, List<String>> partitionFilters
+      @JsonProperty("partitionDimensionValues") @Nullable Map<String, List<String>> partitionDimensionValues
   )
   {
     super(partitionNum, partitions);
-    this.partitionFilters = partitionFilters == null ? Collections.emptyMap() : partitionFilters;
+    this.partitionDimensionValues = partitionDimensionValues == null ? Collections.emptyMap() : partitionDimensionValues;
   }
 
-  @JsonProperty("partitionFilters")
-  public Map<String, List<String>> getPartitionFilters()
+  @JsonProperty("partitionDimensionValues")
+  public Map<String, List<String>> getPartitionDimensionValues()
   {
-    return partitionFilters;
+    return partitionDimensionValues;
   }
 
   @Override
   public List<String> getDomainDimensions()
   {
-    return ImmutableList.copyOf(partitionFilters.keySet());
+    return ImmutableList.copyOf(partitionDimensionValues.keySet());
   }
 
   /**
@@ -81,11 +81,11 @@ public class StreamRangeShardSpec extends NumberedShardSpec
   @Override
   public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
   {
-    if (partitionFilters.isEmpty()) {
+    if (partitionDimensionValues.isEmpty()) {
       return true;
     }
 
-    for (Map.Entry<String, List<String>> entry : partitionFilters.entrySet()) {
+    for (Map.Entry<String, List<String>> entry : partitionDimensionValues.entrySet()) {
       final String dimension = entry.getKey();
       final List<String> allowedValues = entry.getValue();
 
@@ -121,13 +121,13 @@ public class StreamRangeShardSpec extends NumberedShardSpec
   @Override
   public ShardSpec withPartitionNum(int partitionNum)
   {
-    return new StreamRangeShardSpec(partitionNum, getNumCorePartitions(), partitionFilters);
+    return new StreamRangeShardSpec(partitionNum, getNumCorePartitions(), partitionDimensionValues);
   }
 
   @Override
   public ShardSpec withCorePartitions(int partitions)
   {
-    return new StreamRangeShardSpec(getPartitionNum(), partitions, partitionFilters);
+    return new StreamRangeShardSpec(getPartitionNum(), partitions, partitionDimensionValues);
   }
 
   @Override
@@ -143,13 +143,13 @@ public class StreamRangeShardSpec extends NumberedShardSpec
       return false;
     }
     StreamRangeShardSpec that = (StreamRangeShardSpec) o;
-    return Objects.equals(partitionFilters, that.partitionFilters);
+    return Objects.equals(partitionDimensionValues, that.partitionDimensionValues);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), partitionFilters);
+    return Objects.hash(super.hashCode(), partitionDimensionValues);
   }
 
   @Override
@@ -158,7 +158,7 @@ public class StreamRangeShardSpec extends NumberedShardSpec
     return "StreamRangeShardSpec{" +
            "partitionNum=" + getPartitionNum() +
            ", partitions=" + getNumCorePartitions() +
-           ", partitionFilters=" + partitionFilters +
+           ", partitionDimensionValues=" + partitionDimensionValues +
            '}';
   }
 }

@@ -108,7 +108,7 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_twoSupervisors_withPartitionFilters_segmentsPublishAndQueriesSucceed()
+  public void test_twoSupervisors_withPartitionDimensionValues_segmentsPublishAndQueriesSucceed()
   {
     final String topicA = dataSource + "_topic_a";
     final String topicB = dataSource + "_topic_b";
@@ -155,19 +155,19 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     // Verify sys.segments: all published segments carry a stream_range shard spec
     verifyAllSegmentsHaveStreamRangeShardSpec(dataSource);
 
-    // Verify the partitionFilters contain the expected tenant values for each supervisor's segments
+    // Verify the partitionDimensionValues contain the expected tenant values for each supervisor's segments
     final List<Map<String, Object>> shardSpecs = getShardSpecs(dataSource);
     @SuppressWarnings("unchecked")
     final Set<String> allObservedTenants = shardSpecs.stream()
-        .map(spec -> ((Map<String, List<String>>) spec.get("partitionFilters")).get(COL_TENANT))
+        .map(spec -> ((Map<String, List<String>>) spec.get("partitionDimensionValues")).get(COL_TENANT))
         .flatMap(List::stream)
         .collect(Collectors.toSet());
-    Assertions.assertTrue(allObservedTenants.contains(TENANT_A), "Expected tenant_a in partitionFilters");
-    Assertions.assertTrue(allObservedTenants.contains(TENANT_B), "Expected tenant_b in partitionFilters");
+    Assertions.assertTrue(allObservedTenants.contains(TENANT_A), "Expected tenant_a in partitionDimensionValues");
+    Assertions.assertTrue(allObservedTenants.contains(TENANT_B), "Expected tenant_b in partitionDimensionValues");
   }
 
   @Test
-  public void test_multiDimensionAndMultiValuePartitionFilters()
+  public void test_multiDimensionAndMultiValuePartitionDimensionValues()
   {
     final String colRegion = "region";
     final String colRegionCode = "region_code"; // numeric (Long)
@@ -267,10 +267,10 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     final List<Map<String, Object>> shardSpecs = getShardSpecs(dataSource);
     for (Map<String, Object> spec : shardSpecs) {
       @SuppressWarnings("unchecked")
-      final Map<String, List<String>> filters = (Map<String, List<String>>) spec.get("partitionFilters");
+      final Map<String, List<String>> filters = (Map<String, List<String>>) spec.get("partitionDimensionValues");
       Assertions.assertTrue(
           filters.containsKey(COL_TENANT) || filters.containsKey(colRegionCode),
-          "Expected at least one tracked dimension in partitionFilters: " + filters
+          "Expected at least one tracked dimension in partitionDimensionValues: " + filters
       );
     }
   }
@@ -349,13 +349,13 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     final List<Map<String, Object>> publishedShardSpecs = getShardSpecs(dataSource);
     for (Map<String, Object> shardSpec : publishedShardSpecs) {
       @SuppressWarnings("unchecked")
-      final List<String> tenantValues = ((Map<String, List<String>>) shardSpec.get("partitionFilters")).get(COL_TENANT);
-      Assertions.assertEquals(List.of(TENANT_B, TENANT_A), tenantValues, "Expected tenant dimension in partitionFilters");
+      final List<String> tenantValues = ((Map<String, List<String>>) shardSpec.get("partitionDimensionValues")).get(COL_TENANT);
+      Assertions.assertEquals(List.of(TENANT_B, TENANT_A), tenantValues, "Expected tenant dimension in partitionDimensionValues");
     }
   }
 
   /**
-   * One tenant per DAY segment: each segment's {@code partitionFilters} must contain ONLY that segment's tenant, not
+   * One tenant per DAY segment: each segment's {@code partitionDimensionValues} must contain ONLY that segment's tenant, not
    * the union of all tenants the task saw.
    */
   @Test
@@ -401,14 +401,14 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     for (Map<String, Object> shardSpec : shardSpecs) {
       @SuppressWarnings("unchecked")
       final List<String> tenantValues =
-          ((Map<String, List<String>>) shardSpec.get("partitionFilters")).get(COL_TENANT);
-      Assertions.assertNotNull(tenantValues, "Expected tenant in partitionFilters: " + shardSpec);
+          ((Map<String, List<String>>) shardSpec.get("partitionDimensionValues")).get(COL_TENANT);
+      Assertions.assertNotNull(tenantValues, "Expected tenant in partitionDimensionValues: " + shardSpec);
       // Each segment should have exactly 1 tenant (one day = one tenant)
       Assertions.assertEquals(
           1,
           tenantValues.size(),
           StringUtils.format(
-              "Expected exactly 1 tenant per segment's partitionFilters but got %s",
+              "Expected exactly 1 tenant per segment's partitionDimensionValues but got %s",
               tenantValues
           )
       );
@@ -418,7 +418,7 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     final Set<String> allTenants = shardSpecs.stream()
         .map(s -> {
           @SuppressWarnings("unchecked")
-          final List<String> vals = ((Map<String, List<String>>) s.get("partitionFilters")).get(COL_TENANT);
+          final List<String> vals = ((Map<String, List<String>>) s.get("partitionDimensionValues")).get(COL_TENANT);
           return vals;
         })
         .flatMap(List::stream)
@@ -426,7 +426,7 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(
         Set.of(TENANT_A, TENANT_B, tenantC, tenantD),
         allTenants,
-        "Union of all segments' partitionFilters should cover all 4 tenants"
+        "Union of all segments' partitionDimensionValues should cover all 4 tenants"
     );
   }
 
@@ -744,13 +744,13 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     final boolean someSpecDeclaresNull = shardSpecs.stream()
         .map(shardSpec -> {
           @SuppressWarnings("unchecked")
-          final List<String> vals = ((Map<String, List<String>>) shardSpec.get("partitionFilters")).get(COL_TENANT);
+          final List<String> vals = ((Map<String, List<String>>) shardSpec.get("partitionDimensionValues")).get(COL_TENANT);
           return vals;
         })
         .anyMatch(vals -> vals != null && vals.contains(null));
     Assertions.assertTrue(
         someSpecDeclaresNull,
-        "Expected at least one segment's partitionFilters to declare a null tenant value: " + shardSpecs
+        "Expected at least one segment's partitionDimensionValues to declare a null tenant value: " + shardSpecs
     );
   }
 

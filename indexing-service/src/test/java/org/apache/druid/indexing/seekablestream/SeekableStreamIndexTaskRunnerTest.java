@@ -372,7 +372,7 @@ public class SeekableStreamIndexTaskRunnerTest
     final String lookupKey = SegmentIdWithShardSpec.fromDataSegment(segment).toString();
     observe(runner, lookupKey, "tenant", "tenant_a", "tenant_b");
 
-    final DataSegment annotated = runner.annotateSegmentWithPartitionFilters(segment);
+    final DataSegment annotated = runner.annotateSegmentWithPartitionDimensionValues(segment);
 
     Assert.assertTrue(
         "A segment created during the current run with observed values should get a StreamRangeShardSpec",
@@ -381,16 +381,19 @@ public class SeekableStreamIndexTaskRunnerTest
     final StreamRangeShardSpec shardSpec = (StreamRangeShardSpec) annotated.getShardSpec();
     Assert.assertEquals(
         ImmutableSet.of("tenant_a", "tenant_b"),
-        ImmutableSet.copyOf(shardSpec.getPartitionFilters().get("tenant"))
+        ImmutableSet.copyOf(shardSpec.getPartitionDimensionValues().get("tenant"))
     );
   }
 
   /**
-   * A segment that spans a task restart has incomplete observed values, so it must keep its {@link NumberedShardSpec}
-   * (no pruning) rather than get a {@link StreamRangeShardSpec} stamped from only the post-restart values.
+   * A segment that spans a task restart has incomplete observed values, so it must NOT declare any partition filters
+   * (no pruning), to avoid wrongly pruning pre-restart rows. It is still stamped with an empty-filter
+   * {@link StreamRangeShardSpec} (not a bare {@link NumberedShardSpec}) so that all segments in an interval keep a
+   * uniform shard-spec class for {@link org.apache.druid.segment.realtime.appenderator.SegmentPublisherHelper}, which
+   * rejects a publish batch mixing shard-spec classes within an interval.
    */
   @Test
-  public void testRestartSpannedSegmentRetainsNumberedShardSpec() throws Exception
+  public void testRestartSpannedSegmentGetsEmptyFilterStreamRangeShardSpec() throws Exception
   {
     final TestSeekableStreamIndexTaskRunner runner = createRunner(
         ImmutableMap.of("partition", "0"),
@@ -407,14 +410,17 @@ public class SeekableStreamIndexTaskRunnerTest
     // The runner marks this segment as restored-from-disk (spans a restart).
     markRestartSpanned(runner, lookupKey);
 
-    final DataSegment annotated = runner.annotateSegmentWithPartitionFilters(segment);
+    final DataSegment annotated = runner.annotateSegmentWithPartitionDimensionValues(segment);
 
     Assert.assertTrue(
-        "A segment that spans a task restart has incomplete observed values and must keep its NumberedShardSpec "
-        + "(no pruning) to avoid wrongly pruning pre-restart rows → silent data loss",
-        annotated.getShardSpec() instanceof NumberedShardSpec
+        "A restart-spanned segment must be stamped with a StreamRangeShardSpec (class-uniform with freshly-stamped "
+        + "segments in the same interval) so SegmentPublisherHelper does not reject the publish",
+        annotated.getShardSpec() instanceof StreamRangeShardSpec
     );
-    Assert.assertSame("The segment should be returned unchanged", segment, annotated);
+    Assert.assertTrue(
+        "Its filters must be empty (no pruning) so incompletely-observed pre-restart rows are never pruned away",
+        ((StreamRangeShardSpec) annotated.getShardSpec()).getPartitionDimensionValues().isEmpty()
+    );
   }
 
   /**
@@ -422,7 +428,7 @@ public class SeekableStreamIndexTaskRunnerTest
    * values, so {@code IS NULL} queries are not pruned. Here tenant saw tenant_a and a null; region saw only us-west.
    */
   @Test
-  public void testNullValuedDimensionDeclaresNullInPartitionFilters() throws Exception
+  public void testNullValuedDimensionDeclaresNullInPartitionDimensionValues() throws Exception
   {
     final TestSeekableStreamIndexTaskRunner runner = createRunner(
         ImmutableMap.of("partition", "0"),
@@ -438,7 +444,7 @@ public class SeekableStreamIndexTaskRunnerTest
     observe(runner, lookupKey, "tenant", "tenant_a", null);
     observe(runner, lookupKey, "region", "us-west");
 
-    final DataSegment annotated = runner.annotateSegmentWithPartitionFilters(segment);
+    final DataSegment annotated = runner.annotateSegmentWithPartitionDimensionValues(segment);
 
     Assert.assertTrue(
         annotated.getShardSpec() instanceof StreamRangeShardSpec
@@ -447,11 +453,11 @@ public class SeekableStreamIndexTaskRunnerTest
     // tenant declares both its non-null value AND null, so IS NULL queries are not pruned.
     Assert.assertEquals(
         new HashSet<>(Arrays.asList("tenant_a", null)),
-        new HashSet<>(shardSpec.getPartitionFilters().get("tenant"))
+        new HashSet<>(shardSpec.getPartitionDimensionValues().get("tenant"))
     );
     Assert.assertEquals(
         ImmutableSet.of("us-west"),
-        ImmutableSet.copyOf(shardSpec.getPartitionFilters().get("region"))
+        ImmutableSet.copyOf(shardSpec.getPartitionDimensionValues().get("region"))
     );
   }
 
@@ -474,14 +480,59 @@ public class SeekableStreamIndexTaskRunnerTest
 
     observe(runner, lookupKey, "tenant", (String) null);
 
-    final DataSegment annotated = runner.annotateSegmentWithPartitionFilters(segment);
+    final DataSegment annotated = runner.annotateSegmentWithPartitionDimensionValues(segment);
 
     Assert.assertTrue(annotated.getShardSpec() instanceof StreamRangeShardSpec);
     final StreamRangeShardSpec shardSpec = (StreamRangeShardSpec) annotated.getShardSpec();
     Assert.assertEquals(
         Collections.singletonList(null),
-        shardSpec.getPartitionFilters().get("tenant")
+        shardSpec.getPartitionDimensionValues().get("tenant")
     );
+  }
+
+  /**
+   * Feature on, but a segment ingested no values for any tracked dimension (nothing recorded under its key). It still
+   * gets an empty-filter {@link StreamRangeShardSpec} rather than being returned as a bare {@link NumberedShardSpec},
+   * so it stays class-uniform with its interval siblings for
+   * {@link org.apache.druid.segment.realtime.appenderator.SegmentPublisherHelper}.
+   */
+  @Test
+  public void testSegmentWithNoObservedValuesGetsEmptyFilterStreamRangeShardSpec() throws Exception
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createRunner(
+        ImmutableMap.of("partition", "0"),
+        ImmutableMap.of("partition", "100")
+    );
+    Mockito.when(task.getTuningConfig().getStreamingPartitionsSpec())
+           .thenReturn(new StreamingPartitionsSpec(List.of("tenant")));
+
+    // No observe(...) call: nothing was recorded for this segment.
+    final DataSegment annotated = runner.annotateSegmentWithPartitionDimensionValues(createSingleSegment());
+
+    Assert.assertTrue(annotated.getShardSpec() instanceof StreamRangeShardSpec);
+    Assert.assertTrue(
+        "A segment with no observed values declares no filters (no pruning) but stays a StreamRangeShardSpec",
+        ((StreamRangeShardSpec) annotated.getShardSpec()).getPartitionDimensionValues().isEmpty()
+    );
+  }
+
+  /**
+   * Feature off (no streamingPartitionsSpec): the segment is returned completely unchanged, retaining its original
+   * shard spec.
+   */
+  @Test
+  public void testFeatureOffReturnsSegmentUnchanged() throws Exception
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createRunner(
+        ImmutableMap.of("partition", "0"),
+        ImmutableMap.of("partition", "100")
+    );
+    Mockito.when(task.getTuningConfig().getStreamingPartitionsSpec()).thenReturn(null);
+
+    final DataSegment segment = createSingleSegment();
+    final DataSegment annotated = runner.annotateSegmentWithPartitionDimensionValues(segment);
+
+    Assert.assertSame("With the feature off the segment must be returned unchanged", segment, annotated);
   }
 
   private static DataSegment createSingleSegment()

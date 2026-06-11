@@ -24,9 +24,13 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -103,11 +107,11 @@ public class SegmentsAndCommitMetadata
    */
   public SegmentsAndCommitMetadata withPublishedSegments(Set<DataSegment> publishedSegments)
   {
-    final java.util.Map<org.apache.druid.timeline.SegmentId, DataSegment> byId = new java.util.HashMap<>();
+    final Map<SegmentId, DataSegment> byId = new HashMap<>();
     for (DataSegment published : publishedSegments) {
       byId.put(published.getId(), published);
     }
-    final List<DataSegment> reconciled = new java.util.ArrayList<>(segments.size());
+    final List<DataSegment> reconciled = new ArrayList<>(segments.size());
     for (DataSegment original : segments) {
       reconciled.add(byId.getOrDefault(original.getId(), original));
     }

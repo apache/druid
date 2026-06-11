@@ -226,7 +226,7 @@ public class StreamRangeShardSpecTest
         mapper.readValue(mapper.writeValueAsString(original), StreamRangeShardSpec.class);
 
     Assert.assertEquals(original, deserialized);
-    Assert.assertEquals(original.getPartitionFilters(), deserialized.getPartitionFilters());
+    Assert.assertEquals(original.getPartitionDimensionValues(), deserialized.getPartitionDimensionValues());
   }
 
   @Test
@@ -236,7 +236,7 @@ public class StreamRangeShardSpecTest
     final StreamRangeShardSpec spec = new StreamRangeShardSpec(0, 1, ImmutableMap.of(TENANT, List.of("tenant_a")));
     final String json = mapper.writeValueAsString(spec);
     Assert.assertTrue(json.contains("\"type\":\"stream_range\""));
-    Assert.assertTrue(json.contains("\"partitionFilters\""));
+    Assert.assertTrue(json.contains("\"partitionDimensionValues\""));
   }
 
   @Test
@@ -249,7 +249,7 @@ public class StreamRangeShardSpecTest
         mapper.readValue(mapper.writeValueAsString(original), StreamRangeShardSpec.class);
 
     Assert.assertEquals(original, deserialized);
-    Assert.assertTrue(deserialized.getPartitionFilters().isEmpty());
+    Assert.assertTrue(deserialized.getPartitionDimensionValues().isEmpty());
   }
 
   @Test
@@ -299,7 +299,7 @@ public class StreamRangeShardSpecTest
         mapper.readValue(mapper.writeValueAsString(original), StreamRangeShardSpec.class);
 
     Assert.assertEquals(original, deserialized);
-    Assert.assertTrue(deserialized.getPartitionFilters().get(TENANT).contains(null));
+    Assert.assertTrue(deserialized.getPartitionDimensionValues().get(TENANT).contains(null));
     Assert.assertTrue(deserialized.possibleInDomain(nullDomain(TENANT)));
   }
 

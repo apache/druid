@@ -275,7 +275,7 @@ This enables segment pruning for streaming-ingested data without waiting for com
 - Most effective when Kafka partitions are keyed by the tracked dimension (for example, using tenant ID as the message key). Each task naturally sees a subset of values, and segments get tight filter annotations.
 - Also works with multiple supervisors reading from separate topics into one datasource.
 - Use a range or hashed compaction `partitionsSpec`, not the dynamic strategy: dynamic compaction does not partition by dimension, so it cannot preserve pruning after compaction.
-- After compaction, the `StreamRangeShardSpec` annotations are replaced by the compaction output's shard spec (hash or range partitioning), which provides its own pruning.
+- After compaction, the streaming pruning annotations are replaced by the compaction output's partitioning (hash or range), which provides its own pruning.
 
 The following example configures a supervisor to track the `tenant` dimension:
 
