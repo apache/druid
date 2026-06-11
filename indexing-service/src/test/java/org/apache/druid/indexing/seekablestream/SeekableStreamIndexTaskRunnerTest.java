@@ -84,7 +84,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -370,7 +369,8 @@ public class SeekableStreamIndexTaskRunnerTest
 
     final DataSegment segment = createSingleSegment();
     final String lookupKey = SegmentIdWithShardSpec.fromDataSegment(segment).toString();
-    observe(runner, lookupKey, "tenant", "tenant_a", "tenant_b");
+    // Observe out of order; the published values must come back sorted.
+    observe(runner, lookupKey, "tenant", "tenant_c", "tenant_a", "tenant_b");
 
     final DataSegment annotated = runner.annotateSegmentWithPartitionDimensionValues(segment);
 
@@ -380,8 +380,8 @@ public class SeekableStreamIndexTaskRunnerTest
     );
     final StreamRangeShardSpec shardSpec = (StreamRangeShardSpec) annotated.getShardSpec();
     Assert.assertEquals(
-        ImmutableSet.of("tenant_a", "tenant_b"),
-        ImmutableSet.copyOf(shardSpec.getPartitionDimensionValues().get("tenant"))
+        Arrays.asList("tenant_a", "tenant_b", "tenant_c"),
+        shardSpec.getPartitionDimensionValues().get("tenant")
     );
   }
 
@@ -452,8 +452,8 @@ public class SeekableStreamIndexTaskRunnerTest
     final StreamRangeShardSpec shardSpec = (StreamRangeShardSpec) annotated.getShardSpec();
     // tenant declares both its non-null value AND null, so IS NULL queries are not pruned.
     Assert.assertEquals(
-        new HashSet<>(Arrays.asList("tenant_a", null)),
-        new HashSet<>(shardSpec.getPartitionDimensionValues().get("tenant"))
+        Arrays.asList(null, "tenant_a"),
+        shardSpec.getPartitionDimensionValues().get("tenant")
     );
     Assert.assertEquals(
         ImmutableSet.of("us-west"),

@@ -117,6 +117,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -1108,6 +1109,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           }
           snapshot = new ArrayList<>(vals);
         }
+        // Sort for deterministic published metadata; null (missing value) sorts first.
+        snapshot.sort(Comparator.nullsFirst(Comparator.naturalOrder()));
         snapshotFilters.put(dim, snapshot);
       }
     }

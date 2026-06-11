@@ -350,7 +350,7 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     for (Map<String, Object> shardSpec : publishedShardSpecs) {
       @SuppressWarnings("unchecked")
       final List<String> tenantValues = ((Map<String, List<String>>) shardSpec.get("partitionDimensionValues")).get(COL_TENANT);
-      Assertions.assertEquals(List.of(TENANT_B, TENANT_A), tenantValues, "Expected tenant dimension in partitionDimensionValues");
+      Assertions.assertEquals(List.of(TENANT_A, TENANT_B), tenantValues, "Expected tenant dimension in partitionDimensionValues");
     }
   }
 
