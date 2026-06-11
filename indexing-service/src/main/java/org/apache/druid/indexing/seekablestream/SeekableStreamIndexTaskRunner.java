@@ -95,6 +95,7 @@ import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.StreamRangeShardSpec;
 import org.apache.druid.utils.CollectionUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -262,7 +263,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * publish thread under their own monitor. Entries are cleared on successful publish; a publish failure is terminal
    * for the task, so any remaining entries are reclaimed at task teardown rather than removed individually.
    */
-  private final Map<String, Map<String, Set<String>>> observedPartitionDimValuesBySegment = new ConcurrentHashMap<>();
+  private final Map<SegmentId, Map<String, Set<String>>> observedPartitionDimValuesBySegment = new ConcurrentHashMap<>();
 
   /**
    * Segment identifiers restored from disk at startup (i.e. spanning a task restart). Their pre-restart rows are not
@@ -270,7 +271,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * such segments are published with an empty-filter (non-pruning) {@link StreamRangeShardSpec} instead of one
    * declaring observed values.
    */
-  private final Set<String> restartSpannedSegments = ConcurrentHashMap.newKeySet();
+  private final Set<SegmentId> restartSpannedSegments = ConcurrentHashMap.newKeySet();
 
   private volatile DateTime minMessageTime;
   private volatile DateTime maxMessageTime;
@@ -525,7 +526,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       // incomplete filter.
       if (!partitionDimensions.isEmpty()) {
         for (SegmentIdWithShardSpec restored : appenderator.getSegments()) {
-          restartSpannedSegments.add(restored.toString());
+          restartSpannedSegments.add(restored.asSegmentId());
         }
         if (!restartSpannedSegments.isEmpty()) {
           log.warn(
@@ -736,7 +737,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 if (addResult.isOk()) {
                   // Accumulate observed dimension values per segment for StreamRangeShardSpec at publish time.
                   if (!partitionDimensions.isEmpty()) {
-                    final String segmentId = addResult.getSegmentIdentifier().toString();
+                    final SegmentId segmentId = addResult.getSegmentIdentifier().asSegmentId();
                     final Map<String, Set<String>> segValues = observedPartitionDimValuesBySegment
                         .computeIfAbsent(segmentId, k -> new ConcurrentHashMap<>());
                     for (String dim : partitionDimensions) {
@@ -1062,7 +1063,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   }
 
   @VisibleForTesting
-  void recordObservedDimensionValueForTest(String segmentId, String dimension, @Nullable String value)
+  void recordObservedDimensionValueForTest(SegmentId segmentId, String dimension, @Nullable String value)
   {
     observedPartitionDimValuesBySegment
         .computeIfAbsent(segmentId, k -> new ConcurrentHashMap<>())
@@ -1071,7 +1072,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   }
 
   @VisibleForTesting
-  void markSegmentRestartSpannedForTest(String segmentId)
+  void markSegmentRestartSpannedForTest(SegmentId segmentId)
   {
     restartSpannedSegments.add(segmentId);
   }
@@ -1092,7 +1093,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       return s;
     }
     final Map<String, List<String>> snapshotFilters = new HashMap<>();
-    final String lookupKey = SegmentIdWithShardSpec.fromDataSegment(s).toString();
+    final SegmentId lookupKey = s.getId();
     final Map<String, Set<String>> segObserved = observedPartitionDimValuesBySegment.get(lookupKey);
     // Leave filters empty for restart-spanned segments: their pre-restart values can't be re-observed.
     if (!restartSpannedSegments.contains(lookupKey) && segObserved != null) {
@@ -1172,7 +1173,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             log.infoSegments(publishedSegmentsAndCommitMetadata.getSegments(), "Published segments");
 
             for (DataSegment segment : publishedSegmentsAndCommitMetadata.getSegments()) {
-              final String segmentId = SegmentIdWithShardSpec.fromDataSegment(segment).toString();
+              final SegmentId segmentId = segment.getId();
               observedPartitionDimValuesBySegment.remove(segmentId);
               restartSpannedSegments.remove(segmentId);
             }

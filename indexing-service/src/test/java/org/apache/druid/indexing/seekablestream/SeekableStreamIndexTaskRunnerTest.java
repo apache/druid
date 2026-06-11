@@ -53,7 +53,6 @@ import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
@@ -61,6 +60,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.StreamRangeShardSpec;
 import org.joda.time.DateTime;
@@ -368,7 +368,7 @@ public class SeekableStreamIndexTaskRunnerTest
            .thenReturn(new StreamingPartitionsSpec(List.of("tenant")));
 
     final DataSegment segment = createSingleSegment();
-    final String lookupKey = SegmentIdWithShardSpec.fromDataSegment(segment).toString();
+    final SegmentId lookupKey = segment.getId();
     // Observe out of order; the published values must come back sorted.
     observe(runner, lookupKey, "tenant", "tenant_c", "tenant_a", "tenant_b");
 
@@ -403,7 +403,7 @@ public class SeekableStreamIndexTaskRunnerTest
            .thenReturn(new StreamingPartitionsSpec(List.of("tenant")));
 
     final DataSegment segment = createSingleSegment();
-    final String lookupKey = SegmentIdWithShardSpec.fromDataSegment(segment).toString();
+    final SegmentId lookupKey = segment.getId();
 
     // Post-restart, only tenant_c is observed; tenant_a/tenant_b live only in pre-restart hydrants.
     observe(runner, lookupKey, "tenant", "tenant_c");
@@ -424,6 +424,51 @@ public class SeekableStreamIndexTaskRunnerTest
   }
 
   /**
+   * A restart batch mixes a restart-spanned partition (empty-filter fallback) with a freshly-observed one in the same
+   * interval. Both must keep a uniform shard-spec class so the publish isn't rejected.
+   */
+  @Test
+  public void testRestartBatchMixingFallbackAndObservedSegmentsPublishesWithStreamRangeShardSpec()
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createRunner(
+        ImmutableMap.of("partition", "0"),
+        ImmutableMap.of("partition", "100")
+    );
+    Mockito.when(task.getTuningConfig().getStreamingPartitionsSpec())
+           .thenReturn(new StreamingPartitionsSpec(List.of("tenant")));
+
+    // Two partitions in one interval: partition 0 was restored from disk across a restart, partition 1 created after.
+    final List<DataSegment> sameIntervalPartitions = CreateDataSegments
+        .ofDatasource(DATA_SOURCE)
+        .startingAt("2025-01-01")
+        .forIntervals(1, Granularities.DAY)
+        .withNumPartitions(2)
+        .eachOfSizeInMb(500);
+    final DataSegment restartSpanned = sameIntervalPartitions.get(0);
+    final DataSegment freshlyObserved = sameIntervalPartitions.get(1);
+
+    markRestartSpanned(runner, restartSpanned.getId());
+    observe(runner, restartSpanned.getId(), "tenant", "tenant_c");
+    observe(runner, freshlyObserved.getId(), "tenant", "tenant_a");
+
+    final DataSegment annotatedRestartSpanned = runner.annotateSegmentWithPartitionDimensionValues(restartSpanned);
+    final DataSegment annotatedFreshlyObserved = runner.annotateSegmentWithPartitionDimensionValues(freshlyObserved);
+
+    Assert.assertEquals(
+        annotatedRestartSpanned.getShardSpec().getClass(),
+        annotatedFreshlyObserved.getShardSpec().getClass()
+    );
+    Assert.assertTrue(annotatedRestartSpanned.getShardSpec() instanceof StreamRangeShardSpec);
+    Assert.assertTrue(
+        ((StreamRangeShardSpec) annotatedRestartSpanned.getShardSpec()).getPartitionDimensionValues().isEmpty()
+    );
+    Assert.assertEquals(
+        List.of("tenant_a"),
+        ((StreamRangeShardSpec) annotatedFreshlyObserved.getShardSpec()).getPartitionDimensionValues().get("tenant")
+    );
+  }
+
+  /**
    * A dimension that ingested a null/missing value declares null (as a null list element) alongside its non-null
    * values, so {@code IS NULL} queries are not pruned. Here tenant saw tenant_a and a null; region saw only us-west.
    */
@@ -438,7 +483,7 @@ public class SeekableStreamIndexTaskRunnerTest
            .thenReturn(new StreamingPartitionsSpec(List.of("tenant", "region")));
 
     final DataSegment segment = createSingleSegment();
-    final String lookupKey = SegmentIdWithShardSpec.fromDataSegment(segment).toString();
+    final SegmentId lookupKey = segment.getId();
 
     // tenant saw a non-null value and (in another row) a null/missing value; region only saw non-null values.
     observe(runner, lookupKey, "tenant", "tenant_a", null);
@@ -476,7 +521,7 @@ public class SeekableStreamIndexTaskRunnerTest
            .thenReturn(new StreamingPartitionsSpec(List.of("tenant")));
 
     final DataSegment segment = createSingleSegment();
-    final String lookupKey = SegmentIdWithShardSpec.fromDataSegment(segment).toString();
+    final SegmentId lookupKey = segment.getId();
 
     observe(runner, lookupKey, "tenant", (String) null);
 
@@ -548,7 +593,7 @@ public class SeekableStreamIndexTaskRunnerTest
 
   private static void observe(
       SeekableStreamIndexTaskRunner runner,
-      String segmentId,
+      SegmentId segmentId,
       String dimension,
       String... values
   )
@@ -558,7 +603,7 @@ public class SeekableStreamIndexTaskRunnerTest
     }
   }
 
-  private static void markRestartSpanned(SeekableStreamIndexTaskRunner runner, String segmentId)
+  private static void markRestartSpanned(SeekableStreamIndexTaskRunner runner, SegmentId segmentId)
   {
     runner.markSegmentRestartSpannedForTest(segmentId);
   }

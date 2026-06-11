@@ -21,6 +21,7 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.Intervals;
@@ -38,12 +39,14 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
+import org.apache.druid.timeline.partition.StreamRangeShardSpec;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Set;
 
 public class SegmentPublisherHelperTest
@@ -207,6 +210,22 @@ public class SegmentPublisherHelperTest
     );
     final Set<DataSegment> annotated = SegmentPublisherHelper.annotateShardSpec(segments);
     Assert.assertEquals(segments, annotated);
+  }
+
+  @Test
+  public void testAnnotateShardSpecAllowsMixedFilterStreamRangeShardSpecsInSameInterval()
+  {
+    // Empty-filter and populated StreamRangeShardSpecs in one interval must not trip the mismatched shardSpecs
+    // check, so a restart batch publishes without blocking.
+    final Set<DataSegment> segments = ImmutableSet.of(
+        newSegment(new StreamRangeShardSpec(0, 0, Collections.emptyMap())),
+        newSegment(new StreamRangeShardSpec(1, 0, ImmutableMap.of("tenant", ImmutableList.of("tenant_a"))))
+    );
+    final Set<DataSegment> annotated = SegmentPublisherHelper.annotateShardSpec(segments);
+    Assert.assertEquals(segments, annotated);
+    for (DataSegment segment : annotated) {
+      Assert.assertSame(StreamRangeShardSpec.class, segment.getShardSpec().getClass());
+    }
   }
 
   @Test
