@@ -133,11 +133,13 @@ public class NettyHttpClient extends AbstractHttpClient
       channel.config().setAutoRead(true);
     }
     final String urlFile = StringUtils.nullToEmptyNonDruidDataString(url.getFile());
+    // retainedDuplicate so the encoder's read+release doesn't disturb the Request's stored
+    // ByteBuf, preserving it for callers that resend or copy() the Request.
     final FullHttpRequest httpRequest = new DefaultFullHttpRequest(
         HttpVersion.HTTP_1_1,
         method,
         urlFile.isEmpty() ? "/" : urlFile,
-        request.hasContent() ? request.getContent() : Unpooled.EMPTY_BUFFER
+        request.hasContent() ? request.getContent().retainedDuplicate() : Unpooled.EMPTY_BUFFER
     );
 
     if (!headers.containsKey(HttpHeaderNames.HOST.toString())) {

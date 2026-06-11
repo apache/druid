@@ -43,15 +43,20 @@ import org.junit.Test;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -213,7 +218,7 @@ public class FriendlyServersTest
                 // Read headers (HTTP header names are case-insensitive; Netty 4 emits lowercase.)
                 String header;
                 while (!(header = in.readLine()).equals("")) {
-                  if ("accept-encoding: identity".equals(header.toLowerCase(java.util.Locale.ROOT))) {
+                  if ("accept-encoding: identity".equals(header.toLowerCase(Locale.ROOT))) {
                     foundAcceptEncoding.set(true);
                   }
                 }
@@ -388,6 +393,115 @@ public class FriendlyServersTest
       }
     }
     finally {
+      lifecycle.stop();
+    }
+  }
+
+  /**
+   * Regression test for the case where the same {@link Request} (or a copy of it) is sent more
+   * than once. Netty 4's HttpObjectEncoder advances the content's reader index and releases
+   * {@link io.netty.handler.codec.http.FullHttpRequest} after encoding; if {@link NettyHttpClient}
+   * handed the Request's stored {@link io.netty.buffer.ByteBuf} directly to the encoder, the
+   * second send would either drain to zero bytes or hit an {@link io.netty.util.IllegalReferenceCountException}.
+   *
+   * KerberosHttpClient hits this path: on a 401 it calls {@code Request.copy()} (which deep-copies
+   * the content) and re-sends. This test exercises the same shape.
+   */
+  @Test
+  public void testRequestCanBeSentMultipleTimes() throws Exception
+  {
+    final ExecutorService exec = Executors.newCachedThreadPool();
+    final ServerSocket serverSocket = new ServerSocket(0);
+    final BlockingQueue<String> receivedBodies = new LinkedBlockingQueue<>();
+    // Keep-alive HTTP/1.1 loop: each accepted connection serves consecutive requests until the
+    // peer disconnects. Needed because the client's channel pool reuses connections, and a
+    // single-shot server would cause a write-to-closed-channel race on the second send.
+    exec.submit(
+        () -> {
+          while (!Thread.currentThread().isInterrupted()) {
+            final Socket clientSocket;
+            try {
+              clientSocket = serverSocket.accept();
+            }
+            catch (IOException e) {
+              return;
+            }
+            exec.submit(() -> {
+              try (
+                  Socket s = clientSocket;
+                  BufferedReader in = new BufferedReader(
+                      new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8)
+                  );
+                  OutputStream out = s.getOutputStream()
+              ) {
+                while (true) {
+                  String requestLine = in.readLine();
+                  if (requestLine == null) {
+                    return;
+                  }
+                  int contentLength = 0;
+                  String header;
+                  while (!(header = in.readLine()).equals("")) {
+                    if (header.toLowerCase(Locale.ROOT).startsWith("content-length:")) {
+                      contentLength = Integer.parseInt(header.substring("content-length:".length()).trim());
+                    }
+                  }
+                  char[] body = new char[contentLength];
+                  int read = 0;
+                  while (read < contentLength) {
+                    int n = in.read(body, read, contentLength - read);
+                    if (n < 0) {
+                      return;
+                    }
+                    read += n;
+                  }
+                  receivedBodies.put(new String(body, 0, read));
+                  out.write("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok".getBytes(StandardCharsets.UTF_8));
+                  out.flush();
+                }
+              }
+              catch (Exception ignored) {
+                // suppress
+              }
+            });
+          }
+        }
+    );
+
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClient client = HttpClientInit.createClient(HttpClientConfig.builder().build(), lifecycle);
+      final URL url = new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()));
+      final byte[] payload = "hello-body".getBytes(StandardCharsets.UTF_8);
+
+      final Request request = new Request(HttpMethod.POST, url).setContent(payload);
+
+      // First send.
+      Assert.assertEquals(
+          200,
+          client.go(request, StatusResponseHandler.getInstance()).get().getStatus().code()
+      );
+
+      // KerberosHttpClient's retry pattern: copy the request and send the copy. This must not
+      // observe a released ByteBuf nor an already-drained reader index on the original.
+      Assert.assertEquals(
+          200,
+          client.go(request.copy(), StatusResponseHandler.getInstance()).get().getStatus().code()
+      );
+
+      // And the original Request must still be sendable a third time on its own.
+      Assert.assertEquals(
+          200,
+          client.go(request, StatusResponseHandler.getInstance()).get().getStatus().code()
+      );
+
+      Assert.assertEquals("hello-body", receivedBodies.poll(10, TimeUnit.SECONDS));
+      Assert.assertEquals("hello-body", receivedBodies.poll(10, TimeUnit.SECONDS));
+      Assert.assertEquals("hello-body", receivedBodies.poll(10, TimeUnit.SECONDS));
+    }
+    finally {
+      exec.shutdownNow();
+      serverSocket.close();
       lifecycle.stop();
     }
   }
