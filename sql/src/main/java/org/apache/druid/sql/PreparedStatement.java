@@ -23,6 +23,7 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -31,14 +32,17 @@ import java.util.List;
 public class PreparedStatement extends AbstractStatement
 {
   private final SqlQueryPlus originalRequest;
+  private final String remoteAddress;
 
   public PreparedStatement(
       final SqlToolbox lifecycleToolbox,
-      final SqlQueryPlus queryPlus
+      final SqlQueryPlus queryPlus,
+      @Nullable final String remoteAddress
   )
   {
-    super(lifecycleToolbox, queryPlus, null);
+    super(lifecycleToolbox, queryPlus, remoteAddress);
     this.originalRequest = queryPlus;
+    this.remoteAddress = remoteAddress;
   }
 
   /**
@@ -90,7 +94,8 @@ public class PreparedStatement extends AbstractStatement
   {
     return new DirectStatement(
         sqlToolbox,
-        originalRequest.freshCopy().withParameters(parameters)
+        originalRequest.freshCopy().withParameters(parameters),
+        remoteAddress
     );
   }
 
