@@ -74,10 +74,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   @Nullable
   private final StreamingPartitionsSpec streamingPartitionsSpec;
 
-  /**
-   * Backwards-compatible overload without {@link #streamingPartitionsSpec} (defaults to null). Retained so the
-   * Kinesis and RabbitStream subclasses' {@code super(...)} calls compile unchanged.
-   */
   public SeekableStreamIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
       @Nullable Integer maxRowsInMemory,
@@ -263,8 +259,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
 
   /**
    * Dimensions whose observed values are recorded per published segment for query-time pruning via
-   * {@link org.apache.druid.timeline.partition.DimensionValueSetShardSpec}. Null when not configured. Currently honored for
-   * Kafka ingestion only; other stream types carry it through but do not act on it.
+   * {@link org.apache.druid.timeline.partition.DimensionValueSetShardSpec}. Null when not configured.
    */
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)

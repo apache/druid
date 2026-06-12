@@ -265,7 +265,7 @@ The following example shows a supervisor spec with idle configuration enabled:
 
 #### Streaming partitions spec
 
-When you set `streamingPartitionsSpec.partitionDimensions` in the tuning config, the supervisor tracks the distinct values observed for each listed dimension during ingestion. At segment publish time, each segment is annotated with only the values it actually ingested. The broker then uses these annotations to skip segments at query time when the query filter doesn't intersect the segment's declared values.
+When you set `streamingPartitionsSpec.partitionDimensions` in the tuning config, the supervisor tracks the distinct values observed for each listed dimension during ingestion. At segment publish time, each segment is annotated with only the values it actually ingested by publishing it with a `dim_value_set` shard spec, which records the observed values per tracked dimension. The broker then uses these annotations to skip segments at query time when the query filter doesn't intersect the segment's declared values.
 
 This enables segment pruning for streaming-ingested data without waiting for compaction to produce hash or range-partitioned segments. The `partitionDimensions` should be kept in sync with the compaction config's `partitionDimensions` for the same datasource.
 

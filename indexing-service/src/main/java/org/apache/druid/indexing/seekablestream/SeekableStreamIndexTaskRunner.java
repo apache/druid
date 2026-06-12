@@ -263,7 +263,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * publish thread under their own monitor. Entries are cleared on successful publish; a publish failure is terminal
    * for the task, so any remaining entries are reclaimed at task teardown rather than removed individually.
    */
-  private final Map<SegmentId, Map<String, Set<String>>> observedPartitionDimValuesBySegment = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<SegmentId, Map<String, Set<String>>> observedPartitionDimValuesBySegment = new ConcurrentHashMap<>();
 
   /**
    * Segment identifiers restored from disk at startup (i.e. spanning a task restart). Their pre-restart rows are not
@@ -271,7 +271,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * such segments are published with an empty-filter (non-pruning) {@link DimensionValueSetShardSpec} instead of one
    * declaring observed values.
    */
-  private final Set<SegmentId> restartSpannedSegments = ConcurrentHashMap.newKeySet();
+  private final Set<SegmentId> restartSpannedSegments = Sets.newConcurrentHashSet();
 
   private volatile DateTime minMessageTime;
   private volatile DateTime maxMessageTime;

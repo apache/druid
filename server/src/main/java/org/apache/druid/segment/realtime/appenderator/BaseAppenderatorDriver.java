@@ -633,7 +633,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 );
                 if (publishResult.isSuccess()) {
                   // Reconcile to the published shard specs (publishSegments may annotate them, e.g. DimensionValueSetShardSpec
-                  // or core-partition annotation) so logging/handoff reports the real spec, not the pre-publish one.
+                  //  so logging/handoff reports the real spec, not the pre-publish one.
                   final SegmentsAndCommitMetadata publishedMetadata =
                       segmentsAndCommitMetadata.withPublishedSegments(publishResult.getSegments());
 

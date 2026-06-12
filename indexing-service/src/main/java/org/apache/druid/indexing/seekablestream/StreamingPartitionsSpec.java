@@ -33,7 +33,7 @@ import java.util.Objects;
  * declares the dimensions whose observed values each published segment should record in a
  * {@link org.apache.druid.timeline.partition.DimensionValueSetShardSpec} so the broker can prune segments at query time
  * without waiting for compaction. Unlike batch partitioning this does not route rows into shards; it only annotates
- * segments with the values they happened to ingest. Currently honored for Kafka ingestion only.
+ * segments with the values they happened to ingest.
  *
  * <p>Use low-to-medium cardinality dimensions; the {@code partitionDimensions} here should be kept in sync with the
  * {@code partitionDimensions} of the compaction config for the same datasource.
