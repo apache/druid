@@ -50,6 +50,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -354,6 +355,10 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
     assertScan("2", allDays, "SELECT COUNT(*) FROM %s WHERE %s = 3", dataSource, colCode);
     // A non-existent code returns 0 rows but is still NOT pruned (would be a full prune if numeric pruning worked).
     assertScan("0", allDays, "SELECT COUNT(*) FROM %s WHERE %s = 999", dataSource, colCode);
+
+    // Strict correctness: the RIGHT rows survive, not just the right count.
+    assertValues(Set.of("val_0", "val_1"), "SELECT \"%s\" FROM %s WHERE %s = 1", COL_VALUE, dataSource, colCode);
+    assertValues(Set.of("val_4", "val_5"), "SELECT \"%s\" FROM %s WHERE %s = 3", COL_VALUE, dataSource, colCode);
   }
 
   @Test
@@ -593,6 +598,15 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
     assertScan("1", Set.of(day1, day2, day3, day4, day5),
                "SELECT COUNT(*) FROM %s WHERE \"%s\" = 'val_0'", dataSource, COL_VALUE);
 
+    // Strict correctness on some predicates: assert the actual surviving rows, not just their count.
+    // 'IN' spans tenant_a (val_0,val_1,val_4,val_5) plus tenant_c on the multi-value Day4 (val_6) — but NOT tenant_d's
+    // val_7, even though val_7 lives in the same Day4 segment. This is what COUNT alone cannot prove.
+    assertValues(Set.of("val_0", "val_1", "val_4", "val_5", "val_6"),
+                 "SELECT \"%s\" FROM %s WHERE %s IN ('tenant_a','tenant_c')", COL_VALUE, dataSource, COL_TENANT);
+    // 'IS NULL' returns only the two null-tenant Day5 rows.
+    assertValues(Set.of("val_8", "val_9"),
+                 "SELECT \"%s\" FROM %s WHERE %s IS NULL", COL_VALUE, dataSource, COL_TENANT);
+
     // Non-existent value → full prune (no segment reaches the historical). Verified via the sentinel fence.
     assertFullPruneWithSentinel(
         StringUtils.format("SELECT COUNT(*) FROM %s WHERE %s = 'tenant_zzz'", dataSource, COL_TENANT),
@@ -730,6 +744,16 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
         scannedSegments(dataSource),
         "Wrong scanned-segment set for: " + StringUtils.format(sqlTemplate, sqlArgs)
     );
+  }
+
+  private void assertValues(Set<String> expectedValues, String sqlTemplate, Object... sqlArgs)
+  {
+    final String csv = cluster.runSql(sqlTemplate, sqlArgs);
+    final Set<String> actual = Arrays.stream(csv.split("\n"))
+                                     .map(String::trim)
+                                     .filter(s -> !s.isEmpty())
+                                     .collect(Collectors.toSet());
+    Assertions.assertEquals(expectedValues, actual, "Wrong value set for: " + StringUtils.format(sqlTemplate, sqlArgs));
   }
 
   private void assertFullPruneWithSentinel(String prunedSql, String sentinelSql, Set<String> sentinelExpected)
