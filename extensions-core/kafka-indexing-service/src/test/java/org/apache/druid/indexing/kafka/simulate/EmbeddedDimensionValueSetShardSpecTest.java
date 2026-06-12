@@ -243,8 +243,8 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
     Assertions.assertEquals("5", cluster.runSql(
         "SELECT COUNT(*) FROM %s WHERE %s = 'tenant_b'", dataSource, COL_TENANT));
 
-    // Numeric dimension equality filter — region_code is a Long, getDimension() returns "1"/"2"/"3"
-    // so DimensionValueSetShardSpec can prune on equality
+    // Numeric dimension equality filter still returns correct counts. Note this does NOT prune (numeric filters
+    // opt out of segment pruning); pruning behavior is asserted in test_numericDimension_isNotPruned.
     Assertions.assertEquals("5", cluster.runSql(
         "SELECT COUNT(*) FROM %s WHERE %s = 1", dataSource, colRegionCode));
     Assertions.assertEquals("5", cluster.runSql(
@@ -273,6 +273,87 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
           "Expected at least one tracked dimension in partitionDimensionValues: " + filters
       );
     }
+  }
+
+  /**
+   * Numeric (Long) tracked dimensions are recorded in the shard spec but are NOT used for pruning: numeric query
+   * filters opt out of segment pruning (their getDimensionRangeSet returns null, since pruning compares values
+   * lexicographically), so a numeric equality filter scans every segment even though each segment declares exactly
+   * one numeric value. Queries stay correct; there is simply no pruning benefit.
+   *
+   * <p>This is intentional for now. We could either consider extending pruning to numeric types with type-aware
+   * (non-lexicographic) comparison, or (b) reject numeric dimensions outright when they're declared.
+   */
+  @Test
+  public void test_numericDimension_isNotPruned()
+  {
+    final String colCode = "code"; // numeric (Long), tracked
+    final String topic = dataSource + "_topic";
+    kafkaServer.createTopicWithPartitions(topic, 1);
+
+    // One distinct numeric code per DAY segment: Day1=1, Day2=2, Day3=3. If numeric pruning worked, "code = 1" would
+    // scan only Day1; because it does NOT, all three segments are scanned.
+    final List<ProducerRecord<byte[], byte[]>> records = new ArrayList<>();
+    records.add(record(topic, "%s,1,val_0", DateTimes.of("2025-01-01T01:00:00")));
+    records.add(record(topic, "%s,1,val_1", DateTimes.of("2025-01-01T02:00:00")));
+    records.add(record(topic, "%s,2,val_2", DateTimes.of("2025-01-02T01:00:00")));
+    records.add(record(topic, "%s,2,val_3", DateTimes.of("2025-01-02T02:00:00")));
+    records.add(record(topic, "%s,3,val_4", DateTimes.of("2025-01-03T01:00:00")));
+    records.add(record(topic, "%s,3,val_5", DateTimes.of("2025-01-03T02:00:00")));
+    kafkaServer.produceRecordsToTopic(records);
+
+    final KafkaSupervisorSpec spec = new KafkaSupervisorSpecBuilder()
+        .withContext(Collections.singletonMap(Tasks.USE_CONCURRENT_LOCKS, true))
+        .withDataSchema(
+            schema -> schema
+                .withTimestamp(new TimestampSpec(COL_TIMESTAMP, null, null))
+                .withDimensions(
+                    DimensionsSpec.builder()
+                                  .setDimensions(List.of(
+                                      new LongDimensionSchema(colCode),
+                                      new StringDimensionSchema(COL_VALUE)
+                                  ))
+                                  .build()
+                )
+                .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
+        )
+        .withTuningConfig(
+            t -> t.withMaxRowsPerSegment(1000)
+                  .withReleaseLocksOnHandoff(true)
+                  .withStreamingPartitionsSpec(new StreamingPartitionsSpec(List.of(colCode)))
+        )
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withInputFormat(new CsvInputFormat(
+                    List.of(COL_TIMESTAMP, colCode, COL_VALUE), null, null, false, 0, false))
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withTaskDuration(Period.millis(500))
+                .withStartDelay(Period.millis(10))
+                .withSupervisorRunPeriod(Period.millis(500))
+                .withCompletionTimeout(Period.seconds(5))
+                .withUseEarliestSequenceNumber(true)
+        )
+        .withId(dataSource + "_supe")
+        .build(dataSource, topic);
+
+    cluster.callApi().postSupervisor(spec);
+    awaitRowsProcessed(6);
+    suspendAndAwaitHandoff(spec, 1);
+
+    // The numeric value IS recorded in the shard spec (stringified), even though it is never used for pruning.
+    verifyAllSegmentsHaveDimensionValueSetShardSpec(dataSource);
+
+    final Map<String, String> startToSegmentId = getStartToSegmentId(dataSource);
+    final String day1 = startToSegmentId.get("2025-01-01T00:00:00.000Z");
+    final String day2 = startToSegmentId.get("2025-01-02T00:00:00.000Z");
+    final String day3 = startToSegmentId.get("2025-01-03T00:00:00.000Z");
+    final Set<String> allDays = Set.of(day1, day2, day3);
+
+    // Correct count, but ALL segments scanned: numeric equality does not prune even though each segment holds one code.
+    assertScan("2", allDays, "SELECT COUNT(*) FROM %s WHERE %s = 1", dataSource, colCode);
+    assertScan("2", allDays, "SELECT COUNT(*) FROM %s WHERE %s = 3", dataSource, colCode);
+    // A non-existent code returns 0 rows but is still NOT pruned (would be a full prune if numeric pruning worked).
+    assertScan("0", allDays, "SELECT COUNT(*) FROM %s WHERE %s = 999", dataSource, colCode);
   }
 
   @Test

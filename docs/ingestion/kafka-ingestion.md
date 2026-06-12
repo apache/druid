@@ -271,6 +271,7 @@ This enables segment pruning for streaming-ingested data without waiting for com
 
 **Usage guidelines:**
 
+- Only string-typed dimensions are currently supported.
 - Use only low-to-medium cardinality dimensions (for example, `tenant_id`, `region`, `environment`). High-cardinality dimensions bloat segment metadata with no pruning benefit.
 - Most effective when Kafka partitions are keyed by the tracked dimension (for example, using tenant ID as the message key). Each task naturally sees a subset of values, and segments get tight filter annotations.
 - Also works with multiple supervisors reading from separate topics into one datasource.

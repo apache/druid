@@ -37,6 +37,8 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class KafkaIndexTaskTuningConfigTest
@@ -158,6 +160,56 @@ public class KafkaIndexTaskTuningConfigTest
         TuningConfig.class
     );
     Assert.assertNull(config.getStreamingPartitionsSpec());
+  }
+
+  @Test
+  public void testSerdeWithEmptyPartitionDimensions() throws Exception
+  {
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("[]");
+    Assert.assertEquals(Collections.emptyList(), config.getStreamingPartitionsSpec().getPartitionDimensions());
+  }
+
+  @Test
+  public void testSerdeWithNullPartitionDimensionsCoalescesToEmpty() throws Exception
+  {
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("null");
+    Assert.assertEquals(Collections.emptyList(), config.getStreamingPartitionsSpec().getPartitionDimensions());
+  }
+
+  @Test
+  public void testSerdeWithEmptyStringPartitionDimension() throws Exception
+  {
+    // An empty-string dimension name is preserved verbatim (it simply never matches an ingested value).
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("[\"\"]");
+    Assert.assertEquals(List.of(""), config.getStreamingPartitionsSpec().getPartitionDimensions());
+  }
+
+  @Test
+  public void testSerdeWithNumericLookingPartitionDimension() throws Exception
+  {
+    // Dimension names are plain strings; a numeric-looking name is just a string.
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("[\"123\"]");
+    Assert.assertEquals(List.of("123"), config.getStreamingPartitionsSpec().getPartitionDimensions());
+  }
+
+  @Test
+  public void testSerdeWithNullElementInPartitionDimensions() throws Exception
+  {
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("[\"tenant\", null]");
+    Assert.assertEquals(Arrays.asList("tenant", null), config.getStreamingPartitionsSpec().getPartitionDimensions());
+  }
+
+  private KafkaIndexTaskTuningConfig roundTripWithStreamingPartitionsSpec(String partitionDimensionsJson)
+      throws IOException
+  {
+    final String jsonStr = "{\n"
+                           + "  \"type\": \"kafka\",\n"
+                           + "  \"streamingPartitionsSpec\": {\"partitionDimensions\": " + partitionDimensionsJson + "}\n"
+                           + "}";
+    return (KafkaIndexTaskTuningConfig) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonStr, TuningConfig.class)),
+        TuningConfig.class
+    );
   }
 
   @Test
