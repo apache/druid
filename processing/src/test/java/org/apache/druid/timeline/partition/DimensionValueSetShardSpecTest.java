@@ -33,13 +33,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class StreamRangeShardSpecTest
+public class DimensionValueSetShardSpecTest
 {
   private static final String TENANT = "tenant";
 
-  private static StreamRangeShardSpec spec(Map<String, List<String>> filters)
+  private static DimensionValueSetShardSpec spec(Map<String, List<String>> filters)
   {
-    return new StreamRangeShardSpec(0, 1, filters);
+    return new DimensionValueSetShardSpec(0, 1, filters);
   }
 
   private static RangeSet<String> points(String... values)
@@ -77,7 +77,7 @@ public class StreamRangeShardSpecTest
   @Test
   public void testNoFilters_alwaysTrue()
   {
-    final StreamRangeShardSpec s = spec(Collections.emptyMap());
+    final DimensionValueSetShardSpec s = spec(Collections.emptyMap());
     Assert.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_a")));
     Assert.assertTrue(s.possibleInDomain(Collections.emptyMap()));
   }
@@ -85,63 +85,63 @@ public class StreamRangeShardSpecTest
   @Test
   public void testSingleFilter_matchingValue_returnsTrue()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
     Assert.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_a")));
   }
 
   @Test
   public void testSingleFilter_nonMatchingValue_returnsFalse()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
     Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_b")));
   }
 
   @Test
   public void testSingleFilter_domainHasMultipleValues_matchIncluded_returnsTrue()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
     Assert.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_a", "tenant_b")));
   }
 
   @Test
   public void testSingleFilter_domainHasMultipleValues_noMatch_returnsFalse()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
     Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_b", "tenant_c")));
   }
 
   @Test
   public void testMultipleAllowedValues_matchOne_returnsTrue()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a", "tenant_b")));
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a", "tenant_b")));
     Assert.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_b")));
   }
 
   @Test
   public void testMultipleAllowedValues_noMatch_returnsFalse()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a", "tenant_b")));
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a", "tenant_b")));
     Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_c")));
   }
 
   @Test
   public void testDeclaredDimension_notInQueryDomain_returnsTrue()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
     Assert.assertTrue(s.possibleInDomain(Collections.emptyMap()));
   }
 
   @Test
   public void testDeclaredDimension_queryFiltersOnOtherDim_returnsTrue()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
     Assert.assertTrue(s.possibleInDomain(domain("region", "us-west")));
   }
 
   @Test
   public void testRangeFilter_onDeclaredDimension_returnsTrue()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
     // A range predicate (e.g. TENANT BETWEEN 'a' AND 'z') cannot be pruned against declared point values.
     Assert.assertTrue(s.possibleInDomain(rangeFilter(TENANT, "a", "z")));
   }
@@ -149,7 +149,7 @@ public class StreamRangeShardSpecTest
   @Test
   public void testMultipleDimensions_allMatch_returnsTrue()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(
         TENANT, List.of("tenant_a"),
         "region", List.of("us-west")
     ));
@@ -162,7 +162,7 @@ public class StreamRangeShardSpecTest
   @Test
   public void testMultipleDimensions_oneDimensionMismatches_returnsFalse()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(
         TENANT, List.of("tenant_a"),
         "region", List.of("us-west")
     ));
@@ -175,7 +175,7 @@ public class StreamRangeShardSpecTest
   @Test
   public void testMultipleDimensions_onlyOneDimensionInDomain()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(
         TENANT, List.of("tenant_a"),
         "region", List.of("us-west")
     ));
@@ -186,7 +186,7 @@ public class StreamRangeShardSpecTest
   @Test
   public void testGetDomainDimensions_returnsFilterKeys()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(
         TENANT, List.of("tenant_a"),
         "region", List.of("us-west")
     ));
@@ -204,7 +204,7 @@ public class StreamRangeShardSpecTest
   @Test
   public void testGetType()
   {
-    Assert.assertEquals(ShardSpec.Type.STREAM_RANGE, spec(Collections.emptyMap()).getType());
+    Assert.assertEquals(ShardSpec.Type.DIM_VALUE_SET, spec(Collections.emptyMap()).getType());
   }
 
   private static ObjectMapper newMapper()
@@ -216,14 +216,14 @@ public class StreamRangeShardSpecTest
   public void testJsonSerdeRoundTrip() throws Exception
   {
     final ObjectMapper mapper = newMapper();
-    final StreamRangeShardSpec original = new StreamRangeShardSpec(
+    final DimensionValueSetShardSpec original = new DimensionValueSetShardSpec(
         3,
         8,
         ImmutableMap.of(TENANT, List.of("tenant_a", "tenant_b"), "region", List.of("us-west"))
     );
 
-    final StreamRangeShardSpec deserialized =
-        mapper.readValue(mapper.writeValueAsString(original), StreamRangeShardSpec.class);
+    final DimensionValueSetShardSpec deserialized =
+        mapper.readValue(mapper.writeValueAsString(original), DimensionValueSetShardSpec.class);
 
     Assert.assertEquals(original, deserialized);
     Assert.assertEquals(original.getPartitionDimensionValues(), deserialized.getPartitionDimensionValues());
@@ -233,9 +233,9 @@ public class StreamRangeShardSpecTest
   public void testJsonSerdeContainsType() throws Exception
   {
     final ObjectMapper mapper = newMapper();
-    final StreamRangeShardSpec spec = new StreamRangeShardSpec(0, 1, ImmutableMap.of(TENANT, List.of("tenant_a")));
+    final DimensionValueSetShardSpec spec = new DimensionValueSetShardSpec(0, 1, ImmutableMap.of(TENANT, List.of("tenant_a")));
     final String json = mapper.writeValueAsString(spec);
-    Assert.assertTrue(json.contains("\"type\":\"stream_range\""));
+    Assert.assertTrue(json.contains("\"type\":\"dim_value_set\""));
     Assert.assertTrue(json.contains("\"partitionDimensionValues\""));
   }
 
@@ -243,10 +243,10 @@ public class StreamRangeShardSpecTest
   public void testJsonSerdeWithNullFilters() throws Exception
   {
     final ObjectMapper mapper = newMapper();
-    final StreamRangeShardSpec original = new StreamRangeShardSpec(0, 1, null);
+    final DimensionValueSetShardSpec original = new DimensionValueSetShardSpec(0, 1, null);
 
-    final StreamRangeShardSpec deserialized =
-        mapper.readValue(mapper.writeValueAsString(original), StreamRangeShardSpec.class);
+    final DimensionValueSetShardSpec deserialized =
+        mapper.readValue(mapper.writeValueAsString(original), DimensionValueSetShardSpec.class);
 
     Assert.assertEquals(original, deserialized);
     Assert.assertTrue(deserialized.getPartitionDimensionValues().isEmpty());
@@ -255,7 +255,7 @@ public class StreamRangeShardSpecTest
   @Test
   public void testEmptyStringValue_isDistinctFromNull()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(TENANT, List.of("")));
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("")));
     Assert.assertTrue(s.possibleInDomain(domain(TENANT, "")));
     Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_a")));
     // An IS NULL query (domain = (-inf, "")) must NOT match a segment that only declares the empty string.
@@ -266,7 +266,7 @@ public class StreamRangeShardSpecTest
   public void testNullValue_matchesIsNullQueryOnly()
   {
     // A null/missing value is declared as a null list element.
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(TENANT, Collections.singletonList(null)));
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, Collections.singletonList(null)));
     Assert.assertTrue(s.possibleInDomain(nullDomain(TENANT)));
     Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_a")));
     Assert.assertFalse(s.possibleInDomain(domain(TENANT, "")));
@@ -275,14 +275,14 @@ public class StreamRangeShardSpecTest
   @Test
   public void testConcreteValueOnly_isPrunedForIsNullQuery()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
     Assert.assertFalse(s.possibleInDomain(nullDomain(TENANT)));
   }
 
   @Test
   public void testNullAndConcreteValues_matchBoth()
   {
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(TENANT, Arrays.asList("tenant_a", null)));
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, Arrays.asList("tenant_a", null)));
     Assert.assertTrue(s.possibleInDomain(nullDomain(TENANT)));
     Assert.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_a")));
     Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_b")));
@@ -292,11 +292,11 @@ public class StreamRangeShardSpecTest
   public void testNullValue_jsonSerdeRoundTrip() throws Exception
   {
     final ObjectMapper mapper = newMapper();
-    final StreamRangeShardSpec original =
-        new StreamRangeShardSpec(0, 1, ImmutableMap.of(TENANT, Arrays.asList("tenant_a", null)));
+    final DimensionValueSetShardSpec original =
+        new DimensionValueSetShardSpec(0, 1, ImmutableMap.of(TENANT, Arrays.asList("tenant_a", null)));
 
-    final StreamRangeShardSpec deserialized =
-        mapper.readValue(mapper.writeValueAsString(original), StreamRangeShardSpec.class);
+    final DimensionValueSetShardSpec deserialized =
+        mapper.readValue(mapper.writeValueAsString(original), DimensionValueSetShardSpec.class);
 
     Assert.assertEquals(original, deserialized);
     Assert.assertTrue(deserialized.getPartitionDimensionValues().get(TENANT).contains(null));
@@ -307,7 +307,7 @@ public class StreamRangeShardSpecTest
   public void testEmptyAllowedList_prunesEverything()
   {
     // An empty allowed list means no values were observed for the dimension, so any constraining query is pruned.
-    final StreamRangeShardSpec s = spec(ImmutableMap.of(TENANT, List.of()));
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of()));
     Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_a")));
   }
 }

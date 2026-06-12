@@ -36,7 +36,7 @@ import java.util.Objects;
  * contains ({@link #partitionDimensionValues}), letting the broker prune segments whose values cannot match a query filter
  * before compaction. A dimension absent from {@link #partitionDimensionValues} is not pruned on.
  */
-public class StreamRangeShardSpec extends NumberedShardSpec
+public class DimensionValueSetShardSpec extends NumberedShardSpec
 {
   /**
    * Maps dimension name → exhaustive list of values that can appear in this shard for that dimension.
@@ -45,7 +45,7 @@ public class StreamRangeShardSpec extends NumberedShardSpec
   private final Map<String, List<String>> partitionDimensionValues;
 
   @JsonCreator
-  public StreamRangeShardSpec(
+  public DimensionValueSetShardSpec(
       @JsonProperty("partitionNum") int partitionNum,
       @JsonProperty("partitions") int partitions,
       @JsonProperty("partitionDimensionValues") @Nullable Map<String, List<String>> partitionDimensionValues
@@ -115,19 +115,19 @@ public class StreamRangeShardSpec extends NumberedShardSpec
   @Override
   public String getType()
   {
-    return Type.STREAM_RANGE;
+    return Type.DIM_VALUE_SET;
   }
 
   @Override
   public ShardSpec withPartitionNum(int partitionNum)
   {
-    return new StreamRangeShardSpec(partitionNum, getNumCorePartitions(), partitionDimensionValues);
+    return new DimensionValueSetShardSpec(partitionNum, getNumCorePartitions(), partitionDimensionValues);
   }
 
   @Override
   public ShardSpec withCorePartitions(int partitions)
   {
-    return new StreamRangeShardSpec(getPartitionNum(), partitions, partitionDimensionValues);
+    return new DimensionValueSetShardSpec(getPartitionNum(), partitions, partitionDimensionValues);
   }
 
   @Override
@@ -142,7 +142,7 @@ public class StreamRangeShardSpec extends NumberedShardSpec
     if (!super.equals(o)) {
       return false;
     }
-    StreamRangeShardSpec that = (StreamRangeShardSpec) o;
+    DimensionValueSetShardSpec that = (DimensionValueSetShardSpec) o;
     return Objects.equals(partitionDimensionValues, that.partitionDimensionValues);
   }
 
@@ -155,7 +155,7 @@ public class StreamRangeShardSpec extends NumberedShardSpec
   @Override
   public String toString()
   {
-    return "StreamRangeShardSpec{" +
+    return "DimensionValueSetShardSpec{" +
            "partitionNum=" + getPartitionNum() +
            ", partitions=" + getNumCorePartitions() +
            ", partitionDimensionValues=" + partitionDimensionValues +

@@ -263,7 +263,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
 
   /**
    * Dimensions whose observed values are recorded per published segment for query-time pruning via
-   * {@link org.apache.druid.timeline.partition.StreamRangeShardSpec}. Null when not configured. Currently honored for
+   * {@link org.apache.druid.timeline.partition.DimensionValueSetShardSpec}. Null when not configured. Currently honored for
    * Kafka ingestion only; other stream types carry it through but do not act on it.
    */
   @JsonProperty

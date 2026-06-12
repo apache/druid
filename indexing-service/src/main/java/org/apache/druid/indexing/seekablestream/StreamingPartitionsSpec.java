@@ -31,7 +31,7 @@ import java.util.Objects;
 /**
  * Streaming analog of the batch/compaction {@code partitionsSpec}. Configured in the streaming tuning config, it
  * declares the dimensions whose observed values each published segment should record in a
- * {@link org.apache.druid.timeline.partition.StreamRangeShardSpec} so the broker can prune segments at query time
+ * {@link org.apache.druid.timeline.partition.DimensionValueSetShardSpec} so the broker can prune segments at query time
  * without waiting for compaction. Unlike batch partitioning this does not route rows into shards; it only annotates
  * segments with the values they happened to ingest. Currently honored for Kafka ingestion only.
  *

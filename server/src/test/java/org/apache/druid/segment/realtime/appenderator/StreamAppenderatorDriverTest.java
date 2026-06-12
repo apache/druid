@@ -43,8 +43,8 @@ import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.DimensionValueSetShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.timeline.partition.StreamRangeShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.joda.time.DateTime;
@@ -189,11 +189,11 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
       Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
     }
 
-    // Annotate function that swaps every segment to a StreamRangeShardSpec. The publisher echoes the annotated segments
+    // Annotate function that swaps every segment to a DimensionValueSetShardSpec. The publisher echoes the annotated segments
     // into the result, mimicking the metadata store recording the annotated spec.
-    final Function<Set<DataSegment>, Set<DataSegment>> toStreamRange =
+    final Function<Set<DataSegment>, Set<DataSegment>> toDimensionValueSet =
         segments -> segments.stream()
-            .map(s -> s.withShardSpec(new StreamRangeShardSpec(
+            .map(s -> s.withShardSpec(new DimensionValueSetShardSpec(
                 s.getShardSpec().getPartitionNum(),
                 s.getShardSpec().getNumCorePartitions(),
                 ImmutableMap.of("dim1", ImmutableList.of("x"))
@@ -206,15 +206,15 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         echoPublisher,
         committerSupplier.get(),
         ImmutableList.of("dummy"),
-        toStreamRange
+        toDimensionValueSet
     ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
     Assert.assertFalse("Expected at least one published segment", published.getSegments().isEmpty());
     for (DataSegment segment : published.getSegments()) {
       Assert.assertTrue(
-          "Returned segment should carry the published StreamRangeShardSpec, not the pre-publish NumberedShardSpec; "
+          "Returned segment should carry the published DimensionValueSetShardSpec, not the pre-publish NumberedShardSpec; "
           + "got " + segment.getShardSpec().getClass().getSimpleName(),
-          segment.getShardSpec() instanceof StreamRangeShardSpec
+          segment.getShardSpec() instanceof DimensionValueSetShardSpec
       );
     }
   }

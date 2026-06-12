@@ -58,10 +58,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Embedded integration tests for {@link org.apache.druid.timeline.partition.StreamRangeShardSpec}: end-to-end
+ * Embedded integration tests for {@link org.apache.druid.timeline.partition.DimensionValueSetShardSpec}: end-to-end
  * ingestion, publish, query correctness, and broker segment pruning feature when Kafka tasks hand off segments.
  */
-public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
+public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestBase
 {
   private static final String COL_TIMESTAMP = "timestamp";
   private static final String COL_TENANT = "tenant";
@@ -138,7 +138,7 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     // Realtime: all rows from both tenants are queryable.
     assertRowCounts();
 
-    // Suspend both supervisors → handoff. (Per-task query routing is covered by StreamRangeShardSpecTest;
+    // Suspend both supervisors → handoff. (Per-task query routing is covered by DimensionValueSetShardSpecTest;
     // here both tasks share a host:port so query/node/time can't distinguish them — counts confirm correctness.)
     cluster.callApi().postSupervisor(specA.createSuspendedSpec());
     cluster.callApi().postSupervisor(specB.createSuspendedSpec());
@@ -152,8 +152,8 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     // Historical: same counts after publish.
     assertRowCounts();
 
-    // Verify sys.segments: all published segments carry a stream_range shard spec
-    verifyAllSegmentsHaveStreamRangeShardSpec(dataSource);
+    // Verify sys.segments: all published segments carry a dim_value_set shard spec
+    verifyAllSegmentsHaveDimensionValueSetShardSpec(dataSource);
 
     // Verify the partitionDimensionValues contain the expected tenant values for each supervisor's segments
     final List<Map<String, Object>> shardSpecs = getShardSpecs(dataSource);
@@ -244,7 +244,7 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
         "SELECT COUNT(*) FROM %s WHERE %s = 'tenant_b'", dataSource, COL_TENANT));
 
     // Numeric dimension equality filter — region_code is a Long, getDimension() returns "1"/"2"/"3"
-    // so StreamRangeShardSpec can prune on equality
+    // so DimensionValueSetShardSpec can prune on equality
     Assertions.assertEquals("5", cluster.runSql(
         "SELECT COUNT(*) FROM %s WHERE %s = 1", dataSource, colRegionCode));
     Assertions.assertEquals("5", cluster.runSql(
@@ -262,8 +262,8 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     Assertions.assertEquals("5", cluster.runSql(
         "SELECT COUNT(*) FROM %s WHERE %s = 'tenant_b'", dataSource, COL_TENANT));
 
-    // Verify sys.segments: all published segments carry stream_range shard specs with both tracked dims
-    verifyAllSegmentsHaveStreamRangeShardSpec(dataSource);
+    // Verify sys.segments: all published segments carry dim_value_set shard specs with both tracked dims
+    verifyAllSegmentsHaveDimensionValueSetShardSpec(dataSource);
     final List<Map<String, Object>> shardSpecs = getShardSpecs(dataSource);
     for (Map<String, Object> spec : shardSpecs) {
       @SuppressWarnings("unchecked")
@@ -341,11 +341,11 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
 
     suspendAndAwaitHandoff(spec, 1);
 
-    // After publish the StreamRangeShardSpec carries both observed tenants; historical queries stay correct.
+    // After publish the DimensionValueSetShardSpec carries both observed tenants; historical queries stay correct.
     assertMixedTenantCounts();
 
-    // Verify sys.segments: published segments carry stream_range with both tenant values
-    verifyAllSegmentsHaveStreamRangeShardSpec(dataSource);
+    // Verify sys.segments: published segments carry dim_value_set with both tenant values
+    verifyAllSegmentsHaveDimensionValueSetShardSpec(dataSource);
     final List<Map<String, Object>> publishedShardSpecs = getShardSpecs(dataSource);
     for (Map<String, Object> shardSpec : publishedShardSpecs) {
       @SuppressWarnings("unchecked")
@@ -393,7 +393,7 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
 
     // Key assertion: each segment carries ONLY the tenant value(s) observed in that segment,
     // NOT the union of all values seen by the task.
-    verifyAllSegmentsHaveStreamRangeShardSpec(dataSource);
+    verifyAllSegmentsHaveDimensionValueSetShardSpec(dataSource);
     final List<Map<String, Object>> shardSpecs = getShardSpecs(dataSource);
     Assertions.assertEquals(4, shardSpecs.size(),
         "Expected exactly 4 segments (DAY granularity, 4 days) but got " + shardSpecs.size());
@@ -457,8 +457,8 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     awaitRowsProcessed(10);
     suspendAndAwaitHandoff(spec, 1); // publish + hand off all 5 segments to the historical
 
-    // Sanity: exactly 5 published segments, all stream_range.
-    verifyAllSegmentsHaveStreamRangeShardSpec(dataSource);
+    // Sanity: exactly 5 published segments, all dim_value_set.
+    verifyAllSegmentsHaveDimensionValueSetShardSpec(dataSource);
 
     // Build day(startIso) → segmentId map from sys.segments. The segment version is assigned at publish
     // time, so the expected segment ids MUST be read here and never hand-constructed.
@@ -546,7 +546,7 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     awaitRowsProcessed(10);
     suspendAndAwaitHandoff(spec, 1);
 
-    // Partitioning is OFF: every published segment must be a plain "numbered" shard spec, NOT "stream_range".
+    // Partitioning is OFF: every published segment must be a plain "numbered" shard spec, NOT "dim_value_set".
     verifyAllSegmentsHaveShardSpecType(dataSource, "numbered");
 
     final Map<String, String> startToSegmentId = getStartToSegmentId(dataSource);
@@ -734,12 +734,12 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
 
     suspendAndAwaitHandoff(spec, 1);
 
-    // Historical: the IS NULL query must still find the 5 null rows. If the StreamRangeShardSpec failed to declare
+    // Historical: the IS NULL query must still find the 5 null rows. If the DimensionValueSetShardSpec failed to declare
     // null, the broker would prune the segment here and return 0.
     assertNullTenantCounts();
 
     // The published shard spec declares the null value (serialized as a JSON null in the tenant list).
-    verifyAllSegmentsHaveStreamRangeShardSpec(dataSource);
+    verifyAllSegmentsHaveDimensionValueSetShardSpec(dataSource);
     final List<Map<String, Object>> shardSpecs = getShardSpecs(dataSource);
     final boolean someSpecDeclaresNull = shardSpecs.stream()
         .map(shardSpec -> {
@@ -905,9 +905,9 @@ public class EmbeddedStreamRangeShardSpecTest extends EmbeddedClusterTestBase
     return records;
   }
 
-  private void verifyAllSegmentsHaveStreamRangeShardSpec(String ds)
+  private void verifyAllSegmentsHaveDimensionValueSetShardSpec(String ds)
   {
-    verifyAllSegmentsHaveShardSpecType(ds, "stream_range");
+    verifyAllSegmentsHaveShardSpecType(ds, "dim_value_set");
   }
 
   private void verifyAllSegmentsHaveShardSpecType(String ds, String expectedType)

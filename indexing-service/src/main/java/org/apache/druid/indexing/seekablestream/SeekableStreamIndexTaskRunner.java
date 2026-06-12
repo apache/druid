@@ -96,7 +96,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.partition.StreamRangeShardSpec;
+import org.apache.druid.timeline.partition.DimensionValueSetShardSpec;
 import org.apache.druid.utils.CollectionUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
@@ -257,7 +257,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final Map<PartitionIdType, Long> partitionsThroughput = new HashMap<>();
 
   /**
-   * Observed values per tracked dimension, keyed by segment identifier, used to stamp the {@link StreamRangeShardSpec}
+   * Observed values per tracked dimension, keyed by segment identifier, used to stamp the {@link DimensionValueSetShardSpec}
    * at publish time. A {@code null} element denotes an observed null/missing value (distinct from {@code ""}) so that
    * {@code IS NULL} queries are not pruned. Inner sets permit null and are written by the run loop / read by the
    * publish thread under their own monitor. Entries are cleared on successful publish; a publish failure is terminal
@@ -268,7 +268,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   /**
    * Segment identifiers restored from disk at startup (i.e. spanning a task restart). Their pre-restart rows are not
    * re-read, so {@link #observedPartitionDimValuesBySegment} would under-include values; to avoid wrongly pruning them,
-   * such segments are published with an empty-filter (non-pruning) {@link StreamRangeShardSpec} instead of one
+   * such segments are published with an empty-filter (non-pruning) {@link DimensionValueSetShardSpec} instead of one
    * declaring observed values.
    */
   private final Set<SegmentId> restartSpannedSegments = ConcurrentHashMap.newKeySet();
@@ -522,7 +522,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       );
 
       // Segments restored from disk span a task restart; their pre-restart values can't be re-observed, so record them
-      // to fall back to an empty-filter (non-pruning) StreamRangeShardSpec at publish rather than stamping an
+      // to fall back to an empty-filter (non-pruning) DimensionValueSetShardSpec at publish rather than stamping an
       // incomplete filter.
       if (!partitionDimensions.isEmpty()) {
         for (SegmentIdWithShardSpec restored : appenderator.getSegments()) {
@@ -735,7 +735,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 );
 
                 if (addResult.isOk()) {
-                  // Accumulate observed dimension values per segment for StreamRangeShardSpec at publish time.
+                  // Accumulate observed dimension values per segment for DimensionValueSetShardSpec at publish time.
                   if (!partitionDimensions.isEmpty()) {
                     final SegmentId segmentId = addResult.getSegmentIdentifier().asSegmentId();
                     final Map<String, Set<String>> segValues = observedPartitionDimValuesBySegment
@@ -1078,8 +1078,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   }
 
   /**
-   * Stamps a segment with a {@link StreamRangeShardSpec} declaring its observed dimension values so the broker can
-   * prune it. When the feature is on we always return a {@link StreamRangeShardSpec}, falling back to an empty
+   * Stamps a segment with a {@link DimensionValueSetShardSpec} declaring its observed dimension values so the broker can
+   * prune it. When the feature is on we always return a {@link DimensionValueSetShardSpec}, falling back to an empty
    * (non-pruning) filter map when values can't be safely declared, so segments in an interval stay class-uniform for
    * {@link org.apache.druid.segment.realtime.appenderator.SegmentPublisherHelper}. A null observed value is carried
    * through (distinct from {@code ""}) so {@code IS NULL} queries are not pruned.
@@ -1116,7 +1116,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
     }
     return s.withShardSpec(
-        new StreamRangeShardSpec(
+        new DimensionValueSetShardSpec(
             s.getShardSpec().getPartitionNum(),
             s.getShardSpec().getNumCorePartitions(),
             snapshotFilters
