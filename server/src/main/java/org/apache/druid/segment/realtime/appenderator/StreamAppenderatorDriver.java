@@ -105,10 +105,45 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       SegmentGenerationMetrics metrics
   )
   {
+    this(
+        appenderator,
+        segmentAllocator,
+        handoffNotifierFactory,
+        segmentRetriever,
+        dataSegmentKiller,
+        objectMapper,
+        metrics,
+        false
+    );
+  }
+
+  public StreamAppenderatorDriver(
+      Appenderator appenderator,
+      SegmentAllocator segmentAllocator,
+      SegmentHandoffNotifierFactory handoffNotifierFactory,
+      PublishedSegmentRetriever segmentRetriever,
+      DataSegmentKiller dataSegmentKiller,
+      ObjectMapper objectMapper,
+      SegmentGenerationMetrics metrics,
+      boolean strictTierAwareSegmentLoad
+  )
+  {
     super(appenderator, segmentAllocator, segmentRetriever, dataSegmentKiller);
 
-    this.handoffNotifier = Preconditions.checkNotNull(handoffNotifierFactory, "handoffNotifierFactory")
-                                        .createSegmentHandoffNotifier(appenderator.getDataSource(), appenderator.getId());
+    final SegmentHandoffNotifierFactory nonNullHandoffNotifierFactory = Preconditions.checkNotNull(
+        handoffNotifierFactory,
+        "handoffNotifierFactory"
+    );
+    this.handoffNotifier = strictTierAwareSegmentLoad
+                           ? nonNullHandoffNotifierFactory.createSegmentHandoffNotifier(
+                               appenderator.getDataSource(),
+                               appenderator.getId(),
+                               true
+                           )
+                           : nonNullHandoffNotifierFactory.createSegmentHandoffNotifier(
+                               appenderator.getDataSource(),
+                               appenderator.getId()
+                           );
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
   }

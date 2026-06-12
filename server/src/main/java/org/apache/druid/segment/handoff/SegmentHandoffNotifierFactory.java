@@ -23,4 +23,19 @@ package org.apache.druid.segment.handoff;
 public interface SegmentHandoffNotifierFactory
 {
   SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String taskId);
+
+  default SegmentHandoffNotifier createSegmentHandoffNotifier(
+      final String dataSource,
+      final String taskId,
+      final boolean strictTierAwareSegmentLoad
+  )
+  {
+    if (strictTierAwareSegmentLoad) {
+      throw new UnsupportedOperationException(
+          "Strict tier-aware segment load handoff checks are not supported by this "
+          + "SegmentHandoffNotifierFactory implementation."
+      );
+    }
+    return createSegmentHandoffNotifier(dataSource, taskId);
+  }
 }

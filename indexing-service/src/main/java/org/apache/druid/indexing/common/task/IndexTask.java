@@ -958,7 +958,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         waitForSegmentAvailability(
             toolbox,
             segmentsToWaitFor,
-            tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
+            tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(),
+            tuningConfig.isStrictTierAwareSegmentLoad()
         );
       }
 
@@ -1189,6 +1190,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     private static final boolean DEFAULT_GUARANTEE_ROLLUP = false;
     private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;
     private static final long DEFAULT_PUSH_TIMEOUT = 0;
+    private static final boolean DEFAULT_STRICT_TIER_AWARE_SEGMENT_LOAD = false;
 
     private final AppendableIndexSpec appendableIndexSpec;
     private final int maxRowsInMemory;
@@ -1217,6 +1219,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     private final int maxParseExceptions;
     private final int maxSavedParseExceptions;
     private final long awaitSegmentAvailabilityTimeoutMillis;
+    private final boolean strictTierAwareSegmentLoad;
 
     @Nullable
     private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
@@ -1290,6 +1293,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
         @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
         @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
+        @JsonProperty("strictTierAwareSegmentLoad") @Nullable Boolean strictTierAwareSegmentLoad,
         @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads
     )
     {
@@ -1319,6 +1323,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
           maxSavedParseExceptions,
           maxColumnsToMerge,
           awaitSegmentAvailabilityTimeoutMillis,
+          strictTierAwareSegmentLoad,
           numPersistThreads
       );
 
@@ -1330,7 +1335,28 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
     }
 
     private IndexTuningConfig(
@@ -1352,6 +1378,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         @Nullable Integer maxSavedParseExceptions,
         @Nullable Integer maxColumnsToMerge,
         @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
+        @Nullable Boolean strictTierAwareSegmentLoad,
         @Nullable Integer numPersistThreads
     )
     {
@@ -1398,6 +1425,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
       } else {
         this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
       }
+      this.strictTierAwareSegmentLoad = strictTierAwareSegmentLoad == null
+                                        ? DEFAULT_STRICT_TIER_AWARE_SEGMENT_LOAD
+                                        : strictTierAwareSegmentLoad;
       this.numPersistThreads = numPersistThreads == null ?
                                 DEFAULT_NUM_PERSIST_THREADS : Math.max(numPersistThreads, DEFAULT_NUM_PERSIST_THREADS);
     }
@@ -1424,6 +1454,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
           maxSavedParseExceptions,
           maxColumnsToMerge,
           awaitSegmentAvailabilityTimeoutMillis,
+          strictTierAwareSegmentLoad,
           numPersistThreads
       );
     }
@@ -1614,6 +1645,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     }
 
     @JsonProperty
+    public boolean isStrictTierAwareSegmentLoad()
+    {
+      return strictTierAwareSegmentLoad;
+    }
+
+    @JsonProperty
     @Override
     public int getNumPersistThreads()
     {
@@ -1648,7 +1685,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
              Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
              Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
              Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
-             Objects.equals(awaitSegmentAvailabilityTimeoutMillis, that.awaitSegmentAvailabilityTimeoutMillis);
+             awaitSegmentAvailabilityTimeoutMillis == that.awaitSegmentAvailabilityTimeoutMillis &&
+             strictTierAwareSegmentLoad == that.strictTierAwareSegmentLoad;
     }
 
     @Override
@@ -1673,6 +1711,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
           maxSavedParseExceptions,
           segmentWriteOutMediumFactory,
           awaitSegmentAvailabilityTimeoutMillis,
+          strictTierAwareSegmentLoad,
           numPersistThreads
       );
     }
@@ -1698,6 +1737,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
              ", maxSavedParseExceptions=" + maxSavedParseExceptions +
              ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
              ", awaitSegmentAvailabilityTimeoutMillis=" + awaitSegmentAvailabilityTimeoutMillis +
+             ", strictTierAwareSegmentLoad=" + strictTierAwareSegmentLoad +
              ", numPersistThreads=" + numPersistThreads +
              '}';
     }

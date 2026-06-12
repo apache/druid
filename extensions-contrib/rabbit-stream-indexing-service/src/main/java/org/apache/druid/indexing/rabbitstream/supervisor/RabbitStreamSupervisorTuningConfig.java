@@ -69,6 +69,7 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         null,
         null,
         null,
+        null,
         null
         );
   }
@@ -101,7 +102,8 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
-      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
+      @JsonProperty("strictTierAwareSegmentLoad") @Nullable Boolean strictTierAwareSegmentLoad
   )
   {
     super(
@@ -128,7 +130,8 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         recordBufferSize,
         recordBufferOfferTimeout,
         maxRecordsPerPoll,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        strictTierAwareSegmentLoad
     );
     this.workerThreads = workerThreads;
     this.chatRetries = (chatRetries != null ? chatRetries : DEFAULT_CHAT_RETRIES);
@@ -215,6 +218,7 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         ", numPersistThreads=" + getNumPersistThreads() +
         ", maxRecordsPerPoll=" + getMaxRecordsPerPollConfigured() +
         ", maxColumnsToMerge=" + getMaxColumnsToMerge() +
+        ", strictTierAwareSegmentLoad=" + isStrictTierAwareSegmentLoad() +
         '}';
   }
 
@@ -241,11 +245,12 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         isLogParseExceptions(),
         getMaxParseExceptions(),
         getMaxSavedParseExceptions(),
+        getNumPersistThreads(),
         getRecordBufferSizeConfigured(),
         getRecordBufferOfferTimeout(),
         getMaxRecordsPerPollConfigured(),
-        getNumPersistThreads(),
-        getMaxColumnsToMerge()
-        );
+        getMaxColumnsToMerge(),
+        isStrictTierAwareSegmentLoad()
+    );
   }
 }

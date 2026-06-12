@@ -49,6 +49,24 @@ public interface CoordinatorClient
   ListenableFuture<Boolean> isHandoffComplete(String dataSource, SegmentDescriptor descriptor);
 
   /**
+   * Checks if the given segment is handed off or not, optionally requiring the
+   * segment to be loaded on every tier with a positive replica count in the matching retention rule.
+   */
+  default ListenableFuture<Boolean> isHandoffComplete(
+      final String dataSource,
+      final SegmentDescriptor descriptor,
+      final boolean strictTierAwareSegmentLoad
+  )
+  {
+    if (strictTierAwareSegmentLoad) {
+      throw new UnsupportedOperationException(
+          "Strict tier-aware segment load handoff checks are not supported by this CoordinatorClient implementation."
+      );
+    }
+    return isHandoffComplete(dataSource, descriptor);
+  }
+
+  /**
    * Fetches segment metadata for the given dataSource and segmentId. If includeUnused is set to false, the segment is
    * not returned if it is marked as unused.
    */

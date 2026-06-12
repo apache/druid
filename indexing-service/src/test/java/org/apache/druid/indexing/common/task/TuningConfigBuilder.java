@@ -69,6 +69,7 @@ public abstract class TuningConfigBuilder<Self extends TuningConfigBuilder<Self,
   protected Integer maxSavedParseExceptions;
   protected Integer maxColumnsToMerge;
   protected Long awaitSegmentAvailabilityTimeoutMillis;
+  protected Boolean strictTierAwareSegmentLoad;
   protected Integer maxAllowedLockCount;
   protected Integer numPersistThreads;
 
@@ -258,6 +259,12 @@ public abstract class TuningConfigBuilder<Self extends TuningConfigBuilder<Self,
     return self();
   }
 
+  public Self withStrictTierAwareSegmentLoad(Boolean strictTierAwareSegmentLoad)
+  {
+    this.strictTierAwareSegmentLoad = strictTierAwareSegmentLoad;
+    return self();
+  }
+
   public Self withNumPersistThreads(Integer numPersistThreads)
   {
     this.numPersistThreads = numPersistThreads;
@@ -332,6 +339,7 @@ public abstract class TuningConfigBuilder<Self extends TuningConfigBuilder<Self,
           maxSavedParseExceptions,
           maxColumnsToMerge,
           awaitSegmentAvailabilityTimeoutMillis,
+          strictTierAwareSegmentLoad,
           numPersistThreads
       );
     }
@@ -373,6 +381,7 @@ public abstract class TuningConfigBuilder<Self extends TuningConfigBuilder<Self,
           maxSavedParseExceptions,
           maxColumnsToMerge,
           awaitSegmentAvailabilityTimeoutMillis,
+          strictTierAwareSegmentLoad,
           maxAllowedLockCount,
           numPersistThreads
       );
@@ -415,6 +424,7 @@ public abstract class TuningConfigBuilder<Self extends TuningConfigBuilder<Self,
           maxSavedParseExceptions,
           maxColumnsToMerge,
           awaitSegmentAvailabilityTimeoutMillis,
+          strictTierAwareSegmentLoad,
           numPersistThreads
       );
     }

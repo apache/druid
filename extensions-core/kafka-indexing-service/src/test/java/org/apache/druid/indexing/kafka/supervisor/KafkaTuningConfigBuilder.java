@@ -113,7 +113,8 @@ public class KafkaTuningConfigBuilder extends TuningConfigBuilder<KafkaTuningCon
         maxSavedParseExceptions,
         numPersistThreads,
         maxColumnsToMerge,
-        releaseLocksOnHandoff
+        releaseLocksOnHandoff,
+        strictTierAwareSegmentLoad
     );
   }
 }

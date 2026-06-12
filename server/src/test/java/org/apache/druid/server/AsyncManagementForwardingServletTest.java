@@ -163,7 +163,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   public void testCoordinatorLoadStatus() throws Exception
   {
     COORDINATOR_EXPECTED_REQUEST.path = "/druid/coordinator/v1/loadstatus";
-    COORDINATOR_EXPECTED_REQUEST.query = "full";
+    COORDINATOR_EXPECTED_REQUEST.query = "full&strictTierAwareSegmentLoad=true";
     COORDINATOR_EXPECTED_REQUEST.method = "GET";
     COORDINATOR_EXPECTED_REQUEST.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
 

@@ -74,7 +74,17 @@ public class FaultyCoordinatorClient extends CoordinatorClientImpl
   }
 
   @Override
-  public ListenableFuture<Boolean> isHandoffComplete(String dataSource, SegmentDescriptor descriptor)
+  public ListenableFuture<Boolean> isHandoffComplete(final String dataSource, final SegmentDescriptor descriptor)
+  {
+    return isHandoffComplete(dataSource, descriptor, false);
+  }
+
+  @Override
+  public ListenableFuture<Boolean> isHandoffComplete(
+      final String dataSource,
+      final SegmentDescriptor descriptor,
+      final boolean strictTierAwareSegmentLoad
+  )
   {
     final Duration minHandoffDelay = getHandoffDelay();
     if (minHandoffDelay != null) {
@@ -98,7 +108,7 @@ public class FaultyCoordinatorClient extends CoordinatorClientImpl
     }
 
     // Call Coordinator for the actual handoff status
-    return super.isHandoffComplete(dataSource, descriptor);
+    return super.isHandoffComplete(dataSource, descriptor, strictTierAwareSegmentLoad);
   }
 
   private Duration getHandoffDelay()

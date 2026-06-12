@@ -77,6 +77,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -115,7 +116,8 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration,
       @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod,
       @JsonProperty("useListShards") Boolean useListShards,
-      @JsonProperty("maxColumnsToMerge") Integer maxColumnsToMerge
+      @JsonProperty("maxColumnsToMerge") Integer maxColumnsToMerge,
+      @JsonProperty("strictTierAwareSegmentLoad") @Nullable Boolean strictTierAwareSegmentLoad
   )
   {
     super(
@@ -146,7 +148,8 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         maxRecordsPerPoll,
         maxBytesPerPoll,
         intermediateHandoffPeriod,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        strictTierAwareSegmentLoad
     );
 
     this.workerThreads = workerThreads;
@@ -248,6 +251,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", repartitionTransitionDuration=" + getRepartitionTransitionDuration() +
            ", useListShards=" + isUseListShards() +
            ", maxColumnsToMerge=" + getMaxColumnsToMerge() +
+           ", strictTierAwareSegmentLoad=" + isStrictTierAwareSegmentLoad() +
            '}';
   }
 
@@ -282,7 +286,8 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getMaxRecordsPerPollConfigured(),
         getMaxBytesPerPollConfigured(),
         getIntermediateHandoffPeriod(),
-        getMaxColumnsToMerge()
+        getMaxColumnsToMerge(),
+        isStrictTierAwareSegmentLoad()
     );
   }
 }

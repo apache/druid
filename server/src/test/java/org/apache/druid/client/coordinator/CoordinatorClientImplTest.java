@@ -164,6 +164,33 @@ public class CoordinatorClientImplTest
   }
 
   @Test
+  public void test_isHandoffCompleteWithStrictTierAwareSegmentLoad() throws Exception
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/datasources/xyz/handoffComplete?"
+            + "interval=2000-01-01T00%3A00%3A00.000Z%2F3000-01-01T00%3A00%3A00.000Z&"
+            + "partitionNumber=2&"
+            + "version=1&"
+            + "strictTierAwareSegmentLoad=true"
+        ),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        StringUtils.toUtf8("true")
+    );
+
+    Assert.assertEquals(
+        true,
+        coordinatorClient.isHandoffComplete(
+            "xyz",
+            new SegmentDescriptor(Intervals.of("2000/3000"), "1", 2),
+            true
+        ).get()
+    );
+  }
+
+  @Test
   public void test_fetchUsedSegment() throws Exception
   {
     final DataSegment segment =

@@ -356,6 +356,68 @@ public class DruidCoordinatorTest
   }
 
   @Test(timeout = 60_000L)
+  public void testLoadStatusCanUseStrictTierAwareSegmentLoad() throws Exception
+  {
+    final String dataSource = "dataSource", hotTierName = "hot", coldTierName = "cold";
+    final DataSegment dataSegment = new DataSegment(
+        dataSource,
+        Intervals.of("2018-01-02/P1D"),
+        "v1",
+        null,
+        null,
+        null,
+        null,
+        0x9,
+        0
+    );
+    final Rule tieredRule = new ForeverLoadRule(ImmutableMap.of(hotTierName, 1, coldTierName, 1), null);
+    EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
+            .andReturn(ImmutableList.of(tieredRule)).atLeastOnce();
+    metadataRuleManager.stop();
+    EasyMock.expectLastCall().once();
+
+    final DruidDataSource dataSourceWithSegment = new DruidDataSource(dataSource, Collections.emptyMap());
+    dataSourceWithSegment.addSegment(dataSegment);
+    setupSegmentsMetadataMock(dataSourceWithSegment);
+
+    final DruidServer hotServer = new DruidServer("hot", "hot", null, 5L, null, ServerType.HISTORICAL, hotTierName, 0);
+    hotServer.addDataSegment(dataSegment);
+    final DruidServer coldServer =
+        new DruidServer("cold", "cold", null, 5L, null, ServerType.HISTORICAL, coldTierName, 0);
+    setupPeons(ImmutableMap.of("hot", new TestLoadQueuePeon(), "cold", new TestLoadQueuePeon()));
+    EasyMock.expect(serverInventoryView.getInventory())
+            .andReturn(ImmutableList.of(hotServer, coldServer))
+            .atLeastOnce();
+    EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
+
+    EasyMock.replay(metadataRuleManager, serverInventoryView, loadQueueTaskMaster);
+
+    coordinator.start();
+    leaderAnnouncerLatch.await();
+    serviceEmitter.coordinatorRunLatch.await();
+
+    Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
+    Assert.assertEquals(ImmutableMap.of(dataSource, 0.0), coordinator.getDatasourceToLoadStatus(true));
+
+    final Object2IntMap<String> defaultUnavailableUsedSegmentsPerDataSource =
+        coordinator.getDatasourceToUnavailableSegmentCount();
+    Assert.assertEquals(1, defaultUnavailableUsedSegmentsPerDataSource.size());
+    Assert.assertEquals(0, defaultUnavailableUsedSegmentsPerDataSource.getInt(dataSource));
+
+    final Object2IntMap<String> tierAwareUnavailableUsedSegmentsPerDataSource =
+        coordinator.getDatasourceToUnavailableSegmentCount(true);
+    Assert.assertEquals(1, tierAwareUnavailableUsedSegmentsPerDataSource.size());
+    Assert.assertEquals(1, tierAwareUnavailableUsedSegmentsPerDataSource.getInt(dataSource));
+
+    coordinator.stop();
+    leaderUnannouncerLatch.await();
+
+    EasyMock.verify(serverInventoryView);
+    EasyMock.verify(segmentsMetadataManager);
+    EasyMock.verify(metadataRuleManager);
+  }
+
+  @Test(timeout = 60_000L)
   public void testComputeUnderReplicationCountsPerDataSourcePerTierForSegmentsWithBroadcastRule() throws Exception
   {
     final String dataSource = "dataSource";

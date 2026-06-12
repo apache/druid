@@ -1143,6 +1143,58 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   @Test
+  public void testWaitForSegmentAvailabilityStrictTierAwareSegmentLoad()
+  {
+    final TaskToolbox mockToolbox = EasyMock.createMock(TaskToolbox.class);
+    final SegmentHandoffNotifierFactory mockFactory = EasyMock.createMock(SegmentHandoffNotifierFactory.class);
+    final SegmentHandoffNotifier mockNotifier = EasyMock.createMock(SegmentHandoffNotifier.class);
+
+    final DataSegment mockDataSegment = EasyMock.createMock(DataSegment.class);
+    final List<DataSegment> segmentsToWaitFor = new ArrayList<>();
+    segmentsToWaitFor.add(mockDataSegment);
+
+    final IndexTask indexTask = createIndexTask(
+        createDefaultIngestionSpec(
+            new UniformGranularitySpec(
+                Granularities.HOUR,
+                Granularities.MINUTE,
+                null
+            ),
+            createTuningConfigWithMaxRowsPerSegment(2, true),
+            false,
+            false
+        ),
+        null
+    );
+
+    EasyMock.expect(mockDataSegment.getInterval()).andReturn(Intervals.of("1970-01-01/2100-01-01")).once();
+    EasyMock.expect(mockDataSegment.getVersion()).andReturn("dummyString").once();
+    EasyMock.expect(mockDataSegment.getShardSpec()).andReturn(EasyMock.createMock(ShardSpec.class)).once();
+
+    EasyMock.expect(mockToolbox.getSegmentHandoffNotifierFactory()).andReturn(mockFactory).once();
+    EasyMock.expect(mockToolbox.getEmitter()).andReturn(new NoopServiceEmitter()).anyTimes();
+    EasyMock.expect(mockDataSegment.getDataSource()).andReturn("MockDataSource").once();
+    EasyMock.expect(mockFactory.createSegmentHandoffNotifier("MockDataSource", indexTask.getId(), true))
+            .andReturn(mockNotifier)
+            .once();
+    mockNotifier.start();
+    EasyMock.expectLastCall().once();
+    mockNotifier.registerSegmentHandoffCallback(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
+    EasyMock.expectLastCall().andReturn(true).once();
+    mockNotifier.close();
+    EasyMock.expectLastCall().once();
+
+    EasyMock.replay(mockToolbox);
+    EasyMock.replay(mockDataSegment);
+    EasyMock.replay(mockFactory, mockNotifier);
+
+    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 0, true));
+    EasyMock.verify(mockToolbox);
+    EasyMock.verify(mockDataSegment);
+    EasyMock.verify(mockFactory, mockNotifier);
+  }
+
+  @Test
   public void testWaitForSegmentAvailabilityMultipleSegmentsSuccess()
   {
     TaskToolbox mockToolbox = EasyMock.createMock(TaskToolbox.class);

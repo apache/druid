@@ -56,6 +56,34 @@ public class SegmentReplicationStatus
     return totalReplicaCounts.get(segmentId);
   }
 
+  public boolean isSegmentAvailable(final SegmentId segmentId, final boolean strictTierAwareSegmentLoad)
+  {
+    final SegmentReplicaCount countsInCluster = totalReplicaCounts.get(segmentId);
+    if (countsInCluster == null) {
+      return false;
+    }
+
+    if (countsInCluster.required() == 0) {
+      return true;
+    }
+
+    if (!strictTierAwareSegmentLoad) {
+      return countsInCluster.totalLoaded() > 0;
+    }
+
+    final Map<String, SegmentReplicaCount> tierToReplicaCount = replicaCountsInTier.get(segmentId);
+    if (tierToReplicaCount == null) {
+      return false;
+    }
+
+    for (final SegmentReplicaCount countsInTier : tierToReplicaCount.values()) {
+      if (countsInTier.required() > 0 && countsInTier.loadedOnHistoricals() == 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicated(
       Iterable<DataSegment> usedSegments,
       boolean ignoreMissingServers

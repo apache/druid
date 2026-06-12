@@ -41,11 +41,22 @@ public class CoordinatorBasedSegmentHandoffNotifierFactory implements SegmentHan
   @Override
   public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String taskId)
   {
+    return createSegmentHandoffNotifier(dataSource, taskId, false);
+  }
+
+  @Override
+  public SegmentHandoffNotifier createSegmentHandoffNotifier(
+      String dataSource,
+      String taskId,
+      boolean strictTierAwareSegmentLoad
+  )
+  {
     return new CoordinatorBasedSegmentHandoffNotifier(
         dataSource,
         client,
         config,
-        taskId
+        taskId,
+        strictTierAwareSegmentLoad
     );
   }
 }

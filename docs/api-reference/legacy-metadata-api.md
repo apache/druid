@@ -35,6 +35,8 @@ Returns the percentage of segments actually loaded in the cluster versus segment
 
 Returns the number of segments left to load until segments that should be loaded in the cluster are available for queries. This does not include segment replication counts.
 
+Pass the optional query parameter `strictTierAwareSegmentLoad` with no value, or with value `true`, to make the default and `simple` responses consider a segment loaded only when at least one Historical replica is loaded in every tier with a positive replica count in the matching retention rule. Without this parameter, or with value `false`, a segment is considered loaded once any Historical replica is loaded.
+
 `GET /druid/coordinator/v1/loadstatus?full`
 
 Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available. This includes segment replication counts.
@@ -96,6 +98,16 @@ of the load on the metadata store but can be necessary to make sure that we veri
 You can pass the optional query parameter `computeUsingClusterView` to factor in the available cluster services when calculating
 the segments left to load. See [Coordinator Segment Loading](#segment-loading) for details.
 If no used segments are found for the given inputs, this API returns `204 No Content`
+
+For the default and `simple` datasource load status responses, pass the optional query parameter `strictTierAwareSegmentLoad` with no value, or with value `true`, to consider a segment loaded only when at least one Historical replica is loaded in every tier with a positive replica count in the matching retention rule. Without this parameter, or with value `false`, a segment is considered loaded once any Historical replica is loaded.
+
+## Segment handoff
+
+`GET /druid/coordinator/v1/datasources/{dataSourceName}/handoffComplete?interval={myInterval}&partitionNumber={partitionNumber}&version={version}`
+
+Returns whether handoff is complete for a segment descriptor. A segment that is not eligible for load is considered complete. For a segment that is eligible for load, the default response is true once any Historical replica is loaded.
+
+Pass the optional query parameter `strictTierAwareSegmentLoad` with no value, or with value `true`, to return true only when at least one Historical replica is loaded in every tier with a positive replica count in the matching retention rule.
 
 ## Metadata store information
 

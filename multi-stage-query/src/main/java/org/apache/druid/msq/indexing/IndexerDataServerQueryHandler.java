@@ -371,7 +371,7 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
    * Queries the coordinator to check if a list of segments has been handed off.
    * Returns a list of segments which have been handed off.
    * <br>
-   * See {@link  org.apache.druid.server.http.DataSourcesResource#isHandOffComplete(String, String, int, String)}
+   * See {@link org.apache.druid.server.http.DataSourcesResource#isHandOffComplete(String, String, int, String, String)}
    */
   private List<SegmentDescriptor> checkSegmentHandoff(List<SegmentDescriptor> segmentDescriptors)
   {

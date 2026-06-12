@@ -433,7 +433,8 @@ public class DataSourcesResource
       @QueryParam("interval") @Nullable final String interval,
       @QueryParam("simple") @Nullable final String simple,
       @QueryParam("full") @Nullable final String full,
-      @QueryParam("computeUsingClusterView") @Nullable String computeUsingClusterView
+      @QueryParam("computeUsingClusterView") @Nullable String computeUsingClusterView,
+      @QueryParam("strictTierAwareSegmentLoad") @Nullable final String strictTierAwareSegmentLoad
   )
   {
     if (forceMetadataRefresh == null) {
@@ -470,9 +471,11 @@ public class DataSourcesResource
           .build();
     }
 
+    final boolean strictTierAwareLoad = isQueryParamEnabled(strictTierAwareSegmentLoad);
     if (simple != null) {
       // Calculate response for simple mode
-      SegmentsLoadStatistics segmentsLoadStatistics = computeSegmentLoadStatistics(segments);
+      SegmentsLoadStatistics segmentsLoadStatistics =
+          computeSegmentLoadStatistics(segments, strictTierAwareLoad);
       return Response.ok(
           ImmutableMap.of(
               dataSourceName,
@@ -491,7 +494,8 @@ public class DataSourcesResource
       return Response.ok(segmentLoadMap).build();
     } else {
       // Calculate response for default mode
-      SegmentsLoadStatistics segmentsLoadStatistics = computeSegmentLoadStatistics(segments);
+      SegmentsLoadStatistics segmentsLoadStatistics =
+          computeSegmentLoadStatistics(segments, strictTierAwareLoad);
       return Response.ok(
           ImmutableMap.of(
               dataSourceName,
@@ -502,18 +506,41 @@ public class DataSourcesResource
     }
   }
 
-  private SegmentsLoadStatistics computeSegmentLoadStatistics(Iterable<DataSegment> segments)
+  private SegmentsLoadStatistics computeSegmentLoadStatistics(
+      Iterable<DataSegment> segments,
+      final boolean strictTierAwareSegmentLoad
+  )
   {
-    Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getLoadInfoForAllSegments();
+    if (strictTierAwareSegmentLoad) {
+      return computeSegmentLoadStatisticsFromCoordinator(segments);
+    }
+
+    final Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getLoadInfoForAllSegments();
     int numPublishedSegments = 0;
     int numUnavailableSegments = 0;
     int numLoadedSegments = 0;
-    for (DataSegment segment : segments) {
+    for (final DataSegment segment : segments) {
       numPublishedSegments++;
       if (!segmentLoadInfos.containsKey(segment.getId())) {
         numUnavailableSegments++;
       } else {
         numLoadedSegments++;
+      }
+    }
+    return new SegmentsLoadStatistics(numPublishedSegments, numUnavailableSegments, numLoadedSegments);
+  }
+
+  private SegmentsLoadStatistics computeSegmentLoadStatisticsFromCoordinator(Iterable<DataSegment> segments)
+  {
+    int numPublishedSegments = 0;
+    int numUnavailableSegments = 0;
+    int numLoadedSegments = 0;
+    for (final DataSegment segment : segments) {
+      numPublishedSegments++;
+      if (coordinator != null && coordinator.isSegmentAvailable(segment, true)) {
+        numLoadedSegments++;
+      } else {
+        numUnavailableSegments++;
       }
     }
     return new SegmentsLoadStatistics(numPublishedSegments, numUnavailableSegments, numLoadedSegments);
@@ -919,11 +946,13 @@ public class DataSourcesResource
       @PathParam("dataSourceName") String dataSourceName,
       @QueryParam("interval") final String interval,
       @QueryParam("partitionNumber") final int partitionNumber,
-      @QueryParam("version") final String version
+      @QueryParam("version") final String version,
+      @QueryParam("strictTierAwareSegmentLoad") @Nullable final String strictTierAwareSegmentLoad
   )
   {
     try {
       final List<Rule> rules = metadataRuleManager.getRulesWithDefault(dataSourceName);
+      final boolean strictTierAwareLoad = isQueryParamEnabled(strictTierAwareSegmentLoad);
       final Interval theInterval = Intervals.of(interval);
       final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
       final DateTime now = DateTimes.nowUtc();
@@ -941,7 +970,8 @@ public class DataSourcesResource
 
       // A segment that is not eligible for load will never be handed off
       boolean eligibleForLoad = false;
-      for (Rule rule : rules) {
+      Set<String> requiredLoadTiers = Set.of();
+      for (final Rule rule : rules) {
         final boolean applies;
         if (rule.isIntervalBased()) {
           applies = rule.appliesTo(theInterval, now);
@@ -954,7 +984,13 @@ public class DataSourcesResource
           applies = rule.appliesTo(segment, now);
         }
         if (applies) {
-          eligibleForLoad = rule instanceof LoadRule && ((LoadRule) rule).shouldMatchingSegmentBeLoaded();
+          if (rule instanceof LoadRule) {
+            final LoadRule loadRule = (LoadRule) rule;
+            eligibleForLoad = loadRule.shouldMatchingSegmentBeLoaded();
+            if (eligibleForLoad && strictTierAwareLoad) {
+              requiredLoadTiers = getRequiredLoadTiers(loadRule, getHistoricalTierAliases());
+            }
+          }
           break;
         }
       }
@@ -978,9 +1014,16 @@ public class DataSourcesResource
         return Response.ok(true).build();
       }
 
-      Iterable<ImmutableSegmentLoadInfo> servedSegmentsInInterval =
+      final Iterable<ImmutableSegmentLoadInfo> servedSegmentsInInterval =
           prepareServedSegmentsInInterval(timeline, theInterval);
-      if (isSegmentLoaded(servedSegmentsInInterval, descriptor)) {
+      final boolean segmentLoaded = strictTierAwareLoad
+                                    ? isSegmentLoadedOnRequiredTiers(
+                                        servedSegmentsInInterval,
+                                        descriptor,
+                                        requiredLoadTiers
+                                    )
+                                    : isSegmentLoaded(servedSegmentsInInterval, descriptor);
+      if (segmentLoaded) {
         return Response.ok(true).build();
       }
 
@@ -990,6 +1033,51 @@ public class DataSourcesResource
       log.error(e, "Error while handling hand off check request");
       return Response.serverError().entity(ImmutableMap.of("error", e.toString())).build();
     }
+  }
+
+  private Map<String, Set<String>> getHistoricalTierAliases()
+  {
+    return coordinator == null ? Map.of() : coordinator.getCurrentDynamicConfig().getHistoricalTierAliases();
+  }
+
+  private static Set<String> getRequiredLoadTiers(
+      LoadRule loadRule,
+      Map<String, Set<String>> historicalTierAliases
+  )
+  {
+    final Map<String, Integer> expandedTieredReplicants =
+        expandTieredReplicantsWithAliases(loadRule.getTieredReplicants(), historicalTierAliases);
+    return expandedTieredReplicants.entrySet()
+                                   .stream()
+                                   .filter(entry -> entry.getValue() > 0)
+                                   .map(Map.Entry::getKey)
+                                   .collect(Collectors.toSet());
+  }
+
+  private static Map<String, Integer> expandTieredReplicantsWithAliases(
+      Map<String, Integer> tieredReplicants,
+      Map<String, Set<String>> historicalTierAliases
+  )
+  {
+    if (historicalTierAliases.isEmpty()) {
+      return tieredReplicants;
+    }
+
+    final Map<String, Integer> expanded = new HashMap<>();
+    tieredReplicants.forEach((tier, replicaCount) -> {
+      final Set<String> aliasTiers = historicalTierAliases.get(tier);
+      if (aliasTiers == null) {
+        expanded.put(tier, replicaCount);
+      } else {
+        aliasTiers.forEach(alias -> expanded.putIfAbsent(alias, replicaCount));
+      }
+    });
+    return expanded;
+  }
+
+  private static boolean isQueryParamEnabled(@Nullable String queryParam)
+  {
+    return queryParam != null && (queryParam.isEmpty() || Boolean.parseBoolean(queryParam));
   }
 
   @Nullable
@@ -1004,17 +1092,44 @@ public class DataSourcesResource
 
   static boolean isSegmentLoaded(Iterable<ImmutableSegmentLoadInfo> servedSegments, SegmentDescriptor descriptor)
   {
-    for (ImmutableSegmentLoadInfo segmentLoadInfo : servedSegments) {
-      if (segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
-          && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum() == descriptor.getPartitionNumber()
-          && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0
-          && Iterables.any(
-          segmentLoadInfo.getServers(), DruidServerMetadata::isSegmentReplicationTarget
-      )) {
+    for (final ImmutableSegmentLoadInfo segmentLoadInfo : servedSegments) {
+      if (matchesSegmentDescriptor(segmentLoadInfo, descriptor)
+          && Iterables.any(segmentLoadInfo.getServers(), DruidServerMetadata::isSegmentReplicationTarget)) {
         return true;
       }
     }
     return false;
+  }
+
+  static boolean isSegmentLoadedOnRequiredTiers(
+      Iterable<ImmutableSegmentLoadInfo> servedSegments,
+      SegmentDescriptor descriptor,
+      Set<String> requiredTiers
+  )
+  {
+    final Set<String> loadedTiers = new HashSet<>();
+    for (final ImmutableSegmentLoadInfo segmentLoadInfo : servedSegments) {
+      if (!matchesSegmentDescriptor(segmentLoadInfo, descriptor)) {
+        continue;
+      }
+
+      segmentLoadInfo.getServers()
+                     .stream()
+                     .filter(DruidServerMetadata::isSegmentReplicationTarget)
+                     .map(DruidServerMetadata::getTier)
+                     .forEach(loadedTiers::add);
+    }
+    return loadedTiers.containsAll(requiredTiers);
+  }
+
+  private static boolean matchesSegmentDescriptor(
+      ImmutableSegmentLoadInfo segmentLoadInfo,
+      SegmentDescriptor descriptor
+  )
+  {
+    return segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
+           && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum() == descriptor.getPartitionNumber()
+           && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0;
   }
 
 }

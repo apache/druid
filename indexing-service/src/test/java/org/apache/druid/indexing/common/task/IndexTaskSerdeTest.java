@@ -87,6 +87,7 @@ public class IndexTaskSerdeTest
         .withForceGuaranteedRollup(false)
         .withPushTimeout(100L)
         .withAwaitSegmentAvailabilityTimeoutMillis(1L)
+        .withStrictTierAwareSegmentLoad(true)
         .build();
     assertSerdeTuningConfig(tuningConfig);
   }
@@ -123,6 +124,7 @@ public class IndexTaskSerdeTest
         10,
         100,
         1234,
+        null,
         null,
         null
     );

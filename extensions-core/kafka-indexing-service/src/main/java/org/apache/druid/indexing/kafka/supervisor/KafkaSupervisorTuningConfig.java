@@ -67,6 +67,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -97,7 +98,8 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
       @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
-      @JsonProperty("releaseLocksOnHandoff") @Nullable Boolean releaseLocksOnHandoff
+      @JsonProperty("releaseLocksOnHandoff") @Nullable Boolean releaseLocksOnHandoff,
+      @JsonProperty("strictTierAwareSegmentLoad") @Nullable Boolean strictTierAwareSegmentLoad
   )
   {
     super(
@@ -122,7 +124,8 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         maxSavedParseExceptions,
         numPersistThreads,
         maxColumnsToMerge,
-        releaseLocksOnHandoff
+        releaseLocksOnHandoff,
+        strictTierAwareSegmentLoad
     );
     this.workerThreads = workerThreads;
     this.chatRetries = (chatRetries != null ? chatRetries : DEFAULT_CHAT_RETRIES);
@@ -209,6 +212,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
            ", maxParseExceptions=" + getMaxParseExceptions() +
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
            ", numPersistThreads=" + getNumPersistThreads() +
+           ", strictTierAwareSegmentLoad=" + isStrictTierAwareSegmentLoad() +
            '}';
   }
 
@@ -237,7 +241,8 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         getMaxSavedParseExceptions(),
         getNumPersistThreads(),
         getMaxColumnsToMerge(),
-        isReleaseLocksOnHandoff()
+        isReleaseLocksOnHandoff(),
+        isStrictTierAwareSegmentLoad()
     );
   }
 }

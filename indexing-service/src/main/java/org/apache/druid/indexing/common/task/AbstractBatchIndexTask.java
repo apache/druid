@@ -70,6 +70,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -720,6 +721,16 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       long waitTimeout
   )
   {
+    return waitForSegmentAvailability(toolbox, segmentsToWaitFor, waitTimeout, false);
+  }
+
+  protected boolean waitForSegmentAvailability(
+      TaskToolbox toolbox,
+      List<DataSegment> segmentsToWaitFor,
+      long waitTimeout,
+      boolean strictTierAwareSegmentLoad
+  )
+  {
     if (segmentsToWaitFor.isEmpty()) {
       log.info("No segments to wait for availability.");
       return true;
@@ -729,13 +740,13 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
     log.info("Waiting for [%d] segments to be loaded by the cluster...", segmentsToWaitFor.size());
     final Stopwatch stopwatch = Stopwatch.createStarted();
+    final SegmentHandoffNotifierFactory notifierFactory = toolbox.getSegmentHandoffNotifierFactory();
+    final String dataSource = segmentsToWaitFor.get(0).getDataSource();
 
     try (
-        SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
-                                                 .createSegmentHandoffNotifier(
-                                                     segmentsToWaitFor.get(0).getDataSource(),
-                                                     getId()
-                                                 )
+        SegmentHandoffNotifier notifier = strictTierAwareSegmentLoad
+                                          ? notifierFactory.createSegmentHandoffNotifier(dataSource, getId(), true)
+                                          : notifierFactory.createSegmentHandoffNotifier(dataSource, getId())
     ) {
 
       final ExecutorService exec = Execs.directExecutor();

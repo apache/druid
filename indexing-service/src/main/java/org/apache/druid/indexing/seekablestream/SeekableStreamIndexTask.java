@@ -291,7 +291,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         new ActionBasedPublishedSegmentRetriever(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller(),
         toolbox.getJsonMapper(),
-        metrics
+        metrics,
+        tuningConfig.isStrictTierAwareSegmentLoad()
     );
   }
 

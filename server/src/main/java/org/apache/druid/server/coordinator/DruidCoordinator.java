@@ -229,6 +229,11 @@ public class DruidCoordinator
     return computeUnderReplicated(dataSegments, useClusterView);
   }
 
+  public CoordinatorDynamicConfig getCurrentDynamicConfig()
+  {
+    return metadataManager.configs().getCurrentDynamicConfig();
+  }
+
   public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicatedCount(
       Iterable<DataSegment> dataSegments,
       boolean useClusterView
@@ -239,16 +244,21 @@ public class DruidCoordinator
 
   public Object2IntMap<String> getDatasourceToUnavailableSegmentCount()
   {
-    if (segmentReplicationStatus == null) {
+    return getDatasourceToUnavailableSegmentCount(false);
+  }
+
+  public Object2IntMap<String> getDatasourceToUnavailableSegmentCount(final boolean strictTierAwareSegmentLoad)
+  {
+    final SegmentReplicationStatus replicationStatus = segmentReplicationStatus;
+    if (replicationStatus == null) {
       return Object2IntMaps.emptyMap();
     }
 
     final Object2IntOpenHashMap<String> datasourceToUnavailableSegments = new Object2IntOpenHashMap<>();
 
     final Iterable<DataSegment> dataSegments = metadataManager.iterateAllUsedSegments();
-    for (DataSegment segment : dataSegments) {
-      SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
-      if (replicaCount != null && (replicaCount.totalLoaded() > 0 || replicaCount.required() == 0)) {
+    for (final DataSegment segment : dataSegments) {
+      if (replicationStatus.isSegmentAvailable(segment.getId(), strictTierAwareSegmentLoad)) {
         datasourceToUnavailableSegments.addTo(segment.getDataSource(), 0);
       } else {
         datasourceToUnavailableSegments.addTo(segment.getDataSource(), 1);
@@ -279,25 +289,47 @@ public class DruidCoordinator
 
   public Map<String, Double> getDatasourceToLoadStatus()
   {
+    return getDatasourceToLoadStatus(false);
+  }
+
+  public Map<String, Double> getDatasourceToLoadStatus(final boolean strictTierAwareSegmentLoad)
+  {
     final Map<String, Double> loadStatus = new HashMap<>();
     final DataSourcesSnapshot snapshot = metadataManager.segments().getRecentDataSourcesSnapshot();
+    final SegmentReplicationStatus replicationStatus = segmentReplicationStatus;
 
-    for (ImmutableDruidDataSource dataSource : snapshot.getDataSourcesWithAllUsedSegments()) {
+    if (strictTierAwareSegmentLoad && replicationStatus == null) {
+      return Collections.emptyMap();
+    }
+
+    for (final ImmutableDruidDataSource dataSource : snapshot.getDataSourcesWithAllUsedSegments()) {
       final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
       final int numPublishedSegments = segments.size();
+      final int numUnavailableSegments;
 
-      // remove loaded segments
-      for (DruidServer druidServer : serverInventoryView.getInventory()) {
-        final DruidDataSource loadedView = druidServer.getDataSource(dataSource.getName());
-        if (loadedView != null) {
-          // This does not use segments.removeAll(loadedView.getSegments()) for performance reasons.
-          // Please see https://github.com/apache/druid/pull/5632 for more info.
-          for (DataSegment serverSegment : loadedView.getSegments()) {
-            segments.remove(serverSegment);
+      if (strictTierAwareSegmentLoad) {
+        numUnavailableSegments = (int) segments.stream()
+                                               .filter(
+                                                   segment -> !replicationStatus.isSegmentAvailable(
+                                                       segment.getId(),
+                                                       true
+                                                   )
+                                               )
+                                               .count();
+      } else {
+        // remove loaded segments
+        for (final DruidServer druidServer : serverInventoryView.getInventory()) {
+          final DruidDataSource loadedView = druidServer.getDataSource(dataSource.getName());
+          if (loadedView != null) {
+            // This does not use segments.removeAll(loadedView.getSegments()) for performance reasons.
+            // Please see https://github.com/apache/druid/pull/5632 for more info.
+            for (final DataSegment serverSegment : loadedView.getSegments()) {
+              segments.remove(serverSegment);
+            }
           }
         }
+        numUnavailableSegments = segments.size();
       }
-      final int numUnavailableSegments = segments.size();
       loadStatus.put(
           dataSource.getName(),
           (numPublishedSegments - numUnavailableSegments) * 100.0 / numPublishedSegments
@@ -305,6 +337,21 @@ public class DruidCoordinator
     }
 
     return loadStatus;
+  }
+
+  public boolean isSegmentAvailable(DataSegment segment)
+  {
+    return isSegmentAvailable(segment, false);
+  }
+
+  public boolean isSegmentAvailable(final DataSegment segment, final boolean strictTierAwareSegmentLoad)
+  {
+    final SegmentReplicationStatus replicationStatus = segmentReplicationStatus;
+    return replicationStatus != null
+           && replicationStatus.isSegmentAvailable(
+               segment.getId(),
+               strictTierAwareSegmentLoad
+           );
   }
 
   /**
