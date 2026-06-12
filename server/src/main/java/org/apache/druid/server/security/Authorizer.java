@@ -22,6 +22,8 @@ package org.apache.druid.server.security;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+import java.util.Map;
+
 /**
  * An Authorizer is responsible for performing authorization checks for resource accesses.
  * <p>
@@ -51,4 +53,33 @@ public interface Authorizer
    * @return An {@link Access} object representing the result of the authorization check. Must not be null.
    */
   Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action);
+
+  /**
+   * Check if the entity represented by the authentication result is authorized to perform the given action on the
+   * given resource, with additional context about the authorization request.
+   * <p>
+   * The {@code context} map can be used to provide supplementary information about the caller path to be authorized.
+   * For example, it may contain details about the API endpoint or query context that triggered the authorization
+   * check, allowing authorizer implementations to make more informed decisions.
+   * <p>
+   * If the action involves reading a table, the outcome could include {@link org.apache.druid.query.policy.Policy} restrictions.
+   * However, if the action does not involve reading a table, there must be no {@link org.apache.druid.query.policy.Policy} restrictions.
+   *
+   * @param authenticationResult The authentication result of the request
+   * @param resource             The resource to be accessed
+   * @param action               The action to perform on the resource
+   * @param context              Additional context about the authorization request, such as information about the
+   *                             caller path to be authorized. Implementations that do not need this context can
+   *                             safely ignore it.
+   * @return An {@link Access} object representing the result of the authorization check. Must not be null.
+   */
+  default Access authorize(
+      AuthenticationResult authenticationResult,
+      Resource resource,
+      Action action,
+      Map<String, Object> context
+  )
+  {
+    return authorize(authenticationResult, resource, action);
+  }
 }
