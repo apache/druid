@@ -33,11 +33,7 @@ import { SqlExpression } from 'druid-query-toolkit';
 import React from 'react';
 
 import { MenuCheckbox, SplitterLayout } from '../../components';
-import { 
-  SpecDialog, 
-  StringInputDialog,
-  SupervisorToSqlDialog
- } from '../../dialogs';
+import { SpecDialog, StringInputDialog, SupervisorToSqlDialog } from '../../dialogs';
 import type {
   CapacityInfo,
   ConsoleViewId,
@@ -290,7 +286,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   private readonly openSupervisorToSqlDialog = () => {
     this.setState({ supervisorToSqlDialogOpen: true });
   };
-  
+
   private readonly openExecutionSubmitDialog = () => {
     this.setState({ executionSubmitDialogOpen: true });
   };
@@ -880,7 +876,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                       icon={IconNames.EXCHANGE}
                       text="Convert supervisor to SQL"
                       onClick={this.openSupervisorToSqlDialog}
-                    /> 
+                    />
                   )}
                   {!hiddenMoreMenuItems.includes('attach-tab-from-task-id') && (
                     <MenuItem

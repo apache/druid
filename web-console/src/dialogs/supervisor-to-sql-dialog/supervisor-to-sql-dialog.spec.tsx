@@ -37,7 +37,7 @@ describe('SupervisorToSqlDialog', () => {
   const mockOnClose = jest.fn();
 
   const mockSupervisorList = ['wikipedia-kafka', 'clickstream-kafka'];
-  
+
   const mockSupervisorSpec = {
     type: 'kafka',
     spec: {
