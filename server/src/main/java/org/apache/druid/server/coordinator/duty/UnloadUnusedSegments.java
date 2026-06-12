@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
@@ -57,24 +58,35 @@ public class UnloadUnusedSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    final Stopwatch totalTime = Stopwatch.createStarted();
+
     final Map<String, Boolean> broadcastStatusByDatasource = new HashMap<>();
     for (String broadcastDatasource : params.getBroadcastDatasources()) {
       broadcastStatusByDatasource.put(broadcastDatasource, true);
     }
 
     final List<ServerHolder> allServers = params.getDruidCluster().getAllManagedServers();
+
+    final Stopwatch cancelTime = Stopwatch.createStarted();
     int numCancelledLoads = allServers.stream().mapToInt(
         server -> cancelLoadOfUnusedSegments(server, broadcastStatusByDatasource, params)
     ).sum();
+    cancelTime.stop();
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
+    final Stopwatch dropTime = Stopwatch.createStarted();
     int numQueuedDrops = allServers.stream().mapToInt(
         server -> dropUnusedSegments(server, params, stats, broadcastStatusByDatasource)
     ).sum();
+    dropTime.stop();
 
-    if (numCancelledLoads > 0 || numQueuedDrops > 0) {
-      log.debug("Cancelled [%d] loads and started [%d] drops of unused segments.", numCancelledLoads, numQueuedDrops);
-    }
+    log.info(
+        "UnloadUnusedSegments summary: servers[%d], broadcastDatasources[%d],"
+        + " cancelledLoads[%d], queuedDrops[%d]; cancelMs[%,d], dropMs[%,d], totalMs[%,d].",
+        allServers.size(), params.getBroadcastDatasources().size(),
+        numCancelledLoads, numQueuedDrops,
+        cancelTime.millisElapsed(), dropTime.millisElapsed(), totalTime.millisElapsed()
+    );
 
     return params;
   }

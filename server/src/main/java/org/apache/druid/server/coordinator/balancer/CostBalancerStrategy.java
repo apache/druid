@@ -24,7 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -43,10 +43,12 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NavigableMap;
 import java.util.PriorityQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 
 public class CostBalancerStrategy implements BalancerStrategy
@@ -70,6 +72,13 @@ public class CostBalancerStrategy implements BalancerStrategy
 
   private final CoordinatorRunStats stats = new CoordinatorRunStats();
   private final AtomicLong computeTimeNanos = new AtomicLong(0);
+  private final LongAdder serverOrderingCalls = new LongAdder();
+  private final LongAdder serverCostTasks = new LongAdder();
+  private final LongAdder placementCostComputations = new LongAdder();
+  private final LongAdder totalIntervalEntriesScanned = new LongAdder();
+  private final LongAdder datasourceIntervalEntriesScanned = new LongAdder();
+  private final LongAdder totalIntervalEntriesMatched = new LongAdder();
+  private final LongAdder datasourceIntervalEntriesMatched = new LongAdder();
 
   public static double computeJointSegmentsCost(DataSegment segment, Iterable<DataSegment> segmentSet)
   {
@@ -267,10 +276,33 @@ public class CostBalancerStrategy implements BalancerStrategy
   @Override
   public CoordinatorRunStats getStats()
   {
+    final long computationTimeMs = TimeUnit.NANOSECONDS.toMillis(computeTimeNanos.getAndSet(0));
     stats.add(
         Stats.Balancer.COMPUTATION_TIME,
-        TimeUnit.NANOSECONDS.toMillis(computeTimeNanos.getAndSet(0))
+        computationTimeMs
     );
+
+    final long orderingCalls = serverOrderingCalls.sumThenReset();
+    final long costTasks = serverCostTasks.sumThenReset();
+    final long costComputations = placementCostComputations.sumThenReset();
+    final long totalScanned = totalIntervalEntriesScanned.sumThenReset();
+    final long datasourceScanned = datasourceIntervalEntriesScanned.sumThenReset();
+    final long totalMatched = totalIntervalEntriesMatched.sumThenReset();
+    final long datasourceMatched = datasourceIntervalEntriesMatched.sumThenReset();
+    if (costComputations > 0) {
+      log.info(
+          "CostBalancerStrategy summary: serverOrderings[%,d], serverCostTasks[%,d],"
+          + " serverCostComputations[%,d], orderWallMs[%,d];"
+          + " intervalEntriesScanned[total=%,d, datasource=%,d],"
+          + " intervalEntriesMatched[total=%,d, datasource=%,d],"
+          + " avgEntriesScannedPerComputation[total=%.1f, datasource=%.1f],"
+          + " avgEntriesMatchedPerComputation[total=%.1f, datasource=%.1f].",
+          orderingCalls, costTasks, costComputations, computationTimeMs,
+          totalScanned, datasourceScanned, totalMatched, datasourceMatched,
+          average(totalScanned, costComputations), average(datasourceScanned, costComputations),
+          average(totalMatched, costComputations), average(datasourceMatched, costComputations)
+      );
+    }
     return stats;
   }
 
@@ -280,34 +312,61 @@ public class CostBalancerStrategy implements BalancerStrategy
   protected double computePlacementCost(DataSegment proposalSegment, ServerHolder server)
   {
     final Interval costComputeInterval = getCostComputeInterval(proposalSegment);
-
-    // Compute number of segments in each interval
-    final Object2IntOpenHashMap<Interval> intervalToSegmentCount = new Object2IntOpenHashMap<>();
-
     final SegmentCountsPerInterval projectedSegments = server.getProjectedSegmentCounts();
-    projectedSegments.getIntervalToTotalSegmentCount().object2IntEntrySet().forEach(entry -> {
-      final Interval interval = entry.getKey();
-      if (costComputeInterval.overlaps(interval)) {
-        intervalToSegmentCount.addTo(interval, entry.getIntValue());
+
+    final Interval segmentInterval = proposalSegment.getInterval();
+    double cost = 0;
+    int totalScanned = 0;
+    int datasourceScanned = 0;
+    int totalMatched = 0;
+    int datasourceMatched = 0;
+
+    final NavigableMap<Long, Object2IntMap<Interval>> totalCountsByStart =
+        projectedSegments.getStartMillisToTotalSegmentCount();
+    final NavigableMap<Long, Object2IntMap<Interval>> totalCountsByEnd =
+        projectedSegments.getEndMillisToTotalSegmentCount();
+    final Iterable<Object2IntMap<Interval>> totalCandidateBuckets =
+        shouldScanByStart(totalCountsByStart, totalCountsByEnd, costComputeInterval)
+        ? totalCountsByStart.headMap(costComputeInterval.getEndMillis(), false).values()
+        : totalCountsByEnd.tailMap(costComputeInterval.getStartMillis(), false).values();
+    for (Object2IntMap<Interval> intervalCounts : totalCandidateBuckets) {
+      for (Object2IntMap.Entry<Interval> entry : intervalCounts.object2IntEntrySet()) {
+        ++totalScanned;
+        final Interval interval = entry.getKey();
+        if (costComputeInterval.overlaps(interval)) {
+          // Cost contribution from all segments on the server.
+          cost += intervalCost(segmentInterval, interval) * entry.getIntValue();
+          ++totalMatched;
+        }
       }
-    });
+    }
 
     // Count the segments for the same datasource twice as they have twice the cost
     final String datasource = proposalSegment.getDataSource();
-    projectedSegments.getIntervalToSegmentCount(datasource).object2IntEntrySet().forEach(entry -> {
-      final Interval interval = entry.getKey();
-      if (costComputeInterval.overlaps(interval)) {
-        intervalToSegmentCount.addTo(interval, entry.getIntValue());
+    final NavigableMap<Long, Object2IntMap<Interval>> datasourceCountsByStart =
+        projectedSegments.getStartMillisToSegmentCount(datasource);
+    final NavigableMap<Long, Object2IntMap<Interval>> datasourceCountsByEnd =
+        projectedSegments.getEndMillisToSegmentCount(datasource);
+    final Iterable<Object2IntMap<Interval>> datasourceCandidateBuckets =
+        shouldScanByStart(datasourceCountsByStart, datasourceCountsByEnd, costComputeInterval)
+        ? datasourceCountsByStart.headMap(costComputeInterval.getEndMillis(), false).values()
+        : datasourceCountsByEnd.tailMap(costComputeInterval.getStartMillis(), false).values();
+    for (Object2IntMap<Interval> intervalCounts : datasourceCandidateBuckets) {
+      for (Object2IntMap.Entry<Interval> entry : intervalCounts.object2IntEntrySet()) {
+        ++datasourceScanned;
+        final Interval interval = entry.getKey();
+        if (costComputeInterval.overlaps(interval)) {
+          cost += intervalCost(segmentInterval, interval) * entry.getIntValue();
+          ++datasourceMatched;
+        }
       }
-    });
+    }
 
-    // Compute joint cost for each interval
-    double cost = 0;
-    final Interval segmentInterval = proposalSegment.getInterval();
-    cost += intervalToSegmentCount.object2IntEntrySet().stream().mapToDouble(
-        entry -> intervalCost(segmentInterval, entry.getKey())
-                 * entry.getIntValue()
-    ).sum();
+    placementCostComputations.increment();
+    totalIntervalEntriesScanned.add(totalScanned);
+    datasourceIntervalEntriesScanned.add(datasourceScanned);
+    totalIntervalEntriesMatched.add(totalMatched);
+    datasourceIntervalEntriesMatched.add(datasourceMatched);
 
     // Minus the self cost of the segment
     if (server.isProjectedSegment(proposalSegment)) {
@@ -328,6 +387,8 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     final Stopwatch computeTime = Stopwatch.createStarted();
     final List<ListenableFuture<Pair<Double, ServerHolder>>> futures = new ArrayList<>();
+    serverOrderingCalls.increment();
+    serverCostTasks.add(serverHolders.size());
     for (ServerHolder server : serverHolders) {
       futures.add(
           exec.submit(
@@ -404,5 +465,24 @@ public class CostBalancerStrategy implements BalancerStrategy
     }
   }
 
-}
+  private static boolean shouldScanByStart(
+      NavigableMap<Long, Object2IntMap<Interval>> countsByStart,
+      NavigableMap<Long, Object2IntMap<Interval>> countsByEnd,
+      Interval overlapInterval
+  )
+  {
+    if (countsByStart.isEmpty() || countsByEnd.isEmpty()) {
+      return true;
+    }
 
+    final double timeFromFirstStartToOverlapEnd = (double) overlapInterval.getEndMillis() - countsByStart.firstKey();
+    final double timeFromOverlapStartToLastEnd = countsByEnd.lastKey() - (double) overlapInterval.getStartMillis();
+    return timeFromFirstStartToOverlapEnd <= timeFromOverlapStartToLastEnd;
+  }
+
+  private static double average(long numerator, long denominator)
+  {
+    return denominator == 0 ? 0 : ((double) numerator) / denominator;
+  }
+
+}

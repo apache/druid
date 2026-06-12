@@ -25,8 +25,11 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 /**
  * Maintains a count of segments for each datasource and interval.
@@ -38,6 +41,12 @@ public class SegmentCountsPerInterval
   private final Map<String, Object2IntMap<Interval>> datasourceIntervalToSegmentCount = new HashMap<>();
   private final Object2IntMap<Interval> intervalToTotalSegmentCount = new Object2IntOpenHashMap<>();
   private final Object2IntMap<String> datasourceToTotalSegmentCount = new Object2IntOpenHashMap<>();
+  private final NavigableMap<Long, Object2IntMap<Interval>> startMillisToTotalSegmentCount = new TreeMap<>();
+  private final NavigableMap<Long, Object2IntMap<Interval>> endMillisToTotalSegmentCount = new TreeMap<>();
+  private final Map<String, NavigableMap<Long, Object2IntMap<Interval>>> datasourceStartMillisToSegmentCount
+      = new HashMap<>();
+  private final Map<String, NavigableMap<Long, Object2IntMap<Interval>>> datasourceEndMillisToSegmentCount
+      = new HashMap<>();
 
   public void addSegment(DataSegment segment)
   {
@@ -76,13 +85,86 @@ public class SegmentCountsPerInterval
     return intervalToTotalSegmentCount;
   }
 
+  public NavigableMap<Long, Object2IntMap<Interval>> getStartMillisToTotalSegmentCount()
+  {
+    return startMillisToTotalSegmentCount;
+  }
+
+  public NavigableMap<Long, Object2IntMap<Interval>> getEndMillisToTotalSegmentCount()
+  {
+    return endMillisToTotalSegmentCount;
+  }
+
+  public NavigableMap<Long, Object2IntMap<Interval>> getStartMillisToSegmentCount(String datasource)
+  {
+    return datasourceStartMillisToSegmentCount.getOrDefault(datasource, Collections.emptyNavigableMap());
+  }
+
+  public NavigableMap<Long, Object2IntMap<Interval>> getEndMillisToSegmentCount(String datasource)
+  {
+    return datasourceEndMillisToSegmentCount.getOrDefault(datasource, Collections.emptyNavigableMap());
+  }
+
   private void updateCountInInterval(DataSegment segment, int delta)
   {
     totalSegments += delta;
-    intervalToTotalSegmentCount.mergeInt(segment.getInterval(), delta, Integer::sum);
+    updateIntervalCount(
+        intervalToTotalSegmentCount,
+        startMillisToTotalSegmentCount,
+        endMillisToTotalSegmentCount,
+        segment.getInterval(),
+        delta
+    );
     datasourceToTotalSegmentCount.mergeInt(segment.getDataSource(), delta, Integer::sum);
-    datasourceIntervalToSegmentCount
-        .computeIfAbsent(segment.getDataSource(), ds -> new Object2IntOpenHashMap<>())
-        .mergeInt(segment.getInterval(), delta, Integer::sum);
+
+    final String datasource = segment.getDataSource();
+    updateIntervalCount(
+        datasourceIntervalToSegmentCount.computeIfAbsent(datasource, ds -> new Object2IntOpenHashMap<>()),
+        datasourceStartMillisToSegmentCount.computeIfAbsent(datasource, ds -> new TreeMap<>()),
+        datasourceEndMillisToSegmentCount.computeIfAbsent(datasource, ds -> new TreeMap<>()),
+        segment.getInterval(),
+        delta
+    );
+  }
+
+  private static void updateIntervalCount(
+      Object2IntMap<Interval> intervalToSegmentCount,
+      NavigableMap<Long, Object2IntMap<Interval>> startMillisToSegmentCount,
+      NavigableMap<Long, Object2IntMap<Interval>> endMillisToSegmentCount,
+      Interval interval,
+      int delta
+  )
+  {
+    final int updatedCount = intervalToSegmentCount.getInt(interval) + delta;
+    if (updatedCount == 0) {
+      intervalToSegmentCount.removeInt(interval);
+      removeFromIntervalIndex(startMillisToSegmentCount, interval.getStartMillis(), interval);
+      removeFromIntervalIndex(endMillisToSegmentCount, interval.getEndMillis(), interval);
+    } else {
+      intervalToSegmentCount.put(interval, updatedCount);
+      startMillisToSegmentCount
+          .computeIfAbsent(interval.getStartMillis(), startMillis -> new Object2IntOpenHashMap<>())
+          .put(interval, updatedCount);
+      endMillisToSegmentCount
+          .computeIfAbsent(interval.getEndMillis(), endMillis -> new Object2IntOpenHashMap<>())
+          .put(interval, updatedCount);
+    }
+  }
+
+  private static void removeFromIntervalIndex(
+      NavigableMap<Long, Object2IntMap<Interval>> intervalIndex,
+      long millis,
+      Interval interval
+  )
+  {
+    final Object2IntMap<Interval> segmentCounts = intervalIndex.get(millis);
+    if (segmentCounts == null) {
+      return;
+    }
+
+    segmentCounts.removeInt(interval);
+    if (segmentCounts.isEmpty()) {
+      intervalIndex.remove(millis);
+    }
   }
 }
