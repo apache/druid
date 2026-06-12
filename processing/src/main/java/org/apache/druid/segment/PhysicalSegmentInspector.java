@@ -24,19 +24,21 @@ import javax.annotation.Nullable;
 /**
  * Interface for methods describing physical segments such as {@link QueryableIndexSegment} and
  * {@link IncrementalIndexSegment} that is not typically used at query time (outside of metadata queries).
- * <p>
- * For metadata information about specific columns, use {@link PhysicalSegmentColumnInspector}.
+ *
+ * @deprecated this interface has been split into smaller, single-purpose interfaces. Use {@link RowCountInspector} for
+ * the number of rows in a segment, {@link PhysicalSegmentColumnInspector} for column details, and {@link Segment#as}
+ * to get {@link Metadata} instead. It is retained, implemented only by {@link QueryableIndexSegment} and
+ * {@link IncrementalIndexSegment}, so that existing callers reaching it through {@link Segment#as} continue to work.
  */
-public interface PhysicalSegmentInspector
+@Deprecated
+public interface PhysicalSegmentInspector extends RowCountInspector, PhysicalSegmentColumnInspector
 {
   /**
    * Returns {@link Metadata} which contains details about how the segment was created
+   *
+   * @deprecated use {@link Segment#as} to get {@link Metadata} instead
    */
+  @Deprecated
   @Nullable
   Metadata getMetadata();
-
-  /**
-   * Returns the number of rows in the segment
-   */
-  int getNumRows();
 }

@@ -184,8 +184,10 @@ public class TestSegmentUtils
         return (T) INDEX;
       } else if (clazz.equals(CursorFactory.class)) {
         return (T) new QueryableIndexCursorFactory(INDEX);
-      } else if (clazz.equals(PhysicalSegmentInspector.class) || clazz.equals(PhysicalSegmentColumnInspector.class)) {
+      } else if (clazz.equals(RowCountInspector.class) || clazz.equals(PhysicalSegmentColumnInspector.class)) {
         return (T) new QueryableIndexPhysicalSegmentInspector(INDEX);
+      } else if (clazz.equals(Metadata.class)) {
+        return (T) INDEX.getMetadata();
       }
       return null;
     }

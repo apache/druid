@@ -32,8 +32,8 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.PhysicalSegmentColumnInspector;
-import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BaseColumnHolder;
@@ -83,21 +83,21 @@ public class SegmentAnalyzer
 
   public long numRows(Segment segment)
   {
-    return Preconditions.checkNotNull(segment.as(PhysicalSegmentInspector.class), "PhysicalSegmentInspector")
+    return Preconditions.checkNotNull(segment.as(RowCountInspector.class), "RowCountInspector")
                         .getNumRows();
   }
 
   public Map<String, ColumnAnalysis> analyze(Segment segment)
   {
     Preconditions.checkNotNull(segment, "segment");
-    final PhysicalSegmentInspector segmentInspector = segment.as(PhysicalSegmentInspector.class);
+    final RowCountInspector rowCountInspector = segment.as(RowCountInspector.class);
     final PhysicalSegmentColumnInspector columnInspector = segment.as(PhysicalSegmentColumnInspector.class);
 
     // index is null for incremental-index-based segments, but the inspectors should always be available
     final QueryableIndex index = segment.as(QueryableIndex.class);
     final CursorFactory cursorFactory = Objects.requireNonNull(segment.as(CursorFactory.class));
 
-    final int numRows = segmentInspector != null ? segmentInspector.getNumRows() : 0;
+    final int numRows = rowCountInspector != null ? rowCountInspector.getNumRows() : 0;
 
     // Use LinkedHashMap to preserve column order.
     final Map<String, ColumnAnalysis> columns = new LinkedHashMap<>();

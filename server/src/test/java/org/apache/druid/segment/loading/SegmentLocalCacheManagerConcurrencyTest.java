@@ -34,7 +34,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -950,7 +950,7 @@ class SegmentLocalCacheManagerConcurrencyTest
         }
         final Optional<Segment> segment = result.getReferenceProvider().acquireReference().map(closer::register);
         if (segment.isPresent()) {
-          PhysicalSegmentInspector gadget = segment.get().as(PhysicalSegmentInspector.class);
+          RowCountInspector gadget = segment.get().as(RowCountInspector.class);
           if (delayMin >= 0 && delayMax > 0) {
             Thread.sleep(ThreadLocalRandom.current().nextInt(delayMin, delayMax));
           }
@@ -997,7 +997,7 @@ class SegmentLocalCacheManagerConcurrencyTest
         }
         final Optional<Segment> segmentReference = segmentManager.acquireCachedSegment(segment.getId()).map(closer::register);
         if (segmentReference.isPresent()) {
-          PhysicalSegmentInspector gadget = segmentReference.get().as(PhysicalSegmentInspector.class);
+          RowCountInspector gadget = segmentReference.get().as(RowCountInspector.class);
           if (maxDelayAfter > 0) {
             Thread.sleep(ThreadLocalRandom.current().nextInt(maxDelayAfter));
           }

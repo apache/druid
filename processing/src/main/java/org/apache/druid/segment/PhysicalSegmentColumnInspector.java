@@ -24,9 +24,6 @@ import javax.annotation.Nullable;
 /**
  * Interface for methods describing the columns of physical segments such as {@link QueryableIndexSegment} and
  * {@link IncrementalIndexSegment} that is not typically used at query time (outside of metadata queries).
- * <p>
- * For general metadata information about a segment that is not column specific, use {@link PhysicalSegmentInspector}
- * instead.
  */
 public interface PhysicalSegmentColumnInspector extends ColumnInspector
 {
