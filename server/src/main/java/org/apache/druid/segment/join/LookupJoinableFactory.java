@@ -22,7 +22,6 @@ package org.apache.druid.segment.join;
 import com.google.inject.Inject;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.LookupDataSource;
-import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactory;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
@@ -72,9 +71,13 @@ public class LookupJoinableFactory implements JoinableFactory
     final LookupExtractorFactory lookupExtractorFactory = container.getLookupExtractorFactory();
     final Optional<RetainedLookupExtractor> retainedLookupExtractor =
         lookupExtractorFactory.acquireRetainedLookupExtractor();
-    final LookupExtractor lookupExtractor = retainedLookupExtractor.<LookupExtractor>map(retained -> retained)
-                                                                   .orElseGet(lookupExtractorFactory);
 
-    return LookupJoinable.wrap(lookupExtractor);
+    // retained snapshot pins one lookup version for the lifetime of the joinable, so that join filter conversion,
+    // pre-analysis and the join matcher all observe the same version
+    // joinable releases the retained reference when the owning SegmentMapFunction is closed at the end of the query
+    // RetainedLookupExtractor's Cleaner remains as a fallback for paths without a deterministic close
+    return retainedLookupExtractor
+        .map(retained -> LookupJoinable.wrap(retained, retained))
+        .orElseGet(() -> LookupJoinable.wrap(lookupExtractorFactory.get()));
   }
 }

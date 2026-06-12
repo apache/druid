@@ -34,6 +34,7 @@ import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannels;
+import org.apache.druid.frame.processor.manager.ProcessorAndCallback;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.read.FrameReader;
@@ -56,6 +57,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -63,6 +65,7 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.function.Function;
 
@@ -202,7 +205,7 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
   {
     final BaseLeafStageProcessor factory = this;
 
-    return new ChainedProcessorManager<>(
+    final ProcessorManager<Object, Long> delegate = new ChainedProcessorManager<>(
         new BaseLeafFrameProcessorManager(
             baseInputQueue,
             segmentMapFunction,
@@ -234,6 +237,30 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
           );
         }
     );
+
+    // segment map function is shared by the regular and handoff managers above, so neither of them can own its
+    // lifecycle, close it here, once, when this manager is closed by the frame processor executor, that happens
+    // after all processors have finished and released their mapped segments
+    return new ProcessorManager<>()
+    {
+      @Override
+      public ListenableFuture<Optional<ProcessorAndCallback<Object>>> next()
+      {
+        return delegate.next();
+      }
+
+      @Override
+      public Long result()
+      {
+        return delegate.result();
+      }
+
+      @Override
+      public void close()
+      {
+        CloseableUtils.closeAndWrapExceptions(() -> CloseableUtils.closeAll(delegate, segmentMapFunction));
+      }
+    };
   }
 
   /**

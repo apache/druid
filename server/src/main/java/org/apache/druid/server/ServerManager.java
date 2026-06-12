@@ -629,6 +629,9 @@ public class ServerManager implements QuerySegmentWalker
 
       // closer to track all used resources
       final Closer closer = Closer.create();
+      // register the segment map function first so it is closed last (LIFO), after all mapped segments
+      // this releases resources retained for the query, such as lookup versions pinned for joins
+      closer.register(segmentMapFn);
       try {
         final LeafSegmentsBundle segmentsBundle = getLeafSegmentsBundle(query, segmentMapFn);
 

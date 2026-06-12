@@ -34,6 +34,7 @@ import org.apache.druid.segment.join.Joinable;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -41,7 +42,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-public class LookupJoinable implements Joinable
+public class LookupJoinable implements Joinable, Closeable
 {
   static final List<String> ALL_COLUMNS = ImmutableList.of(
       LookupColumnSelectorFactory.KEY_COLUMN,
@@ -49,15 +50,28 @@ public class LookupJoinable implements Joinable
   );
 
   private final LookupExtractor extractor;
+  private final Closeable releaser;
 
-  private LookupJoinable(LookupExtractor extractor)
+  private LookupJoinable(LookupExtractor extractor, Closeable releaser)
   {
     this.extractor = extractor;
+    this.releaser = releaser;
   }
 
   public static LookupJoinable wrap(final LookupExtractor extractor)
   {
-    return new LookupJoinable(extractor);
+    return new LookupJoinable(extractor, () -> {});
+  }
+
+  /**
+   * Wraps an extractor along with a releaser for the resources backing it, such as the retained reference held by a
+   * {@link org.apache.druid.query.lookup.RetainedLookupExtractor}. The releaser is closed through {@link #close()}
+   * when the owning {@link org.apache.druid.segment.SegmentMapFunction} is closed at the end of the query, so it must
+   * be idempotent.
+   */
+  public static LookupJoinable wrap(final LookupExtractor extractor, final Closeable releaser)
+  {
+    return new LookupJoinable(extractor, releaser);
   }
 
   @Override
@@ -178,6 +192,13 @@ public class LookupJoinable implements Joinable
   {
     // Lookup joinables are retained by the SegmentMapFunction and may be reused across multiple mapped base segments.
     // Per-segment references should not close the extractor while the joinable can still be used by later segments.
+    // The retained lookup snapshot is released through close() when the owning SegmentMapFunction is closed.
     return Optional.of(() -> {});
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    releaser.close();
   }
 }
