@@ -38,7 +38,7 @@ public interface PhysicalSegmentColumnInspector extends ColumnInspector
   Comparable getMinValue(String column);
 
   /**
-   * Returns the minimum value of the provided column, if known through an index, dictionary, or cache. Returns null
+   * Returns the maximum value of the provided column, if known through an index, dictionary, or cache. Returns null
    * if not known. Does not scan the column to find the maximum value.
    */
   @Nullable
