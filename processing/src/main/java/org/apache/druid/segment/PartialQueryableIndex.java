@@ -305,6 +305,7 @@ public class PartialQueryableIndex implements QueryableIndex
         null,
         true,
         projectionMeta.getSchema().getOrderingWithTimeColumnSubstitution(),
+        null,
         null
     );
 

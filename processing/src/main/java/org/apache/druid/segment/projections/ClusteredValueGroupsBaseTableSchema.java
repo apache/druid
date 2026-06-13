@@ -36,6 +36,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -354,7 +355,26 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
         effectiveGranularity,
         false,
         ordering,
-        projections
+        projections,
+        this
+    );
+  }
+
+  /**
+   * Convert {@link #clusterGroups} to {@link ClusterGroupTuples} for
+   * {@link org.apache.druid.timeline.DataSegment#getClusterGroups()}, to expose what cluster groups the segment
+   * contains to coordinators and brokers.
+   */
+  public ClusterGroupTuples toClusterGroupTuples()
+  {
+    final List<List<Object>> tuples = new ArrayList<>(clusterGroups.size());
+    for (TableClusterGroupSpec group : clusterGroups) {
+      tuples.add(Arrays.asList(group.lookupClusteringValues()));
+    }
+    return new ClusterGroupTuples(
+        clusteringColumns,
+        virtualColumns.isEmpty() ? null : virtualColumns,
+        tuples
     );
   }
 

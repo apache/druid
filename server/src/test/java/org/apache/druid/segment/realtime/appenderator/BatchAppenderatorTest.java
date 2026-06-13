@@ -24,12 +24,20 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
@@ -161,6 +169,54 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
 
       appenderator.close();
       Assert.assertTrue(appenderator.getSegments().isEmpty());
+    }
+  }
+
+  @Test
+  public void testClusteredBaseTablePushPopulatesDimensionsAndClusterGroups() throws Exception
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .clusteringColumns(new StringDimensionSchema("tenant"))
+            .dimensions(new StringDimensionSchema("region"))
+            .metrics(new CountAggregatorFactory("count"))
+            .build();
+    final DataSchema clusteredSchema = DataSchema.builder()
+                                                 .withDataSource(BatchAppenderatorTester.DATASOURCE)
+                                                 .withTimestamp(new TimestampSpec("ts", "auto", null))
+                                                 .withSegmentGranularity(new SegmentGranularitySpec(Granularities.MINUTE, null))
+                                                 .withBaseTable(clusterSpec)
+                                                 .build();
+
+    try (final BatchAppenderatorTester tester = new BatchAppenderatorTester(100, clusteredSchema, true)) {
+      final Appenderator appenderator = tester.getAppenderator();
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), createClusterRow("2000", "acme", "us-east-1"), null);
+      appenderator.add(IDENTIFIERS.get(0), createClusterRow("2000", "acme", "us-west-2"), null);
+      appenderator.add(IDENTIFIERS.get(0), createClusterRow("2000", "globex", "eu-west-1"), null);
+
+      appenderator.push(appenderator.getSegments(), null, false).get();
+
+      final List<DataSegment> pushed = tester.getPushedSegments();
+      Assert.assertEquals(1, pushed.size());
+      final DataSegment segment = pushed.get(0);
+
+      // Empty-dimensions follow-up: clustered segments source their published dimensions from the cluster summary
+      // (clustering + non-clustering, in summary column order), not the empty top-level columns.
+      Assert.assertEquals(List.of("tenant", "region"), segment.getDimensions());
+
+      // clusterGroups is populated at publish time from the merged segment's cluster summary.
+      final ClusterGroupTuples groups = segment.getClusterGroups();
+      Assert.assertNotNull(groups);
+      Assert.assertEquals(List.of("tenant"), groups.clusteringColumns().getColumnNames());
+      Assert.assertEquals(
+          List.of(
+              Collections.singletonList("acme"),
+              Collections.singletonList("globex")
+          ),
+          groups.tuples()
+      );
+      appenderator.close();
     }
   }
 
@@ -1104,6 +1160,15 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
             "met",
             met
         )
+    );
+  }
+
+  static InputRow createClusterRow(String ts, String tenant, String region)
+  {
+    return new MapBasedInputRow(
+        DateTimes.of(ts).getMillis(),
+        ImmutableList.of("tenant", "region"),
+        ImmutableMap.of("ts", ts, "tenant", tenant, "region", region)
     );
   }
 
