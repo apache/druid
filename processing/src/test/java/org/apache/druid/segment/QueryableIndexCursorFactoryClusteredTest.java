@@ -23,8 +23,10 @@ import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.ListBasedInputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -57,14 +59,17 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.OrFilter;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.projections.ClusteredQueryableIndexTestFixture;
+import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -74,20 +79,20 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * End-to-end coverage for {@link QueryableIndexCursorFactory}'s clustered dispatch, uses a
- * {@link ClusteredQueryableIndexTestFixture} that wires real {@link IndexBuilder}-built per-group queryable indexes
- * behind a clustered {@link SimpleQueryableIndex}. Once the writer exists, this test should be portable to actual
- * clustered segments by swapping the fixture for a real segment-loading harness without case-shape changes.
+ * End-to-end coverage for {@link QueryableIndexCursorFactory}'s clustered dispatch. Builds real clustered base-table
+ * segments directly via {@link IndexBuilder} (ingesting flat rows that the writer partitions into cluster groups by
+ * clustering value) and runs the full per-group cursor pipeline against the actual on-disk clustered segment data.
  */
 class QueryableIndexCursorFactoryClusteredTest
 {
-  private static final RowSignature CLUSTERING = RowSignature.builder()
-                                                             .add("tenant", ColumnType.STRING)
-                                                             .build();
+  private static final Interval INTERVAL = Intervals.of("2025-01-01/2025-01-02");
 
-  private static final RowSignature INGEST_SIG = RowSignature.builder()
-                                                             .add("region", ColumnType.STRING)
-                                                             .build();
+  private static final ClusteredValueGroupsBaseTableProjectionSpec CLUSTER_SPEC =
+      ClusteredValueGroupsBaseTableProjectionSpec.builder()
+          .clusteringColumns(new StringDimensionSchema("tenant"))
+          .dimensions(StringDimensionSchema.create("region"))
+          .metrics(new CountAggregatorFactory("count"))
+          .build();
 
   private static Closer engineCloser;
   private static GroupingEngine groupingEngine;
@@ -123,54 +128,64 @@ class QueryableIndexCursorFactoryClusteredTest
     engineCloser.close();
   }
 
-  private ClusteredQueryableIndexTestFixture fixture;
+  @TempDir
+  public File tmpDir;
+
+  private QueryableIndex segmentIndex;
 
   @AfterEach
-  void tearDown()
+  void tearDown() throws java.io.IOException
   {
-    if (fixture != null) {
-      fixture.close();
+    if (segmentIndex != null) {
+      segmentIndex.close();
     }
   }
 
-  private static InputRow row(String ts, String region)
+  private static InputRow row(String tenant, String ts, String region)
   {
-    return new ListBasedInputRow(INGEST_SIG, DateTimes.of(ts), List.of("region"), List.of(region));
+    return new MapBasedInputRow(
+        DateTimes.of(ts),
+        List.of("tenant", "region"),
+        Map.of("tenant", tenant, "region", region)
+    );
   }
 
-  private ClusteredQueryableIndexTestFixture.Builder defaultBuilder()
+  private QueryableIndex buildSegment(List<InputRow> rows)
   {
-    return ClusteredQueryableIndexTestFixture.builder()
-                                             .interval(Intervals.of("2025-01-01/2025-01-02"))
-                                             .clusteringColumns(CLUSTERING)
-                                             .nonClusteringDimensions(StringDimensionSchema.create("region"))
-                                             .metrics(new CountAggregatorFactory("count"));
+    final IncrementalIndexSchema schema =
+        IncrementalIndexSchema.builder()
+                              .withMinTimestamp(INTERVAL.getStartMillis())
+                              .withTimestampSpec(new TimestampSpec("__time", "auto", null))
+                              .withQueryGranularity(Granularities.NONE)
+                              .withDimensionsSpec(CLUSTER_SPEC.getDimensionsSpec())
+                              .withMetrics(new CountAggregatorFactory("count"))
+                              .withRollup(false)
+                              .withClusterSpec(CLUSTER_SPEC)
+                              .build();
+    return IndexBuilder.create()
+                       .useV10()
+                       .tmpDir(tmpDir)
+                       .schema(schema)
+                       .rows(rows)
+                       .buildMMappedIndex(INTERVAL);
   }
 
-  private ClusteredQueryableIndexTestFixture standardTwoGroup()
+  private QueryableIndex standardTwoGroup()
   {
-    return defaultBuilder()
-        .addGroup(
-            List.of("acme"),
-            List.of(
-                row("2025-01-01T00:00:00", "us-east-1"),
-                row("2025-01-01T01:00:00", "us-west-2")
-            )
-        )
-        .addGroup(
-            List.of("globex"),
-            List.of(row("2025-01-01T00:30:00", "eu-west-1"))
-        )
-        .build();
+    return buildSegment(List.of(
+        row("acme", "2025-01-01T00:00:00", "us-east-1"),
+        row("acme", "2025-01-01T01:00:00", "us-west-2"),
+        row("globex", "2025-01-01T00:30:00", "eu-west-1")
+    ));
   }
 
   @Test
   void testGetRowSignatureCombinesClusteringFromSummaryAndDataFromGroup()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     final RowSignature sig = factory.getRowSignature();
@@ -183,10 +198,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testGetColumnCapabilitiesForClusteringColumnFromSummary()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     final ColumnCapabilities tenantCaps = factory.getColumnCapabilities("tenant");
@@ -197,10 +212,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testGetColumnCapabilitiesForDataColumnFromFirstGroup()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     final ColumnCapabilities regionCaps = factory.getColumnCapabilities("region");
@@ -211,10 +226,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testGetColumnCapabilitiesForUnknownColumnIsNull()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     Assertions.assertNull(factory.getColumnCapabilities("nope"));
@@ -249,10 +264,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testUnfilteredScanWalksAllGroupsAndInjectsClusteringConstants()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     try (CursorHolder holder = factory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
@@ -272,10 +287,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testFilterOnClusteringColumnPrunesNonMatchingGroups()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     // tenant=acme — only the acme group survives the pruner. Its filter is rewritten to TRUE and dropped, so the
@@ -300,13 +315,13 @@ class QueryableIndexCursorFactoryClusteredTest
     // an ORDER BY __time scan would intermittently succeed (single group reporting time-first) or fail (multiple
     // groups reporting clustering-first) based purely on filter selectivity. Both must report the full segment
     // ordering [tenant ASC, __time ASC], which is clustering-first (not time-first).
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
-    final List<OrderBy> expected = fixture.summary().getOrdering();
+    final List<OrderBy> expected = segmentIndex.getClusteredBaseSummary().getOrdering();
     Assertions.assertEquals(ColumnHolder.TIME_COLUMN_NAME, expected.get(expected.size() - 1).getColumnName());
     Assertions.assertNotEquals(ColumnHolder.TIME_COLUMN_NAME, expected.get(0).getColumnName());
 
@@ -325,10 +340,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testFilterOnNonClusteringColumnRunsBitmapOnEverySurvivingGroup()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     // region=us-east-1 — pruner keeps both groups (filter references non-clustering data → UNKNOWN); rewriter
@@ -344,10 +359,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testMixedAndFilterPrunesByClusteringAndBitmapsTheRest()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     // tenant=acme AND region=us-west-2 — pruner keeps acme only (clustering leaf TRUE on acme, FALSE on globex);
@@ -364,10 +379,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testAllGroupsPrunedReturnsEmptyCursor()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     final Filter filter = new EqualityFilter("tenant", ColumnType.STRING, "initech", null);
@@ -388,10 +403,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testMultiGroupCanVectorizeAccountsForEveryGroupRewrite()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     // OR(tenant=acme, nonVectorizable(region=us-east-1)) — both groups survive (UNKNOWN keeps globex), but the
@@ -459,10 +474,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testAllGroupsPrunedTimeseriesReturnsEmptyResult()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     // End-to-end version of the selector-on-done-cursor contract: a real engine runs a query whose filter prunes
@@ -479,10 +494,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testAllGroupsPrunedSupportsForceVectorize()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     // The empty holder must report canVectorize and serve a (done) vector cursor — otherwise "vectorize": "force"
@@ -501,10 +516,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testSingleGroupMatchUsesSingleGroupCursorHolderPath()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     // tenant IN ('globex') matches a single group → single-group cursor-holder path. Filter rewriter still folds
@@ -521,10 +536,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testMultiGroupTypedInFilterKeepsBothGroups()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     // tenant IN ('acme', 'globex') → both groups survive, full concatenated walk.
@@ -544,10 +559,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testTimeseriesCountAcrossClusterGroups()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     // No filter — both groups walked; aggregator must accumulate count across the group transition.
@@ -560,10 +575,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testTimeseriesCountWithClusteringFilter()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     // tenant=acme — only the acme group survives pruning; count should be 2.
@@ -578,10 +593,10 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testGroupByOnClusteringColumnAcrossGroups()
   {
-    fixture = standardTwoGroup();
+    segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     // GROUP BY tenant — one bucket per surviving group; exercises the injected constant clustering selector under
@@ -609,19 +624,14 @@ class QueryableIndexCursorFactoryClusteredTest
     // Three groups that share a region value, so the GroupBy on `region` must roll matching rows across cluster
     // group transitions into the same bucket — proving the grouping engine's selector identity survives the
     // wrapper-factory's setDelegate transitions and the hash bucket isn't accidentally segmented per group.
-    fixture = defaultBuilder()
-        .addGroup(
-            List.of("acme"),
-            List.of(row("2025-01-01T00:00:00", "us-east-1"), row("2025-01-01T00:30:00", "us-east-1"))
-        )
-        .addGroup(
-            List.of("globex"),
-            List.of(row("2025-01-01T01:00:00", "us-east-1"))
-        )
-        .build();
+    segmentIndex = buildSegment(List.of(
+        row("acme", "2025-01-01T00:00:00", "us-east-1"),
+        row("acme", "2025-01-01T00:30:00", "us-east-1"),
+        row("globex", "2025-01-01T01:00:00", "us-east-1")
+    ));
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
-        fixture.segmentIndex(),
-        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
     );
 
     final GroupByQuery query = GroupByQuery.builder()

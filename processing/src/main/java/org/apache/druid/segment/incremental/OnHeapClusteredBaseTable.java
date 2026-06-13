@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
@@ -60,10 +61,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * {@code OnheapIncrementalIndex} delegates row ingestion here when its schema carries a
  * {@link ClusteredValueGroupsBaseTableProjectionSpec}, and the base facts holder stays empty in that mode.
  * <p>
- * On row arrival: each clustering column's value is resolved through the virtual-column selector (so VC clustering
- * like {@code lower(tenant)} works the same as a physical column), then dictionary-encoded into the per-type
- * dictionary for the column's clustering type. The resulting dictionary-ID tuple becomes the lookup key for the
- * {@link OnHeapClusterGroup} that owns the row — new groups are materialized lazily as new tuples arrive.
+ * On row arrival: each clustering column's value is resolved through the virtual-column selector, then
+ * dictionary-encoded into the per-type dictionary for the column's clustering type. The resulting dictionary-ID tuple
+ * becomes the lookup key for the {@link OnHeapClusterGroup} that owns the row, new groups are materialized lazily as
+ * new tuples arrive.
  * <p>
  * Dictionaries here are insertion-order (id = first-seen position). The persist path sorts + remaps them into the
  * read-side {@link ClusteringDictionaries} shape (sorted, nulls first) at segment-write time.
@@ -208,7 +209,7 @@ public final class OnHeapClusteredBaseTable
 
   /**
    * Minimum bucketed row timestamp across all groups. Throws {@link NoSuchElementException} when no rows
-   * have been added, mirroring the facts-holder behavior the parent index's interval accessors normally rely on.
+   * have been added.
    */
   public long getMinTimeMillis()
   {
@@ -275,6 +276,7 @@ public final class OnHeapClusteredBaseTable
     return totalNumRows.get();
   }
 
+  @VisibleForTesting
   public List<String> getStringDictionary()
   {
     return insertionOrder(stringDictionary);
@@ -398,8 +400,7 @@ public final class OnHeapClusteredBaseTable
   }
 
   /**
-   * Materialize a per-type dictionary's values in sorted-nulls-first order (the read-side
-   * {@link ClusteringDictionaries} shape), from a {@link DimensionDictionary#sort()} result.
+   * Materialize a per-type dictionary's values in sorted-nulls-first order from {@link DimensionDictionary#sort()}.
    */
   private static <T extends Comparable<T>> List<T> sortedValues(SortedDimensionDictionary<T> sorted)
   {

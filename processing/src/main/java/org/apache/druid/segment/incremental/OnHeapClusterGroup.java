@@ -23,11 +23,13 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.EncodedKeyComponent;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.CapabilitiesBasedFormat;
@@ -55,7 +57,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * values are written once on the on-disk group spec rather than per-row).
  * <p>
  * Each group owns its own {@link IncrementalIndex.DimensionDesc} list for the non-clustering dimensions, which
- * means own {@link org.apache.druid.segment.DimensionIndexer} instances and own dictionaries. That isolation is
+ * means own {@link DimensionIndexer} instances and own dictionaries. That isolation is
  * what gives the persisted segment the "share nothing across groups" property — at persist time each group's
  * dictionaries are written under its per-group file-bundle prefix.
  * <p>
@@ -77,8 +79,6 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
   private final AtomicInteger rowCounter = new AtomicInteger(0);
   private final AtomicInteger numEntries = new AtomicInteger(0);
-  // Group-local time position within {@link #getOrdering()}: 0 for the canonical "[__time]" group ordering that
-  // results from stripping the clustering-column prefix off the segment ordering.
   private final int groupTimePosition;
 
   private final ColumnSelectorFactory virtualSelectorFactory;
@@ -106,10 +106,6 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
     this.columnFormats = new LinkedHashMap<>();
     initializeDimensions(nonClusteringDimensions);
 
-    // Group-local time position. {@code timePosition} arrives from the parent as the SEGMENT-level position of
-    // __time within the segment's full ordering. Cluster groups strip the clustering-column prefix off that
-    // ordering, so the per-group position is shifted by the size of the clustering tuple. For the canonical v1
-    // ordering [clustering..., __time] this comes out to 0.
     final int clusteringCount = clusteringValues.length;
     this.groupTimePosition = timePosition < 0 ? -1 : Math.max(0, timePosition - clusteringCount);
     final int comparatorTimePosition = groupTimePosition < 0 ? dimensions.size() : groupTimePosition;
@@ -133,7 +129,7 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
     );
     this.aggregatorsMap = new LinkedHashMap<>();
     this.aggSelectors = new LinkedHashMap<>();
-    initializeAggregators(virtualColumns, inputRowHolder);
+    initializeAggregators(inputRowHolder);
   }
 
   /**
@@ -329,12 +325,12 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
       final IncrementalIndex.DimensionDesc desc = dimensions.get(i);
       try {
         @SuppressWarnings({"unchecked", "rawtypes"})
-        final EncodedKeyComponent<?> k = ((org.apache.druid.segment.DimensionIndexer) desc.getIndexer())
+        final EncodedKeyComponent<?> k = ((DimensionIndexer) desc.getIndexer())
             .processRowValsToUnsortedEncodedKeyComponent(row.getRaw(desc.getName()), true);
         groupDims[i] = k.getComponent();
         dimsKeySize += k.getEffectiveSizeBytes();
       }
-      catch (org.apache.druid.java.util.common.parsers.ParseException pe) {
+      catch (ParseException pe) {
         parseExceptionMessages.add(pe.getMessage());
       }
     }
@@ -405,18 +401,14 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
     }
   }
 
-  private void initializeAggregators(
-      VirtualColumns virtualColumns,
-      IncrementalIndex.InputRowHolder inputRowHolder
-  )
+  private void initializeAggregators(IncrementalIndex.InputRowHolder inputRowHolder)
   {
-    int i = 0;
     for (AggregatorFactory agg : aggregatorFactories) {
       final IncrementalIndex.MetricDesc metricDesc = new IncrementalIndex.MetricDesc(aggregatorsMap.size(), agg);
       aggregatorsMap.put(metricDesc.getName(), metricDesc);
       columnFormats.put(
           metricDesc.getName(),
-          new org.apache.druid.segment.column.CapabilitiesBasedFormat(metricDesc.getCapabilities())
+          new CapabilitiesBasedFormat(metricDesc.getCapabilities())
       );
       final ColumnSelectorFactory factory;
       if (agg.getIntermediateType().is(ValueType.COMPLEX)) {
@@ -427,7 +419,6 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
         factory = virtualSelectorFactory;
       }
       aggSelectors.put(agg.getName(), factory);
-      i++;
     }
   }
 
