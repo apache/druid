@@ -19,51 +19,51 @@
 
 package org.apache.druid.segment.projections;
 
-import com.google.common.base.Supplier;
-import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.FloatDimensionSchema;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.SimpleQueryableIndex;
-import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.BaseColumnHolder;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Test fixture that wires real per-group {@link QueryableIndex} instances (built via {@link IndexBuilder}) behind a
- * clustered {@link SimpleQueryableIndex}, so cursor-factory tests can exercise the full per-group
- * {@link ClusteringColumnSelectorFactory} wrapping {@link org.apache.druid.segment.ConcatenatingCursor} pipeline
- * against actual indexed data without a real writer.
+ * Test fixture that builds a real clustered base-table {@link QueryableIndex} — ingested into a clustered
+ * {@link org.apache.druid.segment.incremental.OnheapIncrementalIndex}, persisted + merged through
+ * {@link org.apache.druid.segment.IndexMergerV10}, and reloaded — so cursor-factory tests exercise the full
+ * per-group {@link ClusteringColumnSelectorFactory} wrapping {@link org.apache.druid.segment.ConcatenatingCursor}
+ * pipeline against actual on-disk clustered segment data.
  * <p>
- * Each group's index carries only the non-clustering dimensions/metrics; clustering columns are constants captured
- * on the spec, never on the per-group index. The fixture's {@link #segmentIndex()} overrides
- * {@link QueryableIndex#getClusterGroupQueryableIndex(TableClusterGroupSpec)} to return the corresponding real
- * per-group index, so {@link org.apache.druid.segment.QueryableIndexCursorFactory}'s clustered dispatch sees the
- * same shape it will once the writer side lands. Designed to be swapped out for real clustered segments at that
- * point without test-shape changes.
+ * The builder takes clustering tuples + per-group non-clustering rows; {@link Builder#build()} synthesizes full
+ * input rows (clustering values merged into each row) and lets the writer partition them into cluster groups,
+ * exactly as production ingestion does. (Earlier this fixture hand-wired fake per-group indexes behind a stub
+ * {@code SimpleQueryableIndex}; now that the write side exists it builds genuine clustered segments.)
  * <p>
- * Holds {@link AutoCloseable} state (per-group mmap'd indexes + a temp directory), so callers should manage it via
+ * Holds {@link AutoCloseable} state (the mmap'd segment + a temp directory), so callers should manage it via
  * {@link Closeable#close()} or a {@code try-with-resources}.
  */
 public final class ClusteredQueryableIndexTestFixture implements Closeable
@@ -163,6 +163,7 @@ public final class ClusteredQueryableIndexTestFixture implements Closeable
 
     /**
      * Add one cluster group with its positional clustering tuple + per-group rows (non-clustering columns only).
+     * The clustering values are merged into each row at build time so the writer routes them into the right group.
      */
     public Builder addGroup(List<?> clusteringValues, List<InputRow> rows)
     {
@@ -190,132 +191,89 @@ public final class ClusteredQueryableIndexTestFixture implements Closeable
         }
       }
 
+      // Build the clustered base-table spec from the declared clustering signature + non-clustering dims/metrics.
+      final List<DimensionSchema> clusteringDims = new ArrayList<>(clusteringColumns.size());
+      for (int i = 0; i < clusteringColumns.size(); i++) {
+        final String name = clusteringColumns.getColumnName(i);
+        final ColumnType type = clusteringColumns.getColumnType(i).orElseThrow(
+            () -> DruidException.defensive("clustering column has no type")
+        );
+        clusteringDims.add(dimensionSchemaFor(name, type));
+      }
+      final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec =
+          ClusteredValueGroupsBaseTableProjectionSpec.builder()
+              .clusteringColumns(clusteringDims)
+              .dimensions(dimensionsSpec.getDimensions())
+              .metrics(metrics)
+              .build();
+      final IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
+          .withMinTimestamp(interval.getStartMillis())
+          .withTimestampSpec(new TimestampSpec("__time", "auto", null))
+          .withQueryGranularity(Granularities.NONE)
+          .withDimensionsSpec(clusterSpec.getDimensionsSpec())
+          .withMetrics(metrics)
+          .withRollup(rollup)
+          .withClusterSpec(clusterSpec)
+          .build();
+
+      // Synthesize full input rows: each group's clustering tuple merged into each of its non-clustering rows.
+      final List<InputRow> allRows = new ArrayList<>();
+      for (GroupDescriptor group : groups) {
+        for (InputRow nonClusteringRow : group.rows) {
+          allRows.add(mergeRow(group.clusteringValues, nonClusteringRow));
+        }
+      }
+
       final Closer closer = Closer.create();
+      final File tmpDir = FileUtils.createTempDir("clusteredFixture");
+      closer.register(() -> FileUtils.deleteDirectory(tmpDir));
 
-      // Build per-group QueryableIndex instances via IndexBuilder, one tmpDir per group.
-      final File rootTmpDir = FileUtils.createTempDir("clusteredFixture");
-      closer.register(() -> FileUtils.deleteDirectory(rootTmpDir));
-
-      final List<QueryableIndex> perGroupIndexes = new ArrayList<>(groups.size());
-      for (int i = 0; i < groups.size(); i++) {
-        final File groupTmpDir = new File(rootTmpDir, "group" + i);
-        try {
-          FileUtils.mkdirp(groupTmpDir);
-        }
-        catch (IOException e) {
-          throw new IllegalStateException("could not create " + groupTmpDir, e);
-        }
-        final IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
-            .withDimensionsSpec(dimensionsSpec)
-            .withMetrics(metrics)
-            .withRollup(rollup)
-            .withMinTimestamp(interval.getStartMillis())
-            .build();
-        final QueryableIndex groupIndex = IndexBuilder.create()
-            .useV10()
-            .tmpDir(groupTmpDir)
-            .schema(schema)
-            .rows(groups.get(i).rows)
-            .buildMMappedIndex(interval);
-        closer.register(groupIndex);
-        perGroupIndexes.add(groupIndex);
-      }
-
-      // Build summary + specs via the existing test helper.
-      final List<List<?>> tuples = new ArrayList<>(groups.size());
-      for (GroupDescriptor g : groups) {
-        tuples.add(g.clusteringValues);
-      }
-      final ClusterGroupSchemaTestHelpers.Built built = ClusterGroupSchemaTestHelpers.buildClusterGroups(
-          clusteringColumns,
-          tuples
-      );
-
-      // The summary's "columnNames" is the full set of base-table columns including clustering ones; we mirror the
-      // physical-side convention: clustering names first, then __time, then non-clustering dims, then metrics.
-      final List<String> summaryColumnNames = new ArrayList<>();
-      summaryColumnNames.addAll(clusteringColumns.getColumnNames());
-      summaryColumnNames.add(ColumnHolder.TIME_COLUMN_NAME);
-      for (DimensionSchema d : dimensionsSpec.getDimensions()) {
-        summaryColumnNames.add(d.getName());
-      }
-      for (AggregatorFactory m : metrics) {
-        summaryColumnNames.add(m.getName());
-      }
-
-      // Default ordering: clustering columns ascending, then __time ascending. Tests can construct their own
-      // summary downstream if they need different ordering, but the common case is covered.
-      final List<OrderBy> ordering = new ArrayList<>();
-      for (String c : clusteringColumns.getColumnNames()) {
-        ordering.add(OrderBy.ascending(c));
-      }
-      ordering.add(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME));
-
-      final ClusteredValueGroupsBaseTableSchema summary = new ClusteredValueGroupsBaseTableSchema(
-          VirtualColumns.EMPTY,
-          summaryColumnNames,
-          metrics,
-          ordering,
-          clusteringColumns,
-          null,
-          built.dictionaries(),
-          built.specs()
-      );
-
-      // Outer SimpleQueryableIndex subclass: top-level columns empty (clustered convention), getMetadata returns
-      // the summary-derived metadata, and getClusterGroupQueryableIndex dispatches to the IndexBuilder-built indexes.
-      final List<TableClusterGroupSpec> specs = summary.getClusterGroups();
-      final Metadata segmentMetadata = summary.asMetadata(null);
-      final QueryableIndex segmentIndex = new SimpleQueryableIndex(
-          interval,
-          new ListIndexed<>(List.of()),
-          new RoaringBitmapFactory(),
-          Map.of(),
-          null,
-          segmentMetadata,
-          Map.of(),
-          summary,
-          buildEmptyClusterGroupColumns(specs.size())
-      )
-      {
-        @Override
-        public Metadata getMetadata()
-        {
-          return segmentMetadata;
-        }
-
-        @Override
-        public int getNumRows()
-        {
-          int total = 0;
-          for (QueryableIndex idx : perGroupIndexes) {
-            total += idx.getNumRows();
-          }
-          return total;
-        }
-
-        @Override
-        public QueryableIndex getClusterGroupQueryableIndex(TableClusterGroupSpec groupSpec)
-        {
-          final int idx = specs.indexOf(groupSpec);
-          if (idx < 0) {
-            throw new IllegalArgumentException("Cluster group spec is not part of this fixture");
-          }
-          return perGroupIndexes.get(idx);
-        }
-      };
+      final QueryableIndex segmentIndex = IndexBuilder.create()
+          .useV10()
+          .tmpDir(tmpDir)
+          .schema(schema)
+          .rows(allRows)
+          .buildMMappedIndex(interval);
       closer.register(segmentIndex);
 
+      final ClusteredValueGroupsBaseTableSchema summary = segmentIndex.getClusteredBaseSummary();
+      if (summary == null) {
+        throw DruidException.defensive("expected a clustered segment but loaded summary was null");
+      }
       return new ClusteredQueryableIndexTestFixture(segmentIndex, summary, closer);
     }
 
-    private static List<Map<String, Supplier<BaseColumnHolder>>> buildEmptyClusterGroupColumns(int n)
+    private InputRow mergeRow(List<?> clusteringValues, InputRow nonClusteringRow)
     {
-      final List<Map<String, Supplier<BaseColumnHolder>>> out = new ArrayList<>(n);
-      for (int i = 0; i < n; i++) {
-        out.add(Collections.emptyMap());
+      final List<String> dims = new ArrayList<>(clusteringColumns.size() + dimensionsSpec.getDimensions().size());
+      final Map<String, Object> event = new HashMap<>();
+      for (int i = 0; i < clusteringColumns.size(); i++) {
+        final String name = clusteringColumns.getColumnName(i);
+        dims.add(name);
+        event.put(name, clusteringValues.get(i));
       }
-      return out;
+      for (DimensionSchema dim : dimensionsSpec.getDimensions()) {
+        dims.add(dim.getName());
+        event.put(dim.getName(), nonClusteringRow.getRaw(dim.getName()));
+      }
+      return new MapBasedInputRow(nonClusteringRow.getTimestamp(), dims, event);
+    }
+
+    private static DimensionSchema dimensionSchemaFor(String name, ColumnType type)
+    {
+      if (type.is(ValueType.STRING)) {
+        return new StringDimensionSchema(name);
+      }
+      if (type.is(ValueType.LONG)) {
+        return new LongDimensionSchema(name);
+      }
+      if (type.is(ValueType.DOUBLE)) {
+        return new DoubleDimensionSchema(name);
+      }
+      if (type.is(ValueType.FLOAT)) {
+        return new FloatDimensionSchema(name);
+      }
+      throw DruidException.defensive("unsupported clustering type [%s] for column [%s]", type, name);
     }
   }
 

@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -289,6 +290,35 @@ class QueryableIndexCursorFactoryClusteredTest
           ),
           rows
       );
+    }
+  }
+
+  @Test
+  void testReportedOrderingIsTheFullSegmentOrderingRegardlessOfGroupPruning()
+  {
+    // A clustered segment must advertise the SAME ordering whether a filter prunes to one group or many — otherwise
+    // an ORDER BY __time scan would intermittently succeed (single group reporting time-first) or fail (multiple
+    // groups reporting clustering-first) based purely on filter selectivity. Both must report the full segment
+    // ordering [tenant ASC, __time ASC], which is clustering-first (not time-first).
+    fixture = standardTwoGroup();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        fixture.segmentIndex(),
+        QueryableIndexTimeBoundaryInspector.create(fixture.segmentIndex())
+    );
+
+    final List<OrderBy> expected = fixture.summary().getOrdering();
+    Assertions.assertEquals(ColumnHolder.TIME_COLUMN_NAME, expected.get(expected.size() - 1).getColumnName());
+    Assertions.assertNotEquals(ColumnHolder.TIME_COLUMN_NAME, expected.get(0).getColumnName());
+
+    // Single surviving group (tenant=acme).
+    try (CursorHolder single = factory.makeCursorHolder(
+        specWith(new EqualityFilter("tenant", ColumnType.STRING, "acme", null))
+    )) {
+      Assertions.assertEquals(expected, single.getOrdering());
+    }
+    // Multiple surviving groups (full scan).
+    try (CursorHolder multi = factory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Assertions.assertEquals(expected, multi.getOrdering());
     }
   }
 

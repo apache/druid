@@ -26,10 +26,12 @@ import com.google.common.collect.Maps;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -42,6 +44,8 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.OnHeapClusteredBaseTable;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.realtime.FireHydrant;
@@ -200,6 +204,88 @@ public class SinkTest extends InitializedNullHandlingTest
     Assert.assertEquals(Intervals.of("2013-01-01/PT1M"), sink.getCurrHydrant().getIndex().getInterval());
 
     Assert.assertEquals(2, Iterators.size(sink.iterator()));
+  }
+
+  @Test
+  public void testClusteredBaseTableSchemaProducesClusteredIncrementalIndex()
+  {
+    // A DataSchema declaring a clusteredValueGroups baseTable must drive the Sink's in-memory IncrementalIndex
+    // into clustered mode (rows partitioned into per-tenant cluster groups), exercising the appenderator wiring.
+    final TimestampSpec timestampSpec = new TimestampSpec("ts", "millis", null);
+    final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .clusteringColumns(new StringDimensionSchema("tenant"))
+        .dimensions(new StringDimensionSchema("region"))
+        .metrics(new CountAggregatorFactory("count"))
+        .build();
+    final DataSchema schema = DataSchema.builder()
+                                        .withDataSource("test")
+                                        .withTimestamp(timestampSpec)
+                                        .withSegmentGranularity(new SegmentGranularitySpec(Granularities.HOUR, null))
+                                        .withBaseTable(clusterSpec)
+                                        .build();
+    Assert.assertNotNull(schema.getClusterSpec());
+
+    final long t0 = DateTimes.of("2013-01-01T00:00:00").getMillis();
+    final Sink sink = new Sink(
+        Intervals.of("2013-01-01/2013-01-02"),
+        schema,
+        SHARD_SPEC,
+        DateTimes.nowUtc().toString(),
+        TuningConfig.DEFAULT_APPENDABLE_INDEX,
+        MAX_ROWS_IN_MEMORY,
+        TuningConfig.DEFAULT_APPENDABLE_INDEX.getDefaultMaxBytesInMemory()
+    );
+
+    sink.add(clusterRow(t0, "acme", "us-east-1"));
+    sink.add(clusterRow(t0 + 1, "acme", "us-west-2"));
+    sink.add(clusterRow(t0 + 2, "globex", "eu-west-1"));
+
+    final IncrementalIndex index = sink.getCurrHydrant().getIndex();
+    Assert.assertTrue(index instanceof OnheapIncrementalIndex);
+    final OnHeapClusteredBaseTable clusteredBaseTable = ((OnheapIncrementalIndex) index).getClusteredBaseTable();
+    Assert.assertNotNull("expected clustered IncrementalIndex from clustered DataSchema", clusteredBaseTable);
+    Assert.assertEquals(3, clusteredBaseTable.numRows());
+    Assert.assertEquals(2, clusteredBaseTable.getGroups().size());
+    Assert.assertEquals(List.of("acme", "globex"), clusteredBaseTable.getStringDictionary());
+  }
+
+  @Test
+  public void testClassicSchemaProducesUnclusteredIncrementalIndex()
+  {
+    // Control: a plain (un-clustered) DataSchema must NOT produce a clustered IncrementalIndex.
+    final DataSchema schema =
+        DataSchema.builder()
+                  .withDataSource("test")
+                  .withTimestamp(TimestampSpec.DEFAULT)
+                  .withDimensions(new StringDimensionSchema("tenant"), new StringDimensionSchema("region"))
+                  .withAggregators(new CountAggregatorFactory("count"))
+                  .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null))
+                  .build();
+    Assert.assertNull(schema.getClusterSpec());
+
+    final Sink sink = new Sink(
+        Intervals.of("2013-01-01/2013-01-02"),
+        schema,
+        SHARD_SPEC,
+        DateTimes.nowUtc().toString(),
+        TuningConfig.DEFAULT_APPENDABLE_INDEX,
+        MAX_ROWS_IN_MEMORY,
+        TuningConfig.DEFAULT_APPENDABLE_INDEX.getDefaultMaxBytesInMemory()
+    );
+    sink.add(clusterRow(DateTimes.of("2013-01-01").getMillis(), "acme", "us-east-1"));
+
+    final IncrementalIndex index = sink.getCurrHydrant().getIndex();
+    Assert.assertTrue(index instanceof OnheapIncrementalIndex);
+    Assert.assertNull(((OnheapIncrementalIndex) index).getClusteredBaseTable());
+  }
+
+  private static InputRow clusterRow(long ts, String tenant, String region)
+  {
+    final Map<String, Object> event = new java.util.HashMap<>();
+    event.put("ts", ts);
+    event.put("tenant", tenant);
+    event.put("region", region);
+    return new MapBasedInputRow(ts, ImmutableList.of("tenant", "region"), event);
   }
 
   @Test

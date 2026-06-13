@@ -132,8 +132,13 @@ public class SegmentAnalyzer
             analysis = analyzeNumericColumn(capabilities, numRows, Double.BYTES);
             break;
           case STRING:
-            if (index != null) {
-              analysis = analyzeStringColumn(capabilities, index.getColumnHolder(columnName));
+            // Prefer the dictionary-based analysis when a top-level column holder exists. Clustered segments (and
+            // frame segments) have no top-level holder, so fall back to cursor-based analysis, which reads through
+            // the clustered cursor and the (clustered-aware) segment inspector instead of dereferencing a null
+            // holder.
+            final BaseColumnHolder stringHolder = index != null ? index.getColumnHolder(columnName) : null;
+            if (stringHolder != null) {
+              analysis = analyzeStringColumn(capabilities, stringHolder);
             } else {
               analysis = analyzeStringColumn(capabilities, segmentInspector, cursorFactory, columnName);
             }

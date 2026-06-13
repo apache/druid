@@ -50,6 +50,34 @@ import java.util.function.Supplier;
  */
 public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
 {
+  /**
+   * Throwing placeholder delegate for a {@link ClusteringColumnSelectorFactory} that will have its real delegate
+   * set by a concatenating cursor's lazy init before any selector is exposed to the caller. Shared by the
+   * historical and realtime clustered cursor factories, which both construct the wrapper with this placeholder
+   * before handing it to {@link org.apache.druid.segment.ConcatenatingCursor}.
+   */
+  public static final ColumnSelectorFactory UNINITIALIZED_DELEGATE = new ColumnSelectorFactory()
+  {
+    @Override
+    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+    {
+      throw DruidException.defensive("ConcatenatingCursor delegate accessed before initialization");
+    }
+
+    @Override
+    public ColumnValueSelector makeColumnValueSelector(String columnName)
+    {
+      throw DruidException.defensive("ConcatenatingCursor delegate accessed before initialization");
+    }
+
+    @Nullable
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String column)
+    {
+      return null;
+    }
+  };
+
   private final RowSignature clusteringColumns;
   private ColumnSelectorFactory delegate;
   private Object[] clusteringValues;

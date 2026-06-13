@@ -56,6 +56,16 @@ public class SortedDimensionDictionary<T extends Comparable<T>>
     }
   }
 
+  /**
+   * Number of ids in this sorted view, captured at {@link DimensionDictionary#sort()} time. Both the sorted-id and
+   * unsorted-id spaces cover {@code [0, size())}. Useful when iterating a snapshot taken concurrently with a still-
+   * growing source dictionary, where re-reading the source size would be inconsistent with this view.
+   */
+  public int size()
+  {
+    return sortedVals.size();
+  }
+
   public int getUnsortedIdFromSortedId(int index)
   {
     return indexToId[index];
