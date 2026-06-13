@@ -951,8 +951,19 @@ WHERE c IN
     (SELECT col
      FROM (
            VALUES('[2]'),('[3, [4, 5]]'),('2'),('3'),('999')) AS t(col));
-Unhandled Query Planning Failure
-!error
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+| 1 |
+| 1 |
+| 1 |
++---+
+(6 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_subquery_with_where TEST_ID: A5_B16_C3
@@ -970,8 +981,19 @@ FROM
        (SELECT col
         FROM (
               VALUES('[2]'),('[3, [4, 5]]'),('2'),('3'),('999')) AS t(col)));
-Unhandled Query Planning Failure
-!error
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+| 1 |
+| 1 |
+| 1 |
++---+
+(6 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_subquery_with_where TEST_ID: A5_B16_C5
@@ -1007,8 +1029,19 @@ WHERE c IN
     (SELECT col
      FROM (
            VALUES('[2]'),('[3, [4, 5]]'),('2'),('3'),('999')) AS t(col));
-Unhandled Query Planning Failure
-!error
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+| 1 |
+| 1 |
+| 1 |
++---+
+(6 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_subquery_with_where TEST_ID: A5_B16_C9
@@ -1025,8 +1058,19 @@ WHERE c IN
     (SELECT col
      FROM (
            VALUES('[2]'),('[3, [4, 5]]'),('2'),('3'),('999')) AS t(col));
-Unhandled Query Planning Failure
-!error
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+| 1 |
+| 1 |
+| 1 |
++---+
+(6 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_subquery_with_where TEST_ID: A5_B17_C1

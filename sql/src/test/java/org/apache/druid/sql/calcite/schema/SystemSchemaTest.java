@@ -384,7 +384,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private final long totalMemory = JvmUtils.getTotalMemory();
 
   private final String version = GuavaUtils.firstNonNull(
-      SystemSchemaTest.class.getPackage().getImplementationVersion(),
+      DruidNode.class.getPackage().getImplementationVersion(),
       DruidNode.UNKNOWN_VERSION
   );
 

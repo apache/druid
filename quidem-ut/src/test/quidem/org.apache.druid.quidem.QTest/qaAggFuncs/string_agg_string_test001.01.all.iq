@@ -19,8 +19,14 @@ FROM test_agg_funcs;
 # TESTCASE: test001 TEST_ID: A01
 #-------------------------------------------------------------------------
 SELECT string_agg('AAAAAAAAAA', '|') AS col;
-QueryInterruptedException
-!error
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test001 TEST_ID: A02

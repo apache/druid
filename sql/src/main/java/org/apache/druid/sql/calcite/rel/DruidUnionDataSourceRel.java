@@ -176,10 +176,7 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
   {
     return partialQuery.build(
         DUMMY_DATA_SOURCE,
-        RowSignatures.fromRelDataType(
-            unionRel.getRowType().getFieldNames(),
-            unionRel.getRowType()
-        ),
+        RowSignatures.fromRelDataTypeWithUniqueFields(unionRel.getRowType()),
         getPlannerContext(),
         getCluster().getRexBuilder(),
         false,
