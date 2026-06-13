@@ -295,7 +295,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
     SegmentId segmentId = SegmentId.dummy("data-source", partitionNumber);
     DataSegment segment = DataSegment.builder(segmentId).shardSpec(new NumberedShardSpec(partitionNumber, 10)).build();
     expect(server.isSegmentReplicationTarget()).andReturn(isHistorical).anyTimes();
-    expect(serverSelector.pick(query, CloneQueryMode.EXCLUDECLONES)).andReturn(queryableDruidServer).anyTimes();
+    expect(serverSelector.pick(query, CloneQueryMode.EXCLUDECLONES, null)).andReturn(queryableDruidServer).anyTimes();
     expect(queryableDruidServer.getServer()).andReturn(server).anyTimes();
     expect(serverSelector.getSegment()).andReturn(segment).anyTimes();
     replay(serverSelector, queryableDruidServer, server);

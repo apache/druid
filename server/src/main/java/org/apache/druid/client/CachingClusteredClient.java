@@ -445,7 +445,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();
       final SegmentPruner segmentPruner = ev.getSegmentPruner();
 
-      RealtimeSegmentsMode realtimeSegmentsMode = query.context().getRealtimeSegmentsMode();
+      final QueryContext queryContext = query.context();
+      final RealtimeSegmentsMode realtimeSegmentsMode = queryContext.getRealtimeSegmentsMode();
+      final CloneQueryMode cloneQueryMode = queryContext.getCloneQueryMode();
+      final Set<String> queryableHistoricalTiers = queryContext.getQueryableHistoricalTiers();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Collection<PartitionChunk<ServerSelector>> filteredChunks;
@@ -458,7 +461,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           filteredChunks = Sets.newLinkedHashSet(holder.getObject());
         }
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
-          ServerSelector server = chunk.getObject();
+          final ServerSelector server = chunk.getObject();
           switch (realtimeSegmentsMode) {
             case EXCLUSIVE:
               if (!server.isRealtimeSegment()) {
@@ -472,6 +475,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
               break;
             case INCLUDE:
               break;
+          }
+          if (queryableHistoricalTiers != null
+              && !server.hasQueryableServer(queryableHistoricalTiers, cloneQueryMode)) {
+            continue;
           }
           final SegmentDescriptor segment = new SegmentDescriptor(
               holder.getInterval(),
@@ -604,10 +611,15 @@ public class CachingClusteredClient implements QuerySegmentWalker
         CloneQueryMode cloneQueryMode
     )
     {
+      final Set<String> queryableHistoricalTiers = query.context().getQueryableHistoricalTiers();
       final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = new TreeMap<>();
       for (SegmentServerSelector segmentServer : segments) {
         final QueryableDruidServer queryableDruidServer = segmentServer.getServer()
-                                                                       .pick(query, cloneQueryMode);
+                                                                       .pick(
+                                                                           query,
+                                                                           cloneQueryMode,
+                                                                           queryableHistoricalTiers
+                                                                       );
 
         if (queryableDruidServer == null) {
           log.makeAlert(
@@ -823,10 +835,15 @@ public class CachingClusteredClient implements QuerySegmentWalker
         @Nullable byte[] queryCacheKey
     )
     {
-      Hasher hasher = Hashing.sha1().newHasher();
+      final Hasher hasher = Hashing.sha256().newHasher();
+      final Set<String> queryableHistoricalTiers = query.context().getQueryableHistoricalTiers();
       boolean hasOnlyHistoricalSegments = true;
       for (SegmentServerSelector p : segments) {
-        QueryableDruidServer queryableServer = p.getServer().pick(query, cloneQueryMode);
+        final QueryableDruidServer queryableServer = p.getServer().pick(
+            query,
+            cloneQueryMode,
+            queryableHistoricalTiers
+        );
         if (queryableServer == null || !queryableServer.getServer().isSegmentReplicationTarget()) {
           hasOnlyHistoricalSegments = false;
           break;
