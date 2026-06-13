@@ -21,7 +21,7 @@ package org.apache.druid.java.util.http.client.response;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

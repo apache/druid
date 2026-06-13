@@ -24,18 +24,20 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
 
 import java.io.ByteArrayInputStream;
@@ -106,12 +108,32 @@ public class TestChangeRequestHttpClient<R> implements HttpClient
     } else if (nextResult.clientError != null) {
       throw nextResult.clientError;
     } else if (nextResult.serverError != null) {
-      HttpResponse errorResponse = buildErrorResponse(nextResult.serverError);
-      httpResponseHandler.handleResponse(errorResponse, null);
+      final DruidException druidException = nextResult.serverError;
+      HttpResponse errorResponse = new DefaultHttpResponse(
+          HttpVersion.HTTP_1_1,
+          HttpResponseStatus.valueOf(druidException.getStatusCode())
+      );
+      Object intermResp = httpResponseHandler.handleResponse(errorResponse, null);
+      try {
+        final byte[] body = mapper.writeValueAsBytes(druidException.toErrorResponse());
+        // Netty 4: deliver body via HttpContent chunks after handleResponse.
+        intermResp = httpResponseHandler.handleChunk(
+            (ClientResponse) intermResp,
+            new DefaultHttpContent(Unpooled.wrappedBuffer(body)),
+            1
+        );
+        httpResponseHandler.handleChunk(
+            (ClientResponse) intermResp,
+            LastHttpContent.EMPTY_LAST_CONTENT,
+            2
+        );
+      }
+      catch (JsonProcessingException e) {
+        throw new ISE("Error while serializing given response");
+      }
       return (ListenableFuture<Final>) Futures.immediateFuture(new ByteArrayInputStream(new byte[0]));
     } else {
       HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-      httpResponse.setContent(ChannelBuffers.buffer(0));
       httpResponseHandler.handleResponse(httpResponse, null);
     }
 
@@ -126,23 +148,6 @@ public class TestChangeRequestHttpClient<R> implements HttpClient
     }
   }
 
-  private HttpResponse buildErrorResponse(DruidException druidException)
-  {
-    HttpResponse httpResponse = new DefaultHttpResponse(
-        HttpVersion.HTTP_1_1,
-        HttpResponseStatus.valueOf(druidException.getStatusCode())
-    );
-    httpResponse.setContent(ChannelBuffers.buffer(0));
-
-    ErrorResponse errorResponse = druidException.toErrorResponse();
-    try {
-      httpResponse.setContent(ChannelBuffers.copiedBuffer(mapper.writeValueAsBytes(errorResponse)));
-      return httpResponse;
-    }
-    catch (JsonProcessingException e) {
-      throw new ISE("Error while serializing given response");
-    }
-  }
 
   private static class ResultHolder<R>
   {

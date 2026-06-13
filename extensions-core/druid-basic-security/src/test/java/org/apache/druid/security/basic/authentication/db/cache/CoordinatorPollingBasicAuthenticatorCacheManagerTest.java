@@ -20,6 +20,8 @@
 package org.apache.druid.security.basic.authentication.db.cache;
 
 import com.google.inject.Injector;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -30,11 +32,6 @@ import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.easymock.EasyMock;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -79,23 +76,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
     // Block the second request so that it can be interrupted by stop()
     final AtomicBoolean isInterrupted = new AtomicBoolean(false);
 
-    serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, path),
-        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK) {
-          @Override
-          public ChannelBuffer getContent()
-          {
-            try {
-              Thread.sleep(10_000);
-              return null;
-            }
-            catch (InterruptedException e) {
-              isInterrupted.set(true);
-              throw new RuntimeException(e);
-            }
-          }
-        }
-    );
+    serviceClient.expectAndBlock(new RequestBuilder(HttpMethod.GET, path), isInterrupted);
 
     EasyMock.replay(injector);
 
