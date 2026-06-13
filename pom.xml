@@ -1788,6 +1788,7 @@
                       <exclude>**/*_generated*.class</exclude>
                       <!-- forbidden-apis can't resolve jdk.incubator.vector classes from its own classpath -->
                       <exclude>**/math/expr/vector/simd/Simd*.class</exclude>
+                      <exclude>**/query/aggregation/simd/Simd*.class</exclude>
                     </excludes>
                     <suppressAnnotations>
                         <annotation>**.SuppressForbidden</annotation>
