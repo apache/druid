@@ -65,11 +65,13 @@ import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.PhysicalSegmentColumnInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexPhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.FrontCodedIndexed;
@@ -521,8 +523,10 @@ public class SqlBaseBenchmark
             public <T> T as(@Nonnull Class<T> clazz)
             {
               // computed sql schema uses segment metadata, which relies on physical inspector, use the underlying index
-              if (clazz.equals(PhysicalSegmentInspector.class)) {
+              if (clazz.equals(RowCountInspector.class) || clazz.equals(PhysicalSegmentColumnInspector.class)) {
                 return (T) new QueryableIndexPhysicalSegmentInspector(index);
+              } else if (clazz.equals(Metadata.class)) {
+                return (T) index.getMetadata();
               }
               return super.as(clazz);
             }
@@ -548,8 +552,10 @@ public class SqlBaseBenchmark
             public <T> T as(@Nonnull Class<T> clazz)
             {
               // computed sql schema uses segment metadata, which relies on physical inspector, use the underlying index
-              if (clazz.equals(PhysicalSegmentInspector.class)) {
+              if (clazz.equals(RowCountInspector.class) || clazz.equals(PhysicalSegmentColumnInspector.class)) {
                 return (T) new QueryableIndexPhysicalSegmentInspector(index);
+              } else if (clazz.equals(Metadata.class)) {
+                return (T) index.getMetadata();
               }
               return super.as(clazz);
             }

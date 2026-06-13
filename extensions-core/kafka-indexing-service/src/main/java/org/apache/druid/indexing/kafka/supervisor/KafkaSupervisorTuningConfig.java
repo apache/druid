@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
+import org.apache.druid.indexing.seekablestream.StreamingPartitionsSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -42,6 +43,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   public static KafkaSupervisorTuningConfig defaultConfig()
   {
     return new KafkaSupervisorTuningConfig(
+        null,
         null,
         null,
         null,
@@ -97,7 +99,8 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
       @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
-      @JsonProperty("releaseLocksOnHandoff") @Nullable Boolean releaseLocksOnHandoff
+      @JsonProperty("releaseLocksOnHandoff") @Nullable Boolean releaseLocksOnHandoff,
+      @JsonProperty("streamingPartitionsSpec") @Nullable StreamingPartitionsSpec streamingPartitionsSpec
   )
   {
     super(
@@ -122,7 +125,8 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         maxSavedParseExceptions,
         numPersistThreads,
         maxColumnsToMerge,
-        releaseLocksOnHandoff
+        releaseLocksOnHandoff,
+        streamingPartitionsSpec
     );
     this.workerThreads = workerThreads;
     this.chatRetries = (chatRetries != null ? chatRetries : DEFAULT_CHAT_RETRIES);
@@ -237,7 +241,8 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         getMaxSavedParseExceptions(),
         getNumPersistThreads(),
         getMaxColumnsToMerge(),
-        isReleaseLocksOnHandoff()
+        isReleaseLocksOnHandoff(),
+        getStreamingPartitionsSpec()
     );
   }
 }
