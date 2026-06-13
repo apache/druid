@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
+@SuppressWarnings("deprecation")
 public class QueryableIndexPhysicalSegmentInspector implements PhysicalSegmentInspector
 {
   private final QueryableIndex index;

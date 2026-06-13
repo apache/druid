@@ -22,23 +22,28 @@ package org.apache.druid.segment;
 import javax.annotation.Nullable;
 
 /**
- * Interface for methods describing physical segments such as {@link QueryableIndexSegment} and
+ * Interface for methods describing the columns of physical segments such as {@link QueryableIndexSegment} and
  * {@link IncrementalIndexSegment} that is not typically used at query time (outside of metadata queries).
- *
- * @deprecated this interface has been split into smaller, single-purpose interfaces. Use {@link RowCountInspector} for
- * the number of rows in a segment, {@link PhysicalSegmentColumnInspector} for column details, and {@link Segment#as}
- * to get {@link Metadata} instead. It is retained, implemented only by {@link QueryableIndexSegment} and
- * {@link IncrementalIndexSegment}, so that existing callers reaching it through {@link Segment#as} continue to work.
  */
-@Deprecated
-public interface PhysicalSegmentInspector extends RowCountInspector, PhysicalSegmentColumnInspector
+public interface PhysicalSegmentColumnInspector extends ColumnInspector
 {
   /**
-   * Returns {@link Metadata} which contains details about how the segment was created
-   *
-   * @deprecated use {@link Segment#as} to get {@link Metadata} instead
+   * Returns the minimum value of the provided column, if known through an index, dictionary, or cache. Returns null
+   * if not known. Does not scan the column to find the minimum value.
    */
-  @Deprecated
   @Nullable
-  Metadata getMetadata();
+  Comparable getMinValue(String column);
+
+  /**
+   * Returns the maximum value of the provided column, if known through an index, dictionary, or cache. Returns null
+   * if not known. Does not scan the column to find the maximum value.
+   */
+  @Nullable
+  Comparable getMaxValue(String column);
+
+  /**
+   * Returns the number of distinct values in a column, if known, or
+   * {@link DimensionDictionarySelector#CARDINALITY_UNKNOWN} if not.
+   */
+  int getDimensionCardinality(String column);
 }

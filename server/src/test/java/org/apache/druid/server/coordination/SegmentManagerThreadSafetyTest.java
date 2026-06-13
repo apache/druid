@@ -31,7 +31,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestIndex;
@@ -247,7 +247,7 @@ public class SegmentManagerThreadSafetyTest
     {
       return new Segment()
       {
-        PhysicalSegmentInspector rowCountInspector = Mockito.mock(PhysicalSegmentInspector.class);
+        RowCountInspector rowCountInspector = Mockito.mock(RowCountInspector.class);
 
         @Override
         public SegmentId getId()
@@ -264,7 +264,7 @@ public class SegmentManagerThreadSafetyTest
         @Override
         public <T> T as(Class<T> clazz)
         {
-          if (PhysicalSegmentInspector.class.equals(clazz)) {
+          if (RowCountInspector.class.equals(clazz)) {
             Mockito.when(rowCountInspector.getNumRows()).thenReturn(1);
             return (T) rowCountInspector;
           }
