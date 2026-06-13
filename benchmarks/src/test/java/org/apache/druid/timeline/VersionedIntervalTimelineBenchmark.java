@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
@@ -53,7 +54,7 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 @State(Scope.Benchmark)
-@Fork(value = 1, jvmArgsAppend = {"-XX:+UseG1GC"})
+@Fork(value = 1, jvmArgsAppend = {"-XX:+UseG1GC", "-Xmx4g"})
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
 @BenchmarkMode({Mode.Throughput})
@@ -73,7 +74,7 @@ public class VersionedIntervalTimelineBenchmark
   @Param({"false", "true"})
   private boolean useSegmentLock;
 
-  @Param({"MONTH", "DAY"})
+  @Param({"MONTH", "DAY", "HOUR", "MINUTE"})
   private GranularityType segmentGranularity;
 
   private List<Interval> intervals;
@@ -216,22 +217,49 @@ public class VersionedIntervalTimelineBenchmark
     }
   }
 
+  /**
+   * Measures the cost of draining 10% of the timeline in one shot by rebuilding the timeline fresh
+   * each invocation. This is the "bulk removal" case — use {@link Mode#AverageTime} so the result
+   * is interpretable as "seconds per full 10%-drain" rather than a near-zero throughput figure.
+   */
   @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
   public void benchRemove(Blackhole blackhole)
   {
     final List<DataSegment> segmentsCopy = new ArrayList<>(segments);
-    final SegmentTimeline timeline = SegmentTimeline.forSegments(segmentsCopy);
+    final SegmentTimeline localTimeline = SegmentTimeline.forSegments(segmentsCopy);
     final int numTests = (int) (segmentsCopy.size() * 0.1);
     for (int i = 0; i < numTests; i++) {
       final DataSegment segment = segmentsCopy.remove(ThreadLocalRandom.current().nextInt(segmentsCopy.size()));
       blackhole.consume(
-          timeline.remove(
+          localTimeline.remove(
               segment.getInterval(),
               segment.getVersion(),
               segment.getShardSpec().createChunk(segment)
           )
       );
     }
+  }
+
+  /**
+   * Measures per-remove throughput against the pre-built timeline. One invocation = one remove + one
+   * re-add to keep the timeline stable.
+   */
+  @Benchmark
+  @BenchmarkMode(Mode.Throughput)
+  public void benchRemoveWithReplacement(Blackhole blackhole)
+  {
+    final DataSegment segment = segments.get(ThreadLocalRandom.current().nextInt(segments.size()));
+    final PartitionChunk<DataSegment> chunk = segment.getShardSpec().createChunk(segment);
+    final PartitionChunk<DataSegment> removed = timeline.remove(
+        segment.getInterval(),
+        segment.getVersion(),
+        chunk
+    );
+    if (removed != null) {
+      timeline.add(segment.getInterval(), segment.getVersion(), chunk);
+    }
+    blackhole.consume(removed);
   }
 
   @Benchmark
@@ -243,6 +271,26 @@ public class VersionedIntervalTimelineBenchmark
         intervals.get(intervalIndex + 2).getEnd()
     );
     blackhole.consume(timeline.lookup(queryInterval));
+  }
+
+  /**
+   * Looks up a single-interval window — the case that benefits most from the O(log N + K) range scan since only a
+   * tiny fraction of the timeline is touched regardless of overall size.
+   */
+  @Benchmark
+  public void benchLookupSingleInterval(Blackhole blackhole)
+  {
+    final int intervalIndex = ThreadLocalRandom.current().nextInt(intervals.size());
+    blackhole.consume(timeline.lookup(intervals.get(intervalIndex)));
+  }
+
+  /**
+   * Full-range lookup — scans all segments regardless of optimization; provides an upper-bound baseline.
+   */
+  @Benchmark
+  public void benchLookupFullRange(Blackhole blackhole)
+  {
+    blackhole.consume(timeline.lookup(TOTAL_INTERVAL));
   }
 
   @Benchmark
