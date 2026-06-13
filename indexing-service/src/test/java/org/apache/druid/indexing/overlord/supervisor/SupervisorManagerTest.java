@@ -1402,6 +1402,7 @@ public class SupervisorManagerTest extends EasyMockSupport
       {
         super(
             DataSchema.builder()
+                      .withDataSource("testDS")
                       .withTimestamp(new TimestampSpec("time", "auto", null))
                       .withDimensions(new DimensionsSpec(Collections.emptyList()))
                       .build(),
