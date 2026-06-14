@@ -1485,7 +1485,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.12.Final
+version: 4.2.14.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1506,6 +1506,7 @@ libraries:
   - io.netty: netty-transport-native-epoll
   - io.netty: netty-transport-native-unix-common
   - io.netty: netty-codec-http2
+  - io.netty: netty-codec-classes-quic
   - io.netty: netty-resolver-dns-classes-macos
   - io.netty: netty-transport-classes-kqueue
   - io.netty: netty-resolver-dns-native-macos
