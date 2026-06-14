@@ -141,6 +141,49 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
+  public void testComputeValidTaskCountsGapEnrichment()
+  {
+    // All adjacent gaps are <= 100 (33 and 99), so no intermediate candidates are inserted.
+    final int[] noGaps = computeValidTaskCounts(199, 100, 67, 199);
+    Assert.assertArrayEquals(new int[]{67, 100, 199}, noGaps);
+
+    // 250 partitions, base {84, 125, 250}: only the 125 -> 250 gap (125) exceeds 100.
+    // 33%/66% of [125, 250] give 166 and 208.
+    final int[] p250 = computeValidTaskCounts(250, 125, 84, 250);
+    Assert.assertArrayEquals(new int[]{84, 125, 166, 208, 250}, p250);
+
+    // 300 partitions, base {100, 150, 300}: only the 150 -> 300 gap (150) exceeds 100.
+    final int[] p300 = computeValidTaskCounts(300, 150, 100, 300);
+    Assert.assertArrayEquals(new int[]{100, 150, 200, 249, 300}, p300);
+
+    // 500 partitions, base {167, 250, 500}: only the 250 -> 500 gap (250) exceeds 100.
+    final int[] p500 = computeValidTaskCounts(500, 250, 167, 500);
+    Assert.assertArrayEquals(new int[]{167, 250, 333, 415, 500}, p500);
+
+    // Multiple wide gaps are all split. 900 partitions, base
+    // {100, 113, 129, 150, 180, 225, 300, 450, 900}: the 300 -> 450 (150) and 450 -> 900 (450)
+    // gaps each get two intermediate candidates.
+    final int[] multi = computeValidTaskCounts(900, 450, 100, 900);
+    Assert.assertTrue("Split of 300 -> 450 at 33%", contains(multi, 350));
+    Assert.assertTrue("Split of 300 -> 450 at 66%", contains(multi, 399));
+    Assert.assertTrue("Split of 450 -> 900 at 33%", contains(multi, 599));
+    Assert.assertTrue("Split of 450 -> 900 at 66%", contains(multi, 747));
+
+    // A single candidate has no adjacent pair, so nothing is inserted.
+    final int[] single = computeValidTaskCounts(200, 100, 100, 100);
+    Assert.assertArrayEquals(new int[]{100}, single);
+
+    // Every returned array is sorted ascending, as computeOptimalTaskCount relies on binarySearch,
+    // and every candidate stays within the configured bounds.
+    Assert.assertTrue(contains(multi, 100) && contains(multi, 900));
+    for (int[] counts : new int[][]{noGaps, p250, p300, p500, multi, single}) {
+      for (int i = 1; i < counts.length; i++) {
+        Assert.assertTrue("Candidates must be sorted ascending", counts[i - 1] < counts[i]);
+      }
+    }
+  }
+
+  @Test
   public void testComputeOptimalTaskCount()
   {
     // Invalid inputs return -1

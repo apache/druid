@@ -40,7 +40,7 @@ public class WeightedCostFunction
    * Multiplier for a lag amplification factor; it was carefully chosen
    * during extensive testing as the most balanced multiplier for high-lag recovery.
    */
-  static final double LAG_AMPLIFICATION_MULTIPLIER = 0.4;
+  static final double LAG_AMPLIFICATION_MULTIPLIER = 0.35;
 
   /**
    * Minimum rate of processing for any task in records per second. This is used
