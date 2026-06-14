@@ -28,6 +28,9 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.audit.RequestInfo;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.policy.Policy;
 
 import javax.annotation.Nullable;
@@ -49,6 +52,9 @@ public class AuthorizationUtils
   public static final ImmutableSet<String> RESTRICTION_APPLICABLE_RESOURCE_TYPES = ImmutableSet.of(
       ResourceType.DATASOURCE
   );
+
+  private static final String METRIC_ACCESS_DENIED = "auth/accessDenied";
+  private static final String METRIC_EXCEPTION = "auth/exception";
 
   /**
    * Performs authorization check on a single resource-action based on the authentication fields from the request.
@@ -90,6 +96,13 @@ public class AuthorizationUtils
     ResourceAction resourceAction = createDatasourceResourceAction(datasource, req);
     AuthorizationResult authResult = authorizeResourceAction(req, resourceAction, authorizerMapper);
     if (!authResult.allowAccessWithNoRestriction()) {
+      emitAuthMetric(
+          authorizerMapper.getServiceEmitter(),
+          authenticationResultFromRequest(req),
+          resourceAction,
+          METRIC_ACCESS_DENIED,
+          authResult.getErrorMessage()
+      );
       throw new ForbiddenException(authResult.getErrorMessage());
     }
   }
@@ -184,7 +197,10 @@ public class AuthorizationUtils
   {
     final Authorizer authorizer = authorizerMapper.getAuthorizer(authenticationResult.getAuthorizerName());
     if (authorizer == null) {
-      throw new ISE("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
+      final String msg =
+          StringUtils.format("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
+      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, METRIC_EXCEPTION, null);
+      throw new ISE(msg);
     }
 
     // this method returns on first failure, so only successful Access results are kept in the cache
@@ -201,6 +217,7 @@ public class AuthorizationUtils
           resourceAction.getAction()
       );
       if (!access.isAllowed()) {
+        emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, resourceAction, METRIC_ACCESS_DENIED, access.getMessage());
         return AuthorizationResult.deny(access.getMessage());
       } else {
         resultCache.add(resourceAction);
@@ -212,18 +229,22 @@ public class AuthorizationUtils
           if (prevPolicy != null) {
             // Shouldn't have two policies for the same resource name, because only tables have policies and
             // each table should only be processed one time. If it does happen, throw a defensive exception.
-            throw DruidException.defensive(
+            final String twoPoliciesMsg = StringUtils.format(
                 "Cannot have two policies on the same resourceName[%s]: policyA[%s], policyB[%s]",
                 resourceName,
                 prevPolicy,
                 access.getPolicy()
             );
+            emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, resourceAction, METRIC_EXCEPTION, twoPoliciesMsg);
+            throw DruidException.defensive(twoPoliciesMsg);
           }
         } else if (access.getPolicy().isPresent()) {
-          throw DruidException.defensive(
+          final String policyPresentMsg = StringUtils.format(
               "Policy should only present when reading a table, but was present for a different kind of resource action [%s]",
               resourceAction
           );
+          emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, resourceAction, METRIC_EXCEPTION, policyPresentMsg);
+          throw DruidException.defensive(policyPresentMsg);
         } else {
           // Not a read table action, access doesn't have a filter, do nothing.
         }
@@ -265,12 +286,15 @@ public class AuthorizationUtils
       return AuthorizationResult.ALLOW_NO_RESTRICTION;
     }
 
+    final AuthenticationResult authenticationResult = authenticationResultFromRequest(request);
     if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
-      throw new ISE("Request already had authorization check.");
+      final String msg = "Request already had authorization check.";
+      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, METRIC_EXCEPTION, msg);
+      throw new ISE(msg);
     }
 
     AuthorizationResult authResult = authorizeAllResourceActions(
-        authenticationResultFromRequest(request),
+        authenticationResult,
         resourceActions,
         authorizerMapper
     );
@@ -326,11 +350,12 @@ public class AuthorizationUtils
       return resources;
     }
 
-    if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
-      throw new ISE("Request already had authorization check.");
-    }
-
     final AuthenticationResult authenticationResult = authenticationResultFromRequest(request);
+    if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
+      final String msg = "Request already had authorization check.";
+      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, METRIC_EXCEPTION, msg);
+      throw new ISE(msg);
+    }
 
     final Iterable<ResType> filteredResources = filterAuthorizedResources(
         authenticationResult,
@@ -370,7 +395,9 @@ public class AuthorizationUtils
   {
     final Authorizer authorizer = authorizerMapper.getAuthorizer(authenticationResult.getAuthorizerName());
     if (authorizer == null) {
-      throw new ISE("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
+      final String msg = StringUtils.format("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
+      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, METRIC_EXCEPTION, msg);
+      throw new ISE(msg);
     }
 
     final Map<ResourceAction, Access> resultCache = new HashMap<>();
@@ -433,11 +460,13 @@ public class AuthorizationUtils
       return unfilteredResources;
     }
 
+    final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(request);
     if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
-      throw new ISE("Request already had authorization check.");
+      final String msg = "Request already had authorization check.";
+      emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, null, METRIC_EXCEPTION, msg);
+      throw new ISE(msg);
     }
 
-    final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(request);
 
     Map<KeyType, List<ResType>> filteredResources = new HashMap<>();
     for (Map.Entry<KeyType, List<ResType>> entry : unfilteredResources.entrySet()) {
@@ -560,4 +589,27 @@ public class AuthorizationUtils
       Action.WRITE
   );
 
+  private static void emitAuthMetric(
+      @Nullable ServiceEmitter emitter,
+      AuthenticationResult authenticationResult,
+      @Nullable ResourceAction resourceAction,
+      String metricName,
+      @Nullable String errorMessage
+  )
+  {
+    if (emitter == null) {
+      return;
+    }
+    final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder().setDimension("identity", authenticationResult.getIdentity()).setDimension("authorizerName", authenticationResult.getAuthorizerName());
+
+    if (resourceAction != null) {
+      builder.setDimension("resourceName", resourceAction.getResource().getName())
+             .setDimension("resourceType", resourceAction.getResource().getType())
+             .setDimension("action", resourceAction.getAction().toString());
+    }
+    if (errorMessage != null) {
+      builder.setDimension("errorMessage", errorMessage);
+    }
+    emitter.emit(builder.setMetric(metricName, 1));
+  }
 }
