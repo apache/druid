@@ -34,11 +34,14 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class LookupJoinableTest extends InitializedNullHandlingTest
 {
@@ -48,6 +51,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
   private static final String SEARCH_VALUE_VALUE = "SEARCH_VALUE_VALUE";
   private static final String SEARCH_VALUE_UNKNOWN = "SEARCH_VALUE_UNKNOWN";
 
+  private LookupExtractor extractor;
   private LookupJoinable target;
 
   @Before
@@ -60,8 +64,8 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
     lookupMap.put(null, "xyzzy");
     lookupMap.put(SEARCH_KEY_VALUE, SEARCH_VALUE_VALUE);
 
-    final LookupExtractor extractor = ImmutableLookupMap.fromMap(lookupMap)
-                                                        .asLookupExtractor(false, () -> new byte[0]);
+    extractor = ImmutableLookupMap.fromMap(lookupMap)
+                                  .asLookupExtractor(false, () -> new byte[0]);
     target = LookupJoinable.wrap(extractor);
   }
 
@@ -317,5 +321,35 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
     );
 
     Assert.assertEquals(ImmutableSet.of(), values.getColumnValues());
+  }
+
+  @Test
+  public void closeShouldCloseReleaser() throws IOException
+  {
+    final AtomicInteger closeCount = new AtomicInteger(0);
+    final LookupJoinable joinable = LookupJoinable.wrap(extractor, closeCount::incrementAndGet);
+    joinable.close();
+    Assert.assertEquals(1, closeCount.get());
+  }
+
+  @Test
+  public void acquireReferenceShouldNotCloseReleaser() throws IOException
+  {
+    final AtomicInteger closeCount = new AtomicInteger(0);
+    final LookupJoinable joinable = LookupJoinable.wrap(extractor, closeCount::incrementAndGet);
+
+    final Optional<Closeable> reference = joinable.acquireReference();
+    Assert.assertTrue(reference.isPresent());
+    reference.get().close();
+    Assert.assertEquals(0, closeCount.get());
+
+    joinable.close();
+    Assert.assertEquals(1, closeCount.get());
+  }
+
+  @Test
+  public void closeOnJoinableWithoutReleaserShouldBeNoop() throws IOException
+  {
+    target.close();
   }
 }
