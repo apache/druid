@@ -160,5 +160,10 @@ module.exports={
         "src": "img/favicon.png"
       }
     },
-  }
+  },
+  future: {
+    v4: {
+      fasterByDefault: true,
+      removeLegacyPostBuildHeadAttribute: true
+    }}    
 }
