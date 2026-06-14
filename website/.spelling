@@ -838,6 +838,7 @@ WorkerRpcFailed
 TIMED_OUT
 # MSQ context parameters
 maxNumTasks
+minorCompactionTaskPercent
 taskAssignment
 finalizeAggregations
 indexSpec
