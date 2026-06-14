@@ -45,6 +45,7 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.audit.RequestHeaderContext;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -84,6 +85,7 @@ import java.util.concurrent.TimeUnit;
 import static org.apache.druid.sql.calcite.BaseCalciteQueryTest.assertResultsEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -204,6 +206,46 @@ public class SqlStatementTest
     assertFalse(resultSet.runnable());
     resultSet.close();
     stmt.close();
+  }
+
+  @Test
+  public void testDirectStripsForgedReservedContextKeyWhenNoHeader()
+  {
+    // Anti-spoof: a client supplies a value for the reserved "traceId" context key in the
+    // SQL body but no header was captured. The forged value must be stripped from the
+    // statement context (which is what gets logged and handed to the planner).
+    SqlQueryPlus sqlReq = SqlQueryPlus.builder("SELECT COUNT(*) AS cnt FROM druid.foo")
+                                      .queryContext(ImmutableMap.of("traceId", "FORGED", "foo", "bar"))
+                                      .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                      .build();
+    RequestHeaderContext.clear();
+    try {
+      DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+      assertNull("forged traceId must be stripped from SQL context", stmt.context().get("traceId"));
+      assertEquals("bar", stmt.context().get("foo"));
+      stmt.close();
+    }
+    finally {
+      RequestHeaderContext.clear();
+    }
+  }
+
+  @Test
+  public void testDirectInjectsCapturedHeaderOverridingForgedBody()
+  {
+    SqlQueryPlus sqlReq = SqlQueryPlus.builder("SELECT COUNT(*) AS cnt FROM druid.foo")
+                                      .queryContext(ImmutableMap.of("traceId", "FORGED"))
+                                      .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                      .build();
+    RequestHeaderContext.bind(ImmutableMap.of("traceId", "real-trace"));
+    try {
+      DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+      assertEquals("real-trace", stmt.context().get("traceId"));
+      stmt.close();
+    }
+    finally {
+      RequestHeaderContext.clear();
+    }
   }
 
   @Test

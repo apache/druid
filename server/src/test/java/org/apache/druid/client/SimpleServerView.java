@@ -75,7 +75,8 @@ public class SimpleServerView implements TimelineServerView
         conglomerate,
         NOOP_QUERY_WATCHER,
         objectMapper,
-        httpClient
+        httpClient,
+        new org.apache.druid.audit.RequestHeaderContextConfig()
     );
   }
 

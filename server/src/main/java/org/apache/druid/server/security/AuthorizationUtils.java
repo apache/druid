@@ -156,6 +156,15 @@ public class AuthorizationUtils
 
   /**
    * Builds a RequestInfo object that can be used for auditing purposes.
+   *
+   * <p>The {@link RequestInfo#getTraceId()} field is populated from the thread-local
+   * {@link org.apache.druid.server.audit.RequestHeaderContext}, looked up under the
+   * canonical context key {@code "traceId"} that the {@code RequestHeaderContextFilter}
+   * uses when capturing the {@link AuditManager#X_DRUID_TRACE_ID} header (or whichever
+   * header an operator has remapped to that context key via
+   * {@code druid.audit.requestHeaders.headerToContextKey}). Reading from the filter
+   * thread-local instead of the raw header makes the typed audit column honor operator
+   * header remapping rather than being a separate hardcoded path.
    */
   public static RequestInfo buildRequestInfo(String service, HttpServletRequest request)
   {
@@ -163,7 +172,8 @@ public class AuthorizationUtils
         service,
         request.getMethod(),
         request.getRequestURI(),
-        request.getQueryString()
+        request.getQueryString(),
+        org.apache.druid.server.audit.RequestHeaderContext.current().get("traceId")
     );
   }
 
