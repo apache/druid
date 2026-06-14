@@ -105,6 +105,7 @@ ECS
 EMR
 EMRFS
 ETL
+ETag
 Elasticsearch
 Enums
 FIRST_VALUE

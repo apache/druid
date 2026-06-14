@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.common.config.ConfigEtag;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.CompactionEngine;
@@ -41,6 +42,7 @@ import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigAuditEntry;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.AuthConfig;
@@ -55,7 +57,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -151,11 +155,16 @@ public class OverlordCompactionResourceTest
   @Test
   public void test_updateClusterConfig()
   {
-    EasyMock.expect(configManager.updateClusterCompactionConfig(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(configManager.updateClusterCompactionConfig(
+        EasyMock.anyObject(),
+        EasyMock.anyObject(),
+        EasyMock.anyObject()
+    ))
             .andReturn(true)
             .once();
 
     setupMockRequestForAudit();
+    EasyMock.expect(httpRequest.getHeader("If-Match")).andReturn(null).once();
     replayAll();
 
     Response response = compactionResource.updateClusterCompactionConfig(
@@ -167,18 +176,39 @@ public class OverlordCompactionResourceTest
   }
 
   @Test
+  public void test_updateClusterConfigWithBlankIfMatchReturnsBadRequest()
+  {
+    setupMockRequestForAudit();
+    EasyMock.expect(httpRequest.getHeader(HttpHeaders.IF_MATCH)).andReturn("  ").once();
+    replayAll();
+
+    final Response response = compactionResource.updateClusterCompactionConfig(
+        new ClusterCompactionConfig(0.5, 10, null, true, CompactionEngine.MSQ, true),
+        httpRequest
+    );
+
+    verifyInvalidInputResponse(response, "If-Match header must not be blank");
+  }
+
+  @Test
   public void test_getClusterConfig()
   {
     final ClusterCompactionConfig clusterConfig =
         new ClusterCompactionConfig(0.4, 100, null, true, CompactionEngine.MSQ, true);
-    EasyMock.expect(configManager.getClusterCompactionConfig())
-            .andReturn(clusterConfig)
+    final DruidCompactionConfig compactionConfig = DruidCompactionConfig.empty().withClusterConfig(clusterConfig);
+    final byte[] currentBytes = "current-compaction-config".getBytes(StandardCharsets.UTF_8);
+    EasyMock.expect(configManager.getCurrentCompactionConfigBytes())
+            .andReturn(currentBytes)
+            .once();
+    EasyMock.expect(configManager.convertBytesToCompactionConfig(EasyMock.aryEq(currentBytes)))
+            .andReturn(compactionConfig)
             .once();
     replayAll();
 
     final Response response = compactionResource.getClusterCompactionConfig();
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(clusterConfig, response.getEntity());
+    Assert.assertEquals(ConfigEtag.compute(currentBytes), response.getMetadata().getFirst(HttpHeaders.ETAG));
   }
 
   @Test

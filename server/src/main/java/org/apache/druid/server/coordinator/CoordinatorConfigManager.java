@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.common.config.ConfigEtag;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.config.JacksonConfigManager;
@@ -87,13 +88,41 @@ public class CoordinatorConfigManager
     return Preconditions.checkNotNull(dynamicConfig, "Got null config from watcher?!");
   }
 
-  public ConfigManager.SetResult setDynamicConfig(CoordinatorDynamicConfig config, AuditInfo auditInfo)
+  public CoordinatorDynamicConfig convertBytesToDynamicConfig(@Nullable byte[] bytes)
   {
-    return jacksonConfigManager.set(
+    return jacksonConfigManager.convertByteToConfig(
+        bytes,
+        CoordinatorDynamicConfig.class,
+        CoordinatorDynamicConfig.builder().build()
+    );
+  }
+
+  public ConfigManager.SetResult updateDynamicConfig(
+      UnaryOperator<CoordinatorDynamicConfig> operator,
+      @Nullable String ifMatchEtag,
+      AuditInfo auditInfo
+  )
+  {
+    return jacksonConfigManager.setIfMatch(
         CoordinatorDynamicConfig.CONFIG_KEY,
-        config,
+        ifMatchEtag,
+        CoordinatorDynamicConfig.class,
+        CoordinatorDynamicConfig.builder().build(),
+        operator,
         auditInfo
     );
+  }
+
+  @Nullable
+  public byte[] getCurrentDynamicConfigBytes()
+  {
+    return jacksonConfigManager.getCurrentBytes(CoordinatorDynamicConfig.CONFIG_KEY);
+  }
+
+  @Nullable
+  public byte[] getCurrentCompactionConfigBytes()
+  {
+    return jacksonConfigManager.getCurrentBytes(DruidCompactionConfig.CONFIG_KEY);
   }
 
   public DruidCompactionConfig getCurrentCompactionConfig()
@@ -120,6 +149,24 @@ public class CoordinatorConfigManager
       AuditInfo auditInfo
   )
   {
+    return getAndUpdateCompactionConfig(operator, null, auditInfo);
+  }
+
+  public ConfigManager.SetResult getAndUpdateCompactionConfig(
+      UnaryOperator<DruidCompactionConfig> operator,
+      @Nullable String ifMatchEtag,
+      AuditInfo auditInfo
+  )
+  {
+    if (ifMatchEtag != null && !jacksonConfigManager.isCompareAndSwapEnabled()) {
+      return ConfigManager.SetResult.preconditionFailed(
+          new IllegalStateException(
+              "If-Match requires druid.manager.config.enableCompareAndSwap to be enabled for key["
+              + DruidCompactionConfig.CONFIG_KEY
+              + "]"
+          )
+      );
+    }
     // Fetch the bytes and use to build the current config and perform compare-and-swap.
     // This avoids failures in ConfigManager while updating configs previously
     // persisted by older versions of Druid which didn't have fields such as 'granularitySpec'.
@@ -129,22 +176,35 @@ public class CoordinatorConfigManager
         MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
         DruidCompactionConfig.CONFIG_KEY
     );
+    if (ifMatchEtag != null && !ConfigEtag.matches(ifMatchEtag, currentBytes)) {
+      return ConfigManager.SetResult.preconditionFailed(
+          new IllegalStateException("If-Match precondition failed for compaction config")
+      );
+    }
     DruidCompactionConfig current = convertBytesToCompactionConfig(currentBytes);
     DruidCompactionConfig updated = operator.apply(current);
 
     if (current.equals(updated)) {
       return ConfigManager.SetResult.ok();
-    } else {
-      return jacksonConfigManager.set(
-          DruidCompactionConfig.CONFIG_KEY,
-          currentBytes,
-          updated,
-          auditInfo
+    }
+    final ConfigManager.SetResult result = jacksonConfigManager.set(
+        DruidCompactionConfig.CONFIG_KEY,
+        currentBytes,
+        updated,
+        auditInfo
+    );
+    // Under If-Match, a lost CAS means a concurrent writer committed between our
+    // read and write: the precondition no longer holds, so report it as such
+    // rather than as a retryable failure (conditional writes must not auto-retry).
+    if (ifMatchEtag != null && result.isRetryable()) {
+      return ConfigManager.SetResult.preconditionFailed(
+          new IllegalStateException("If-Match precondition failed (concurrent update) for compaction config")
       );
     }
+    return result;
   }
 
-  public DruidCompactionConfig convertBytesToCompactionConfig(byte[] bytes)
+  public DruidCompactionConfig convertBytesToCompactionConfig(@Nullable byte[] bytes)
   {
     return jacksonConfigManager.convertByteToConfig(
         bytes,
@@ -156,6 +216,16 @@ public class CoordinatorConfigManager
   public boolean updateCompactionTaskSlots(
       @Nullable Double compactionTaskSlotRatio,
       @Nullable Integer maxCompactionTaskSlots,
+      AuditInfo auditInfo
+  )
+  {
+    return updateCompactionTaskSlots(compactionTaskSlotRatio, maxCompactionTaskSlots, null, auditInfo);
+  }
+
+  public boolean updateCompactionTaskSlots(
+      @Nullable Double compactionTaskSlotRatio,
+      @Nullable Integer maxCompactionTaskSlots,
+      @Nullable String ifMatchEtag,
       AuditInfo auditInfo
   )
   {
@@ -173,16 +243,17 @@ public class CoordinatorConfigManager
       return current.withClusterConfig(updatedClusterConfig);
     };
 
-    return updateConfigHelper(operator, auditInfo);
+    return updateConfigHelper(operator, ifMatchEtag, auditInfo);
   }
 
   public boolean updateClusterCompactionConfig(
       ClusterCompactionConfig config,
+      @Nullable String ifMatchEtag,
       AuditInfo auditInfo
   )
   {
     UnaryOperator<DruidCompactionConfig> operator = current -> current.withClusterConfig(config);
-    return updateConfigHelper(operator, auditInfo);
+    return updateConfigHelper(operator, ifMatchEtag, auditInfo);
   }
 
   public ClusterCompactionConfig getClusterCompactionConfig()
@@ -195,8 +266,17 @@ public class CoordinatorConfigManager
       AuditInfo auditInfo
   )
   {
+    return updateDatasourceCompactionConfig(config, null, auditInfo);
+  }
+
+  public boolean updateDatasourceCompactionConfig(
+      DataSourceCompactionConfig config,
+      @Nullable String ifMatchEtag,
+      AuditInfo auditInfo
+  )
+  {
     UnaryOperator<DruidCompactionConfig> callable = current -> current.withDatasourceConfig(config);
-    return updateConfigHelper(callable, auditInfo);
+    return updateConfigHelper(callable, ifMatchEtag, auditInfo);
   }
 
   public DataSourceCompactionConfig getDatasourceCompactionConfig(String dataSource)
@@ -215,6 +295,15 @@ public class CoordinatorConfigManager
       AuditInfo auditInfo
   )
   {
+    return deleteDatasourceCompactionConfig(dataSource, null, auditInfo);
+  }
+
+  public boolean deleteDatasourceCompactionConfig(
+      String dataSource,
+      @Nullable String ifMatchEtag,
+      AuditInfo auditInfo
+  )
+  {
     UnaryOperator<DruidCompactionConfig> callable = current -> {
       final Map<String, DataSourceCompactionConfig> configs = current.dataSourceToCompactionConfigMap();
       final DataSourceCompactionConfig config = configs.remove(dataSource);
@@ -224,7 +313,7 @@ public class CoordinatorConfigManager
 
       return current.withDatasourceConfigs(List.copyOf(configs.values()));
     };
-    return updateConfigHelper(callable, auditInfo);
+    return updateConfigHelper(callable, ifMatchEtag, auditInfo);
   }
 
   public List<DataSourceCompactionConfigAuditEntry> getCompactionConfigHistory(
@@ -268,18 +357,22 @@ public class CoordinatorConfigManager
 
   private boolean updateConfigHelper(
       UnaryOperator<DruidCompactionConfig> configUpdateOperator,
+      @Nullable String ifMatchEtag,
       AuditInfo auditInfo
   )
   {
-    int attemps = 0;
+    int attempts = 0;
     ConfigManager.SetResult setResult = null;
+    // Only an unconditional write can be retried: getAndUpdateCompactionConfig converts a lost
+    // CAS under If-Match into a (non-retryable) precondition failure, so conditional writes exit
+    // this loop on the first attempt rather than silently retrying past the caller's precondition.
     try {
-      while (attemps < MAX_UPDATE_RETRIES) {
-        setResult = getAndUpdateCompactionConfig(configUpdateOperator, auditInfo);
+      while (attempts < MAX_UPDATE_RETRIES) {
+        setResult = getAndUpdateCompactionConfig(configUpdateOperator, ifMatchEtag, auditInfo);
         if (setResult.isOk() || !setResult.isRetryable()) {
           break;
         }
-        attemps++;
+        attempts++;
         updateRetryDelay();
       }
     }
@@ -296,7 +389,19 @@ public class CoordinatorConfigManager
 
     if (setResult.isOk()) {
       return true;
-    } else if (setResult.getException() instanceof NoSuchElementException) {
+    }
+
+    // getAndUpdateCompactionConfig already converts a lost CAS under If-Match into
+    // a precondition failure, so a retryable result here is only a genuine
+    // (non-conditional) CAS conflict that exhausted its retries.
+    if (setResult.isPreconditionFailed()) {
+      log.info("If-Match precondition failed on compaction config update");
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.PRECONDITION_FAILED)
+                          .build(setResult.getException().getMessage());
+    }
+
+    if (setResult.getException() instanceof NoSuchElementException) {
       log.warn(setResult.getException(), "Update compaction config failed");
       throw NotFound.exception(
           Throwables.getRootCause(setResult.getException()),

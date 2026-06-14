@@ -26,6 +26,7 @@ import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.ClientMSQContext;
+import org.apache.druid.common.config.ConfigEtag;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.common.config.TestConfigManagerConfig;
@@ -58,7 +59,9 @@ import org.skife.jdbi.v2.Handle;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -107,6 +110,26 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertTrue(defaultConfig.getCompactionConfigs().isEmpty());
     Assert.assertTrue(defaultConfig.isUseSupervisors());
     Assert.assertEquals(CompactionEngine.NATIVE, defaultConfig.getEngine());
+  }
+
+  @Test
+  public void testGetCompactionConfigDerivesBodyAndEtagFromSameBytes()
+  {
+    final CoordinatorConfigManager mockConfigManager = Mockito.mock(CoordinatorConfigManager.class);
+    final CoordinatorCompactionConfigsResource mockResource =
+        new CoordinatorCompactionConfigsResource(mockConfigManager);
+    final byte[] currentBytes = "current-compaction-config".getBytes(StandardCharsets.UTF_8);
+    final DruidCompactionConfig expectedConfig = DruidCompactionConfig.empty();
+
+    Mockito.when(mockConfigManager.getCurrentCompactionConfigBytes()).thenReturn(currentBytes);
+    Mockito.when(mockConfigManager.convertBytesToCompactionConfig(currentBytes)).thenReturn(expectedConfig);
+
+    final Response response = mockResource.getCompactionConfig();
+
+    verifyStatus(Response.Status.OK, response);
+    Assert.assertEquals(expectedConfig, response.getEntity());
+    Assert.assertEquals(ConfigEtag.compute(currentBytes), response.getMetadata().getFirst(HttpHeaders.ETAG));
+    Mockito.verify(mockConfigManager, Mockito.never()).getCurrentCompactionConfig();
   }
 
   @Test
@@ -178,6 +201,47 @@ public class CoordinatorCompactionConfigsResourceTest
         "MSQ engine is supported only with supervisor-based compaction on the Overlord.",
         ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
     );
+  }
+
+  @Test
+  public void testAddDatasourceConfigWithBlankIfMatchReturnsBadRequest()
+  {
+    Mockito.when(mockHttpServletRequest.getHeader(HttpHeaders.IF_MATCH)).thenReturn("  ");
+
+    final DataSourceCompactionConfig newDatasourceConfig
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
+    final Response response = resource.addOrUpdateDatasourceCompactionConfig(newDatasourceConfig, mockHttpServletRequest);
+
+    verifyStatus(Response.Status.BAD_REQUEST, response);
+    Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
+    Assert.assertEquals(
+        "If-Match header must not be blank",
+        ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
+    );
+  }
+
+  @Test
+  public void testAddDatasourceConfigWithIfMatchReturnsPreconditionFailedWhenCompareAndSwapDisabled()
+  {
+    configManager.setCompareAndSwapEnabled(false);
+    Mockito.when(mockHttpServletRequest.getHeader(HttpHeaders.IF_MATCH)).thenReturn("\"etag\"");
+
+    final DataSourceCompactionConfig newDatasourceConfig
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
+    final Response response = resource.addOrUpdateDatasourceCompactionConfig(
+        newDatasourceConfig,
+        mockHttpServletRequest
+    );
+
+    verifyStatus(Response.Status.PRECONDITION_FAILED, response);
+    Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
+    Assert.assertEquals(
+        "If-Match requires druid.manager.config.enableCompareAndSwap to be enabled for key["
+        + DruidCompactionConfig.CONFIG_KEY
+        + "]",
+        ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
+    );
+    Assert.assertTrue(configManager.getCurrentCompactionConfig().getCompactionConfigs().isEmpty());
   }
 
   @Test
@@ -417,6 +481,7 @@ public class CoordinatorCompactionConfigsResourceTest
   private static class TestCoordinatorConfigManager extends CoordinatorConfigManager
   {
     private final ConfigManager delegate;
+    private final TestConfigManagerConfig configManagerConfig;
     private int numUpdateAttempts;
     private ConfigManager.SetResult configUpdateResult;
 
@@ -432,15 +497,17 @@ public class CoordinatorCompactionConfigsResourceTest
       };
 
       final TestDBConnector dbConnector = new TestDBConnector();
+      final TestConfigManagerConfig configManagerConfig = new TestConfigManagerConfig();
       final ConfigManager configManager = new ConfigManager(
           dbConnector,
           Suppliers.ofInstance(tablesConfig),
-          Suppliers.ofInstance(new TestConfigManagerConfig())
+          Suppliers.ofInstance(configManagerConfig)
       );
 
       return new TestCoordinatorConfigManager(
           new JacksonConfigManager(configManager, OBJECT_MAPPER, auditManager),
           configManager,
+          configManagerConfig,
           auditManager,
           dbConnector,
           tablesConfig
@@ -450,6 +517,7 @@ public class CoordinatorCompactionConfigsResourceTest
     TestCoordinatorConfigManager(
         JacksonConfigManager jackson,
         ConfigManager configManager,
+        TestConfigManagerConfig configManagerConfig,
         AuditManager auditManager,
         TestDBConnector dbConnector,
         MetadataStorageTablesConfig tablesConfig
@@ -457,17 +525,24 @@ public class CoordinatorCompactionConfigsResourceTest
     {
       super(jackson, dbConnector, tablesConfig, auditManager);
       this.delegate = configManager;
+      this.configManagerConfig = configManagerConfig;
+    }
+
+    void setCompareAndSwapEnabled(boolean enabled)
+    {
+      configManagerConfig.enableCompareAndSwap = enabled;
     }
 
     @Override
     public ConfigManager.SetResult getAndUpdateCompactionConfig(
         UnaryOperator<DruidCompactionConfig> operator,
+        String ifMatchEtag,
         AuditInfo auditInfo
     )
     {
       ++numUpdateAttempts;
       if (configUpdateResult == null) {
-        return super.getAndUpdateCompactionConfig(operator, auditInfo);
+        return super.getAndUpdateCompactionConfig(operator, ifMatchEtag, auditInfo);
       } else {
         return configUpdateResult;
       }

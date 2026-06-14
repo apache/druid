@@ -24,8 +24,8 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -41,17 +41,13 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Path("/druid/coordinator/v1/broker/config")
 @ResourceFilters(ConfigResourceFilter.class)
 public class CoordinatorBrokerConfigsResource
 {
-  private static final Logger log = new Logger(CoordinatorBrokerConfigsResource.class);
-
   private final JacksonConfigManager configManager;
   private final AuditManager auditManager;
-  private final AtomicReference<BrokerDynamicConfig> currentConfig;
   private final BrokerDynamicConfigSyncer brokerDynamicConfigSyncer;
 
   @Inject
@@ -63,11 +59,6 @@ public class CoordinatorBrokerConfigsResource
   {
     this.configManager = configManager;
     this.auditManager = auditManager;
-    this.currentConfig = configManager.watch(
-        BrokerDynamicConfig.CONFIG_KEY,
-        BrokerDynamicConfig.class,
-        BrokerDynamicConfig.builder().build()
-    );
     this.brokerDynamicConfigSyncer = brokerDynamicConfigSyncer;
   }
 
@@ -75,7 +66,14 @@ public class CoordinatorBrokerConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getBrokerDynamicConfig()
   {
-    return Response.ok(currentConfig.get()).build();
+    return DynamicConfigEtagHelper.buildReadResponseWithEtag(
+        () -> configManager.getCurrentBytes(BrokerDynamicConfig.CONFIG_KEY),
+        currentBytes -> configManager.convertByteToConfig(
+            currentBytes,
+            BrokerDynamicConfig.class,
+            BrokerDynamicConfig.builder().build()
+        )
+    );
   }
 
   @POST
@@ -86,12 +84,12 @@ public class CoordinatorBrokerConfigsResource
   )
   {
     try {
-      BrokerDynamicConfig current = currentConfig.get();
-      BrokerDynamicConfig newConfig = configBuilder.build(current);
-
-      final SetResult setResult = configManager.set(
+      final SetResult setResult = configManager.setIfMatch(
           BrokerDynamicConfig.CONFIG_KEY,
-          newConfig,
+          DynamicConfigEtagHelper.getIfMatch(req),
+          BrokerDynamicConfig.class,
+          BrokerDynamicConfig.builder().build(),
+          configBuilder::build,
           AuthorizationUtils.buildAuditInfo(req)
       );
 
@@ -99,10 +97,11 @@ public class CoordinatorBrokerConfigsResource
         brokerDynamicConfigSyncer.queueBroadcastConfigToBrokers();
         return Response.ok().build();
       } else {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity(ServletResourceUtils.sanitizeException(setResult.getException()))
-                       .build();
+        return DynamicConfigEtagHelper.toErrorResponse(setResult);
       }
+    }
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
     }
     catch (IllegalArgumentException e) {
       return Response.status(Response.Status.BAD_REQUEST)

@@ -27,8 +27,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.common.config.ConfigEtag;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
@@ -90,8 +92,10 @@ import org.junit.rules.ExpectedException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -1361,6 +1365,48 @@ public class OverlordResourceTest
     Assert.assertEquals(expectedWorkerCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
     Assert.assertEquals(expectedWorkerCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getUsedClusterCapacity());
     Assert.assertEquals(expectedWorkerCapacityWithAutoscale, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+  }
+
+  @Test
+  public void testGetWorkerConfigDerivesBodyAndEtagFromSameBytes()
+  {
+    final WorkerBehaviorConfig workerBehaviorConfig = EasyMock.createMock(WorkerBehaviorConfig.class);
+    final byte[] currentBytes = "current-worker-config".getBytes(StandardCharsets.UTF_8);
+
+    EasyMock.expect(configManager.getCurrentBytes(WorkerBehaviorConfig.CONFIG_KEY))
+            .andReturn(currentBytes)
+            .once();
+    EasyMock.expect(
+        configManager.convertByteToConfig(
+            EasyMock.aryEq(currentBytes),
+            EasyMock.eq(WorkerBehaviorConfig.class),
+            (WorkerBehaviorConfig) EasyMock.isNull()
+        )
+    ).andReturn(workerBehaviorConfig).once();
+    replayAll();
+
+    final Response response = overlordResource.getWorkerConfig();
+
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assert.assertEquals(workerBehaviorConfig, response.getEntity());
+    Assert.assertEquals(ConfigEtag.compute(currentBytes), response.getMetadata().getFirst(HttpHeaders.ETAG));
+  }
+
+  @Test
+  public void testSetWorkerConfigWithBlankIfMatchReturnsBadRequest()
+  {
+    final WorkerBehaviorConfig workerBehaviorConfig = EasyMock.createMock(WorkerBehaviorConfig.class);
+    EasyMock.expect(req.getHeader(HttpHeaders.IF_MATCH)).andReturn("  ").once();
+    replayAll();
+
+    final Response response = overlordResource.setWorkerConfig(workerBehaviorConfig, req);
+
+    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
+    Assert.assertEquals(
+        "If-Match header must not be blank",
+        ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
+    );
   }
 
   @Test

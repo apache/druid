@@ -44,6 +44,7 @@ import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigAuditEntry;
+import org.apache.druid.server.http.DynamicConfigEtagHelper;
 import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -123,7 +124,11 @@ public class OverlordCompactionResource
   {
     final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
     return ServletResourceUtils.buildUpdateResponse(
-        () -> configManager.updateClusterCompactionConfig(updatePayload, auditInfo)
+        () -> configManager.updateClusterCompactionConfig(
+            updatePayload,
+            DynamicConfigEtagHelper.getIfMatch(req),
+            auditInfo
+        )
     );
   }
 
@@ -133,8 +138,9 @@ public class OverlordCompactionResource
   @ResourceFilters(ConfigResourceFilter.class)
   public Response getClusterCompactionConfig()
   {
-    return ServletResourceUtils.buildReadResponse(
-        configManager::getClusterCompactionConfig
+    return DynamicConfigEtagHelper.buildReadResponseWithEtag(
+        configManager::getCurrentCompactionConfigBytes,
+        currentBytes -> configManager.convertBytesToCompactionConfig(currentBytes).clusterConfig()
     );
   }
 

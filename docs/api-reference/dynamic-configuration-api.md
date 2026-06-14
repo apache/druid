@@ -33,6 +33,32 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router s
 Replace it with the information for your deployment.
 For example, use `http://localhost:8888` for quickstart deployments.
 
+## Concurrency control with ETag and If-Match
+
+Without coordination, two concurrent updates to the same dynamic configuration silently overwrite each other—the last writer wins and the earlier writer has no signal that their change was lost. To prevent this, the dynamic configuration endpoints support an optimistic-concurrency-control protocol modeled on HTTP `ETag` and `If-Match`:
+
+* Every `GET` response for a dynamic configuration includes an `ETag` header. The value is a stable hash of the stored configuration bytes—identical bytes always produce the same ETag.
+* On a `POST` (or `DELETE`), supply the ETag you last observed in an `If-Match` header. The server only commits the change if the currently stored configuration still hashes to that ETag.
+* If another writer changed the configuration after your read, your request fails with `412 Precondition Failed`. Re-`GET` to obtain the new value and ETag, re-apply your change, and retry.
+* The `If-Match` header is **optional**. Requests without it preserve the previous last-writer-wins behavior.
+* `If-Match: *` is supported and matches any existing configuration (it only fails if no value has been stored yet).
+
+Typical client flow:
+
+```shell
+# Read current config and capture its ETag
+ETAG=$(curl -sD - "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config" | awk '/^ETag:/ {print $2}' | tr -d '\r')
+
+# Submit an update guarded by the ETag
+curl -X POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config" \
+  -H "Content-Type: application/json" \
+  -H "If-Match: $ETAG" \
+  -d @new-config.json
+# 200 on success, 412 if someone else updated the config in between.
+```
+
+Endpoints that support this protocol are noted individually below.
+
 ## Coordinator dynamic configuration
 
 The Coordinator has dynamic configurations to tune certain behavior on the fly, without requiring a service restart.
@@ -40,7 +66,7 @@ For information on the supported properties, see [Coordinator dynamic configurat
 
 ### Get dynamic configuration
 
-Retrieves the current Coordinator dynamic configuration. Returns a JSON object with the dynamic configuration properties.
+Retrieves the current Coordinator dynamic configuration. Returns a JSON object with the dynamic configuration properties. The response includes an `ETag` header that can be used with `If-Match` on a subsequent update; see [Concurrency control with ETag and If-Match](#concurrency-control-with-etag-and-if-match).
 
 #### URL
 
@@ -53,7 +79,7 @@ Retrieves the current Coordinator dynamic configuration. Returns a JSON object w
 <TabItem value="1" label="200 SUCCESS">
 
 
-*Successfully retrieved dynamic configuration*
+*Successfully retrieved dynamic configuration. The `ETag` response header carries an opaque identifier for the returned configuration version.*
 
 </TabItem>
 </Tabs>
@@ -136,6 +162,9 @@ The endpoint supports a set of optional header parameters to populate the `autho
 * `X-Druid-Comment`
   * Type: String
   * Description for the update.
+* `If-Match`
+  * Type: String
+  * Optional. Quoted ETag previously returned by `GET /druid/coordinator/v1/config`. When supplied, the update only commits if the currently stored configuration still matches this ETag. Pass `*` to require only that some value is already stored. See [Concurrency control with ETag and If-Match](#concurrency-control-with-etag-and-if-match).
 
 #### Responses
 
@@ -145,6 +174,12 @@ The endpoint supports a set of optional header parameters to populate the `autho
 
 
 *Successfully updated dynamic configuration*
+
+</TabItem>
+<TabItem value="4b" label="412 PRECONDITION FAILED">
+
+
+*The `If-Match` header did not match the currently stored configuration, or another writer committed a change between this request's precondition check and write. Re-read the configuration and retry.*
 
 </TabItem>
 </Tabs>
@@ -319,7 +354,7 @@ These settings control broker behavior such as query blocking rules and default 
 
 ### Get broker dynamic configuration
 
-Retrieves the current Broker dynamic configuration. Returns a JSON object with the dynamic configuration properties.
+Retrieves the current Broker dynamic configuration. Returns a JSON object with the dynamic configuration properties. The response includes an `ETag` header that can be used with `If-Match` on a subsequent update; see [Concurrency control with ETag and If-Match](#concurrency-control-with-etag-and-if-match).
 
 #### URL
 
@@ -332,7 +367,7 @@ Retrieves the current Broker dynamic configuration. Returns a JSON object with t
 <TabItem value="25" label="200 SUCCESS">
 
 
-*Successfully retrieved broker dynamic configuration*
+*Successfully retrieved broker dynamic configuration. The `ETag` response header carries an opaque identifier for the returned configuration version.*
 
 </TabItem>
 </Tabs>
@@ -412,6 +447,10 @@ The endpoint supports a set of optional header parameters to populate the audit 
   * Type: String
   * Comment describing the change.
 
+* `If-Match`
+  * Type: String
+  * Optional. Quoted ETag previously returned by `GET /druid/coordinator/v1/broker/config`. When supplied, the update only commits if the currently stored configuration still matches this ETag. Pass `*` to require only that some value is already stored. See [Concurrency control with ETag and If-Match](#concurrency-control-with-etag-and-if-match).
+
 #### Responses
 
 <Tabs>
@@ -420,6 +459,12 @@ The endpoint supports a set of optional header parameters to populate the audit 
 
 
 *Successfully updated configuration*
+
+</TabItem>
+<TabItem value="28b" label="412 PRECONDITION FAILED">
+
+
+*The `If-Match` header did not match the currently stored configuration, or another writer committed a change between this request's precondition check and write. Re-read the configuration and retry.*
 
 </TabItem>
 </Tabs>
@@ -719,6 +764,7 @@ For information on the supported properties, see [Overlord dynamic configuration
 Retrieves the current Overlord dynamic configuration.
 Returns a JSON object with the dynamic configuration properties.
 Returns an empty response body if there is no current Overlord dynamic configuration.
+When a configuration is present, the response includes an `ETag` header that can be used with `If-Match` on a subsequent update; see [Concurrency control with ETag and If-Match](#concurrency-control-with-etag-and-if-match).
 
 #### URL
 
@@ -731,7 +777,7 @@ Returns an empty response body if there is no current Overlord dynamic configura
 <TabItem value="10" label="200 SUCCESS">
 
 
-*Successfully retrieved dynamic configuration*
+*Successfully retrieved dynamic configuration. When a configuration is stored, the `ETag` response header carries an opaque identifier for the returned configuration version.*
 
 </TabItem>
 </Tabs>
@@ -799,6 +845,9 @@ The endpoint supports a set of optional header parameters to populate the `autho
 * `X-Druid-Comment`
   * Type: String
   * Description for the update.
+* `If-Match`
+  * Type: String
+  * Optional. Quoted ETag previously returned by `GET /druid/indexer/v1/worker`. When supplied, the update only commits if the currently stored configuration still matches this ETag. Pass `*` to require only that some value is already stored. See [Concurrency control with ETag and If-Match](#concurrency-control-with-etag-and-if-match).
 
 #### Responses
 
@@ -808,6 +857,12 @@ The endpoint supports a set of optional header parameters to populate the `autho
 
 
 *Successfully updated dynamic configuration*
+
+</TabItem>
+<TabItem value="13b" label="412 PRECONDITION FAILED">
+
+
+*The `If-Match` header did not match the currently stored configuration, or another writer committed a change between this request's precondition check and write. Re-read the configuration and retry.*
 
 </TabItem>
 </Tabs>
