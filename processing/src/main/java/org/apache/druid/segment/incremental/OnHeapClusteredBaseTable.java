@@ -282,19 +282,10 @@ public final class OnHeapClusteredBaseTable
     return insertionOrder(stringDictionary);
   }
 
+  @VisibleForTesting
   public List<Long> getLongDictionary()
   {
     return insertionOrder(longDictionary);
-  }
-
-  public List<Double> getDoubleDictionary()
-  {
-    return insertionOrder(doubleDictionary);
-  }
-
-  public List<Float> getFloatDictionary()
-  {
-    return insertionOrder(floatDictionary);
   }
 
   /**
