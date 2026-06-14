@@ -44,6 +44,7 @@ import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.msq.rpc.WorkerResource;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
@@ -52,6 +53,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -59,6 +61,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -76,8 +79,8 @@ public class DartWorkerRunner
   /**
    * Used to track the time since this runner has been idle.
    */
+  @GuardedBy("this")
   private final Stopwatch sinceLastWorkerFinished = Stopwatch.createUnstarted();
-
   /**
    * Query ID -> Worker instance.
    */
@@ -88,7 +91,15 @@ public class DartWorkerRunner
   private final DruidNodeDiscoveryProvider discoveryProvider;
   private final ResourcePermissionMapper permissionMapper;
   private final AuthorizerMapper authorizerMapper;
+  private final ServerConfig serverConfig;
   private final File baseTempDir;
+  private final Clock clock;
+
+  /**
+   * Used to fence off new workers from starting after {@link #stop()} has been called.
+   */
+  @GuardedBy("this")
+  private boolean stopped;
 
   public DartWorkerRunner(
       final DartWorkerContextFactory workerFactory,
@@ -96,7 +107,9 @@ public class DartWorkerRunner
       final DruidNodeDiscoveryProvider discoveryProvider,
       final ResourcePermissionMapper permissionMapper,
       final AuthorizerMapper authorizerMapper,
-      final File baseTempDir
+      final ServerConfig serverConfig,
+      final File baseTempDir,
+      final Clock clock
   )
   {
     this.workerFactory = workerFactory;
@@ -104,7 +117,9 @@ public class DartWorkerRunner
     this.discoveryProvider = discoveryProvider;
     this.permissionMapper = permissionMapper;
     this.authorizerMapper = authorizerMapper;
+    this.serverConfig = serverConfig;
     this.baseTempDir = baseTempDir;
+    this.clock = clock;
   }
 
   /**
@@ -123,10 +138,20 @@ public class DartWorkerRunner
     final boolean newHolder;
 
     synchronized (this) {
+      if (stopped) {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                            .build("Cannot start query[%s] because this instance has been stopped", queryId);
+      }
+
       if (!activeControllerHosts.contains(controllerHost)) {
         throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                             .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                            .build("Received startWorker request for unknown controller[%s]", controllerHost);
+                            .build(
+                                "Received startWorker request for query[%s] with controller[%s]",
+                                queryId,
+                                controllerHost
+                            );
       }
 
       final WorkerHolder existingHolder = workerMap.get(queryId);
@@ -137,7 +162,7 @@ public class DartWorkerRunner
         final WorkerContext workerContext = workerFactory.build(queryId, controllerHost, baseTempDir, context);
         final Worker worker = new WorkerImpl(null, workerContext);
         final WorkerResource resource = new WorkerResource(worker, permissionMapper, authorizerMapper);
-        holder = new WorkerHolder(worker, workerContext, controllerHost, resource, DateTimes.nowUtc());
+        holder = new WorkerHolder(worker, workerContext, controllerHost, resource, DateTimes.utc(clock.millis()));
         workerMap.put(queryId, holder);
         this.notifyAll();
         newHolder = true;
@@ -250,15 +275,47 @@ public class DartWorkerRunner
   @LifecycleStop
   public void stop()
   {
+    final List<WorkerHolder> runningWorkers;
     synchronized (this) {
-      final Collection<WorkerHolder> holders = workerMap.values();
-
-      for (final WorkerHolder holder : holders) {
-        holder.runRef.cancel();
+      if (stopped) {
+        return;
       }
+      stopped = true;
+      runningWorkers = new ArrayList<>(workerMap.values());
+      workerMap.clear();
+    }
 
-      for (final WorkerHolder holder : holders) {
-        holder.runRef.awaitStop();
+    if (runningWorkers.isEmpty()) {
+      return;
+    }
+
+    // Wait for workers to exit outside the lock.
+    final DateTime waitStart = DateTimes.utc(clock.millis());
+    final DateTime deadline = waitStart.plus(serverConfig.getGracefulShutdownTimeout());
+
+    log.info(
+        "Waiting until[%s] for queries[%s] to stop.",
+        deadline,
+        runningWorkers.stream().map(holder -> holder.workerContext.queryId()).collect(Collectors.joining(", "))
+    );
+
+    for (final WorkerHolder holder : runningWorkers) {
+      try {
+        final long timeout = deadline.getMillis() - clock.millis();
+        if (timeout <= 0 || !holder.runRef.awaitStop(timeout, TimeUnit.MILLISECONDS)) {
+          log.warn(
+              "Canceling work for query[%s] due to timeout during stop (waited [%,d] ms)",
+              holder.workerContext.queryId(),
+              clock.millis() - waitStart.getMillis()
+          );
+
+          holder.runRef.cancel();
+          holder.runRef.awaitStop();
+        }
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
       }
     }
   }
