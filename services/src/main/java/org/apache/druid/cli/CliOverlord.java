@@ -52,6 +52,7 @@ import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.MetadataManagerModule;
 import org.apache.druid.guice.PolyBind;
+import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -516,7 +517,8 @@ public class CliOverlord extends ServerRunnable
         new SamplerModule(),
         new MSQIndexingModule(),
         new MSQDurableStorageModule(),
-        new MSQExternalDataSourceModule()
+        new MSQExternalDataSourceModule(),
+        new RegexEngineModule()
     );
   }
 
