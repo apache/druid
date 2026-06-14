@@ -131,15 +131,34 @@ public abstract class StreamIndexTestBase extends EmbeddedClusterTestBase
 
   /**
    * Waits until the total row count of successfully published segments matches
-   * {@code expectedRowCount}.
+   * {@code expectedRowCount}, using the cluster default emitter timeout.
    */
   protected void waitUntilPublishedRecordsAreIngested(int expectedRowCount)
   {
-    indexer.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("ingest/rows/published")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasSumAtLeast(expectedRowCount)
-    );
+    waitUntilPublishedRecordsAreIngested(expectedRowCount, null);
+  }
+
+  /**
+   * Same as {@link #waitUntilPublishedRecordsAreIngested(int)} but with an explicit timeout in millis.
+   * Use for ingestion paths with a heavier task lifecycle (e.g. bounded supervisor cold start) where the
+   * cluster default may not allow enough headroom on CI.
+   */
+  protected void waitUntilPublishedRecordsAreIngested(int expectedRowCount, Long timeoutMillis)
+  {
+    if (timeoutMillis == null) {
+      indexer.latchableEmitter().waitForEventAggregate(
+          event -> event.hasMetricName("ingest/rows/published")
+                        .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+          agg -> agg.hasSumAtLeast(expectedRowCount)
+      );
+    } else {
+      indexer.latchableEmitter().waitForEventAggregate(
+          event -> event.hasMetricName("ingest/rows/published")
+                        .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+          agg -> agg.hasSumAtLeast(expectedRowCount),
+          timeoutMillis
+      );
+    }
 
     final int totalEventsProcessed = indexer
         .latchableEmitter()
