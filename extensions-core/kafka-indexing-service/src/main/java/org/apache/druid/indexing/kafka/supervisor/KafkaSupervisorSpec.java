@@ -267,4 +267,42 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
            ", suspend=" + isSuspended() +
            '}';
   }
+
+  @Override
+  public Builder toBuilder()
+  {
+    return new Builder().copyFrom(this);
+  }
+
+  public static class Builder extends SeekableStreamSupervisorSpec.Builder<Builder>
+  {
+    @Override
+    protected Builder self()
+    {
+      return this;
+    }
+
+    @Override
+    public KafkaSupervisorSpec build()
+    {
+      return new KafkaSupervisorSpec(
+          id,
+          null,
+          dataSchema,
+          (KafkaSupervisorTuningConfig) tuningConfig,
+          (KafkaSupervisorIOConfig) ioConfig,
+          context,
+          suspended,
+          taskStorage,
+          taskMaster,
+          indexerMetadataStorageCoordinator,
+          (KafkaIndexTaskClientFactory) indexTaskClientFactory,
+          mapper,
+          emitter,
+          monitorSchedulerConfig,
+          rowIngestionMetersFactory,
+          supervisorStateManagerConfig
+      );
+    }
+  }
 }

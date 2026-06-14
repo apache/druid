@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
@@ -570,5 +572,66 @@ public class SeekableStreamSupervisorIOConfigTest
 
     Assert.assertFalse(config.isBounded());
     Assert.assertNull(config.getBoundedStreamConfig());
+  }
+
+  private static SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder ioConfigBuilder()
+  {
+    return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withReplicas(1)
+        .withTaskCount(2)
+        .withTaskDuration(new Period("PT1H"))
+        .withLagAggregator(LagAggregator.DEFAULT);
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    final SeekableStreamSupervisorIOConfig config = ioConfigBuilder().build();
+    Assert.assertEquals(config, ioConfigBuilder().build());
+    Assert.assertEquals(config.hashCode(), ioConfigBuilder().build().hashCode());
+    Assert.assertNotEquals(config, null);
+    Assert.assertNotEquals(config, "not an io config");
+    Assert.assertNotEquals(config, ioConfigBuilder().withStream("other").build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withReplicas(9).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withTaskCount(9).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withStopTaskCount(7).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withIdleConfig(new IdleConfig(true, 5L)).build());
+  }
+
+  @Test
+  public void testIdleConfigEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(IdleConfig.class).usingGetClass().verify();
+  }
+
+  /**
+   * Drift guard: the supervisor restart decision is equality-based, so any field omitted from
+   * {@code equals} would let a changed spec persist without restarting. EqualsVerifier reflects over the
+   * fields and fails automatically on a newly-added unused field — only abstract field types need prefab
+   * values. {@code taskCountExplicit}/{@code autoScalerEnabled} are derived hints (ignored); {@code taskCount}
+   * is mutable (NONFINAL_FIELDS suppressed).
+   */
+  @Test
+  public void testEqualsContractCoversAllFields()
+  {
+    EqualsVerifier.forClass(SeekableStreamSupervisorIOConfig.class)
+                  .usingGetClass()
+                  .withIgnoredFields("taskCountExplicit", "autoScalerEnabled")
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .withPrefabValues(InputFormat.class, mock(InputFormat.class), mock(InputFormat.class))
+                  .withPrefabValues(AutoScalerConfig.class, mock(AutoScalerConfig.class), mock(AutoScalerConfig.class))
+                  .withPrefabValues(LagAggregator.class, mock(LagAggregator.class), mock(LagAggregator.class))
+                  .verify();
+  }
+
+  @Test
+  public void testDefaultLagAggregatorEquals()
+  {
+    final LagAggregator aggregator = new LagAggregator.DefaultLagAggregator();
+    Assert.assertEquals(aggregator, new LagAggregator.DefaultLagAggregator());
+    Assert.assertEquals(aggregator.hashCode(), new LagAggregator.DefaultLagAggregator().hashCode());
+    Assert.assertNotEquals(aggregator, null);
+    Assert.assertNotEquals(aggregator, "not a lag aggregator");
   }
 }

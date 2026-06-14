@@ -61,5 +61,19 @@ public interface LagAggregator
       final long avgLag = partitionLags.isEmpty() ? 0 : totalLag / partitionLags.size();
       return new LagStats(maxLag, totalLag, avgLag);
     }
+
+    // Stateless: all instances are equal. Needed because Jackson creates fresh instances on
+    // deserialization rather than reusing the DEFAULT singleton.
+    @Override
+    public boolean equals(Object o)
+    {
+      return this == o || (o != null && getClass() == o.getClass());
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return DefaultLagAggregator.class.hashCode();
+    }
   }
 }

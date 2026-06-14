@@ -255,6 +255,123 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
+  public void testCreateOrUpdateSkipRestart_changedNoRestart_persistsWithoutRestart()
+  {
+    final Capture<TestSupervisorSpec> capturedInsert = Capture.newInstance();
+    final Map<String, SupervisorSpec> existingSpecs =
+        ImmutableMap.of("id1", new VersionedTestSupervisorSpec("id1", supervisor1, 1));
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    // Persist is expected; supervisor1.stop(...) is NOT expected, so verifyAll() asserts no restart.
+    metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.capture(capturedInsert));
+    replayAll();
+
+    manager.start();
+    // version differs (byte change) but requireRestart() is false.
+    final SupervisorSpec updated = new VersionedTestSupervisorSpec("id1", supervisor1, 2);
+    final SupervisorManager.SpecUpdateResult updateResult = manager.createOrUpdateAndStartSupervisor(updated, true);
+    Assert.assertTrue(updateResult.isModified());
+    Assert.assertFalse(updateResult.isRestarted());
+    Assert.assertSame(updated, capturedInsert.getValue());
+    Assert.assertSame(updated, manager.getSupervisorSpec("id1").get());
+    verifyAll();
+  }
+
+  @Test
+  public void testCreateOrUpdateSkipRestart_identicalSpec_isNoop()
+  {
+    final Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", new TestSupervisorSpec("id1", supervisor1));
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    // No insert and no stop expected for an identical spec.
+    replayAll();
+
+    manager.start();
+    final SupervisorManager.SpecUpdateResult updateResult =
+        manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec("id1", supervisor1), true);
+    Assert.assertFalse(updateResult.isModified());
+    Assert.assertFalse(updateResult.isRestarted());
+    verifyAll();
+  }
+
+  @Test
+  public void testCreateOrUpdateSkipRestart_changedRequiringRestart_restartsAndPersists()
+  {
+    final Map<String, SupervisorSpec> existingSpecs =
+        ImmutableMap.of("id1", new VersionedTestSupervisorSpec("id1", supervisor1, 1));
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    replayAll();
+    manager.start();
+    verifyAll();
+
+    resetAll();
+    // A changed spec that requires a restart must be fully applied (stop + recreate + persist), even on the
+    // skip-restart path — it must never be silently dropped or persisted without restarting.
+    supervisor1.stop(true);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.anyObject());
+    replayAll();
+
+    final SupervisorSpec updated = new VersionedTestSupervisorSpec("id1", supervisor1, 2, true);
+    final SupervisorManager.SpecUpdateResult updateResult = manager.createOrUpdateAndStartSupervisor(updated, true);
+    Assert.assertTrue(updateResult.isModified());
+    Assert.assertTrue(updateResult.isRestarted());
+    Assert.assertSame(updated, manager.getSupervisorSpec("id1").get());
+    verifyAll();
+  }
+
+  @Test
+  public void testCreateOrUpdateSkipRestart_mergesBeforeDiffAndRestartDecision()
+  {
+    final MergingVersionedTestSupervisorSpec existing =
+        new MergingVersionedTestSupervisorSpec("id1", supervisor1, 1);
+    final Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", existing);
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    replayAll();
+
+    manager.start();
+    final MergingVersionedTestSupervisorSpec updated =
+        new MergingVersionedTestSupervisorSpec("id1", supervisor1, null);
+    final SupervisorManager.SpecUpdateResult updateResult = manager.createOrUpdateAndStartSupervisor(updated, true);
+    Assert.assertFalse(updateResult.isModified());
+    Assert.assertFalse(updateResult.isRestarted());
+    Assert.assertEquals(Integer.valueOf(1), updated.getVersion());
+    Assert.assertSame(existing, manager.getSupervisorSpec("id1").get());
+    verifyAll();
+  }
+
+  @Test
+  public void testCreateOrUpdateWithoutSkipRestart_forcesRestartWhenSpecUnchanged()
+  {
+    final Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", new TestSupervisorSpec("id1", supervisor1));
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    replayAll();
+    manager.start();
+    verifyAll();
+
+    resetAll();
+    supervisor1.stop(true);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    replayAll();
+
+    final SupervisorManager.SpecUpdateResult updateResult =
+        manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec("id1", supervisor1), false);
+    Assert.assertFalse(updateResult.isModified());
+    Assert.assertTrue(updateResult.isRestarted());
+    verifyAll();
+  }
+
+  @Test
   public void testShouldUpdateSupervisorIllegalEvolution()
   {
     SupervisorSpec spec = new TestSupervisorSpec("id1", supervisor1)
@@ -1392,6 +1509,12 @@ public class SupervisorManagerTest extends EasyMockSupport
       return getSpec().getIOConfig();
     }
 
+    @Override
+    public Builder<?> toBuilder()
+    {
+      throw new UnsupportedOperationException();
+    }
+
     @JsonTypeName("testBackfillIngestionSpec")
     static class IngestionSpec extends SeekableStreamSupervisorIngestionSpec
     {
@@ -1424,6 +1547,76 @@ public class SupervisorManagerTest extends EasyMockSupport
       )
       {
         super(stream, null, 1, taskCount, null, null, null, false, null, null, null, null, LagAggregator.DEFAULT, null, null, null, null, boundedStreamConfig);
+      }
+    }
+  }
+
+  /**
+   * A {@link TestSupervisorSpec} with an explicitly-serialized {@code version} field, so two specs
+   * sharing the same id can still differ in their serialized form (the base spec serializes only
+   * id-derived properties).
+   */
+  private static class VersionedTestSupervisorSpec extends TestSupervisorSpec
+  {
+    private final int version;
+    private final boolean requireRestart;
+
+    VersionedTestSupervisorSpec(String id, Supervisor supervisor, int version)
+    {
+      this(id, supervisor, version, false);
+    }
+
+    VersionedTestSupervisorSpec(String id, Supervisor supervisor, int version, boolean requireRestart)
+    {
+      super(id, supervisor);
+      this.version = version;
+      this.requireRestart = requireRestart;
+    }
+
+    @JsonProperty
+    public int getVersion()
+    {
+      return version;
+    }
+
+    /**
+     * Lets a test model either a no-restart change (default) or a restart-requiring change. (The default
+     * {@link SupervisorSpec#requireRestart} is conservative and returns true.)
+     */
+    @Override
+    public boolean requireRestart(SupervisorSpec old)
+    {
+      return requireRestart;
+    }
+  }
+
+  private static class MergingVersionedTestSupervisorSpec extends TestSupervisorSpec
+  {
+    @Nullable
+    private Integer version;
+
+    MergingVersionedTestSupervisorSpec(
+        final String id,
+        final Supervisor supervisor,
+        @Nullable final Integer version
+    )
+    {
+      super(id, supervisor);
+      this.version = version;
+    }
+
+    @JsonProperty
+    @Nullable
+    public Integer getVersion()
+    {
+      return version;
+    }
+
+    @Override
+    public void merge(@Nullable final SupervisorSpec existingSpec)
+    {
+      if (version == null && existingSpec instanceof MergingVersionedTestSupervisorSpec) {
+        version = ((MergingVersionedTestSupervisorSpec) existingSpec).version;
       }
     }
   }

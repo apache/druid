@@ -164,7 +164,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     };
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec)).andReturn(true);
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, false))
+            .andReturn(SupervisorManager.SpecUpdateResult.of(true, true));
 
     setupMockRequest();
     setupMockRequestForAudit();
@@ -179,7 +180,27 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id", "restarted", true), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id", "modified", true, "restarted", true), response.getEntity());
+    resetAll();
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, false))
+            .andReturn(SupervisorManager.SpecUpdateResult.of(false, true));
+
+    setupMockRequest();
+    setupMockRequestForAudit();
+
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+    auditManager.doAudit(EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+
+    replayAll();
+
+    response = supervisorResource.specPost(spec, false, request);
+    verifyAll();
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id", "modified", false, "restarted", true), response.getEntity());
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
@@ -238,24 +259,47 @@ public class SupervisorResourceTest extends EasyMockSupport
     };
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(supervisorManager.shouldUpdateSupervisor(spec)).andReturn(false);
+    // Changed but no restart needed: persisted without restarting — and the persist must be audited.
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, true))
+            .andReturn(SupervisorManager.SpecUpdateResult.of(true, false));
 
     setupMockRequest();
+    setupMockRequestForAudit();
 
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+    auditManager.doAudit(EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
     replayAll();
 
     Response response = supervisorResource.specPost(spec, true, request);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id", "restarted", false), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id", "modified", true, "restarted", false), response.getEntity());
 
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(supervisorManager.shouldUpdateSupervisor(spec)).andReturn(true);
-    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec)).andReturn(true);
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, true))
+            .andReturn(SupervisorManager.SpecUpdateResult.of(false, false));
+
+    setupMockRequest();
+
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+
+    replayAll();
+
+    response = supervisorResource.specPost(spec, true, request);
+    verifyAll();
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id", "modified", false, "restarted", false), response.getEntity());
+
+    resetAll();
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, true))
+            .andReturn(SupervisorManager.SpecUpdateResult.of(true, true));
 
     setupMockRequest();
     setupMockRequestForAudit();
@@ -270,7 +314,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id", "restarted", true), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id", "modified", true, "restarted", true), response.getEntity());
   }
 
   @Test
@@ -287,7 +331,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     };
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec)).andReturn(true);
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, false))
+            .andReturn(SupervisorManager.SpecUpdateResult.of(true, true));
     setupMockRequest();
     setupMockRequestForAudit();
 
@@ -301,7 +346,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id", "restarted", true), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id", "modified", true, "restarted", true), response.getEntity());
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
@@ -1771,6 +1816,12 @@ public class SupervisorResourceTest extends EasyMockSupport
     )
     {
       return null;
+    }
+
+    @Override
+    public Builder<?> toBuilder()
+    {
+      throw new UnsupportedOperationException();
     }
 
     @JsonIgnore

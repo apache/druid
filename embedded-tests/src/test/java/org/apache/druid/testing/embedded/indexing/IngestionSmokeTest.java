@@ -424,7 +424,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
 
   protected void validateSupervisorUpdateResponse(Map<String, String> startSupervisorResult, String supervisorId)
   {
-    Assertions.assertEquals(Map.of("id", supervisorId, "restarted", "true"), startSupervisorResult);
+    Assertions.assertEquals(Map.of("id", supervisorId, "modified", "true", "restarted", "true"), startSupervisorResult);
   }
 
   protected void waitForNextCoordinatorCacheSync()

@@ -186,12 +186,131 @@ public class SupervisorManager implements SupervisorStatsProvider
 
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
-      final boolean shouldUpdateSpec = shouldUpdateSupervisor(spec);
+      // Persist whenever the spec actually changed (or is new) — independent of whether a restart is
+      // required. This stops/recreates the supervisor regardless; persistence must not be gated on the
+      // restart decision, otherwise a no-restart change (e.g. taskCount under autoscaling) would be
+      // applied to the running supervisor but lost from the metadata store.
+      final boolean specChanged = isSpecChangedAndValidate(spec);
       SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
       spec.merge(existingSpec);
-      createAndStartSupervisorInternal(spec, shouldUpdateSpec);
-      return shouldUpdateSpec;
+      createAndStartSupervisorInternal(spec, specChanged);
+      return specChanged;
     }
+  }
+
+  /**
+   * Result of applying a submitted supervisor spec. {@code modified} means the persisted spec changed;
+   * {@code restarted} means the running supervisor was stopped and recreated.
+   */
+  public static final class SpecUpdateResult
+  {
+    private final boolean modified;
+    private final boolean restarted;
+
+    private SpecUpdateResult(final boolean modified, final boolean restarted)
+    {
+      this.modified = modified;
+      this.restarted = restarted;
+    }
+
+    public static SpecUpdateResult of(final boolean modified, final boolean restarted)
+    {
+      return new SpecUpdateResult(modified, restarted);
+    }
+
+    public boolean isModified()
+    {
+      return modified;
+    }
+
+    public boolean isRestarted()
+    {
+      return restarted;
+    }
+  }
+
+  /**
+   * Decides whether the submitted spec needs a restart and applies it under a single lock, so the decision
+   * cannot go stale between deciding and acting (which would let a concurrent POST drop a write or persist a
+   * spec that the running supervisor needs to be recreated for). With {@code skipRestartIfUnmodified} set, an
+   * unchanged spec is a no-op and a changed spec whose {@link SupervisorSpec#requireRestart} is false (e.g. a
+   * taskCount change under autoscaling) is persisted without recreating the supervisor; otherwise the
+   * supervisor is stopped and recreated (the only behavior when the flag is false).
+   */
+  public SpecUpdateResult createOrUpdateAndStartSupervisor(
+      final SupervisorSpec spec,
+      final boolean skipRestartIfUnmodified
+  )
+  {
+    if (!skipRestartIfUnmodified) {
+      return SpecUpdateResult.of(createOrUpdateAndStartSupervisor(spec), true);
+    }
+
+    Preconditions.checkState(started, "SupervisorManager not started");
+    Preconditions.checkNotNull(spec, "spec");
+    Preconditions.checkNotNull(spec.getId(), "spec.getId()");
+    Preconditions.checkNotNull(spec.getDataSources(), "spec.getDatasources()");
+
+    synchronized (lock) {
+      Preconditions.checkState(started, "SupervisorManager not started");
+      final Pair<Supervisor, SupervisorSpec> current = supervisors.get(spec.getId());
+      final boolean isNew = current == null || current.rhs == null;
+
+      if (isNew) {
+        spec.merge(null);
+        createAndStartSupervisorInternal(spec, true);
+        return SpecUpdateResult.of(true, true);
+      }
+
+      if (!isSpecChangedAndValidate(spec)) {
+        return SpecUpdateResult.of(false, false);
+      }
+
+      // Compare and apply the effective spec after carrying forward fields from the running spec. Otherwise an
+      // omitted field that merge() would preserve (for example, taskCount) can cause an unnecessary restart.
+      spec.merge(current.rhs);
+      final boolean specChanged = isSpecChangedAndValidate(spec);
+      if (!specChanged) {
+        return SpecUpdateResult.of(false, false);
+      }
+      if (!spec.requireRestart(current.rhs)) {
+        metadataSupervisorManager.insert(spec.getId(), spec);
+        supervisors.put(spec.getId(), Pair.of(current.lhs, spec));
+        return SpecUpdateResult.of(true, false);
+      }
+
+      // Restart path: stop+recreate, persisting the spec when it changed.
+      possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
+      createAndStartSupervisorInternal(spec, specChanged);
+      return SpecUpdateResult.of(specChanged, true);
+    }
+  }
+
+  /**
+   * Returns whether the submitted spec differs from the running spec (true if there is no running
+   * spec). When the spec differs, {@link SupervisorSpec#validateSpecUpdateTo} is invoked to reject
+   * disallowed updates. This is a pure "did anything change" check; it does not consider whether the
+   * change warrants a restart (see {@link #shouldUpdateSupervisor}).
+   */
+  private boolean isSpecChangedAndValidate(SupervisorSpec spec)
+  {
+    final Pair<Supervisor, SupervisorSpec> current = supervisors.get(spec.getId());
+    if (current == null || current.rhs == null) {
+      return true;
+    }
+    try {
+      if (Arrays.equals(jsonMapper.writeValueAsBytes(spec), jsonMapper.writeValueAsBytes(current.rhs))) {
+        return false;
+      }
+    }
+    catch (JsonProcessingException ex) {
+      // Treat an unserializable spec as changed (and skip validateSpecUpdateTo, since we cannot diff);
+      // matches prior behavior.
+      log.warn("Failed to write spec as bytes for spec_id[%s]", spec.getId());
+      return true;
+    }
+    current.rhs.validateSpecUpdateTo(spec);
+    return true;
   }
 
   /**
@@ -209,24 +328,18 @@ public class SupervisorManager implements SupervisorStatsProvider
     Preconditions.checkNotNull(spec.getDataSources(), "spec.getDatasources()");
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
-      try {
-        byte[] specAsBytes = jsonMapper.writeValueAsBytes(spec);
-        Pair<Supervisor, SupervisorSpec> currentSupervisor = supervisors.get(spec.getId());
-        if (currentSupervisor == null || currentSupervisor.rhs == null) {
-          return true;
-        } else if (Arrays.equals(specAsBytes, jsonMapper.writeValueAsBytes(currentSupervisor.rhs))) {
-          return false;
-        } else {
-          // The spec bytes are different, so we need to check if the update is allowed
-          currentSupervisor.rhs.validateSpecUpdateTo(spec);
-          return true;
-        }
+      final Pair<Supervisor, SupervisorSpec> currentSupervisor = supervisors.get(spec.getId());
+      if (currentSupervisor == null || currentSupervisor.rhs == null) {
+        return true;
       }
-      catch (JsonProcessingException ex) {
-        log.warn("Failed to write spec as bytes for spec_id[%s]", spec.getId());
+      // Identical specs never require a restart. Otherwise (after validating the update is allowed)
+      // let the spec decide whether the differences actually warrant a restart — e.g. a taskCount-only
+      // change under autoscaling does not.
+      if (!isSpecChangedAndValidate(spec)) {
+        return false;
       }
+      return spec.requireRestart(currentSupervisor.rhs);
     }
-    return true;
   }
 
   public boolean stopAndRemoveSupervisor(String id)

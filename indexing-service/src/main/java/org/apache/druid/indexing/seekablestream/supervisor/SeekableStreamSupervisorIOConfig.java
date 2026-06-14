@@ -35,6 +35,7 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 
 public abstract class SeekableStreamSupervisorIOConfig
@@ -315,5 +316,74 @@ public abstract class SeekableStreamSupervisorIOConfig
   public boolean isBounded()
   {
     return boundedStreamConfig != null;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SeekableStreamSupervisorIOConfig that = (SeekableStreamSupervisorIOConfig) o;
+    // taskCountExplicit and the derived autoScalerEnabled flag are intentionally excluded; they are
+    // transient construction hints, not part of the config's logical identity.
+    return taskCount == that.taskCount
+           && useEarliestSequenceNumber == that.useEarliestSequenceNumber
+           && Objects.equals(stream, that.stream)
+           && Objects.equals(inputFormat, that.inputFormat)
+           && Objects.equals(replicas, that.replicas)
+           && Objects.equals(taskDuration, that.taskDuration)
+           && Objects.equals(startDelay, that.startDelay)
+           && Objects.equals(period, that.period)
+           && Objects.equals(completionTimeout, that.completionTimeout)
+           && Objects.equals(lateMessageRejectionPeriod, that.lateMessageRejectionPeriod)
+           && Objects.equals(earlyMessageRejectionPeriod, that.earlyMessageRejectionPeriod)
+           && Objects.equals(lateMessageRejectionStartDateTime, that.lateMessageRejectionStartDateTime)
+           && Objects.equals(autoScalerConfig, that.autoScalerConfig)
+           && Objects.equals(idleConfig, that.idleConfig)
+           && Objects.equals(stopTaskCount, that.stopTaskCount)
+           && Objects.equals(serverPriorityToReplicas, that.serverPriorityToReplicas)
+           && Objects.equals(boundedStreamConfig, that.boundedStreamConfig)
+           && Objects.equals(lagAggregator, that.lagAggregator);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        stream,
+        inputFormat,
+        replicas,
+        taskCount,
+        taskDuration,
+        startDelay,
+        period,
+        useEarliestSequenceNumber,
+        completionTimeout,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        lateMessageRejectionStartDateTime,
+        autoScalerConfig,
+        idleConfig,
+        stopTaskCount,
+        serverPriorityToReplicas,
+        boundedStreamConfig,
+        lagAggregator
+    );
+  }
+
+  /**
+   * Returns a builder pre-populated with this config's values, for producing a modified copy without
+   * mutating this instance. Subclasses <strong>must</strong> override to return their own builder: the
+   * default builder's {@code build()} yields a generic instance whose {@code getClass()} differs from any
+   * subclass, so a non-overriding subclass would never {@link #equals} its original and {@link
+   * SeekableStreamSupervisorSpec#requireRestart} would conservatively force a restart (safe, but unnecessary).
+   */
+  public SupervisorIOConfigBuilder<?, ?> toBuilder()
+  {
+    return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder().copyFromBase(this);
   }
 }
