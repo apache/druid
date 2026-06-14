@@ -208,7 +208,6 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    */
   int findWorkerForServerSelector(final ServerSelector serverSelector, final int maxNumSlices)
   {
-    // Currently, Dart does not support clone query modes, all servers can be queried.
     final QueryableDruidServer server = serverSelector.pick(null, cloneQueryMode);
 
     if (server == null) {
@@ -335,6 +334,10 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
   private boolean shouldIncludeSegment(final ServerSelector serverSelector)
   {
     if (serverSelector.getSegment().isTombstone()) {
+      return false;
+    }
+    if (cloneQueryMode == CloneQueryMode.EXCLUDESOURCE
+        && serverSelector.pick(null, cloneQueryMode) == null) {
       return false;
     }
     if (serverSelector.isRealtimeSegment()) {

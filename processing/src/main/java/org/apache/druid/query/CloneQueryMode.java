@@ -33,6 +33,10 @@ public enum CloneQueryMode
    */
   PREFERCLONES("preferClones"),
   /**
+   * Only query clone target servers. Source servers and servers not participating as clone targets are not queried.
+   */
+  EXCLUDESOURCE("excludeSource"),
+  /**
    * Consider both clones and their source servers for querying.
    */
   INCLUDECLONES("includeClones"),

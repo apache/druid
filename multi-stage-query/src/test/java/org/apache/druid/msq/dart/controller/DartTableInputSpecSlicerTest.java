@@ -42,7 +42,9 @@ import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.FilterSegmentPruner;
@@ -517,6 +519,48 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
         null
     );
 
+    final List<InputSlice> inputSlices = slicer.sliceStatic(inputSpec, null, 2);
+
+    Assertions.assertEquals(
+        ImmutableList.of(
+            new SegmentsInputSlice(
+                DATASOURCE,
+                ImmutableList.of(
+                    new RichSegmentDescriptor(
+                        SEGMENT1.getInterval(),
+                        SEGMENT1.getInterval(),
+                        SEGMENT1.getVersion(),
+                        SEGMENT1.getShardSpec().getPartitionNum()
+                    )
+                ),
+                ImmutableList.of()
+            ),
+            new SegmentsInputSlice(
+                DATASOURCE,
+                ImmutableList.of(
+                    new RichSegmentDescriptor(
+                        SEGMENT2.getInterval(),
+                        SEGMENT2.getInterval(),
+                        SEGMENT2.getVersion(),
+                        SEGMENT2.getShardSpec().getPartitionNum()
+                    )
+                ),
+                ImmutableList.of()
+            )
+        ),
+        inputSlices
+    );
+  }
+
+  @Test
+  void test_excludeSource_twoSlices()
+  {
+    final QueryContext queryContext = QueryContext.of(
+        Map.of(QueryContexts.CLONE_QUERY_MODE, CloneQueryMode.EXCLUDESOURCE.toString())
+    );
+    slicer = DartTableInputSpecSlicer.createFromWorkerIds(WORKER_IDS, serverView, queryContext);
+
+    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null);
     final List<InputSlice> inputSlices = slicer.sliceStatic(inputSpec, null, 2);
 
     Assertions.assertEquals(
