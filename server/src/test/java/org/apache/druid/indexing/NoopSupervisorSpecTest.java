@@ -51,4 +51,12 @@ public class NoopSupervisorSpecTest
     NoopSupervisorSpec noopSupervisorSpec = new NoopSupervisorSpec(null, Collections.singletonList("datasource1"));
     Assert.assertTrue(noopSupervisorSpec.getInputSourceResources().isEmpty());
   }
+
+  @Test
+  public void testStopGracefullyOnNewSpecDefaultsToFalse()
+  {
+    final Supervisor supervisor = new NoopSupervisorSpec(null, Collections.singletonList("datasource1"))
+        .createSupervisor();
+    Assert.assertFalse(supervisor.stopGracefullyOnNewSpec());
+  }
 }

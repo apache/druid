@@ -248,6 +248,20 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
+  public void testStopGracefullyOnNewSpecReturnsTrue()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    replayAll();
+
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    // SeekableStreamSupervisor retains the historical graceful stop-and-roll behavior on a spec update.
+    Assert.assertTrue(supervisor.stopGracefullyOnNewSpec());
+
+    verifyAll();
+  }
+
+  @Test
   public void testRunningStreamGetSequenceNumberReturnsNull()
   {
     EasyMock.reset(recordSupplier);

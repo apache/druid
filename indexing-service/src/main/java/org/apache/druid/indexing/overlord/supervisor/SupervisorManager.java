@@ -281,7 +281,7 @@ public class SupervisorManager implements SupervisorStatsProvider
     Preconditions.checkState(started, "SupervisorManager not started");
     List<ListenableFuture<Void>> stopFutures = new ArrayList<>();
     synchronized (lock) {
-      log.info("Stopping [%d] supervisors", supervisors.keySet().size());
+      log.info("Stopping [%d] supervisors", supervisors.size());
       for (String id : supervisors.keySet()) {
         try {
           stopFutures.add(supervisors.get(id).lhs.stopAsync());
@@ -377,7 +377,7 @@ public class SupervisorManager implements SupervisorStatsProvider
    * Resets a supervisor to the latest stream offsets and starts a bounded backfill supervisor to
    * process the skipped range from the previously checkpointed offsets up to the latest offsets.
    *
-   * @param id               supervisor ID
+   * @param id                supervisor ID
    * @param backfillTaskCount number of tasks for the backfill supervisor, or null to inherit from the source spec
    * @return map with {@code "id"} (the original supervisor ID) and {@code "backfillSupervisorId"}
    * @throws IllegalArgumentException if the supervisor is not a {@link SeekableStreamSupervisor},
@@ -424,10 +424,20 @@ public class SupervisorManager implements SupervisorStatsProvider
     String backfillSupervisorId = IdUtils.getRandomIdWithPrefix(id + "_backfill");
 
     try {
-      Map<String, Object> normalizedStartOffsets = jsonMapper.readValue(jsonMapper.writeValueAsString(startOffsets), Map.class);
-      Map<String, Object> normalizedEndOffsets = jsonMapper.readValue(jsonMapper.writeValueAsString(endOffsets), Map.class);
+      Map<String, Object> normalizedStartOffsets = jsonMapper.readValue(
+          jsonMapper.writeValueAsString(startOffsets),
+          Map.class
+      );
+      Map<String, Object> normalizedEndOffsets = jsonMapper.readValue(
+          jsonMapper.writeValueAsString(endOffsets),
+          Map.class
+      );
       BoundedStreamConfig boundedStreamConfig = new BoundedStreamConfig(normalizedStartOffsets, normalizedEndOffsets);
-      SupervisorSpec backfillSpec = streamSpec.createBackfillSpec(backfillSupervisorId, boundedStreamConfig, backfillTaskCount);
+      SupervisorSpec backfillSpec = streamSpec.createBackfillSpec(
+          backfillSupervisorId,
+          boundedStreamConfig,
+          backfillTaskCount
+      );
       createOrUpdateAndStartSupervisor(backfillSpec);
     }
     catch (JsonProcessingException e) {
@@ -615,12 +625,10 @@ public class SupervisorManager implements SupervisorStatsProvider
     }
 
     if (writeTombstone) {
-      metadataSupervisorManager.insert(
-          id,
-          new NoopSupervisorSpec(null, pair.rhs.getDataSources())
-      ); // where NoopSupervisorSpec is a tombstone
+      // NoopSupervisorSpec is a tombstone
+      metadataSupervisorManager.insert(id, new NoopSupervisorSpec(null, pair.rhs.getDataSources()));
     }
-    pair.lhs.stop(true);
+    pair.lhs.stop(writeTombstone || pair.lhs.stopGracefullyOnNewSpec());
     supervisors.remove(id);
 
     SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
