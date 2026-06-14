@@ -23,10 +23,12 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.github.luben.zstd.ZstdInputStream;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import net.jpountz.lz4.LZ4BlockInputStream;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -159,6 +161,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     final JavaType queryResultType = isBySegment ? toolChest.getBySegmentResultType() : toolChest.getBaseResultType();
 
     final ListenableFuture<InputStream> future;
+    final AtomicReference<String> responseContentEncoding = new AtomicReference<>("");
     final String url = scheme + "://" + host + "/druid/v2/";
     final String cancelUrl = url + query.getId();
 
@@ -248,6 +251,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 query.getId(),
                 query.getSubQueryId()
             );
+            final String encoding = response.headers().get(HttpHeaders.Names.CONTENT_ENCODING);
+            responseContentEncoding.set(encoding != null ? encoding : "");
             final String responseContext = response.headers().get(QueryResource.HEADER_RESPONSE_CONTEXT);
             context.addRemainingResponse(query.getMostSpecificId(), VAL_TO_REDUCE_REMAINING_RESPONSES);
             // context may be null in case of error or query timeout
@@ -525,7 +530,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           {
             return new JsonParserIterator<>(
                 queryResultType,
-                future,
+                wrapFutureWithDecompressor(future, responseContentEncoding.get()),
                 url,
                 query,
                 host,
@@ -594,6 +599,35 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       }
     };
     queryCancellationExecutor.submit(cancelRunnable);
+  }
+
+  private static ListenableFuture<InputStream> wrapFutureWithDecompressor(
+      ListenableFuture<InputStream> future,
+      String contentEncoding
+  )
+  {
+    if ("x-lz4".equals(contentEncoding)) {
+      return Futures.transform(future, DirectDruidClient::newLz4InputStream, Execs.directExecutor());
+    }
+    if ("zstd".equals(contentEncoding)) {
+      return Futures.transform(future, DirectDruidClient::newZstdInputStream, Execs.directExecutor());
+    }
+    return future;
+  }
+
+  private static InputStream newLz4InputStream(InputStream in)
+  {
+    return new LZ4BlockInputStream(in);
+  }
+
+  private static InputStream newZstdInputStream(InputStream in)
+  {
+    try {
+      return new ZstdInputStream(in);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override

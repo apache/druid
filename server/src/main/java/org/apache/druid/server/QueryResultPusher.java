@@ -21,8 +21,10 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.luben.zstd.ZstdOutputStream;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
+import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
@@ -385,6 +387,36 @@ public abstract class QueryResultPusher
     void writeResponseEnd() throws IOException;
   }
 
+  /**
+   * Picks the best compression encoding the client accepts. Prefers zstd over x-lz4.
+   * Returns null if no supported encoding is advertised.
+   */
+  @Nullable
+  private static String negotiateContentEncoding(@Nullable String acceptEncoding)
+  {
+    if (acceptEncoding == null) {
+      return null;
+    }
+    if (acceptEncoding.contains("zstd")) {
+      return "zstd";
+    }
+    if (acceptEncoding.contains("x-lz4")) {
+      return "x-lz4";
+    }
+    return null;
+  }
+
+  private static OutputStream wrapWithCompressor(OutputStream out, @Nullable String contentEncoding) throws IOException
+  {
+    if ("zstd".equals(contentEncoding)) {
+      return new ZstdOutputStream(out);
+    }
+    if ("x-lz4".equals(contentEncoding)) {
+      return new LZ4BlockOutputStream(out);
+    }
+    return out;
+  }
+
   public class StreamingHttpResponseAccumulator implements Accumulator<Response, Object>, Closeable
   {
     private final ResponseContext responseContext;
@@ -442,8 +474,14 @@ public abstract class QueryResultPusher
 
         response.setTrailerFields(() -> trailerFields);
 
+        final String contentEncoding = negotiateContentEncoding(request.getHeader("Accept-Encoding"));
+        if (contentEncoding != null) {
+          response.setHeader("Content-Encoding", contentEncoding);
+        }
+
         try {
-          out = new CountingOutputStream(response.getOutputStream());
+          final OutputStream responseOs = response.getOutputStream();
+          out = new CountingOutputStream(wrapWithCompressor(responseOs, contentEncoding));
           writer = resultsWriter.makeWriter(out);
         }
         catch (IOException e) {
