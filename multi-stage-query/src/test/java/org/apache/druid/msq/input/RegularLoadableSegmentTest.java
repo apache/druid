@@ -44,7 +44,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -249,7 +249,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
                 try (final AcquireSegmentAction ignored = pair.lhs;
                      final Segment acquiredSegment = acquiredSegmentOptional.get()) {
                   Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
-                  PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+                  RowCountInspector gadget = acquiredSegment.as(RowCountInspector.class);
                   Assertions.assertNotNull(gadget);
                   Assertions.assertEquals(1209, gadget.getNumRows());
                   return true;
@@ -320,7 +320,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
                 try (final AcquireSegmentAction ignored = pair.lhs;
                      final Segment acquiredSegment = acquiredSegmentOptional.get()) {
                   Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
-                  PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+                  RowCountInspector gadget = acquiredSegment.as(RowCountInspector.class);
                   Assertions.assertNotNull(gadget);
                   Assertions.assertEquals(1209, gadget.getNumRows());
                   return true;
@@ -377,7 +377,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
 
     try (final Segment acquiredSegment = cachedSegment.get()) {
       Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
-      final PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+      final RowCountInspector gadget = acquiredSegment.as(RowCountInspector.class);
       Assertions.assertNotNull(gadget);
       Assertions.assertEquals(1209, gadget.getNumRows());
     }
@@ -440,7 +440,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     try (final AcquireSegmentAction ignored = acquireAction;
          final Segment acquiredSegment = acquiredSegmentOptional.get()) {
       Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
-      final PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+      final RowCountInspector gadget = acquiredSegment.as(RowCountInspector.class);
       Assertions.assertNotNull(gadget);
       Assertions.assertEquals(1209, gadget.getNumRows());
     }
@@ -479,7 +479,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     try (final AcquireSegmentAction ignored = acquireAction;
          final Segment acquiredSegment = acquiredSegmentOptional.get()) {
       Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
-      final PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+      final RowCountInspector gadget = acquiredSegment.as(RowCountInspector.class);
       Assertions.assertNotNull(gadget);
       Assertions.assertEquals(1209, gadget.getNumRows());
     }
