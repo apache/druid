@@ -2349,10 +2349,9 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
   @Test(timeout = 60_000L)
-  public void testRunWithOffsetOutOfRangeExceptionAndNextOffsetGreaterThanLeastAvailable() throws Exception
+  public void testRunWithOffsetOutOfRangeExceptionAndResetWhenOffsetBeyondLatest() throws Exception
   {
     resetOffsetAutomatically = true;
-    // Insert data
     insertData();
 
     final KafkaIndexTask task = createTask(
@@ -2381,7 +2380,44 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     for (int i = 0; i < 5; i++) {
       Assert.assertEquals(Status.READING, task.getRunner().getStatus());
-      // Offset should not be reset
+      Assert.assertEquals(200L, (long) task.getRunner().getCurrentOffsets().get(new KafkaTopicPartition(false, topic, 0)));
+    }
+  }
+
+  @Test(timeout = 60_000L)
+  public void testRunWithOffsetOutOfRangeExceptionAndNoResetWhenResetOffsetAutomaticallyFalse() throws Exception
+  {
+    // With resetOffsetAutomatically=false, the task must not attempt a reset even when nextOffset exceeds the
+    // partition's high watermark. It should simply wait and retry.
+    resetOffsetAutomatically = false;
+    insertData();
+
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 200L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 500L)),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT,
+            null,
+            Duration.standardHours(2).getStandardMinutes()
+        )
+    );
+
+    runTask(task);
+
+    while (!task.getRunner().getStatus().equals(Status.READING)) {
+      Thread.sleep(20);
+    }
+
+    for (int i = 0; i < 5; i++) {
+      Assert.assertEquals(Status.READING, task.getRunner().getStatus());
       Assert.assertEquals(200L, (long) task.getRunner().getCurrentOffsets().get(new KafkaTopicPartition(false, topic, 0)));
     }
   }

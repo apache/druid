@@ -138,12 +138,14 @@ public class KafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<KafkaTop
               topicPartition.partition()
           );
         }
+        final Long latestAvailableOffset = recordSupplier.getLatestSequenceNumber(streamPartition);
         // reset the seek
         recordSupplier.seek(streamPartition, nextOffset);
-        // Reset consumer offset if resetOffsetAutomatically is set to true
-        // and the current message offset in the kafka partition is more than the
-        // next message offset that we are trying to fetch
-        if (leastAvailableOffset > nextOffset) {
+        // Reset if the stored offset is outside the valid range:
+        // - offset too old: data was expired/compacted away (earliest > nextOffset)
+        // - offset too new: partition was truncated and high watermark went backward (nextOffset > latest)
+        if (leastAvailableOffset > nextOffset
+            || (latestAvailableOffset != null && nextOffset > latestAvailableOffset)) {
           doReset = true;
           resetPartitions.put(topicPartition, nextOffset);
         }
