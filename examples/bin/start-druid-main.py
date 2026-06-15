@@ -74,12 +74,6 @@ SERVICE_MEMORY_RATIO = {
     INDEXER: 32
 }
 
-# The middleManager floor is deliberately set to 256m rather than a smaller value: it not
-# only forks peons but also runs an embedded HTTP server that proxies task reports/logs back
-# to callers (e.g. the web console polling a running query). With a smaller heap (the auto
-# split awards it as little as ~68m at -m 16g) the middleManager OOMs under that proxying
-# load and the task it owns "disappears on the worker". 256m matches the value shipped in the
-# medium/large/xlarge single-server example configs.
 MINIMUM_MEMORY_MB = {
     MIDDLE_MANAGER: 256,
     ROUTER: 256,
