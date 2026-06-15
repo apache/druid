@@ -516,11 +516,113 @@ class PartialSegmentFileMapperV10Test
     }
   }
 
+  @Test
+  void testEnsureAllDownloadedReadsOneRangePerContainer() throws IOException
+  {
+    final int numBundles = 3;
+    final int filesPerBundle = 4;
+    final File segmentFile = buildMultiBundleSegment(numBundles, filesPerBundle);
+    final File cacheDir = newCacheDir("ensure_all_bulk");
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      final int numContainers = mapper.getSegmentFileMetadata().getContainers().size();
+      final int numFiles = mapper.getInternalFilenames().size();
+      Assertions.assertEquals(numBundles, numContainers, "each tiny bundle should be its own container");
+      Assertions.assertEquals(numBundles * filesPerBundle, numFiles);
+
+      rangeReader.resetCount();
+      mapper.ensureAllDownloaded();
+
+      // one range read per container, not one per internal file
+      Assertions.assertEquals(numContainers, rangeReader.getReadCount());
+      Assertions.assertTrue(rangeReader.getReadCount() < numFiles, "bulk download must beat the per-file read count");
+      Assertions.assertTrue(mapper.isFullyDownloaded());
+      Assertions.assertEquals((long) numFiles * Integer.BYTES, mapper.getDownloadedBytes());
+
+      // a second pass is a no-op: every container is already fully downloaded
+      rangeReader.resetCount();
+      mapper.ensureAllDownloaded();
+      Assertions.assertEquals(0, rangeReader.getReadCount());
+    }
+
+    // bulk-downloaded contents match the eager mapper byte-for-byte
+    final DirectoryBackedRangeReader freshReader = new DirectoryBackedRangeReader(segmentFile.getParentFile());
+    try (SegmentFileMapperV10 eager = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER);
+         PartialSegmentFileMapperV10 lazy = createMapper(freshReader, newCacheDir("ensure_all_bulk_match"))) {
+      lazy.ensureAllDownloaded();
+      for (String name : eager.getInternalFilenames()) {
+        Assertions.assertEquals(eager.mapFile(name), lazy.mapFile(name), "file[" + name + "]");
+      }
+    }
+  }
+
+  @Test
+  void testEnsureBundleDownloadedFetchesOnlyThatBundle() throws IOException
+  {
+    final File segmentFile = buildMultiBundleSegment(3, 4);
+    final File cacheDir = newCacheDir("ensure_bundle");
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      Assertions.assertTrue(mapper.getBundleNames().contains("b1"));
+      final int b1Containers = mapper.getContainerIndicesForBundle("b1").size();
+
+      rangeReader.resetCount();
+      mapper.ensureBundleDownloaded("b1");
+
+      // one range read per container in the bundle, and nothing fetched from the other bundles
+      Assertions.assertEquals(b1Containers, rangeReader.getReadCount());
+      Assertions.assertFalse(mapper.isFullyDownloaded(), "only one bundle was materialized");
+      final Set<String> downloaded = mapper.getDownloadedFiles();
+      for (int i = 0; i < 4; i++) {
+        Assertions.assertTrue(downloaded.contains(StringUtils.format("b1/col_%d", i)), "b1 file should be downloaded");
+        Assertions.assertFalse(downloaded.contains(StringUtils.format("b0/col_%d", i)), "b0 must stay undownloaded");
+        Assertions.assertFalse(downloaded.contains(StringUtils.format("b2/col_%d", i)), "b2 must stay undownloaded");
+      }
+      // the materialized bundle's files are mappable with the expected content
+      for (int i = 0; i < 4; i++) {
+        final ByteBuffer buf = mapper.mapFile(StringUtils.format("b1/col_%d", i));
+        Assertions.assertNotNull(buf);
+        Assertions.assertEquals(100 + i, buf.getInt());
+      }
+
+      // an unknown bundle is a no-op
+      rangeReader.resetCount();
+      mapper.ensureBundleDownloaded("does-not-exist");
+      Assertions.assertEquals(0, rangeReader.getReadCount());
+    }
+  }
+
   private File newCacheDir(String name) throws IOException
   {
     final File dir = new File(tempDir, name + "_" + ThreadLocalRandom.current().nextInt());
     FileUtils.mkdirp(dir);
     return dir;
+  }
+
+  /**
+   * Build a segment whose files are spread across {@code numBundles} bundles. Each tiny file stays well under the max
+   * container size, so each bundle becomes its own container. Files in bundle {@code b} are named {@code "b{b}/col_{i}"}
+   * with content {@code b * 100 + i} (4 bytes).
+   */
+  private File buildMultiBundleSegment(int numBundles, int filesPerBundle) throws IOException
+  {
+    final File baseDir = new File(tempDir, "multibundle_" + ThreadLocalRandom.current().nextInt());
+    FileUtils.mkdirp(baseDir);
+
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
+      for (int b = 0; b < numBundles; b++) {
+        builder.startFileBundle("b" + b);
+        for (int i = 0; i < filesPerBundle; i++) {
+          final File tmpFile = new File(tempDir, StringUtils.format("mb-%d-%d.bin", b, i));
+          Files.write(Ints.toByteArray(b * 100 + i), tmpFile);
+          builder.add(StringUtils.format("b%d/col_%d", b, i), tmpFile);
+        }
+      }
+    }
+
+    return new File(baseDir, IndexIO.V10_FILE_NAME);
   }
 
   private File buildTestSegment(int numFiles, CompressionStrategy compression) throws IOException

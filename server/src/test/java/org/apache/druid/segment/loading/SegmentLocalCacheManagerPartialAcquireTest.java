@@ -181,7 +181,8 @@ class SegmentLocalCacheManagerPartialAcquireTest
     final StorageLocationConfig locConfig = new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null);
     final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
         .setLocations(List.of(locConfig))
-        .setVirtualStorage(true);
+        .setVirtualStorage(true)
+        .setVirtualStoragePartialDownloadsEnabled(true);
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     manager = new SegmentLocalCacheManager(
         storageLocations,
@@ -459,7 +460,8 @@ class SegmentLocalCacheManagerPartialAcquireTest
     final StorageLocationConfig locConfig = new StorageLocationConfig(plainCacheRoot, 1024L * 1024L * 1024L, null);
     final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
         .setLocations(List.of(locConfig))
-        .setVirtualStorage(true);
+        .setVirtualStorage(true)
+        .setVirtualStoragePartialDownloadsEnabled(true);
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     final SegmentLocalCacheManager plain = new SegmentLocalCacheManager(
         storageLocations,

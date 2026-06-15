@@ -90,6 +90,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   {
     historical.setServerMemory(500_000_000)
               .addProperty("druid.segmentCache.virtualStorage", "true")
+              .addProperty("druid.segmentCache.virtualStoragePartialDownloadsEnabled", "true")
               .addProperty(
                   "druid.segmentCache.virtualStorageMetadataReservationEstimate",
                   String.valueOf(ESTIMATE_SIZE)

@@ -166,7 +166,9 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     cacheDir = tempDir.resolve("cache").toFile();
     final SegmentLoaderConfig virtualLoaderConfig = new SegmentLoaderConfig()
         .setLocations(ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null)))
-        .setVirtualStorage(true).setVirtualStorageIsEphemeral(true);
+        .setVirtualStorage(true)
+        .setVirtualStorageIsEphemeral(true)
+        .setVirtualStoragePartialDownloadsEnabled(true);
     final List<StorageLocation> virtualLocations = virtualLoaderConfig.toStorageLocations();
     segmentManagerDynamic = new SegmentManager(
         new SegmentLocalCacheManager(

@@ -106,14 +106,13 @@ public class SegmentLoaderConfig
   private long virtualStorageMetadataReservationEstimate = 16L * 1024L * 1024L;
 
   /**
-   * When true (the default), partial-eligible V10 segments are mounted via the partial machinery and
+   * When true, partial-eligible V10 segments are mounted via the partial machinery and
    * {@link SegmentCacheManager#acquireSegment} with {@link AcquireMode#PARTIAL} returns a metadata-anchored segment
-   * whose columns are downloaded on demand. When false, {@link AcquireMode#PARTIAL} falls back to
+   * whose columns are downloaded on demand. When false (the default), {@link AcquireMode#PARTIAL} falls back to
    * {@link AcquireMode#FULL} so the entire segment is downloaded up front (matching pre-partial-download behavior).
-   * Provided as an operator escape hatch if partial downloads cause problems in a given deployment.
    */
   @JsonProperty("virtualStoragePartialDownloadsEnabled")
-  private boolean virtualStoragePartialDownloadsEnabled = true;
+  private boolean virtualStoragePartialDownloadsEnabled = false;
 
   private long combinedMaxSize = 0;
 

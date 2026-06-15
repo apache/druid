@@ -23,12 +23,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.loading.SegmentRangeReader;
 import org.apache.druid.utils.CloseableUtils;
@@ -244,6 +246,10 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   // across attached external mappers is the cache layer's concern (PartialSegmentBundleCacheEntry).
   private final Map<String, List<Integer>> bundleToContainerIndices;
 
+  // file names per container index (parallel to metadata.getContainers()), for whole-container bulk download. Built
+  // once from the immutable metadata.
+  private final List<List<String>> containerFileNames;
+
   // external file mappers
   private final Map<String, PartialSegmentFileMapperV10> externalMappers = new HashMap<>();
 
@@ -290,6 +296,17 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     }
     bundleIndices.replaceAll((name, indices) -> List.copyOf(indices));
     this.bundleToContainerIndices = Map.copyOf(bundleIndices);
+
+    final List<List<String>> perContainer = new ArrayList<>(numContainers);
+    for (int i = 0; i < numContainers; i++) {
+      perContainer.add(new ArrayList<>());
+    }
+    for (Map.Entry<String, SegmentInternalFileMetadata> entry : metadata.getFiles().entrySet()) {
+      perContainer.get(entry.getValue().getContainer()).add(entry.getKey());
+    }
+    perContainer.replaceAll(List::copyOf);
+    this.containerFileNames = List.copyOf(perContainer);
+
     this.bitmapLock = new ReentrantLock();
   }
 
@@ -410,13 +427,69 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
    * Download every internal file referenced by this mapper's metadata (and recursively every attached external
    * mapper's metadata) so that {@link #isFullyDownloaded} returns true afterward. Used by the eager
    * {@code acquireSegment} path on partial-eligible segments to force the segment fully resident before returning.
-   * Files already downloaded are skipped.
+   * Containers already fully downloaded are skipped.
    */
   public void ensureAllDownloaded() throws IOException
   {
-    ensureFilesAvailable(metadata.getFiles().keySet());
+    for (int containerIndex = 0; containerIndex < containers.length; containerIndex++) {
+      downloadContainer(containerIndex);
+    }
     for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
       external.ensureAllDownloaded();
+    }
+  }
+
+  /**
+   * Download every container belonging to {@code bundleName} in this mapper, each in a single range read (see
+   * {@link #downloadContainer}). No-op for an unknown bundle.
+   */
+  public void ensureBundleDownloaded(String bundleName) throws IOException
+  {
+    checkClosed();
+    for (int containerIndex : getContainerIndicesForBundle(bundleName)) {
+      downloadContainer(containerIndex);
+    }
+  }
+
+  /**
+   * Download an entire container in a single range read and mark every internal file it holds as downloaded. The whole
+   * region streams straight to the container's local sparse file at offset 0.
+   * <p>
+   * No-op when every file in the container is already downloaded. A partially-downloaded container is re-fetched in
+   * full (already-present files are overwritten with byte-identical data). Holds the container lock for the whole
+   * fetch so a concurrent {@link #evictContainer} or container-init can't race the write; concurrent per-file
+   * {@link #ensureFileDownloaded} calls write byte-identical data so they remain safe, and the download-bookkeeping is
+   * gated on the atomic {@link #downloadedFiles} add so neither path double-counts.
+   */
+  private void downloadContainer(int containerIndex) throws IOException
+  {
+    final List<String> fileNames = containerFileNames.get(containerIndex);
+    if (fileNames.isEmpty() || downloadedFiles.containsAll(fileNames)) {
+      return;
+    }
+    containerLocks[containerIndex].lock();
+    try {
+      checkClosed();
+      if (downloadedFiles.containsAll(fileNames)) {
+        return;
+      }
+      ensureContainerInitialized(containerIndex);
+
+      final SegmentFileContainerMetadata containerMeta = metadata.getContainers().get(containerIndex);
+      streamRangeIntoContainer(
+          containerIndex,
+          headerSize + containerMeta.getStartOffset(),
+          0,
+          containerMeta.getSize(),
+          StringUtils.format("container[%d]", containerIndex)
+      );
+
+      for (String name : fileNames) {
+        markDownloaded(name, metadata.getFiles().get(name).getSize());
+      }
+    }
+    finally {
+      containerLocks[containerIndex].unlock();
     }
   }
 
@@ -545,9 +618,14 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       }
 
       ensureContainerInitialized(fileMetadata.getContainer());
-      downloadFileToContainer(name, fileMetadata);
-      downloadedFiles.add(name);
-      markDownloadedInBitmap(name);
+      streamRangeIntoContainer(
+          fileMetadata.getContainer(),
+          computeAbsoluteOffset(fileMetadata),
+          fileMetadata.getStartOffset(),
+          fileMetadata.getSize(),
+          StringUtils.format("file[%s]", name)
+      );
+      markDownloaded(name, fileMetadata.getSize());
     }
     finally {
       lock.unlock();
@@ -695,28 +773,35 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   }
 
   /**
-   * Download an internal file from deep storage and write it to the correct position in its local container file.
-   * Uses a short-lived {@link RandomAccessFile} for writing. The mmap sees the written data through the shared page
-   * cache.
+   * Stream {@code size} bytes starting at {@code absoluteOffset} in the segment file (deep storage) into container
+   * {@code containerIndex}'s local file at {@code localOffset}, via a short-lived {@link RandomAccessFile} (traditional
+   * I/O rather than an NIO channel, so a thread interrupt can't close the channel mid-write; the container's read-only
+   * mmap sees the bytes through the shared page cache). {@code what} names the unit being fetched (e.g.
+   * {@code "file[foo]"} or {@code "container[2]"}) for the end-of-stream error message.
    */
-  private void downloadFileToContainer(String name, SegmentInternalFileMetadata fileMetadata) throws IOException
+  private void streamRangeIntoContainer(
+      int containerIndex,
+      long absoluteOffset,
+      long localOffset,
+      long size,
+      String what
+  ) throws IOException
   {
-    final long absoluteOffset = computeAbsoluteOffset(fileMetadata);
-    final long size = fileMetadata.getSize();
-
-    // stream directly from deep storage to the local container file to avoid holding the entire file in heap
-    try (InputStream is = rangeReader.readRange(targetFilename, absoluteOffset, size);
-         RandomAccessFile raf = new RandomAccessFile(containerFiles[fileMetadata.getContainer()], "rw")) {
-      raf.seek(fileMetadata.getStartOffset());
-      final byte[] buf = new byte[8192];
+    // stream straight from deep storage to the local container file to avoid heap-buffering the whole range
+    try (ResourceHolder<byte[]> bufHolder = CompressedPools.getOutputBytes();
+         InputStream is = rangeReader.readRange(targetFilename, absoluteOffset, size);
+         RandomAccessFile raf = new RandomAccessFile(containerFiles[containerIndex], "rw")) {
+      final byte[] buf = bufHolder.get();
+      raf.seek(localOffset);
       long remaining = size;
       while (remaining > 0) {
         final int toRead = (int) Math.min(buf.length, remaining);
         final int read = is.read(buf, 0, toRead);
         if (read < 0) {
           throw DruidException.defensive(
-              "unexpected end of stream for file[%s], expected[%s] more bytes",
-              name,
+              "unexpected end of stream for %s of [%s], expected[%s] more bytes",
+              what,
+              targetFilename,
               remaining
           );
         }
@@ -724,8 +809,20 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
         remaining -= read;
       }
     }
+  }
 
-    downloadedBytes.addAndGet(size);
+  /**
+   * Record an internal file as downloaded once its bytes are on disk: gate on the atomic {@link #downloadedFiles} add
+   * so a concurrent download of the same file via the other path (whole-container {@link #downloadContainer} vs
+   * per-file {@link #ensureFileDownloaded}) doesn't double-count its size (both write byte-identical data), then add
+   * its size and set its bitmap bit.
+   */
+  private void markDownloaded(String name, long size)
+  {
+    if (downloadedFiles.add(name)) {
+      downloadedBytes.addAndGet(size);
+      markDownloadedInBitmap(name);
+    }
   }
 
   /**
