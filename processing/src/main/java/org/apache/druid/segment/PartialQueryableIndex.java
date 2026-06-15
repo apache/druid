@@ -41,6 +41,7 @@ import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.projections.BaseTableProjectionSchema;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.ConstantTimeColumn;
 import org.apache.druid.segment.projections.ProjectionMetadata;
 import org.apache.druid.segment.projections.Projections;
@@ -124,6 +125,17 @@ public class PartialQueryableIndex implements QueryableIndex
         baseProjection.getSchema().getName()
     );
     final BaseTableProjectionSchema baseSchema = (BaseTableProjectionSchema) baseProjection.getSchema();
+    // Clustered V10 segments keep their data in per-cluster-group bundles, matched from metadata much like
+    // projections, but partial loading does not wire that up yet (and the write side isn't available to build one for
+    // testing). Fail loudly here rather than mis-treating the clustered base summary as a plain base table, whose
+    // top-level columns are empty. Both acquire modes route partial-eligible segments through this index, so this
+    // guards the full path too. Remove once partial loading supports clustered segments.
+    if (baseSchema instanceof ClusteredValueGroupsBaseTableSchema) {
+      throw DruidException.defensive(
+          "Clustered V10 segments are not yet supported for partial loading (interval[%s])",
+          metadata.getInterval()
+      );
+    }
     this.baseProjectionMetadata = baseProjection;
     this.baseNumRows = baseProjection.getNumRows();
     this.baseProjectionPrefix = Projections.getProjectionSegmentInternalFilePrefix(baseSchema);

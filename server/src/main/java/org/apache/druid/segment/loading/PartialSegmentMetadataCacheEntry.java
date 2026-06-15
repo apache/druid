@@ -582,6 +582,50 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   }
 
   /**
+   * Acquire a fully-materialized reference for {@link AcquireMode#FULL} with the metadata reference plus a
+   * hold on every bundle, all folded into the returned segment's close so the segment stays fully resident for its
+   * lifetime.
+   * <p>
+   * Returns {@link Optional#empty()} when the segment is not fully resident in the cache.
+   */
+  public Optional<Segment> acquireFullReference(@Nullable Closeable extraOnClose)
+  {
+    final PartialSegmentFileMapperV10 mapper = getFileMapper();
+    if (mapper == null || !isFullyDownloaded()) {
+      CloseableUtils.closeAndSuppressExceptions(extraOnClose, ignored -> {});
+      return Optional.empty();
+    }
+    final Closer bundleHolds = Closer.create();
+    try {
+      // acquire() mounts each bundle's parents first, so iteration order doesn't matter. When the entry is resident
+      // every bundle is already mounted, so each acquire is a cheap refcount; only the rare eviction race below does
+      // any work (a discarded empty sparse-mount).
+      for (String bundleName : PartialSegmentBundleCacheEntry.bundleNames(mapper)) {
+        bundleHolds.register(bundleAcquirer.acquire(bundleName));
+      }
+      // Re-check under the holds: a bundle could have been evicted between the check above and taking its hold,
+      // in which case acquire() re-mounted it as an empty container and isFullyDownloaded() is now false. Bail so the
+      // caller downloads via the executor path rather than handing back a segment that fails in makeCursorHolder.
+      if (!isFullyDownloaded()) {
+        CloseableUtils.closeAndSuppressExceptions(bundleHolds, ignored -> {});
+        CloseableUtils.closeAndSuppressExceptions(extraOnClose, ignored -> {});
+        return Optional.empty();
+      }
+    }
+    catch (Throwable t) {
+      CloseableUtils.closeAndSuppressExceptions(bundleHolds, ignored -> {});
+      CloseableUtils.closeAndSuppressExceptions(extraOnClose, ignored -> {});
+      throw t;
+    }
+    final Closer onClose = Closer.create();
+    if (extraOnClose != null) {
+      onClose.register(extraOnClose);
+    }
+    onClose.register(bundleHolds);
+    return acquireReference(onClose);
+  }
+
+  /**
    * The actual unmount work, invoked by the reference-counted gate's {@code onAdvance} once every outstanding
    * reference (plus the wrapper's own initial party) has been released. Closes the file mapper, deletes the on-disk
    * header files (the entry owns its storage-location footprint), and runs the optional {@link #setOnUnmount

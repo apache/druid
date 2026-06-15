@@ -203,6 +203,38 @@ class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
   }
 
   @Test
+  void testAsRowCountInspectorReturnsV10Inspector() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    final PartialQueryableIndex index = openIndex(rangeReader, "row_count");
+
+    try (Segment segment = makeSegment(index)) {
+      final RowCountInspector inspector = segment.as(RowCountInspector.class);
+      Assertions.assertNotNull(inspector);
+      Assertions.assertInstanceOf(V10RowCountInspector.class, inspector);
+    }
+  }
+
+  @Test
+  void testRowCountAnsweredFromMetadataWithoutColumnDownloads() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    final PartialQueryableIndex index = openIndex(rangeReader, "row_count_no_download");
+    // header fetch happens during mapper creation; reset so we observe only what the row-count lookup triggers
+    rangeReader.resetCount();
+
+    try (Segment segment = makeSegment(index)) {
+      final RowCountInspector inspector = segment.as(RowCountInspector.class);
+      Assertions.assertEquals(ROWS.size(), inspector.getNumRows());
+      Assertions.assertEquals(
+          0,
+          rangeReader.getReadCount(),
+          "metadata-only row count must not trigger any column downloads"
+      );
+    }
+  }
+
+  @Test
   void testAsQueryableIndexReturnsUnderlyingIndex() throws IOException
   {
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);

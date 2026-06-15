@@ -478,8 +478,12 @@ public class StorageLocation
       currSizeBytes.getAndAdd(-delta);
       if (weak == null) {
         currStaticSizeBytes.getAndAdd(-delta);
+        // The reservation (loadBegin) was recorded at the pre-shrink size; correct its byte total to match.
+        staticStats.getAndUpdate(s -> s.shrinkLoadBegin(delta));
       } else {
         currWeakSizeBytes.getAndAdd(-delta);
+        // The reservation (loadBegin) was recorded at the pre-shrink size; correct its byte total to match.
+        weakStats.getAndUpdate(s -> s.shrinkLoadBegin(delta));
         // Each active hold contributed entry.getSize() to currHoldBytes via trackWeakHold; shrink each hold's
         // contribution by the same delta so a future trackWeakRelease (which subtracts the new smaller size) lands
         // on the correct total. Clamp at 0 defensively against any pre-existing drift.
@@ -1148,6 +1152,16 @@ public class StorageLocation
       return this;
     }
 
+    /**
+     * Correct the reserved (loadBegin) byte total downward by {@code delta} when a reservation is shrunk via
+     * {@link StorageLocation#adjustReservation}. The load-begin count is unchanged; only the byte total is corrected.
+     */
+    public StaticStats shrinkLoadBegin(long delta)
+    {
+      loadBeginBytes.getAndAdd(-delta);
+      return this;
+    }
+
     public StaticStats load(long size)
     {
       loadCount.getAndIncrement();
@@ -1239,6 +1253,17 @@ public class StorageLocation
     {
       loadBeginCount.getAndIncrement();
       loadBeginBytes.getAndAdd(size);
+      return this;
+    }
+
+    /**
+     * Correct the reserved (loadBegin) byte total downward by {@code delta} when a reservation is shrunk via
+     * {@link StorageLocation#adjustReservation} (e.g. a partial metadata entry's pessimistic estimate reduced to the
+     * actual header size after mount). The load-begin count is unchanged; only the byte total is corrected.
+     */
+    public WeakStats shrinkLoadBegin(long delta)
+    {
+      loadBeginBytes.getAndAdd(-delta);
       return this;
     }
 

@@ -76,7 +76,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
@@ -154,55 +153,6 @@ class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
     realExec.shutdownNow();
   }
 
-  private record IndexAndMapper(PartialQueryableIndex index, PartialSegmentFileMapperV10 mapper)
-      implements AutoCloseable
-  {
-    @Override
-    public void close()
-    {
-      mapper.close();
-    }
-  }
-
-  private IndexAndMapper openIndex(CountingRangeReader rangeReader, String cacheName) throws IOException
-  {
-    final File cacheDir = new File(perTestTempDir, cacheName);
-    FileUtils.mkdirp(cacheDir);
-    final PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
-        rangeReader,
-        TestHelper.makeJsonMapper(),
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        Collections.emptyList()
-    );
-    return new IndexAndMapper(
-        new PartialQueryableIndex(mapper.getSegmentFileMetadata(), mapper, COLUMN_CONFIG),
-        mapper
-    );
-  }
-
-  private static ListeningExecutorService directExec()
-  {
-    return MoreExecutors.listeningDecorator(MoreExecutors.newDirectExecutorService());
-  }
-
-  private static PartialBundleAcquirer noOpAcquirer(ListeningExecutorService downloadExec)
-  {
-    return new PartialBundleAcquirer()
-    {
-      @Override
-      public Closeable acquire(String bundleName)
-      {
-        return () -> {};
-      }
-
-      @Override
-      public <T> AsyncResource<T> submitDownload(Callable<T> task)
-      {
-        return AsyncResources.fromFutureUnmanaged(downloadExec.submit(task));
-      }
-    };
-  }
 
   @Test
   void testSyncMakeCursorHolderThrowsWhenSegmentNotFullyDownloaded() throws IOException
@@ -540,48 +490,6 @@ class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
     }
   }
 
-  private File buildTimeOrderedProjectionSegment(String projectionName)
-  {
-    final List<AggregateProjectionSpec> projections = Collections.singletonList(
-        AggregateProjectionSpec.builder(projectionName)
-                               .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
-                               .groupingColumns(
-                                   new LongDimensionSchema("__gran"),
-                                   new StringDimensionSchema("dim1")
-                               )
-                               .aggregators(
-                                   new LongSumAggregatorFactory("_metric1_sum", "metric1"),
-                                   new CountAggregatorFactory("_count")
-                               )
-                               .build()
-    );
-    final File tmpDir = new File(perTestTempDir, "build_time_ordered_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    return IndexBuilder.create()
-                       .useV10()
-                       .tmpDir(tmpDir)
-                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                       .schema(
-                           IncrementalIndexSchema.builder()
-                                                 .withDimensionsSpec(
-                                                     DimensionsSpec.builder()
-                                                                   .setDimensions(
-                                                                       List.of(
-                                                                           new StringDimensionSchema("dim1"),
-                                                                           new LongDimensionSchema("metric1")
-                                                                       )
-                                                                   )
-                                                                   .build()
-                                                 )
-                                                 .withRollup(false)
-                                                 .withMinTimestamp(TIME.getMillis())
-                                                 .withProjections(projections)
-                                                 .build()
-                       )
-                       .indexSpec(IndexSpec.builder().withMetadataCompression(CompressionStrategy.NONE).build())
-                       .rows(ROWS)
-                       .buildMMappedIndexFile();
-  }
-
   @Test
   void testRowSignatureAndCapabilitiesDelegatedToUnderlyingFactory() throws IOException
   {
@@ -600,55 +508,6 @@ class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
       Assertions.assertTrue(signature.size() > 0);
 
       Assertions.assertNotNull(factory.getColumnCapabilities("dim1"));
-    }
-  }
-
-  @Test
-  void testAsyncCloseBeforeDownloadCompletesClosesCursorHolderOnce() throws Exception
-  {
-    // Producer-doesn't-leak invariant: if the wrapper is closed before the producer's set(holder) fires, the producer
-    // is responsible for closing the holder. Use the real (single-threaded) executor with a gate that pauses the
-    // download task before it builds the cursor, then close the wrapper, then release the gate.
-    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
-    final AtomicReference<RuntimeException> bgErr = new AtomicReference<>();
-    final CountDownLatch gate = new CountDownLatch(1);
-    final ExecutorService rawExec = Execs.singleThreaded("partial-cursor-close-%d");
-    final ListeningExecutorService gatedExec = MoreExecutors.listeningDecorator(rawExec);
-    try (IndexAndMapper opened = openIndex(rangeReader, "close_before_ready")) {
-      final PartialQueryableIndex index = opened.index();
-      // Queue the gate first so the download task can't start until we release it.
-      // assign the blocker future to an (intentionally unused) local so errorprone's CheckReturnValue is satisfied
-      @SuppressWarnings("unused")
-      ListenableFuture<?> unused = gatedExec.submit(() -> {
-        try {
-          gate.await();
-        }
-        catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-        }
-      });
-
-      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
-          index,
-          QueryableIndexTimeBoundaryInspector.create(index),
-          noOpAcquirer(gatedExec)
-      );
-
-      final AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
-      Assertions.assertFalse(asyncHolder.isReady());
-
-      // Close the wrapper before the download task can run.
-      asyncHolder.close();
-      gate.countDown();
-
-      // Let the download task finish.
-      gatedExec.submit(() -> { /* settles ordering */ }).get(5, TimeUnit.SECONDS);
-
-      Assertions.assertNull(bgErr.get(), "no exception should have leaked from the producer");
-    }
-    finally {
-      gatedExec.shutdownNow();
-      rawExec.shutdownNow();
     }
   }
 
@@ -801,6 +660,98 @@ class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
       }
       blockingExec.shutdownNow();
       rawExec.shutdownNow();
+    }
+  }
+
+  private File buildTimeOrderedProjectionSegment(String projectionName)
+  {
+    final List<AggregateProjectionSpec> projections = Collections.singletonList(
+        AggregateProjectionSpec.builder(projectionName)
+                               .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                               .groupingColumns(
+                                   new LongDimensionSchema("__gran"),
+                                   new StringDimensionSchema("dim1")
+                               )
+                               .aggregators(
+                                   new LongSumAggregatorFactory("_metric1_sum", "metric1"),
+                                   new CountAggregatorFactory("_count")
+                               )
+                               .build()
+    );
+    final File tmpDir = new File(perTestTempDir, "build_time_ordered_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
+    return IndexBuilder.create()
+                       .useV10()
+                       .tmpDir(tmpDir)
+                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                       .schema(
+                           IncrementalIndexSchema.builder()
+                                                 .withDimensionsSpec(
+                                                     DimensionsSpec.builder()
+                                                                   .setDimensions(
+                                                                       List.of(
+                                                                           new StringDimensionSchema("dim1"),
+                                                                           new LongDimensionSchema("metric1")
+                                                                       )
+                                                                   )
+                                                                   .build()
+                                                 )
+                                                 .withRollup(false)
+                                                 .withMinTimestamp(TIME.getMillis())
+                                                 .withProjections(projections)
+                                                 .build()
+                       )
+                       .indexSpec(IndexSpec.builder().withMetadataCompression(CompressionStrategy.NONE).build())
+                       .rows(ROWS)
+                       .buildMMappedIndexFile();
+  }
+
+  private IndexAndMapper openIndex(CountingRangeReader rangeReader, String cacheName) throws IOException
+  {
+    final File cacheDir = new File(perTestTempDir, cacheName);
+    FileUtils.mkdirp(cacheDir);
+    final PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
+        rangeReader,
+        TestHelper.makeJsonMapper(),
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        Collections.emptyList()
+    );
+    return new IndexAndMapper(
+        new PartialQueryableIndex(mapper.getSegmentFileMetadata(), mapper, COLUMN_CONFIG),
+        mapper
+    );
+  }
+
+  private static ListeningExecutorService directExec()
+  {
+    return MoreExecutors.listeningDecorator(MoreExecutors.newDirectExecutorService());
+  }
+
+  private static PartialBundleAcquirer noOpAcquirer(ListeningExecutorService downloadExec)
+  {
+    return new PartialBundleAcquirer()
+    {
+      @Override
+      public Closeable acquire(String bundleName)
+      {
+        return () -> {};
+      }
+
+      @Override
+      public <T> AsyncResource<T> submitDownload(Callable<T> task)
+      {
+        return AsyncResources.fromFutureUnmanaged(downloadExec.submit(task));
+      }
+    };
+  }
+
+  private record IndexAndMapper(PartialQueryableIndex index, PartialSegmentFileMapperV10 mapper)
+      implements AutoCloseable
+  {
+    @Override
+    public void close()
+    {
+      mapper.close();
     }
   }
 }

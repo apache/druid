@@ -153,9 +153,10 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
       return asyncHolder;
     }
     catch (Throwable t) {
-      // Failure between acquire and wiring up the downloads (submitDownload shut-down rejection, etc.). Ownership of
-      // the bundle hold hasn't transferred to the holder yet, so release it here.
-      throw CloseableUtils.closeAndWrapInCatch(t, holdRelease.releaser());
+      // Failure while submitting downloads / wiring up the holder (e.g. submitDownload shutdown rejection). A column
+      // download submitted before the failure may already be in flight, so release the bundle hold through the
+      // handshake (requestRelease defers to the last in-flight body) rather than dropping it directly mid-mapFile().
+      throw CloseableUtils.closeAndWrapInCatch(t, holdRelease::requestRelease);
     }
   }
 
@@ -349,8 +350,11 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     }
 
     /**
-     * The success-path releaser: ownership transfers to the produced cursor holder, whose close releases the bundle
-     * hold. The once-guard keeps it safe against the cancel/failure paths.
+     * The raw, idempotent bundle-hold close. Handed to the produced cursor holder on the success path so that closing
+     * the holder releases the hold; it bypasses the in-flight handshake, which is safe there because the holder is only
+     * built after every download has completed (nothing is mid-{@code mapFile()}). Cancel/failure paths must release
+     * through {@link #requestRelease()} instead; the once-guard keeps the hold release exactly-once across whichever
+     * path fires.
      */
     Closeable releaser()
     {

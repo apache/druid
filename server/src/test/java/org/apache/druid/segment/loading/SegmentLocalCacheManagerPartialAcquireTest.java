@@ -274,6 +274,39 @@ class SegmentLocalCacheManagerPartialAcquireTest
   }
 
   @Test
+  void testPartialAcquireRecordsLoadAndCorrectsReservationOvercount()
+      throws ExecutionException, InterruptedException, IOException
+  {
+    final StorageLocation loc = manager.getLocations().get(0);
+    final long estimate = new SegmentLoaderConfig().getVirtualStorageMetadataReservationEstimate();
+
+    // A lazy (PARTIAL) acquire mounts only the metadata entry (downloads the header); bundles stay lazy until a cursor
+    // is built, so exactly one weak reservation + one weak load is expected.
+    try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
+      try (Segment ignored = action.getSegmentFuture().get().getReferenceProvider().acquireReference().orElseThrow()) {
+        final StorageLocation.WeakStats stats = loc.getWeakStats();
+
+        // The header download is recorded as an actual load (previously partial mounts recorded no load at all).
+        Assertions.assertEquals(1, stats.getLoadCount(), "metadata header load should be recorded once");
+        Assertions.assertTrue(stats.getLoadBytes() > 0, "header load bytes should be > 0");
+        Assertions.assertTrue(
+            stats.getLoadBytes() < estimate,
+            "the header is far smaller than the pessimistic reservation estimate"
+        );
+
+        // The reservation (loadBegin) was corrected from the pessimistic estimate down to the actual header size, so it
+        // matches the loaded bytes rather than overcounting at ~16MB.
+        Assertions.assertEquals(1, stats.getLoadBeginCount());
+        Assertions.assertEquals(
+            stats.getLoadBytes(),
+            stats.getLoadBeginBytes(),
+            "loadBegin bytes must be corrected to the actual header size, not the reservation estimate"
+        );
+      }
+    }
+  }
+
+  @Test
   void testSecondAcquireReturnsCachedSegment() throws ExecutionException, InterruptedException, IOException
   {
     try (AcquireSegmentAction first = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
@@ -413,6 +446,76 @@ class SegmentLocalCacheManagerPartialAcquireTest
   }
 
   @Test
+  void testCachedFullAcquirePinsBundlesAgainstEviction()
+      throws ExecutionException, InterruptedException, IOException
+  {
+    // Regression: a FULL acquire of a partial segment must pin every bundle for the segment's lifetime. The cached
+    // fast path (acquireCachedSegment FULL -> acquireCachedInternal) used to hand back a metadata-only hold, so a
+    // bundle SIEVE-evicted under cache pressure mid-query cleared the mapper's downloaded-file set and the sync
+    // makeCursorHolder then failed with "requires the segment to be fully downloaded". Uses a plain manager so we can
+    // call acquireCachedSegment(FULL) directly (the shared fixture installs a tripwire that forbids it).
+    final File plainCacheRoot = new File(perTestTempDir, "plain_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
+    FileUtils.mkdirp(plainCacheRoot);
+    final StorageLocationConfig locConfig = new StorageLocationConfig(plainCacheRoot, 1024L * 1024L * 1024L, null);
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+        .setLocations(List.of(locConfig))
+        .setVirtualStorage(true);
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
+    final SegmentLocalCacheManager plain = new SegmentLocalCacheManager(
+        storageLocations,
+        loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
+        jsonMapper
+    );
+    final StorageLocation loc = plain.getLocations().get(0);
+    final PartialSegmentBundleCacheEntryIdentifier baseBundleId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME);
+    final PartialSegmentBundleCacheEntryIdentifier aggBundleId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
+    try {
+      // Fully download + mount, then release the eager acquire so the bundles become unheld (resident but evictable) —
+      // the state a previously-queried segment is in when the next query's acquireCachedSegment(FULL) finds it.
+      try (AcquireSegmentAction action = plain.acquireSegment(partialSegment, AcquireMode.FULL)) {
+        action.getSegmentFuture().get();
+      }
+      Assertions.assertTrue(loc.isWeakReserved(baseBundleId), "base bundle resident after eager acquire");
+      Assertions.assertTrue(loc.isWeakReserved(aggBundleId), "agg bundle resident after eager acquire");
+
+      final Segment cached = plain.acquireCachedSegment(SEGMENT_ID, AcquireMode.FULL).orElseThrow(
+          () -> new AssertionError("cached FULL acquire of a resident partial segment must return a segment")
+      );
+      try {
+        Assertions.assertInstanceOf(PartialQueryableIndexSegment.class, cached);
+        // Simulate SIEVE eviction under cache pressure: a bundle held by the FULL reference must be left in place.
+        loc.removeUnheldWeakEntry(baseBundleId);
+        loc.removeUnheldWeakEntry(aggBundleId);
+        Assertions.assertTrue(loc.isWeakReserved(baseBundleId), "FULL acquire must pin the base bundle against eviction");
+        Assertions.assertTrue(loc.isWeakReserved(aggBundleId), "FULL acquire must pin the agg bundle against eviction");
+        // Still fully resident, so the sync cursor factory succeeds (this is the call that throws without the fix).
+        try (CursorHolder holder = cached.as(CursorFactory.class).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+          Assertions.assertNotNull(holder);
+        }
+      }
+      finally {
+        CloseableUtils.closeAndWrapExceptions(cached);
+      }
+
+      // Once the FULL reference closes the bundles are unheld again and free to reclaim. Evict child-before-parent:
+      // the agg bundle holds the base bundle (its transitive parent), so the base stays reserved until the agg is gone.
+      loc.removeUnheldWeakEntry(aggBundleId);
+      Assertions.assertFalse(loc.isWeakReserved(aggBundleId), "agg bundle evictable once the FULL reference closes");
+      loc.removeUnheldWeakEntry(baseBundleId);
+      Assertions.assertFalse(loc.isWeakReserved(baseBundleId), "base bundle evictable once the agg bundle is gone");
+    }
+    finally {
+      plain.drop(partialSegment);
+      plain.shutdown();
+    }
+  }
+
+  @Test
   void testPartialDownloadsDisabledFallsBackToEager()
       throws ExecutionException, InterruptedException, IOException
   {
@@ -515,6 +618,53 @@ class SegmentLocalCacheManagerPartialAcquireTest
         restoredBundles.contains(Projections.BASE_TABLE_PROJECTION_NAME),
         "base bundle must be restored by bootstrap; got " + restoredBundles
     );
+  }
+
+  @Test
+  void testGetCachedSegmentsDeletesPartialLayoutWhenPartialDisabled() throws IOException
+  {
+    // Prime a partial on-disk layout + info file as a previous (partial-enabled) run would have left behind.
+    final File partialDir = new File(cacheRoot, SEGMENT_ID.toString());
+    FileUtils.mkdirp(partialDir);
+    primePartialOnDiskState(partialDir);
+    manager.storeInfoFile(partialSegment);
+    Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+
+    // A manager with partial downloads disabled (operator toggled the flag off) over the same cache dir must reclaim
+    // the now-unusable partial layout at bootstrap rather than reserving it and failing at query time.
+    final StorageLocationConfig locConfig = new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null);
+    final SegmentLoaderConfig disabledConfig = new SegmentLoaderConfig()
+        .setLocations(List.of(locConfig))
+        .setVirtualStorage(true)
+        .setVirtualStoragePartialDownloadsEnabled(false);
+    final List<StorageLocation> storageLocations = disabledConfig.toStorageLocations();
+    final SegmentLocalCacheManager disabledManager = new SegmentLocalCacheManager(
+        storageLocations,
+        disabledConfig,
+        StorageLoadingThreadPool.createFromConfig(disabledConfig),
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
+        jsonMapper
+    );
+
+    try {
+      final List<DataSegment> cached = disabledManager.getCachedSegments();
+      Assertions.assertFalse(
+          cached.contains(partialSegment),
+          "partial-disabled bootstrap must not return a segment whose only cache state is a partial layout"
+      );
+      Assertions.assertFalse(
+          partialDir.exists(),
+          "partial-disabled bootstrap must delete the unusable partial layout from disk"
+      );
+      Assertions.assertNull(
+          disabledManager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
+          "no cache entry should be reserved for the deleted partial layout"
+      );
+    }
+    finally {
+      disabledManager.shutdown();
+    }
   }
 
   /**

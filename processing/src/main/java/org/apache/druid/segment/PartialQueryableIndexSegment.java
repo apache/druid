@@ -29,9 +29,9 @@ import java.io.Closeable;
 
 /**
  * {@link Segment} wrapper around a {@link PartialQueryableIndex}. Mirrors {@link QueryableIndexSegment} but wires up
- * the V10-specific {@link V10TimeBoundaryInspector} (which answers from
- * {@link org.apache.druid.segment.projections.ProjectionMetadata} min/max fields without downloading the
- * {@code __time} column) and the partial-aware {@link PartialQueryableIndexCursorFactory} (which downloads
+ * the V10-specific {@link V10TimeBoundaryInspector} and {@link V10RowCountInspector} (which answer from
+ * {@link org.apache.druid.segment.projections.ProjectionMetadata} min/max-time and row-count fields without
+ * downloading any column data) and the partial-aware {@link PartialQueryableIndexCursorFactory} (which downloads
  * required files on the supplied download executor before handing back a cursor).
  * <p>
  * Lifecycle: this segment is intended to exist as a transient reference-hold scope over an externally-owned
@@ -43,6 +43,7 @@ public class PartialQueryableIndexSegment implements ReferenceCountedSegmentProv
   private final PartialQueryableIndex index;
   private final PartialQueryableIndexCursorFactory cursorFactory;
   private final TimeBoundaryInspector timeBoundaryInspector;
+  private final RowCountInspector rowCountInspector;
   private final SegmentId segmentId;
   private final Closeable onClose;
 
@@ -58,6 +59,7 @@ public class PartialQueryableIndexSegment implements ReferenceCountedSegmentProv
         index.getBaseProjectionMetadata(),
         index.getDataInterval()
     );
+    this.rowCountInspector = V10RowCountInspector.forBaseProjection(index.getBaseProjectionMetadata());
     this.cursorFactory = new PartialQueryableIndexCursorFactory(
         index,
         timeBoundaryInspector,
@@ -96,6 +98,8 @@ public class PartialQueryableIndexSegment implements ReferenceCountedSegmentProv
       return (T) index;
     } else if (TimeBoundaryInspector.class.equals(clazz)) {
       return (T) timeBoundaryInspector;
+    } else if (RowCountInspector.class.equals(clazz)) {
+      return (T) rowCountInspector;
     } else if (Metadata.class.equals(clazz)) {
       return (T) index.getMetadata();
     }

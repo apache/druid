@@ -42,7 +42,7 @@ public final class V10TimeBoundaryInspector implements TimeBoundaryInspector
 {
   /**
    * Build an inspector that reads from the given base projection metadata, falling back to {@code fallbackInterval}
-   * when the writer didn't persist min/max times (e.g. pre-Phase-1.5 segments).
+   * when the writer didn't persist min/max times.
    */
   public static V10TimeBoundaryInspector forBaseProjection(ProjectionMetadata baseProjection, Interval fallbackInterval)
   {

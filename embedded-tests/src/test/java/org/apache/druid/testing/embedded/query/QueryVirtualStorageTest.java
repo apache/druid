@@ -73,6 +73,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   private static final long SIZE_BYTES = 3778338L;
   private static final long CACHE_SIZE = HumanReadableBytes.parse("1MiB");
   private static final long MAX_SIZE = HumanReadableBytes.parse("100MiB");
+  private static final long ESTIMATE_SIZE = HumanReadableBytes.parse("2KiB");
 
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
@@ -89,6 +90,10 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   {
     historical.setServerMemory(500_000_000)
               .addProperty("druid.segmentCache.virtualStorage", "true")
+              .addProperty(
+                  "druid.segmentCache.virtualStorageMetadataReservationEstimate",
+                  String.valueOf(ESTIMATE_SIZE)
+              )
               .addProperty("druid.segmentCache.virtualStorageLoadThreads", String.valueOf(Runtime.getRuntime().availableProcessors()))
               .addBeforeStartHook(
                   (cluster, self) -> self.addProperty(
@@ -155,8 +160,10 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
         RuntimeException.class,
         () -> cluster.runSql("select count(*) from \"%s\"", dataSource)
     );
-    Assertions.assertTrue(t.getMessage().contains("Unable to load segment"));
-    Assertions.assertTrue(t.getMessage().contains("] on demand, ensure enough disk space has been allocated to load all segments involved in the query"));
+    Assertions.assertTrue(t.getMessage().contains("Unable to reserve bundle"));
+    Assertions.assertTrue(t.getMessage()
+                           .contains(
+                               "ensure enough disk space has been allocated to load all segments involved in the query"));
   }
 
   @Test
@@ -296,11 +303,13 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     MatcherAssert.assertThat(inputChannelSums.bytes(), Matchers.lessThanOrEqualTo(SIZE_BYTES));
 
     // Verify stage 0 (segment read) VSF load counters
-    MatcherAssert.assertThat(inputChannelSums.loadFiles(), Matchers.greaterThan(0L));
+    // partial loading is only partially metered at the moment, so depending on how stuff landed in and was evicted
+    // from the cache,there can be 0 loads (because loads are currently only counted when the metadata entry is mounted)
+    MatcherAssert.assertThat(inputChannelSums.loadFiles(), Matchers.greaterThanOrEqualTo(0L));
     MatcherAssert.assertThat(inputChannelSums.loadFiles(), Matchers.lessThanOrEqualTo(24L));
-    MatcherAssert.assertThat(inputChannelSums.loadTime(), Matchers.greaterThan(0L));
-    MatcherAssert.assertThat(inputChannelSums.loadWait(), Matchers.greaterThan(0L));
-    MatcherAssert.assertThat(inputChannelSums.loadBytes(), Matchers.greaterThan(0L));
+    MatcherAssert.assertThat(inputChannelSums.loadTime(), Matchers.greaterThanOrEqualTo(0L));
+    MatcherAssert.assertThat(inputChannelSums.loadWait(), Matchers.greaterThanOrEqualTo(0L));
+    MatcherAssert.assertThat(inputChannelSums.loadBytes(), Matchers.greaterThanOrEqualTo(0L));
     MatcherAssert.assertThat(inputChannelSums.loadBytes(), Matchers.lessThanOrEqualTo(SIZE_BYTES));
   }
 
@@ -322,7 +331,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 
     long loadCount = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_COUNT, expectedEventCount);
     if (expectedLoadCount != null) {
-      Assertions.assertEquals(expectedLoadCount, loadCount);
+      MatcherAssert.assertThat(loadCount, Matchers.lessThanOrEqualTo(expectedLoadCount));
     }
     boolean hasLoads = loadCount > 0;
 

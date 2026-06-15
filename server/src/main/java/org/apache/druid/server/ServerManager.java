@@ -87,6 +87,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -417,6 +418,8 @@ public class ServerManager implements QuerySegmentWalker
       final DruidException toThrow;
       if (failure instanceof DruidException) {
         toThrow = (DruidException) failure;
+      } else if (failure instanceof ExecutionException ee && ee.getCause() instanceof DruidException druidException) {
+        toThrow = druidException;
       } else if (timedOut) {
         toThrow = DruidException.forPersona(DruidException.Persona.USER)
                                 .ofCategory(DruidException.Category.TIMEOUT)

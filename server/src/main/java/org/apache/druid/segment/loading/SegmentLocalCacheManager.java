@@ -310,6 +310,23 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       final File partialDir = cacheEntry.toPotentialLocation(location.getPath());
       if (partialDir.exists()
           && PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME)) {
+        if (!config.isVirtualStoragePartialDownloadsEnabled()) {
+          // Partial downloads are disabled but a partial-load layout (header + sparse containers) is on disk, e.g. the
+          // operator toggled druid.segmentCache.virtualStoragePartialDownloadsEnabled off. The eager path can't serve
+          // this layout, so reclaim it now and let the segment be re-downloaded in full on next load, rather than
+          // reserving it and failing when a query later tries to acquire it (see acquireExistingSegment). Leave
+          // removeInfo true so the segment is treated as uncached and re-loaded. Use the same move-then-delete as the
+          // other cache-dir removals; safe without a segment lock here because bootstrap runs before the node serves,
+          // so nothing concurrently mounts or drops this entry.
+          log.info(
+              "Deleting on-disk partial-load layout for segment[%s] in [%s] because partial downloads are disabled; "
+              + "it will be re-loaded via full download on next access.",
+              segment.getId(),
+              partialDir
+          );
+          atomicMoveAndDeleteCacheEntryDirectory(partialDir);
+          continue;
+        }
         removeInfo = false;
         try {
           PartialSegmentCacheBootstrap.reserveFromDisk(
@@ -522,8 +539,16 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
       final StorageLocation.ReservationHold<SegmentCacheEntry> hold = location.addWeakReservationHoldIfExists(id);
       if (hold != null) {
-        if (hold.getEntry().isMounted() && (!requireFullyDownloaded || hold.getEntry().isFullyDownloaded())) {
-          return hold.getEntry().acquireReference(hold);
+        final SegmentCacheEntry entry = hold.getEntry();
+        if (entry.isMounted() && (!requireFullyDownloaded || entry.isFullyDownloaded())) {
+          if (requireFullyDownloaded && entry instanceof PartialSegmentMetadataCacheEntry partial) {
+            // A FULL reference on a partial segment must pin every bundle for the segment's lifetime (the sync cursor
+            // factory requires isFullyDownloaded(), which a metadata-only hold can't guarantee under SIEVE eviction).
+            // acquireFullReference folds `hold` into the segment close on success, or closes it and returns empty when
+            // a bundle is no longer resident — in which case we fall through to the downloading acquireSegment path.
+            return partial.acquireFullReference(hold);
+          }
+          return entry.acquireReference(hold);
         }
         hold.close();
         return Optional.empty();
@@ -557,13 +582,19 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final ReservedPartial existing = findExistingPartialWithHold(dataSegment.getId());
     if (existing != null) {
       final PartialSegmentMetadataCacheEntry partial = existing.metadata;
-      if (partial.isMounted() && (!fullDownload || partial.isFullyDownloaded())) {
+      if (!fullDownload && partial.isMounted()) {
+        // Lazy/PARTIAL contract: hand back a metadata-anchored segment; bundles mount on demand at query time via the
+        // async cursor factory, so a metadata-only hold is correct here. The full-download fast path is intentionally
+        // omitted: a FULL segment must hold every bundle for its lifetime (the sync cursor factory requires
+        // isFullyDownloaded(), which a metadata-only hold can't guarantee under SIEVE eviction), so it goes through
+        // the slow path's bundle-holding + ensureAllDownloaded dance. The resident full case is already served without
+        // an executor hop upstream by acquireCachedSegment -> acquireCachedInternal -> acquireFullReference.
         return new AcquireSegmentAction(
             () -> Futures.immediateFuture(AcquireSegmentResult.cached(partial::acquireReference)),
             existing.hold
         );
       }
-      // Entry exists but isn't usable yet (not mounted, or not fully-downloaded when required). Release the
+      // Entry exists but isn't usable on the fast path (not mounted, or a full download is required). Release the
       // fast-path hold and let the slow path re-find with a fresh hold and drive mount on the executor.
       CloseableUtils.closeAndSuppressExceptions(existing.hold, ignored -> {});
     }
@@ -642,6 +673,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                     // Lazy mount: report the header bytes when this task caused the mount; 0 when the entry was
                     // already mounted (a concurrent acquirer or earlier query did the load).
                     loadSizeBytes = wasMounted ? 0L : mapper.getOnDiskHeaderSize();
+                  }
+                  // Record the actual-load bytes on the location (VSF_LOAD_*): the header bytes for a lazy mount, or the
+                  // full downloaded delta for a full download. The partial metadata entry is always weak (reservePartial
+                  // uses addWeakReservationHold). Skip when nothing was pulled (a cache hit / already-mounted re-acquire
+                  // reports 0) so we don't log a spurious 0-byte load. On-demand per-column downloads on the lazy path
+                  // happen later at query time and are captured by the query-layer load metrics (the
+                  // AcquireSegmentResult load size), not by this per-location stat.
+                  if (loadSizeBytes > 0) {
+                    reserved.location.trackWeakLoad(loadSizeBytes);
                   }
                   final long loadNanos = System.nanoTime() - taskStartNanos;
                   return new AcquireSegmentResult(
@@ -835,10 +875,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         );
         if (hold != null) {
           if (!(hold.getEntry() instanceof CompleteSegmentCacheEntry complete)) {
-            // The eager (complete) acquire path found a non-complete entry under this id. This only arises if
-            // partial-load on-disk state survived a toggle of druid.segmentCache.virtualStoragePartialDownloadsEnabled
-            // to false (getCachedSegments reserves an on-disk partial layout regardless of the flag). The eager path
-            // cannot serve a partial layout; surface a clear operator error rather than a ClassCastException.
+            // The eager (complete) acquire path found a non-complete entry under this id. Defensive backstop: when
+            // partial downloads are disabled, getCachedSegments now deletes any on-disk partial layout at bootstrap
+            // rather than reserving it, so a partial entry should not exist on this path. If one somehow does (e.g. a
+            // bootstrap delete failed), surface a clear operator error rather than a ClassCastException.
             throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                                 .ofCategory(DruidException.Category.RUNTIME_FAILURE)
                                 .build(
