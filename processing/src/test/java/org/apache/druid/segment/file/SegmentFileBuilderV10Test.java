@@ -24,21 +24,28 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
 
 class SegmentFileBuilderV10Test
@@ -431,10 +438,10 @@ class SegmentFileBuilderV10Test
   @Test
   void testNestedDelegateClosedAfterOuterRoutesToOriginalBundle() throws IOException
   {
-    // doing something like this is weird and probably should happen in practice, but if a nested write was requested
-    // while bundle "groupA" was active; even if the caller switches to "groupB" before finally closing the nested
-    // channel, the delegated bytes must still land in groupA's container, not groupB's. Otherwise bundles break and
-    // files from other bundles end up in the same container.
+    // doing something like this is weird and probably should not happen in practice, but if a nested write was
+    // requested while bundle "groupA" was active; even if the caller switches to "groupB" before finally closing the
+    // nested channel, the delegated bytes must still land in groupA's container, not groupB's. Otherwise bundles break
+    // and files from other bundles end up in the same container.
     final File baseDir = newBaseDir();
 
     final byte[] outerBytes = new byte[]{1, 2, 3, 4};
@@ -497,6 +504,69 @@ class SegmentFileBuilderV10Test
     try (SegmentFileMapperV10 mapper = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER)) {
       Assertions.assertEquals(1, mapper.getSegmentFileMetadata().getContainers().size());
     }
+  }
+
+  @ParameterizedTest
+  @EnumSource(CompressionStrategy.class)
+  void testLargeMetadataRoundTrips(CompressionStrategy metaCompression) throws IOException
+  {
+    final File baseDir = newBaseDir();
+
+    // bug fix test: build metadata large enough to exceed the fixed 64k pooled decompression buffer
+    // (CompressedPools.BUFFER_SIZE) used by the default metadata compression (zstd) when using heap buffers.
+    final int fileCount = 2000;
+    final byte[] payload = Ints.toByteArray(0xCAFEBABE);
+    final File payloadFile = new File(tempDir, "payload-" + metaCompression + ".bin");
+    Files.write(payload, payloadFile);
+
+    final Set<String> expectedNames = new TreeSet<>();
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir, metaCompression)) {
+      for (int i = 0; i < fileCount; i++) {
+        final String name = StringUtils.format("a_reasonably_long_internal_file_name_for_padding_metadata_%05d", i);
+        expectedNames.add(name);
+        builder.add(name, payloadFile);
+      }
+    }
+
+    final File segmentFile = new File(baseDir, IndexIO.V10_FILE_NAME);
+
+    final int uncompressedMetaLength = readUncompressedMetaLength(segmentFile);
+    Assertions.assertTrue(
+        uncompressedMetaLength > CompressedPools.BUFFER_SIZE,
+        StringUtils.format(
+            "metadata length[%,d] must exceed the pooled buffer size[%,d] to exercise the fallback",
+            uncompressedMetaLength,
+            CompressedPools.BUFFER_SIZE
+        )
+    );
+
+    try (SegmentFileMapperV10 mapper = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER)) {
+      final SegmentFileMetadata metadata = mapper.getSegmentFileMetadata();
+      Assertions.assertEquals(fileCount, metadata.getFiles().size());
+      Assertions.assertEquals(expectedNames, metadata.getFiles().keySet());
+
+      // spot-check that a few files (first, middle, last) still round-trip their content
+      for (int i : new int[]{0, fileCount / 2, fileCount - 1}) {
+        final String name = StringUtils.format("a_reasonably_long_internal_file_name_for_padding_metadata_%05d", i);
+        assertBytes(mapper.mapFile(name), payload);
+      }
+    }
+  }
+
+  private static int readUncompressedMetaLength(File segmentFile) throws IOException
+  {
+    final byte[] header = new byte[SegmentFileMetadataReader.HEADER_SIZE];
+    try (FileInputStream fis = new FileInputStream(segmentFile)) {
+      int offset = 0;
+      while (offset < header.length) {
+        final int read = fis.read(header, offset, header.length - offset);
+        if (read < 0) {
+          break;
+        }
+        offset += read;
+      }
+    }
+    return ByteBuffer.wrap(header).order(ByteOrder.LITTLE_ENDIAN).getInt(2);
   }
 
   private static void assertBytes(ByteBuffer actual, byte[] expected)
