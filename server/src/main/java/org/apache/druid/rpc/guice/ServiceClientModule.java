@@ -22,6 +22,7 @@ package org.apache.druid.rpc.guice;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
+import org.apache.druid.audit.RequestHeaderContextConfig;
 import org.apache.druid.client.broker.Broker;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.broker.BrokerClientImpl;
@@ -47,6 +48,8 @@ import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClientImpl;
 
+import javax.annotation.Nullable;
+
 import java.util.concurrent.ScheduledExecutorService;
 
 public class ServiceClientModule implements DruidModule
@@ -63,9 +66,15 @@ public class ServiceClientModule implements DruidModule
   @Provides
   @LazySingleton
   @EscalatedGlobal
-  public ServiceClientFactory getServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
+  public ServiceClientFactory getServiceClientFactory(
+      @EscalatedGlobal final HttpClient httpClient,
+      @Nullable final RequestHeaderContextConfig requestHeaderContextConfig
+  )
   {
-    return makeServiceClientFactory(httpClient);
+    return makeServiceClientFactory(
+        httpClient,
+        requestHeaderContextConfig != null ? requestHeaderContextConfig : new RequestHeaderContextConfig()
+    );
   }
 
   @Provides
@@ -166,8 +175,16 @@ public class ServiceClientModule implements DruidModule
 
   public static ServiceClientFactory makeServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
   {
+    return makeServiceClientFactory(httpClient, new RequestHeaderContextConfig());
+  }
+
+  public static ServiceClientFactory makeServiceClientFactory(
+      @EscalatedGlobal final HttpClient httpClient,
+      final RequestHeaderContextConfig requestHeaderContextConfig
+  )
+  {
     final ScheduledExecutorService connectExec =
         ScheduledExecutors.fixed(CONNECT_EXEC_THREADS, "ServiceClientFactory-%d");
-    return new ServiceClientFactoryImpl(httpClient, connectExec);
+    return new ServiceClientFactoryImpl(httpClient, connectExec, requestHeaderContextConfig);
   }
 }

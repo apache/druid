@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -32,6 +33,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.ObjectOrErrorResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.server.audit.RequestHeaderContext;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -45,6 +47,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -116,6 +119,42 @@ public class ServiceClientImplTest
     final Map<String, String> response = doRequest(serviceClient, requestBuilder);
 
     Assert.assertEquals(expectedResponseObject, response);
+  }
+
+  @Test
+  public void test_request_forwardsCapturedRequestHeader() throws Exception
+  {
+    // A header captured from the inbound request (here simulated via the thread-local that
+    // RequestHeaderContextFilter would bind) must be forwarded onto this outbound inter-service
+    // call, so it propagates to downstream services on the normal (non-query) path. The forwarding
+    // happens on this caller thread; the request is later sent on connectExec, so the value must be
+    // stamped onto the RequestBuilder now.
+    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.GET, "/foo");
+    final ImmutableMap<String, String> expectedResponseObject = ImmutableMap.of("foo", "bar");
+
+    stubLocatorCall(locations(SERVER1));
+    expectHttpCall(requestBuilder, SERVER1).thenReturn(valueResponse(expectedResponseObject));
+
+    serviceClient = makeServiceClient(StandardRetryPolicy.noRetries());
+
+    RequestHeaderContext.bind(ImmutableMap.of("traceId", "trace-abc"));
+    try {
+      doRequest(serviceClient, requestBuilder);
+    }
+    finally {
+      RequestHeaderContext.clear();
+    }
+
+    final ArgumentCaptor<Request> requestCaptor = ArgumentCaptor.forClass(Request.class);
+    Mockito.verify(httpClient).go(
+        requestCaptor.capture(),
+        ArgumentMatchers.any(ObjectOrErrorResponseHandler.class),
+        ArgumentMatchers.eq(RequestBuilder.DEFAULT_TIMEOUT)
+    );
+    MatcherAssert.assertThat(
+        requestCaptor.getValue().getHeaders().get(AuditManager.X_DRUID_TRACE_ID),
+        CoreMatchers.hasItem("trace-abc")
+    );
   }
 
   @Test

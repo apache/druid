@@ -88,7 +88,6 @@ public abstract class AbstractStatement implements Closeable
     this.sqlToolbox = sqlToolbox;
     this.reporter = new SqlExecutionReporter(this, remoteAddress);
     this.queryPlus = queryPlus;
-    this.authContextKeys = queryPlus.authContextKeys();
     this.queryContext = new HashMap<>(queryPlus.context());
     sqlToolbox.engine.initContextMap(this.queryContext);
     // Anti-spoof + propagation for reserved request-header context keys, mirroring
@@ -109,6 +108,15 @@ public abstract class AbstractStatement implements Closeable
         this.queryContext.remove(reservedKey);
       }
     }
+    // A value captured from an inbound header is client-influenced (the caller controls the
+    // headers it sends), so it must be authorized like a body-supplied context key. The body's
+    // authContextKeys were computed before the captured values were injected above, so union
+    // the captured keys in here, mirroring QueryLifecycle.initialize() on the native path. This
+    // stops a client from mapping a header to an operational key (priority, lane, cache flags,
+    // ...) to bypass the QUERY_CONTEXT WRITE authorization required for that key in the body.
+    final Set<String> keysToAuthorize = new HashSet<>(queryPlus.authContextKeys());
+    keysToAuthorize.addAll(capturedHeaders.keySet());
+    this.authContextKeys = Set.copyOf(keysToAuthorize);
     // "bySegment" results are never valid to use with SQL because the result format is incompatible
     // so, overwrite any user specified context to avoid exceptions down the line
     if (this.queryContext.remove(QueryContexts.BY_SEGMENT_KEY) != null) {

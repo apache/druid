@@ -131,4 +131,34 @@ public class RequestHeaderContextConfigTest
     config.applyToOutboundRequest(null, captured::put);
     Assertions.assertTrue(captured.isEmpty());
   }
+
+  @Test
+  public void testApplyCapturedHeaders_attachesByHeaderName()
+  {
+    RequestHeaderContextConfig config = new RequestHeaderContextConfig(
+        com.google.common.collect.ImmutableMap.of(
+            AuditManager.X_DRUID_TRACE_ID, "traceId",
+            "X-Tenant-Id", "tenantId"
+        )
+    );
+    // keyed by context key, as held by RequestHeaderContext
+    java.util.Map<String, String> capturedByContextKey = com.google.common.collect.ImmutableMap.of(
+        "traceId", "abc-123",
+        "tenantId", "acme"
+    );
+    java.util.Map<String, String> outbound = new java.util.HashMap<>();
+    config.applyCapturedHeaders(capturedByContextKey, outbound::put);
+    Assertions.assertEquals("abc-123", outbound.get(AuditManager.X_DRUID_TRACE_ID));
+    Assertions.assertEquals("acme", outbound.get("X-Tenant-Id"));
+  }
+
+  @Test
+  public void testApplyCapturedHeaders_emptyOrNullIsNoOp()
+  {
+    RequestHeaderContextConfig config = new RequestHeaderContextConfig();
+    java.util.Map<String, String> outbound = new java.util.HashMap<>();
+    config.applyCapturedHeaders(java.util.Collections.emptyMap(), outbound::put);
+    config.applyCapturedHeaders(null, outbound::put);
+    Assertions.assertTrue(outbound.isEmpty());
+  }
 }

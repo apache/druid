@@ -136,4 +136,24 @@ public class RequestHeaderContextConfig
       }
     }
   }
+
+  /**
+   * For each configured {@code header → contextKey}, if the supplied captured-header map (keyed
+   * by context key, as held by {@code RequestHeaderContext}) carries a value for {@code contextKey},
+   * invokes {@code headerSetter} with {@code (headerName, value)}. Used by the shared outbound
+   * HTTP client to forward configured headers on ALL inter-service calls made on the request
+   * thread (not just queries), so the chain of internal calls carries the same header values.
+   */
+  public void applyCapturedHeaders(Map<String, String> capturedByContextKey, BiConsumer<String, String> headerSetter)
+  {
+    if (capturedByContextKey == null || capturedByContextKey.isEmpty() || headerToContextKey.isEmpty()) {
+      return;
+    }
+    for (Map.Entry<String, String> entry : headerToContextKey.entrySet()) {
+      final String value = capturedByContextKey.get(entry.getValue());
+      if (value != null) {
+        headerSetter.accept(entry.getKey(), value);
+      }
+    }
+  }
 }

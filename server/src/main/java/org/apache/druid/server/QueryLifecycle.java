@@ -253,7 +253,7 @@ public class QueryLifecycle
     // upstream Druid node attached the header onto the wire (see
     // DirectDruidClient.applyToOutboundRequest). Without sanitizing, a malicious client
     // could supply {"context":{"traceId":"forged"}} in the query JSON body and have it
-    // survive into OpenLineage / Atlas / audit.
+    // survive into audit events and any downstream consumers of the query context.
     //
     // NOTE: withOverriddenContext() MERGES finalContext on top of baseQuery.getContext()
     // (see QueryContexts.override) rather than replacing it. So merely removing a reserved

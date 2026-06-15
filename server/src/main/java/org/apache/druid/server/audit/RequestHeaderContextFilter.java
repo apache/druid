@@ -20,6 +20,7 @@
 package org.apache.druid.server.audit;
 
 import org.apache.druid.audit.RequestHeaderContextConfig;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -40,6 +41,8 @@ import java.util.Map;
  */
 public class RequestHeaderContextFilter implements Filter
 {
+  private static final Logger log = new Logger(RequestHeaderContextFilter.class);
+
   private final RequestHeaderContextConfig config;
 
   public RequestHeaderContextFilter(RequestHeaderContextConfig config)
@@ -75,6 +78,9 @@ public class RequestHeaderContextFilter implements Filter
         }
         if (captured != null) {
           RequestHeaderContext.bind(captured);
+          // Debug-level so operators can confirm header capture/propagation without log spam.
+          // The keys are the configured context-keys (e.g. traceId); values are caller-supplied.
+          log.debug("Captured request-header context %s from inbound request", captured.keySet());
         }
       }
       chain.doFilter(request, response);

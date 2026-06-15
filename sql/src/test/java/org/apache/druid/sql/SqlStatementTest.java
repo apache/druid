@@ -249,6 +249,29 @@ public class SqlStatementTest
   }
 
   @Test
+  public void testDirectAuthorizesCapturedHeaderContextKey()
+  {
+    // A context key whose value is captured from an inbound header is client-influenced, so it
+    // must be subject to QUERY_CONTEXT authorization like a body key. authContextKeys is frozen
+    // from the body before header injection, so the captured key must be unioned in (mirrors
+    // QueryLifecycle on the native path). Without it, mapping a header to e.g. priority/lane
+    // would reach planning without the WRITE authorization required for the same body key.
+    SqlQueryPlus sqlReq = SqlQueryPlus.builder("SELECT COUNT(*) AS cnt FROM druid.foo")
+                                      .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                      .build();
+    RequestHeaderContext.bind(ImmutableMap.of("traceId", "client-set"));
+    try {
+      DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+      // "traceId" arrived only via the captured header (not the body) yet must be authorized.
+      assertTrue(stmt.authContextKeys.contains("traceId"));
+      stmt.close();
+    }
+    finally {
+      RequestHeaderContext.clear();
+    }
+  }
+
+  @Test
   public void testDirectPlanTwice()
   {
     SqlQueryPlus sqlReq = queryPlus(
