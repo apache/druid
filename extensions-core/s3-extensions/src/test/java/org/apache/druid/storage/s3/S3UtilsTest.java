@@ -36,6 +36,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -144,6 +145,31 @@ public class S3UtilsTest
                     + "Must provide an explicit region in the builder or setup environment to supply a region."
                 )
                 .build();
+          }
+        },
+        maxRetries
+    );
+    Assert.assertEquals(maxRetries, count.get());
+  }
+
+  @Test
+  public void testRetryWithAsyncCredentialProviderChainException() throws Exception
+  {
+    final int maxRetries = 3;
+    final AtomicInteger count = new AtomicInteger();
+    S3Utils.retryS3Operation(
+        () -> {
+          if (count.incrementAndGet() >= maxRetries) {
+            return "hey";
+          } else {
+            throw new CompletionException(
+                SdkClientException.builder()
+                                  .message(
+                                      "Unable to load credentials from any of the providers in the chain "
+                                      + "AwsCredentialsProviderChain"
+                                  )
+                                  .build()
+            );
           }
         },
         maxRetries

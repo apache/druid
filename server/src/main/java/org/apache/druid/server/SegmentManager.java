@@ -31,7 +31,7 @@ import org.apache.druid.query.DataSegmentAndDescriptor;
 import org.apache.druid.query.LeafSegmentsBundle;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
@@ -357,7 +357,7 @@ public class SegmentManager
                     segment.getId()
                 );
               }
-              final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
+              final RowCountInspector countInspector = segment.as(RowCountInspector.class);
               if (countInspector != null) {
                 numOfRows = countInspector.getNumRows();
               }
@@ -405,7 +405,7 @@ public class SegmentManager
                 final Optional<Segment> oldSegment = cacheManager.acquireCachedSegment(oldSegmentRef.getId());
                 long numberOfRows = oldSegment.map(segment -> {
                   closer.register(segment);
-                  final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
+                  final RowCountInspector countInspector = segment.as(RowCountInspector.class);
                   if (countInspector != null) {
                     return countInspector.getNumRows();
                   }
