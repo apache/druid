@@ -49,6 +49,7 @@ import org.apache.druid.testing.embedded.tools.WikipediaStreamEventStreamGenerat
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -143,7 +144,7 @@ public abstract class StreamIndexTestBase extends EmbeddedClusterTestBase
    * Use for ingestion paths with a heavier task lifecycle (e.g. bounded supervisor cold start) where the
    * cluster default may not allow enough headroom on CI.
    */
-  protected void waitUntilPublishedRecordsAreIngested(int expectedRowCount, Long timeoutMillis)
+  protected void waitUntilPublishedRecordsAreIngested(int expectedRowCount, @Nullable Long timeoutMillis)
   {
     if (timeoutMillis == null) {
       indexer.latchableEmitter().waitForEventAggregate(
