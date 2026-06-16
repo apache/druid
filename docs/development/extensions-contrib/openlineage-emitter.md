@@ -31,7 +31,7 @@ This extension emits [OpenLineage](https://openlineage.io) `RunEvent`s for each 
 For MSQ DML statements (`INSERT INTO` / `REPLACE INTO`), the output datasource is extracted from the SQL text and emitted as an output dataset. Input extraction from SQL is not performed — reliably resolving `FROM` / `JOIN` tables at the logger layer would duplicate planner work. For native queries, input table names are resolved from the datasource tree and emitted as input datasets. Native sub-queries spawned by a SQL execution carry a `sqlQueryId` in their context facet for correlation with the parent SQL event.
 
 :::note
-SQL table extraction relies on `calcite-core` being on the classpath, which is the case on Broker nodes. Native query lineage is available on all nodes.
+MSQ DML output extraction relies on `calcite-core` being on the classpath, which is the case on Broker nodes. Native query lineage is available on all nodes.
 :::
 
 ## Configuration

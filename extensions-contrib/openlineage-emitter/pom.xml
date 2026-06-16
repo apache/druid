@@ -34,11 +34,12 @@
   <artifactId>openlineage-emitter</artifactId>
   <name>openlineage-emitter</name>
   <description>
-    OpenLineage data lineage emitter for Apache Druid. Captures table-level lineage from SQL
-    and native queries and emits OpenLineage RunEvents to a console or HTTP endpoint.
+    OpenLineage data lineage emitter for Apache Druid. Captures table-level lineage from
+    native and SQL queries and emits OpenLineage RunEvents to a console or HTTP endpoint.
 
     Configure via druid.request.logging.type=openlineage.
-    SQL table extraction uses the Calcite SQL parser; only available on Broker nodes.
+    Input datasources are resolved from the native query plan; the SQL parser (calcite-core,
+    present on Broker nodes) is used only to extract the output datasource of MSQ INSERT/REPLACE.
   </description>
 
   <dependencies>
