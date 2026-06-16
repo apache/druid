@@ -677,8 +677,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
   /**
    * Caches references to selector objects for each column instead of creating a new object each time in order to save
-   * heap space. In general the selectorFactory need not to thread-safe. If required, set concurrentEventAdd to true to
-   * use concurrent hash map instead of vanilla hash map for thread-safe operations.
+   * heap space.
    */
   static class CachingColumnSelectorFactory implements ColumnSelectorFactory
   {

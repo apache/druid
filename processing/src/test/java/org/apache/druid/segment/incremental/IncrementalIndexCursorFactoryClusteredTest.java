@@ -27,6 +27,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.TypedInFilter;
@@ -34,10 +35,12 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.AndFilter;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -112,6 +115,65 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
       cursor.advance();
     }
     return out;
+  }
+
+  @Test
+  void testNonClusteringVirtualColumnDimensionIsMaterialized()
+  {
+    // A non-clustering column declared as a virtual-column output (region_upper = upper(region)) is computed at
+    // ingest through the VC-aware selector and stored like any other column — VCs aren't limited to clustering
+    // columns. region_upper is never in the input row, so a null here would mean the VC was not applied.
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .virtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("region_upper", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new StringDimensionSchema("region_upper"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
+        .build();
+    final IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
+        .withMinTimestamp(T0)
+        .withTimestampSpec(TIMESTAMP_SPEC)
+        .withQueryGranularity(Granularities.NONE)
+        .withDimensionsSpec(spec.getDimensionsSpec())
+        .withRollup(false)
+        .withClusterSpec(spec)
+        .build();
+    try (OnheapIncrementalIndex index = (OnheapIncrementalIndex) new OnheapIncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(10_000)
+        .build()) {
+      index.add(row(T0, "acme", "us-east-1"));
+      index.add(row(T0 + 1, "acme", "us-west-2"));
+
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      try (CursorHolder holder = factory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        final Cursor cursor = holder.asCursor();
+        final DimensionSelector regionSel =
+            cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("region"));
+        final DimensionSelector upperSel =
+            cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("region_upper"));
+        final List<List<String>> out = new ArrayList<>();
+        while (!cursor.isDone()) {
+          out.add(Arrays.asList(
+              regionSel.lookupName(regionSel.getRow().get(0)),
+              upperSel.lookupName(upperSel.getRow().get(0))
+          ));
+          cursor.advance();
+        }
+        Assertions.assertEquals(
+            List.of(
+                List.of("us-east-1", "US-EAST-1"),
+                List.of("us-west-2", "US-WEST-2")
+            ),
+            out
+        );
+      }
+    }
   }
 
   @Test

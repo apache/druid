@@ -74,6 +74,7 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
   private final AtomicInteger numEntries = new AtomicInteger(0);
   private final int groupTimePosition;
 
+  private final VirtualColumns virtualColumns;
   private final ColumnSelectorFactory virtualSelectorFactory;
 
   OnHeapClusterGroup(
@@ -114,6 +115,7 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
       this.factsHolder = new OnheapIncrementalIndex.PlainNonTimeOrderedFactsHolder(rowComparator);
     }
 
+    this.virtualColumns = virtualColumns;
     this.virtualSelectorFactory = new OnheapIncrementalIndex.CachingColumnSelectorFactory(
         IncrementalIndex.makeColumnSelectorFactory(virtualColumns, inputRowHolder, null)
     );
@@ -301,10 +303,16 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
     long dimsKeySize = 0L;
     for (int i = 0; i < dimensions.size(); i++) {
       final IncrementalIndex.DimensionDesc desc = dimensions.get(i);
+      final String name = desc.getName();
+      // A column declared as a virtual-column output is computed through the (VC-aware) selector factory; a plain
+      // column is read straight from the raw row.
+      final Object dimValue = virtualColumns.exists(name)
+                              ? virtualSelectorFactory.makeColumnValueSelector(name).getObject()
+                              : row.getRaw(name);
       try {
         @SuppressWarnings({"unchecked", "rawtypes"})
         final EncodedKeyComponent<?> k = ((DimensionIndexer) desc.getIndexer())
-            .processRowValsToUnsortedEncodedKeyComponent(row.getRaw(desc.getName()), true);
+            .processRowValsToUnsortedEncodedKeyComponent(dimValue, true);
         groupDims[i] = k.getComponent();
         dimsKeySize += k.getEffectiveSizeBytes();
       }

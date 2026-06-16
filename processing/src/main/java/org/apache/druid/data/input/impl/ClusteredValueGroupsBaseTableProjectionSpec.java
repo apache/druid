@@ -32,6 +32,8 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -49,18 +51,19 @@ import java.util.Set;
  * <p>
  * The operator declares a single ordered {@link #columns} list — the full set of columns in segment order, plus a
  * {@link #clusteringColumns} list of NAMES designating the leading prefix of {@link #columns} that rows are
- * clustered by. The time position is an explicit positional entry in {@link #columns} (named {@code __time}, or the
- * query-granularity column {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME}); clustering by the time column is not
- * yet supported, so the time marker must be a non-clustering column. A clustered base table is never rollup and has
- * no metric columns.
+ * clustered by. The time position is an explicit positional entry in {@link #columns} named {@code __time}; clustering
+ * by the time column is not yet supported, so {@code __time} must be a non-clustering column. A clustered base table
+ * is never rollup and has no metric columns.
  * <p>
  * {@link #getDimensionsSpec()} returns the unified spec built from {@link #columns} in declared order with
  * {@code forceSegmentSortByTime=false}; {@link #getOrdering()} is computed as every column of {@link #columns}
  * ascending, in list order.
  * <p>
- * Query granularity, when wanted, is just another entry in {@link #getVirtualColumns()} named
- * {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME}; absent that virtual column the query granularity is
- * {@code NONE}. Segment granularity and intervals live on the top-level
+ * Query granularity, when wanted, is a virtual column in {@link #getVirtualColumns()} named
+ * {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME}. It is a granularity <em>carrier</em>: it supplies the
+ * granularity that floors the stored {@code __time} column, and is NOT itself a stored column, so it never appears in
+ * {@link #columns} (declare {@code __time} there as the time column). Absent that virtual column the query granularity
+ * is {@code NONE}.
  * {@link org.apache.druid.indexer.granularity.SegmentGranularitySpec}, not here.
  */
 @JsonTypeName(ClusteredValueGroupsBaseTableProjectionSpec.TYPE_NAME)
@@ -180,8 +183,18 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
       throw clusteringPrefixException(columns, clusteringColumns);
     }
     for (int i = 0; i < clusteringColumns.size(); i++) {
-      if (!columns.get(i).getName().equals(clusteringColumns.get(i))) {
+      final DimensionSchema clusteringColumn = columns.get(i);
+      if (!clusteringColumn.getName().equals(clusteringColumns.get(i))) {
         throw clusteringPrefixException(columns, clusteringColumns);
+      }
+      // Clustering values are dictionary-encoded into per-type dictionaries on the write side, which supports only
+      // these scalar types; reject anything else up front rather than failing later at ingest.
+      if (!isSupportedClusteringType(clusteringColumn.getColumnType())) {
+        throw InvalidInput.exception(
+            "clustering column [%s] has unsupported type [%s]; clustering columns must be STRING, LONG, DOUBLE, or FLOAT",
+            clusteringColumn.getName(),
+            clusteringColumn.getColumnType()
+        );
       }
     }
 
@@ -193,38 +206,43 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
     }
 
     int timeIndex = -1;
-    boolean bothPresent = false;
     for (int i = 0; i < columns.size(); i++) {
       final String name = columns.get(i).getName();
-      if (ColumnHolder.TIME_COLUMN_NAME.equals(name) || Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME.equals(name)) {
-        if (timeIndex >= 0) {
-          bothPresent = true;
-        }
+      // The query-granularity virtual column is a granularity carrier in virtualColumns (it floors the stored __time
+      // column); it is not itself a stored column, so it must not be declared in 'columns'.
+      if (Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME.equals(name)) {
+        throw InvalidInput.exception(
+            "[%s] is the query-granularity virtual column, not a stored column; declare it in 'virtualColumns' and use"
+            + " [%s] as the time column in 'columns'",
+            Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+            ColumnHolder.TIME_COLUMN_NAME
+        );
+      }
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(name)) {
         timeIndex = i;
       }
     }
     if (timeIndex < 0) {
       throw InvalidInput.exception(
-          "clustered base table must include %s (or the query-granularity column [%s]) in 'columns' to define the"
-          + " time position",
-          ColumnHolder.TIME_COLUMN_NAME,
-          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
-      );
-    }
-    if (bothPresent) {
-      throw InvalidInput.exception(
-          "clustered base table must include exactly one of %s / %s in 'columns' to define the time position",
-          ColumnHolder.TIME_COLUMN_NAME,
-          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+          "clustered base table must include [%s] in 'columns' to define the time position",
+          ColumnHolder.TIME_COLUMN_NAME
       );
     }
     if (timeIndex < clusteringColumns.size()) {
       throw InvalidInput.exception(
-          "clustering by %s / %s is not yet supported; the time column must be a non-clustering column",
-          ColumnHolder.TIME_COLUMN_NAME,
-          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+          "clustering by [%s] is not yet supported; the time column must be a non-clustering column",
+          ColumnHolder.TIME_COLUMN_NAME
       );
     }
+  }
+
+  private static boolean isSupportedClusteringType(ColumnType type)
+  {
+    return type != null
+           && (type.is(ValueType.STRING)
+               || type.is(ValueType.LONG)
+               || type.is(ValueType.DOUBLE)
+               || type.is(ValueType.FLOAT));
   }
 
   private static DruidException clusteringPrefixException(

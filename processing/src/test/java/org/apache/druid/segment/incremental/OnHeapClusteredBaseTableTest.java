@@ -27,10 +27,12 @@ import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.VirtualColumns;
@@ -143,6 +145,61 @@ class OnHeapClusteredBaseTableTest extends InitializedNullHandlingTest
           "new-group row delta [" + newGroupDelta + "] should exceed same-group row delta [" + sameGroupDelta + "]"
       );
     }
+  }
+
+  @Test
+  void testQueryGranularityColumnRejectedInColumns()
+  {
+    // The query-granularity virtual column is a granularity carrier (it floors the stored __time column), not a stored
+    // column, so it must not be declared in 'columns' — only __time defines the time position.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .columns(
+                new StringDimensionSchema("tenant"),
+                new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+            )
+            .clusteringColumns("tenant")
+            .build()
+    );
+    Assertions.assertTrue(
+        e.getMessage().contains(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME) && e.getMessage().contains("virtualColumns"),
+        e.getMessage()
+    );
+  }
+
+  @Test
+  void testUnsupportedClusteringColumnTypeRejected()
+  {
+    // Clustering values are dictionary-encoded by scalar type on the write side, so a non-scalar (here array) type is
+    // rejected at spec-validation time rather than failing later at ingest.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .columns(
+                new AutoTypeColumnSchema("tags", ColumnType.STRING_ARRAY, null),
+                new LongDimensionSchema("__time")
+            )
+            .clusteringColumns("tags")
+            .build()
+    );
+    Assertions.assertTrue(
+        e.getMessage().contains("tags") && e.getMessage().contains("STRING, LONG, DOUBLE"),
+        e.getMessage()
+    );
+  }
+
+  @Test
+  void testMissingTimeColumnRejected()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .columns(new StringDimensionSchema("tenant"), new StringDimensionSchema("region"))
+            .clusteringColumns("tenant")
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("__time"), e.getMessage());
   }
 
   @Test
