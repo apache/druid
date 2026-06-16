@@ -21,6 +21,7 @@ package org.apache.druid.testing.embedded.auth;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.ExceptionMatcher;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.query.http.ClientSqlQuery;
@@ -57,6 +58,13 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   public static final String USER_1 = "user1";
   public static final String ROLE_1 = "role1";
   public static final String USER_1_PASSWORD = "password1";
+
+  /**
+   * Attempts allowed for a request while basic-auth changes reach the Broker, which the
+   * Coordinator propagates asynchronously (a push plus a poll every
+   * {@code druid.auth.basic.common.pollingPeriod}).
+   */
+  private static final int AUTH_PROPAGATION_ATTEMPTS = 5;
 
   private SecurityClient securityClient;
   private EmbeddedServiceClient userClient;
@@ -119,7 +127,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void testIngestionWithoutPermissions()
+  public void testIngestionWithoutPermissions() throws Exception
   {
     List<ResourceAction> permissions = ImmutableList.of();
     securityClient.setPermissionsToRole(ROLE_1, permissions);
@@ -134,7 +142,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void testIngestionWithPermissions()
+  public void testIngestionWithPermissions() throws Exception
   {
     List<ResourceAction> permissions = ImmutableList.of(
         new ResourceAction(new Resource(".*", "DATASOURCE"), Action.READ),
@@ -150,16 +158,12 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
         Resources.DataFile.tinyWiki1Json()
     );
 
-    final SqlTaskStatus taskStatus = userClient.onAnyBroker(
-        b -> b.submitSqlTask(
-            new ClientSqlQuery(queryLocal, null, false, false, false, Map.of(), List.of())
-        )
-    );
+    final SqlTaskStatus taskStatus = submitSqlTaskWhenAuthorized(queryLocal);
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
   }
 
   @Test
-  public void testExportWithoutPermissions()
+  public void testExportWithoutPermissions() throws Exception
   {
     // No external write permissions for s3
     List<ResourceAction> permissions = ImmutableList.of(
@@ -192,7 +196,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void testExportWithPermissions()
+  public void testExportWithPermissions() throws Exception
   {
     // No external write permissions for s3
     List<ResourceAction> permissions = ImmutableList.of(
@@ -221,26 +225,70 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
             Resources.DataFile.tinyWiki1Json()
         );
 
-    final SqlTaskStatus taskStatus = userClient.onAnyBroker(
-        b -> b.submitSqlTask(
-            new ClientSqlQuery(exportQuery, null, false, false, false, Map.of(), List.of())
-        )
-    );
+    final SqlTaskStatus taskStatus = submitSqlTaskWhenAuthorized(exportQuery);
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
   }
 
-  private void verifySqlSubmitFailsWith403Forbidden(String sql)
+  /**
+   * Submits an MSQ task to an arbitrary Broker as {@link #USER_1}.
+   */
+  private SqlTaskStatus submitSqlTaskAsUser(String sql)
   {
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> userClient.onAnyBroker(
-                b -> b.submitSqlTask(
-                    new ClientSqlQuery(sql, null, false, false, false, Map.of(), List.of())
-                )
-            )
-        ),
-        ExceptionMatcher.of(Exception.class).expectMessageContains("403 Forbidden")
+    return userClient.onAnyBroker(
+        b -> b.submitSqlTask(
+            new ClientSqlQuery(sql, null, false, false, false, Map.of(), List.of())
+        )
     );
+  }
+
+  /**
+   * Submits an MSQ task as {@link #USER_1}, retrying on a transient 401/403 while the Broker's
+   * auth cache catches up with the test setup.
+   */
+  private SqlTaskStatus submitSqlTaskWhenAuthorized(String sql) throws Exception
+  {
+    return RetryUtils.retry(
+        () -> submitSqlTaskAsUser(sql),
+        BasicAuthMSQTest::isTransientAuthFailure,
+        AUTH_PROPAGATION_ATTEMPTS
+    );
+  }
+
+  /**
+   * Asserts that submitting the SQL as an unauthorized user fails with 403 Forbidden. Retries on a
+   * transient 401 (authentication not yet propagated); 403 is the expected result, so it is not.
+   */
+  private void verifySqlSubmitFailsWith403Forbidden(String sql) throws Exception
+  {
+    try {
+      RetryUtils.retry(
+          () -> submitSqlTaskAsUser(sql),
+          e -> messageContains(e, "401 Unauthorized"),
+          AUTH_PROPAGATION_ATTEMPTS
+      );
+      Assertions.fail("Expected submit to fail with 403 Forbidden");
+    }
+    catch (Exception e) {
+      MatcherAssert.assertThat(e, ExceptionMatcher.of(Exception.class).expectMessageContains("403 Forbidden"));
+    }
+  }
+
+  /**
+   * Whether the error is a transient 401 (new user) or 403 (new permission) from the Broker's
+   * auth cache lagging behind the test setup.
+   */
+  private static boolean isTransientAuthFailure(Throwable t)
+  {
+    return messageContains(t, "401 Unauthorized") || messageContains(t, "403 Forbidden");
+  }
+
+  private static boolean messageContains(Throwable t, String text)
+  {
+    for (Throwable cause = t; cause != null; cause = cause.getCause()) {
+      if (cause.getMessage() != null && cause.getMessage().contains(text)) {
+        return true;
+      }
+    }
+    return false;
   }
 }
