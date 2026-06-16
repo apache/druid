@@ -25,6 +25,7 @@ import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -89,9 +90,12 @@ class QueryableIndexCursorFactoryClusteredTest
 
   private static final ClusteredValueGroupsBaseTableProjectionSpec CLUSTER_SPEC =
       ClusteredValueGroupsBaseTableProjectionSpec.builder()
-          .clusteringColumns(new StringDimensionSchema("tenant"))
-          .dimensions(StringDimensionSchema.create("region"))
-          .metrics(new CountAggregatorFactory("count"))
+          .columns(
+              new StringDimensionSchema("tenant"),
+              StringDimensionSchema.create("region"),
+              new LongDimensionSchema("__time")
+          )
+          .clusteringColumns("tenant")
           .build();
 
   private static Closer engineCloser;
@@ -158,7 +162,6 @@ class QueryableIndexCursorFactoryClusteredTest
                               .withTimestampSpec(new TimestampSpec("__time", "auto", null))
                               .withQueryGranularity(Granularities.NONE)
                               .withDimensionsSpec(CLUSTER_SPEC.getDimensionsSpec())
-                              .withMetrics(new CountAggregatorFactory("count"))
                               .withRollup(false)
                               .withClusterSpec(CLUSTER_SPEC)
                               .build();
@@ -192,7 +195,6 @@ class QueryableIndexCursorFactoryClusteredTest
     Assertions.assertEquals(ColumnType.STRING, sig.getColumnType("tenant").orElseThrow());
     Assertions.assertEquals(ColumnType.LONG, sig.getColumnType(ColumnHolder.TIME_COLUMN_NAME).orElseThrow());
     Assertions.assertEquals(ColumnType.STRING, sig.getColumnType("region").orElseThrow());
-    Assertions.assertEquals(ColumnType.LONG, sig.getColumnType("count").orElseThrow());
   }
 
   @Test
@@ -314,7 +316,7 @@ class QueryableIndexCursorFactoryClusteredTest
     // A clustered segment must advertise the SAME ordering whether a filter prunes to one group or many — otherwise
     // an ORDER BY __time scan would intermittently succeed (single group reporting time-first) or fail (multiple
     // groups reporting clustering-first) based purely on filter selectivity. Both must report the full segment
-    // ordering [tenant ASC, __time ASC], which is clustering-first (not time-first).
+    // ordering [tenant ASC, region ASC, __time ASC], which is clustering-first (not time-first).
     segmentIndex = standardTwoGroup();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
         segmentIndex,
@@ -395,7 +397,7 @@ class QueryableIndexCursorFactoryClusteredTest
       final DimensionSelector tenantSel =
           cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("tenant"));
       Assertions.assertNotNull(tenantSel);
-      Assertions.assertNotNull(cursor.getColumnSelectorFactory().makeColumnValueSelector("count"));
+      Assertions.assertNotNull(cursor.getColumnSelectorFactory().makeColumnValueSelector("region"));
       Assertions.assertNull(cursor.getColumnSelectorFactory().getColumnCapabilities("tenant"));
     }
   }

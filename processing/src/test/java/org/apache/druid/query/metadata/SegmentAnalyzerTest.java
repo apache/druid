@@ -26,6 +26,7 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -40,7 +41,6 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.NoopAggregator;
 import org.apache.druid.query.aggregation.NoopBufferAggregator;
@@ -443,13 +443,11 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     );
     final Map<String, ColumnAnalysis> analysis = analyzer.analyze(segment);
 
-    // Clustering column (constant per group) + non-clustering dim + metric + __time all present with right types.
+    // Clustering column (constant per group) + non-clustering dim + __time all present with right types.
     Assert.assertEquals(ColumnType.STRING, analysis.get("tenant").getTypeSignature());
     Assert.assertFalse("tenant should not be an error", analysis.get("tenant").isError());
     Assert.assertEquals(ColumnType.STRING, analysis.get("region").getTypeSignature());
     Assert.assertFalse("region should not be an error", analysis.get("region").isError());
-    Assert.assertEquals(ColumnType.LONG, analysis.get("count").getTypeSignature());
-    Assert.assertFalse("count should not be an error", analysis.get("count").isError());
     Assert.assertEquals(ColumnType.LONG, analysis.get(ColumnHolder.TIME_COLUMN_NAME).getTypeSignature());
   }
 
@@ -458,16 +456,18 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     final TimestampSpec timestampSpec = new TimestampSpec("ts", "millis", null);
     final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec =
         ClusteredValueGroupsBaseTableProjectionSpec.builder()
-            .clusteringColumns(new StringDimensionSchema("tenant"))
-            .dimensions(new StringDimensionSchema("region"))
-            .metrics(new CountAggregatorFactory("count"))
+            .columns(
+                new StringDimensionSchema("tenant"),
+                new StringDimensionSchema("region"),
+                new LongDimensionSchema("__time")
+            )
+            .clusteringColumns("tenant")
             .build();
     final IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
         .withMinTimestamp(DateTimes.of("2011-01-01").getMillis())
         .withTimestampSpec(timestampSpec)
         .withQueryGranularity(Granularities.NONE)
         .withDimensionsSpec(clusterSpec.getDimensionsSpec())
-        .withMetrics(new CountAggregatorFactory("count"))
         .withRollup(false)
         .withClusterSpec(clusterSpec)
         .build();

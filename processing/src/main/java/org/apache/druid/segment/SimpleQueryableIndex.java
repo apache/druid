@@ -286,7 +286,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     final Map<String, Supplier<BaseColumnHolder>> groupColumns = clusterGroupColumns.get(index);
     final Metadata groupMetadata = new Metadata(
         null,
-        clusteredBaseSummary.getAggregators(),
+        null,
         null,
         clusteredBaseSummary.getEffectiveGranularity(),
         false,

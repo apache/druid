@@ -58,7 +58,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -145,7 +144,6 @@ public class IndexMergerV10 extends IndexMergerBase
       return makeClusteredIndexFiles(
           adapters,
           clusterSchemas,
-          segmentMetadata,
           outDir,
           progress,
           mergedMetrics,
@@ -364,7 +362,6 @@ public class IndexMergerV10 extends IndexMergerBase
   private File makeClusteredIndexFiles(
       final List<IndexableAdapter> adapters,
       final List<ClusteredValueGroupsBaseTableSchema> clusterSchemas,
-      final Metadata segmentMetadata,
       final File outDir,
       final ProgressIndicator progress,
       final List<String> mergedMetrics,
@@ -527,8 +524,7 @@ public class IndexMergerV10 extends IndexMergerBase
         }
       }
 
-      // Assemble the merged summary schema. Aggregators use the merged (combining) form from the segment metadata,
-      // consistent with how the non-clustered base table metadata is built.
+      // Assemble the merged summary schema
       final ClusteredValueGroupsBaseTableSchema firstSchema = clusterSchemas.get(0);
       final List<String> summaryColumns = new ArrayList<>();
       summaryColumns.addAll(firstSchema.getClusteringColumns().getColumnNames());
@@ -541,7 +537,6 @@ public class IndexMergerV10 extends IndexMergerBase
       final ClusteredValueGroupsBaseTableSchema mergedSchema = new ClusteredValueGroupsBaseTableSchema(
           firstSchema.getVirtualColumns(),
           summaryColumns,
-          segmentMetadata.getAggregators(),
           firstSchema.getOrdering(),
           firstSchema.getClusteringColumns(),
           null,
@@ -596,18 +591,6 @@ public class IndexMergerV10 extends IndexMergerBase
           "Cannot merge clustered segments with different clustering virtual columns: [%s] vs [%s]",
           first.getVirtualColumns(),
           schema.getVirtualColumns()
-      );
-      // Per-group metric columns are written for the segment-wide merged metric set; the per-group merge derives its
-      // metric formats from only that group's source adapters. All adapters reaching here descend from a single
-      // IncrementalIndexSchema (intermediary persists of one ingest/compaction job), so every cluster group carries
-      // every metric and the two sets coincide. Assert that invariant defensively: a future path that merges
-      // arbitrary clustered segments with differing aggregators would otherwise NPE when writing a group missing a
-      // segment-wide metric.
-      DruidException.conditionalDefensive(
-          Arrays.equals(first.getAggregators(), schema.getAggregators()),
-          "Cannot merge clustered segments with different aggregators: [%s] vs [%s]",
-          Arrays.toString(first.getAggregators()),
-          Arrays.toString(schema.getAggregators())
       );
     }
 

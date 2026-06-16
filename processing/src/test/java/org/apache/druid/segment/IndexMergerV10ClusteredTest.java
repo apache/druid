@@ -22,9 +22,9 @@ package org.apache.druid.segment;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -65,9 +65,12 @@ class IndexMergerV10ClusteredTest extends InitializedNullHandlingTest
   private static ClusteredValueGroupsBaseTableProjectionSpec tenantClusterSpec()
   {
     return ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .dimensions(new StringDimensionSchema("region"))
-        .metrics(new CountAggregatorFactory("count"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
   }
 
@@ -78,7 +81,6 @@ class IndexMergerV10ClusteredTest extends InitializedNullHandlingTest
                                  .withTimestampSpec(TIMESTAMP_SPEC)
                                  .withQueryGranularity(Granularities.NONE)
                                  .withDimensionsSpec(spec.getDimensionsSpec())
-                                 .withMetrics(new CountAggregatorFactory("count"))
                                  .withRollup(false)
                                  .withClusterSpec(spec)
                                  .build();
@@ -100,31 +102,6 @@ class IndexMergerV10ClusteredTest extends InitializedNullHandlingTest
                        .tmpDir(new File(tempDir, dirName))
                        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                        .schema(clusteredSchema(tenantClusterSpec()))
-                       .rows(rows)
-                       .buildMMappedIndex();
-  }
-
-  private QueryableIndex buildSegmentWithMetrics(String dirName, List<InputRow> rows, AggregatorFactory[] metrics)
-  {
-    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .dimensions(new StringDimensionSchema("region"))
-        .metrics(metrics)
-        .build();
-    final IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
-                                                                .withMinTimestamp(T0)
-                                                                .withTimestampSpec(TIMESTAMP_SPEC)
-                                                                .withQueryGranularity(Granularities.NONE)
-                                                                .withDimensionsSpec(spec.getDimensionsSpec())
-                                                                .withMetrics(metrics)
-                                                                .withRollup(false)
-                                                                .withClusterSpec(spec)
-                                                                .build();
-    return IndexBuilder.create()
-                       .useV10()
-                       .tmpDir(new File(tempDir, dirName))
-                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                       .schema(schema)
                        .rows(rows)
                        .buildMMappedIndex();
   }
@@ -182,12 +159,11 @@ class IndexMergerV10ClusteredTest extends InitializedNullHandlingTest
     Assertions.assertEquals(1, groups.get(1).getNumRows());
     Assertions.assertEquals(3, index.getNumRows());
 
-    // Per-group QueryableIndex: region + count physically present, clustering column not.
+    // Per-group QueryableIndex: region physically present, clustering column not.
     final QueryableIndex acmeGroup = index.getClusterGroupQueryableIndex(groups.get(0));
     Assertions.assertNotNull(acmeGroup);
     Assertions.assertEquals(2, acmeGroup.getNumRows());
     Assertions.assertNotNull(acmeGroup.getColumnHolder("region"));
-    Assertions.assertNotNull(acmeGroup.getColumnHolder("count"));
     Assertions.assertNull(acmeGroup.getColumnHolder("tenant"));
 
     // Full scan through the real clustered cursor path: groups in clustering order, constants injected.
@@ -246,7 +222,7 @@ class IndexMergerV10ClusteredTest extends InitializedNullHandlingTest
     merger.mergeQueryableIndex(
         List.of(segment1, segment2),
         false,
-        new AggregatorFactory[]{new LongSumAggregatorFactory("count", "count")},
+        new AggregatorFactory[0],
         mergedDir,
         IndexSpec.getDefault(),
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
@@ -271,12 +247,14 @@ class IndexMergerV10ClusteredTest extends InitializedNullHandlingTest
     Assertions.assertEquals(1, groups.get(2).getNumRows());   // initech: from segment 2
     Assertions.assertEquals(5, mergedIndex.getNumRows());
 
+    // region is now an explicit ordering column (dimensions = [tenant, region, __time]), so within the globex group
+    // rows are region-sorted ascending (eu-central-1 before eu-west-1), not left in time/insertion order.
     Assertions.assertEquals(
         List.of(
             List.of("acme", "us-east-1"),
             List.of("acme", "us-west-2"),
-            List.of("globex", "eu-west-1"),
             List.of("globex", "eu-central-1"),
+            List.of("globex", "eu-west-1"),
             List.of("initech", "us-east-1")
         ),
         scanTenantRegion(mergedIndex)
@@ -324,49 +302,4 @@ class IndexMergerV10ClusteredTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  void testMergeClusteredSegmentsWithDifferentAggregatorsRejected()
-  {
-    // All adapters reaching merge descend from one IncrementalIndexSchema, so cluster groups always share an
-    // aggregator set; mergeClusterSchemas asserts that invariant defensively. A hand-built pair with differing
-    // aggregators must be rejected loudly rather than NPE'ing later when a group missing a segment-wide metric is
-    // written.
-    final QueryableIndex segment1 = buildSegmentWithMetrics(
-        "agg-mismatch-1",
-        List.of(row(T0, "acme", "us-east-1")),
-        new AggregatorFactory[]{new CountAggregatorFactory("count")}
-    );
-    final QueryableIndex segment2 = buildSegmentWithMetrics(
-        "agg-mismatch-2",
-        List.of(row(T0 + 1, "globex", "eu-west-1")),
-        new AggregatorFactory[]{new CountAggregatorFactory("total")}
-    );
-
-    final IndexBuilder builderForMerger = IndexBuilder.create().useV10();
-    final IndexMergerV10 merger = new IndexMergerV10(
-        TestHelper.makeJsonMapper(),
-        builderForMerger.getIndexIO(),
-        OffHeapMemorySegmentWriteOutMediumFactory.instance()
-    );
-
-    // Pass the union of both segments' metrics as the merge aggregators so the base merge's own metric-consistency
-    // check (which would otherwise reject the mismatch first with an IAE) is satisfied, and the clustered guard in
-    // mergeClusterSchemas is the thing that rejects the differing per-segment summary aggregators.
-    final DruidException e = Assertions.assertThrows(
-        DruidException.class,
-        () -> merger.mergeQueryableIndex(
-            List.of(segment1, segment2),
-            false,
-            new AggregatorFactory[]{new CountAggregatorFactory("count"), new CountAggregatorFactory("total")},
-            new File(tempDir, "agg-mismatch-merged"),
-            IndexSpec.getDefault(),
-            OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-            -1
-        )
-    );
-    Assertions.assertTrue(
-        e.getMessage().contains("different aggregators"),
-        "expected aggregator-mismatch message, got: " + e.getMessage()
-    );
-  }
 }

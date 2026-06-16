@@ -213,9 +213,12 @@ public class SinkTest extends InitializedNullHandlingTest
     // into clustered mode (rows partitioned into per-tenant cluster groups), exercising the appenderator wiring.
     final TimestampSpec timestampSpec = new TimestampSpec("ts", "millis", null);
     final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .dimensions(new StringDimensionSchema("region"))
-        .metrics(new CountAggregatorFactory("count"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     final DataSchema schema = DataSchema.builder()
                                         .withDataSource("test")

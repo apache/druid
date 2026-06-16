@@ -25,7 +25,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BaseColumnHolder;
@@ -53,12 +52,11 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  *
@@ -155,9 +153,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   {
     final ClusteredValueGroupsBaseTableSchema clusteredSummary = input.getClusteredBaseSummary();
     if (clusteredSummary != null) {
-      return Arrays.stream(clusteredSummary.getAggregators())
-                   .map(AggregatorFactory::getName)
-                   .collect(Collectors.toList());
+      return Collections.emptyList();
     }
     final Set<String> columns = Sets.newLinkedHashSet(input.getColumnNames());
     final HashSet<String> dimensions = Sets.newHashSet(availableDimensions);

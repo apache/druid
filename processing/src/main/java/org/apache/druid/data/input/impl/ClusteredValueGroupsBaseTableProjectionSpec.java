@@ -25,11 +25,14 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -44,16 +47,20 @@ import java.util.Set;
  * "cluster groups" keyed by one or more typed clustering columns, optionally derived from {@link #virtualColumns}.
  * Essentially, each group is stored as its own internal sub-segment..
  * <p>
- * The operator declares (1) the typed clustering columns (as ordinary {@link DimensionSchema}s, they're real
- * dimensions, just stored differently), (2) optional virtual columns, and (3) the non-clustering
- * dimensions and metrics. {@link #getDimensionsSpec()} returns the unified spec in canonical order
- * (clustering dims first, then non-clustering); {@link #getOrdering()} is either the declared ordering or, by
- * default, all clustering dims ascending followed by {@code __time} ascending.
+ * The operator declares a single ordered {@link #columns} list — the full set of columns in segment order, plus a
+ * {@link #clusteringColumns} list of NAMES designating the leading prefix of {@link #columns} that rows are
+ * clustered by. The time position is an explicit positional entry in {@link #columns} (named {@code __time}, or the
+ * query-granularity column {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME}); clustering by the time column is not
+ * yet supported, so the time marker must be a non-clustering column. A clustered base table is never rollup and has
+ * no metric columns.
  * <p>
- * A clustered base table is never rollup. Query granularity, when wanted, is just another entry in
- * {@link #getVirtualColumns()} named
- * {@link org.apache.druid.java.util.common.granularity.Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME}; absent that
- * virtual column the query granularity is {@code NONE}. Segment granularity and intervals live on the top-level
+ * {@link #getDimensionsSpec()} returns the unified spec built from {@link #columns} in declared order with
+ * {@code forceSegmentSortByTime=false}; {@link #getOrdering()} is computed as every column of {@link #columns}
+ * ascending, in list order.
+ * <p>
+ * Query granularity, when wanted, is just another entry in {@link #getVirtualColumns()} named
+ * {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME}; absent that virtual column the query granularity is
+ * {@code NONE}. Segment granularity and intervals live on the top-level
  * {@link org.apache.druid.indexer.granularity.SegmentGranularitySpec}, not here.
  */
 @JsonTypeName(ClusteredValueGroupsBaseTableProjectionSpec.TYPE_NAME)
@@ -62,9 +69,10 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
   public static final String TYPE_NAME = "clusteredValueGroups";
 
   private final VirtualColumns virtualColumns;
-  private final List<DimensionSchema> clusteringColumns;
-  private final List<DimensionSchema> nonClusteringDimensions;
-  private final AggregatorFactory[] metrics;
+  private final List<DimensionSchema> columns;
+  private final List<String> clusteringColumns;
+  private final List<DimensionSchema> clusteringColumnSchemas;
+  private final List<DimensionSchema> nonClusteringColumnSchemas;
   private final DimensionsSpec dimensionsSpec;
   private final List<OrderBy> ordering;
 
@@ -76,26 +84,21 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
   @JsonCreator
   public ClusteredValueGroupsBaseTableProjectionSpec(
       @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns,
-      @JsonProperty("clusteringColumns") List<DimensionSchema> clusteringColumns,
-      @JsonProperty("dimensions") @Nullable List<DimensionSchema> nonClusteringDimensions,
-      @JsonProperty("metrics") @Nullable AggregatorFactory[] metrics,
-      @JsonProperty("ordering") @Nullable List<OrderBy> declaredOrdering
+      @JsonProperty("columns") List<DimensionSchema> columns,
+      @JsonProperty("clusteringColumns") List<String> clusteringColumns
   )
   {
-    if (clusteringColumns == null || clusteringColumns.isEmpty()) {
-      throw InvalidInput.exception("clusteringColumns must be non-empty for clusteredValueGroups base table");
-    }
-    this.clusteringColumns = Collections.unmodifiableList(new ArrayList<>(clusteringColumns));
+    validate(columns, clusteringColumns);
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
-    this.nonClusteringDimensions = nonClusteringDimensions == null
-                                   ? Collections.emptyList()
-                                   : Collections.unmodifiableList(new ArrayList<>(nonClusteringDimensions));
-    this.metrics = metrics == null ? new AggregatorFactory[0] : metrics;
-    validateNoOverlap(this.clusteringColumns, this.nonClusteringDimensions);
-    this.dimensionsSpec = computeDimensionsSpec(this.clusteringColumns, this.nonClusteringDimensions);
-    this.ordering = declaredOrdering != null
-                    ? Collections.unmodifiableList(new ArrayList<>(declaredOrdering))
-                    : computeDefaultOrdering(this.clusteringColumns);
+    this.columns = Collections.unmodifiableList(new ArrayList<>(columns));
+    this.clusteringColumns = Collections.unmodifiableList(new ArrayList<>(clusteringColumns));
+    this.clusteringColumnSchemas = this.columns.subList(0, this.clusteringColumns.size());
+    this.nonClusteringColumnSchemas = this.columns.subList(this.clusteringColumns.size(), this.columns.size());
+    this.dimensionsSpec = DimensionsSpec.builder()
+                                        .setDimensions(this.columns)
+                                        .setForceSegmentSortByTime(false)
+                                        .build();
+    this.ordering = computeOrdering(this.columns);
   }
 
   @Override
@@ -106,29 +109,53 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
     return virtualColumns;
   }
 
-  @JsonProperty
-  public List<DimensionSchema> getClusteringColumns()
+  /**
+   * The full, ordered list of columns in segment order; the clustering prefix followed by the remaining
+   * (non-clustering) columns, with the explicit {@code __time} (or query-granularity) marker at its declared
+   * position.
+   */
+  @JsonProperty("columns")
+  public List<DimensionSchema> getColumns()
+  {
+    return columns;
+  }
+
+  /**
+   * The names of the leading prefix of {@link #getColumns()} that rows are clustered by.
+   */
+  @JsonProperty("clusteringColumns")
+  public List<String> getClusteringColumnNames()
   {
     return clusteringColumns;
   }
 
-  @JsonProperty("dimensions")
-  @JsonInclude(JsonInclude.Include.NON_EMPTY)
-  public List<DimensionSchema> getNonClusteringDimensions()
+  /**
+   * The clustering columns as {@link DimensionSchema}s; the leading prefix of {@link #getColumns()}.
+   */
+  @JsonIgnore
+  public List<DimensionSchema> getClusteringColumns()
   {
-    return nonClusteringDimensions;
+    return clusteringColumnSchemas;
+  }
+
+  /**
+   * The non-clustering columns as {@link DimensionSchema}s; the suffix of {@link #getColumns()} after the
+   * clustering prefix. Includes the explicit time marker.
+   */
+  @JsonIgnore
+  public List<DimensionSchema> getNonClusteringColumns()
+  {
+    return nonClusteringColumnSchemas;
   }
 
   @Override
-  @JsonProperty("metrics")
-  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public AggregatorFactory[] getMetrics()
   {
-    return metrics;
+    return new AggregatorFactory[0];
   }
 
   @Override
-  @JsonProperty
+  @JsonIgnore
   public List<OrderBy> getOrdering()
   {
     return ordering;
@@ -141,45 +168,87 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
     return dimensionsSpec;
   }
 
-  private static void validateNoOverlap(
-      List<DimensionSchema> clustering,
-      List<DimensionSchema> nonClustering
-  )
+  private static void validate(List<DimensionSchema> columns, List<String> clusteringColumns)
   {
-    final Set<String> clusteringNames = Sets.newHashSetWithExpectedSize(clustering.size());
-    for (DimensionSchema d : clustering) {
-      if (!clusteringNames.add(d.getName())) {
-        throw InvalidInput.exception("clusteringColumns contains duplicate name [%s]", d.getName());
+    if (CollectionUtils.isNullOrEmpty(clusteringColumns)) {
+      throw InvalidInput.exception("clusteringColumns must be non-empty for clusteredValueGroups base table");
+    }
+    if (CollectionUtils.isNullOrEmpty(columns)) {
+      throw InvalidInput.exception("columns must be non-empty for clusteredValueGroups base table");
+    }
+    if (clusteringColumns.size() > columns.size()) {
+      throw clusteringPrefixException(columns, clusteringColumns);
+    }
+    for (int i = 0; i < clusteringColumns.size(); i++) {
+      if (!columns.get(i).getName().equals(clusteringColumns.get(i))) {
+        throw clusteringPrefixException(columns, clusteringColumns);
       }
     }
-    for (DimensionSchema d : nonClustering) {
-      if (clusteringNames.contains(d.getName())) {
-        throw InvalidInput.exception(
-            "dimension [%s] appears in both clusteringColumns and non-clustering dimensions",
-            d.getName()
-        );
+
+    final Set<String> seen = Sets.newHashSetWithExpectedSize(columns.size());
+    for (DimensionSchema d : columns) {
+      if (!seen.add(d.getName())) {
+        throw InvalidInput.exception("columns contains duplicate name [%s]", d.getName());
       }
+    }
+
+    int timeIndex = -1;
+    boolean bothPresent = false;
+    for (int i = 0; i < columns.size(); i++) {
+      final String name = columns.get(i).getName();
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(name) || Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME.equals(name)) {
+        if (timeIndex >= 0) {
+          bothPresent = true;
+        }
+        timeIndex = i;
+      }
+    }
+    if (timeIndex < 0) {
+      throw InvalidInput.exception(
+          "clustered base table must include %s (or the query-granularity column [%s]) in 'columns' to define the"
+          + " time position",
+          ColumnHolder.TIME_COLUMN_NAME,
+          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+      );
+    }
+    if (bothPresent) {
+      throw InvalidInput.exception(
+          "clustered base table must include exactly one of %s / %s in 'columns' to define the time position",
+          ColumnHolder.TIME_COLUMN_NAME,
+          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+      );
+    }
+    if (timeIndex < clusteringColumns.size()) {
+      throw InvalidInput.exception(
+          "clustering by %s / %s is not yet supported; the time column must be a non-clustering column",
+          ColumnHolder.TIME_COLUMN_NAME,
+          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+      );
     }
   }
 
-  private static DimensionsSpec computeDimensionsSpec(
-      List<DimensionSchema> clustering,
-      List<DimensionSchema> nonClustering
+  private static DruidException clusteringPrefixException(
+      List<DimensionSchema> columns,
+      List<String> clusteringColumns
   )
   {
-    final List<DimensionSchema> all = new ArrayList<>(clustering.size() + nonClustering.size());
-    all.addAll(clustering);
-    all.addAll(nonClustering);
-    return DimensionsSpec.builder().setDimensions(all).build();
+    final List<String> columnPrefix = new ArrayList<>(clusteringColumns.size());
+    for (int i = 0; i < Math.min(clusteringColumns.size(), columns.size()); i++) {
+      columnPrefix.add(columns.get(i).getName());
+    }
+    return InvalidInput.exception(
+        "clusteringColumns must be the leading prefix of columns, in order; got %s vs columns prefix %s",
+        clusteringColumns,
+        columnPrefix
+    );
   }
 
-  private static List<OrderBy> computeDefaultOrdering(List<DimensionSchema> clustering)
+  private static List<OrderBy> computeOrdering(List<DimensionSchema> columns)
   {
-    final List<OrderBy> ordering = new ArrayList<>(clustering.size() + 1);
-    for (DimensionSchema d : clustering) {
+    final List<OrderBy> ordering = new ArrayList<>(columns.size());
+    for (DimensionSchema d : columns) {
       ordering.add(OrderBy.ascending(d.getName()));
     }
-    ordering.add(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME));
     return Collections.unmodifiableList(ordering);
   }
 
@@ -193,22 +262,18 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
       return false;
     }
     ClusteredValueGroupsBaseTableProjectionSpec that = (ClusteredValueGroupsBaseTableProjectionSpec) o;
-    return Objects.equals(clusteringColumns, that.clusteringColumns)
-           && Objects.equals(virtualColumns, that.virtualColumns)
-           && Objects.equals(nonClusteringDimensions, that.nonClusteringDimensions)
-           && Arrays.equals(metrics, that.metrics)
-           && Objects.equals(ordering, that.ordering);
+    return Objects.equals(virtualColumns, that.virtualColumns)
+           && Objects.equals(columns, that.columns)
+           && Objects.equals(clusteringColumns, that.clusteringColumns);
   }
 
   @Override
   public int hashCode()
   {
     return Objects.hash(
-        clusteringColumns,
         virtualColumns,
-        nonClusteringDimensions,
-        Arrays.hashCode(metrics),
-        ordering
+        columns,
+        clusteringColumns
     );
   }
 
@@ -216,30 +281,23 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
   public String toString()
   {
     return "ClusteredValueGroupsBaseTableProjectionSpec{" +
-           "clusteringColumns=" + clusteringColumns +
-           ", virtualColumns=" + virtualColumns +
-           ", nonClusteringDimensions=" + nonClusteringDimensions +
-           ", metrics=" + Arrays.toString(metrics) +
-           ", ordering=" + ordering +
+           "virtualColumns=" + virtualColumns +
+           ", columns=" + columns +
+           ", clusteringColumns=" + clusteringColumns +
            '}';
   }
 
   /**
    * Fluent builder for {@link ClusteredValueGroupsBaseTableProjectionSpec}, avoiding the constructor's positional
-   * nullable arguments (notably the leading {@code virtualColumns}). Only {@link #clusteringColumns} is required; the
-   * rest default to empty/none.
+   * nullable arguments (notably the leading {@code virtualColumns}). Both {@link #columns} (the full ordered column
+   * list) and {@link #clusteringColumns} (the leading prefix names) are required.
    */
   public static final class Builder
   {
     @Nullable
     private VirtualColumns virtualColumns;
-    private List<DimensionSchema> clusteringColumns = Collections.emptyList();
-    @Nullable
-    private List<DimensionSchema> nonClusteringDimensions;
-    @Nullable
-    private AggregatorFactory[] metrics;
-    @Nullable
-    private List<OrderBy> ordering;
+    private List<DimensionSchema> columns = Collections.emptyList();
+    private List<String> clusteringColumns = Collections.emptyList();
 
     public Builder virtualColumns(@Nullable VirtualColumns virtualColumns)
     {
@@ -247,51 +305,40 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
       return this;
     }
 
-    public Builder clusteringColumns(List<DimensionSchema> clusteringColumns)
+    /**
+     * The full, ordered list of columns in segment order, including the explicit time marker.
+     */
+    public Builder columns(List<DimensionSchema> columns)
+    {
+      this.columns = columns;
+      return this;
+    }
+
+    public Builder columns(DimensionSchema... columns)
+    {
+      return columns(Arrays.asList(columns));
+    }
+
+    /**
+     * The names of the leading prefix of {@link #columns} that rows are clustered by.
+     */
+    public Builder clusteringColumns(List<String> clusteringColumns)
     {
       this.clusteringColumns = clusteringColumns;
       return this;
     }
 
-    public Builder clusteringColumns(DimensionSchema... clusteringColumns)
+    public Builder clusteringColumns(String... clusteringColumns)
     {
       return clusteringColumns(Arrays.asList(clusteringColumns));
-    }
-
-    /**
-     * Non-clustering dimensions (clustering columns are declared separately via {@link #clusteringColumns}).
-     */
-    public Builder dimensions(@Nullable List<DimensionSchema> nonClusteringDimensions)
-    {
-      this.nonClusteringDimensions = nonClusteringDimensions;
-      return this;
-    }
-
-    public Builder dimensions(DimensionSchema... nonClusteringDimensions)
-    {
-      return dimensions(Arrays.asList(nonClusteringDimensions));
-    }
-
-    public Builder metrics(@Nullable AggregatorFactory... metrics)
-    {
-      this.metrics = metrics;
-      return this;
-    }
-
-    public Builder ordering(@Nullable List<OrderBy> ordering)
-    {
-      this.ordering = ordering;
-      return this;
     }
 
     public ClusteredValueGroupsBaseTableProjectionSpec build()
     {
       return new ClusteredValueGroupsBaseTableProjectionSpec(
           virtualColumns,
-          clusteringColumns,
-          nonClusteringDimensions,
-          metrics,
-          ordering
+          columns,
+          clusteringColumns
       );
     }
   }

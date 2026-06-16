@@ -26,15 +26,14 @@ import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionS
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionary;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.SortedDimensionDictionary;
 import org.apache.druid.segment.StringDimensionDictionary;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -82,7 +81,6 @@ public final class OnHeapClusteredBaseTable
 
   // template state for instantiating new OnHeapClusterGroups
   private final List<DimensionSchema> nonClusteringDimensions;
-  private final AggregatorFactory[] aggregatorFactories;
   private final boolean rollup;
   private final int timePosition;
 
@@ -132,9 +130,8 @@ public final class OnHeapClusteredBaseTable
     this.inputRowHolder = inputRowHolder;
     this.rollup = rollup;
     this.timePosition = timePosition;
-    this.aggregatorFactories = spec.getMetrics() == null ? new AggregatorFactory[0] : spec.getMetrics();
     this.nonClusteringDimensions = Collections.unmodifiableList(
-        new ArrayList<>(spec.getNonClusteringDimensions())
+        new ArrayList<>(spec.getNonClusteringColumns())
     );
 
     final RowSignature.Builder sigBuilder = RowSignature.builder();
@@ -163,6 +160,7 @@ public final class OnHeapClusteredBaseTable
       AtomicLong totalSizeInBytes
   )
   {
+    final long clusteringDictSizeBefore = clusteringDictionariesSizeInBytes();
     final Object[] clusteringValues = new Object[clusteringColumns.size()];
     final List<Integer> clusteringValueIds = new ArrayList<>(clusteringColumns.size());
     for (int i = 0; i < clusteringColumns.size(); i++) {
@@ -176,7 +174,7 @@ public final class OnHeapClusteredBaseTable
       final Object raw = selector.getObject();
       Object coerced;
       try {
-        coerced = coerceClusteringValue(name, type, raw);
+        coerced = DimensionHandlerUtils.convertObjectToType(raw, type, true, name);
       }
       catch (ParseException pe) {
         parseExceptionMessages.add(pe.getMessage());
@@ -185,26 +183,58 @@ public final class OnHeapClusteredBaseTable
       clusteringValues[i] = coerced;
       clusteringValueIds.add(internClusteringValue(type, coerced));
     }
+    totalSizeInBytes.addAndGet(clusteringDictionariesSizeInBytes() - clusteringDictSizeBefore);
 
+    final boolean[] groupCreated = {false};
     final OnHeapClusterGroup group = groups.computeIfAbsent(
         clusteringValueIds,
-        ids -> new OnHeapClusterGroup(
-            this,
-            clusteringValues,
-            ids,
-            nonClusteringDimensions,
-            aggregatorFactories,
-            virtualColumns,
-            inputRowHolder,
-            rollup,
-            timePosition
-        )
+        ids -> {
+          groupCreated[0] = true;
+          return new OnHeapClusterGroup(
+              this,
+              clusteringValues,
+              ids,
+              nonClusteringDimensions,
+              virtualColumns,
+              inputRowHolder,
+              rollup,
+              timePosition
+          );
+        }
     );
+    if (groupCreated[0]) {
+      totalSizeInBytes.addAndGet(estimateNewGroupOverhead());
+    }
     final boolean isNewEntry = group.addToFacts(row, key.getTimestamp(), parseExceptionMessages, totalSizeInBytes);
     totalNumRows.incrementAndGet();
     minTimeMillis.accumulateAndGet(key.getTimestamp(), Math::min);
     maxTimeMillis.accumulateAndGet(key.getTimestamp(), Math::max);
     return isNewEntry;
+  }
+
+  /**
+   * Rough running-heap cost of a newly-created cluster group beyond its rows: the {@link #groups}-map node, the boxed
+   * clustering-id tuple held as the map key, the per-group clustering-values array, and the group object's fixed
+   * structures.
+   */
+  private long estimateNewGroupOverhead()
+  {
+    final int numClusteringColumns = clusteringColumns.size();
+    return OnheapIncrementalIndex.ROUGH_OVERHEAD_PER_MAP_ENTRY
+           + (long) numClusteringColumns * (Long.BYTES * 2 + Long.BYTES)
+           + Long.BYTES * 8L;
+  }
+
+  /**
+   * Total in-memory size of the shared per-type clustering dictionaries. Used to fold new-clustering-value growth into
+   * the running heap estimate (see {@link #addToFacts}).
+   */
+  private long clusteringDictionariesSizeInBytes()
+  {
+    return stringDictionary.sizeInBytes()
+           + longDictionary.sizeInBytes()
+           + doubleDictionary.sizeInBytes()
+           + floatDictionary.sizeInBytes();
   }
 
   /**
@@ -228,11 +258,6 @@ public final class OnHeapClusteredBaseTable
       throw new NoSuchElementException("no rows");
     }
     return maxTimeMillis.get();
-  }
-
-  public IncrementalIndex.InputRowHolder getInputRowHolder()
-  {
-    return inputRowHolder;
   }
 
   public ClusteredValueGroupsBaseTableProjectionSpec getSpec()
@@ -352,21 +377,14 @@ public final class OnHeapClusteredBaseTable
     // value order — so back-to-back group walking yields rows in the full segment ordering.
     groupSpecs.sort(BY_CLUSTERING_VALUE_IDS);
 
-    // Note: aggregator names are NOT included here — the schema's getColumnNames() appends them from the
-    // aggregators array.
-    final List<String> columnNames = new ArrayList<>();
-    columnNames.addAll(clusteringColumns.getColumnNames());
-    columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
-    for (DimensionSchema d : nonClusteringDimensions) {
-      if (!ColumnHolder.TIME_COLUMN_NAME.equals(d.getName())) {
-        columnNames.add(d.getName());
-      }
+    final List<String> columnNames = new ArrayList<>(spec.getColumns().size());
+    for (DimensionSchema d : spec.getColumns()) {
+      columnNames.add(d.getName());
     }
 
     return new ClusteredValueGroupsBaseTableSchema(
         spec.getVirtualColumns(),
         columnNames,
-        aggregatorFactories,
         spec.getOrdering(),
         clusteringColumns,
         null,
@@ -430,10 +448,10 @@ public final class OnHeapClusteredBaseTable
   }
 
   /**
-   * Intern an already-{@link #coerceClusteringValue coerced} clustering value into the segment-wide dictionary for
-   * its type, returning the insertion-order id (existing id on repeat, null handled natively by
-   * {@link DimensionDictionary}). The value's runtime class matches {@code type} by construction (the coercion step
-   * produces String/Long/Double/Float or null).
+   * Intern an already-coerced clustering value into the segment-wide dictionary for its type, returning the
+   * insertion-order id (existing id on repeat, null handled natively by {@link DimensionDictionary}). The value's
+   * runtime class matches {@code type} by construction ({@link DimensionHandlerUtils#convertObjectToType} produces
+   * String/Long/Double/Float or null).
    */
   private int internClusteringValue(ColumnType type, @Nullable Object value)
   {
@@ -450,82 +468,6 @@ public final class OnHeapClusteredBaseTable
       return floatDictionary.add((Float) value);
     }
     throw DruidException.defensive("unsupported clustering type [%s]", type);
-  }
-
-  /**
-   * Coerce a raw clustering value (read uncoerced from the input row) to its declared clustering type. Bad input
-   * data — a non-numeric string, or a non-scalar value, bound to a numeric clustering column — raises a recoverable
-   * {@link ParseException} (collected per row by {@link #addToFacts}, subject to {@code maxParseExceptions}), NOT a
-   * fatal defensive error. A genuinely unsupported clustering type (the type system should have rejected it upstream)
-   * stays a defensive error.
-   */
-  @Nullable
-  private static Object coerceClusteringValue(String columnName, ColumnType type, @Nullable Object raw)
-  {
-    if (raw == null) {
-      return null;
-    }
-    if (type.is(ValueType.STRING)) {
-      return raw instanceof String ? raw : raw.toString();
-    }
-    if (type.is(ValueType.LONG)) {
-      if (raw instanceof Number) {
-        return ((Number) raw).longValue();
-      }
-      if (raw instanceof String) {
-        try {
-          return Long.parseLong(((String) raw).trim());
-        }
-        catch (NumberFormatException e) {
-          throw unparseableClusteringValue(columnName, type, raw);
-        }
-      }
-      throw unparseableClusteringValue(columnName, type, raw);
-    }
-    if (type.is(ValueType.DOUBLE)) {
-      if (raw instanceof Number) {
-        return ((Number) raw).doubleValue();
-      }
-      if (raw instanceof String) {
-        try {
-          return Double.parseDouble(((String) raw).trim());
-        }
-        catch (NumberFormatException e) {
-          throw unparseableClusteringValue(columnName, type, raw);
-        }
-      }
-      throw unparseableClusteringValue(columnName, type, raw);
-    }
-    if (type.is(ValueType.FLOAT)) {
-      if (raw instanceof Number) {
-        return ((Number) raw).floatValue();
-      }
-      if (raw instanceof String) {
-        try {
-          return Float.parseFloat(((String) raw).trim());
-        }
-        catch (NumberFormatException e) {
-          throw unparseableClusteringValue(columnName, type, raw);
-        }
-      }
-      throw unparseableClusteringValue(columnName, type, raw);
-    }
-    throw DruidException.defensive(
-        "unsupported clustering column type [%s] for column [%s]",
-        type,
-        columnName
-    );
-  }
-
-  private static ParseException unparseableClusteringValue(String columnName, ColumnType type, Object raw)
-  {
-    return new ParseException(
-        String.valueOf(raw),
-        "Unparseable clustering value [%s] for column [%s] of type [%s]",
-        raw,
-        columnName,
-        type
-    );
   }
 
   private static VirtualColumns mergeVirtualColumns(

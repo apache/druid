@@ -21,11 +21,11 @@ package org.apache.druid.segment.incremental;
 
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
@@ -66,16 +66,18 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
   private static OnheapIncrementalIndex standardTwoGroup()
   {
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .dimensions(new StringDimensionSchema("region"))
-        .metrics(new CountAggregatorFactory("count"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     final IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
         .withMinTimestamp(T0)
         .withTimestampSpec(TIMESTAMP_SPEC)
         .withQueryGranularity(Granularities.NONE)
         .withDimensionsSpec(spec.getDimensionsSpec())
-        .withMetrics(new CountAggregatorFactory("count"))
         .withRollup(false)
         .withClusterSpec(spec)
         .build();
@@ -116,7 +118,7 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
   void testRowSignatureExposesClusteringAndNonClusteringColumns()
   {
     // Sink.getSignature() -> IncrementalIndexCursorFactory.getRowSignature() must expose the full logical schema
-    // for a clustered in-memory index (clustering + non-clustering + metrics + __time), not an empty signature.
+    // for a clustered in-memory index (clustering + non-clustering + __time), not an empty signature.
     try (OnheapIncrementalIndex index = standardTwoGroup()) {
       final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
       final RowSignature sig = factory.getRowSignature();
@@ -126,7 +128,6 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
           ColumnType.LONG,
           sig.getColumnType(ColumnHolder.TIME_COLUMN_NAME).orElseThrow()
       );
-      Assertions.assertEquals(ColumnType.LONG, sig.getColumnType("count").orElseThrow());
     }
   }
 

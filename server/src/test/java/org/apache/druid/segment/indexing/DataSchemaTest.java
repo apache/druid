@@ -871,9 +871,12 @@ class DataSchemaTest extends InitializedNullHandlingTest
   void testBaseTableModeJsonRoundTripOmitsLegacyTopLevelFields() throws IOException
   {
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .dimensions(new StringDimensionSchema("region"))
-        .metrics(new CountAggregatorFactory("rows"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     final DataSchema original = DataSchema.builder()
                                           .withDataSource("datasource")
@@ -900,8 +903,11 @@ class DataSchemaTest extends InitializedNullHandlingTest
   void testBaseTableModeLegacyAccessorsDelegateToSpec()
   {
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .metrics(new CountAggregatorFactory("rows"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     final DataSchema schema = DataSchema.builder()
                                         .withDataSource("datasource")
@@ -934,8 +940,11 @@ class DataSchemaTest extends InitializedNullHandlingTest
     );
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
         .virtualColumns(virtualColumns)
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .metrics(new CountAggregatorFactory("rows"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     final DataSchema schema = DataSchema.builder()
                                         .withDataSource("datasource")
@@ -977,8 +986,11 @@ class DataSchemaTest extends InitializedNullHandlingTest
   void testBaseTableSetAlongsideLegacySchemaFieldsRejected()
   {
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .metrics(new CountAggregatorFactory("rows"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     // A top-level *schema* field (granularitySpec here) alongside baseTable must reject loudly — the baseTable owns
     // the schema. (timestampSpec is exempt: it's parse-time and always lives top-level, see the baseTable-mode
@@ -1000,8 +1012,11 @@ class DataSchemaTest extends InitializedNullHandlingTest
   void testBaseTableModeSurvivesBuilderCopyRoundTrip()
   {
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .metrics(new CountAggregatorFactory("rows"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     final DataSchema schema = DataSchema.builder()
                                         .withDataSource("datasource")
@@ -1036,8 +1051,11 @@ class DataSchemaTest extends InitializedNullHandlingTest
     );
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
         .virtualColumns(virtualColumns)
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .metrics(new CountAggregatorFactory("rows"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     final DataSchema schema = DataSchema.builder()
                                         .withDataSource("datasource")
@@ -1066,8 +1084,11 @@ class DataSchemaTest extends InitializedNullHandlingTest
   void testWithDimensionsSpecRejectedInBaseTableMode()
   {
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .metrics(new CountAggregatorFactory("rows"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     final DataSchema schema = DataSchema.builder()
                                         .withDataSource("datasource")

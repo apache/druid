@@ -28,7 +28,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.VirtualColumn;
@@ -61,7 +60,6 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
 
   private final VirtualColumns virtualColumns;
   private final List<String> columnNames;
-  private final AggregatorFactory[] aggregators;
   private final List<OrderBy> ordering;
   private final RowSignature clusteringColumns;
   private final List<String> sharedColumns;
@@ -76,7 +74,6 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
   public ClusteredValueGroupsBaseTableSchema(
       @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
       @JsonProperty("columns") List<String> columns,
-      @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators,
       @JsonProperty("ordering") List<OrderBy> ordering,
       @JsonProperty("clusteringColumns") RowSignature clusteringColumns,
       @JsonProperty("sharedColumns") @Nullable List<String> sharedColumns,
@@ -142,7 +139,6 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
     }
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     this.columnNames = columns;
-    this.aggregators = aggregators == null ? new AggregatorFactory[0] : aggregators;
     this.ordering = ordering;
     this.clusteringColumns = clusteringColumns;
     this.sharedColumns = resolvedSharedColumns;
@@ -186,12 +182,7 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
   @Override
   public List<String> getColumnNames()
   {
-    List<String> columns = new ArrayList<>(columnNames.size() + aggregators.length);
-    columns.addAll(columnNames);
-    for (AggregatorFactory aggregator : aggregators) {
-      columns.add(aggregator.getName());
-    }
-    return columns;
+    return new ArrayList<>(columnNames);
   }
 
   @JsonProperty
@@ -205,13 +196,6 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
   public List<String> getColumns()
   {
     return columnNames;
-  }
-
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  public AggregatorFactory[] getAggregators()
-  {
-    return aggregators;
   }
 
   @JsonProperty
@@ -281,7 +265,7 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
   }
 
   /**
-   * Per-group column names: this summary's full column list (including aggregator names) minus the clustering columns.
+   * Per-group column names: this summary's full column list minus the clustering columns.
    */
   @JsonIgnore
   public List<String> getGroupColumnNames()
@@ -350,7 +334,7 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
   {
     return new Metadata(
         null,
-        aggregators,
+        null,
         null,
         effectiveGranularity,
         false,
@@ -390,7 +374,6 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
     ClusteredValueGroupsBaseTableSchema that = (ClusteredValueGroupsBaseTableSchema) o;
     return Objects.equals(virtualColumns, that.virtualColumns)
            && Objects.equals(columnNames, that.columnNames)
-           && Objects.deepEquals(aggregators, that.aggregators)
            && Objects.equals(ordering, that.ordering)
            && Objects.equals(clusteringColumns, that.clusteringColumns)
            && Objects.equals(sharedColumns, that.sharedColumns)
@@ -404,7 +387,6 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
     return Objects.hash(
         virtualColumns,
         columnNames,
-        Arrays.hashCode(aggregators),
         ordering,
         clusteringColumns,
         sharedColumns,
@@ -419,7 +401,6 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
     return "ClusteredValueGroupsBaseTableSchema{" +
            "virtualColumns=" + virtualColumns +
            ", columnNames=" + columnNames +
-           ", aggregators=" + Arrays.toString(aggregators) +
            ", ordering=" + ordering +
            ", clusteringColumns=" + clusteringColumns +
            ", sharedColumns=" + sharedColumns +

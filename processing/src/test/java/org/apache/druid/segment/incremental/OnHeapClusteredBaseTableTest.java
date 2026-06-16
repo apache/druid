@@ -22,7 +22,6 @@ package org.apache.druid.segment.incremental;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -31,7 +30,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.Metadata;
@@ -69,10 +67,7 @@ class OnHeapClusteredBaseTableTest extends InitializedNullHandlingTest
         .withMinTimestamp(T0)
         .withTimestampSpec(TIMESTAMP_SPEC)
         .withQueryGranularity(Granularities.NONE)
-        .withDimensionsSpec(DimensionsSpec.builder()
-                                          .setDimensions(spec.getDimensionsSpec().getDimensions())
-                                          .build())
-        .withMetrics(new CountAggregatorFactory("count"))
+        .withDimensionsSpec(spec.getDimensionsSpec())
         .withRollup(false)
         .withClusterSpec(spec)
         .build();
@@ -86,8 +81,12 @@ class OnHeapClusteredBaseTableTest extends InitializedNullHandlingTest
   void testSingleColumnStringClusteringRoutesRowsByValue()
   {
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .dimensions(new StringDimensionSchema("region"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     try (OnheapIncrementalIndex index = buildIndex(spec)) {
       index.add(row(T0, Map.of("tenant", "acme", "region", "us-east-1")));
@@ -113,11 +112,50 @@ class OnHeapClusteredBaseTableTest extends InitializedNullHandlingTest
   }
 
   @Test
+  void testNewClusterGroupsGrowHeapEstimate()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
+        .build();
+    try (OnheapIncrementalIndex index = buildIndex(spec)) {
+      index.add(row(T0, Map.of("tenant", "acme", "region", "us-west-2")));
+      final long afterFirst = index.getBytesInMemory().get();
+
+      // A row landing in the existing "acme" group pays only its own row size.
+      index.add(row(T0 + 1, Map.of("tenant", "acme", "region", "us-west-2")));
+      final long sameGroupDelta = index.getBytesInMemory().get() - afterFirst;
+      final long afterSameGroup = index.getBytesInMemory().get();
+
+      // A row creating a new "globex" group pays its row size plus the new group's key/structure and the new
+      // clustering value's dictionary bytes — so it grows the estimate strictly more than a same-group row of
+      // equivalent content.
+      index.add(row(T0 + 2, Map.of("tenant", "globex", "region", "us-west-2")));
+      final long newGroupDelta = index.getBytesInMemory().get() - afterSameGroup;
+
+      Assertions.assertTrue(sameGroupDelta > 0, "a row in an existing group should still grow the estimate");
+      Assertions.assertTrue(
+          newGroupDelta > sameGroupDelta,
+          "new-group row delta [" + newGroupDelta + "] should exceed same-group row delta [" + sameGroupDelta + "]"
+      );
+    }
+  }
+
+  @Test
   void testTwoColumnClusteringDistinguishesTuples()
   {
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"), new StringDimensionSchema("region"))
-        .dimensions(new StringDimensionSchema("metric"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new StringDimensionSchema("metric"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant", "region")
         .build();
     try (OnheapIncrementalIndex index = buildIndex(spec)) {
       index.add(row(T0, Map.of("tenant", "acme", "region", "us-east-1", "metric", "page-views")));
@@ -149,8 +187,13 @@ class OnHeapClusteredBaseTableTest extends InitializedNullHandlingTest
   void testMixedTypeClusteringUsesPerTypeDictionaries()
   {
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"), new LongDimensionSchema("priority"))
-        .dimensions(new StringDimensionSchema("metric"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("priority"),
+            new StringDimensionSchema("metric"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant", "priority")
         .build();
     try (OnheapIncrementalIndex index = buildIndex(spec)) {
       index.add(row(T0, Map.of("tenant", "acme", "priority", 5L, "metric", "x")));
@@ -175,8 +218,12 @@ class OnHeapClusteredBaseTableTest extends InitializedNullHandlingTest
   void testNullClusteringValueGetsItsOwnGroup()
   {
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .dimensions(new StringDimensionSchema("metric"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("metric"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     try (OnheapIncrementalIndex index = buildIndex(spec)) {
       final Map<String, Object> nullTenantRow = new HashMap<>();
@@ -212,8 +259,12 @@ class OnHeapClusteredBaseTableTest extends InitializedNullHandlingTest
     // Ingest in an order that exercises both insertion-order vs sorted-order ID assignment AND null handling.
     // Strings are inserted as: globex, null, acme → sorted-nulls-first: [null, acme, globex] = ids [0, 1, 2].
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .dimensions(new StringDimensionSchema("metric"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("metric"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     try (OnheapIncrementalIndex index = buildIndex(spec)) {
       index.add(row(T0, Map.of("tenant", "globex", "metric", "x")));
@@ -250,9 +301,12 @@ class OnHeapClusteredBaseTableTest extends InitializedNullHandlingTest
     //  - per-group row count
     //  - per-group ordering = segment ordering with clustering-prefix stripped
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .dimensions(new StringDimensionSchema("region"))
-        .metrics(new CountAggregatorFactory("count"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     try (OnheapIncrementalIndex index = buildIndex(spec)) {
       index.add(row(T0, Map.of("tenant", "acme", "region", "us-east-1")));
@@ -283,7 +337,8 @@ class OnHeapClusteredBaseTableTest extends InitializedNullHandlingTest
       final IndexableAdapter acmeAdapter = adapter.getClusterGroupAdapter(acmeSpec);
       Assertions.assertEquals(2, acmeAdapter.getNumRows());
       Assertions.assertEquals(List.of("region"), acmeAdapter.getDimensionNames(false));
-      Assertions.assertEquals(List.of("count"), acmeAdapter.getMetricNames());
+      // Clustered base tables have no metric columns.
+      Assertions.assertEquals(List.of(), acmeAdapter.getMetricNames());
 
       final IndexableAdapter globexAdapter = adapter.getClusterGroupAdapter(globexSpec);
       Assertions.assertEquals(1, globexAdapter.getNumRows());
@@ -304,8 +359,13 @@ class OnHeapClusteredBaseTableTest extends InitializedNullHandlingTest
     );
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
         .virtualColumns(VirtualColumns.create(lowerTenant))
-        .clusteringColumns(new StringDimensionSchema("tenant_lower"))
-        .dimensions(new StringDimensionSchema("tenant"), new StringDimensionSchema("metric"))
+        .columns(
+            new StringDimensionSchema("tenant_lower"),
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("metric"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant_lower")
         .build();
     try (OnheapIncrementalIndex index = buildIndex(spec)) {
       index.add(row(T0, Map.of("tenant", "Acme", "metric", "x")));
@@ -335,8 +395,12 @@ class OnHeapClusteredBaseTableTest extends InitializedNullHandlingTest
     // OnheapIncrementalIndex; returning the row count would let a row appended after a cursor snapshots this
     // value leak into that in-flight query.
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .dimensions(new StringDimensionSchema("region"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     try (OnheapIncrementalIndex index = buildIndex(spec)) {
       index.add(row(T0, Map.of("tenant", "acme", "region", "us-east-1")));
@@ -362,8 +426,12 @@ class OnHeapClusteredBaseTableTest extends InitializedNullHandlingTest
     // ConcurrentHashMap these must not throw or tear; the previous plain HashMap + ArrayList could throw
     // ConcurrentModificationException or read a half-resized structure.
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new StringDimensionSchema("tenant"))
-        .dimensions(new StringDimensionSchema("region"))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
         .build();
     final int numTenants = 4000;
     try (OnheapIncrementalIndex index = buildIndex(spec)) {
@@ -422,8 +490,13 @@ class OnHeapClusteredBaseTableTest extends InitializedNullHandlingTest
     // CSV/TSV (and string-typed JSON) deliver clustering values as Strings; numeric clustering columns must parse
     // them, not throw. Cluster on a DOUBLE and a FLOAT column whose row values arrive as Strings.
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new DoubleDimensionSchema("price"), new FloatDimensionSchema("rate"))
-        .dimensions(new StringDimensionSchema("region"))
+        .columns(
+            new DoubleDimensionSchema("price"),
+            new FloatDimensionSchema("rate"),
+            new StringDimensionSchema("region"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("price", "rate")
         .build();
     try (OnheapIncrementalIndex index = buildIndex(spec)) {
       index.add(row(T0, Map.of("price", "9.99", "rate", "0.5", "region", "us-east-1")));
@@ -449,8 +522,12 @@ class OnHeapClusteredBaseTableTest extends InitializedNullHandlingTest
     // as a recoverable ParseException (governed by maxParseExceptions) with the row still ingested into the null
     // group — not abort the whole task with a fatal/defensive error.
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
-        .clusteringColumns(new LongDimensionSchema("tenantId"))
-        .dimensions(new StringDimensionSchema("region"))
+        .columns(
+            new LongDimensionSchema("tenantId"),
+            new StringDimensionSchema("region"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenantId")
         .build();
     try (OnheapIncrementalIndex index = buildIndex(spec)) {
       final IncrementalIndexAddResult result =

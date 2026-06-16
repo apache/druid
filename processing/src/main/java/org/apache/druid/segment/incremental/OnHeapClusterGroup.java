@@ -25,9 +25,6 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.aggregation.Aggregator;
-import org.apache.druid.query.aggregation.AggregatorAndSize;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.EncodedKeyComponent;
@@ -38,7 +35,6 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -46,7 +42,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -61,8 +56,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * what gives the persisted segment the "share nothing across groups" property — at persist time each group's
  * dictionaries are written under its per-group file-bundle prefix.
  * <p>
- * Aggregator state is also per-group: rollup (when enabled) deduplicates within a group's facts holder, never
- * across groups, since two rows with different clustering tuples land in different groups by construction.
+ * Clustered base tables are never rollup and have no metric columns. When rollup is enabled, the facts holder
+ * deduplicates rows within a group (never across groups, since two rows with different clustering tuples land in
+ * different groups by construction); with no aggregators a rollup hit is simply a no-op dedup.
  */
 public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
 {
@@ -72,24 +68,19 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
 
   private final List<IncrementalIndex.DimensionDesc> dimensions;
   private final Map<String, IncrementalIndex.DimensionDesc> dimensionsMap;
-  private final Map<String, IncrementalIndex.MetricDesc> aggregatorsMap;
   private final Map<String, ColumnFormat> columnFormats;
-  private final AggregatorFactory[] aggregatorFactories;
   private final FactsHolder factsHolder;
-  private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
   private final AtomicInteger rowCounter = new AtomicInteger(0);
   private final AtomicInteger numEntries = new AtomicInteger(0);
   private final int groupTimePosition;
 
   private final ColumnSelectorFactory virtualSelectorFactory;
-  private final Map<String, ColumnSelectorFactory> aggSelectors;
 
   OnHeapClusterGroup(
       OnHeapClusteredBaseTable parent,
       Object[] clusteringValues,
       List<Integer> clusteringValueIds,
       List<DimensionSchema> nonClusteringDimensions,
-      AggregatorFactory[] aggregatorFactories,
       VirtualColumns virtualColumns,
       IncrementalIndex.InputRowHolder inputRowHolder,
       boolean rollup,
@@ -99,7 +90,6 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
     this.parent = parent;
     this.clusteringValues = clusteringValues;
     this.clusteringValueIds = Collections.unmodifiableList(new ArrayList<>(clusteringValueIds));
-    this.aggregatorFactories = aggregatorFactories;
 
     this.dimensions = new ArrayList<>(nonClusteringDimensions.size());
     this.dimensionsMap = new LinkedHashMap<>();
@@ -127,9 +117,6 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
     this.virtualSelectorFactory = new OnheapIncrementalIndex.CachingColumnSelectorFactory(
         IncrementalIndex.makeColumnSelectorFactory(virtualColumns, inputRowHolder, null)
     );
-    this.aggregatorsMap = new LinkedHashMap<>();
-    this.aggSelectors = new LinkedHashMap<>();
-    initializeAggregators(inputRowHolder);
   }
 
   /**
@@ -179,7 +166,7 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
   @Override
   public List<String> getMetricNames()
   {
-    return ImmutableList.copyOf(aggregatorsMap.keySet());
+    return List.of();
   }
 
   @Override
@@ -193,7 +180,7 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
   @Nullable
   public IncrementalIndex.MetricDesc getMetric(String columnName)
   {
-    return aggregatorsMap.get(columnName);
+    return null;
   }
 
   @Override
@@ -255,32 +242,32 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
   @Override
   public float getMetricFloatValue(int rowOffset, int aggOffset)
   {
-    return aggregators.get(rowOffset)[aggOffset].getFloat();
+    throw DruidException.defensive("clustered base table groups have no metrics");
   }
 
   @Override
   public long getMetricLongValue(int rowOffset, int aggOffset)
   {
-    return aggregators.get(rowOffset)[aggOffset].getLong();
+    throw DruidException.defensive("clustered base table groups have no metrics");
   }
 
   @Override
   public double getMetricDoubleValue(int rowOffset, int aggOffset)
   {
-    return aggregators.get(rowOffset)[aggOffset].getDouble();
+    throw DruidException.defensive("clustered base table groups have no metrics");
   }
 
   @Override
   @Nullable
   public Object getMetricObjectValue(int rowOffset, int aggOffset)
   {
-    return aggregators.get(rowOffset)[aggOffset].get();
+    throw DruidException.defensive("clustered base table groups have no metrics");
   }
 
   @Override
   public boolean isNull(int rowOffset, int aggOffset)
   {
-    return aggregators.get(rowOffset)[aggOffset].isNull();
+    throw DruidException.defensive("clustered base table groups have no metrics");
   }
 
   @Override
@@ -294,16 +281,7 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
     if (dim != null) {
       return dim.getCapabilities();
     }
-    final IncrementalIndex.MetricDesc metric = aggregatorsMap.get(column);
-    if (metric != null) {
-      return metric.getCapabilities();
-    }
     return null;
-  }
-
-  public AggregatorFactory[] getAggregatorFactories()
-  {
-    return aggregatorFactories;
   }
 
   /**
@@ -344,39 +322,18 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
     );
 
     final int priorIndex = factsHolder.getPriorIndex(subKey);
-    final Aggregator[] aggs;
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
-      aggs = aggregators.get(priorIndex);
-      final long aggSizeDelta = OnheapIncrementalIndex.doAggregate(
-          aggregatorFactories,
-          aggs,
-          parent.getInputRowHolder(),
-          parseExceptionMessages,
-          false
-      );
-      totalSizeInBytes.addAndGet(aggSizeDelta);
+      // with no metric columns there is nothing to aggregate
       return false;
     } else {
-      aggs = new Aggregator[aggregatorFactories.length];
-      long aggSizeForRow = factorizeAggs(aggs);
-      aggSizeForRow += OnheapIncrementalIndex.doAggregate(
-          aggregatorFactories,
-          aggs,
-          parent.getInputRowHolder(),
-          parseExceptionMessages,
-          false
-      );
       final int rowIndex = rowCounter.getAndIncrement();
-      aggregators.put(rowIndex, aggs);
       final int prev = factsHolder.putIfAbsent(subKey, rowIndex);
       if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
         numEntries.incrementAndGet();
       } else {
         throw DruidException.defensive("Encountered existing fact entry for new key in cluster group");
       }
-      final long rowSize = subKey.estimateBytesInMemory()
-                           + aggSizeForRow
-                           + OnheapIncrementalIndex.ROUGH_OVERHEAD_PER_MAP_ENTRY;
+      final long rowSize = subKey.estimateBytesInMemory() + OnheapIncrementalIndex.ROUGH_OVERHEAD_PER_MAP_ENTRY;
       totalSizeInBytes.addAndGet(rowSize);
       return true;
     }
@@ -399,40 +356,5 @@ public final class OnHeapClusterGroup implements IncrementalIndexRowSelector
       dimensionsMap.put(schema.getName(), desc);
       columnFormats.put(schema.getName(), desc.getIndexer().getFormat());
     }
-  }
-
-  private void initializeAggregators(IncrementalIndex.InputRowHolder inputRowHolder)
-  {
-    for (AggregatorFactory agg : aggregatorFactories) {
-      final IncrementalIndex.MetricDesc metricDesc = new IncrementalIndex.MetricDesc(aggregatorsMap.size(), agg);
-      aggregatorsMap.put(metricDesc.getName(), metricDesc);
-      columnFormats.put(
-          metricDesc.getName(),
-          new CapabilitiesBasedFormat(metricDesc.getCapabilities())
-      );
-      final ColumnSelectorFactory factory;
-      if (agg.getIntermediateType().is(ValueType.COMPLEX)) {
-        factory = new OnheapIncrementalIndex.CachingColumnSelectorFactory(
-            IncrementalIndex.makeColumnSelectorFactory(VirtualColumns.EMPTY, inputRowHolder, agg)
-        );
-      } else {
-        factory = virtualSelectorFactory;
-      }
-      aggSelectors.put(agg.getName(), factory);
-    }
-  }
-
-  private long factorizeAggs(Aggregator[] aggs)
-  {
-    long totalInitialSizeBytes = 0L;
-    final long aggReferenceSize = Long.BYTES;
-    for (int i = 0; i < aggregatorFactories.length; i++) {
-      final AggregatorFactory agg = aggregatorFactories[i];
-      final AggregatorAndSize aggregatorAndSize = agg.factorizeWithSize(aggSelectors.get(agg.getName()));
-      aggs[i] = aggregatorAndSize.getAggregator();
-      totalInitialSizeBytes += aggregatorAndSize.getInitialSizeBytes();
-      totalInitialSizeBytes += aggReferenceSize;
-    }
-    return totalInitialSizeBytes;
   }
 }
