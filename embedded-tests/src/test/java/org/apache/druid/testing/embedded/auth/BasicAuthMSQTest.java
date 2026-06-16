@@ -177,16 +177,18 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
 
     String exportQuery =
         StringUtils.format(
-            "INSERT INTO extern(%s(exportPath => '%s'))\n"
-            + "AS CSV\n"
-            + "SELECT page, added, delta\n"
-            + "FROM TABLE(\n"
-            + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"%s\"]}',\n"
-            + "    '{\"type\":\"json\"}',\n"
-            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
-            + "  )\n"
-            + ")\n",
+            """
+                INSERT INTO extern(%s(exportPath => '%s'))
+                AS CSV
+                SELECT page, added, delta
+                FROM TABLE(
+                  EXTERN(
+                    '{"type":"local","files":["%s"]}',
+                    '{"type":"json"}',
+                    '[{"type":"string","name":"timestamp"},{"type":"string","name":"isRobot"},{"type":"string","name":"diffUrl"},{"type":"long","name":"added"},{"type":"string","name":"countryIsoCode"},{"type":"string","name":"regionName"},{"type":"string","name":"channel"},{"type":"string","name":"flags"},{"type":"long","name":"delta"},{"type":"string","name":"isUnpatrolled"},{"type":"string","name":"isNew"},{"type":"double","name":"deltaBucket"},{"type":"string","name":"isMinor"},{"type":"string","name":"isAnonymous"},{"type":"long","name":"deleted"},{"type":"string","name":"cityName"},{"type":"long","name":"metroCode"},{"type":"string","name":"namespace"},{"type":"string","name":"comment"},{"type":"string","name":"page"},{"type":"long","name":"commentLength"},{"type":"string","name":"countryName"},{"type":"string","name":"user"},{"type":"string","name":"regionIsoCode"}]'
+                  )
+                )
+                """,
             LocalFileExportStorageProvider.TYPE_NAME,
             cluster.getTestFolder().getOrCreateFolder("msq-export").getAbsolutePath(),
             Resources.DataFile.tinyWiki1Json().getAbsolutePath()
@@ -210,16 +212,18 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
 
     String exportQuery =
         StringUtils.format(
-            "INSERT INTO extern(%s(exportPath => '%s'))\n"
-            + "AS CSV\n"
-            + "SELECT page, added, delta\n"
-            + "FROM TABLE(\n"
-            + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"%s\"]}',\n"
-            + "    '{\"type\":\"json\"}',\n"
-            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
-            + "  )\n"
-            + ")\n",
+            """
+                INSERT INTO extern(%s(exportPath => '%s'))
+                AS CSV
+                SELECT page, added, delta
+                FROM TABLE(
+                  EXTERN(
+                    '{"type":"local","files":["%s"]}',
+                    '{"type":"json"}',
+                    '[{"type":"string","name":"timestamp"},{"type":"string","name":"isRobot"},{"type":"string","name":"diffUrl"},{"type":"long","name":"added"},{"type":"string","name":"countryIsoCode"},{"type":"string","name":"regionName"},{"type":"string","name":"channel"},{"type":"string","name":"flags"},{"type":"long","name":"delta"},{"type":"string","name":"isUnpatrolled"},{"type":"string","name":"isNew"},{"type":"double","name":"deltaBucket"},{"type":"string","name":"isMinor"},{"type":"string","name":"isAnonymous"},{"type":"long","name":"deleted"},{"type":"string","name":"cityName"},{"type":"long","name":"metroCode"},{"type":"string","name":"namespace"},{"type":"string","name":"comment"},{"type":"string","name":"page"},{"type":"long","name":"commentLength"},{"type":"string","name":"countryName"},{"type":"string","name":"user"},{"type":"string","name":"regionIsoCode"}]'
+                  )
+                )
+                """,
             LocalFileExportStorageProvider.TYPE_NAME,
             new File(exportDirectory.get(), dataSource).getAbsolutePath(),
             Resources.DataFile.tinyWiki1Json()
@@ -258,7 +262,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
    * Asserts that submitting the SQL as an unauthorized user fails with 403 Forbidden. Retries on a
    * transient 401 (authentication not yet propagated); 403 is the expected result, so it is not.
    */
-  private void verifySqlSubmitFailsWith403Forbidden(String sql) throws Exception
+  private void verifySqlSubmitFailsWith403Forbidden(String sql)
   {
     try {
       RetryUtils.retry(
