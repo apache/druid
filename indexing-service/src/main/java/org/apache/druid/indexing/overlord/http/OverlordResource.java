@@ -60,6 +60,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.server.http.DynamicConfigEtagHelper;
 import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
@@ -426,7 +427,14 @@ public class OverlordResource
   @ResourceFilters(ConfigResourceFilter.class)
   public Response getWorkerConfig()
   {
-    return Response.ok(taskQueryTool.getLatestWorkerConfig()).build();
+    return DynamicConfigEtagHelper.buildReadResponseWithEtag(
+        () -> configManager.getCurrentBytes(WorkerBehaviorConfig.CONFIG_KEY),
+        currentBytes -> configManager.convertByteToConfig(
+            currentBytes,
+            WorkerBehaviorConfig.class,
+            null
+        )
+    );
   }
 
   /**
@@ -455,17 +463,23 @@ public class OverlordResource
       @Context final HttpServletRequest req
   )
   {
-    final SetResult setResult = configManager.set(
-        WorkerBehaviorConfig.CONFIG_KEY,
-        workerBehaviorConfig,
-        AuthorizationUtils.buildAuditInfo(req)
-    );
-    if (setResult.isOk()) {
-      log.info("Updating Worker configs: %s", workerBehaviorConfig);
+    try {
+      final SetResult setResult = configManager.setIfMatch(
+          WorkerBehaviorConfig.CONFIG_KEY,
+          DynamicConfigEtagHelper.getIfMatch(req),
+          workerBehaviorConfig,
+          AuthorizationUtils.buildAuditInfo(req)
+      );
+      if (setResult.isOk()) {
+        log.info("Updating Worker configs: %s", workerBehaviorConfig);
 
-      return Response.ok().build();
-    } else {
-      return Response.status(Response.Status.BAD_REQUEST).build();
+        return Response.ok().build();
+      } else {
+        return DynamicConfigEtagHelper.toErrorResponse(setResult);
+      }
+    }
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
     }
   }
 

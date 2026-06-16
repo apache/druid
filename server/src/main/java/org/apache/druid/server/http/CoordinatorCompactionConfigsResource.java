@@ -60,8 +60,9 @@ public class CoordinatorCompactionConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompactionConfig()
   {
-    return ServletResourceUtils.buildReadResponse(
-        configManager::getCurrentCompactionConfig
+    return DynamicConfigEtagHelper.buildReadResponseWithEtag(
+        configManager::getCurrentCompactionConfigBytes,
+        configManager::convertBytesToCompactionConfig
     );
   }
 
@@ -85,7 +86,12 @@ public class CoordinatorCompactionConfigsResource
 
     final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
     return ServletResourceUtils.buildUpdateResponse(
-        () -> configManager.updateCompactionTaskSlots(compactionTaskSlotRatio, maxCompactionTaskSlots, auditInfo)
+        () -> configManager.updateCompactionTaskSlots(
+            compactionTaskSlotRatio,
+            maxCompactionTaskSlots,
+            DynamicConfigEtagHelper.getIfMatch(req),
+            auditInfo
+        )
     );
   }
 
@@ -99,12 +105,13 @@ public class CoordinatorCompactionConfigsResource
   {
     final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
     return ServletResourceUtils.buildUpdateResponse(() -> {
+      final String ifMatch = DynamicConfigEtagHelper.getIfMatch(req);
       if (newConfig.getEngine() == CompactionEngine.MSQ) {
         throw InvalidInput.exception(
             "MSQ engine is supported only with supervisor-based compaction on the Overlord."
         );
       }
-      return configManager.updateDatasourceCompactionConfig(newConfig, auditInfo);
+      return configManager.updateDatasourceCompactionConfig(newConfig, ifMatch, auditInfo);
     });
   }
 
@@ -142,7 +149,11 @@ public class CoordinatorCompactionConfigsResource
   {
     final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
     return ServletResourceUtils.buildUpdateResponse(
-        () -> configManager.deleteDatasourceCompactionConfig(dataSource, auditInfo)
+        () -> configManager.deleteDatasourceCompactionConfig(
+            dataSource,
+            DynamicConfigEtagHelper.getIfMatch(req),
+            auditInfo
+        )
     );
   }
 }

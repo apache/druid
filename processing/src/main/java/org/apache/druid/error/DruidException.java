@@ -380,6 +380,11 @@ public class DruidException extends RuntimeException
      */
     CONFLICT(409),
     /**
+     * Indicates that the request could not be completed due to a conflict with
+     * headers supplied in the request and the current state of the target resource.
+     */
+    PRECONDITION_FAILED(412),
+    /**
      * Means that some capacity limit was exceeded, this could be due to throttling or due to some system limit
      */
     CAPACITY_EXCEEDED(429),

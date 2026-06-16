@@ -36,6 +36,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @ExtendWith(MockitoExtension.class)
 public class JacksonConfigManagerTest
@@ -75,6 +76,214 @@ public class JacksonConfigManagerTest
     ArgumentCaptor<AuditEntry> auditCapture = ArgumentCaptor.forClass(AuditEntry.class);
     Mockito.verify(mockAuditManager).doAudit(auditCapture.capture());
     Assertions.assertNotNull(auditCapture.getValue());
+  }
+
+  @Test
+  public void testSetIfMatchNullEtagDelegatesToUnconditionalSet()
+  {
+    String key = "key";
+    TestConfig val = new TestConfig("v", "s", 1);
+    AuditInfo auditInfo = new AuditInfo("a", "i", "c", "ip");
+    Mockito.when(mockConfigManager.set(
+        Mockito.eq(key),
+        Mockito.any(ConfigSerde.class),
+        Mockito.isNull(),
+        Mockito.eq(val)
+    )).thenReturn(ConfigManager.SetResult.ok());
+
+    ConfigManager.SetResult result = jacksonConfigManager.setIfMatch(key, null, val, auditInfo);
+
+    Assertions.assertTrue(result.isOk());
+    Mockito.verify(mockConfigManager).set(
+        Mockito.eq(key),
+        Mockito.any(ConfigSerde.class),
+        Mockito.isNull(),
+        Mockito.eq(val)
+    );
+  }
+
+  @Test
+  public void testSetIfMatchPreconditionPassesForMatchingEtag()
+  {
+    String key = "key";
+    TestConfig val = new TestConfig("v", "s", 1);
+    AuditInfo auditInfo = new AuditInfo("a", "i", "c", "ip");
+    byte[] currentBytes = "current".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    Mockito.when(mockConfigManager.isCompareAndSwapEnabled()).thenReturn(true);
+    Mockito.when(mockConfigManager.getCurrentBytes(key)).thenReturn(currentBytes);
+    Mockito.when(mockConfigManager.set(
+        Mockito.eq(key),
+        Mockito.any(ConfigSerde.class),
+        Mockito.eq(currentBytes),
+        Mockito.eq(val)
+    )).thenReturn(ConfigManager.SetResult.ok());
+
+    String etag = ConfigEtag.compute(currentBytes);
+    ConfigManager.SetResult result = jacksonConfigManager.setIfMatch(key, etag, val, auditInfo);
+
+    Assertions.assertTrue(result.isOk());
+    Assertions.assertFalse(result.isPreconditionFailed());
+    Mockito.verify(mockConfigManager).set(
+        Mockito.eq(key),
+        Mockito.any(ConfigSerde.class),
+        Mockito.eq(currentBytes),
+        Mockito.eq(val)
+    );
+  }
+
+  @Test
+  public void testSetIfMatchPreconditionFailsForMismatchedEtag()
+  {
+    String key = "key";
+    TestConfig val = new TestConfig("v", "s", 1);
+    AuditInfo auditInfo = new AuditInfo("a", "i", "c", "ip");
+    Mockito.when(mockConfigManager.isCompareAndSwapEnabled()).thenReturn(true);
+    Mockito.when(mockConfigManager.getCurrentBytes(key)).thenReturn("current".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+    ConfigManager.SetResult result = jacksonConfigManager.setIfMatch(
+        key,
+        ConfigEtag.compute("stale".getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+        val,
+        auditInfo
+    );
+
+    Assertions.assertFalse(result.isOk());
+    Assertions.assertTrue(result.isPreconditionFailed());
+    Mockito.verify(mockConfigManager, Mockito.never()).set(
+        Mockito.anyString(),
+        Mockito.any(ConfigSerde.class),
+        Mockito.any(byte[].class),
+        Mockito.any()
+    );
+  }
+
+  @Test
+  public void testSetIfMatchPreconditionFailsWhenCompareAndSwapDisabled()
+  {
+    final String key = "key";
+    final TestConfig val = new TestConfig("v", "s", 1);
+    final AuditInfo auditInfo = new AuditInfo("a", "i", "c", "ip");
+    Mockito.when(mockConfigManager.isCompareAndSwapEnabled()).thenReturn(false);
+
+    final ConfigManager.SetResult result = jacksonConfigManager.setIfMatch(key, "\"etag\"", val, auditInfo);
+
+    Assertions.assertFalse(result.isOk());
+    Assertions.assertTrue(result.isPreconditionFailed());
+    Mockito.verify(mockConfigManager, Mockito.never()).getCurrentBytes(Mockito.anyString());
+    Mockito.verify(mockConfigManager, Mockito.never()).set(
+        Mockito.anyString(),
+        Mockito.any(ConfigSerde.class),
+        Mockito.any(byte[].class),
+        Mockito.any()
+    );
+    Mockito.verify(mockAuditManager, Mockito.never()).doAudit(Mockito.any(AuditEntry.class));
+  }
+
+  @Test
+  public void testSetIfMatchTransformBuildsNewValueFromMatchedBytes()
+  {
+    final String key = "key";
+    final AuditInfo auditInfo = new AuditInfo("a", "i", "c", "ip");
+    final TestConfig current = new TestConfig("v1", "current", 1);
+    final TestConfig updated = new TestConfig("v1", "updated", 2);
+    final ConfigSerde<TestConfig> serde = jacksonConfigManager.create(TestConfig.class, null);
+    final byte[] currentBytes = serde.serialize(current);
+
+    Mockito.when(mockConfigManager.isCompareAndSwapEnabled()).thenReturn(true);
+    Mockito.when(mockConfigManager.getCurrentBytes(key)).thenReturn(currentBytes);
+    Mockito.when(mockConfigManager.set(
+        Mockito.eq(key),
+        Mockito.any(ConfigSerde.class),
+        Mockito.eq(currentBytes),
+        Mockito.eq(updated)
+    )).thenReturn(ConfigManager.SetResult.ok());
+
+    final ConfigManager.SetResult result = jacksonConfigManager.setIfMatch(
+        key,
+        ConfigEtag.compute(currentBytes),
+        TestConfig.class,
+        null,
+        currentValue -> new TestConfig(currentValue.getVersion(), "updated", currentValue.getSettingInt() + 1),
+        auditInfo
+    );
+
+    Assertions.assertTrue(result.isOk());
+    Mockito.verify(mockConfigManager).set(
+        Mockito.eq(key),
+        Mockito.any(ConfigSerde.class),
+        Mockito.eq(currentBytes),
+        Mockito.eq(updated)
+    );
+  }
+
+  @Test
+  public void testSetIfMatchTransformDoesNotApplyUpdateForMismatchedEtag()
+  {
+    final String key = "key";
+    final AuditInfo auditInfo = new AuditInfo("a", "i", "c", "ip");
+    final TestConfig current = new TestConfig("v1", "current", 1);
+    final ConfigSerde<TestConfig> serde = jacksonConfigManager.create(TestConfig.class, null);
+    final byte[] currentBytes = serde.serialize(current);
+    final AtomicBoolean updateCalled = new AtomicBoolean(false);
+
+    Mockito.when(mockConfigManager.isCompareAndSwapEnabled()).thenReturn(true);
+    Mockito.when(mockConfigManager.getCurrentBytes(key)).thenReturn(currentBytes);
+
+    final ConfigManager.SetResult result = jacksonConfigManager.setIfMatch(
+        key,
+        ConfigEtag.compute("stale".getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+        TestConfig.class,
+        null,
+        currentValue -> {
+          updateCalled.set(true);
+          return currentValue;
+        },
+        auditInfo
+    );
+
+    Assertions.assertFalse(result.isOk());
+    Assertions.assertTrue(result.isPreconditionFailed());
+    Assertions.assertFalse(updateCalled.get());
+    Mockito.verify(mockConfigManager, Mockito.never()).set(
+        Mockito.anyString(),
+        Mockito.any(ConfigSerde.class),
+        Mockito.any(byte[].class),
+        Mockito.any()
+    );
+    Mockito.verify(mockAuditManager, Mockito.never()).doAudit(Mockito.any(AuditEntry.class));
+  }
+
+  @Test
+  public void testSetIfMatchTransformPreconditionFailsWhenCompareAndSwapDisabled()
+  {
+    final String key = "key";
+    final AuditInfo auditInfo = new AuditInfo("a", "i", "c", "ip");
+    final AtomicBoolean updateCalled = new AtomicBoolean(false);
+    Mockito.when(mockConfigManager.isCompareAndSwapEnabled()).thenReturn(false);
+
+    final ConfigManager.SetResult result = jacksonConfigManager.setIfMatch(
+        key,
+        "\"etag\"",
+        TestConfig.class,
+        null,
+        currentValue -> {
+          updateCalled.set(true);
+          return currentValue;
+        },
+        auditInfo
+    );
+
+    Assertions.assertFalse(result.isOk());
+    Assertions.assertTrue(result.isPreconditionFailed());
+    Assertions.assertFalse(updateCalled.get());
+    Mockito.verify(mockConfigManager, Mockito.never()).getCurrentBytes(Mockito.anyString());
+    Mockito.verify(mockConfigManager, Mockito.never()).set(
+        Mockito.anyString(),
+        Mockito.any(ConfigSerde.class),
+        Mockito.any(byte[].class),
+        Mockito.any()
+    );
+    Mockito.verify(mockAuditManager, Mockito.never()).doAudit(Mockito.any(AuditEntry.class));
   }
 
   @Test

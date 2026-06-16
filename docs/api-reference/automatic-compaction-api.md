@@ -37,6 +37,14 @@ Instead of the automatic compaction API, you can use the supervisor API to submi
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
+## Concurrency control with ETag and If-Match
+
+The automatic compaction write endpoints support optimistic concurrency control using HTTP `ETag` and `If-Match`. `GET /druid/coordinator/v1/config/compaction` returns an `ETag` header whose value is a stable hash of the underlying compaction configuration document (the union of cluster-level config and all per-datasource configs).
+
+To guard a write against concurrent updates, pass the most recently observed ETag back in an `If-Match` header on `POST` or `DELETE`. The change only commits if the stored configuration still hashes to that ETag; otherwise the request fails with `412 Precondition Failed`. Re-`GET` to obtain the new value and ETag, re-apply your change, and retry. The `If-Match` header is optional; requests without it preserve the previous last-writer-wins behavior. `If-Match: *` matches any existing configuration.
+
+Endpoints with this behavior: `POST /druid/coordinator/v1/config/compaction`, `DELETE /druid/coordinator/v1/config/compaction/{dataSource}`, `POST /druid/coordinator/v1/config/compaction/taskslots`, and the unified `POST /druid/indexer/v1/compaction/config/cluster`. See the equivalent section in the [Dynamic configuration API](./dynamic-configuration-api.md#concurrency-control-with-etag-and-if-match) for the general protocol and a client-flow example.
+
 ## Manage automatic compaction
 
 ### Create or update automatic compaction configuration
@@ -51,6 +59,12 @@ Note that this endpoint returns an HTTP `200 OK` message code even if the dataso
 
 `POST` `/druid/coordinator/v1/config/compaction`
 
+#### Header parameters
+
+* `If-Match`
+  * Type: String
+  * Optional. Quoted ETag previously returned by `GET /druid/coordinator/v1/config/compaction`. When supplied, the update only commits if the stored compaction configuration still matches this ETag. Pass `*` to require only that some value is already stored. See [Concurrency control with ETag and If-Match](#concurrency-control-with-etag-and-if-match).
+
 #### Responses
 
 <Tabs>
@@ -59,6 +73,12 @@ Note that this endpoint returns an HTTP `200 OK` message code even if the dataso
 
 
 *Successfully submitted auto compaction configuration*
+
+</TabItem>
+<TabItem value="1b" label="412 PRECONDITION FAILED">
+
+
+*The `If-Match` header did not match the currently stored configuration, or another writer committed a change between this request's precondition check and write. Re-read the configuration and retry.*
 
 </TabItem>
 </Tabs>
@@ -140,6 +160,12 @@ Removes the automatic compaction configuration for a datasource. This updates th
 
 `DELETE` `/druid/coordinator/v1/config/compaction/{dataSource}`
 
+#### Header parameters
+
+* `If-Match`
+  * Type: String
+  * Optional. Quoted ETag previously returned by `GET /druid/coordinator/v1/config/compaction`. When supplied, the delete only commits if the stored compaction configuration still matches this ETag. See [Concurrency control with ETag and If-Match](#concurrency-control-with-etag-and-if-match).
+
 #### Responses
 
 <Tabs>
@@ -154,6 +180,12 @@ Removes the automatic compaction configuration for a datasource. This updates th
 
 
 *Datasource does not have automatic compaction or invalid datasource name*
+
+</TabItem>
+<TabItem value="5b" label="412 PRECONDITION FAILED">
+
+
+*The `If-Match` header did not match the currently stored configuration, or another writer committed a change between this request's precondition check and write. Re-read the configuration and retry.*
 
 </TabItem>
 </Tabs>
@@ -215,6 +247,12 @@ To limit the maximum number of compaction tasks, use the optional query paramete
   * Default: 2147483647
   * Limits the maximum number of task slots for compaction tasks.
 
+#### Header parameters
+
+* `If-Match`
+  * Type: String
+  * Optional. Quoted ETag previously returned by `GET /druid/coordinator/v1/config/compaction`. When supplied, the update only commits if the stored compaction configuration still matches this ETag. See [Concurrency control with ETag and If-Match](#concurrency-control-with-etag-and-if-match).
+
 #### Responses
 
 <Tabs>
@@ -229,6 +267,12 @@ To limit the maximum number of compaction tasks, use the optional query paramete
 
 
 *Invalid `max` value*
+
+</TabItem>
+<TabItem value="9b" label="412 PRECONDITION FAILED">
+
+
+*The `If-Match` header did not match the currently stored configuration, or another writer committed a change between this request's precondition check and write. Re-read the configuration and retry.*
 
 </TabItem>
 </Tabs>
@@ -270,6 +314,8 @@ Retrieves all automatic compaction configurations. Returns a `compactionConfigs`
 
 You can use this endpoint to retrieve `compactionTaskSlotRatio` and `maxCompactionTaskSlots` values for managing resource allocation of compaction tasks.
 
+The response includes an `ETag` header that you can pass back in `If-Match` on a subsequent write to detect concurrent updates; see [Concurrency control with ETag and If-Match](#concurrency-control-with-etag-and-if-match).
+
 #### URL
 
 `GET` `/druid/coordinator/v1/config/compaction`
@@ -281,7 +327,7 @@ You can use this endpoint to retrieve `compactionTaskSlotRatio` and `maxCompacti
 <TabItem value="12" label="200 SUCCESS">
 
 
-*Successfully retrieved automatic compaction configurations*
+*Successfully retrieved automatic compaction configurations. The `ETag` response header carries an opaque identifier for the returned configuration version.*
 
 </TabItem>
 </Tabs>
@@ -926,6 +972,12 @@ This policy specifies the datasources and intervals eligible for compaction and 
 
 `POST` `/druid/indexer/v1/compaction/config/cluster`
 
+#### Header parameters
+
+* `If-Match`
+  * Type: String
+  * Optional. Quoted ETag previously returned by `GET /druid/indexer/v1/compaction/config/cluster` (or `GET /druid/coordinator/v1/config/compaction`, since both reflect the same underlying configuration). When supplied, the update only commits if the stored configuration still matches this ETag. See [Concurrency control with ETag and If-Match](#concurrency-control-with-etag-and-if-match).
+
 #### Responses
 
 <Tabs>
@@ -940,6 +992,12 @@ This policy specifies the datasources and intervals eligible for compaction and 
 
 
 *Invalid `max` value*
+
+</TabItem>
+<TabItem value="9b" label="412 PRECONDITION FAILED">
+
+
+*The `If-Match` header did not match the currently stored configuration, or another writer committed a change between this request's precondition check and write. Re-read the configuration and retry.*
 
 </TabItem>
 </Tabs>
@@ -1002,6 +1060,8 @@ A successful request returns an HTTP `200 OK` message code and an empty response
 Retrieves cluster-level configuration for compaction tasks which applies to all datasources, unless explicitly overridden in the datasource compaction config.
 This includes all the fields listed in [Update cluster-level compaction config](#update-cluster-level-compaction-config).
 
+The response includes an `ETag` header that you can pass back in `If-Match` on a subsequent write; see [Concurrency control with ETag and If-Match](#concurrency-control-with-etag-and-if-match).
+
 #### URL
 
 `GET` `/druid/indexer/v1/compaction/config/cluster`
@@ -1012,7 +1072,7 @@ This includes all the fields listed in [Update cluster-level compaction config](
 
 <TabItem value="8" label="200 SUCCESS">
 
-*Successfully retrieved cluster compaction configuration*
+*Successfully retrieved cluster compaction configuration. The `ETag` response header carries an opaque identifier for the returned configuration version.*
 
 </TabItem>
 </Tabs>
