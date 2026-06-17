@@ -23,9 +23,11 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -97,6 +99,9 @@ public interface DataSourceCompactionConfig
   List<AggregateProjectionSpec> getProjections();
 
   @Nullable
+  BaseTableProjectionSpec getBaseTable();
+
+  @Nullable
   CompactionTransformSpec getTransformSpec();
 
   @Nullable
@@ -140,8 +145,25 @@ public interface DataSourceCompactionConfig
 
     CompactionTransformSpec transformSpec = getTransformSpec();
 
+    List<AggregateProjectionSpec> projections = getProjections();
+
     GranularitySpec granularitySpec = null;
-    if (getGranularitySpec() != null) {
+    SegmentGranularitySpec segmentGranularitySpec = null;
+    BaseTableProjectionSpec baseTable = getBaseTable();
+    if (baseTable != null) {
+      // baseTable (clustered) mode: segment granularity goes in a SegmentGranularitySpec and query granularity lives in
+      // the baseTable spec's virtual column. The effective baseTable carries the configured query granularity so the
+      // expected state matches the recorded effective spec.
+      // (intervals=null here mirrors the existing legacy behavior; the fingerprint-vs-recorded intervals discrepancy is
+      // a known separate bug.)
+      segmentGranularitySpec = new SegmentGranularitySpec(
+          getGranularitySpec() == null ? null : getGranularitySpec().getSegmentGranularity(),
+          null  // intervals
+      );
+      baseTable = baseTable.withQueryGranularity(
+          getGranularitySpec() == null ? null : getGranularitySpec().getQueryGranularity()
+      );
+    } else if (getGranularitySpec() != null) {
       UserCompactionTaskGranularityConfig userGranularityConfig = getGranularitySpec();
       granularitySpec = new UniformGranularitySpec(
           userGranularityConfig.getSegmentGranularity(),
@@ -151,8 +173,6 @@ public interface DataSourceCompactionConfig
       );
     }
 
-    List<AggregateProjectionSpec> projections = getProjections();
-
     return new CompactionState(
         partitionsSpec,
         dimensionsSpec,
@@ -160,6 +180,8 @@ public interface DataSourceCompactionConfig
         transformSpec,
         indexSpec,
         granularitySpec,
+        segmentGranularitySpec,
+        baseTable,
         projections
     );
   }

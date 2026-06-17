@@ -21,10 +21,12 @@ package org.apache.druid.server.compaction;
 
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -239,7 +241,7 @@ public class CompactionStatusTest
   {
     final PartitionsSpec requiredPartitionsSpec = new DynamicPartitionsSpec(5_000_000, null);
     verifyCompactionStatusIsPendingBecause(
-        new CompactionState(null, null, null, null, null, null, null),
+        new CompactionState(null, null, null, null, null, null, null, null, null),
         InlineSchemaDataSourceCompactionConfig
             .builder()
             .withTuningConfig(createTuningConfig(requiredPartitionsSpec, null))
@@ -256,7 +258,7 @@ public class CompactionStatusTest
     final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
 
     final CompactionState lastCompactionState
-        = new CompactionState(currentPartitionsSpec, null, null, null, null, null, null);
+        = new CompactionState(currentPartitionsSpec, null, null, null, null, null, null, null, null);
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .withTuningConfig(createTuningConfig(requiredPartitionsSpec, null))
@@ -284,6 +286,8 @@ public class CompactionStatusTest
         null,
         null,
         currentIndexSpec,
+        null,
+        null,
         null,
         null
     );
@@ -326,6 +330,8 @@ public class CompactionStatusTest
         null,
         currentIndexSpec,
         currentGranularitySpec,
+        null,
+        null,
         null
     );
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
@@ -357,6 +363,8 @@ public class CompactionStatusTest
         null,
         currentIndexSpec,
         currentGranularitySpec,
+        null,
+        null,
         null
     );
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
@@ -406,6 +414,8 @@ public class CompactionStatusTest
         null,
         currentIndexSpec,
         currentGranularitySpec,
+        null,
+        null,
         List.of(projection1)
     );
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
@@ -414,6 +424,51 @@ public class CompactionStatusTest
         .withTuningConfig(createTuningConfig(currentPartitionsSpec, currentIndexSpec))
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
         .withProjections(List.of(projection1))
+        .build();
+
+    final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
+    final CompactionStatus status = CompactionStatus.compute(
+        List.of(segment),
+        compactionConfig,
+        fingerprintMapper
+    );
+    Assert.assertTrue(status.isComplete());
+  }
+
+  @Test
+  public void testStatusWhenBaseTableMatchesWithQueryGranularity()
+  {
+    // The published segment records the EFFECTIVE baseTable (query-granularity virtual column baked in by
+    // CompactionTask.createDataSchema), while the config carries the query granularity via its granularitySpec plus a
+    // raw baseTable spec. The status check must apply the same withQueryGranularity before comparing, otherwise this
+    // would be perpetually "pending" (re-compacting every cycle).
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
+    final IndexSpec currentIndexSpec
+        = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
+    final ClusteredValueGroupsBaseTableProjectionSpec baseTable =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(new StringDimensionSchema("tenant"), new LongDimensionSchema("__time"))
+                                                   .clusteringColumns("tenant")
+                                                   .build();
+    // The published segment records baseTable mode: segment granularity in a SegmentGranularitySpec (null
+    // GranularitySpec) and query granularity in the effective baseTable's virtual column.
+    final CompactionState lastCompactionState = new CompactionState(
+        currentPartitionsSpec,
+        null,
+        null,
+        null,
+        currentIndexSpec,
+        null,
+        new SegmentGranularitySpec(Granularities.HOUR, null),
+        baseTable.withQueryGranularity(Granularities.HOUR),
+        null
+    );
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withTuningConfig(createTuningConfig(currentPartitionsSpec, currentIndexSpec))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, Granularities.HOUR, null))
+        .withBaseTable(baseTable)
         .build();
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
@@ -461,6 +516,8 @@ public class CompactionStatusTest
         null,
         currentIndexSpec,
         currentGranularitySpec,
+        null,
+        null,
         List.of(projection1)
     );
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
@@ -497,6 +554,8 @@ public class CompactionStatusTest
         transformSpec,
         IndexSpec.getDefault(),
         null,
+        null,
+        null,
         null
     );
     DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
@@ -529,6 +588,8 @@ public class CompactionStatusTest
         null,
         new CompactionTransformSpec(filter, VirtualColumns.create(oldVc)),
         IndexSpec.getDefault(),
+        null,
+        null,
         null,
         null
     );
@@ -600,6 +661,8 @@ public class CompactionStatusTest
         null,
         IndexSpec.getDefault().getEffectiveSpec(),
         currentGranularitySpec,
+        null,
+        null,
         Collections.emptyList()
     );
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
@@ -654,6 +717,8 @@ public class CompactionStatusTest
         null,
         IndexSpec.getDefault(),
         currentGranularitySpec,
+        null,
+        null,
         Collections.emptyList()
     );
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
@@ -986,6 +1051,8 @@ public class CompactionStatusTest
         null,
         IndexSpec.getDefault(),
         new UniformGranularitySpec(segmentGranularity, null, null, null),
+        null,
+        null,
         null
     );
   }

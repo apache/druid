@@ -24,7 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -500,5 +503,34 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
     Assert.assertEquals(config.getMetricsSpec(), fromJson.getMetricsSpec());
+  }
+
+  @Test
+  public void testSerdeBaseTable() throws IOException
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec baseTable =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new LongDimensionSchema("__time")
+                                                   )
+                                                   .clusteringColumns("tenant")
+                                                   .build();
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withEngine(CompactionEngine.MSQ)
+        .withBaseTable(baseTable)
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
+    final String json = OBJECT_MAPPER.writeValueAsString(config);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
+
+    Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
+    Assert.assertEquals(config.getBaseTable(), fromJson.getBaseTable());
+    Assert.assertEquals(baseTable, fromJson.getBaseTable());
+    Assert.assertEquals(config, fromJson);
   }
 }

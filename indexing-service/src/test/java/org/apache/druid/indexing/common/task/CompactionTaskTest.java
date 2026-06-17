@@ -803,6 +803,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -861,6 +862,7 @@ public class CompactionTaskTest
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        null,
         null,
         null,
         null,
@@ -930,6 +932,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -990,6 +993,7 @@ public class CompactionTaskTest
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        null,
         null,
         null,
         null,
@@ -1067,6 +1071,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1119,6 +1124,7 @@ public class CompactionTaskTest
         customMetricsSpec,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1159,6 +1165,7 @@ public class CompactionTaskTest
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        null,
         null,
         null,
         null,
@@ -1216,6 +1223,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1242,6 +1250,7 @@ public class CompactionTaskTest
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        null,
         null,
         null,
         null,
@@ -1290,6 +1299,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1335,6 +1345,7 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
+        null,
         null,
         METRIC_BUILDER,
         false
@@ -1383,6 +1394,7 @@ public class CompactionTaskTest
             null
         ),
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1427,6 +1439,7 @@ public class CompactionTaskTest
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        null,
         null,
         null,
         null,
@@ -1479,6 +1492,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1526,6 +1540,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, true),
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1557,6 +1572,7 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
+        null,
         null,
         METRIC_BUILDER,
         false
@@ -1591,6 +1607,7 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
+        null,
         null,
         METRIC_BUILDER,
         true

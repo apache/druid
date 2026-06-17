@@ -389,6 +389,8 @@ public class ReindexingDeletionRuleOptimizerTest
         transformSpec,
         IndexSpec.getDefault(),
         null,
+        null,
+        null,
         null
     );
   }
@@ -405,6 +407,8 @@ public class ReindexingDeletionRuleOptimizerTest
         transformSpec,
         IndexSpec.getDefault(),
         null,
+        null,
+        null,
         null
     );
   }
@@ -417,6 +421,8 @@ public class ReindexingDeletionRuleOptimizerTest
         null,
         null,
         IndexSpec.getDefault(),
+        null,
+        null,
         null,
         null
     );

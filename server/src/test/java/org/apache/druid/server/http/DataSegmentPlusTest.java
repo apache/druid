@@ -114,6 +114,8 @@ public class DataSegmentPlusTest
                        ),
                        MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
                        MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                       null,
+                       null,
                        null
                    ))
                    .indexingStateFingerprint(indexingStateFingerprint)

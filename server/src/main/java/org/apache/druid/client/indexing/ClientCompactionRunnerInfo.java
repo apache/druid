@@ -99,6 +99,11 @@ public class ClientCompactionRunnerInfo
   {
     CompactionEngine compactionEngine = newConfig.getEngine() == null ? defaultCompactionEngine : newConfig.getEngine();
     if (compactionEngine == CompactionEngine.NATIVE) {
+      if (newConfig.getBaseTable() != null) {
+        return CompactionConfigValidationResult.failure(
+            "Compaction engine[native] does not support 'baseTable'; use the MSQ compaction engine."
+        );
+      }
       return CompactionConfigValidationResult.success();
     } else {
       return compactionConfigSupportedByMSQEngine(newConfig);

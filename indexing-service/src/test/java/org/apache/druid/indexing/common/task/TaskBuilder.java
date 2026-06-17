@@ -449,6 +449,7 @@ public abstract class TaskBuilder<
           segmentGranularity,
           granularitySpec,
           null,
+          null,
           tuningConfig.build(),
           null,
           null,
