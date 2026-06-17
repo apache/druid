@@ -22,6 +22,7 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -41,13 +42,29 @@ import java.util.Objects;
 public class StreamingPartitionsSpec
 {
   private final List<String> partitionDimensions;
+  @Nullable
+  private final Integer maxValuesPerDimension;
 
   @JsonCreator
   public StreamingPartitionsSpec(
-      @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions
+      @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
+      @JsonProperty("maxValuesPerDimension") @Nullable Integer maxValuesPerDimension
   )
   {
     this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
+    if (maxValuesPerDimension != null) {
+      Preconditions.checkArgument(
+          maxValuesPerDimension > 0,
+          "maxValuesPerDimension must be > 0, got [%s]",
+          maxValuesPerDimension
+      );
+    }
+    this.maxValuesPerDimension = maxValuesPerDimension;
+  }
+
+  public StreamingPartitionsSpec(@Nullable List<String> partitionDimensions)
+  {
+    this(partitionDimensions, null);
   }
 
   @JsonProperty
@@ -55,6 +72,14 @@ public class StreamingPartitionsSpec
   public List<String> getPartitionDimensions()
   {
     return partitionDimensions;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Integer getMaxValuesPerDimension()
+  {
+    return maxValuesPerDimension;
   }
 
   @Override
@@ -67,23 +92,33 @@ public class StreamingPartitionsSpec
       return false;
     }
     StreamingPartitionsSpec that = (StreamingPartitionsSpec) o;
-    return Objects.equals(partitionDimensions, that.partitionDimensions);
+    return Objects.equals(partitionDimensions, that.partitionDimensions)
+           && Objects.equals(maxValuesPerDimension, that.maxValuesPerDimension);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(partitionDimensions);
+    return Objects.hash(partitionDimensions, maxValuesPerDimension);
   }
 
   @Override
   public String toString()
   {
-    return "StreamingPartitionsSpec{partitionDimensions=" + partitionDimensions + '}';
+    return "StreamingPartitionsSpec{"
+           + "partitionDimensions=" + partitionDimensions
+           + ", maxValuesPerDimension=" + maxValuesPerDimension
+           + '}';
   }
 
   public static List<String> getPartitionDimensionsOrEmpty(@Nullable StreamingPartitionsSpec spec)
   {
     return spec == null ? List.of() : spec.getPartitionDimensions();
+  }
+
+  @Nullable
+  public static Integer getMaxValuesPerDimensionOrNull(@Nullable StreamingPartitionsSpec spec)
+  {
+    return spec == null ? null : spec.getMaxValuesPerDimension();
   }
 }
