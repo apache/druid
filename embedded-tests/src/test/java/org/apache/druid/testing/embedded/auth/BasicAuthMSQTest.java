@@ -245,48 +245,42 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   }
 
   /**
-   * Submits an MSQ task as {@link #USER_1}, retrying on a transient 401/403 while the Broker's
-   * auth cache catches up with the test setup.
+   * Submits an MSQ task as {@link #USER_1}.
    */
   private SqlTaskStatus submitSqlTaskWhenAuthorized(String sql) throws Exception
   {
     return RetryUtils.retry(
         () -> submitSqlTaskAsUser(sql),
-        BasicAuthMSQTest::isTransientAuthFailure,
+        e -> unauthorizedExceptionMatcher().matches(e) || forbiddenMessageMatcher().matches(e),
         AUTH_PROPAGATION_ATTEMPTS
     );
   }
 
   /**
-   * Asserts that submitting the SQL as an unauthorized user fails with 403 Forbidden. Retries on a
-   * transient 401 (authentication not yet propagated); 403 is the expected result, so it is not.
+   * Asserts that submitting SQL as an unauthorized user fails with 403 Forbidden.
    */
   private void verifySqlSubmitFailsWith403Forbidden(String sql)
   {
     try {
       RetryUtils.retry(
           () -> submitSqlTaskAsUser(sql),
-          e -> failedWithHttpError(e, "401 Unauthorized"),
+          e -> unauthorizedExceptionMatcher().matches(e),
           AUTH_PROPAGATION_ATTEMPTS
       );
       Assertions.fail("Expected submit to fail with 403 Forbidden");
     }
     catch (Exception e) {
-      MatcherAssert.assertThat(e, ExceptionMatcher.of(Exception.class).expectMessageContains("403 Forbidden"));
+      MatcherAssert.assertThat(e, forbiddenMessageMatcher());
     }
   }
 
-  /**
-   * Whether the error is a transient 401 (new user) or 403 (new permission) from the Broker's
-   * auth cache lagging behind the test setup.
-   */
-  private static boolean isTransientAuthFailure(Throwable t)
+  private static ExceptionMatcher unauthorizedExceptionMatcher()
   {
-    return failedWithHttpError(t, "401 Unauthorized") || failedWithHttpError(t, "403 Forbidden");
+    return ExceptionMatcher.of(Exception.class).expectMessageContains("401 Unauthorized");
   }
 
-  private static boolean failedWithHttpError(Throwable t, String httpError)
+  private static ExceptionMatcher forbiddenMessageMatcher()
   {
-    return ExceptionMatcher.of(Exception.class).expectMessageContains(httpError).matches(t);
+    return ExceptionMatcher.of(Exception.class).expectMessageContains("403 Forbidden");
   }
 }
