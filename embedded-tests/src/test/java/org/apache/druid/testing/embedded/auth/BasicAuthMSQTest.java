@@ -251,7 +251,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   {
     return RetryUtils.retry(
         () -> submitSqlTaskAsUser(sql),
-        e -> unauthorizedExceptionMatcher().matches(e) || forbiddenMessageMatcher().matches(e),
+        e -> unauthorizedExceptionMatcher().matches(e) || forbiddenExceptionMatcher().matches(e),
         AUTH_PROPAGATION_ATTEMPTS
     );
   }
@@ -270,7 +270,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
       Assertions.fail("Expected submit to fail with 403 Forbidden");
     }
     catch (Exception e) {
-      MatcherAssert.assertThat(e, forbiddenMessageMatcher());
+      MatcherAssert.assertThat(e, forbiddenExceptionMatcher());
     }
   }
 
@@ -279,7 +279,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
     return ExceptionMatcher.of(Exception.class).expectMessageContains("401 Unauthorized");
   }
 
-  private static ExceptionMatcher forbiddenMessageMatcher()
+  private static ExceptionMatcher forbiddenExceptionMatcher()
   {
     return ExceptionMatcher.of(Exception.class).expectMessageContains("403 Forbidden");
   }
