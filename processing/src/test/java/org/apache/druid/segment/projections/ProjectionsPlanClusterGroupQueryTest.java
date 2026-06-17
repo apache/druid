@@ -21,8 +21,6 @@ package org.apache.druid.segment.projections;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
@@ -66,7 +64,6 @@ class ProjectionsPlanClusterGroupQueryTest
     new ClusteredValueGroupsBaseTableSchema(
         VirtualColumns.EMPTY,
         List.of("tenant", ColumnHolder.TIME_COLUMN_NAME, "metric"),
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
         List.of(OrderBy.ascending("tenant"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         clustering,
         null,
@@ -86,7 +83,6 @@ class ProjectionsPlanClusterGroupQueryTest
     new ClusteredValueGroupsBaseTableSchema(
         VirtualColumns.EMPTY,
         List.of("priority", ColumnHolder.TIME_COLUMN_NAME, "metric"),
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
         List.of(OrderBy.ascending("priority"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         clustering,
         null,
@@ -109,7 +105,6 @@ class ProjectionsPlanClusterGroupQueryTest
     new ClusteredValueGroupsBaseTableSchema(
         VirtualColumns.EMPTY,
         List.of("tenant", "region", ColumnHolder.TIME_COLUMN_NAME, "metric"),
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
         List.of(
             OrderBy.ascending("tenant"),
             OrderBy.ascending("region"),
@@ -141,7 +136,6 @@ class ProjectionsPlanClusterGroupQueryTest
     new ClusteredValueGroupsBaseTableSchema(
         VirtualColumns.EMPTY,
         List.of("device_id", "region", ColumnHolder.TIME_COLUMN_NAME, "temperature"),
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
         List.of(
             OrderBy.ascending("device_id"),
             OrderBy.ascending("region"),
@@ -165,7 +159,6 @@ class ProjectionsPlanClusterGroupQueryTest
     new ClusteredValueGroupsBaseTableSchema(
         VirtualColumns.EMPTY,
         List.of("partition", ColumnHolder.TIME_COLUMN_NAME, "payload"),
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
         List.of(OrderBy.ascending("partition"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         clustering,
         null,
@@ -192,7 +185,6 @@ class ProjectionsPlanClusterGroupQueryTest
             )
         ),
         List.of("tenant_lower", ColumnHolder.TIME_COLUMN_NAME, "metric"),
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
         List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         clustering,
         null,

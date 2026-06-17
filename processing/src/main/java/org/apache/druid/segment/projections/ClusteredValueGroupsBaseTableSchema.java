@@ -28,7 +28,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.VirtualColumn;
@@ -36,6 +35,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -60,7 +60,6 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
 
   private final VirtualColumns virtualColumns;
   private final List<String> columnNames;
-  private final AggregatorFactory[] aggregators;
   private final List<OrderBy> ordering;
   private final RowSignature clusteringColumns;
   private final List<String> sharedColumns;
@@ -75,7 +74,6 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
   public ClusteredValueGroupsBaseTableSchema(
       @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
       @JsonProperty("columns") List<String> columns,
-      @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators,
       @JsonProperty("ordering") List<OrderBy> ordering,
       @JsonProperty("clusteringColumns") RowSignature clusteringColumns,
       @JsonProperty("sharedColumns") @Nullable List<String> sharedColumns,
@@ -141,7 +139,6 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
     }
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     this.columnNames = columns;
-    this.aggregators = aggregators == null ? new AggregatorFactory[0] : aggregators;
     this.ordering = ordering;
     this.clusteringColumns = clusteringColumns;
     this.sharedColumns = resolvedSharedColumns;
@@ -185,12 +182,7 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
   @Override
   public List<String> getColumnNames()
   {
-    List<String> columns = new ArrayList<>(columnNames.size() + aggregators.length);
-    columns.addAll(columnNames);
-    for (AggregatorFactory aggregator : aggregators) {
-      columns.add(aggregator.getName());
-    }
-    return columns;
+    return new ArrayList<>(columnNames);
   }
 
   @JsonProperty
@@ -204,13 +196,6 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
   public List<String> getColumns()
   {
     return columnNames;
-  }
-
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  public AggregatorFactory[] getAggregators()
-  {
-    return aggregators;
   }
 
   @JsonProperty
@@ -280,7 +265,7 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
   }
 
   /**
-   * Per-group column names: this summary's full column list (including aggregator names) minus the clustering columns.
+   * Per-group column names: this summary's full column list minus the clustering columns.
    */
   @JsonIgnore
   public List<String> getGroupColumnNames()
@@ -349,12 +334,31 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
   {
     return new Metadata(
         null,
-        aggregators,
+        null,
         null,
         effectiveGranularity,
         false,
         ordering,
-        projections
+        projections,
+        this
+    );
+  }
+
+  /**
+   * Convert {@link #clusterGroups} to {@link ClusterGroupTuples} for
+   * {@link org.apache.druid.timeline.DataSegment#getClusterGroups()}, to expose what cluster groups the segment
+   * contains to coordinators and brokers.
+   */
+  public ClusterGroupTuples toClusterGroupTuples()
+  {
+    final List<List<Object>> tuples = new ArrayList<>(clusterGroups.size());
+    for (TableClusterGroupSpec group : clusterGroups) {
+      tuples.add(Arrays.asList(group.lookupClusteringValues()));
+    }
+    return new ClusterGroupTuples(
+        clusteringColumns,
+        virtualColumns.isEmpty() ? null : virtualColumns,
+        tuples
     );
   }
 
@@ -370,7 +374,6 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
     ClusteredValueGroupsBaseTableSchema that = (ClusteredValueGroupsBaseTableSchema) o;
     return Objects.equals(virtualColumns, that.virtualColumns)
            && Objects.equals(columnNames, that.columnNames)
-           && Objects.deepEquals(aggregators, that.aggregators)
            && Objects.equals(ordering, that.ordering)
            && Objects.equals(clusteringColumns, that.clusteringColumns)
            && Objects.equals(sharedColumns, that.sharedColumns)
@@ -384,7 +387,6 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
     return Objects.hash(
         virtualColumns,
         columnNames,
-        Arrays.hashCode(aggregators),
         ordering,
         clusteringColumns,
         sharedColumns,
@@ -399,7 +401,6 @@ public class ClusteredValueGroupsBaseTableSchema implements BaseTableProjectionS
     return "ClusteredValueGroupsBaseTableSchema{" +
            "virtualColumns=" + virtualColumns +
            ", columnNames=" + columnNames +
-           ", aggregators=" + Arrays.toString(aggregators) +
            ", ordering=" + ordering +
            ", clusteringColumns=" + clusteringColumns +
            ", sharedColumns=" + sharedColumns +

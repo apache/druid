@@ -424,6 +424,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
             Granularities.NONE,
             Boolean.TRUE,
             makeOrderBys(ColumnHolder.TIME_COLUMN_NAME, "dim1", "dim2"),
+            null,
             null
         ),
         index.getMetadata()

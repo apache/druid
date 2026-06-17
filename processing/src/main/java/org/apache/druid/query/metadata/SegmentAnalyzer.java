@@ -134,8 +134,9 @@ public class SegmentAnalyzer
             analysis = analyzeNumericColumn(capabilities, numRows, Double.BYTES);
             break;
           case STRING:
-            if (index != null) {
-              analysis = analyzeStringColumn(capabilities, index.getColumnHolder(columnName));
+            final BaseColumnHolder stringHolder = index != null ? index.getColumnHolder(columnName) : null;
+            if (stringHolder != null) {
+              analysis = analyzeStringColumn(capabilities, stringHolder);
             } else {
               analysis = analyzeStringColumn(capabilities, columnInspector, cursorFactory, columnName);
             }

@@ -24,18 +24,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 class ClusteredValueGroupsBaseTableSchemaTest
@@ -66,11 +68,10 @@ class ClusteredValueGroupsBaseTableSchemaTest
   }
 
   @Test
-  void testColumnNamesIncludeClusteringColumnsAndAggregators()
+  void testColumnNamesIncludeClusteringColumns()
   {
-    // Summary carries the full logical signature, including clustering columns.
     Assertions.assertEquals(
-        List.of(ColumnHolder.TIME_COLUMN_NAME, TENANT_COL, PRIORITY_COL, REGION_COL, METRIC_COL, "count", "c"),
+        List.of(ColumnHolder.TIME_COLUMN_NAME, TENANT_COL, PRIORITY_COL, REGION_COL, METRIC_COL),
         newSchema(TENANT_SIGNATURE).getColumnNames()
     );
   }
@@ -91,7 +92,6 @@ class ClusteredValueGroupsBaseTableSchemaTest
     Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> new ClusteredValueGroupsBaseTableSchema(
-            null,
             null,
             null,
             List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
@@ -116,7 +116,6 @@ class ClusteredValueGroupsBaseTableSchemaTest
             null,
             List.of(ColumnHolder.TIME_COLUMN_NAME, TENANT_COL),
             null,
-            null,
             TENANT_SIGNATURE,
             null,
             null,
@@ -137,7 +136,6 @@ class ClusteredValueGroupsBaseTableSchemaTest
         () -> new ClusteredValueGroupsBaseTableSchema(
             null,
             List.of(ColumnHolder.TIME_COLUMN_NAME, TENANT_COL),
-            null,
             List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
             RowSignature.empty(),
             null,
@@ -159,7 +157,6 @@ class ClusteredValueGroupsBaseTableSchemaTest
         () -> new ClusteredValueGroupsBaseTableSchema(
             null,
             List.of(ColumnHolder.TIME_COLUMN_NAME, TENANT_COL),
-            null,
             List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
             RowSignature.builder().add("unknown", ColumnType.STRING).build(),
             null,
@@ -181,7 +178,6 @@ class ClusteredValueGroupsBaseTableSchemaTest
         () -> new ClusteredValueGroupsBaseTableSchema(
             null,
             List.of(ColumnHolder.TIME_COLUMN_NAME, "tenants"),
-            null,
             List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
             RowSignature.builder().add("tenants", ColumnType.STRING_ARRAY).build(),
             null,
@@ -202,7 +198,6 @@ class ClusteredValueGroupsBaseTableSchemaTest
     ClusteredValueGroupsBaseTableSchema schema = new ClusteredValueGroupsBaseTableSchema(
         VirtualColumns.EMPTY,
         List.of(ColumnHolder.TIME_COLUMN_NAME, TENANT_COL, REGION_COL),
-        null,
         List.of(OrderBy.ascending(TENANT_COL), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         TENANT_SIGNATURE,
         List.of(REGION_COL),
@@ -226,7 +221,6 @@ class ClusteredValueGroupsBaseTableSchemaTest
         () -> new ClusteredValueGroupsBaseTableSchema(
             null,
             List.of(ColumnHolder.TIME_COLUMN_NAME, TENANT_COL),
-            null,
             List.of(OrderBy.ascending(TENANT_COL), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
             TENANT_SIGNATURE,
             List.of("unknown"),
@@ -249,7 +243,6 @@ class ClusteredValueGroupsBaseTableSchemaTest
         () -> new ClusteredValueGroupsBaseTableSchema(
             null,
             List.of(ColumnHolder.TIME_COLUMN_NAME, TENANT_COL),
-            null,
             List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending(TENANT_COL)),
             TENANT_SIGNATURE,
             null,
@@ -269,7 +262,6 @@ class ClusteredValueGroupsBaseTableSchemaTest
         () -> new ClusteredValueGroupsBaseTableSchema(
             null,
             List.of(ColumnHolder.TIME_COLUMN_NAME, TENANT_COL, REGION_COL),
-            null,
             List.of(OrderBy.ascending(TENANT_COL)),
             RowSignature.builder()
                         .add(TENANT_COL, ColumnType.STRING)
@@ -293,7 +285,6 @@ class ClusteredValueGroupsBaseTableSchemaTest
     final ClusteredValueGroupsBaseTableSchema schema = new ClusteredValueGroupsBaseTableSchema(
         null,
         List.of(ColumnHolder.TIME_COLUMN_NAME, TENANT_COL),
-        null,
         List.of(OrderBy.ascending(TENANT_COL), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         TENANT_SIGNATURE,
         null,
@@ -335,10 +326,9 @@ class ClusteredValueGroupsBaseTableSchemaTest
   @Test
   void testGetGroupColumnNamesExcludesClusteringColumns()
   {
-    // Summary's columns are (__time, tenant, priority, region, metric); clustering=tenant → group view drops tenant
-    // (and adds aggregator names: count, c).
+    // Summary's columns are (__time, tenant, priority, region, metric); clustering=tenant → group view drops tenant.
     Assertions.assertEquals(
-        List.of(ColumnHolder.TIME_COLUMN_NAME, PRIORITY_COL, REGION_COL, METRIC_COL, "count", "c"),
+        List.of(ColumnHolder.TIME_COLUMN_NAME, PRIORITY_COL, REGION_COL, METRIC_COL),
         newSchema(TENANT_SIGNATURE).getGroupColumnNames()
     );
   }
@@ -352,6 +342,74 @@ class ClusteredValueGroupsBaseTableSchemaTest
         List.of(PRIORITY_COL, REGION_COL, METRIC_COL),
         newSchema(TENANT_SIGNATURE).getGroupDimensionNames()
     );
+  }
+
+  @Test
+  void testToClusterGroupTuples()
+  {
+    // (tenant STRING, priority LONG) clustering with two groups: (acme, 5) and (globex, 10). toClusterGroupTuples
+    // materializes one tuple per group from the dictionaries, in group order, for the broker/coordinator wire form.
+    final RowSignature clustering = RowSignature.builder()
+                                                .add(TENANT_COL, ColumnType.STRING)
+                                                .add(PRIORITY_COL, ColumnType.LONG)
+                                                .build();
+    final ClusteringDictionaries dicts = new ClusteringDictionaries(
+        List.of("acme", "globex"),
+        List.of(5L, 10L),
+        null,
+        null
+    );
+    final ClusteredValueGroupsBaseTableSchema schema = new ClusteredValueGroupsBaseTableSchema(
+        VirtualColumns.EMPTY,
+        List.of(TENANT_COL, PRIORITY_COL, ColumnHolder.TIME_COLUMN_NAME, REGION_COL),
+        List.of(
+            OrderBy.ascending(TENANT_COL),
+            OrderBy.ascending(PRIORITY_COL),
+            OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)
+        ),
+        clustering,
+        null,
+        dicts,
+        List.of(
+            new TableClusterGroupSpec(List.of(0, 0), 3),
+            new TableClusterGroupSpec(List.of(1, 1), 7)
+        )
+    );
+
+    final ClusterGroupTuples tuples = schema.toClusterGroupTuples();
+    Assertions.assertEquals(clustering, tuples.clusteringColumns());
+    Assertions.assertTrue(tuples.virtualColumns().isEmpty());
+    Assertions.assertEquals(
+        List.of(
+            Arrays.asList("acme", 5L),
+            Arrays.asList("globex", 10L)
+        ),
+        tuples.tuples()
+    );
+  }
+
+  @Test
+  void testToClusterGroupTuplesPreservesClusteringVirtualColumns()
+  {
+    // When the segment is clustered on a virtual column, the produced tuples carry those VCs so portable rules
+    // can resolve them by equivalence.
+    final VirtualColumns vcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("tenant_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final RowSignature clustering = RowSignature.builder().add("tenant_lower", ColumnType.STRING).build();
+    final ClusteredValueGroupsBaseTableSchema schema = new ClusteredValueGroupsBaseTableSchema(
+        vcs,
+        List.of("tenant_lower", ColumnHolder.TIME_COLUMN_NAME, REGION_COL),
+        List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
+        clustering,
+        null,
+        new ClusteringDictionaries(List.of("acme"), null, null, null),
+        List.of(new TableClusterGroupSpec(List.of(0), 1))
+    );
+
+    final ClusterGroupTuples tuples = schema.toClusterGroupTuples();
+    Assertions.assertEquals(vcs, tuples.virtualColumns());
+    Assertions.assertEquals(List.of(Collections.singletonList("acme")), tuples.tuples());
   }
 
   @Test
@@ -377,10 +435,6 @@ class ClusteredValueGroupsBaseTableSchemaTest
     return new ClusteredValueGroupsBaseTableSchema(
         VirtualColumns.EMPTY,
         List.of(ColumnHolder.TIME_COLUMN_NAME, TENANT_COL, PRIORITY_COL, REGION_COL, METRIC_COL),
-        new AggregatorFactory[]{
-            new CountAggregatorFactory("count"),
-            new LongSumAggregatorFactory("c", "c")
-        },
         ordering,
         clusteringColumns,
         null,
