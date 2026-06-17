@@ -60,9 +60,8 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   public static final String USER_1_PASSWORD = "password1";
 
   /**
-   * Attempts allowed for a request while basic-auth changes reach the Broker, which the
-   * Coordinator propagates asynchronously (a push plus a poll every
-   * {@code druid.auth.basic.common.pollingPeriod}).
+   * Attempts allowed for a request while basic-auth changes reach the broker, which the
+   * coordinator then propagates asynchronously.
    */
   private static final int AUTH_PROPAGATION_ATTEMPTS = 5;
 
