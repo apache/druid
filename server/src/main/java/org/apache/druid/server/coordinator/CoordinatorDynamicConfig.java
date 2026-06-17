@@ -203,9 +203,8 @@ public class CoordinatorDynamicConfig
       final Set<String> duplicateTiers = Sets.intersection(mappedTiers, seenTiers);
       if (!duplicateTiers.isEmpty()) {
         throw InvalidInput.exception(
-            "historicalTierAliases [%s] is invalid. Physical tier%s %s cannot belong to more than one alias.",
+            "historicalTierAliases [%s] is invalid. Physical tier(s) %s cannot belong to more than one alias.",
             this.historicalTierAliases,
-            duplicateTiers.size() > 1 ? "s" : "",
             duplicateTiers
         );
       }
