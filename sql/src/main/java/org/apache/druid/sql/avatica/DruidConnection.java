@@ -52,7 +52,6 @@ public class DruidConnection
   private final String connectionId;
   private final int maxStatements;
   private final Map<String, Object> userSecret;
-  private final String remoteAddress;
 
   /**
    * The set of context values for each query within this connection. In JDBC,
@@ -76,15 +75,13 @@ public class DruidConnection
       final String connectionId,
       final int maxStatements,
       final Map<String, Object> userSecret,
-      final Map<String, Object> sessionContext,
-      final String remoteAddress
+      final Map<String, Object> sessionContext
   )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId);
     this.maxStatements = maxStatements;
     this.userSecret = Collections.unmodifiableMap(userSecret);
     this.sessionContext = Collections.unmodifiableMap(sessionContext);
-    this.remoteAddress = remoteAddress;
   }
 
   public String getConnectionId()
@@ -102,15 +99,11 @@ public class DruidConnection
     return userSecret;
   }
 
-  public String remoteAddress()
-  {
-    return remoteAddress;
-  }
-
   public synchronized DruidJdbcStatement createStatement(
       final SqlStatementFactory sqlStatementFactory,
       final Map<String, Object> systemDefaultContext,
-      final ResultFetcherFactory fetcherFactory
+      final ResultFetcherFactory fetcherFactory,
+      final String remoteAddress
   )
   {
     final int statementId = statementCounter.incrementAndGet();
@@ -148,7 +141,8 @@ public class DruidConnection
       final SqlQueryPlus sqlQueryPlus,
       final Map<String, Object> systemDefaultContext,
       final long maxRowCount,
-      final ResultFetcherFactory fetcherFactory
+      final ResultFetcherFactory fetcherFactory,
+      final String remoteAddress
   )
   {
     final int statementId = statementCounter.incrementAndGet();

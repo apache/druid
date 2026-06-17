@@ -279,7 +279,12 @@ public class DruidMeta extends MetaImpl
   {
     try {
       final DruidJdbcStatement druidStatement = getDruidConnection(ch.id)
-          .createStatement(sqlStatementFactory, queryConfigProvider.getContext(), fetcherFactory);
+          .createStatement(
+              sqlStatementFactory,
+              queryConfigProvider.getContext(),
+              fetcherFactory,
+              THREAD_LOCAL_REMOTE_ADDRESS.get()
+          );
       return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
     }
     catch (Throwable t) {
@@ -312,7 +317,8 @@ public class DruidMeta extends MetaImpl
           sqlReq,
           queryConfigProvider.getContext(),
           maxRowCount,
-          fetcherFactory
+          fetcherFactory,
+          THREAD_LOCAL_REMOTE_ADDRESS.get()
       );
       stmt.prepare();
       LOG.debug("Successfully prepared statement [%s] for execution", stmt.getStatementId());
@@ -816,8 +822,6 @@ public class DruidMeta extends MetaImpl
       final Map<String, Object> context
   )
   {
-    String remoteAddress = THREAD_LOCAL_REMOTE_ADDRESS.get();
-
     if (connectionCount.incrementAndGet() > config.getMaxConnections()) {
       // O(connections) but we don't expect this to happen often (it's a last-ditch effort to clear out
       // abandoned connections) or to have too many connections.
@@ -846,7 +850,7 @@ public class DruidMeta extends MetaImpl
 
     final DruidConnection putResult = connections.putIfAbsent(
         connectionId,
-        new DruidConnection(connectionId, config.getMaxStatementsPerConnection(), userSecret, context, remoteAddress)
+        new DruidConnection(connectionId, config.getMaxStatementsPerConnection(), userSecret, context)
     );
 
     if (putResult != null) {
