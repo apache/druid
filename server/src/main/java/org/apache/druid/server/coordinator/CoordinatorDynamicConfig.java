@@ -37,6 +37,7 @@ import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -83,6 +84,13 @@ public class CoordinatorDynamicConfig
    * to servers in either tier.
    */
   private final Map<String, Set<String>> historicalTierAliases;
+
+  /**
+   * Reverse view of {@link #historicalTierAliases}: maps each physical tier name
+   * to the alias tier it belongs to. Derived in the constructor and used to tag
+   * coordinator metrics with their {@link Dimension#TIER_ALIAS}.
+   */
+  private final Map<String, String> tierToAliasName;
 
   /**
    * Stale pending segments belonging to the data sources in this list are not killed by {@code
@@ -184,6 +192,7 @@ public class CoordinatorDynamicConfig
 
     this.historicalTierAliases = Configs.valueOrDefault(historicalTierAliases, Map.of());
     final Set<String> aliasKeys = this.historicalTierAliases.keySet();
+    final Set<String> seenTiers = new HashSet<>();
     for (Set<String> mappedTiers : this.historicalTierAliases.values()) {
       if (!Sets.intersection(mappedTiers, aliasKeys).isEmpty()) {
         throw InvalidInput.exception(
@@ -191,7 +200,33 @@ public class CoordinatorDynamicConfig
             this.historicalTierAliases
         );
       }
+      final Set<String> duplicateTiers = Sets.intersection(mappedTiers, seenTiers);
+      if (!duplicateTiers.isEmpty()) {
+        throw InvalidInput.exception(
+            "historicalTierAliases [%s] is invalid. Physical tier%s %s cannot belong to more than one alias.",
+            this.historicalTierAliases,
+            duplicateTiers.size() > 1 ? "s" : "",
+            duplicateTiers
+        );
+      }
+      seenTiers.addAll(mappedTiers);
     }
+    this.tierToAliasName = computeTierToAliasName(this.historicalTierAliases);
+  }
+
+  /**
+   * Builds a reverse lookup from physical tier name to its alias tier name. Each
+   * physical tier belongs to at most one alias (enforced during validation), so
+   * the mapping is unambiguous.
+   */
+  private static Map<String, String> computeTierToAliasName(Map<String, Set<String>> aliases)
+  {
+    if (aliases.isEmpty()) {
+      return Map.of();
+    }
+    final Map<String, String> reverse = new HashMap<>();
+    aliases.forEach((alias, tiers) -> tiers.forEach(tier -> reverse.put(tier, alias)));
+    return reverse;
   }
 
   private Map<Dimension, String> validateDebugDimensions(Map<String, String> debugDimensions)
@@ -362,6 +397,17 @@ public class CoordinatorDynamicConfig
   public Map<String, Set<String>> getHistoricalTierAliases()
   {
     return historicalTierAliases;
+  }
+
+  /**
+   * Reverse view of {@link #getHistoricalTierAliases()} mapping each physical tier
+   * to the alias tier it belongs to. Used to tag coordinator metrics with
+   * {@link Dimension#TIER_ALIAS}. Not serialized; derived from {@code historicalTierAliases}.
+   */
+  @JsonIgnore
+  public Map<String, String> getTierToAliasName()
+  {
+    return tierToAliasName;
   }
 
   /**
