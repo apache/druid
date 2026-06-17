@@ -267,7 +267,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
     try {
       RetryUtils.retry(
           () -> submitSqlTaskAsUser(sql),
-          e -> messageContains(e, "401 Unauthorized"),
+          e -> failedWithHttpError(e, "401 Unauthorized"),
           AUTH_PROPAGATION_ATTEMPTS
       );
       Assertions.fail("Expected submit to fail with 403 Forbidden");
@@ -283,16 +283,11 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
    */
   private static boolean isTransientAuthFailure(Throwable t)
   {
-    return messageContains(t, "401 Unauthorized") || messageContains(t, "403 Forbidden");
+    return failedWithHttpError(t, "401 Unauthorized") || failedWithHttpError(t, "403 Forbidden");
   }
 
-  private static boolean messageContains(Throwable t, String text)
+  private static boolean failedWithHttpError(Throwable t, String httpError)
   {
-    for (Throwable cause = t; cause != null; cause = cause.getCause()) {
-      if (cause.getMessage() != null && cause.getMessage().contains(text)) {
-        return true;
-      }
-    }
-    return false;
+    return ExceptionMatcher.of(Exception.class).expectMessageContains(httpError).matches(t);
   }
 }
