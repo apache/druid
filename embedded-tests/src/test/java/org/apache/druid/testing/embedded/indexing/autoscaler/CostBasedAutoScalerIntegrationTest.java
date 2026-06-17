@@ -47,7 +47,12 @@ import org.junit.jupiter.api.Timeout;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.OPTIMAL_TASK_COUNT_METRIC;
 
@@ -60,6 +65,8 @@ import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.Cos
 public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 {
   private static final int PARTITION_COUNT = 50;
+  private static final int MAX_SCALE_UP_RECORD_BATCHES = 30;
+  private static final long SCALE_UP_PUBLISH_INTERVAL_MILLIS = 100;
 
   private String topic;
   private final KafkaResource kafkaServer = new KafkaResource();
@@ -183,6 +190,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
   @Test
   public void test_autoScaler_scalesUpAndDown_withSlowPublish()
+      throws Exception
   {
     final String topic = EmbeddedClusterApis.createTestDatasourceName();
     kafkaServer.createTopicWithPartitions(topic, 4);
@@ -216,41 +224,67 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .build(dataSource, topic);
     cluster.callApi().postSupervisor(supervisor);
 
-    // Ingest a large number of records to trigger a scale-up
-    // 10k records = 100 segments to publish * 100 rows per segment
-    int totalRecords = 0;
-    for (int i = 0; i < 10; ++i) {
-      totalRecords += publish1kRecords(topic, false);
+    overlord.latchableEmitter()
+            .waitForEvent(event -> event.hasMetricName("task/run/time")
+                                        .hasDimension(DruidMetrics.DATASOURCE, dataSource));
+
+    final AtomicBoolean keepPublishing = new AtomicBoolean(true);
+    final AtomicInteger totalRecords = new AtomicInteger();
+    final ExecutorService publisher = Executors.newSingleThreadExecutor();
+    final Future<?> publisherFuture = publisher.submit(() -> {
+      for (int i = 0; i < MAX_SCALE_UP_RECORD_BATCHES && keepPublishing.get(); ++i) {
+        totalRecords.addAndGet(publish1kRecords(topic, false));
+        try {
+          TimeUnit.MILLISECONDS.sleep(SCALE_UP_PUBLISH_INTERVAL_MILLIS);
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          return;
+        }
+      }
+    });
+
+    try {
+      overlord.latchableEmitter().waitForEvent(
+          event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
+                        .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
+                        .hasValueMatching(Matchers.greaterThan(1L))
+      );
+
+      overlord.latchableEmitter().waitForEvent(
+          event -> event.hasMetricName("task/autoScaler/updatedCount")
+                        .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
+                        .hasValueMatching(Matchers.greaterThan(1L))
+      );
+      keepPublishing.set(false);
+      publisherFuture.get(30, TimeUnit.SECONDS);
+      ITRetryUtil.retryUntilTrue(
+          () -> getCurrentTaskCount(supervisor.getId()) > 1,
+          "supervisor task count to scale up"
+      );
+      waitUntilPublishedRecordsAreIngested(totalRecords.get());
+
+      // Let the tasks work through the lag.
+      // Do not publish any more records so that the idleness causes scale-down
+      overlord.latchableEmitter().waitForEvent(
+          event -> event.hasMetricName("task/autoScaler/updatedCount")
+                        .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
+                        .hasValueMatching(Matchers.equalTo(1L))
+      );
+      ITRetryUtil.retryUntilEquals(
+          () -> getCurrentTaskCount(supervisor.getId()),
+          1,
+          "supervisor task count to scale down"
+      );
+    }
+    finally {
+      keepPublishing.set(false);
+      publisher.shutdownNow();
+      cluster.callApi().postSupervisor(supervisor.createSuspendedSpec());
     }
 
-    // Wait for tasks to scale up
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("task/autoScaler/updatedCount")
-                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
-                      .hasValueMatching(Matchers.greaterThan(1L))
-    );
-    ITRetryUtil.retryUntilTrue(
-        () -> getCurrentTaskCount(supervisor.getId()) > 1,
-        "supervisor task count to scale up"
-    );
-    waitUntilPublishedRecordsAreIngested(totalRecords);
-
-    // Let the tasks work through the lag.
-    // Do not publish any more records so that the idleness causes scale-down
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("task/autoScaler/updatedCount")
-                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
-                      .hasValueMatching(Matchers.equalTo(1L))
-    );
-    ITRetryUtil.retryUntilEquals(
-        () -> getCurrentTaskCount(supervisor.getId()),
-        1,
-        "supervisor task count to scale down"
-    );
-
-    cluster.callApi().postSupervisor(supervisor.createSuspendedSpec());
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-    Assertions.assertEquals("10000", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+    Assertions.assertEquals(String.valueOf(totalRecords.get()), cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
 
     final List<TaskStatusPlus> tasks = cluster.callApi().getTasks(dataSource, "complete");
     Assertions.assertFalse(tasks.isEmpty());
