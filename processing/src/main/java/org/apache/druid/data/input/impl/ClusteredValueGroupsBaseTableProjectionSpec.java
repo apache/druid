@@ -32,8 +32,7 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -189,7 +188,7 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
       }
       // Clustering values are dictionary-encoded into per-type dictionaries on the write side, which supports only
       // these scalar types; reject anything else up front rather than failing later at ingest.
-      if (!isSupportedClusteringType(clusteringColumn.getColumnType())) {
+      if (!Projections.isAllowedClusteringType(clusteringColumn.getColumnType())) {
         throw InvalidInput.exception(
             "clustering column [%s] has unsupported type [%s]; clustering columns must be STRING, LONG, DOUBLE, or FLOAT",
             clusteringColumn.getName(),
@@ -234,15 +233,6 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
           ColumnHolder.TIME_COLUMN_NAME
       );
     }
-  }
-
-  private static boolean isSupportedClusteringType(ColumnType type)
-  {
-    return type != null
-           && (type.is(ValueType.STRING)
-               || type.is(ValueType.LONG)
-               || type.is(ValueType.DOUBLE)
-               || type.is(ValueType.FLOAT));
   }
 
   private static DruidException clusteringPrefixException(
