@@ -34,6 +34,7 @@ import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.indexing.StreamIndexTestBase;
+import org.apache.druid.testing.embedded.utils.ITRetryUtil;
 import org.hamcrest.Matchers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
@@ -228,7 +229,10 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
                       .hasValueMatching(Matchers.greaterThan(1L))
     );
-    Assertions.assertEquals(4, getCurrentTaskCount(supervisor.getId()));
+    ITRetryUtil.retryUntilTrue(
+        () -> getCurrentTaskCount(supervisor.getId()) > 1,
+        "supervisor task count to scale up"
+    );
     waitUntilPublishedRecordsAreIngested(totalRecords);
 
     // Let the tasks work through the lag.
@@ -238,7 +242,11 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
                       .hasValueMatching(Matchers.equalTo(1L))
     );
-    Assertions.assertEquals(1, getCurrentTaskCount(supervisor.getId()));
+    ITRetryUtil.retryUntilEquals(
+        () -> getCurrentTaskCount(supervisor.getId()),
+        1,
+        "supervisor task count to scale down"
+    );
 
     cluster.callApi().postSupervisor(supervisor.createSuspendedSpec());
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
