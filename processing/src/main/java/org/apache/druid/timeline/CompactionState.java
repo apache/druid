@@ -244,6 +244,11 @@ public class CompactionState
   }
 
 
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
   public Builder toBuilder()
   {
     return new Builder(this);

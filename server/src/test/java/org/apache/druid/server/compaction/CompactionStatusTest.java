@@ -452,17 +452,12 @@ public class CompactionStatusTest
                                                    .build();
     // The published segment records baseTable mode: segment granularity in a SegmentGranularitySpec (null
     // GranularitySpec) and query granularity in the effective baseTable's virtual column.
-    final CompactionState lastCompactionState = new CompactionState(
-        currentPartitionsSpec,
-        null,
-        null,
-        null,
-        currentIndexSpec,
-        null,
-        new SegmentGranularitySpec(Granularities.HOUR, null),
-        baseTable.withQueryGranularity(Granularities.HOUR),
-        null
-    );
+    final CompactionState lastCompactionState = CompactionState.builder()
+        .partitionsSpec(currentPartitionsSpec)
+        .indexSpec(currentIndexSpec)
+        .segmentGranularitySpec(new SegmentGranularitySpec(Granularities.HOUR, null))
+        .baseTable(baseTable.withQueryGranularity(Granularities.HOUR))
+        .build();
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)

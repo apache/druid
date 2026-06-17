@@ -290,17 +290,15 @@ public class CompactionStateTest
                                                    .clusteringColumns("tenant")
                                                    .build();
 
-    CompactionState state = new CompactionState(
-        new DynamicPartitionsSpec(null, null),
-        DimensionsSpec.builder().build(),
-        List.of(new CountAggregatorFactory("count")),
-        new CompactionTransformSpec(null, null),
-        IndexSpec.getDefault(),
-        new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, Collections.emptyList()),
-        null,
-        baseTable,
-        null
-    );
+    CompactionState state = CompactionState.builder()
+        .partitionsSpec(new DynamicPartitionsSpec(null, null))
+        .dimensionsSpec(DimensionsSpec.builder().build())
+        .metricsSpec(List.of(new CountAggregatorFactory("count")))
+        .transformSpec(new CompactionTransformSpec(null, null))
+        .indexSpec(IndexSpec.getDefault())
+        .granularitySpec(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, Collections.emptyList()))
+        .baseTable(baseTable)
+        .build();
 
     CompactionState roundTrip = mapper.readValue(mapper.writeValueAsString(state), CompactionState.class);
     Assertions.assertEquals(state, roundTrip);
@@ -325,17 +323,15 @@ public class CompactionStateTest
 
     SegmentGranularitySpec segmentGranularitySpec = new SegmentGranularitySpec(Granularities.DAY, null);
 
-    CompactionState state = new CompactionState(
-        new DynamicPartitionsSpec(null, null),
-        DimensionsSpec.builder().build(),
-        List.of(new CountAggregatorFactory("count")),
-        new CompactionTransformSpec(null, null),
-        IndexSpec.getDefault(),
-        null,
-        segmentGranularitySpec,
-        baseTable,
-        null
-    );
+    CompactionState state = CompactionState.builder()
+        .partitionsSpec(new DynamicPartitionsSpec(null, null))
+        .dimensionsSpec(DimensionsSpec.builder().build())
+        .metricsSpec(List.of(new CountAggregatorFactory("count")))
+        .transformSpec(new CompactionTransformSpec(null, null))
+        .indexSpec(IndexSpec.getDefault())
+        .segmentGranularitySpec(segmentGranularitySpec)
+        .baseTable(baseTable)
+        .build();
 
     final String json = mapper.writeValueAsString(state);
     CompactionState roundTrip = mapper.readValue(json, CompactionState.class);

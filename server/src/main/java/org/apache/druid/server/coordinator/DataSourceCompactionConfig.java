@@ -154,8 +154,8 @@ public interface DataSourceCompactionConfig
       // baseTable (clustered) mode: segment granularity goes in a SegmentGranularitySpec and query granularity lives in
       // the baseTable spec's virtual column. The effective baseTable carries the configured query granularity so the
       // expected state matches the recorded effective spec.
-      // (intervals=null here mirrors the existing legacy behavior; the fingerprint-vs-recorded intervals discrepancy is
-      // a known separate bug.)
+      // intervals=null is consistent the legacy path: input intervals are not a compaction-config property, are
+      // excluded from the fingerprint, and are not compared by the per-field checks.
       segmentGranularitySpec = new SegmentGranularitySpec(
           getGranularitySpec() == null ? null : getGranularitySpec().getSegmentGranularity(),
           null  // intervals
