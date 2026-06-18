@@ -131,6 +131,20 @@ public class DeltaInputSourceReader implements InputSourceReader
         if (!filteredColumnarBatchIterators.hasNext()) {
           return false;
         }
+        // Close the drained file iterator before overwriting it. Each iterator from
+        // Scan.transformPhysicalData() owns an underlying Parquet reader/file handle;
+        // not closing it here would leak a handle per completed file on multi-file
+        // tables (only the last and the never-started iterators are closed in close()).
+        // hasNext() cannot throw checked exceptions, so wrap like the rest of this
+        // extension (see DeltaInputSource).
+        if (currentFileIterator != null) {
+          try {
+            currentFileIterator.close();
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        }
         currentFileIterator = filteredColumnarBatchIterators.next();
       }
       return true;
