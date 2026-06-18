@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.file;
 
+import org.apache.druid.segment.loading.DirectoryBackedRangeReader;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;

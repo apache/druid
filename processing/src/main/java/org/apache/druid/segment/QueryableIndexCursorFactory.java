@@ -97,6 +97,25 @@ public class QueryableIndexCursorFactory implements CursorFactory
     return new QueryableIndexCursorHolder(index, spec, timeBoundaryInspector);
   }
 
+  public CursorHolder makeCursorHolderForProjection(
+      CursorBuildSpec spec,
+      @Nullable QueryableProjection<QueryableIndex> projection
+  )
+  {
+    if (projection != null) {
+      return makeAggregateProjectionCursorHolder(projection);
+    }
+
+    // Cluster-group dispatch runs after aggregate-projection match, before the regular base-table fallback
+    final ClusteredValueGroupsBaseTableSchema clusterSummary = index.getClusteredBaseSummary();
+    if (clusterSummary != null) {
+      return makeClusteredCursorHolder(spec);
+    }
+
+    // No projections, no clustering, regular full-segment cursor.
+    return new QueryableIndexCursorHolder(index, spec, timeBoundaryInspector);
+  }
+
   private CursorHolder makeAggregateProjectionCursorHolder(QueryableProjection<QueryableIndex> projection)
   {
     return new QueryableIndexCursorHolder(

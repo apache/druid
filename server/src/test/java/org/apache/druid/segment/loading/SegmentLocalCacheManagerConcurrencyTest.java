@@ -940,7 +940,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     {
       final Closer closer = Closer.create();
       final AcquireSegmentAction action = closer.register(
-          segmentManager.acquireSegment(segment)
+          segmentManager.acquireSegment(segment, AcquireMode.FULL)
       );
       try {
         final AcquireSegmentResult result =
@@ -995,7 +995,7 @@ class SegmentLocalCacheManagerConcurrencyTest
         if (maxDelayBefore > 0) {
           Thread.sleep(ThreadLocalRandom.current().nextInt(maxDelayBefore));
         }
-        final Optional<Segment> segmentReference = segmentManager.acquireCachedSegment(segment.getId()).map(closer::register);
+        final Optional<Segment> segmentReference = segmentManager.acquireCachedSegment(segment.getId(), AcquireMode.FULL).map(closer::register);
         if (segmentReference.isPresent()) {
           RowCountInspector gadget = segmentReference.get().as(RowCountInspector.class);
           if (maxDelayAfter > 0) {
@@ -1033,7 +1033,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     {
       final Closer closer = Closer.create();
       final AcquireSegmentAction action = closer.register(
-          segmentManager.acquireSegment(segment)
+          segmentManager.acquireSegment(segment, AcquireMode.FULL)
       );
       try {
         final Future<AcquireSegmentResult> result = action.getSegmentFuture();

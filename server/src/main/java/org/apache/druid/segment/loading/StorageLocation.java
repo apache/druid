@@ -478,8 +478,12 @@ public class StorageLocation
       currSizeBytes.getAndAdd(-delta);
       if (weak == null) {
         currStaticSizeBytes.getAndAdd(-delta);
+        // The reservation (loadBegin) was recorded at the pre-shrink size; correct its byte total to match.
+        staticStats.getAndUpdate(s -> s.shrinkLoadBegin(delta));
       } else {
         currWeakSizeBytes.getAndAdd(-delta);
+        // The reservation (loadBegin) was recorded at the pre-shrink size; correct its byte total to match.
+        weakStats.getAndUpdate(s -> s.shrinkLoadBegin(delta));
         // Each active hold contributed entry.getSize() to currHoldBytes via trackWeakHold; shrink each hold's
         // contribution by the same delta so a future trackWeakRelease (which subtracts the new smaller size) lands
         // on the correct total. Clamp at 0 defensively against any pre-existing drift.
@@ -509,6 +513,45 @@ public class StorageLocation
         toRemove.unmount();
         trackDrop(entry);
       }
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Remove a {@link #weakCacheEntries} entry that currently has no outstanding holds, unlinking it from the SIEVE
+   * queue and terminating its phaser (which fires the underlying {@link CacheEntry#unmount}). No-op when the entry
+   * is absent, is a {@link #staticCacheEntries} entry, or still has outstanding holds.
+   * <p>
+   * This exists for callers that register a weak entry <em>without</em> a {@link ReservationHold} (the bootstrap
+   * reserve path uses {@link #reserveWeak}) and need to clean it up after a failed mount. The normal runtime path
+   * registers weak entries via {@link #addWeakReservationHold} and relies on the hold's release runnable to evict a
+   * never-mounted entry on close; an entry registered without a hold has no such cleanup, so a failed mount would
+   * otherwise leave it lingering (and un-re-mountable if its on-disk state was deleted by the mount rollback). The
+   * hold guard makes this safe to call unconditionally on any mount failure: a held entry (runtime path) is left to
+   * its holder's release runnable.
+   */
+  public void removeUnheldWeakEntry(CacheEntryIdentifier id)
+  {
+    lock.writeLock().lock();
+    try {
+      weakCacheEntries.computeIfPresent(
+          id,
+          (cacheEntryIdentifier, weakCacheEntry) -> {
+            if (weakCacheEntry.isHeld()) {
+              // a holder is responsible for cleanup when it releases; leave the entry in place
+              return weakCacheEntry;
+            }
+            final boolean isMounted = weakCacheEntry.cacheEntry.isMounted();
+            unlinkWeakEntry(weakCacheEntry);
+            weakCacheEntry.unmount(); // terminate the phaser; fires cacheEntry.unmount() (idempotent)
+            if (isMounted) {
+              weakStats.getAndUpdate(s -> s.evict(weakCacheEntry.cacheEntry.getSize()));
+            }
+            return null;
+          }
+      );
     }
     finally {
       lock.writeLock().unlock();
@@ -1109,6 +1152,16 @@ public class StorageLocation
       return this;
     }
 
+    /**
+     * Correct the reserved (loadBegin) byte total downward by {@code delta} when a reservation is shrunk via
+     * {@link StorageLocation#adjustReservation}. The load-begin count is unchanged; only the byte total is corrected.
+     */
+    public StaticStats shrinkLoadBegin(long delta)
+    {
+      loadBeginBytes.getAndAdd(-delta);
+      return this;
+    }
+
     public StaticStats load(long size)
     {
       loadCount.getAndIncrement();
@@ -1200,6 +1253,17 @@ public class StorageLocation
     {
       loadBeginCount.getAndIncrement();
       loadBeginBytes.getAndAdd(size);
+      return this;
+    }
+
+    /**
+     * Correct the reserved (loadBegin) byte total downward by {@code delta} when a reservation is shrunk via
+     * {@link StorageLocation#adjustReservation} (e.g. a partial metadata entry's pessimistic estimate reduced to the
+     * actual header size after mount). The load-begin count is unchanged; only the byte total is corrected.
+     */
+    public WeakStats shrinkLoadBegin(long delta)
+    {
+      loadBeginBytes.getAndAdd(-delta);
       return this;
     }
 

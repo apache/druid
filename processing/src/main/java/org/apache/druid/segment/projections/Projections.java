@@ -115,6 +115,7 @@ public class Projections
             cursorBuildSpec.getQueryMetrics().projection(spec.getSchema().getName());
           }
           return new QueryableProjection<>(
+              spec.getSchema().getName(),
               match.getCursorBuildSpec(),
               match.getRemapColumns(),
               getRowSelector.apply(spec.getSchema().getName())

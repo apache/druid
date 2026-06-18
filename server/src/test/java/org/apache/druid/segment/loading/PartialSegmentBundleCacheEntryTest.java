@@ -43,7 +43,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
-import org.apache.druid.segment.file.DirectoryBackedRangeReader;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.file.SegmentFileBuilderV10;
@@ -64,6 +63,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -258,6 +258,40 @@ class PartialSegmentBundleCacheEntryTest
     // unmounting the aggregate releases the parent hold; base is then evictable
     aggHold.close();
     aggEntry.unmount();
+  }
+
+  @Test
+  void testRuntimeAcquireOfProjectionBundleMountsParentBaseFirst() throws IOException
+  {
+    // Runtime acquire path (the cursor factory's PartialBundleAcquirer): acquiring a projection bundle must first
+    // mount its parent __base bundle, since the projection bundle's mount() takes holds/references on its parents and
+    // fails with "parent entry not registered" otherwise. Unlike the bootstrap restore path, the runtime path reaches
+    // the projection bundle directly with no __base mounted, so the acquirer is responsible for the ordering.
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    final PartialSegmentMetadataCacheEntry metadata = newMetadataEntry();
+    Assertions.assertTrue(location.reserve(metadata));
+    metadata.mount(location);
+
+    final PartialSegmentBundleCacheEntryIdentifier baseId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME);
+    final PartialSegmentBundleCacheEntryIdentifier aggId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
+
+    // Precondition: nothing has mounted __base yet; the acquirer must do it as the projection bundle's parent.
+    Assertions.assertNull(location.getCacheEntry(baseId), "test setup: __base must not be mounted yet");
+
+    final Closeable handle = metadata.getBundleAcquirer().acquire(AGG_BUNDLE);
+    try {
+      final PartialSegmentBundleCacheEntry agg = location.getCacheEntry(aggId);
+      final PartialSegmentBundleCacheEntry base = location.getCacheEntry(baseId);
+      Assertions.assertNotNull(agg, "projection bundle should be registered");
+      Assertions.assertTrue(agg.isMounted(), "projection bundle should be mounted");
+      Assertions.assertNotNull(base, "parent __base bundle should be auto-registered by the acquirer");
+      Assertions.assertTrue(base.isMounted(), "parent __base bundle should be auto-mounted by the acquirer");
+    }
+    finally {
+      handle.close();
+    }
   }
 
   @Test
@@ -487,6 +521,7 @@ class PartialSegmentBundleCacheEntryTest
         List.of(),
         new DirectoryBackedRangeReader(deepDir),
         JSON_MAPPER,
+        null,
         ESTIMATE
     );
     Assertions.assertTrue(location.reserve(metadata));
@@ -534,6 +569,7 @@ class PartialSegmentBundleCacheEntryTest
         List.of(externalName),
         new DirectoryBackedRangeReader(deepDir),
         JSON_MAPPER,
+        null,
         ESTIMATE
     );
     Assertions.assertTrue(location.reserve(metadata));
@@ -576,6 +612,7 @@ class PartialSegmentBundleCacheEntryTest
         List.of(),
         new DirectoryBackedRangeReader(deepDir),
         JSON_MAPPER,
+        null,
         ESTIMATE
     );
     Assertions.assertTrue(location.reserve(metadata));
@@ -590,6 +627,75 @@ class PartialSegmentBundleCacheEntryTest
         metadata.getSegmentFileMetadata().getContainers().size(),
         root.getContainerRefs().size(),
         "root bundle should own every container in a no-startFileBundle segment"
+    );
+  }
+
+  @Test
+  void testResolveBundleNameFallsBackToRootWhenRootIsSoleBundle() throws IOException
+  {
+    // A segment whose every container defaulted to the root bundle (legacy / never called startFileBundle).
+    final File deepDir = writeRootOnlySegment();
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    final PartialSegmentMetadataCacheEntry metadata = new PartialSegmentMetadataCacheEntry(
+        SEGMENT_ID,
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(),
+        new DirectoryBackedRangeReader(deepDir),
+        JSON_MAPPER,
+        null,
+        ESTIMATE
+    );
+    Assertions.assertTrue(location.reserve(metadata));
+    metadata.mount(location);
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+
+    Assertions.assertEquals(
+        Set.of(SegmentFileBuilder.ROOT_BUNDLE_NAME),
+        PartialSegmentBundleCacheEntry.bundleNames(mapper),
+        "an untagged segment has only the root bundle"
+    );
+    // A request for the base bundle (or any projection) resolves to the root catch-all, since root is the sole bundle.
+    Assertions.assertEquals(
+        SegmentFileBuilder.ROOT_BUNDLE_NAME,
+        PartialSegmentBundleCacheEntry.resolveBundleName(mapper, Projections.BASE_TABLE_PROJECTION_NAME)
+    );
+    Assertions.assertEquals(
+        SegmentFileBuilder.ROOT_BUNDLE_NAME,
+        PartialSegmentBundleCacheEntry.resolveBundleName(mapper, "some_projection")
+    );
+    // A request for the root bundle by name resolves to itself (it exists; no fallback logic needed).
+    Assertions.assertEquals(
+        SegmentFileBuilder.ROOT_BUNDLE_NAME,
+        PartialSegmentBundleCacheEntry.resolveBundleName(mapper, SegmentFileBuilder.ROOT_BUNDLE_NAME)
+    );
+  }
+
+  @Test
+  void testResolveBundleNameNoFallbackWhenNamedBundlesPresent() throws IOException
+  {
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    final PartialSegmentMetadataCacheEntry metadata = newMetadataEntry();
+    Assertions.assertTrue(location.reserve(metadata));
+    metadata.mount(location);
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+
+    final Set<String> present = PartialSegmentBundleCacheEntry.bundleNames(mapper);
+    Assertions.assertTrue(present.contains(Projections.BASE_TABLE_PROJECTION_NAME));
+    Assertions.assertTrue(present.contains(AGG_BUNDLE));
+    Assertions.assertFalse(present.contains(SegmentFileBuilder.ROOT_BUNDLE_NAME), "a tagged segment has no root bundle");
+
+    // Present bundles resolve to themselves.
+    Assertions.assertEquals(
+        Projections.BASE_TABLE_PROJECTION_NAME,
+        PartialSegmentBundleCacheEntry.resolveBundleName(mapper, Projections.BASE_TABLE_PROJECTION_NAME)
+    );
+    Assertions.assertEquals(AGG_BUNDLE, PartialSegmentBundleCacheEntry.resolveBundleName(mapper, AGG_BUNDLE));
+    // An absent request does NOT fall back to root when named bundles are present: the name passes through unchanged
+    // so the downstream forBundle fails loudly rather than silently serving the wrong data.
+    Assertions.assertEquals(
+        "does_not_exist",
+        PartialSegmentBundleCacheEntry.resolveBundleName(mapper, "does_not_exist")
     );
   }
 
@@ -783,6 +889,7 @@ class PartialSegmentBundleCacheEntryTest
         List.of(),
         new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
+        null,
         ESTIMATE
     );
   }
