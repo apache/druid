@@ -293,6 +293,55 @@ public class ClientCompactionRunnerInfoTest
     );
   }
 
+  @Test
+  public void testMSQEngineWithBaseTableStringRangePartitionDimensionIsValid()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec baseTable =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new LongDimensionSchema("__time")
+                                                   )
+                                                   .clusteringColumns("tenant")
+                                                   .build();
+    final DataSourceCompactionConfig compactionConfig = createBaseTableCompactionConfig(
+        CompactionEngine.MSQ,
+        new DimensionRangePartitionsSpec(100, null, ImmutableList.of("tenant"), false),
+        baseTable
+    );
+    Assert.assertTrue(
+        ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE).isValid()
+    );
+  }
+
+  @Test
+  public void testMSQEngineWithBaseTableLongRangePartitionDimensionIsInvalid()
+  {
+    // baseTable configs carry their columns on the baseTable spec (no legacy dimensionsSpec); the range-partition
+    // column-type check must still run at config time against those columns, not be silently skipped.
+    final ClusteredValueGroupsBaseTableProjectionSpec baseTable =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new LongDimensionSchema("region_id"),
+                                                       new LongDimensionSchema("__time")
+                                                   )
+                                                   .clusteringColumns("tenant")
+                                                   .build();
+    final DataSourceCompactionConfig compactionConfig = createBaseTableCompactionConfig(
+        CompactionEngine.MSQ,
+        new DimensionRangePartitionsSpec(100, null, ImmutableList.of("region_id"), false),
+        baseTable
+    );
+    final CompactionConfigValidationResult validationResult =
+        ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE);
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "MSQ: Non-string partition dimension[region_id] of type[LONG] not supported with 'range' partition spec",
+        validationResult.getReason()
+    );
+  }
+
   private static DataSourceCompactionConfig createBaseTableCompactionConfig(CompactionEngine engine)
   {
     final ClusteredValueGroupsBaseTableProjectionSpec baseTable =
@@ -303,11 +352,20 @@ public class ClientCompactionRunnerInfoTest
                                                    )
                                                    .clusteringColumns("tenant")
                                                    .build();
+    return createBaseTableCompactionConfig(engine, new DynamicPartitionsSpec(100, null), baseTable);
+  }
+
+  private static DataSourceCompactionConfig createBaseTableCompactionConfig(
+      CompactionEngine engine,
+      PartitionsSpec partitionsSpec,
+      ClusteredValueGroupsBaseTableProjectionSpec baseTable
+  )
+  {
     return InlineSchemaDataSourceCompactionConfig.builder()
                                                  .forDataSource("dataSource")
                                                  .withInputSegmentSizeBytes(500L)
                                                  .withSkipOffsetFromLatest(new Period(3600))
-                                                 .withTuningConfig(createTuningConfig(new DynamicPartitionsSpec(100, null)))
+                                                 .withTuningConfig(createTuningConfig(partitionsSpec))
                                                  .withBaseTable(baseTable)
                                                  .withEngine(engine)
                                                  .build();

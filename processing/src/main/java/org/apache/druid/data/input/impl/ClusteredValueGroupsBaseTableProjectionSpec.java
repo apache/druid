@@ -175,7 +175,10 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
   /**
    * Returns a copy of this spec with a new {@code queryGranularity}, expressed as a
    * {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME} virtual column added to {@link #getVirtualColumns()}. A
-   * {@code null}, {@code NONE}, or {@code ALL} granularity is a no-op, so this returns {@code this} unchanged.
+   * {@code null} or {@code NONE} granularity is a no-op (no flooring), so this returns {@code this} unchanged.
+   * <p>
+   * {@code ALL} is rejected: it would floor {@code __time} to a single constant (the interval start) for the whole
+   * segment, which clustered base tables do not yet support.
    * <p>
    * Idempotent: if the spec already declares a query-granularity virtual column, that one is authoritative and this is
    * a no-op. (The compaction path attaches the virtual column up front; the MSQ generation path then calls this again
@@ -184,9 +187,13 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
   @Override
   public ClusteredValueGroupsBaseTableProjectionSpec withQueryGranularity(@Nullable Granularity queryGranularity)
   {
+    if (Granularities.ALL.equals(queryGranularity)) {
+      throw InvalidInput.exception(
+          "Query granularity[ALL] is not supported for clusteredValueGroups base tables"
+      );
+    }
     if (queryGranularity == null
         || Granularities.NONE.equals(queryGranularity)
-        || Granularities.ALL.equals(queryGranularity)
         || virtualColumns.getVirtualColumn(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME) != null) {
       return this;
     }

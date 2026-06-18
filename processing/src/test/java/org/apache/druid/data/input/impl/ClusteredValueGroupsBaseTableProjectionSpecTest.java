@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -52,14 +53,25 @@ class ClusteredValueGroupsBaseTableProjectionSpecTest extends InitializedNullHan
   }
 
   @Test
-  void testWithQueryGranularityNoneNullAndAllAreNoOps()
+  void testWithQueryGranularityNullAndNoneAreNoOps()
   {
-    // Absent __virtualGranularity virtual column already means NONE, and ALL means "not grouping on time", so these
-    // add nothing and return the same spec.
+    // Absent __virtualGranularity virtual column already means NONE, so null/NONE add nothing and return the same spec.
     final ClusteredValueGroupsBaseTableProjectionSpec spec = tenantSpec();
     Assertions.assertSame(spec, spec.withQueryGranularity(null));
     Assertions.assertSame(spec, spec.withQueryGranularity(Granularities.NONE));
-    Assertions.assertSame(spec, spec.withQueryGranularity(Granularities.ALL));
+  }
+
+  @Test
+  void testWithQueryGranularityAllIsRejected()
+  {
+    // ALL would floor __time to a single constant (the interval start) for the whole segment, which clustered base
+    // tables do not yet support, so it is rejected rather than silently ignored.
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = tenantSpec();
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> spec.withQueryGranularity(Granularities.ALL)
+    );
+    Assertions.assertTrue(e.getMessage().contains("ALL"));
   }
 
   @Test

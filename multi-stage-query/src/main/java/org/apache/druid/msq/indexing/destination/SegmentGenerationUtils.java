@@ -111,6 +111,7 @@ public final class SegmentGenerationUtils
                        .withTimestamp(new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null))
                        .withTransform(transformSpec)
                        .withBaseTable(baseTable)
+                       .withProjections(destination.getProjections())
                        .build();
     }
 
