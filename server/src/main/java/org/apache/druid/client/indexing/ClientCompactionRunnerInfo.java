@@ -132,6 +132,7 @@ public class ClientCompactionRunnerInfo
       ));
     }
     validationResults.add(validateMaxNumTasksForMSQ(newConfig.getTaskContext()));
+    validationResults.add(validateMinorCompactionTaskPercentForMSQ(newConfig.getTaskContext()));
     validationResults.add(validateMetricsSpecForMSQ(newConfig.getMetricsSpec()));
     return validationResults.stream()
                             .filter(result -> !result.isValid())
@@ -237,6 +238,37 @@ public class ClientCompactionRunnerInfo
             maxNumTasks
         );
       }
+    }
+    return CompactionConfigValidationResult.success();
+  }
+
+  /**
+   * Validate that {@link ClientMSQContext#CTX_MINOR_COMPACTION_TASK_PERCENT}, if present in context,
+   * is an integer between 1 and 100. Rejects malformed and out-of-range values upfront so a bad
+   * config cannot be persisted and then fail every subsequent minor compaction job.
+   */
+  public static CompactionConfigValidationResult validateMinorCompactionTaskPercentForMSQ(Map<String, Object> context)
+  {
+    if (context == null || !context.containsKey(ClientMSQContext.CTX_MINOR_COMPACTION_TASK_PERCENT)) {
+      return CompactionConfigValidationResult.success();
+    }
+    final int percent;
+    try {
+      percent = QueryContext.of(context).getInt(ClientMSQContext.CTX_MINOR_COMPACTION_TASK_PERCENT, 0);
+    }
+    catch (Exception e) {
+      return CompactionConfigValidationResult.failure(
+          "MSQ: Context '%s'[%s] must be an integer between 1 and 100",
+          ClientMSQContext.CTX_MINOR_COMPACTION_TASK_PERCENT,
+          context.get(ClientMSQContext.CTX_MINOR_COMPACTION_TASK_PERCENT)
+      );
+    }
+    if (percent < 1 || percent > 100) {
+      return CompactionConfigValidationResult.failure(
+          "MSQ: Context '%s'[%d] must be between 1 and 100",
+          ClientMSQContext.CTX_MINOR_COMPACTION_TASK_PERCENT,
+          percent
+      );
     }
     return CompactionConfigValidationResult.success();
   }

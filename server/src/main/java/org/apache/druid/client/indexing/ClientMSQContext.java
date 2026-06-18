@@ -32,4 +32,11 @@ public class ClientMSQContext
    * Limit to ensure that an MSQ compaction task doesn't take up all task slots in a cluster.
    */
   public static final int MAX_TASK_SLOTS_FOR_MSQ_COMPACTION_TASK = 5;
+
+  /**
+   * Compaction-only context key (1-100) used to scale {@link #CTX_MAX_NUM_TASKS} for MSQ minor compactions.
+   * The scaled value is floored at {@link #DEFAULT_MAX_NUM_TASKS}. Has no effect on full compactions or on the native
+   * compaction engine.
+   */
+  public static final String CTX_MINOR_COMPACTION_TASK_PERCENT = "minorCompactionTaskPercent";
 }

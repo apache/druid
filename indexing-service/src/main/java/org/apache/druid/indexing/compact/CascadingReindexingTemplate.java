@@ -264,6 +264,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    *       Range partition dimension type checking passes {@code null} for dimensionSchemas
    *       since those are not known at template level.</li>
    *   <li>maxNumTasks >= 2 in taskContext.</li>
+   *   <li>minorCompactionTaskPercent (if set) is an integer between 1 and 100 in taskContext.</li>
    * </ul>
    *
    * <p>Standard MSQ checks skipped (not applicable at template level):
@@ -292,6 +293,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     ));
 
     results.add(ClientCompactionRunnerInfo.validateMaxNumTasksForMSQ(this.getTaskContext()));
+
+    results.add(ClientCompactionRunnerInfo.validateMinorCompactionTaskPercentForMSQ(this.getTaskContext()));
 
     return results.stream()
                   .filter(result -> !result.isValid())

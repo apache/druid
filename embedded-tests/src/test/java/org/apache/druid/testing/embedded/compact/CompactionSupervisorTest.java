@@ -19,8 +19,12 @@
 
 package org.apache.druid.testing.embedded.compact;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
+import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.client.indexing.ClientMSQContext;
+import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -29,6 +33,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -50,6 +55,7 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -114,8 +120,10 @@ import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -295,6 +303,86 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     // performed minor compaction: 1 previously compacted segment + 1 recently compacted segment from minor compaction
     Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(4000, getTotalRowCount());
+  }
+
+  @Test
+  public void test_minorCompactionWithMSQ_minorCompactionTaskPercentScalesWorkers()
+  {
+    final MostFragmentedIntervalFirstPolicy policy =
+        new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, 80, null, null);
+    configureCompaction(CompactionEngine.MSQ, policy);
+
+    ingest1kRecords();
+    ingest1kRecords();
+
+    overlord.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
+
+    // maxNumTasks=3 (controller + 2 workers) for full; minorCompactionTaskPercent=50
+    // scales minor compactions to maxNumTasks=2 (controller + 1 worker).
+    final InlineSchemaDataSourceCompactionConfig dayConfig =
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, false))
+            .withDimensionsSpec(new UserCompactionTaskDimensionsConfig(
+                WikipediaStreamEventStreamGenerator.dimensions()
+                                                   .stream()
+                                                   .map(StringDimensionSchema::new)
+                                                   .collect(Collectors.toUnmodifiableList())))
+            .withTaskContext(buildScalingTaskContext(3, 50))
+            .withIoConfig(new UserCompactionTaskIOConfig(true))
+            .withTuningConfig(
+                UserCompactionTaskQueryTuningConfig
+                    .builder()
+                    .partitionsSpec(new DimensionRangePartitionsSpec(null, 10_000, List.of("page"), false))
+                    .build()
+            )
+            .build();
+
+    // First run: full compaction (no compacted segments yet).
+    runCompactionWithSpec(dayConfig);
+    waitForAllCompactionTasksToFinish();
+    pauseCompaction(dayConfig);
+
+    overlord.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    Assertions.assertEquals(1, getNumSegmentsWith(Granularities.DAY));
+
+    // Capture the full task before the minor task arrives (its ID does not contain "-minor").
+    final TaskStatusPlus fullTask = findMostRecentCompactionTask(taskId -> !taskId.contains("-minor"));
+    Assertions.assertNotNull(fullTask, "Expected a full compaction task for datasource[" + dataSource + "]");
+    assertCompactionTaskMaxNumTasks(fullTask, 3);
+
+    // Ingest more so the next run sees a mix of compacted + uncompacted segments.
+    ingest1kRecords();
+    ingest1kRecords();
+
+    overlord.latchableEmitter().waitForNextEvent(event -> event.hasMetricName("segment/metadataCache/sync/time"));
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    Assertions.assertEquals(3, getNumSegmentsWith(Granularities.DAY));
+
+    final long totalUsed = overlord.latchableEmitter().getMetricValues(
+        "segment/metadataCache/used/count",
+        Map.of(DruidMetrics.DATASOURCE, dataSource)
+    ).stream().reduce((first, second) -> second).orElse(0).longValue();
+
+    // Second run: minor compaction (uncompacted bytes ratio is below the 80% threshold).
+    runCompactionWithSpec(dayConfig);
+    waitForAllCompactionTasksToFinish();
+
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("segment/metadataCache/used/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasValueMatching(Matchers.greaterThan(totalUsed)));
+
+    Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
+
+    final TaskStatusPlus minorTask = findMostRecentCompactionTask(taskId -> taskId.contains("-minor"));
+    Assertions.assertNotNull(minorTask, "Expected a minor compaction task for datasource[" + dataSource + "]");
+    assertCompactionTaskMaxNumTasks(minorTask, 2);
   }
 
   @MethodSource("getEngine")
@@ -1214,6 +1302,50 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .filter(segment -> !segment.isTombstone())
         .filter(segment -> granularity.isAligned(segment.getInterval()))
         .count();
+  }
+
+  private static Map<String, Object> buildScalingTaskContext(int maxNumTasks, int minorCompactionTaskPercent)
+  {
+    final Map<String, Object> context = new HashMap<>();
+    context.put("useConcurrentLocks", true);
+    context.put(ClientMSQContext.CTX_MAX_NUM_TASKS, maxNumTasks);
+    context.put(ClientMSQContext.CTX_MINOR_COMPACTION_TASK_PERCENT, minorCompactionTaskPercent);
+    return context;
+  }
+
+  /**
+   * Returns the most recent completed compaction task whose id matches the given filter,
+   * or null if none is found.
+   */
+  @Nullable
+  private TaskStatusPlus findMostRecentCompactionTask(Predicate<String> taskIdFilter)
+  {
+    final List<TaskStatusPlus> tasks = ImmutableList.copyOf(
+        (CloseableIterator<TaskStatusPlus>) cluster.callApi().onLeaderOverlord(
+            o -> o.taskStatuses("complete", dataSource, 100)
+        )
+    );
+    TaskStatusPlus match = null;
+    for (TaskStatusPlus task : tasks) {
+      if ("compact".equals(task.getType()) && taskIdFilter.test(task.getId())) {
+        match = task;
+      }
+    }
+    return match;
+  }
+
+  /**
+   * Asserts that the submitted compaction task carries the expected {@code maxNumTasks} in its context.
+   */
+  private void assertCompactionTaskMaxNumTasks(TaskStatusPlus task, int expectedMaxNumTasks)
+  {
+    final TaskPayloadResponse payload = cluster.callApi().onLeaderOverlord(o -> o.taskPayload(task.getId()));
+    final ClientCompactionTaskQuery query = (ClientCompactionTaskQuery) payload.getPayload();
+    Assertions.assertEquals(
+        expectedMaxNumTasks,
+        ((Number) query.getContext().get(ClientMSQContext.CTX_MAX_NUM_TASKS)).intValue(),
+        "maxNumTasks in compaction task[" + task.getId() + "] context"
+    );
   }
 
   private void runIngestionAtGranularity(
