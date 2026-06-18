@@ -41,6 +41,7 @@ import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.projections.BaseTableProjectionSchema;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.ConstantTimeColumn;
 import org.apache.druid.segment.projections.ProjectionMetadata;
 import org.apache.druid.segment.projections.Projections;
@@ -74,6 +75,7 @@ public class PartialQueryableIndex implements QueryableIndex
 {
   private final Interval dataInterval;
   private final int baseNumRows;
+  private final ProjectionMetadata baseProjectionMetadata;
   private final Indexed<String> availableDimensions;
   private final List<String> columnNames;
   private final BitmapFactory bitmapFactory;
@@ -123,6 +125,18 @@ public class PartialQueryableIndex implements QueryableIndex
         baseProjection.getSchema().getName()
     );
     final BaseTableProjectionSchema baseSchema = (BaseTableProjectionSchema) baseProjection.getSchema();
+    // Clustered V10 segments keep their data in per-cluster-group bundles, matched from metadata much like
+    // projections, but partial loading does not wire that up yet (and the write side isn't available to build one for
+    // testing). Fail loudly here rather than mis-treating the clustered base summary as a plain base table, whose
+    // top-level columns are empty. Both acquire modes route partial-eligible segments through this index, so this
+    // guards the full path too. Remove once partial loading supports clustered segments.
+    if (baseSchema instanceof ClusteredValueGroupsBaseTableSchema) {
+      throw DruidException.defensive(
+          "Clustered V10 segments are not yet supported for partial loading (interval[%s])",
+          metadata.getInterval()
+      );
+    }
+    this.baseProjectionMetadata = baseProjection;
     this.baseNumRows = baseProjection.getNumRows();
     this.baseProjectionPrefix = Projections.getProjectionSegmentInternalFilePrefix(baseSchema);
     this.dataInterval = Intervals.of(metadata.getInterval());
@@ -215,6 +229,24 @@ public class PartialQueryableIndex implements QueryableIndex
     return reconstructedMetadata;
   }
 
+  /**
+   * Returns the {@link ProjectionMetadata} for the base table projection.
+   */
+  public ProjectionMetadata getBaseProjectionMetadata()
+  {
+    return baseProjectionMetadata;
+  }
+
+  /**
+   * Whether every internal file referenced by this index's segment metadata (including any attached external file
+   * mappers) is already downloaded. Used by partial loaded segments to gate sync paths to confirm the segment
+   * is fully loaded before performing operations. Only async paths are allowed to perform on-demand downloads.
+   */
+  public boolean isFullyDownloaded()
+  {
+    return fileMapper.isFullyDownloaded();
+  }
+
   @Override
   public Map<String, DimensionHandler> getDimensionHandlers()
   {
@@ -268,18 +300,19 @@ public class PartialQueryableIndex implements QueryableIndex
         cursorBuildSpec,
         projections,
         dataInterval,
-        (projectionName, columnName) -> {
-          // check if the projection has this column using metadata column descriptors
-          final ProjectionMetadata projSpec = projectionSpecs.get(projectionName);
-          if (projSpec == null) {
-            return false;
-          }
-          final String smooshName = Projections.getProjectionSegmentInternalFileName(projSpec.getSchema(), columnName);
-          return metadata.getColumnDescriptors().containsKey(smooshName)
-                 || getColumnCapabilities(columnName) == null;
-        },
+        this::checkProjectionHasColumn,
         this::getProjectionQueryableIndex
     );
+  }
+
+  private boolean checkProjectionHasColumn(String projectionName, String columnName)
+  {
+    final ProjectionMetadata meta = projectionSpecs.get(projectionName);
+    if (meta == null) {
+      return false;
+    }
+    final String file = Projections.getProjectionSegmentInternalFileName(meta.getSchema(), columnName);
+    return metadata.getColumnDescriptors().containsKey(file) || getColumnCapabilities(columnName) == null;
   }
 
   @Nullable

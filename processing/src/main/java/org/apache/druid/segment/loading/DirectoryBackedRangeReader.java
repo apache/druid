@@ -17,9 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.file;
-
-import org.apache.druid.segment.loading.SegmentRangeReader;
+package org.apache.druid.segment.loading;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -28,9 +26,9 @@ import java.io.InputStream;
 import java.io.RandomAccessFile;
 
 /**
- * A {@link SegmentRangeReader} backed by a directory of files. Used across the partial-segment test suite (processing
- * + server modules) to simulate deep-storage range reads against an on-disk layout produced by
- * {@link SegmentFileBuilderV10} or {@link org.apache.druid.segment.IndexMergerV10}.
+ * A {@link SegmentRangeReader} backed by a directory of files: each {@code filename} passed to
+ * {@link #readRange} resolves to a child of the directory and is read at the requested byte range via
+ * {@link RandomAccessFile}.
  */
 public class DirectoryBackedRangeReader implements SegmentRangeReader
 {

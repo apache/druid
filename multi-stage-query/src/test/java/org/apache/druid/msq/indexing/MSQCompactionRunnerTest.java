@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -36,6 +37,7 @@ import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.security.EscalatorModule;
 import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -650,6 +652,69 @@ public class MSQCompactionRunnerTest
     Assert.assertEquals(
         PARTITION_DIMENSIONS.stream().map(OrderBy::ascending).collect(Collectors.toList()),
         scanQuery.getOrderBys()
+    );
+  }
+
+  @Test
+  public void testClusteredBaseTableWithoutMetricsProducesScanSpec() throws JsonProcessingException
+  {
+    final StringDimensionSchema tenant = new StringDimensionSchema("tenant");
+    final StringDimensionSchema region = new StringDimensionSchema("region");
+    final ClusteredValueGroupsBaseTableProjectionSpec baseTable =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(tenant, region, new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME))
+                                                   .clusteringColumns("tenant")
+                                                   .build();
+
+    CompactionTask compactionTask = createCompactionTask(
+        new DynamicPartitionsSpec(TARGET_ROWS_PER_SEGMENT, null),
+        null,
+        Collections.emptyMap(),
+        new ClientCompactionTaskGranularitySpec(SEGMENT_GRANULARITY.getDefaultGranularity(), null, null),
+        null
+    );
+
+    // The input schema is built the same way CompactionTask.createDataSchema hands it to the runner in baseTable mode.
+    DataSchema dataSchema = CombinedDataSchema.forBaseTable(
+        DATA_SOURCE,
+        new TimestampSpec(TIMESTAMP_COLUMN, "millis", null),
+        new SegmentGranularitySpec(
+            SEGMENT_GRANULARITY.getDefaultGranularity(),
+            Collections.singletonList(COMPACTION_INTERVAL)
+        ),
+        null,
+        null,
+        baseTable
+    );
+
+    List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
+        compactionTask,
+        Map.of(new MultipleIntervalSegmentSpec(List.of(COMPACTION_INTERVAL)), dataSchema)
+    );
+
+    MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
+    LegacyMSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
+
+    // Clustered base tables are never rollup, so the query is always a Scan, never a GroupBy.
+    Assert.assertTrue(actualMSQSpec.getQuery() instanceof ScanQuery);
+    ScanQuery scanQuery = (ScanQuery) actualMSQSpec.getQuery();
+
+    // Columns follow the spec's declared order: clustering prefix, remaining columns, then the explicit __time marker.
+    Assert.assertEquals(
+        ImmutableList.of(tenant.getName(), region.getName(), ColumnHolder.TIME_COLUMN_NAME),
+        scanQuery.getColumns()
+    );
+
+    // Destination is base-table-mode: it carries the spec and no legacy dimensionSchemas.
+    Assert.assertTrue(actualMSQSpec.getDestination() instanceof DataSourceMSQDestination);
+    DataSourceMSQDestination destination = (DataSourceMSQDestination) actualMSQSpec.getDestination();
+    Assert.assertEquals(baseTable, destination.getBaseTable());
+    Assert.assertNull(destination.getDimensionSchemas());
+
+    // Column mappings carry the same columns in declared order.
+    Assert.assertEquals(
+        ImmutableList.of(tenant.getName(), region.getName(), ColumnHolder.TIME_COLUMN_NAME),
+        actualMSQSpec.getColumnMappings().getOutputColumnNames()
     );
   }
 

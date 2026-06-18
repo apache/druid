@@ -21,6 +21,7 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -56,6 +57,7 @@ public class ReindexingDataSchemaRule extends AbstractReindexingRule
   private final Granularity queryGranularity;
   private final Boolean rollup;
   private final List<AggregateProjectionSpec> projections;
+  private final BaseTableProjectionSpec baseTable;
 
   public ReindexingDataSchemaRule(
       @JsonProperty("id") @Nonnull String id,
@@ -65,19 +67,21 @@ public class ReindexingDataSchemaRule extends AbstractReindexingRule
       @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] metricsSpec,
       @JsonProperty("queryGranularity") @Nullable Granularity queryGranularity,
       @JsonProperty("rollup") @Nullable Boolean rollup,
+      @JsonProperty("baseTable") @Nullable BaseTableProjectionSpec baseTable,
       @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections
   )
   {
     super(id, description, olderThan);
     InvalidInput.conditionalException(
-        (dimensionsSpec != null || metricsSpec != null || queryGranularity != null || rollup != null || projections != null),
-        "At least oe of 'dimensionsSpec', 'metricsSpec', 'queryGranularity', 'rollup' or 'projections' must be non-null"
+        (dimensionsSpec != null || metricsSpec != null || queryGranularity != null || rollup != null || projections != null || baseTable != null),
+        "At least one of 'dimensionsSpec', 'metricsSpec', 'queryGranularity', 'rollup', 'projections' or 'baseTable' must be non-null"
     );
     this.dimensionsSpec = dimensionsSpec;
     this.metricsSpec = metricsSpec;
     this.queryGranularity = queryGranularity;
     this.rollup = rollup;
     this.projections = projections;
+    this.baseTable = baseTable;
   }
 
   @JsonProperty
@@ -90,6 +94,13 @@ public class ReindexingDataSchemaRule extends AbstractReindexingRule
   public List<AggregateProjectionSpec> getProjections()
   {
     return projections;
+  }
+
+  @JsonProperty
+  @Nullable
+  public BaseTableProjectionSpec getBaseTable()
+  {
+    return baseTable;
   }
 
   @JsonProperty
@@ -127,7 +138,8 @@ public class ReindexingDataSchemaRule extends AbstractReindexingRule
            && Objects.deepEquals(metricsSpec, that.metricsSpec)
            && Objects.equals(queryGranularity, that.queryGranularity)
            && Objects.equals(rollup, that.rollup)
-           && Objects.equals(projections, that.projections);
+           && Objects.equals(projections, that.projections)
+           && Objects.equals(baseTable, that.baseTable);
   }
 
   @Override
@@ -140,7 +152,8 @@ public class ReindexingDataSchemaRule extends AbstractReindexingRule
         dimensionsSpec,
         queryGranularity,
         rollup,
-        projections
+        projections,
+        baseTable
     );
     result = 31 * result + Arrays.hashCode(metricsSpec);
     return result;
@@ -157,6 +170,7 @@ public class ReindexingDataSchemaRule extends AbstractReindexingRule
            + ", metricsSpec=" + Arrays.toString(metricsSpec)
            + ", queryGranularity=" + queryGranularity
            + ", rollup=" + rollup
+           + ", baseTable=" + baseTable
            + ", projections=" + projections
            + '}';
   }

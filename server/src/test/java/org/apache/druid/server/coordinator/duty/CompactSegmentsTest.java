@@ -46,7 +46,9 @@ import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -459,6 +461,8 @@ public class CompactSegmentsTest
                   null,
                   JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
                   JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                  null,
+                  null,
                   null
               )
           );
@@ -470,6 +474,8 @@ public class CompactSegmentsTest
                   null,
                   JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
                   JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                  null,
+                  null,
                   null
               )
           );
@@ -484,6 +490,8 @@ public class CompactSegmentsTest
                   null,
                   JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
                   JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                  null,
+                  null,
                   null
               )
           );
@@ -985,6 +993,43 @@ public class CompactSegmentsTest
   }
 
   @Test
+  public void testCompactWithBaseTable()
+  {
+    final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
+    final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    final ClusteredValueGroupsBaseTableProjectionSpec baseTable =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("bar"),
+                                                       new LongDimensionSchema("__time")
+                                                   )
+                                                   .clusteringColumns("bar")
+                                                   .build();
+
+    compactionConfigs.add(
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withBaseTable(baseTable)
+                                              // baseTable requires the MSQ compaction engine
+                                              .withEngine(CompactionEngine.MSQ)
+                                              .build()
+    );
+    doCompactSegments(compactSegments, compactionConfigs);
+    ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
+    Assert.assertEquals(
+        baseTable,
+        taskPayload.getBaseTable()
+    );
+  }
+
+  @Test
   public void testCompactWithCatalogProjections()
   {
     final String dataSource = DATA_SOURCE_PREFIX + 0;
@@ -1112,6 +1157,7 @@ public class CompactSegmentsTest
             ),
             null,
             new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null),
+            null,
             null,
             null,
             null,
@@ -1979,6 +2025,8 @@ public class CompactSegmentsTest
                     IndexSpec.class
                 ),
                 jsonMapper.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                null,
+                null,
                 null
             ),
             1,

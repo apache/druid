@@ -86,6 +86,8 @@ public class LoadableDataSegmentTest
         ),
         MAPPER.convertValue(Map.of(), IndexSpec.class),
         MAPPER.convertValue(Map.of(), GranularitySpec.class),
+        null,
+        null,
         null
     );
     final DataSegment segment = DataSegment.builder(segmentId)

@@ -448,6 +448,8 @@ public class SqlSegmentsMetadataQueryTest
         null,
         IndexSpec.getDefault(),
         null,
+        null,
+        null,
         null
     );
     CompactionState state3 = createTestIndexingState();
@@ -653,6 +655,8 @@ public class SqlSegmentsMetadataQueryTest
         null,
         null,
         IndexSpec.getDefault(),
+        null,
+        null,
         null,
         null
     );
