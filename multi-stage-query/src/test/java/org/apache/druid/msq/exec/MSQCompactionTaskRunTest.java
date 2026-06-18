@@ -780,6 +780,8 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
             true,
             intervals
         ),
+        null,
+        null,
         null
     );
   }

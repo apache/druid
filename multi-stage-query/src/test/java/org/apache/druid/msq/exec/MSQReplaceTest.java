@@ -2922,6 +2922,8 @@ public class MSQReplaceTest extends MSQTestBase
         transformSpec,
         indexSpec,
         granularitySpec,
+        null,
+        null,
         null
     );
 

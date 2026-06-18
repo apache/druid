@@ -101,6 +101,8 @@ public class DataSegmentTest
         ),
         MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
         MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+        null,
+        null,
         null
     );
     final DataSegment segment = DataSegment.builder(segmentId)
@@ -176,6 +178,8 @@ public class DataSegmentTest
                                          ),
                                          MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
                                          MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                                         null,
+                                         null,
                                          null
                                      ))
                                      .binaryVersion(TEST_VERSION)
@@ -227,6 +231,8 @@ public class DataSegmentTest
                                          null,
                                          MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
                                          MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                                         null,
+                                         null,
                                          null
                                      ))
                                      .binaryVersion(TEST_VERSION)
@@ -386,6 +392,8 @@ public class DataSegmentTest
         ),
         MAPPER.convertValue(Map.of("test", "map"), IndexSpec.class),
         MAPPER.convertValue(Map.of("test2", "map2"), GranularitySpec.class),
+        null,
+        null,
         null
     );
     final DataSegment segment1 = DataSegment.builder(SegmentId.of(
@@ -433,6 +441,8 @@ public class DataSegmentTest
         transformSpec,
         indexSpec,
         granularitySpec,
+        null,
+        null,
         null
     );
 
@@ -444,6 +454,8 @@ public class DataSegmentTest
             transformSpec,
             indexSpec,
             granularitySpec,
+            null,
+            null,
             null
         );
 

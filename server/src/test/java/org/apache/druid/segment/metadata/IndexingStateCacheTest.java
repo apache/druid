@@ -251,6 +251,8 @@ public class IndexingStateCacheTest
         null,
         IndexSpec.getDefault(),
         null,
+        null,
+        null,
         null
     );
     String fingerprint = "same_fp";
@@ -294,6 +296,8 @@ public class IndexingStateCacheTest
         null,
         null,
         IndexSpec.getDefault(),
+        null,
+        null,
         null,
         null
     );

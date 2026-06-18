@@ -488,6 +488,8 @@ public class SqlIndexingStateStorageTest
         null,
         IndexSpec.getDefault(),
         null,
+        null,
+        null,
         null
     );
 
@@ -497,6 +499,8 @@ public class SqlIndexingStateStorageTest
         metrics2,
         null,
         IndexSpec.getDefault(),
+        null,
+        null,
         null,
         null
     );
@@ -529,6 +533,8 @@ public class SqlIndexingStateStorageTest
         null,
         IndexSpec.getDefault(),
         null,
+        null,
+        null,
         null
     );
 
@@ -538,6 +544,8 @@ public class SqlIndexingStateStorageTest
         Collections.singletonList(new CountAggregatorFactory("count")),
         null,
         IndexSpec.getDefault(),
+        null,
+        null,
         null,
         null
     );
@@ -562,6 +570,8 @@ public class SqlIndexingStateStorageTest
         null,
         IndexSpec.getDefault(),
         null,
+        null,
+        null,
         null
     );
 
@@ -571,6 +581,8 @@ public class SqlIndexingStateStorageTest
         Collections.singletonList(new CountAggregatorFactory("count")),
         null,
         IndexSpec.getDefault(),
+        null,
+        null,
         null,
         null
     );
@@ -594,6 +606,8 @@ public class SqlIndexingStateStorageTest
         null,
         IndexSpec.getDefault(),
         null,
+        null,
+        null,
         null
     );
   }
@@ -606,6 +620,8 @@ public class SqlIndexingStateStorageTest
         null,
         null,
         IndexSpec.getDefault(),
+        null,
+        null,
         null,
         null
     );

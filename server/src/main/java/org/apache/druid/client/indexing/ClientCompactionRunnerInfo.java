@@ -99,6 +99,11 @@ public class ClientCompactionRunnerInfo
   {
     CompactionEngine compactionEngine = newConfig.getEngine() == null ? defaultCompactionEngine : newConfig.getEngine();
     if (compactionEngine == CompactionEngine.NATIVE) {
+      if (newConfig.getBaseTable() != null) {
+        return CompactionConfigValidationResult.failure(
+            "Compaction engine[native] does not support 'baseTable'; use the MSQ compaction engine."
+        );
+      }
       return CompactionConfigValidationResult.success();
     } else {
       return compactionConfigSupportedByMSQEngine(newConfig);
@@ -119,9 +124,17 @@ public class ClientCompactionRunnerInfo
   {
     List<CompactionConfigValidationResult> validationResults = new ArrayList<>();
     if (newConfig.getTuningConfig() != null) {
+      // In baseTable mode the dimensions live on the baseTable spec, not the legacy top-level dimensionsSpec, so
+      // validate range-partition columns against it.
+      final List<DimensionSchema> dimensionSchemas;
+      if (newConfig.getBaseTable() != null) {
+        dimensionSchemas = newConfig.getBaseTable().getDimensionsSpec().getDimensions();
+      } else {
+        dimensionSchemas = newConfig.getDimensionsSpec() == null ? null : newConfig.getDimensionsSpec().getDimensions();
+      }
       validationResults.add(validatePartitionsSpecForMSQ(
           newConfig.getTuningConfig().getPartitionsSpec(),
-          newConfig.getDimensionsSpec() == null ? null : newConfig.getDimensionsSpec().getDimensions(),
+          dimensionSchemas,
           newConfig.getTransformSpec() == null ? VirtualColumns.EMPTY : newConfig.getTransformSpec().getVirtualColumns()
       ));
     }

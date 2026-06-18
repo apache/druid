@@ -660,6 +660,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
           transformSpec,
           tuningConfig.getIndexSpec(),
           granularitySpec,
+          null,
+          ingestionSpec.getDataSchema().getBaseTable(),
           ingestionSpec.getDataSchema().getProjections()
       );
     } else {
