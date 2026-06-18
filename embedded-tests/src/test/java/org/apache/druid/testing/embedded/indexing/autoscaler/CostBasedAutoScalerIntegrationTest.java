@@ -47,6 +47,7 @@ import org.junit.jupiter.api.Timeout;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -285,6 +286,10 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
           "supervisor task count to scale down"
       );
     }
+    catch (Exception e) {
+      throwPublisherFailureIfDone(publisherFuture);
+      throw e;
+    }
     finally {
       keepPublishing.set(false);
       publisher.shutdownNow();
@@ -391,5 +396,27 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
     );
     Assertions.assertNotNull(supervisorSpec);
     return supervisorSpec.getSpec().getIOConfig().getTaskCount();
+  }
+
+  private static void throwPublisherFailureIfDone(Future<?> publisherFuture)
+      throws Exception
+  {
+    if (!publisherFuture.isDone()) {
+      return;
+    }
+
+    try {
+      publisherFuture.get();
+    }
+    catch (ExecutionException e) {
+      final Throwable cause = e.getCause();
+      if (cause instanceof Error) {
+        throw (Error) cause;
+      } else if (cause instanceof Exception) {
+        throw (Exception) cause;
+      } else {
+        throw e;
+      }
+    }
   }
 }
