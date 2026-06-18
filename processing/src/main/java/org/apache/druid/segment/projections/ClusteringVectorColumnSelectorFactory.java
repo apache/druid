@@ -181,7 +181,21 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
   {
     final int idx = clusteringColumns.indexOf(column);
     if (idx < 0) {
-      return delegate.getColumnCapabilities(column);
+      // Non-clustering columns are stored per cluster group with per-group local dictionaries that are NOT stable
+      // across the concatenating vector cursor. We must not advertise dictionary encoding: the vectorized group-by
+      // keys on the selector's (per-group-local) IDs when the column reports as dictionary-encoded
+      // (GroupByVectorColumnProcessorFactory#useDictionaryEncodedSelector), conflating distinct values across groups.
+      // Reporting non-dictionary-encoded routes it to the value-building vector selector, which is correct across
+      // groups.
+      final ColumnCapabilities delegateCapabilities = delegate.getColumnCapabilities(column);
+      if (delegateCapabilities == null) {
+        return null;
+      }
+      return ColumnCapabilitiesImpl.copyOf(delegateCapabilities)
+                                   .setDictionaryEncoded(false)
+                                   .setDictionaryValuesSorted(false)
+                                   .setDictionaryValuesUnique(false)
+                                   .setHasBitmapIndexes(false);
     }
     final ColumnType type = clusteringColumns.getColumnType(idx).orElseThrow();
     if (type.is(ValueType.STRING)) {

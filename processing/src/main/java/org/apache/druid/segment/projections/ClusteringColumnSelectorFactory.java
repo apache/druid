@@ -29,6 +29,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.RowIdSupplier;
@@ -150,7 +151,20 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   {
     final int idx = clusteringColumns.indexOf(column);
     if (idx < 0) {
-      return delegate.getColumnCapabilities(column);
+      // Non-clustering columns are stored per cluster group, each with its own local dictionary. The
+      // ConcatenatingCursor walks those groups behind a single cursor, so a column's dictionary IDs are NOT stable
+      // across the whole cursor. We therefore must not advertise dictionary encoding here: otherwise the group-by
+      // engine keys on the (per-group-local) IDs and conflates distinct values from different groups. Reporting the
+      // column as non-dictionary-encoded forces value-based grouping, which is correct across groups.
+      final ColumnCapabilities delegateCapabilities = delegate.getColumnCapabilities(column);
+      if (delegateCapabilities == null) {
+        return null;
+      }
+      return ColumnCapabilitiesImpl.copyOf(delegateCapabilities)
+                                   .setDictionaryEncoded(false)
+                                   .setDictionaryValuesSorted(false)
+                                   .setDictionaryValuesUnique(false)
+                                   .setHasBitmapIndexes(false);
     }
     final ColumnType type = clusteringColumns.getColumnType(idx).orElseThrow();
     if (type.is(ValueType.STRING)) {
@@ -477,7 +491,12 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
     @Override
     public int getValueCardinality()
     {
-      return currentInner().getValueCardinality();
+      // The dictionary is per cluster group and NOT stable across the concatenating cursor (the same local id means
+      // different values in different groups). Reporting CARDINALITY_UNKNOWN forces query engines onto the
+      // value-based (rather than dictionary-id-keyed) path, which is correct across groups; a dictionary-id-keyed
+      // group-by would otherwise conflate distinct values that share an id. lookupName() still resolves per-row
+      // against the current group, so value-based grouping reads the right value.
+      return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
     }
 
     @Nullable
@@ -490,14 +509,16 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
     @Override
     public boolean nameLookupPossibleInAdvance()
     {
-      return currentInner().nameLookupPossibleInAdvance();
+      // Per-group dictionaries cannot be enumerated in advance across the concatenating cursor.
+      return false;
     }
 
     @Nullable
     @Override
     public IdLookup idLookup()
     {
-      return currentInner().idLookup();
+      // No stable id<->name mapping across groups; callers must resolve by value.
+      return null;
     }
 
     @Nullable
