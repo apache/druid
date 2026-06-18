@@ -49,10 +49,10 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       // ===========================
       // non-expression reference queries
       // ===========================
-      // 0: non-expression timeseries reference, 1 columns
+      // 0: non-expression timeseries reference, 1 column
+      "SELECT SUM(long1) FROM expressions",
+      // 1: non-expression timeseries reference, 1 column with nulls
       "SELECT SUM(long5) FROM expressions",
-      // 1: non-expression timeseries reference, 2 columns
-      "SELECT SUM(long1), SUM(long2) FROM expressions",
       // 2: non-expression timeseries reference, 3 columns
       "SELECT SUM(long1), SUM(long4), SUM(double1) FROM expressions",
       // 3: non-expression timeseries reference, 4 columns
