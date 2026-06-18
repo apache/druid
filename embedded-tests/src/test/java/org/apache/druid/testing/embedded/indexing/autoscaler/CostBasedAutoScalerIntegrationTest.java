@@ -67,6 +67,8 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
   private static final int PARTITION_COUNT = 50;
   private static final int MAX_SCALE_UP_RECORD_BATCHES = 30;
   private static final long SCALE_UP_PUBLISH_INTERVAL_MILLIS = 100;
+  private static final long TASK_COUNT_RETRY_INTERVAL_MILLIS = 1_000;
+  private static final int TASK_COUNT_RETRY_COUNT = 60;
 
   private String topic;
   private final KafkaResource kafkaServer = new KafkaResource();
@@ -189,6 +191,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
   }
 
   @Test
+  @Timeout(value = 20, unit = TimeUnit.MINUTES)
   public void test_autoScaler_scalesUpAndDown_withSlowPublish()
       throws Exception
   {
@@ -258,8 +261,11 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
       );
       keepPublishing.set(false);
       publisherFuture.get(30, TimeUnit.SECONDS);
-      ITRetryUtil.retryUntilTrue(
+      ITRetryUtil.retryUntil(
           () -> getCurrentTaskCount(supervisor.getId()) > 1,
+          true,
+          TASK_COUNT_RETRY_INTERVAL_MILLIS,
+          TASK_COUNT_RETRY_COUNT,
           "supervisor task count to scale up"
       );
       waitUntilPublishedRecordsAreIngested(totalRecords.get());
@@ -274,6 +280,8 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
       ITRetryUtil.retryUntilEquals(
           () -> getCurrentTaskCount(supervisor.getId()),
           1,
+          TASK_COUNT_RETRY_INTERVAL_MILLIS,
+          TASK_COUNT_RETRY_COUNT,
           "supervisor task count to scale down"
       );
     }
