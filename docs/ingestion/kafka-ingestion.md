@@ -273,7 +273,7 @@ This enables segment pruning for streaming-ingested data without waiting for com
 
 - Only string-typed dimensions are currently supported.
 - Use only low-to-medium cardinality dimensions (for example, `tenant_id`, `region`, `environment`). High-cardinality dimensions bloat segment metadata with no pruning benefit.
-- Set `maxValuesPerDimension` as a safety cap if a tracked dimension may unexpectedly grow high-cardinality. When a segment's observed distinct values for a dimension exceed the cap, that dimension is omitted from the segment's stamped filter map: pruning is disabled for that dimension on that segment, but other tracked dimensions continue to prune as normal. Default is unset (uncapped).
+- Set `maxValuesPerDimension` as a safety cap if a tracked dimension may unexpectedly grow high-cardinality. When a segment's observed distinct values for a dimension exceed the cap, that dimension is omitted from the segment's stamped filter map: pruning is disabled for that dimension on that segment, but other tracked dimensions continue to prune as normal. Default is unlimited (uncapped).
 - Most effective when Kafka partitions are keyed by the tracked dimension (for example, using tenant ID as the message key). Each task naturally sees a subset of values, and segments get tight filter annotations.
 - Also works with multiple supervisors reading from separate topics into one datasource.
 - Use a range or hashed compaction `partitionsSpec`, not the dynamic strategy: dynamic compaction does not partition by dimension, so it cannot preserve pruning after compaction.

@@ -22,7 +22,7 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -52,12 +52,10 @@ public class StreamingPartitionsSpec
   )
   {
     this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
-    if (maxValuesPerDimension != null) {
-      Preconditions.checkArgument(
-          maxValuesPerDimension > 0,
-          "maxValuesPerDimension must be > 0, got [%s]",
-          maxValuesPerDimension
-      );
+    if (maxValuesPerDimension != null && maxValuesPerDimension <= 0) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("maxValuesPerDimension must be > 0, got [%d]", maxValuesPerDimension);
     }
     this.maxValuesPerDimension = maxValuesPerDimension;
   }

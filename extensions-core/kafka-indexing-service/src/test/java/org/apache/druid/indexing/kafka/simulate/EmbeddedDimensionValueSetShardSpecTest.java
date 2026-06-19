@@ -516,6 +516,88 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
     );
   }
 
+  /** Over-cap dim is omitted from the filter map; under-cap sibling dim stamps normally; queries stay correct. */
+  @Test
+  public void test_maxValuesPerDimensionCap_overCapDimensionOmitted()
+  {
+    final String colRegion = "region";
+    final String topic = dataSource + "_topic";
+    kafkaServer.createTopicWithPartitions(topic, 1);
+
+    // 3 distinct tenants (over cap=2), 2 distinct regions (under cap=2). All in one DAY segment.
+    final List<ProducerRecord<byte[], byte[]>> records = new ArrayList<>();
+    records.add(record(topic, "%s,tenant_a,us-east,val_0", DateTimes.of("2025-01-01T01:00:00")));
+    records.add(record(topic, "%s,tenant_b,us-east,val_1", DateTimes.of("2025-01-01T02:00:00")));
+    records.add(record(topic, "%s,tenant_c,us-west,val_2", DateTimes.of("2025-01-01T03:00:00")));
+    records.add(record(topic, "%s,tenant_a,us-west,val_3", DateTimes.of("2025-01-01T04:00:00")));
+    kafkaServer.produceRecordsToTopic(records);
+
+    final KafkaSupervisorSpec spec = new KafkaSupervisorSpecBuilder()
+        .withContext(Collections.singletonMap(Tasks.USE_CONCURRENT_LOCKS, true))
+        .withDataSchema(
+            schema -> schema
+                .withTimestamp(new TimestampSpec(COL_TIMESTAMP, null, null))
+                .withDimensions(
+                    DimensionsSpec.builder()
+                                  .setDimensions(List.of(
+                                      new StringDimensionSchema(COL_TENANT),
+                                      new StringDimensionSchema(colRegion),
+                                      new StringDimensionSchema(COL_VALUE)
+                                  ))
+                                  .build()
+                )
+                .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
+        )
+        .withTuningConfig(
+            t -> t.withMaxRowsPerSegment(1000)
+                  .withReleaseLocksOnHandoff(true)
+                  .withStreamingPartitionsSpec(new StreamingPartitionsSpec(List.of(COL_TENANT, colRegion), 2))
+        )
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withInputFormat(new CsvInputFormat(
+                    List.of(COL_TIMESTAMP, COL_TENANT, colRegion, COL_VALUE), null, null, false, 0, false))
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withTaskDuration(Period.millis(500))
+                .withStartDelay(Period.millis(10))
+                .withSupervisorRunPeriod(Period.millis(500))
+                .withCompletionTimeout(Period.seconds(5))
+                .withUseEarliestSequenceNumber(true)
+        )
+        .withId(dataSource + "_supe")
+        .build(dataSource, topic);
+
+    cluster.callApi().postSupervisor(spec);
+    awaitRowsProcessed(4);
+    suspendAndAwaitHandoff(spec, 1);
+
+    Assertions.assertEquals("4", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+    Assertions.assertEquals("2", cluster.runSql(
+        "SELECT COUNT(*) FROM %s WHERE %s = 'tenant_a'", dataSource, COL_TENANT));
+    Assertions.assertEquals("1", cluster.runSql(
+        "SELECT COUNT(*) FROM %s WHERE %s = 'tenant_c'", dataSource, COL_TENANT));
+    Assertions.assertEquals("2", cluster.runSql(
+        "SELECT COUNT(*) FROM %s WHERE %s = 'us-east'", dataSource, colRegion));
+    Assertions.assertEquals("2", cluster.runSql(
+        "SELECT COUNT(*) FROM %s WHERE %s = 'us-west'", dataSource, colRegion));
+
+    verifyAllSegmentsHaveDimensionValueSetShardSpec(dataSource);
+    final List<Map<String, Object>> shardSpecs = getShardSpecs(dataSource);
+    Assertions.assertEquals(1, shardSpecs.size());
+
+    @SuppressWarnings("unchecked")
+    final Map<String, List<String>> filters =
+        (Map<String, List<String>>) shardSpecs.get(0).get("partitionDimensionValues");
+
+    Assertions.assertNull(filters.get(COL_TENANT),
+        "Over-cap dim must be absent from filter map: " + filters);
+    Assertions.assertEquals(
+        Set.of("us-east", "us-west"),
+        Set.copyOf(filters.get(colRegion)),
+        "Under-cap dim must be stamped with all observed values: " + filters
+    );
+  }
+
   @Test
   public void test_pruning_verifiedBySegmentScanMetric()
   {
