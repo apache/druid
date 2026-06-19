@@ -557,6 +557,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   void forceOrWaitOngoingDatabasePoll()
   {
     long checkStartTime = System.currentTimeMillis();
+    long checkStartTimeNanos = System.nanoTime();
     ReentrantReadWriteLock.WriteLock lock = startStopPollLock.writeLock();
     lock.lock();
     try {
@@ -569,7 +570,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         }
         // Verify if there was a on-demand poll completed while we were waiting for the lock
         if (latestDatabasePoll instanceof OnDemandDatabasePoll) {
-          long checkStartTimeNanos = TimeUnit.MILLISECONDS.toNanos(checkStartTime);
           OnDemandDatabasePoll latestOnDemandPoll = (OnDemandDatabasePoll) latestDatabasePoll;
           if (latestOnDemandPoll.initiationTimeNanos > checkStartTimeNanos) {
             return;
