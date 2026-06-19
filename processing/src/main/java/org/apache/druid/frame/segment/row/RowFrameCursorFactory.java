@@ -33,6 +33,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.ResidentCursorFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -49,7 +50,7 @@ import java.util.List;
  *
  * @see ColumnarFrameCursorFactory the columnar version
  */
-public class RowFrameCursorFactory implements CursorFactory
+public class RowFrameCursorFactory implements ResidentCursorFactory
 {
   private final Frame frame;
   private final FrameReader frameReader;
