@@ -199,7 +199,7 @@ public class DruidNodeTest
     Assert.assertEquals("host:8082", node.getHostAndPortToUse());
 
     // When set, advertisedPlaintextPort overrides in getHostAndPort() but not getPlaintextPort()
-    node = new DruidNode("test", "host", false, 8082, null, 9443, true, false, 9443);
+    node = new DruidNode("test", "host", false, 8082, null, 9443, true, false, null, 9443);
     Assert.assertEquals(8082, node.getPlaintextPort());
     Assert.assertEquals(9443, node.getAdvertisedPlaintextPort());
     Assert.assertEquals("host:9443", node.getHostAndPort());
@@ -212,7 +212,7 @@ public class DruidNodeTest
   public void testAdvertisedPlaintextPortWithTls()
   {
     // advertisedPlaintextPort with TLS enabled — getHostAndPortToUse() prefers TLS
-    DruidNode node = new DruidNode("test", "host", false, 8082, null, 8443, true, true, 9443);
+    DruidNode node = new DruidNode("test", "host", false, 8082, null, 8443, true, true, null, 9443);
     Assert.assertEquals(8082, node.getPlaintextPort());
     Assert.assertEquals(9443, node.getAdvertisedPlaintextPort());
     Assert.assertEquals(8443, node.getTlsPort());
@@ -225,7 +225,7 @@ public class DruidNodeTest
   public void testAdvertisedPlaintextPortDisabledPlaintext()
   {
     // When plaintext is disabled, advertisedPlaintextPort is -1 regardless
-    DruidNode node = new DruidNode("test", "host", false, null, null, 8443, false, true, 9443);
+    DruidNode node = new DruidNode("test", "host", false, null, null, 8443, false, true, null, 9443);
     Assert.assertEquals(-1, node.getPlaintextPort());
     Assert.assertEquals(-1, node.getAdvertisedPlaintextPort());
     Assert.assertNull(node.getHostAndPort());
@@ -235,7 +235,7 @@ public class DruidNodeTest
   public void testAdvertisedPlaintextPortSerde() throws Exception
   {
     // Serialization roundtrip preserves advertisedPlaintextPort
-    DruidNode original = new DruidNode("service", "host", true, 8082, null, 5678, true, true, 9443);
+    DruidNode original = new DruidNode("service", "host", true, 8082, null, 5678, true, true, null, 9443);
     DruidNode actual = mapper.readValue(mapper.writeValueAsString(original), DruidNode.class);
     Assert.assertEquals(8082, actual.getPlaintextPort());
     Assert.assertEquals(9443, actual.getAdvertisedPlaintextPort());
@@ -282,7 +282,7 @@ public class DruidNodeTest
   @Test
   public void testAdvertisedPlaintextPortWithService()
   {
-    DruidNode node = new DruidNode("test", "host", false, 8082, null, 9443, true, false, 9443);
+    DruidNode node = new DruidNode("test", "host", false, 8082, null, 9443, true, false, null, 9443);
     DruidNode copy = node.withService("other");
     Assert.assertEquals("other", copy.getServiceName());
     Assert.assertEquals(8082, copy.getPlaintextPort());
@@ -292,8 +292,8 @@ public class DruidNodeTest
   @Test
   public void testAdvertisedPlaintextPortEquality()
   {
-    DruidNode a = new DruidNode("test", "host", false, 8082, null, 9443, true, false, 9443);
-    DruidNode b = new DruidNode("test", "host", false, 8082, null, 9443, true, false, 9443);
+    DruidNode a = new DruidNode("test", "host", false, 8082, null, 9443, true, false, null, 9443);
+    DruidNode b = new DruidNode("test", "host", false, 8082, null, 9443, true, false, null, 9443);
     DruidNode c = new DruidNode("test", "host", false, 8082, null, true, false);
     Assert.assertEquals(a, b);
     Assert.assertNotEquals(a, c);
