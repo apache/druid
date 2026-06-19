@@ -29,9 +29,9 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Ignore;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -235,7 +235,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
   }
 
   @Test
-  @Ignore
+  @Disabled
   /**
    * See {@link LookupJoinable#getCorrelatedColumnValues(String, String, String, long, boolean)} for implementation
    * details that cause this test to fail.

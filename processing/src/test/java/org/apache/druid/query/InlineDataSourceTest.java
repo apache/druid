@@ -220,11 +220,12 @@ public class InlineDataSourceTest
   @Test
   public void test_withChildren_nonEmpty()
   {
-    Assertions.assertThrows(
+    Throwable t = Assertions.assertThrows(
         IllegalArgumentException.class,
         // Workaround so "withChildren" isn't flagged as unused in the DataSource interface.
         () -> ((DataSource) listDataSource).withChildren(ImmutableList.of(new TableDataSource("foo")))
     );
+    Assertions.assertEquals("Cannot accept children", t.getMessage());
   }
 
   @Test

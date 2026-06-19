@@ -66,11 +66,11 @@ public class FlatTextFormatParserTest extends InitializedNullHandlingTest
   {
     final String header = concat(format, "time", "value1", "value2", "value2");
 
-    Assertions.assertThrows(
+    Throwable t = Assertions.assertThrows(
         ParseException.class,
-        () -> PARSER_FACTORY.get(format, header),
-        StringUtils.format("Unable to parse header [%s]", header)
+        () -> PARSER_FACTORY.get(format, header)
     );
+    Assertions.assertEquals(StringUtils.format("Unable to parse header [%s]", header), t.getMessage());
   }
 
   @Test
