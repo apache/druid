@@ -580,6 +580,103 @@ public class SeekableStreamIndexTaskRunnerTest
     Assert.assertSame("With the feature off the segment must be returned unchanged", segment, annotated);
   }
 
+  /** Boundary: observed values exactly equal the cap, dim must still stamp. */
+  @Test
+  public void testCapAtBoundaryStampsValuesNormally() throws Exception
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createRunner(
+        ImmutableMap.of("partition", "0"),
+        ImmutableMap.of("partition", "100")
+    );
+    Mockito.when(task.getTuningConfig().getStreamingPartitionsSpec())
+           .thenReturn(new StreamingPartitionsSpec(List.of("tenant"), 3));
+
+    final DataSegment segment = createSingleSegment();
+    observe(runner, segment.getId(), "tenant", "tenant_a", "tenant_b", "tenant_c");
+
+    final DataSegment annotated = runner.annotateSegmentWithPartitionDimensionValues(segment);
+
+    Assert.assertTrue(annotated.getShardSpec() instanceof DimensionValueSetShardSpec);
+    Assert.assertEquals(
+        Arrays.asList("tenant_a", "tenant_b", "tenant_c"),
+        ((DimensionValueSetShardSpec) annotated.getShardSpec()).getPartitionDimensionValues().get("tenant")
+    );
+  }
+
+  /** Over-cap: dim is omitted from the filter map; segment still gets a DimensionValueSetShardSpec. */
+  @Test
+  public void testCapExceededOmitsDimensionFromFilterMap() throws Exception
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createRunner(
+        ImmutableMap.of("partition", "0"),
+        ImmutableMap.of("partition", "100")
+    );
+    Mockito.when(task.getTuningConfig().getStreamingPartitionsSpec())
+           .thenReturn(new StreamingPartitionsSpec(List.of("tenant"), 2));
+
+    final DataSegment segment = createSingleSegment();
+    observe(runner, segment.getId(), "tenant", "tenant_a", "tenant_b", "tenant_c");
+
+    final DataSegment annotated = runner.annotateSegmentWithPartitionDimensionValues(segment);
+
+    Assert.assertTrue(annotated.getShardSpec() instanceof DimensionValueSetShardSpec);
+    Assert.assertTrue(
+        "Over-cap dimension must be absent from the filter map so possibleInDomain treats it as unconstrained",
+        ((DimensionValueSetShardSpec) annotated.getShardSpec()).getPartitionDimensionValues().isEmpty()
+    );
+  }
+
+  /** Per-dim independence: a runaway dim must not disable pruning on its under-cap siblings. */
+  @Test
+  public void testCapEnforcedPerDimensionIndependently() throws Exception
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createRunner(
+        ImmutableMap.of("partition", "0"),
+        ImmutableMap.of("partition", "100")
+    );
+    Mockito.when(task.getTuningConfig().getStreamingPartitionsSpec())
+           .thenReturn(new StreamingPartitionsSpec(List.of("tenant", "region"), 2));
+
+    final DataSegment segment = createSingleSegment();
+    observe(runner, segment.getId(), "tenant", "tenant_a", "tenant_b", "tenant_c");
+    observe(runner, segment.getId(), "region", "us-west", "us-east");
+
+    final DataSegment annotated = runner.annotateSegmentWithPartitionDimensionValues(segment);
+
+    final DimensionValueSetShardSpec shardSpec = (DimensionValueSetShardSpec) annotated.getShardSpec();
+    Assert.assertNull(
+        "Over-cap dim must be absent",
+        shardSpec.getPartitionDimensionValues().get("tenant")
+    );
+    Assert.assertEquals(
+        "Under-cap dim must be stamped normally",
+        Arrays.asList("us-east", "us-west"),
+        shardSpec.getPartitionDimensionValues().get("region")
+    );
+  }
+
+  /** Null counts toward the cap like any other distinct value. */
+  @Test
+  public void testNullCountsTowardCap() throws Exception
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createRunner(
+        ImmutableMap.of("partition", "0"),
+        ImmutableMap.of("partition", "100")
+    );
+    Mockito.when(task.getTuningConfig().getStreamingPartitionsSpec())
+           .thenReturn(new StreamingPartitionsSpec(List.of("tenant"), 2));
+
+    final DataSegment segment = createSingleSegment();
+    observe(runner, segment.getId(), "tenant", "tenant_a", "tenant_b", null);
+
+    final DataSegment annotated = runner.annotateSegmentWithPartitionDimensionValues(segment);
+
+    Assert.assertTrue(
+        "Null counts toward the cap; over-cap dim must be omitted",
+        ((DimensionValueSetShardSpec) annotated.getShardSpec()).getPartitionDimensionValues().isEmpty()
+    );
+  }
+
   private static DataSegment createSingleSegment()
   {
     return CreateDataSegments
