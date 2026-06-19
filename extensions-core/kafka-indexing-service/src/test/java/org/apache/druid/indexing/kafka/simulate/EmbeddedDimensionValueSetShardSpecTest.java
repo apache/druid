@@ -516,7 +516,6 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
     );
   }
 
-  /** Over-cap dim is omitted from the filter map; under-cap sibling dim stamps normally; queries stay correct. */
   @Test
   public void test_maxValuesPerDimensionCap_overCapDimensionOmitted()
   {
@@ -524,12 +523,14 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
     final String topic = dataSource + "_topic";
     kafkaServer.createTopicWithPartitions(topic, 1);
 
-    // 3 distinct tenants (over cap=2), 2 distinct regions (under cap=2). All in one DAY segment.
+    // Day1: 3 distinct tenants (over cap=2) → tenant omitted; region single-valued {us-east}.
+    // Day2: 2 distinct tenants (at cap=2)   → tenant stamped;  region single-valued {us-west}.
     final List<ProducerRecord<byte[], byte[]>> records = new ArrayList<>();
     records.add(record(topic, "%s,tenant_a,us-east,val_0", DateTimes.of("2025-01-01T01:00:00")));
     records.add(record(topic, "%s,tenant_b,us-east,val_1", DateTimes.of("2025-01-01T02:00:00")));
-    records.add(record(topic, "%s,tenant_c,us-west,val_2", DateTimes.of("2025-01-01T03:00:00")));
-    records.add(record(topic, "%s,tenant_a,us-west,val_3", DateTimes.of("2025-01-01T04:00:00")));
+    records.add(record(topic, "%s,tenant_c,us-east,val_2", DateTimes.of("2025-01-01T03:00:00")));
+    records.add(record(topic, "%s,tenant_a,us-west,val_3", DateTimes.of("2025-01-02T01:00:00")));
+    records.add(record(topic, "%s,tenant_b,us-west,val_4", DateTimes.of("2025-01-02T02:00:00")));
     kafkaServer.produceRecordsToTopic(records);
 
     final KafkaSupervisorSpec spec = new KafkaSupervisorSpecBuilder()
@@ -568,34 +569,64 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
         .build(dataSource, topic);
 
     cluster.callApi().postSupervisor(spec);
-    awaitRowsProcessed(4);
+    awaitRowsProcessed(5);
     suspendAndAwaitHandoff(spec, 1);
 
-    Assertions.assertEquals("4", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
-    Assertions.assertEquals("2", cluster.runSql(
-        "SELECT COUNT(*) FROM %s WHERE %s = 'tenant_a'", dataSource, COL_TENANT));
-    Assertions.assertEquals("1", cluster.runSql(
-        "SELECT COUNT(*) FROM %s WHERE %s = 'tenant_c'", dataSource, COL_TENANT));
-    Assertions.assertEquals("2", cluster.runSql(
-        "SELECT COUNT(*) FROM %s WHERE %s = 'us-east'", dataSource, colRegion));
-    Assertions.assertEquals("2", cluster.runSql(
-        "SELECT COUNT(*) FROM %s WHERE %s = 'us-west'", dataSource, colRegion));
-
     verifyAllSegmentsHaveDimensionValueSetShardSpec(dataSource);
-    final List<Map<String, Object>> shardSpecs = getShardSpecs(dataSource);
-    Assertions.assertEquals(1, shardSpecs.size());
-
-    @SuppressWarnings("unchecked")
-    final Map<String, List<String>> filters =
-        (Map<String, List<String>>) shardSpecs.get(0).get("partitionDimensionValues");
-
-    Assertions.assertNull(filters.get(COL_TENANT),
-        "Over-cap dim must be absent from filter map: " + filters);
+    final Map<String, String> startToSegmentId = getStartToSegmentId(dataSource);
     Assertions.assertEquals(
-        Set.of("us-east", "us-west"),
-        Set.copyOf(filters.get(colRegion)),
-        "Under-cap dim must be stamped with all observed values: " + filters
+        2,
+        startToSegmentId.size(),
+        "Expected exactly 2 day segments (1:1 start→segment) but got " + startToSegmentId
     );
+    final String day1 = startToSegmentId.get("2025-01-01T00:00:00.000Z");
+    final String day2 = startToSegmentId.get("2025-01-02T00:00:00.000Z");
+    Assertions.assertNotNull(day1, "Missing Day1 segment id in: " + startToSegmentId);
+    Assertions.assertNotNull(day2, "Missing Day2 segment id in: " + startToSegmentId);
+
+    assertScan("5", Set.of(day1, day2), "SELECT COUNT(*) FROM %s", dataSource);
+
+    assertScan("3", Set.of(day1), "SELECT COUNT(*) FROM %s WHERE %s = 'us-east'", dataSource, colRegion);
+    assertScan("2", Set.of(day2), "SELECT COUNT(*) FROM %s WHERE %s = 'us-west'", dataSource, colRegion);
+
+    assertScan("2", Set.of(day1, day2), "SELECT COUNT(*) FROM %s WHERE %s = 'tenant_a'", dataSource, COL_TENANT);
+    assertScan("1", Set.of(day1), "SELECT COUNT(*) FROM %s WHERE %s = 'tenant_c'", dataSource, COL_TENANT);
+
+    // Key cap consequence: a non-existent tenant value is NOT fully pruned — Day1 is still scanned because its over-cap
+    // tenant filter was omitted. Day2 IS pruned (value not in its stamped {a,b}). Were tenant under-cap, this would
+    // prune to zero segments.
+    assertScan("0", Set.of(day1), "SELECT COUNT(*) FROM %s WHERE %s = 'tenant_zzz'", dataSource, COL_TENANT);
+
+    final List<Map<String, Object>> shardSpecs = getShardSpecs(dataSource);
+    Assertions.assertEquals(2, shardSpecs.size());
+
+    Map<String, List<String>> overCapFilters = null;
+    Map<String, List<String>> underCapFilters = null;
+    for (Map<String, Object> shardSpec : shardSpecs) {
+      @SuppressWarnings("unchecked")
+      final Map<String, List<String>> filters = (Map<String, List<String>>) shardSpec.get("partitionDimensionValues");
+      if (filters.get(COL_TENANT) == null) {
+        overCapFilters = filters;
+      } else {
+        underCapFilters = filters;
+      }
+    }
+
+    Assertions.assertNotNull(overCapFilters, "Expected one segment to omit the over-cap tenant dim: " + shardSpecs);
+    Assertions.assertNotNull(underCapFilters, "Expected one segment to stamp the under-cap tenant dim: " + shardSpecs);
+
+    Assertions.assertNull(overCapFilters.get(COL_TENANT),
+        "Over-cap dim must be absent from filter map: " + overCapFilters);
+    Assertions.assertEquals(List.of("us-east"), overCapFilters.get(colRegion),
+        "Under-cap sibling dim must still be stamped on the over-cap segment: " + overCapFilters);
+
+    Assertions.assertEquals(
+        Set.of(TENANT_A, TENANT_B),
+        Set.copyOf(underCapFilters.get(COL_TENANT)),
+        "Under-cap dim must be stamped with all observed values: " + underCapFilters
+    );
+    Assertions.assertEquals(List.of("us-west"), underCapFilters.get(colRegion),
+        "Under-cap sibling dim must be stamped: " + underCapFilters);
   }
 
   @Test
