@@ -40,9 +40,11 @@ module.exports={
     "disableHeaderTitle": true
   },
   "onBrokenLinks": "log",
-  "onBrokenMarkdownLinks": "throw",
   markdown: {
     mermaid: true,
+    hooks: {
+      onBrokenMarkdownLinks: "throw"
+    }
   },
   "presets": [
     [
