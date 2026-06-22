@@ -337,8 +337,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 {
                   final TrafficCop trafficCop;
                   synchronized (done) {
-                    // If the response already completed normally there is nothing to abandon, and the connection may
-                    // already be back in the pool, so don't race that cleanup by aborting it now.
                     if (done.get()) {
                       return;
                     }
