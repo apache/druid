@@ -110,8 +110,9 @@ public class DeltaLakeInputSourceIngestionTest extends EmbeddedClusterTestBase
         "Expected all rows to be ingested. A count of 2048 indicates the per-file batch-drain bug (GH-18606) regressed."
     );
 
-    // The 'id' column was used as the POSIX timestamp; its documented min/max (0 and 3999) bound __time,
-    // confirming rows from both Parquet files (not just the first batch of each) were ingested.
+    // Secondary sanity check on timestamp parsing and value range: the 'id' column (used as the POSIX
+    // timestamp) has a documented min of 0 and max of 3999, which should bound __time after ingestion.
+    // Completeness across both files is guaranteed by the COUNT(*) assertion above, not by these bounds.
     Assertions.assertEquals(
         "1970-01-01T00:00:00.000Z,1970-01-01T01:06:39.000Z",
         cluster.runSql("SELECT MIN(__time), MAX(__time) FROM %s", dataSource)
