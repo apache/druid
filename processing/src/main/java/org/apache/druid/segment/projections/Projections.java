@@ -174,7 +174,13 @@ public class Projections
   )
   {
     if (!queryCursorBuildSpec.isCompatibleOrdering(projection.getOrderingWithTimeColumnSubstitution())) {
-      logTrace(queryCursorBuildSpec.getQueryContext(), "matchAggregateProjection: projection [%s] rejected — incompatible ordering", projection.getName());
+      logTrace(
+          queryCursorBuildSpec.getQueryContext(),
+          "matchAggregateProjection: projection [%s] rejected — incompatible ordering, query wants %s but projection provides %s",
+          projection.getName(),
+          queryCursorBuildSpec.getPreferredOrdering(),
+          projection.getOrderingWithTimeColumnSubstitution()
+      );
       return null;
     }
     if (CollectionUtils.isNullOrEmpty(queryCursorBuildSpec.getPhysicalColumns())) {
@@ -252,7 +258,6 @@ public class Projections
     if (projection.getFilter() != null) {
       final Filter queryFilter = queryCursorBuildSpec.getFilter();
       if (queryFilter != null) {
-        final Set<String> originalRequired = queryFilter.getRequiredColumns();
         // try to rewrite the query filter into a projection filter, if the rewrite is valid, we can proceed
         final Filter projectionFilter = projection.getFilter().toOptimizedFilter(false);
         final Filter remappedQueryFilter = remapFilterToProjection(matchBuilder, queryFilter);
