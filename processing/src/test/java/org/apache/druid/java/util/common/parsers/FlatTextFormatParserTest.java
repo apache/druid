@@ -200,9 +200,13 @@ public class FlatTextFormatParserTest extends InitializedNullHandlingTest
         concat(format, "header", "line", "2"),
         concat(format, "hello", "world", "foo")
     };
-    Assertions.assertThrows(
+    Throwable t = Assertions.assertThrows(
         UnsupportedOperationException.class,
         () -> parser.parseToMap(body[0])
+    );
+    Assertions.assertEquals(
+        "hasHeaderRow or maxSkipHeaderRows is not supported. Please check the indexTask supports these options.",
+        t.getMessage()
     );
   }
 
