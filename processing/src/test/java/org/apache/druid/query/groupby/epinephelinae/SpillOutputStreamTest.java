@@ -243,7 +243,7 @@ public class SpillOutputStreamTest
   }
 
   @Test
-  public void testDiskStorageLimitEnforced() throws IOException
+  public void testDiskStorageLimitEnforced()
   {
     LimitedTemporaryStorage storage = makeStorage(10);
     Assertions.assertThrows(TemporaryStorageFullException.class, () -> {
@@ -255,12 +255,12 @@ public class SpillOutputStreamTest
     });
   }
 
-  private SpillOutputStream makeStream(long threshold) throws IOException
+  private SpillOutputStream makeStream(long threshold)
   {
     return new SpillOutputStream(makeStorage(1024 * 1024), threshold);
   }
 
-  private LimitedTemporaryStorage makeStorage(long maxBytes) throws IOException
+  private LimitedTemporaryStorage makeStorage(long maxBytes)
   {
     return new LimitedTemporaryStorage(
         temporaryFolder,
