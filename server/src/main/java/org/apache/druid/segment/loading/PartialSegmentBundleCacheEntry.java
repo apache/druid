@@ -35,7 +35,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -140,14 +142,13 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
   )
   {
     final List<BundleContainerRef> refs = new ArrayList<>();
-    collectMatchingContainers(fileMapper.getSegmentFileMetadata(), bundleName, null, refs);
+    for (int containerIndex : fileMapper.getContainerIndicesForBundle(bundleName)) {
+      refs.add(new BundleContainerRef(null, containerIndex));
+    }
     for (String externalFilename : fileMapper.getExternalFilenames()) {
-      collectMatchingContainers(
-          fileMapper.getExternalMapper(externalFilename).getSegmentFileMetadata(),
-          bundleName,
-          externalFilename,
-          refs
-      );
+      for (int containerIndex : fileMapper.getExternalMapper(externalFilename).getContainerIndicesForBundle(bundleName)) {
+        refs.add(new BundleContainerRef(externalFilename, containerIndex));
+      }
     }
     return List.copyOf(refs);
   }
@@ -390,7 +391,7 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
 
       // 2. References on metadata + parents (gates their deferred cleanup on this bundle's lifetime; matters for
       // statically-reserved dependencies where a drop fires `release()` directly without going through cache)
-      acquiredRefs.add(metadataEntry.acquireReference());
+      acquiredRefs.add(metadataEntry.acquireMetadataReference());
       for (PartialSegmentBundleCacheEntryIdentifier parentId : parentEntryIds) {
         final CacheEntry parentEntry = mountLocation.getCacheEntry(parentId);
         if (!(parentEntry instanceof PartialSegmentBundleCacheEntry)) {
@@ -569,19 +570,50 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
     metadataEntry.unregisterBundle(this);
   }
 
-  private static void collectMatchingContainers(
-      SegmentFileMetadata fileMeta,
-      String bundleName,
-      @Nullable String externalFilename,
-      List<BundleContainerRef> out
-  )
+  /**
+   * The distinct set of bundle names present across the segment's main file and every attached external file. A
+   * container written without an explicit {@link SegmentFileBuilder#startFileBundle} call (or from a segment that
+   * predates the bundle field) reports {@link SegmentFileBuilder#ROOT_BUNDLE_NAME}. Shared by the bootstrap
+   * discovery path and {@link #resolveBundleName}.
+   */
+  public static Set<String> bundleNames(PartialSegmentFileMapperV10 fileMapper)
   {
-    final List<SegmentFileContainerMetadata> containers = fileMeta.getContainers();
-    for (int ci = 0; ci < containers.size(); ci++) {
-      if (bundleName.equals(containers.get(ci).getBundle())) {
-        out.add(new BundleContainerRef(externalFilename, ci));
-      }
+    // Union of each mapper's own bundle names (each computed once at mapper construction).
+    final Set<String> names = new HashSet<>(fileMapper.getBundleNames());
+    for (String externalFilename : fileMapper.getExternalFilenames()) {
+      names.addAll(fileMapper.getExternalMapper(externalFilename).getBundleNames());
     }
+    return names;
+  }
+
+  /**
+   * Resolve the bundle name to actually acquire for a query that asked for {@code requestedBundleName}. Normally the
+   * requested name itself, but when no container exists with that name AND the segment's <em>only</em> bundle is
+   * {@link SegmentFileBuilder#ROOT_BUNDLE_NAME}, this method resolves to the root bundle so the whole segment becomes
+   * a single catch-all bundle and the query does not fail. This is to handle legacy v10 segments that might exist from
+   * before the bundle name was stored in the metadata.
+   * <p>
+   * The fallback is deliberately gated on root being the segment's sole bundle:
+   * <ul>
+   *   <li>A segment with named bundles present never silently reroutes a missing request to root, that stays a hard
+   *       error (a genuinely missing bundle is a bug).</li>
+   *   <li>A future writer that legitimately writes some files to the root bundle <em>alongside</em> named bundles is
+   *       unaffected: its reader asks for {@code __root__} by name, which exists, so the fallback never fires.</li>
+   * </ul>
+   */
+  public static String resolveBundleName(PartialSegmentFileMapperV10 fileMapper, String requestedBundleName)
+  {
+    if (!findContainersForBundle(fileMapper, requestedBundleName).isEmpty()) {
+      return requestedBundleName;
+    }
+    final Set<String> present = bundleNames(fileMapper);
+    // legacy v10 segments from before bundle field was persisted in the segment
+    if (present.size() == 1 && present.contains(SegmentFileBuilder.ROOT_BUNDLE_NAME)) {
+      return SegmentFileBuilder.ROOT_BUNDLE_NAME;
+    }
+    // Requested bundle is absent and there are named bundles present: leave the name as-is so the caller fails
+    // loudly (forBundle throws "no containers") rather than silently serving the wrong data.
+    return requestedBundleName;
   }
 
   private static void awaitMount(SettableFuture<Void> future) throws IOException

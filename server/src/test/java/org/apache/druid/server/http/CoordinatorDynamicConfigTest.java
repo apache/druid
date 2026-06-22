@@ -699,10 +699,54 @@ public class CoordinatorDynamicConfigTest
   }
 
   @Test
+  public void testHistoricalTierAliasesRejectsTierInMultipleAliases()
+  {
+    Map<String, Set<String>> aliases = Map.of(
+        "hot", Set.of("tier_1", "tier_2"),
+        "warm", Set.of("tier_2", "tier_3")
+    );
+
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> CoordinatorDynamicConfig.builder().withHistoricalTierAliases(aliases).build()
+    );
+    Assert.assertTrue(
+        "Throws correct multi-alias message",
+        exception.getMessage().contains("cannot belong to more than one alias")
+    );
+    Assert.assertTrue(
+        "Names the offending tier",
+        exception.getMessage().contains("tier_2")
+    );
+  }
+
+  @Test
+  public void testGetTierToAliasName()
+  {
+    Map<String, Set<String>> aliases = Map.of(
+        "hot", Set.of("hot_1", "hot_2"),
+        "cold", Set.of("cold_1")
+    );
+    CoordinatorDynamicConfig config = CoordinatorDynamicConfig.builder()
+                                                              .withHistoricalTierAliases(aliases)
+                                                              .build();
+
+    Map<String, String> expected = Map.of(
+        "hot_1", "hot",
+        "hot_2", "hot",
+        "cold_1", "cold"
+    );
+    Assert.assertEquals(expected, config.getTierToAliasName());
+
+    // No aliases configured -> empty reverse map
+    Assert.assertEquals(Map.of(), CoordinatorDynamicConfig.builder().build().getTierToAliasName());
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(CoordinatorDynamicConfig.class)
-                  .withIgnoredFields("validDebugDimensions")
+                  .withIgnoredFields("validDebugDimensions", "tierToAliasName")
                   .usingGetClass()
                   .verify();
   }

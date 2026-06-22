@@ -20,6 +20,7 @@
 package org.apache.druid.segment.incremental;
 
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -39,6 +40,10 @@ public class IncrementalIndexSchema
   {
     return new Builder();
   }
+  public static IncrementalIndexSchema.Builder builder(IncrementalIndexSchema schema)
+  {
+    return new Builder(schema);
+  }
 
   private final long minTimestamp;
   private final TimestampSpec timestampSpec;
@@ -50,6 +55,13 @@ public class IncrementalIndexSchema
 
   private final List<AggregateProjectionSpec> projections;
 
+  /**
+   * Optional clustered-base-table spec. When non-null, the IncrementalIndex partitions rows into per-clustering-tuple
+   * sub-indexes ("cluster groups") rather than storing them in a single shared facts holder.
+   */
+  @Nullable
+  private final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec;
+
   public IncrementalIndexSchema(
       long minTimestamp,
       TimestampSpec timestampSpec,
@@ -58,7 +70,8 @@ public class IncrementalIndexSchema
       DimensionsSpec dimensionsSpec,
       AggregatorFactory[] metrics,
       boolean rollup,
-      List<AggregateProjectionSpec> projections
+      List<AggregateProjectionSpec> projections,
+      @Nullable ClusteredValueGroupsBaseTableProjectionSpec clusterSpec
   )
   {
     this.minTimestamp = minTimestamp;
@@ -69,6 +82,7 @@ public class IncrementalIndexSchema
     this.metrics = metrics;
     this.rollup = rollup;
     this.projections = projections;
+    this.clusterSpec = clusterSpec;
   }
 
   public long getMinTimestamp()
@@ -111,6 +125,12 @@ public class IncrementalIndexSchema
     return projections;
   }
 
+  @Nullable
+  public ClusteredValueGroupsBaseTableProjectionSpec getClusterSpec()
+  {
+    return clusterSpec;
+  }
+
   public static class Builder
   {
     private long minTimestamp;
@@ -121,6 +141,8 @@ public class IncrementalIndexSchema
     private AggregatorFactory[] metrics;
     private boolean rollup;
     private List<AggregateProjectionSpec> projections;
+    @Nullable
+    private ClusteredValueGroupsBaseTableProjectionSpec clusterSpec;
 
     public Builder()
     {
@@ -131,6 +153,19 @@ public class IncrementalIndexSchema
       this.metrics = new AggregatorFactory[]{};
       this.rollup = true;
       this.projections = Collections.emptyList();
+      this.clusterSpec = null;
+    }
+
+    public Builder(IncrementalIndexSchema schema)
+    {
+      this.minTimestamp = schema.getMinTimestamp();
+      this.queryGranularity = schema.getQueryGranularity();
+      this.virtualColumns = schema.getVirtualColumns();
+      this.dimensionsSpec = schema.getDimensionsSpec();
+      this.metrics = schema.getMetrics();
+      this.rollup = schema.isRollup();
+      this.projections = schema.getProjections();
+      this.clusterSpec = schema.getClusterSpec();
     }
 
     public Builder withMinTimestamp(long minTimestamp)
@@ -181,6 +216,12 @@ public class IncrementalIndexSchema
       return this;
     }
 
+    public Builder withClusterSpec(@Nullable ClusteredValueGroupsBaseTableProjectionSpec clusterSpec)
+    {
+      this.clusterSpec = clusterSpec;
+      return this;
+    }
+
     public IncrementalIndexSchema build()
     {
       return new IncrementalIndexSchema(
@@ -191,7 +232,8 @@ public class IncrementalIndexSchema
           dimensionsSpec,
           metrics,
           rollup,
-          projections
+          projections,
+          clusterSpec
       );
     }
   }

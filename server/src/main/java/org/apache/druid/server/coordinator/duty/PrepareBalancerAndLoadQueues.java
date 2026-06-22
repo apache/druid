@@ -40,6 +40,7 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -92,7 +93,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     cancelLoadsOnDecommissioningServers(cluster);
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    collectHistoricalStats(cluster, stats);
+    collectHistoricalStats(cluster, stats, dynamicConfig.getTierToAliasName());
     collectUsedSegmentStats(params, stats);
     collectDebugStats(segmentLoadingConfig, stats);
 
@@ -170,10 +171,17 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     return cluster.build();
   }
 
-  private void collectHistoricalStats(DruidCluster cluster, CoordinatorRunStats stats)
+  private void collectHistoricalStats(
+      DruidCluster cluster,
+      CoordinatorRunStats stats,
+      Map<String, String> tierToAliasName
+  )
   {
     cluster.getHistoricals().forEach((tier, historicals) -> {
-      RowKey rowKey = RowKey.of(Dimension.TIER, tier);
+      final String alias = tierToAliasName.get(tier);
+      final RowKey rowKey = alias == null
+                            ? RowKey.of(Dimension.TIER, tier)
+                            : RowKey.with(Dimension.TIER, tier).and(Dimension.TIER_ALIAS, alias);
       stats.add(Stats.Tier.HISTORICAL_COUNT, rowKey, historicals.size());
 
       long totalCapacity = 0;

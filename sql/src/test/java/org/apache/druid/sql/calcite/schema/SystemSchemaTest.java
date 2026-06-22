@@ -309,6 +309,8 @@ public class SystemSchemaTest extends CalciteTestBase
       null,
       MAPPER.convertValue(Collections.singletonMap("test", "map"), IndexSpec.class),
       MAPPER.convertValue(Collections.singletonMap("test2", "map2"), GranularitySpec.class),
+      null,
+      null,
       null
   );
 

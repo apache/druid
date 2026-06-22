@@ -58,10 +58,10 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.SegmentMetadata;
@@ -1758,7 +1758,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch(config);
 
     QueryableIndexSegment queryableIndexSegment = new QueryableIndexSegment(index2, SegmentId.dummy("test"));
-    PhysicalSegmentInspector rowCountInspector = queryableIndexSegment.as(PhysicalSegmentInspector.class);
+    RowCountInspector rowCountInspector = queryableIndexSegment.as(RowCountInspector.class);
     QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index2);
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentStatsMap = new ImmutableMap.Builder<>();

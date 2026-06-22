@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.indexing;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.google.common.collect.ImmutableList;
@@ -27,7 +28,10 @@ import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.common.utils.IdUtilsTest;
+import org.apache.druid.data.input.impl.AdaptedBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -35,7 +39,9 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.indexer.granularity.BaseGranularitySpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -46,9 +52,11 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -804,6 +812,295 @@ class DataSchemaTest extends InitializedNullHandlingTest
   @Test
   void testEqualsAndHashcode()
   {
-    EqualsVerifier.forClass(DataSchema.class).usingGetClass().verify();
+    EqualsVerifier.forClass(DataSchema.class)
+                  .usingGetClass()
+                  .withIgnoredFields("effectiveBaseTableSpec", "effectiveGranularitySpec")
+                  .verify();
+  }
+
+  @Test
+  void testLegacyModeEffectiveBaseTableSpecSynthesizedFromLegacyFields()
+  {
+    final DataSchema schema = DataSchema.builder()
+                                        .withDataSource("datasource")
+                                        .withTimestamp(TIMESTAMP_SPEC)
+                                        .withDimensions(new StringDimensionSchema("tenant"))
+                                        .withAggregators(new CountAggregatorFactory("rows"))
+                                        .withGranularity(ARBITRARY_GRANULARITY)
+                                        .build();
+
+    final BaseTableProjectionSpec effective = schema.getEffectiveBaseTableSpec();
+    Assertions.assertNotNull(effective);
+    Assertions.assertInstanceOf(
+        AdaptedBaseTableProjectionSpec.class,
+        effective
+    );
+    // timestampSpec is not part of the base-table spec (it stays top-level); the rest is adapted from legacy fields.
+    // The adapter alone retains the wrapped GranularitySpec (the interface no longer exposes one).
+    Assertions.assertEquals(ARBITRARY_GRANULARITY, ((AdaptedBaseTableProjectionSpec) effective).getGranularitySpec());
+    Assertions.assertEquals(schema.getDimensionsSpec(), effective.getDimensionsSpec());
+    Assertions.assertArrayEquals(schema.getAggregators(), effective.getMetrics());
+  }
+
+  @Test
+  void testLegacyModeJsonRoundTripOmitsBaseTable() throws IOException
+  {
+    final DataSchema original = DataSchema.builder()
+                                          .withDataSource("datasource")
+                                          .withTimestamp(TIMESTAMP_SPEC)
+                                          .withDimensions(new StringDimensionSchema("tenant"))
+                                          .withAggregators(new CountAggregatorFactory("rows"))
+                                          .withGranularity(ARBITRARY_GRANULARITY)
+                                          .build();
+
+    final String serialized = jsonMapper.writeValueAsString(original);
+    final JsonNode root = jsonMapper.readTree(serialized);
+    // Wire form: legacy top-level fields present, baseTable absent.
+    Assertions.assertTrue(root.has("timestampSpec"));
+    Assertions.assertTrue(root.has("dimensionsSpec"));
+    Assertions.assertTrue(root.has("granularitySpec"));
+    Assertions.assertTrue(root.has("metricsSpec"));
+    Assertions.assertFalse(root.has("baseTable"));
+
+    final DataSchema deserialized = jsonMapper.readValue(serialized, DataSchema.class);
+    Assertions.assertEquals(original, deserialized);
+    Assertions.assertNull(deserialized.getBaseTable());
+  }
+
+  @Test
+  void testBaseTableModeJsonRoundTripOmitsLegacyTopLevelFields() throws IOException
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
+        .build();
+    final DataSchema original = DataSchema.builder()
+                                          .withDataSource("datasource")
+                                          .withTimestamp(TIMESTAMP_SPEC)
+                                          .withBaseTable(spec)
+                                          .build();
+
+    final String serialized = jsonMapper.writeValueAsString(original);
+    final JsonNode root = jsonMapper.readTree(serialized);
+    // Wire form: baseTable present at top level; timestampSpec also top-level (it's a parse-time concern, not part
+    // of the base-table schema); the schema fields (dimensions/granularity/metrics) live inside the baseTable.
+    Assertions.assertTrue(root.has("baseTable"));
+    Assertions.assertTrue(root.has("timestampSpec"));
+    Assertions.assertFalse(root.has("dimensionsSpec"));
+    Assertions.assertFalse(root.has("granularitySpec"));
+    Assertions.assertFalse(root.has("metricsSpec"));
+
+    final DataSchema deserialized = jsonMapper.readValue(serialized, DataSchema.class);
+    Assertions.assertEquals(original, deserialized);
+    Assertions.assertEquals(spec, deserialized.getBaseTable());
+  }
+
+  @Test
+  void testBaseTableModeLegacyAccessorsDelegateToSpec()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
+        .build();
+    final DataSchema schema = DataSchema.builder()
+                                        .withDataSource("datasource")
+                                        .withTimestamp(TIMESTAMP_SPEC)
+                                        .withBaseTable(spec)
+                                        .build();
+
+    // Legacy accessors should hand back the schema's values so existing consumers keep working when a DataSchema is
+    // in baseTable mode: dims/metrics delegate to the spec, timestampSpec is the top-level one. Granularity is
+    // reconstructed: with no segmentGranularitySpec and no query-granularity virtual column it defaults to a
+    // UniformGranularitySpec at the default segment granularity, NONE query granularity, and rollup off (clustered
+    // base tables are never rollup).
+    Assertions.assertEquals(TIMESTAMP_SPEC, schema.getTimestampSpec());
+    final GranularitySpec effectiveGranularity = schema.getGranularitySpec();
+    Assertions.assertEquals(BaseGranularitySpec.DEFAULT_SEGMENT_GRANULARITY, effectiveGranularity.getSegmentGranularity());
+    Assertions.assertEquals(Granularities.NONE, effectiveGranularity.getQueryGranularity());
+    Assertions.assertFalse(effectiveGranularity.isRollup());
+    Assertions.assertEquals(spec.getDimensionsSpec(), schema.getDimensionsSpec());
+    Assertions.assertArrayEquals(spec.getMetrics(), schema.getAggregators());
+    Assertions.assertSame(spec, schema.getEffectiveBaseTableSpec());
+  }
+
+  @Test
+  void testBaseTableModeGranularityRecombinedFromSegmentGranularityAndQueryGranularityVirtualColumn()
+  {
+    // Query granularity rides as a __virtualGranularity virtual column on the spec; segment granularity + intervals
+    // ride on the top-level SegmentGranularitySpec. getGranularitySpec() must recombine the two (plus rollup=false).
+    final VirtualColumns virtualColumns = VirtualColumns.create(
+        Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+    );
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .virtualColumns(virtualColumns)
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
+        .build();
+    final DataSchema schema = DataSchema.builder()
+                                        .withDataSource("datasource")
+                                        .withTimestamp(TIMESTAMP_SPEC)
+                                        .withSegmentGranularity(new SegmentGranularitySpec(Granularities.MONTH, null))
+                                        .withBaseTable(spec)
+                                        .build();
+
+    final GranularitySpec effectiveGranularity = schema.getGranularitySpec();
+    Assertions.assertEquals(Granularities.MONTH, effectiveGranularity.getSegmentGranularity());
+    Assertions.assertEquals(Granularities.HOUR, effectiveGranularity.getQueryGranularity());
+    Assertions.assertFalse(effectiveGranularity.isRollup());
+    Assertions.assertEquals(
+        new SegmentGranularitySpec(Granularities.MONTH, null),
+        schema.getSegmentGranularitySpec()
+    );
+  }
+
+  @Test
+  void testSegmentGranularitySpecRejectedInLegacyMode()
+  {
+    // segmentGranularitySpec is a baseTable-only concept; in legacy mode the top-level granularitySpec owns segment
+    // granularity, so setting both must reject loudly.
+    final DruidException t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DataSchema.builder()
+                       .withDataSource("datasource")
+                       .withTimestamp(TIMESTAMP_SPEC)
+                       .withDimensions(new StringDimensionSchema("tenant"))
+                       .withGranularity(ARBITRARY_GRANULARITY)
+                       .withSegmentGranularity(new SegmentGranularitySpec(Granularities.DAY, null))
+                       .build()
+    );
+    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("segmentGranularitySpec"));
+    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("baseTable"));
+  }
+
+  @Test
+  void testBaseTableSetAlongsideLegacySchemaFieldsRejected()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
+        .build();
+    // A top-level *schema* field (granularitySpec here) alongside baseTable must reject loudly — the baseTable owns
+    // the schema. (timestampSpec is exempt: it's parse-time and always lives top-level, see the baseTable-mode
+    // round-trip tests above.)
+    final DruidException t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DataSchema.builder()
+                       .withDataSource("datasource")
+                       .withTimestamp(TIMESTAMP_SPEC)
+                       .withGranularity(ARBITRARY_GRANULARITY)
+                       .withBaseTable(spec)
+                       .build()
+    );
+    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("granularitySpec"));
+    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("baseTable"));
+  }
+
+  @Test
+  void testBaseTableModeSurvivesBuilderCopyRoundTrip()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
+        .build();
+    final DataSchema schema = DataSchema.builder()
+                                        .withDataSource("datasource")
+                                        .withTimestamp(TIMESTAMP_SPEC)
+                                        .withSegmentGranularity(new SegmentGranularitySpec(Granularities.DAY, null))
+                                        .withBaseTable(spec)
+                                        .build();
+
+    // Rebuilding a baseTable schema through the copy Builder must be an identity, not throw: the constructor stores a
+    // non-null empty aggregators array that the copy ctor carries forward, and it must not be flagged as a legacy
+    // metricsSpec conflict.
+    final DataSchema rebuilt = DataSchema.builder(schema).build();
+    Assertions.assertEquals(schema, rebuilt);
+    Assertions.assertEquals(spec, rebuilt.getBaseTable());
+    Assertions.assertEquals(schema.getSegmentGranularitySpec(), rebuilt.getSegmentGranularitySpec());
+
+    // A wither that touches only a non-schema field routes through the same copy path and must also work.
+    final DataSchema withTransform = schema.withTransformSpec(TransformSpec.NONE);
+    Assertions.assertEquals(schema, withTransform);
+    Assertions.assertEquals(spec, withTransform.getBaseTable());
+  }
+
+  @Test
+  void testWithGranularitySpecOnBaseTableModeUpdatesSegmentGranularity()
+  {
+    // The interval-determination path calls schema.withGranularitySpec(schema.getGranularitySpec().withIntervals(...)).
+    // In baseTable mode that must update the SegmentGranularitySpec (segment granularity + intervals) and leave the
+    // baseTable spec — including its query-granularity virtual column — intact, rather than being rejected as a
+    // legacy top-level granularitySpec.
+    final VirtualColumns virtualColumns = VirtualColumns.create(
+        Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+    );
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .virtualColumns(virtualColumns)
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
+        .build();
+    final DataSchema schema = DataSchema.builder()
+                                        .withDataSource("datasource")
+                                        .withTimestamp(TIMESTAMP_SPEC)
+                                        .withSegmentGranularity(new SegmentGranularitySpec(Granularities.DAY, null))
+                                        .withBaseTable(spec)
+                                        .build();
+
+    final DataSchema updated = schema.withGranularitySpec(
+        schema.getGranularitySpec().withIntervals(List.of(Intervals.of("2024-01-01/2024-02-01")))
+    );
+
+    Assertions.assertEquals(spec, updated.getBaseTable());
+    Assertions.assertEquals(
+        new SegmentGranularitySpec(Granularities.DAY, List.of(Intervals.of("2024-01-01/2024-02-01"))),
+        updated.getSegmentGranularitySpec()
+    );
+    final GranularitySpec effective = updated.getGranularitySpec();
+    Assertions.assertEquals(Granularities.DAY, effective.getSegmentGranularity());
+    Assertions.assertEquals(Granularities.HOUR, effective.getQueryGranularity());
+    Assertions.assertEquals(List.of(Intervals.of("2024-01-01/2024-02-01")), effective.inputIntervals());
+    Assertions.assertFalse(effective.isRollup());
+  }
+
+  @Test
+  void testWithDimensionsSpecRejectedInBaseTableMode()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
+        .build();
+    final DataSchema schema = DataSchema.builder()
+                                        .withDataSource("datasource")
+                                        .withTimestamp(TIMESTAMP_SPEC)
+                                        .withBaseTable(spec)
+                                        .build();
+    // Dimensions are owned by the baseTable spec — the legacy flat-DimensionsSpec wither has no valid mapping and
+    // must reject clearly.
+    final DruidException t = Assertions.assertThrows(
+        DruidException.class,
+        () -> schema.withDimensionsSpec(DimensionsSpec.builder().build())
+    );
+    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("dimensionsSpec"));
   }
 }

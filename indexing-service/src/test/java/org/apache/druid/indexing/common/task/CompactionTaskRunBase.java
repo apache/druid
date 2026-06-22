@@ -674,6 +674,8 @@ public abstract class CompactionTaskRunBase
         null,
         expected.getIndexSpec(),
         expected.getGranularitySpec().withIntervals(List.of()),
+        null,
+        null,
         expected.getProjections()
     ), new CompactionState(
         actual.getPartitionsSpec(),
@@ -682,6 +684,8 @@ public abstract class CompactionTaskRunBase
         null,
         actual.getIndexSpec(),
         actual.getGranularitySpec().withIntervals(List.of()),
+        null,
+        null,
         actual.getProjections()
     ));
   }
@@ -1892,6 +1896,8 @@ public abstract class CompactionTaskRunBase
             true,
             intervals
         ),
+        null,
+        null,
         null
     );
   }

@@ -210,6 +210,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               true,
               ImmutableList.of(segment.getInterval())
           ),
+          null,
+          null,
           null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -258,6 +260,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               true,
               ImmutableList.of(segment.getInterval())
           ),
+          null,
+          null,
           null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -321,6 +325,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               true,
               ImmutableList.of(segment.getInterval())
           ),
+          null,
+          null,
           null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -374,6 +380,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               true,
               ImmutableList.of(Intervals.of("2014-01-01T00:00:00Z/2014-01-01T03:00:00Z"))
           ),
+          null,
+          null,
           null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -425,6 +433,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               true,
               ImmutableList.of(segment.getInterval())
           ),
+          null,
+          null,
           null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -473,6 +483,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               true,
               ImmutableList.of(segment.getInterval())
           ),
+          null,
+          null,
           null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -524,6 +536,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               true,
               ImmutableList.of(segment.getInterval())
           ),
+          null,
+          null,
           null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -605,6 +619,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               true,
               ImmutableList.of(segment.getInterval())
           ),
+          null,
+          null,
           null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -660,6 +676,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               true,
               ImmutableList.of(segment.getInterval())
           ),
+          null,
+          null,
           null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -936,6 +954,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               true,
               ImmutableList.of(segment.getInterval())
           ),
+          null,
+          null,
           ImmutableList.of(PROJECTION_SPEC)
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -995,6 +1015,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               true,
               ImmutableList.of(segment.getInterval())
           ),
+          null,
+          null,
           ImmutableList.of(PROJECTION_SPEC, addProjection)
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());

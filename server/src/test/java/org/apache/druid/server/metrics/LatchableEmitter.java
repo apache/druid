@@ -203,6 +203,18 @@ public class LatchableEmitter extends StubServiceEmitter
       UnaryOperator<AggregateMatcher> aggregateCondition
   )
   {
+    waitForEventAggregate(condition, aggregateCondition, defaultWaitTimeoutMillis);
+  }
+
+  /**
+   * Same as {@link #waitForEventAggregate(UnaryOperator, UnaryOperator)} but with an explicit timeout.
+   */
+  public void waitForEventAggregate(
+      UnaryOperator<EventMatcher> condition,
+      UnaryOperator<AggregateMatcher> aggregateCondition,
+      long timeoutMillis
+  )
+  {
     final EventMatcher eventMatcher = condition.apply(new EventMatcher());
     final AggregateMatcher aggregateMatcher = aggregateCondition.apply(new AggregateMatcher());
 
@@ -210,7 +222,7 @@ public class LatchableEmitter extends StubServiceEmitter
         event -> event instanceof ServiceMetricEvent
                  && eventMatcher.test((ServiceMetricEvent) event)
                  && aggregateMatcher.test((ServiceMetricEvent) event),
-        defaultWaitTimeoutMillis
+        timeoutMillis
     );
   }
 

@@ -29,6 +29,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 
+@SuppressWarnings("deprecation")
 public class IncrementalIndexPhysicalSegmentInspector implements PhysicalSegmentInspector
 {
   static final ColumnCapabilities.CoercionLogic SNAPSHOT_COERCE_LOGIC =
