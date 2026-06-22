@@ -273,6 +273,7 @@ This enables segment pruning for streaming-ingested data without waiting for com
 
 - Only string-typed dimensions are currently supported.
 - Use only low-to-medium cardinality dimensions (for example, `tenant_id`, `region`, `environment`). High-cardinality dimensions bloat segment metadata with no pruning benefit.
+- Set `maxValuesPerDimension` as a safety cap if a tracked dimension may unexpectedly grow high-cardinality. When a segment's observed distinct values for a dimension exceed the cap, that dimension is omitted from the segment's stamped filter map: pruning is disabled for that dimension on that segment, but other tracked dimensions continue to prune as normal. Default is unlimited (uncapped).
 - Most effective when Kafka partitions are keyed by the tracked dimension (for example, using tenant ID as the message key). Each task naturally sees a subset of values, and segments get tight filter annotations.
 - Also works with multiple supervisors reading from separate topics into one datasource.
 - Use a range or hashed compaction `partitionsSpec`, not the dynamic strategy: dynamic compaction does not partition by dimension, so it cannot preserve pruning after compaction.
@@ -485,7 +486,7 @@ For configuration properties shared across all streaming ingestion methods, refe
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
 |`numPersistThreads`|Integer|The number of threads to use to create and persist incremental segments on the disk. Higher ingestion data throughput results in a larger number of incremental segments, causing significant CPU time to be spent on the creation of the incremental segments on the disk. For datasources with number of columns running into hundreds or thousands, creation of the incremental segments may take up significant time, in the order of multiple seconds. In both of these scenarios, ingestion can stall or pause frequently, causing it to fall behind. You can use additional threads to parallelize the segment creation without blocking ingestion as long as there are sufficient CPU resources available.|No|1|
-|`streamingPartitionsSpec`|Object|Configures query-time segment pruning for streaming-ingested segments. Contains a single property, `partitionDimensions` (List of String), the dimensions whose observed values each segment records so the broker can skip segments that can't match a query filter. See [Streaming partitions spec](#streaming-partitions-spec) for details.|No|null|
+|`streamingPartitionsSpec`|Object|Configures query-time segment pruning for streaming-ingested segments. Contains `partitionDimensions` (List of String), the dimensions whose observed values each segment records so the broker can skip segments that can't match a query filter, and an optional `maxValuesPerDimension` (Integer) cap on the distinct values recorded per dimension per segment. See [Streaming partitions spec](#streaming-partitions-spec) for details.|No|null|
 
 ## Deployment notes on Kafka partitions and Druid segments
 
