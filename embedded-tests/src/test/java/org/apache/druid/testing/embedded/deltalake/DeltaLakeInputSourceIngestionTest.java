@@ -19,13 +19,10 @@
 
 package org.apache.druid.testing.embedded.deltalake;
 
-import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.delta.common.DeltaLakeDruidModule;
-import org.apache.druid.delta.input.DeltaInputSource;
-import org.apache.druid.indexing.common.task.IndexTask;
-import org.apache.druid.indexing.common.task.TaskBuilder;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
-import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
@@ -33,19 +30,22 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.junit.jupiter.api.Assertions;
+import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 /**
  * End-to-end ingestion test for the Delta Lake input source running inside an embedded Druid cluster.
+ * Modeled on the Iceberg embedded test ({@code IcebergRestCatalogIngestionTest}): it ingests an external
+ * table with an MSQ {@code INSERT ... EXTERN(...)} SQL statement and verifies the result over the cluster.
+ * Unlike Iceberg, Delta needs no catalog or testcontainer since it reads directly from a filesystem path.
  *
- * <p>The test ingests a Delta table whose two Parquet files contain 2000 rows each (4000 rows total).
- * Because each file has more than the Delta kernel's default batch size of 1024 rows, this exercises the
- * per-file batch-drain path in {@code DeltaInputSourceReader} that regressed in
- * <a href="https://github.com/apache/druid/issues/18606">GH-18606</a>: the reader only returned the first
- * 1024 rows of each file, yielding {@code 1024 * 2 = 2048} rows instead of 4000. This is the integration-level
+ * <p>The table has two Parquet files of 2000 rows each (4000 rows total). Because each file exceeds the
+ * Delta kernel's default batch size of 1024 rows, this exercises the per-file batch-drain path in
+ * {@code DeltaInputSourceReader} that regressed in
+ * <a href="https://github.com/apache/druid/issues/18606">GH-18606</a>, where the reader returned only the
+ * first 1024 rows of each file ({@code 1024 * 2 = 2048} instead of 4000). This is the integration-level
  * counterpart of the unit regression test {@code DeltaInputSourceTest.BatchDrainRegressionTests}.
  */
 public class DeltaLakeInputSourceIngestionTest extends EmbeddedClusterTestBase
@@ -82,40 +82,51 @@ public class DeltaLakeInputSourceIngestionTest extends EmbeddedClusterTestBase
   @Test
   public void testIngestAllRowsFromDeltaTable()
   {
+    final EmbeddedMSQApis msqApis = new EmbeddedMSQApis(cluster, overlord);
+
     final File deltaTableDir = Resources.getFileForResource(DELTA_TABLE_RESOURCE);
+    // Escape backslashes so a Windows path stays valid inside the JSON input source spec.
+    final String tablePath = deltaTableDir.getAbsolutePath().replace("\\", "\\\\");
 
-    final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
-    final IndexTask task = TaskBuilder
-        .ofTypeIndex()
-        .inputSource(new DeltaInputSource(deltaTableDir.getAbsolutePath(), null, null, null))
-        // The Delta input source produces rows directly, so no inputFormat is required.
-        .dataSource(dataSource)
-        // The 'id' column holds POSIX seconds, used here as the timestamp.
-        .dataSchema(builder -> builder.withTimestamp(new TimestampSpec("id", "posix", null)))
-        .dimensions("name")
-        .granularitySpec("DAY", "NONE", false)
-        .dynamicPartitionWithMaxRows(EXPECTED_ROW_COUNT + 1)
-        .appendToExisting(false)
-        .withId(taskId);
+    final String sql = StringUtils.format(
+        "INSERT INTO %s\n"
+        + "SELECT\n"
+        // The 'id' column holds POSIX seconds; convert to a millisecond timestamp.
+        + "  MILLIS_TO_TIMESTAMP(\"id\" * 1000) AS __time,\n"
+        + "  \"name\"\n"
+        + "FROM TABLE(\n"
+        + "  EXTERN(\n"
+        + "    '{\"type\":\"delta\",\"tablePath\":\"%s\"}',\n"
+        // EXTERN requires a non-null inputFormat, but the Delta input source reads Parquet via the
+        // Delta kernel and ignores it (DeltaInputSource.needsFormat() == false). This value is unused.
+        + "    '{\"type\":\"json\"}',\n"
+        + "    '[{\"type\":\"long\",\"name\":\"id\"},{\"type\":\"string\",\"name\":\"name\"}]'\n"
+        + "  )\n"
+        + ")\n"
+        + "PARTITIONED BY DAY",
+        dataSource,
+        tablePath
+    );
 
-    cluster.callApi().runTask(task, overlord);
+    final SqlTaskStatus taskStatus = msqApis.submitTaskSql(sql);
+    cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     // The core regression assertion: all 4000 rows must be ingested. Before the GH-18606 fix this
-    // returned 1024 * 2 = 2048 because only the first batch of each Parquet file was read. COUNT(*) is
-    // exact (unlike SQL COUNT(DISTINCT), which is approximate by default), so the comparison is stable.
-    Assertions.assertEquals(
-        String.valueOf(EXPECTED_ROW_COUNT),
-        cluster.runSql("SELECT COUNT(*) FROM %s", dataSource),
-        "Expected all rows to be ingested. A count of 2048 indicates the per-file batch-drain bug (GH-18606) regressed."
+    // returned 1024 * 2 = 2048 because only the first batch of each Parquet file was read.
+    cluster.callApi().verifySqlQuery(
+        "SELECT COUNT(*) FROM %s",
+        dataSource,
+        String.valueOf(EXPECTED_ROW_COUNT)
     );
 
     // Secondary sanity check on timestamp parsing and value range: the 'id' column (used as the POSIX
     // timestamp) has a documented min of 0 and max of 3999, which should bound __time after ingestion.
     // Completeness across both files is guaranteed by the COUNT(*) assertion above, not by these bounds.
-    Assertions.assertEquals(
-        "1970-01-01T00:00:00.000Z,1970-01-01T01:06:39.000Z",
-        cluster.runSql("SELECT MIN(__time), MAX(__time) FROM %s", dataSource)
+    cluster.callApi().verifySqlQuery(
+        "SELECT MIN(__time), MAX(__time) FROM %s",
+        dataSource,
+        "1970-01-01T00:00:00.000Z,1970-01-01T01:06:39.000Z"
     );
   }
 }
