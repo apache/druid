@@ -157,14 +157,13 @@ public class AuthorizationUtils
   /**
    * Builds a RequestInfo object that can be used for auditing purposes.
    *
-   * <p>The {@link RequestInfo#getTraceId()} field is populated from the thread-local
-   * {@link org.apache.druid.server.audit.RequestHeaderContext}, looked up under the
-   * canonical context key {@code "traceId"} that the {@code RequestHeaderContextFilter}
-   * uses when capturing the {@link AuditManager#X_DRUID_TRACE_ID} header (or whichever
-   * header an operator has remapped to that context key via
-   * {@code druid.audit.requestHeaders.headerToContextKey}). Reading from the filter
-   * thread-local instead of the raw header makes the typed audit column honor operator
-   * header remapping rather than being a separate hardcoded path.
+   * <p>The {@link RequestInfo#getRequestMetadata()} map is populated from the thread-local
+   * {@link org.apache.druid.server.audit.RequestHeaderContext}, which holds the values captured
+   * from the configured inbound request headers (see {@code RequestHeaderContextFilter} and
+   * {@code druid.audit.requestHeaders.headerToContextKey}), keyed by their context key (for
+   * example {@code traceId}). Passing the whole captured map — rather than a single hard-coded
+   * field — lets operators map additional headers and have them appear in audit records with no
+   * code change, and lets consumers extract whichever fields they need.
    */
   public static RequestInfo buildRequestInfo(String service, HttpServletRequest request)
   {
@@ -173,7 +172,7 @@ public class AuthorizationUtils
         request.getMethod(),
         request.getRequestURI(),
         request.getQueryString(),
-        org.apache.druid.server.audit.RequestHeaderContext.current().get("traceId")
+        org.apache.druid.server.audit.RequestHeaderContext.current()
     );
   }
 

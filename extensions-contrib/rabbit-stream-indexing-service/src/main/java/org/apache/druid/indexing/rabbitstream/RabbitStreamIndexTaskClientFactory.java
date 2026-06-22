@@ -21,11 +21,14 @@ package org.apache.druid.indexing.rabbitstream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.druid.audit.RequestHeaderContextConfig;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.java.util.http.client.HttpClient;
+
+import javax.annotation.Nullable;
 
 @LazySingleton
 public class RabbitStreamIndexTaskClientFactory extends SeekableStreamIndexTaskClientFactory<String, Long>
@@ -33,7 +36,15 @@ public class RabbitStreamIndexTaskClientFactory extends SeekableStreamIndexTaskC
   @Inject
   public RabbitStreamIndexTaskClientFactory(
       @EscalatedGlobal HttpClient httpClient,
-      @Json ObjectMapper mapper)
+      @Json ObjectMapper mapper,
+      @Nullable RequestHeaderContextConfig requestHeaderContextConfig)
+  {
+    super(httpClient, mapper, requestHeaderContextConfig != null ? requestHeaderContextConfig : new RequestHeaderContextConfig());
+  }
+
+  public RabbitStreamIndexTaskClientFactory(
+      HttpClient httpClient,
+      ObjectMapper mapper)
   {
     super(httpClient, mapper);
   }

@@ -246,9 +246,9 @@ public class AuthorizationUtilsTest
   }
 
   @Test
-  public void test_buildRequestInfo_capturesTraceIdFromFilterThreadLocal()
+  public void test_buildRequestInfo_capturesMetadataFromFilterThreadLocal()
   {
-    // RequestInfo.traceId is sourced from the filter's thread-local
+    // RequestInfo.requestMetadata is sourced from the filter's thread-local
     // (RequestHeaderContext) so operator header remapping is honored.
     MockHttpServletRequest request = newRequest("GET", "/druid/coordinator/v1/datasources");
     org.apache.druid.server.audit.RequestHeaderContext.bind(
@@ -260,7 +260,7 @@ public class AuthorizationUtilsTest
       Assert.assertEquals("coordinator", info.getService());
       Assert.assertEquals("GET", info.getMethod());
       Assert.assertEquals("/druid/coordinator/v1/datasources", info.getUri());
-      Assert.assertEquals("trace-abc-123", info.getTraceId());
+      Assert.assertEquals("trace-abc-123", info.getRequestMetadata().get("traceId"));
     }
     finally {
       org.apache.druid.server.audit.RequestHeaderContext.clear();
@@ -268,15 +268,15 @@ public class AuthorizationUtilsTest
   }
 
   @Test
-  public void test_buildRequestInfo_noTraceIdWhenContextEmpty()
+  public void test_buildRequestInfo_noMetadataWhenContextEmpty()
   {
-    // No header captured, no thread-local bound -> traceId is null.
+    // No header captured, no thread-local bound -> requestMetadata is null.
     MockHttpServletRequest request = newRequest("POST", "/druid/indexer/v1/task");
 
     RequestInfo info = AuthorizationUtils.buildRequestInfo("overlord", request);
 
     Assert.assertEquals("overlord", info.getService());
-    Assert.assertNull(info.getTraceId());
+    Assert.assertNull(info.getRequestMetadata());
   }
 
   /**

@@ -272,6 +272,34 @@ public class SqlStatementTest
   }
 
   @Test
+  public void testDirectDoesNotAuthorizeStrippedBodyReservedContextKey()
+  {
+    // A body-supplied value for a header-target key ("traceId") with no captured header is
+    // stripped from the executed context (anti-spoof) and never takes effect, so it must NOT
+    // count toward context-key authorization. Mirrors QueryLifecycle.initialize() on the native
+    // path; without the removeAll, enabling authorizeQueryContextParams would falsely reject a
+    // query carrying traceId in its body even though the value is discarded.
+    SqlQueryPlus sqlReq = SqlQueryPlus.builder("SELECT COUNT(*) AS cnt FROM druid.foo")
+                                      .queryContext(ImmutableMap.of("traceId", "FORGED", "foo", "bar"))
+                                      .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                      .build();
+    RequestHeaderContext.clear();
+    try {
+      DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+      assertFalse(
+          "stripped body traceId must not require context-key authorization",
+          stmt.authContextKeys.contains("traceId")
+      );
+      // A genuine (non header-target) body context key still requires authorization.
+      assertTrue(stmt.authContextKeys.contains("foo"));
+      stmt.close();
+    }
+    finally {
+      RequestHeaderContext.clear();
+    }
+  }
+
+  @Test
   public void testDirectPlanTwice()
   {
     SqlQueryPlus sqlReq = queryPlus(

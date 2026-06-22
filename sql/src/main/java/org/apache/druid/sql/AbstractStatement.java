@@ -115,6 +115,12 @@ public abstract class AbstractStatement implements Closeable
     // stops a client from mapping a header to an operational key (priority, lane, cache flags,
     // ...) to bypass the QUERY_CONTEXT WRITE authorization required for that key in the body.
     final Set<String> keysToAuthorize = new HashSet<>(queryPlus.authContextKeys());
+    // A body-supplied value for a header-target key was just stripped above and never takes
+    // effect, so it must not count toward context-key authorization (mirrors the removeAll on
+    // QueryLifecycle.initialize()). Without this, a body context key that collides with a
+    // configured header-target key (e.g. traceId) would still require QUERY_CONTEXT WRITE and
+    // could falsely reject the query when authorizeQueryContextParams is enabled.
+    keysToAuthorize.removeAll(sqlToolbox.requestHeaderContextConfig.getHeaderToContextKey().values());
     keysToAuthorize.addAll(capturedHeaders.keySet());
     this.authContextKeys = Set.copyOf(keysToAuthorize);
     // "bySegment" results are never valid to use with SQL because the result format is incompatible

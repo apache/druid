@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
@@ -84,7 +85,9 @@ public class JacksonConfigManagerTest
     String key = "key";
     TestConfig val = new TestConfig("version", "string", 3);
     AuditInfo auditInfo = new AuditInfo("testAuthor", "testIdentity", "testComment", "127.0.0.1");
-    RequestInfo requestInfo = new RequestInfo("coordinator", "POST", "/druid/coordinator/v1/config", null, "trace-xyz");
+    RequestInfo requestInfo = new RequestInfo(
+        "coordinator", "POST", "/druid/coordinator/v1/config", null, ImmutableMap.of("traceId", "trace-xyz")
+    );
 
     jacksonConfigManager.set(key, null, val, auditInfo, requestInfo);
 
@@ -92,7 +95,7 @@ public class JacksonConfigManagerTest
     Mockito.verify(mockAuditManager).doAudit(auditCapture.capture());
     AuditEntry entry = auditCapture.getValue();
     Assertions.assertNotNull(entry.getRequest());
-    Assertions.assertEquals("trace-xyz", entry.getRequest().getTraceId());
+    Assertions.assertEquals("trace-xyz", entry.getRequest().getRequestMetadata().get("traceId"));
   }
 
   @Test

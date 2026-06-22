@@ -22,8 +22,10 @@ package org.apache.druid.audit;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -36,7 +38,7 @@ public class RequestInfo
   private final String uri;
   private final String queryParams;
   @Nullable
-  private final String traceId;
+  private final Map<String, String> requestMetadata;
 
   public RequestInfo(String service, String method, String uri, String queryParams)
   {
@@ -49,14 +51,16 @@ public class RequestInfo
       @JsonProperty("method") String method,
       @JsonProperty("uri") String uri,
       @JsonProperty("queryParams") String queryParams,
-      @JsonProperty("traceId") @Nullable String traceId
+      @JsonProperty("requestMetadata") @Nullable Map<String, String> requestMetadata
   )
   {
     this.service = service;
     this.method = method;
     this.uri = uri;
     this.queryParams = queryParams;
-    this.traceId = traceId;
+    this.requestMetadata = (requestMetadata == null || requestMetadata.isEmpty())
+                           ? null
+                           : ImmutableMap.copyOf(requestMetadata);
   }
 
   @JsonProperty
@@ -84,16 +88,18 @@ public class RequestInfo
   }
 
   /**
-   * Value of the {@link AuditManager#X_DRUID_TRACE_ID} header on the inbound HTTP request,
-   * if present. Null otherwise. Carried through so audit consumers can correlate audit
-   * events with the originating distributed-trace ID.
+   * Metadata captured from configured inbound request headers (see
+   * {@link RequestHeaderContextConfig}), keyed by the operator-configured context key (for
+   * example {@code traceId}). Lets audit consumers extract whichever fields they need, and new
+   * mapped headers require no code change. Omitted from the audit JSON when empty, so records
+   * remain byte-identical when no configured header is sent.
    */
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   @Nullable
-  public String getTraceId()
+  public Map<String, String> getRequestMetadata()
   {
-    return traceId;
+    return requestMetadata;
   }
 
   @Override
@@ -110,13 +116,13 @@ public class RequestInfo
            && Objects.equals(this.method, that.method)
            && Objects.equals(this.uri, that.uri)
            && Objects.equals(this.queryParams, that.queryParams)
-           && Objects.equals(this.traceId, that.traceId);
+           && Objects.equals(this.requestMetadata, that.requestMetadata);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(service, method, uri, queryParams, traceId);
+    return Objects.hash(service, method, uri, queryParams, requestMetadata);
   }
 
   @Override
@@ -127,7 +133,7 @@ public class RequestInfo
            ", method='" + method + '\'' +
            ", path='" + uri + '\'' +
            ", queryParams='" + queryParams + '\'' +
-           ", traceId='" + traceId + '\'' +
+           ", requestMetadata=" + requestMetadata +
            '}';
   }
 }
