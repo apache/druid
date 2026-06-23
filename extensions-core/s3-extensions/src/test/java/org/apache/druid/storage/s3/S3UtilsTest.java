@@ -34,6 +34,8 @@ import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
+import javax.crypto.AEADBadTagException;
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletionException;
@@ -53,6 +55,24 @@ public class S3UtilsTest
             () -> {
               count.incrementAndGet();
               throw new IOException("hmm");
+            },
+            maxRetries
+        ));
+    Assert.assertEquals(maxRetries, count.get());
+  }
+
+  @Test
+  public void testRetryWithSslExceptionWrappingAeadBadTag()
+  {
+    // Transient TLS "Tag mismatch!" should be retried, not treated as terminal. See issue #19616.
+    final int maxRetries = 3;
+    final AtomicInteger count = new AtomicInteger();
+    Assert.assertThrows(
+        SSLException.class,
+        () -> S3Utils.retryS3Operation(
+            () -> {
+              count.incrementAndGet();
+              throw new SSLException("Tag mismatch!", new AEADBadTagException("Tag mismatch!"));
             },
             maxRetries
         ));
