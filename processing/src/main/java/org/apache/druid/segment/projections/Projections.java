@@ -73,7 +73,7 @@ public class Projections
 
   private static void logTrace(QueryContext context, String format, Object... args)
   {
-    if (context.getBoolean(QueryContexts.PROJECTION_TRACE, false) || context.isDebug()) {
+    if (context.isDebug()) {
       log.info(format, args);
     } else {
       log.debug(format, args);

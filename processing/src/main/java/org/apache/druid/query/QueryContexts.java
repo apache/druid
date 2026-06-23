@@ -126,7 +126,6 @@ public class QueryContexts
   public static final String NO_PROJECTIONS = "noProjections";
   public static final String FORCE_PROJECTION = "forceProjections";
   public static final String USE_PROJECTION = "useProjection";
-  public static final String PROJECTION_TRACE = "projectionTrace";
 
   // Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the
   // query's runtime
