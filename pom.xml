@@ -105,7 +105,7 @@
         <iceberg.core.version>1.10.0</iceberg.core.version>
         <jetty.version>12.1.8</jetty.version>
         <jersey.version>1.19.4</jersey.version>
-        <jackson.version>2.21.3</jackson.version>
+        <jackson.version>2.22.0</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.25.4</log4j.version>
         <mysql.version>8.2.0</mysql.version>
