@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -35,6 +36,8 @@ public class CostMetrics
   private final long taskDurationSeconds;
   private final double avgProcessingRate;
   private final double aggregateLag;
+  @Nullable
+  private final Double maxObservedRate;
 
   public CostMetrics(
       double avgPartitionLag,
@@ -45,6 +48,27 @@ public class CostMetrics
       double avgProcessingRate
   )
   {
+    this(
+        avgPartitionLag,
+        currentTaskCount,
+        partitionCount,
+        pollIdleRatio,
+        taskDurationSeconds,
+        avgProcessingRate,
+        null
+    );
+  }
+
+  public CostMetrics(
+      double avgPartitionLag,
+      int currentTaskCount,
+      int partitionCount,
+      double pollIdleRatio,
+      long taskDurationSeconds,
+      double avgProcessingRate,
+      @Nullable Double maxObservedRate
+  )
+  {
     this.avgPartitionLag = avgPartitionLag;
     this.currentTaskCount = currentTaskCount;
     this.partitionCount = partitionCount;
@@ -52,6 +76,7 @@ public class CostMetrics
     this.taskDurationSeconds = taskDurationSeconds;
     this.avgProcessingRate = avgProcessingRate;
     this.aggregateLag = avgPartitionLag * partitionCount;
+    this.maxObservedRate = maxObservedRate;
   }
 
   /**
@@ -105,6 +130,12 @@ public class CostMetrics
     return avgProcessingRate;
   }
 
+  @Nullable
+  public Double getMaxObservedRate()
+  {
+    return maxObservedRate;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -120,7 +151,8 @@ public class CostMetrics
            && partitionCount == that.partitionCount
            && Double.compare(that.pollIdleRatio, pollIdleRatio) == 0
            && taskDurationSeconds == that.taskDurationSeconds
-           && Double.compare(that.avgProcessingRate, avgProcessingRate) == 0;
+           && Double.compare(that.avgProcessingRate, avgProcessingRate) == 0
+           && Objects.equals(that.maxObservedRate, maxObservedRate);
   }
 
   @Override
@@ -132,7 +164,8 @@ public class CostMetrics
         partitionCount,
         pollIdleRatio,
         taskDurationSeconds,
-        avgProcessingRate
+        avgProcessingRate,
+        maxObservedRate
     );
   }
 
@@ -146,6 +179,7 @@ public class CostMetrics
            ", pollIdleRatio=" + pollIdleRatio +
            ", taskDurationSeconds=" + taskDurationSeconds +
            ", avgProcessingRate=" + avgProcessingRate +
+           ", maxObservedRate=" + maxObservedRate +
            '}';
   }
 }

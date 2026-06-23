@@ -67,6 +67,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final Duration minScaleUpDelay;
   private final Duration minScaleDownDelay;
   private final boolean scaleDownDuringTaskRolloverOnly;
+  private final boolean useUtilizationRatio;
 
   /**
    * Creates a new CostBasedAutoScalerConfig instance.
@@ -91,7 +92,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("useTaskCountBoundariesOnScaleDown") Boolean useTaskCountBoundariesOnScaleDown,
       @Nullable @JsonProperty("minScaleUpDelay") Duration minScaleUpDelay,
       @Nullable @JsonProperty("minScaleDownDelay") Duration minScaleDownDelay,
-      @Nullable @JsonProperty("scaleDownDuringTaskRolloverOnly") Boolean scaleDownDuringTaskRolloverOnly
+      @Nullable @JsonProperty("scaleDownDuringTaskRolloverOnly") Boolean scaleDownDuringTaskRolloverOnly,
+      @Nullable @JsonProperty("useUtilizationRatio") Boolean useUtilizationRatio
   )
   {
     this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
@@ -116,6 +118,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     );
     this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, DEFAULT_MIN_SCALE_DELAY);
     this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, false);
+    this.useUtilizationRatio = Configs.valueOrDefault(useUtilizationRatio, false);
 
     if (this.enableTaskAutoScaler) {
       if (useTaskCountBoundaries != null) {
@@ -282,6 +285,15 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     return scaleDownDuringTaskRolloverOnly;
   }
 
+  /**
+   * Opt-in flag for replacing default idle-ratio with the rate-based utilization idle ratio.
+   */
+  @JsonProperty("useUtilizationRatio")
+  public boolean shouldUseUtilizationRatio()
+  {
+    return useUtilizationRatio;
+  }
+
   @Override
   public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter)
   {
@@ -312,6 +324,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && Objects.equals(minScaleUpDelay, that.minScaleUpDelay)
            && Objects.equals(minScaleDownDelay, that.minScaleDownDelay)
            && scaleDownDuringTaskRolloverOnly == that.scaleDownDuringTaskRolloverOnly
+           && useUtilizationRatio == that.useUtilizationRatio
            && Objects.equals(taskCountStart, that.taskCountStart)
            && Objects.equals(stopTaskCountRatio, that.stopTaskCountRatio);
   }
@@ -333,7 +346,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         useTaskCountBoundariesOnScaleDown,
         minScaleUpDelay,
         minScaleDownDelay,
-        scaleDownDuringTaskRolloverOnly
+        scaleDownDuringTaskRolloverOnly,
+        useUtilizationRatio
     );
   }
 
@@ -355,6 +369,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", minScaleUpDelay=" + minScaleUpDelay +
            ", minScaleDownDelay=" + minScaleDownDelay +
            ", scaleDownDuringTaskRolloverOnly=" + scaleDownDuringTaskRolloverOnly +
+           ", useUtilizationRatio=" + useUtilizationRatio +
            '}';
   }
 
@@ -378,6 +393,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Duration minScaleUpDelay;
     private Duration minScaleDownDelay;
     private Boolean scaleDownDuringTaskRolloverOnly;
+    private Boolean useUtilizationRatio;
 
     private Builder()
     {
@@ -455,6 +471,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
+    public Builder useUtilizationRatio(boolean useUtilizationRatio)
+    {
+      this.useUtilizationRatio = useUtilizationRatio;
+      return this;
+    }
+
     public Builder useTaskCountBoundariesOnScaleUp(boolean useTaskCountBoundariesOnScaleUp)
     {
       this.useTaskCountBoundariesOnScaleUp = useTaskCountBoundariesOnScaleUp;
@@ -485,7 +507,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           useTaskCountBoundariesOnScaleDown,
           minScaleUpDelay,
           minScaleDownDelay,
-          scaleDownDuringTaskRolloverOnly
+          scaleDownDuringTaskRolloverOnly,
+          useUtilizationRatio
       );
     }
   }

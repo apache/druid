@@ -51,7 +51,8 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"idleWeight\": 0.4,\n"
                   + "  \"minScaleUpDelay\": \"PT5M\",\n"
                   + "  \"minScaleDownDelay\": \"PT10M\",\n"
-                  + "  \"scaleDownDuringTaskRolloverOnly\": true\n"
+                  + "  \"scaleDownDuringTaskRolloverOnly\": true,\n"
+                  + "  \"useUtilizationRatio\": true\n"
                   + "}";
 
     CostBasedAutoScalerConfig config = mapper.readValue(json, CostBasedAutoScalerConfig.class);
@@ -69,6 +70,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
     Assert.assertFalse(config.shouldUseTaskCountBoundariesOnScaleUp());
     Assert.assertTrue(config.shouldUseTaskCountBoundariesOnScaleDown());
+    Assert.assertTrue(config.shouldUseUtilizationRatio());
 
     // Test serialization back to JSON
     String serialized = mapper.writeValueAsString(config);
@@ -103,6 +105,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertFalse(config.isScaleDownOnTaskRolloverOnly());
     Assert.assertFalse(config.shouldUseTaskCountBoundariesOnScaleUp());
     Assert.assertTrue(config.shouldUseTaskCountBoundariesOnScaleDown());
+    Assert.assertFalse(config.shouldUseUtilizationRatio());
     Assert.assertNull(config.getTaskCountStart());
     Assert.assertNull(config.getStopTaskCountRatio());
   }
@@ -190,6 +193,7 @@ public class CostBasedAutoScalerConfigTest
                                                                 .minScaleUpDelay(Duration.standardMinutes(5))
                                                                 .minScaleDownDelay(Duration.standardMinutes(10))
                                                                 .scaleDownDuringTaskRolloverOnly(true)
+                                                                .useUtilizationRatio(true)
                                                                 .build();
 
     Assert.assertTrue(config.getEnableTaskAutoScaler());
@@ -205,6 +209,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(Duration.standardMinutes(5), config.getMinScaleUpDelay());
     Assert.assertEquals(Duration.standardMinutes(10), config.getMinScaleDownDelay());
     Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
+    Assert.assertTrue(config.shouldUseUtilizationRatio());
   }
 
   @Test

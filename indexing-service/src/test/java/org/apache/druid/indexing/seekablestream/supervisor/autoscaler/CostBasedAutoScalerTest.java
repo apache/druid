@@ -62,6 +62,7 @@ public class CostBasedAutoScalerTest
     when(mockSupervisorSpec.getDataSources()).thenReturn(List.of("test-datasource"));
     when(mockSupervisor.getIoConfig()).thenReturn(mockIoConfig);
     when(mockIoConfig.getStream()).thenReturn("test-stream");
+    when(mockIoConfig.getTaskDuration()).thenReturn(Duration.standardHours(1));
 
     CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig.builder()
                                                                 .taskCountMax(100)
@@ -484,6 +485,7 @@ public class CostBasedAutoScalerTest
     when(spec.getDataSources()).thenReturn(List.of("test-datasource"));
     when(supervisor.getIoConfig()).thenReturn(ioConfig);
     when(ioConfig.getStream()).thenReturn("stream");
+    when(ioConfig.getTaskDuration()).thenReturn(Duration.standardHours(1));
 
     CostBasedAutoScalerConfig cfgWithDefaults = CostBasedAutoScalerConfig.builder()
                                                                          .taskCountMax(10)
@@ -550,6 +552,85 @@ public class CostBasedAutoScalerTest
     );
   }
 
+  @Test
+  public void testCollectMetricsTracksLagGatedRateWatermark()
+  {
+    SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
+    SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
+    ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
+
+    when(spec.getId()).thenReturn("test-supervisor");
+    when(spec.getDataSources()).thenReturn(List.of("test-datasource"));
+    when(spec.isSuspended()).thenReturn(false);
+    when(supervisor.getIoConfig()).thenReturn(ioConfig);
+    when(ioConfig.getStream()).thenReturn("test-stream");
+    when(ioConfig.getTaskDuration()).thenReturn(Duration.standardHours(1));
+    when(supervisor.getPartitionCount()).thenReturn(1);
+
+    // windowSize = taskDurationMillis / scaleActionPeriodMillis = 3,600,000 / 1,800,000 = 2
+    CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig.builder()
+                                                                .taskCountMax(10)
+                                                                .taskCountMin(1)
+                                                                .enableTaskAutoScaler(true)
+                                                                .scaleActionPeriodMillis(1_800_000)
+                                                                .build();
+
+    when(supervisor.computeLagStats()).thenReturn(
+        new LagStats(0, 0, 0),
+        new LagStats(100, 100, 100),
+        new LagStats(0, 0, 0),
+        new LagStats(100, 100, 100),
+        new LagStats(100, 100, 100)
+    );
+    when(supervisor.getStats()).thenReturn(
+        buildTaskStatsForRate(999.0),
+        buildTaskStatsForRate(500.0),
+        buildTaskStatsForRate(9000.0),
+        buildTaskStatsForRate(300.0),
+        buildTaskStatsForRate(700.0)
+    );
+
+    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, config, spec, emitter);
+
+    Assert.assertNull(
+        "No lag-gated sample observed yet, so the watermark should be unset",
+        scaler.collectMetrics().getMaxObservedRate()
+    );
+    Assert.assertEquals(
+        "First lag-gated sample becomes the watermark",
+        500.0,
+        scaler.collectMetrics().getMaxObservedRate(),
+        0.0001
+    );
+    Assert.assertEquals(
+        "A tick with no lag is not a capacity sample and must not move the watermark",
+        500.0,
+        scaler.collectMetrics().getMaxObservedRate(),
+        0.0001
+    );
+    Assert.assertEquals(
+        "Watermark is the max across lag-gated samples still within the window",
+        500.0,
+        scaler.collectMetrics().getMaxObservedRate(),
+        0.0001
+    );
+    Assert.assertEquals(
+        "Once the window (size 2) fills, the oldest lag-gated sample (500) is evicted, "
+        + "letting a lower new max (700) surface",
+        700.0,
+        scaler.collectMetrics().getMaxObservedRate(),
+        0.0001
+    );
+  }
+
+  private Map<String, Map<String, Object>> buildTaskStatsForRate(double processedRate)
+  {
+    Map<String, Map<String, Object>> stats = new HashMap<>();
+    stats.put("0", Collections.singletonMap("task-0", buildTaskStatsWithMovingAverage(processedRate)));
+    return stats;
+  }
+
   private CostMetrics createMetrics(
       double avgPartitionLag,
       int currentTaskCount,
@@ -578,6 +659,7 @@ public class CostBasedAutoScalerTest
     when(mockSupervisorSpec.getDataSources()).thenReturn(List.of("test-datasource"));
     when(mockSupervisor.getIoConfig()).thenReturn(mockIoConfig);
     when(mockIoConfig.getStream()).thenReturn("test-stream");
+    when(mockIoConfig.getTaskDuration()).thenReturn(Duration.standardHours(1));
 
     return new CostBasedAutoScaler(mockSupervisor, config, mockSupervisorSpec, mockEmitter);
   }
