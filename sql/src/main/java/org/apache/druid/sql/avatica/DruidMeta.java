@@ -282,8 +282,7 @@ public class DruidMeta extends MetaImpl
           .createStatement(
               sqlStatementFactory,
               queryConfigProvider.getContext(),
-              fetcherFactory,
-              THREAD_LOCAL_REMOTE_ADDRESS.get()
+              fetcherFactory
           );
       return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
     }
@@ -389,7 +388,7 @@ public class DruidMeta extends MetaImpl
         final SqlQueryPlus sqlRequest = SqlQueryPlus.builder(sql)
                                                     .auth(authenticationResult)
                                                     .buildJdbc();
-        druidStatement.execute(sqlRequest, maxRowCount);
+        druidStatement.execute(sqlRequest, maxRowCount, THREAD_LOCAL_REMOTE_ADDRESS.get());
         final ExecuteResult result = doFetch(druidStatement, maxRowsInFirstFrame);
         LOG.debug("Successfully prepared statement [%s] and started execution", druidStatement.getStatementId());
         return result;
@@ -512,7 +511,7 @@ public class DruidMeta extends MetaImpl
     try {
       final DruidJdbcPreparedStatement druidStatement =
           getDruidStatement(statement, DruidJdbcPreparedStatement.class);
-      druidStatement.execute(parameterValues);
+      druidStatement.execute(parameterValues, THREAD_LOCAL_REMOTE_ADDRESS.get());
       ExecuteResult result = doFetch(druidStatement, maxRowsInFirstFrame);
       LOG.debug(
           "Successfully started execution of statement [%s]",

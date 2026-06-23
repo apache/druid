@@ -32,7 +32,6 @@ import java.util.List;
 public class PreparedStatement extends AbstractStatement
 {
   private final SqlQueryPlus originalRequest;
-  private final String remoteAddress;
 
   public PreparedStatement(
       final SqlToolbox lifecycleToolbox,
@@ -42,7 +41,6 @@ public class PreparedStatement extends AbstractStatement
   {
     super(lifecycleToolbox, queryPlus, remoteAddress);
     this.originalRequest = queryPlus;
-    this.remoteAddress = remoteAddress;
   }
 
   /**
@@ -89,8 +87,13 @@ public class PreparedStatement extends AbstractStatement
    * same statement can be execute many times, including concurrently. Each
    * execution repeats the parse, validate, authorize and plan steps since
    * data, permissions, views and other dependencies may have changed.
+   * <p>
+   * The {@code remoteAddress} is supplied per execution (read from the execute
+   * request) rather than reusing the address captured at prepare time, so that a
+   * prepared statement reused after a reconnect or from a different remote is
+   * attributed to the actual caller of this execution.
    */
-  public DirectStatement execute(List<TypedValue> parameters)
+  public DirectStatement execute(List<TypedValue> parameters, @Nullable String remoteAddress)
   {
     return new DirectStatement(
         sqlToolbox,

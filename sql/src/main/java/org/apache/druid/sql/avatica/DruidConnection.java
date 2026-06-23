@@ -102,8 +102,7 @@ public class DruidConnection
   public synchronized DruidJdbcStatement createStatement(
       final SqlStatementFactory sqlStatementFactory,
       final Map<String, Object> systemDefaultContext,
-      final ResultFetcherFactory fetcherFactory,
-      final String remoteAddress
+      final ResultFetcherFactory fetcherFactory
   )
   {
     final int statementId = statementCounter.incrementAndGet();
@@ -126,8 +125,7 @@ public class DruidConnection
           sessionContext,
           systemDefaultContext,
           sqlStatementFactory,
-          fetcherFactory,
-          remoteAddress
+          fetcherFactory
       );
 
       statements.put(statementId, statement);

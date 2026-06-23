@@ -396,7 +396,7 @@ public class QueryFrameworkUtils
         }
 
         @Override
-        public DirectStatement execute(List<TypedValue> parameters)
+        public DirectStatement execute(List<TypedValue> parameters, String remoteAddress)
         {
           return directStatement(queryPlus.withParameters(parameters));
         }

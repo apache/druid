@@ -436,7 +436,7 @@ public class SqlStatementTest
     // JDBC supports a prepare once, execute many model
     for (int i = 0; i < 3; i++) {
       List<Object[]> results = stmt
-          .execute(Collections.emptyList())
+          .execute(Collections.emptyList(), null)
           .execute()
           .getResults()
           .toList();
@@ -495,7 +495,7 @@ public class SqlStatementTest
         CalciteTests.REGULAR_USER_AUTH_RESULT
     );
     PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
-    DruidException e = Assert.assertThrows(DruidException.class, () -> stmt.execute(Collections.emptyList()).execute());
+    DruidException e = Assert.assertThrows(DruidException.class, () -> stmt.execute(Collections.emptyList(), null).execute());
 
     Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
     Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
@@ -512,7 +512,7 @@ public class SqlStatementTest
         CalciteTests.REGULAR_USER_AUTH_RESULT
     );
     PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
-    List<Object[]> results = stmt.execute(Collections.emptyList()).execute().getResults().toList();
+    List<Object[]> results = stmt.execute(Collections.emptyList(), null).execute().getResults().toList();
 
     ImmutableList<Object[]> expectedResults = ImmutableList.of(new Object[]{1L});
     assertResultsEquals("SELECT COUNT(*) AS cnt FROM druid.restrictedDatasource_m1_is_6", expectedResults, results);
