@@ -24,15 +24,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -75,6 +79,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -113,10 +118,17 @@ class SegmentLocalCacheManagerPartialAcquireTest
       new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(3), ROW_SIGNATURE.getColumnNames(), Arrays.asList("b", 4L))
   );
 
+  // A second segment that is both clustered and carries an aggregate projection (the apache/druid#19599 combo): no
+  // shared columns, so it has per-group __base$<ids> bundles + a self-contained "proj" bundle, but no __base bundle.
+  private static final SegmentId CLUSTERED_SEGMENT_ID =
+      SegmentId.of("test_clustered", Intervals.of("2025/2026"), "v1", 0);
+  private static final String CLUSTERED_PROJECTION_BUNDLE = "proj";
+
   @TempDir
   static File SHARED_TEMP_DIR;
 
   private static File DEEP_STORAGE_DIR;
+  private static File CLUSTERED_DEEP_STORAGE_DIR;
 
   @TempDir
   File perTestTempDir;
@@ -156,7 +168,68 @@ class SegmentLocalCacheManagerPartialAcquireTest
                                                        .build())
                                    .rows(ROWS)
                                    .buildMMappedIndexFile();
+    CLUSTERED_DEEP_STORAGE_DIR = buildClusteredProjectionSegment();
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
+  }
+
+  /**
+   * Build a clustered base-table segment that also carries an aggregate projection (group-by {@code tenant} with
+   * {@code sum(x)}). With no shared columns the layout is per-group {@code __base$<ids>} bundles + a self-contained
+   * {@code proj} bundle and no {@code __base} bundle.
+   */
+  private static File buildClusteredProjectionSegment()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .columns(
+                new StringDimensionSchema("tenant"),
+                new StringDimensionSchema("region"),
+                new LongDimensionSchema("x"),
+                new LongDimensionSchema("__time")
+            )
+            .clusteringColumns("tenant")
+            .build();
+    final AggregateProjectionSpec projectionSpec =
+        AggregateProjectionSpec.builder(CLUSTERED_PROJECTION_BUNDLE)
+                               .groupingColumns(new StringDimensionSchema("tenant"))
+                               .aggregators(
+                                   new CountAggregatorFactory("cnt"),
+                                   new LongSumAggregatorFactory("sum_x", "x")
+                               )
+                               .build();
+    final File tmp = new File(SHARED_TEMP_DIR, "build_clustered_" + ThreadLocalRandom.current().nextInt());
+    return IndexBuilder.create()
+                       .useV10()
+                       .tmpDir(tmp)
+                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                       .schema(
+                           IncrementalIndexSchema.builder()
+                                                 .withMinTimestamp(TIME.getMillis())
+                                                 .withTimestampSpec(new TimestampSpec("ts", "millis", null))
+                                                 .withQueryGranularity(Granularities.NONE)
+                                                 .withDimensionsSpec(clusterSpec.getDimensionsSpec())
+                                                 .withRollup(false)
+                                                 .withClusterSpec(clusterSpec)
+                                                 .withProjections(List.of(projectionSpec))
+                                                 .build()
+                       )
+                       .indexSpec(IndexSpec.builder().withMetadataCompression(CompressionStrategy.NONE).build())
+                       .rows(List.of(
+                           clusteredRow(TIME.getMillis() + 2, "globex", "eu-west-1", 5),
+                           clusteredRow(TIME.getMillis(), "acme", "us-east-1", 10),
+                           clusteredRow(TIME.getMillis() + 1, "acme", "us-west-2", 20)
+                       ))
+                       .buildMMappedIndexFile();
+  }
+
+  private static InputRow clusteredRow(long ts, String tenant, String region, long x)
+  {
+    final Map<String, Object> event = new HashMap<>();
+    event.put("ts", ts);
+    event.put("tenant", tenant);
+    event.put("region", region);
+    event.put("x", x);
+    return new MapBasedInputRow(ts, List.of("tenant", "region", "x"), event);
   }
 
   @BeforeEach
@@ -403,6 +476,62 @@ class SegmentLocalCacheManagerPartialAcquireTest
         loc.isWeakReserved(baseBundleId),
         "base bundle should be registered with the storage location after the async cursor build"
     );
+  }
+
+  @Test
+  void testPartialAcquireClusteredWithProjectionMountsProjectionBundleWithoutBase()
+      throws ExecutionException, InterruptedException, IOException
+  {
+    final DataSegment clusteredSegment =
+        DataSegment.builder()
+                   .dataSource(CLUSTERED_SEGMENT_ID.getDataSource())
+                   .interval(CLUSTERED_SEGMENT_ID.getInterval())
+                   .version(CLUSTERED_SEGMENT_ID.getVersion())
+                   .shardSpec(NoneShardSpec.instance())
+                   .loadSpec(Map.of("type", "local", "path", CLUSTERED_DEEP_STORAGE_DIR.getAbsolutePath()))
+                   .size(0)
+                   .build();
+    try (AcquireSegmentAction action = manager.acquireSegment(clusteredSegment, AcquireMode.PARTIAL)) {
+      final AcquireSegmentResult result = action.getSegmentFuture().get();
+      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+        Assertions.assertEquals(CLUSTERED_SEGMENT_ID, segment.getId());
+
+        // group-by tenant + sum(x) matches the aggregate projection. Building this cursor drives the 'proj' bundle to
+        // mount through the real acquire path. inferParentBundles must return no parent for it (the clustered segment
+        // has no __base bundle); the old "aggregate always depends on __base" rule would have tried to mount a
+        // nonexistent __base here and failed.
+        final CursorBuildSpec aggSpec = CursorBuildSpec.builder()
+                                                       .setGroupingColumns(List.of("tenant"))
+                                                       .setAggregators(List.of(new LongSumAggregatorFactory("sum_x", "x")))
+                                                       .setPhysicalColumns(Set.of("tenant", "x"))
+                                                       .build();
+        try (var asyncHolder = segment.as(CursorFactory.class).makeCursorHolderAsync(aggSpec)) {
+          final CountDownLatch ready = new CountDownLatch(1);
+          asyncHolder.addReadyCallback(ready::countDown);
+          Assertions.assertTrue(ready.await(15, TimeUnit.SECONDS));
+          try (CursorHolder cursorHolder = asyncHolder.release()) {
+            Assertions.assertNotNull(cursorHolder.asCursor(), "projection-matched cursor must build over the combo segment");
+          }
+        }
+      }
+
+      final StorageLocation loc = manager.getLocations().get(0);
+      // the projection bundle mounted through the real acquire path...
+      Assertions.assertTrue(
+          loc.isWeakReserved(new PartialSegmentBundleCacheEntryIdentifier(CLUSTERED_SEGMENT_ID, CLUSTERED_PROJECTION_BUNDLE)),
+          "projection bundle must be registered after the projection-matched cursor build"
+      );
+      // ...and NO phantom __base bundle was created: a clustered segment with no shared columns has no base bundle.
+      Assertions.assertFalse(
+          loc.isWeakReserved(
+              new PartialSegmentBundleCacheEntryIdentifier(CLUSTERED_SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME)
+          ),
+          "no __base bundle should be mounted for a clustered segment with no shared columns"
+      );
+    }
+    finally {
+      manager.drop(clusteredSegment);
+    }
   }
 
   @Test
