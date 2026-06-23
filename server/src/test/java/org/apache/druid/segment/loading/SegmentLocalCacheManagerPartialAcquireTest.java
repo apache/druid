@@ -118,8 +118,8 @@ class SegmentLocalCacheManagerPartialAcquireTest
       new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(3), ROW_SIGNATURE.getColumnNames(), Arrays.asList("b", 4L))
   );
 
-  // A second segment that is both clustered and carries an aggregate projection (the apache/druid#19599 combo): no
-  // shared columns, so it has per-group __base$<ids> bundles + a self-contained "proj" bundle, but no __base bundle.
+  // A second segment that is both clustered and carries an aggregate projection: no shared columns, so it has
+  // per-group __base$<ids> bundles + a self-contained "proj" bundle, but no __base bundle.
   private static final SegmentId CLUSTERED_SEGMENT_ID =
       SegmentId.of("test_clustered", Intervals.of("2025/2026"), "v1", 0);
   private static final String CLUSTERED_PROJECTION_BUNDLE = "proj";
@@ -279,10 +279,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
     };
 
     // DataSegment with a LocalLoadSpec pointing at the deep storage directory (unzipped V10 layout).
-    partialSegment = DataSegment.builder()
-                                .dataSource(SEGMENT_ID.getDataSource())
-                                .interval(SEGMENT_ID.getInterval())
-                                .version(SEGMENT_ID.getVersion())
+    partialSegment = DataSegment.builder(SEGMENT_ID)
                                 .shardSpec(NoneShardSpec.instance())
                                 .loadSpec(Map.of("type", "local", "path", DEEP_STORAGE_DIR.getAbsolutePath()))
                                 .size(0)
@@ -483,10 +480,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
       throws ExecutionException, InterruptedException, IOException
   {
     final DataSegment clusteredSegment =
-        DataSegment.builder()
-                   .dataSource(CLUSTERED_SEGMENT_ID.getDataSource())
-                   .interval(CLUSTERED_SEGMENT_ID.getInterval())
-                   .version(CLUSTERED_SEGMENT_ID.getVersion())
+        DataSegment.builder(CLUSTERED_SEGMENT_ID)
                    .shardSpec(NoneShardSpec.instance())
                    .loadSpec(Map.of("type", "local", "path", CLUSTERED_DEEP_STORAGE_DIR.getAbsolutePath()))
                    .size(0)
