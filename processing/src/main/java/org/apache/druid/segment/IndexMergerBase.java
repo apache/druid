@@ -630,7 +630,7 @@ public abstract class IndexMergerBase implements IndexMerger
 
       final String section2 = "build projection[" + projectionSchema.getName() + "] inverted index and columns";
       progress.startSection(section2);
-      segmentFileBuilder.startFileGroup(projectionSchema.getName());
+      segmentFileBuilder.startFileBundle(projectionSchema.getName());
       if (projectionSchema.getTimeColumnName() != null) {
         makeTimeColumn(
             segmentFileBuilder,

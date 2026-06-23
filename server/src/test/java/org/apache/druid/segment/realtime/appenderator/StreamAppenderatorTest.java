@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryPlus;
@@ -2296,14 +2297,14 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   private void verifySinkMetrics(StubServiceEmitter emitter, Set<String> segmentIds)
   {
     int segments = segmentIds.size();
-    emitter.verifyEmitted("query/cpu/time", 1);
-    Assert.assertEquals(segments, emitter.getMetricEvents("query/segment/time").size());
-    Assert.assertEquals(segments, emitter.getMetricEvents("query/segmentAndCache/time").size());
-    Assert.assertEquals(segments, emitter.getMetricEvents("query/wait/time").size());
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_CPU_TIME, 1);
+    Assert.assertEquals(segments, emitter.getMetricEvents(DefaultQueryMetrics.QUERY_SEGMENT_TIME).size());
+    Assert.assertEquals(segments, emitter.getMetricEvents(DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME).size());
+    Assert.assertEquals(segments, emitter.getMetricEvents(DefaultQueryMetrics.QUERY_WAIT_TIME).size());
     for (String id : segmentIds) {
-      Assert.assertTrue(emitter.getMetricEvents("query/segment/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
-      Assert.assertTrue(emitter.getMetricEvents("query/segmentAndCache/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
-      Assert.assertTrue(emitter.getMetricEvents("query/wait/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
+      Assert.assertTrue(emitter.getMetricEvents(DefaultQueryMetrics.QUERY_SEGMENT_TIME).stream().anyMatch(value -> value.getUserDims().containsValue(id)));
+      Assert.assertTrue(emitter.getMetricEvents(DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME).stream().anyMatch(value -> value.getUserDims().containsValue(id)));
+      Assert.assertTrue(emitter.getMetricEvents(DefaultQueryMetrics.QUERY_WAIT_TIME).stream().anyMatch(value -> value.getUserDims().containsValue(id)));
     }
   }
 

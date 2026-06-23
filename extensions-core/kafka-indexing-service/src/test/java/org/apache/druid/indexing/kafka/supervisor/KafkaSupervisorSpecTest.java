@@ -32,6 +32,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -562,6 +563,38 @@ public class KafkaSupervisorSpecTest
         )
         .build("testDs", "metrics");
     sourceSpec.validateSpecUpdateTo(validDestSpec);
+  }
+
+  @Test
+  public void testCreateBackfillSpec()
+  {
+    KafkaSupervisorSpec spec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(
+            schema -> schema
+                .withTimestamp(TimestampSpec.DEFAULT)
+                .withAggregators(new CountAggregatorFactory("rows"))
+                .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null))
+        )
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withJsonInputFormat()
+                .withConsumerProperties(Map.of("bootstrap.servers", "localhost:9092"))
+                .withTaskCount(3)
+        )
+        .build("testDs", "metrics");
+
+    BoundedStreamConfig boundedStreamConfig = new BoundedStreamConfig(
+        Map.of("0", 100L, "1", 200L),
+        Map.of("0", 500L, "1", 600L)
+    );
+
+    KafkaSupervisorSpec backfill = (KafkaSupervisorSpec) spec.createBackfillSpec("backfill-id", boundedStreamConfig, 2);
+
+    Assert.assertEquals("backfill-id", backfill.getId());
+    Assert.assertEquals("testDs", backfill.getSpec().getDataSchema().getDataSource());
+    Assert.assertEquals("metrics", backfill.getSpec().getIOConfig().getTopic());
+    Assert.assertEquals(2, backfill.getSpec().getIOConfig().getTaskCount());
+    Assert.assertEquals(boundedStreamConfig, backfill.getSpec().getIOConfig().getBoundedStreamConfig());
   }
 
   private KafkaSupervisorSpec getSpec(String topic, String topicPattern)

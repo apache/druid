@@ -258,8 +258,21 @@ public enum CompressionStrategy
       final byte[] bytes = new byte[numBytes];
       in.get(bytes);
 
-      try (final ResourceHolder<byte[]> outputBytesHolder = CompressedPools.getOutputBytes()) {
-        final byte[] outputBytes = outputBytesHolder.get();
+      // the pooled output buffer is a fixed CompressedPools.BUFFER_SIZE (64k); if the decompressed output is larger
+      // use a right-sized non-pooled buffer instead
+      final int outputSize = out.remaining();
+      if (outputSize <= CompressedPools.BUFFER_SIZE) {
+        try (final ResourceHolder<byte[]> outputBytesHolder = CompressedPools.getOutputBytes()) {
+          decompressHeap(bytes, outputBytesHolder.get(), out);
+        }
+      } else {
+        decompressHeap(bytes, new byte[outputSize], out);
+      }
+    }
+
+    private static void decompressHeap(byte[] bytes, byte[] outputBytes, ByteBuffer out)
+    {
+      try {
         final int numDecompressedBytes = LZFDecoder.decode(bytes, outputBytes);
         out.put(outputBytes, 0, numDecompressedBytes);
         out.flip();
@@ -408,18 +421,15 @@ public enum CompressionStrategy
         // fall back to heap byte arrays if both buffers are not direct
         final byte[] inputBytes = new byte[numBytes];
         in.get(inputBytes);
-        try (final ResourceHolder<byte[]> outputBytesHolder = CompressedPools.getOutputBytes()) {
-          final byte[] outputBytes = outputBytesHolder.get();
-          int decompressedBytes = (int) Zstd.decompressByteArray(
-              outputBytes,
-              0,
-              outputBytes.length,
-              inputBytes,
-              0,
-              numBytes
-          );
-          out.put(outputBytes, 0, decompressedBytes);
-          out.flip();
+        // the pooled output buffer is a fixed CompressedPools.BUFFER_SIZE (64k); if the decompressed output is larger
+        // use a right-sized non-pooled buffer instead
+        final int outputSize = out.remaining();
+        if (outputSize <= CompressedPools.BUFFER_SIZE) {
+          try (final ResourceHolder<byte[]> outputBytesHolder = CompressedPools.getOutputBytes()) {
+            decompressHeap(inputBytes, numBytes, outputBytesHolder.get(), out);
+          }
+        } else {
+          decompressHeap(inputBytes, numBytes, new byte[outputSize], out);
         }
       } else {
         int decompressedBytes = (int) Zstd.decompressDirectByteBuffer(
@@ -432,6 +442,23 @@ public enum CompressionStrategy
         );
         out.limit(out.position() + decompressedBytes);
       }
+    }
+
+    private static void decompressHeap(byte[] inputBytes, int numBytes, byte[] outputBytes, ByteBuffer out)
+    {
+      final long decompressedBytes = Zstd.decompressByteArray(
+          outputBytes,
+          0,
+          outputBytes.length,
+          inputBytes,
+          0,
+          numBytes
+      );
+      if (Zstd.isError(decompressedBytes)) {
+        throw new RuntimeException("Unable to decompress zstd data: " + Zstd.getErrorName(decompressedBytes));
+      }
+      out.put(outputBytes, 0, (int) decompressedBytes);
+      out.flip();
     }
   }
 

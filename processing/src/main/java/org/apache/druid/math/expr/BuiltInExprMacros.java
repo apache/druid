@@ -21,10 +21,12 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class BuiltInExprMacros
 {
@@ -210,6 +212,107 @@ public class BuiltInExprMacros
       public Object getLiteralValue()
       {
         return eval(InputBindings.nilBindings()).value();
+      }
+    }
+  }
+
+  /**
+   * Expression macro for now() function that returns current system timestamp.
+   * Implemented as a macro to prevent constant folding optimization.
+   */
+  public static class NowExprMacro implements ExprMacroTable.ExprMacro
+  {
+    public static final String NAME = "now";
+
+    // Strictly monotonic counter. Mixed into the cache key of any Expr containing now() so each computation
+    // produces a unique key, effectively disabling result caching for non-deterministic expressions.
+    private static final AtomicLong CACHE_KEY_NONCE = new AtomicLong();
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+
+    @Override
+    public Expr apply(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 0);
+      return new NowExpression();
+    }
+
+    static final class NowExpression implements Expr
+    {
+      @Override
+      public ExprEval eval(ObjectBinding bindings)
+      {
+        return ExprEval.ofLong(System.currentTimeMillis());
+      }
+
+      @Override
+      public String stringify()
+      {
+        return "now()";
+      }
+
+      @Override
+      public Expr visit(Shuttle shuttle)
+      {
+        return shuttle.visit(this);
+      }
+
+      @Override
+      public BindingAnalysis analyzeInputs()
+      {
+        return new BindingAnalysis().withNonDeterministic();
+      }
+
+      @Override
+      public void decorateCacheKeyBuilder(CacheKeyBuilder builder)
+      {
+        // Append a strictly increasing nonce so any Expr containing now() produces a fresh cache key on every
+        // computation, effectively disabling result caching.
+        builder.appendLong(CACHE_KEY_NONCE.incrementAndGet());
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        return ExpressionType.LONG;
+      }
+
+      @Override
+      public boolean isLiteral()
+      {
+        // NOT a literal - prevents constant folding
+        return false;
+      }
+
+      @Override
+      public boolean isNullLiteral()
+      {
+        return false;
+      }
+
+      @Nullable
+      @Override
+      public Object getLiteralValue()
+      {
+        // Not a literal, so no constant value
+        return null;
+      }
+
+      @Override
+      public int hashCode()
+      {
+        return NowExpression.class.hashCode();
+      }
+
+      @Override
+      public boolean equals(Object obj)
+      {
+        return obj instanceof NowExpression;
       }
     }
   }

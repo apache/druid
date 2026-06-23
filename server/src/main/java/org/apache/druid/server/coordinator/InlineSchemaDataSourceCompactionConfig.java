@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -49,8 +50,8 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
   }
 
   /**
-   * The number of input segments is limited because the byte size of a serialized task spec is limited by
-   * org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig.maxZnodeBytes.
+   * The number of input segments is limited because the byte size of a serialized task spec is bounded by the
+   * maximum payload size accepted by the task runner.
    */
   @Nullable
   private final Integer maxRowsPerSegment;
@@ -67,6 +68,8 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
   private final CompactionTransformSpec transformSpec;
   @Nullable
   private final List<AggregateProjectionSpec> projections;
+  @Nullable
+  private final BaseTableProjectionSpec baseTable;
   @Nullable
   private final UserCompactionTaskIOConfig ioConfig;
   @Nullable
@@ -86,6 +89,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
       @JsonProperty("dimensionsSpec") @Nullable UserCompactionTaskDimensionsConfig dimensionsSpec,
       @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] metricsSpec,
       @JsonProperty("transformSpec") @Nullable CompactionTransformSpec transformSpec,
+      @JsonProperty("baseTable") @Nullable BaseTableProjectionSpec baseTable,
       @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
       @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
       @JsonProperty("engine") @Nullable CompactionEngine engine,
@@ -108,6 +112,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
     this.dimensionsSpec = dimensionsSpec;
     this.transformSpec = transformSpec;
     this.projections = projections;
+    this.baseTable = baseTable;
     this.taskContext = taskContext;
     this.engine = engine;
   }
@@ -208,6 +213,14 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
   @JsonProperty
   @Nullable
   @Override
+  public BaseTableProjectionSpec getBaseTable()
+  {
+    return baseTable;
+  }
+
+  @JsonProperty
+  @Nullable
+  @Override
   public Map<String, Object> getTaskContext()
   {
     return taskContext;
@@ -256,6 +269,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
            Arrays.equals(metricsSpec, that.metricsSpec) &&
            Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(projections, that.projections) &&
+           Objects.equals(baseTable, that.baseTable) &&
            Objects.equals(ioConfig, that.ioConfig) &&
            this.engine == that.engine &&
            Objects.equals(taskContext, that.taskContext);
@@ -275,6 +289,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
         dimensionsSpec,
         transformSpec,
         projections,
+        baseTable,
         ioConfig,
         taskContext,
         engine
@@ -301,6 +316,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
         .withMetricsSpec(this.metricsSpec)
         .withTransformSpec(this.transformSpec)
         .withProjections(this.projections)
+        .withBaseTable(this.baseTable)
         .withIoConfig(this.ioConfig)
         .withEngine(this.engine)
         .withTaskContext(this.taskContext);
@@ -319,6 +335,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
     private AggregatorFactory[] metricsSpec;
     private CompactionTransformSpec transformSpec;
     private List<AggregateProjectionSpec> projections;
+    private BaseTableProjectionSpec baseTable;
     private UserCompactionTaskIOConfig ioConfig;
     private CompactionEngine engine;
     private Map<String, Object> taskContext;
@@ -336,6 +353,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
           dimensionsSpec,
           metricsSpec,
           transformSpec,
+          baseTable,
           projections,
           ioConfig,
           engine,
@@ -443,6 +461,12 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
     public Builder withProjections(List<AggregateProjectionSpec> projections)
     {
       this.projections = projections;
+      return this;
+    }
+
+    public Builder withBaseTable(BaseTableProjectionSpec baseTable)
+    {
+      this.baseTable = baseTable;
       return this;
     }
 

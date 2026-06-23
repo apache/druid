@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.rules;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
+import org.apache.druid.segment.loading.PartialProjectionLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -33,7 +34,7 @@ import java.util.Map;
  * Base for {@link PartialLoadMatcher} implementations that decide which of a segment's V10 projections to load.
  * Subclasses supply the resolution policy via {@link #resolveProjectionNames(DataSegment)}; this base handles
  * fingerprint computation and wraps the result into the {@code partialProjection} load-spec wire form consumed
- * by the historical-side {@code PartialProjectionLoadSpec}.
+ * by the historical-side {@link PartialProjectionLoadSpec}.
  * <p>
  * The fingerprint is a hash of what projections are partially loaded on a segment by this rule; the data node will
  * include this value in the segment announcement so that it can be used as a lightweight value to compare against
@@ -41,7 +42,6 @@ import java.util.Map;
  */
 public abstract class ProjectionPartialLoadMatcher implements PartialLoadMatcher
 {
-  static final String LOAD_SPEC_TYPE = "partialProjection";
   static final String FINGERPRINT_VERSION = "v1";
 
   /**
@@ -60,13 +60,7 @@ public abstract class ProjectionPartialLoadMatcher implements PartialLoadMatcher
       return null;
     }
     final String fingerprint = computeFingerprint(resolved);
-    final Map<String, Object> wrapped = Map.of(
-        "type", LOAD_SPEC_TYPE,
-        "delegate", baseLoadSpec,
-        "projections", resolved,
-        "fingerprint", fingerprint
-    );
-    return new MatchResult(wrapped, fingerprint);
+    return new MatchResult(PartialProjectionLoadSpec.wireForm(baseLoadSpec, resolved, fingerprint), fingerprint);
   }
 
   static String computeFingerprint(List<String> sortedDedupedNames)

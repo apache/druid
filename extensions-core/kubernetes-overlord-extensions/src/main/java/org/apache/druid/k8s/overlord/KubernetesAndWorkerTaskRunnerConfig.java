@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 
 import javax.annotation.Nullable;
@@ -51,11 +50,9 @@ public class KubernetesAndWorkerTaskRunnerConfig
     this.runnerStrategy = ObjectUtils.getIfNull(runnerStrategy, KubernetesTaskRunnerFactory.TYPE_NAME);
     this.workerType = ObjectUtils.getIfNull(workerType, HttpRemoteTaskRunnerFactory.TYPE_NAME);
     Preconditions.checkArgument(
-        this.workerType.equals(HttpRemoteTaskRunnerFactory.TYPE_NAME) ||
-        this.workerType.equals(RemoteTaskRunnerFactory.TYPE_NAME),
-        "workerType must be set to one of (%s, %s)",
-        HttpRemoteTaskRunnerFactory.TYPE_NAME,
-        RemoteTaskRunnerFactory.TYPE_NAME
+        this.workerType.equals(HttpRemoteTaskRunnerFactory.TYPE_NAME),
+        "workerType must be set to [%s]; the ZooKeeper-based 'remote' worker type has been removed.",
+        HttpRemoteTaskRunnerFactory.TYPE_NAME
     );
   }
 

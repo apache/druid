@@ -275,7 +275,7 @@ public class StorageLocation
       unmountReclaimed(reclaimResult);
       if (reclaimResult.isSuccess()) {
         staticCacheEntries.put(entry.getId(), entry);
-        trackLoad(entry);
+        trackStaticLoadBegin(entry);
       }
       return reclaimResult.isSuccess();
     }
@@ -323,7 +323,7 @@ public class StorageLocation
         final WeakCacheEntry newEntry = new WeakCacheEntry(entry);
         linkNewWeakEntry(newEntry);
         weakCacheEntries.put(entry.getId(), newEntry);
-        weakStats.getAndUpdate(s -> s.load(entry.getSize()));
+        weakStats.getAndUpdate(s -> s.loadBegin(entry.getSize()));
       }
       return reclaimResult.isSuccess();
     }
@@ -407,7 +407,7 @@ public class StorageLocation
         linkNewWeakEntry(newWeakEntry);
         weakCacheEntries.put(newEntry.getId(), newWeakEntry);
         trackWeakHold(newWeakEntry);
-        weakStats.getAndUpdate(s -> s.load(newEntry.getSize()));
+        weakStats.getAndUpdate(s -> s.loadBegin(newEntry.getSize()));
         hold = new ReservationHold<>(
             (T) newEntry,
             createWeakEntryReleaseRunnable(newWeakEntry, true)
@@ -417,6 +417,82 @@ public class StorageLocation
         hold = null;
       }
       return hold;
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Adjusts the reservation size of an already-registered {@link ResizableCacheEntry} downward. Used when an entry's
+   * final size is not known at registration time (e.g. a partial-segment metadata entry that reserves a pessimistic
+   * estimate and shrinks to the actual on-disk header size once the header has been downloaded). Returns reclaimed
+   * capacity to the location's available budget; never triggers eviction.
+   * <p>
+   * Throws if {@code newSize} is greater than the entry's current size: grow semantics require checking the location's
+   * available budget and possibly evicting other entries, and aren't needed by the current callers.
+   */
+  public void adjustReservation(CacheEntryIdentifier id, long newSize)
+  {
+    lock.writeLock().lock();
+    try {
+      final CacheEntry entry;
+      final WeakCacheEntry weak;
+      if (staticCacheEntries.containsKey(id)) {
+        entry = staticCacheEntries.get(id);
+        weak = null;
+      } else {
+        weak = weakCacheEntries.get(id);
+        if (weak == null) {
+          throw DruidException.defensive(
+              "Cannot adjust reservation for unknown cache entry[%s]",
+              id
+          );
+        }
+        entry = weak.cacheEntry;
+      }
+
+      if (!(entry instanceof ResizableCacheEntry)) {
+        throw DruidException.defensive(
+            "Cache entry[%s] of type[%s] does not support reservation adjustment",
+            id,
+            entry.getClass().getSimpleName()
+        );
+      }
+
+      final long oldSize = entry.getSize();
+      final long delta = oldSize - newSize;
+      if (delta < 0) {
+        throw DruidException.defensive(
+            "Cannot grow reservation for cache entry[%s] from [%d] to [%d] bytes; only shrink is supported",
+            id,
+            oldSize,
+            newSize
+        );
+      }
+      if (delta == 0) {
+        return;
+      }
+
+      ((ResizableCacheEntry) entry).resizeReservation(newSize);
+      currSizeBytes.getAndAdd(-delta);
+      if (weak == null) {
+        currStaticSizeBytes.getAndAdd(-delta);
+        // The reservation (loadBegin) was recorded at the pre-shrink size; correct its byte total to match.
+        staticStats.getAndUpdate(s -> s.shrinkLoadBegin(delta));
+      } else {
+        currWeakSizeBytes.getAndAdd(-delta);
+        // The reservation (loadBegin) was recorded at the pre-shrink size; correct its byte total to match.
+        weakStats.getAndUpdate(s -> s.shrinkLoadBegin(delta));
+        // Each active hold contributed entry.getSize() to currHoldBytes via trackWeakHold; shrink each hold's
+        // contribution by the same delta so a future trackWeakRelease (which subtracts the new smaller size) lands
+        // on the correct total. Clamp at 0 defensively against any pre-existing drift.
+        final long activeHolds = weak.holdReferents.getRegisteredParties() - 1L;
+        if (activeHolds > 0) {
+          final long holdDelta = delta * activeHolds;
+          currHoldBytes.updateAndGet(v -> Math.max(0L, v - holdDelta));
+        }
+      }
     }
     finally {
       lock.writeLock().unlock();
@@ -437,6 +513,45 @@ public class StorageLocation
         toRemove.unmount();
         trackDrop(entry);
       }
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Remove a {@link #weakCacheEntries} entry that currently has no outstanding holds, unlinking it from the SIEVE
+   * queue and terminating its phaser (which fires the underlying {@link CacheEntry#unmount}). No-op when the entry
+   * is absent, is a {@link #staticCacheEntries} entry, or still has outstanding holds.
+   * <p>
+   * This exists for callers that register a weak entry <em>without</em> a {@link ReservationHold} (the bootstrap
+   * reserve path uses {@link #reserveWeak}) and need to clean it up after a failed mount. The normal runtime path
+   * registers weak entries via {@link #addWeakReservationHold} and relies on the hold's release runnable to evict a
+   * never-mounted entry on close; an entry registered without a hold has no such cleanup, so a failed mount would
+   * otherwise leave it lingering (and un-re-mountable if its on-disk state was deleted by the mount rollback). The
+   * hold guard makes this safe to call unconditionally on any mount failure: a held entry (runtime path) is left to
+   * its holder's release runnable.
+   */
+  public void removeUnheldWeakEntry(CacheEntryIdentifier id)
+  {
+    lock.writeLock().lock();
+    try {
+      weakCacheEntries.computeIfPresent(
+          id,
+          (cacheEntryIdentifier, weakCacheEntry) -> {
+            if (weakCacheEntry.isHeld()) {
+              // a holder is responsible for cleanup when it releases; leave the entry in place
+              return weakCacheEntry;
+            }
+            final boolean isMounted = weakCacheEntry.cacheEntry.isMounted();
+            unlinkWeakEntry(weakCacheEntry);
+            weakCacheEntry.unmount(); // terminate the phaser; fires cacheEntry.unmount() (idempotent)
+            if (isMounted) {
+              weakStats.getAndUpdate(s -> s.evict(weakCacheEntry.cacheEntry.getSize()));
+            }
+            return null;
+          }
+      );
     }
     finally {
       lock.writeLock().unlock();
@@ -506,7 +621,7 @@ public class StorageLocation
       hand = newWeakEntry;
     }
     head = newWeakEntry;
-    trackWeakLoad(newWeakEntry);
+    trackWeakLoadBegin(newWeakEntry);
   }
 
   /**
@@ -643,11 +758,16 @@ public class StorageLocation
     }
   }
 
-  private void trackLoad(CacheEntry entry)
+  private void trackStaticLoadBegin(CacheEntry entry)
   {
     currSizeBytes.getAndAdd(entry.getSize());
     currStaticSizeBytes.getAndAdd(entry.getSize());
-    staticStats.getAndUpdate(s -> s.load(entry.getSize()));
+    staticStats.getAndUpdate(s -> s.loadBegin(entry.getSize()));
+  }
+
+  public void trackStaticLoad(long size)
+  {
+    staticStats.getAndUpdate(s -> s.load(size));
   }
 
   private void trackDrop(CacheEntry entry)
@@ -657,7 +777,7 @@ public class StorageLocation
     staticStats.getAndUpdate(s -> s.drop(entry.getSize()));
   }
 
-  private void trackWeakLoad(WeakCacheEntry entry)
+  private void trackWeakLoadBegin(WeakCacheEntry entry)
   {
     currSizeBytes.getAndAdd(entry.cacheEntry.getSize());
     currWeakSizeBytes.getAndAdd(entry.cacheEntry.getSize());
@@ -667,6 +787,11 @@ public class StorageLocation
   {
     currSizeBytes.getAndAdd(-entry.cacheEntry.getSize());
     currWeakSizeBytes.getAndAdd(-entry.cacheEntry.getSize());
+  }
+
+  public void trackWeakLoad(long size)
+  {
+    weakStats.getAndUpdate(s -> s.load(size));
   }
 
   private void trackWeakHold(WeakCacheEntry entry)
@@ -1008,6 +1133,8 @@ public class StorageLocation
   public static final class StaticStats implements StorageLocationStats
   {
     private final AtomicLong sizeUsed;
+    private final AtomicLong loadBeginCount = new AtomicLong(0);
+    private final AtomicLong loadBeginBytes = new AtomicLong(0);
     private final AtomicLong loadCount = new AtomicLong(0);
     private final AtomicLong loadBytes = new AtomicLong(0);
     private final AtomicLong dropCount = new AtomicLong(0);
@@ -1016,6 +1143,23 @@ public class StorageLocation
     public StaticStats(AtomicLong sizeUsed)
     {
       this.sizeUsed = sizeUsed;
+    }
+
+    public StaticStats loadBegin(long size)
+    {
+      loadBeginCount.getAndIncrement();
+      loadBeginBytes.getAndAdd(size);
+      return this;
+    }
+
+    /**
+     * Correct the reserved (loadBegin) byte total downward by {@code delta} when a reservation is shrunk via
+     * {@link StorageLocation#adjustReservation}. The load-begin count is unchanged; only the byte total is corrected.
+     */
+    public StaticStats shrinkLoadBegin(long delta)
+    {
+      loadBeginBytes.getAndAdd(-delta);
+      return this;
     }
 
     public StaticStats load(long size)
@@ -1036,6 +1180,18 @@ public class StorageLocation
     public long getUsedBytes()
     {
       return sizeUsed.get();
+    }
+
+    @Override
+    public long getLoadBeginCount()
+    {
+      return loadBeginCount.get();
+    }
+
+    @Override
+    public long getLoadBeginBytes()
+    {
+      return loadBeginBytes.get();
     }
 
     @Override
@@ -1068,6 +1224,8 @@ public class StorageLocation
     private final AtomicLong sizeUsed;
     private final AtomicLong holdCount;
     private final AtomicLong holdBytes;
+    private final AtomicLong loadBeginCount = new AtomicLong(0);
+    private final AtomicLong loadBeginBytes = new AtomicLong(0);
     private final AtomicLong loadCount = new AtomicLong(0);
     private final AtomicLong loadBytes = new AtomicLong(0);
     private final AtomicLong rejectionCount = new AtomicLong(0);
@@ -1088,6 +1246,24 @@ public class StorageLocation
     {
       hitCount.getAndIncrement();
       hitBytes.getAndAdd(size);
+      return this;
+    }
+
+    public WeakStats loadBegin(long size)
+    {
+      loadBeginCount.getAndIncrement();
+      loadBeginBytes.getAndAdd(size);
+      return this;
+    }
+
+    /**
+     * Correct the reserved (loadBegin) byte total downward by {@code delta} when a reservation is shrunk via
+     * {@link StorageLocation#adjustReservation} (e.g. a partial metadata entry's pessimistic estimate reduced to the
+     * actual header size after mount). The load-begin count is unchanged; only the byte total is corrected.
+     */
+    public WeakStats shrinkLoadBegin(long delta)
+    {
+      loadBeginBytes.getAndAdd(-delta);
       return this;
     }
 
@@ -1145,6 +1321,18 @@ public class StorageLocation
     public long getHitBytes()
     {
       return hitBytes.get();
+    }
+
+    @Override
+    public long getLoadBeginCount()
+    {
+      return loadBeginCount.get();
+    }
+
+    @Override
+    public long getLoadBeginBytes()
+    {
+      return loadBeginBytes.get();
     }
 
     @Override

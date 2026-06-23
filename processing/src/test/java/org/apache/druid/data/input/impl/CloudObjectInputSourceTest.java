@@ -19,22 +19,33 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputFilePointer;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -227,6 +238,110 @@ public class CloudObjectInputSourceTest
   }
 
   @Test
+  public void test_asFilePointers_withUris()
+  {
+    final CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
+        .useConstructor(SCHEME, URIS2, null, null, null, SystemFields.none())
+        .defaultAnswer(Mockito.CALLS_REAL_METHODS)
+    );
+    Mockito.when(inputSource.getSplitWidget()).thenReturn(new MockSplitWidget(123L));
+
+    final List<InputFilePointer> pointers = inputSource.asFilePointers();
+
+    Assertions.assertEquals(
+        URIS2,
+        pointers.stream().map(InputFilePointer::uri).collect(Collectors.toList())
+    );
+
+    // sizeSupplier defers to the split widget.
+    Assertions.assertEquals(123L, pointers.get(0).sizeSupplier().getAsLong());
+  }
+
+  @Test
+  public void test_asFilePointers_withObjects()
+  {
+    final CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
+        .useConstructor(SCHEME, null, null, OBJECTS_BEFORE_GLOB, null, SystemFields.none())
+        .defaultAnswer(Mockito.CALLS_REAL_METHODS)
+    );
+    Mockito.when(inputSource.getSplitWidget()).thenReturn(new MockSplitWidget());
+
+    final List<InputFilePointer> pointers = inputSource.asFilePointers();
+
+    Assertions.assertEquals(
+        OBJECTS_BEFORE_GLOB.stream().map(object -> object.toUri(SCHEME)).collect(Collectors.toList()),
+        pointers.stream().map(InputFilePointer::uri).collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void test_asFilePointers_withObjectGlob()
+  {
+    final CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
+        .useConstructor(SCHEME, null, null, OBJECTS_BEFORE_GLOB, "**.csv", SystemFields.none())
+        .defaultAnswer(Mockito.CALLS_REAL_METHODS)
+    );
+    Mockito.when(inputSource.getSplitWidget()).thenReturn(new MockSplitWidget());
+
+    final List<InputFilePointer> pointers = inputSource.asFilePointers();
+
+    // Only the .csv object survives the glob; the .parquet object is filtered out.
+    Assertions.assertEquals(
+        URIS,
+        pointers.stream().map(InputFilePointer::uri).collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void test_asFilePointers_withSystemFieldsReturnsNull()
+  {
+    final CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
+        .useConstructor(SCHEME, URIS, null, null, null, new SystemFields(EnumSet.of(SystemField.URI)))
+        .defaultAnswer(Mockito.CALLS_REAL_METHODS)
+    );
+
+    // System fields cannot be expressed as file pointers.
+    Assertions.assertNull(inputSource.asFilePointers());
+  }
+
+  @Test
+  public void test_asFilePointers_withPrefixesReturnsNull()
+  {
+    final CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
+        .useConstructor(SCHEME, null, PREFIXES, null, null, SystemFields.none())
+        .defaultAnswer(Mockito.CALLS_REAL_METHODS)
+    );
+
+    // Prefixes are not expressed as file pointers.
+    Assertions.assertNull(inputSource.asFilePointers());
+  }
+
+  @Test
+  public void test_asFilePointers_populatorFetchesContent(@TempDir File tempDir) throws IOException
+  {
+    final byte[] content = "hello,world\n1,2\n".getBytes(StandardCharsets.UTF_8);
+
+    final InputEntity entity = Mockito.mock(InputEntity.class);
+    Mockito.when(entity.openRaw()).thenReturn(new ByteArrayInputStream(content));
+    Mockito.when(entity.getRetryCondition()).thenReturn(Predicates.alwaysFalse());
+
+    final CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
+        .useConstructor(SCHEME, URIS, null, null, null, SystemFields.none())
+        .defaultAnswer(Mockito.CALLS_REAL_METHODS)
+    );
+    Mockito.when(inputSource.getSplitWidget()).thenReturn(new MockSplitWidget());
+    Mockito.doReturn(entity).when(inputSource).createEntity(ArgumentMatchers.any());
+
+    final List<InputFilePointer> pointers = inputSource.asFilePointers();
+    Assertions.assertEquals(1, pointers.size());
+
+    final File dstFile = new File(tempDir, "fetched.csv");
+    pointers.get(0).populator().populate(dstFile);
+
+    Assertions.assertArrayEquals(content, Files.readAllBytes(dstFile.toPath()));
+  }
+
+  @Test
   public void testGlobSubdirectories()
   {
     PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:**.parquet");
@@ -240,6 +355,18 @@ public class CloudObjectInputSourceTest
 
   private static class MockSplitWidget implements CloudObjectSplitWidget
   {
+    private final long objectSize;
+
+    MockSplitWidget()
+    {
+      this(0);
+    }
+
+    MockSplitWidget(final long objectSize)
+    {
+      this.objectSize = objectSize;
+    }
+
     @Override
     public Iterator<LocationWithSize> getDescriptorIteratorForPrefixes(List<URI> prefixes)
     {
@@ -249,7 +376,7 @@ public class CloudObjectInputSourceTest
     @Override
     public long getObjectSize(CloudObjectLocation descriptor)
     {
-      return 0;
+      return objectSize;
     }
   }
 }

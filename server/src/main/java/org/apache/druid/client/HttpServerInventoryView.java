@@ -48,6 +48,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.segment.loading.PartialLoadSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
@@ -57,9 +58,12 @@ import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.SegmentSchemasChangeRequest;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Duration;
+
+import javax.annotation.Nullable;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -67,6 +71,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -590,12 +595,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
           druidServer.iterateAllSegments().forEach(segment -> toRemove.put(segment.getId(), segment));
 
           for (DataSegmentChangeRequest request : changes) {
-            if (request instanceof SegmentChangeRequestLoad) {
-              DataSegment segment = ((SegmentChangeRequestLoad) request).getSegment();
+            if (request instanceof SegmentChangeRequestLoad loadRequest) {
+              DataSegment segment = loadRequest.getSegment();
               toRemove.remove(segment.getId());
-              addSegment(segment, true);
-            } else if (request instanceof SegmentSchemasChangeRequest) {
-              runSegmentCallbacks(input -> input.segmentSchemasAnnounced(((SegmentSchemasChangeRequest) request).getSegmentSchemas()));
+              addSegment(segment, partialLoadProfileFor(loadRequest), true);
+            } else if (request instanceof SegmentSchemasChangeRequest changeRequest) {
+              runSegmentCallbacks(input -> input.segmentSchemasAnnounced((changeRequest).getSegmentSchemas()));
             } else {
               log.error(
                   "Server[%s] gave a non-load dataSegmentChangeRequest[%s]., Ignored.",
@@ -615,7 +620,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         {
           for (DataSegmentChangeRequest request : changes) {
             if (request instanceof SegmentChangeRequestLoad) {
-              addSegment(((SegmentChangeRequestLoad) request).getSegment(), false);
+              SegmentChangeRequestLoad loadRequest = (SegmentChangeRequestLoad) request;
+              addSegment(loadRequest.getSegment(), partialLoadProfileFor(loadRequest), false);
             } else if (request instanceof SegmentChangeRequestDrop) {
               removeSegment(((SegmentChangeRequestDrop) request).getSegment(), false);
             } else if (request instanceof SegmentSchemasChangeRequest) {
@@ -632,12 +638,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       };
     }
 
-    private void addSegment(DataSegment segment, boolean fullSync)
+    private void addSegment(DataSegment segment, @Nullable PartialLoadProfile profile, boolean fullSync)
     {
       if (finalPredicate.apply(Pair.of(druidServer.getMetadata(), segment))) {
         if (druidServer.getSegment(segment.getId()) == null) {
           DataSegment theSegment = DataSegmentInterner.intern(segment);
-          druidServer.addDataSegment(theSegment);
+          druidServer.addDataSegment(theSegment, profile);
           runSegmentCallbacks(
               new Function<>()
               {
@@ -648,6 +654,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                 }
               }
           );
+        } else if (!Objects.equals(druidServer.getPartialLoadProfile(segment.getId()), profile)) {
+          // Already present, but the per-server partial-load profile changed (e.g. the historical re-announced after
+          // an additive reload swapped the wrapper / fingerprint). Update the inventory state in place; the segment
+          // is still on this server, only the profile metadata changed, so don't fire segmentAdded/segmentRemoved
+          // callbacks
+          druidServer.updateDataSegmentProfile(segment, profile);
         } else if (!fullSync) {
           // duplicates can happen when doing a full sync from a 'reset', so only warn for dupes on delta changes
           log.warn(
@@ -657,6 +669,39 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
           );
         }
       }
+    }
+
+    /**
+     * Builds a {@link PartialLoadProfile} from a load announcement when the historical populated the partial-load
+     * wire fields ({@code fingerprint} + {@code loadedBytes}). Returns {@code null} for plain full-load
+     * announcements.
+     * <p>
+     * Picks between {@link PartialLoadProfile#forLoaded forLoaded} and
+     * {@link PartialLoadProfile#forFullFallback forFullFallback} based on what the historical actually realized:
+     * <ul>
+     *   <li>If {@code loadedBytes} is strictly less than the segment's full size <em>and</em> the announced segment
+     *       carries a {@link PartialLoadSpec} wrapper on its load spec, the historical honored the partial request —
+     *       preserve the wrapped load spec on the profile so per-replica observability (e.g.
+     *       {@link PartialLoadProfile#isFullFallback}) reports correctly.</li>
+     *   <li>Otherwise the historical either fell back to full or doesn't yet implement scheme-specific partial
+     *       loading; build a full-fallback profile (the wire fingerprint still satisfies the rule, so the
+     *       coordinator's reconciler counts it as matching without reload thrash).</li>
+     * </ul>
+     */
+    @Nullable
+    private static PartialLoadProfile partialLoadProfileFor(SegmentChangeRequestLoad loadRequest)
+    {
+      final String fingerprint = loadRequest.getFingerprint();
+      final Long loadedBytes = loadRequest.getLoadedBytes();
+      if (fingerprint == null || loadedBytes == null) {
+        return null;
+      }
+      final DataSegment segment = loadRequest.getSegment();
+      final Map<String, Object> loadSpec = segment.getLoadSpec();
+      if (loadedBytes < segment.getSize() && PartialLoadSpec.detectPartialLoadSpec(loadSpec)) {
+        return PartialLoadProfile.forLoaded(loadSpec, fingerprint, loadedBytes);
+      }
+      return PartialLoadProfile.forFullFallback(fingerprint, loadedBytes);
     }
 
     private void removeSegment(final DataSegment segment, boolean fullSync)

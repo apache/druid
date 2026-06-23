@@ -279,7 +279,7 @@ public class DartQueryMaker implements QueryMaker
       return Sequences.simple(List.<Object[]>of(new Object[]{reportMap}));
     }
     catch (InterruptedException e) {
-      controllerHolder.cancel(CancellationReason.UNKNOWN);
+      controllerHolder.cancel(CancellationReason.UNKNOWN, null);
       Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
@@ -321,8 +321,11 @@ public class DartQueryMaker implements QueryMaker
           @Override
           public void after(final boolean isDone, final Throwable thrown)
           {
-            if (!isDone || thrown != null) {
-              controllerHolder.cancel(CancellationReason.UNKNOWN);
+            if (thrown != null || !isDone) {
+              // If an exception is set (thrown != null), retain it. Otherwise, if we're in here, !isDone indicates
+              // the caller went away before reading the entire stream of results. The best we can do in that case
+              // is a generic UNKNOWN cancellation reason.
+              controllerHolder.cancel(CancellationReason.UNKNOWN, thrown);
             }
           }
         }

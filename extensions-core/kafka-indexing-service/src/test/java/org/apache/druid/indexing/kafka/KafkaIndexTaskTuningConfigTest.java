@@ -24,6 +24,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaTuningConfigBuilder;
 import org.apache.druid.indexing.kafka.test.TestModifiedKafkaIndexTaskTuningConfig;
+import org.apache.druid.indexing.seekablestream.StreamingPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -36,6 +37,9 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 public class KafkaIndexTaskTuningConfigTest
 {
@@ -129,6 +133,86 @@ public class KafkaIndexTaskTuningConfigTest
   }
 
   @Test
+  public void testSerdeWithStreamingPartitionsSpec() throws Exception
+  {
+    final String jsonStr = "{\n"
+                           + "  \"type\": \"kafka\",\n"
+                           + "  \"streamingPartitionsSpec\": {\"partitionDimensions\": [\"tenant\", \"region\"]}\n"
+                           + "}";
+
+    final KafkaIndexTaskTuningConfig config = (KafkaIndexTaskTuningConfig) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonStr, TuningConfig.class)),
+        TuningConfig.class
+    );
+
+    Assert.assertEquals(
+        new StreamingPartitionsSpec(List.of("tenant", "region")),
+        config.getStreamingPartitionsSpec()
+    );
+    Assert.assertEquals(List.of("tenant", "region"), config.getStreamingPartitionsSpec().getPartitionDimensions());
+  }
+
+  @Test
+  public void testSerdeWithoutStreamingPartitionsSpecIsNull() throws Exception
+  {
+    final KafkaIndexTaskTuningConfig config = (KafkaIndexTaskTuningConfig) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue("{\"type\": \"kafka\"}", TuningConfig.class)),
+        TuningConfig.class
+    );
+    Assert.assertNull(config.getStreamingPartitionsSpec());
+  }
+
+  @Test
+  public void testSerdeWithEmptyPartitionDimensions() throws Exception
+  {
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("[]");
+    Assert.assertEquals(Collections.emptyList(), config.getStreamingPartitionsSpec().getPartitionDimensions());
+  }
+
+  @Test
+  public void testSerdeWithNullPartitionDimensionsCoalescesToEmpty() throws Exception
+  {
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("null");
+    Assert.assertEquals(Collections.emptyList(), config.getStreamingPartitionsSpec().getPartitionDimensions());
+  }
+
+  @Test
+  public void testSerdeWithEmptyStringPartitionDimension() throws Exception
+  {
+    // An empty-string dimension name is preserved verbatim (it simply never matches an ingested value).
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("[\"\"]");
+    Assert.assertEquals(List.of(""), config.getStreamingPartitionsSpec().getPartitionDimensions());
+  }
+
+  @Test
+  public void testSerdeWithNumericLookingPartitionDimension() throws Exception
+  {
+    // Dimension names are plain strings; a numeric-looking name is just a string.
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("[\"123\"]");
+    Assert.assertEquals(List.of("123"), config.getStreamingPartitionsSpec().getPartitionDimensions());
+  }
+
+  @Test
+  public void testSerdeWithNullElementInPartitionDimensions() throws Exception
+  {
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("[\"tenant\", null]");
+    Assert.assertEquals(Arrays.asList("tenant", null), config.getStreamingPartitionsSpec().getPartitionDimensions());
+  }
+
+  private KafkaIndexTaskTuningConfig roundTripWithStreamingPartitionsSpec(String partitionDimensionsJson)
+      throws IOException
+  {
+    final String jsonStr = "{\n"
+                           + "  \"type\": \"kafka\",\n"
+                           + "  \"streamingPartitionsSpec\": {\"partitionDimensions\": " + partitionDimensionsJson + "}\n"
+                           + "}";
+    return (KafkaIndexTaskTuningConfig) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonStr, TuningConfig.class)),
+        TuningConfig.class
+    );
+  }
+
+  @Test
   public void testConvert()
   {
     KafkaSupervisorTuningConfig original = new KafkaTuningConfigBuilder()
@@ -186,7 +270,8 @@ public class KafkaIndexTaskTuningConfigTest
         42,
         2,
         -1,
-        false
+        false,
+        null
     );
 
     String serialized = mapper.writeValueAsString(base);

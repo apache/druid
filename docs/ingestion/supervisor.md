@@ -65,6 +65,7 @@ For configuration properties specific to Kafka and Kinesis, see [Kafka I/O confi
 |`lateMessageRejectionPeriod`|ISO 8601 period|Configures tasks to reject messages with timestamps earlier than this period before the task was created. For example, if this property is set to `PT1H` and the supervisor creates a task at `2016-01-01T12:00Z`, Druid drops messages with timestamps earlier than `2016-01-01T11:00Z`. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments, such as a streaming and a nightly batch ingestion pipeline. You can specify only one of the late message rejection properties.|No||
 |`earlyMessageRejectionPeriod`|ISO 8601 period|Configures tasks to reject messages with timestamps later than this period after the task reached its task duration. For example, if this property is set to `PT1H`, the task duration is set to `PT1H` and the supervisor creates a task at `2016-01-01T12:00Z`, Druid drops messages with timestamps later than `2016-01-01T14:00Z`. Tasks sometimes run past their task duration, such as in cases of supervisor failover.|No||
 |`stopTaskCount`|Integer|Limits the number of ingestion tasks Druid can cycle at any given time. If not set, Druid can cycle all tasks at the same time. If set to a value less than `taskCount`, your cluster needs fewer available slots to run the supervisor. You can save costs by scaling down your ingestion tier, but this can lead to slower cycle times and lag. See [`stopTaskCount`](#stoptaskcount) for more information.|No|`taskCount` value|
+|`boundedStreamConfig`|Object|Configures the supervisor for bounded (one-time) ingestion with explicit start and end offsets. When set, the supervisor creates tasks that read from `startSequenceNumbers` to `endSequenceNumbers`, then automatically terminates when all data is ingested. The bounded configuration is stored with datasource metadata; if a supervisor is restarted or a new supervisor is created with different offsets for the same datasource, it will fail. To retry with different offsets, use the supervisor reset API to clear metadata or use a different supervisor ID. Useful for backfills and historical reprocessing. See [Bounded stream configuration](#bounded-stream-configuration) for details.|No|null|
 |`serverPriorityToReplicas`|Object (`Map<Integer, Integer>`)|Map of server priorities to the number of replicas per priority. When set, each task replica is assigned a server priority that corresponds to `druid.server.priority` on the Peon process to enable query isolation for mixed workloads using [query routing strategies](../configuration/index.md#query-routing). If not configured, the `replicas` setting applies and all task replicas are assigned a default priority of 0.<br/><br/>For example, setting `serverPriorityToReplicas` to `{"1": 2, "0": 1}` creates 2 task replicas with `druid.server.priority=1` and 1 task replica with `druid.server.priority=0` per task group. This configuration scales proportionally with `taskCount`. For example, if `taskCount` is set to 5, this results in 15 total tasks - 10 tasks with priority 1 and 5 tasks with priority 0. If both `replicas` and `serverPriorityToReplicas` are set, the sum of replicas in `serverPriorityToReplicas` must equal `replicas`.|No|null|
 
 #### Task autoscaler
@@ -250,6 +251,57 @@ Before you set `stopTaskCount`, note the following:
 - Some operations require all tasks to cycle at the same time, for example changes to the supervisor spec and change to the number of Kafka partitions. These operations can cause lag without sufficient task slot capacity.
 - The [task autoscaler](#task-autoscaler) ignores `stopTaskCount` when shutting down tasks in response to a task count change. The task autoscaler needs to redistribute partitions across tasks, which requires all tasks to be shut down.
 - If you set `stopTaskCount` to a value less than `taskCount`, Druid cycles the longest running tasks first, then other tasks up to the value set.
+
+#### Bounded stream configuration
+
+Use `boundedStreamConfig` to configure one-time ingestion from a specific range of offsets. This is useful for backfilling historical data or reprocessing data with different configurations.
+
+The `boundedStreamConfig` object contains the following properties:
+
+|Property|Type|Description|Required|
+|--------|----|-----------|--------|
+|`startSequenceNumbers`|Object|Map of partition IDs to start offsets (inclusive for Kafka, inclusive for Kinesis).|Yes|
+|`endSequenceNumbers`|Object|Map of partition IDs to end offsets (exclusive for Kafka, inclusive for Kinesis).|Yes|
+
+When configured, the supervisor:
+1. Creates tasks that start reading from `startSequenceNumbers`
+2. Tasks automatically stop when they reach `endSequenceNumbers`
+3. Supervisor does not create replacement tasks after tasks complete
+4. Supervisor transitions to `COMPLETED` state and terminates when all tasks finish
+
+**Metadata consistency:** The bounded configuration is stored in datasource metadata along with checkpointed offsets. If you restart the supervisor or create a new supervisor with a different `boundedStreamConfig` for the same datasource, the supervisor will fail with an error. To start a new bounded ingestion with different offsets, either:
+- Use the [supervisor reset API](../api-reference/supervisor-api.md#reset-a-supervisor) to clear existing metadata
+- Use a different supervisor ID
+
+**Example (Kafka):**
+
+```json
+{
+  "type": "kafka",
+  "spec": {
+    "ioConfig": {
+      "topic": "my-topic",
+      "inputFormat": {
+        "type": "json"
+      },
+      "boundedStreamConfig": {
+        "startSequenceNumbers": {
+          "0": 1000,
+          "1": 2000,
+          "2": 1500
+        },
+        "endSequenceNumbers": {
+          "0": 5000,
+          "1": 6000,
+          "2": 5500
+        }
+      }
+    }
+  }
+}
+```
+
+This configuration ingests data from partition 0 offsets 1000-4999, partition 1 offsets 2000-5999, and partition 2 offsets 1500-5499.
 
 ### Tuning configuration
 

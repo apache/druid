@@ -371,9 +371,14 @@ public class KillUnreferencedIndexingStateTest
   {
     return new CompactionState(
         new DynamicPartitionsSpec(100, null),
-        null, null, null,
+        null,
+        null,
+        null,
         IndexSpec.getDefault(),
-        null, null
+        null,
+        null,
+        null,
+        null
     );
   }
 }

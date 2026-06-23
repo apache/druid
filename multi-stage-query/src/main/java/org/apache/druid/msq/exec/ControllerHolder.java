@@ -238,7 +238,7 @@ public class ControllerHolder
   /**
    * Places this holder into {@link State#CANCELED} and stops the controller.
    */
-  public void cancel(final CancellationReason reason)
+  public void cancel(final CancellationReason reason, @Nullable final Throwable cause)
   {
     final State prevState;
     synchronized (this) {
@@ -251,7 +251,7 @@ public class ControllerHolder
     }
 
     if (prevState == State.RUNNING) {
-      controller.stop(reason);
+      controller.stop(reason, cause);
 
       // Interrupt the controller thread as a failsafe, in case the controller is blocked on something.
       synchronized (this) {
@@ -299,12 +299,12 @@ public class ControllerHolder
     if (delayMs <= 0) {
       // Deadline has already passed. Cancel immediately rather than scheduling, so the cancellation
       // takes effect even when using a direct executor for the controller thread.
-      cancel(CancellationReason.QUERY_TIMEOUT);
+      cancel(CancellationReason.QUERY_TIMEOUT, null);
       return null;
     }
 
     return scheduledExec.schedule(
-        () -> cancel(CancellationReason.QUERY_TIMEOUT),
+        () -> cancel(CancellationReason.QUERY_TIMEOUT, null),
         delayMs,
         TimeUnit.MILLISECONDS
     );

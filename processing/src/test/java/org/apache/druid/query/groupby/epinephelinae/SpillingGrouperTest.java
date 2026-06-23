@@ -287,9 +287,42 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testSmallSpillsStayInMemoryUntilFlush() throws IOException
+  {
+    final File storageDir = temporaryFolder.newFolder();
+    final LimitedTemporaryStorage temporaryStorage =
+        new LimitedTemporaryStorage(storageDir, 1024 * 1024, 100, new GroupByStatsProvider.PerQueryStats());
+
+    // Use a large minSpillFileSize so individual spills (which are tiny with a 50-byte buffer)
+    // stay in memory via SpillOutputStream and never create temp files.
+    final long largeMinSpillFileSize = 1024 * 1024L;
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(50, temporaryStorage, largeMinSpillFileSize)) {
+      // Aggregate enough keys to trigger multiple spills, but not enough to exceed
+      // minSpillFileSize in total pending bytes.
+      for (int i = 0; i < 20; i++) {
+        Assert.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+      }
+
+      // No files should have been created — all spills are below the threshold and
+      // pending bytes haven't reached minSpillFileSize yet.
+      Assert.assertEquals(
+          "small spills should stay in memory without creating any temp files",
+          0,
+          temporaryStorage.currentFileCount()
+      );
+      Assert.assertEquals(0, storageDir.listFiles().length);
+
+      // Results should still be correct when iterated.
+      assertResultsCorrect(grouper, 20, 1);
+    }
+  }
+
+  @Test
   public void testDiskFull() throws IOException
   {
-    try (SpillingGrouper<IntKey> grouper = makeGrouper(50, temporaryFolder.newFolder(), 10, 100)) {
+    // Use a small minSpillFileSize so pending runs flush to disk frequently, where the
+    // 500-byte maxStorageBytes limit will be hit.
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(50, temporaryFolder.newFolder(), 500, 100, 100)) {
       AggregateResult lastResult = AggregateResult.ok();
       for (int i = 0; i < 10000 && lastResult.isOk(); i++) {
         lastResult = grouper.aggregate(new IntKey(i));
@@ -346,15 +379,36 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
       int maxFileCount
   )
   {
+    return makeGrouper(bufferSize, storageDir, maxStorageBytes, maxFileCount, 1024 * 1024L);
+  }
+
+  private SpillingGrouper<IntKey> makeGrouper(
+      int bufferSize,
+      File storageDir,
+      long maxStorageBytes,
+      int maxFileCount,
+      long minSpillFileSize
+  )
+  {
     return makeGrouper(
         bufferSize,
-        new LimitedTemporaryStorage(storageDir, maxStorageBytes, maxFileCount, new GroupByStatsProvider.PerQueryStats())
+        new LimitedTemporaryStorage(storageDir, maxStorageBytes, maxFileCount, new GroupByStatsProvider.PerQueryStats()),
+        minSpillFileSize
     );
   }
 
   private SpillingGrouper<IntKey> makeGrouper(
       int bufferSize,
       LimitedTemporaryStorage temporaryStorage
+  )
+  {
+    return makeGrouper(bufferSize, temporaryStorage, 1024 * 1024L);
+  }
+
+  private SpillingGrouper<IntKey> makeGrouper(
+      int bufferSize,
+      LimitedTemporaryStorage temporaryStorage,
+      long minSpillFileSize
   )
   {
     final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
@@ -374,7 +428,7 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
         null,
         false,
         bufferSize,
-        1024 * 1024L,
+        minSpillFileSize,
         new GroupByStatsProvider.PerQueryStats()
     );
     grouper.init();

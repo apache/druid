@@ -158,7 +158,16 @@ public class HllSketchHolder
         return other;
       }
     } else {
-      add(other.getSketch());
+      if (other.union != null && other.sketch == null) {
+        // Both holders have unions. Materialize the other union's result as HLL_8
+        // (the union's native internal type) to avoid the expensive HLL_8 to HLL_4
+        // conversion that getResult() would trigger by default. The receiving union
+        // accepts any HLL type, so HLL_8 is fine and copies as a cheap byte[] clone.
+        union.update(other.union.getResult(TgtHllType.HLL_8));
+        sketch = null;
+      } else {
+        add(other.getSketch());
+      }
       return this;
     }
   }
