@@ -26,6 +26,8 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -67,6 +69,17 @@ import java.util.function.Function;
 
 public class Projections
 {
+  private static final Logger log = new Logger(Projections.class);
+
+  private static void logTrace(QueryContext context, String format, Object... args)
+  {
+    if (context.isDebug()) {
+      log.info(format, args);
+    } else {
+      log.debug(format, args);
+    }
+  }
+
   public static final String BASE_TABLE_PROJECTION_NAME = "__base";
 
   private static final String CLUSTER_GROUP_PREFIX = BASE_TABLE_PROJECTION_NAME + "$";
@@ -161,13 +174,22 @@ public class Projections
   )
   {
     if (!queryCursorBuildSpec.isCompatibleOrdering(projection.getOrderingWithTimeColumnSubstitution())) {
+      logTrace(
+          queryCursorBuildSpec.getQueryContext(),
+          "matchAggregateProjection: projection [%s] rejected — incompatible ordering, query wants %s but projection provides %s",
+          projection.getName(),
+          queryCursorBuildSpec.getPreferredOrdering(),
+          projection.getOrderingWithTimeColumnSubstitution()
+      );
       return null;
     }
     if (CollectionUtils.isNullOrEmpty(queryCursorBuildSpec.getPhysicalColumns())) {
+      logTrace(queryCursorBuildSpec.getQueryContext(), "matchAggregateProjection: projection [%s] rejected — no physical columns in query", projection.getName());
       return null;
     }
 
     if (isUnalignedInterval(projection, queryCursorBuildSpec, dataInterval)) {
+      logTrace(queryCursorBuildSpec.getQueryContext(), "matchAggregateProjection: projection [%s] rejected — unaligned interval", projection.getName());
       return null;
     }
     ProjectionMatchBuilder matchBuilder = new ProjectionMatchBuilder();
@@ -175,21 +197,25 @@ public class Projections
     // match virtual columns first, which will populate the 'remapColumns' of the match builder
     matchBuilder = matchQueryVirtualColumns(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
     if (matchBuilder == null) {
+      logTrace(queryCursorBuildSpec.getQueryContext(), "matchAggregateProjection: projection [%s] rejected — virtual column mismatch", projection.getName());
       return null;
     }
 
     matchBuilder = matchFilter(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
     if (matchBuilder == null) {
+      logTrace(queryCursorBuildSpec.getQueryContext(), "matchAggregateProjection: projection [%s] rejected — filter mismatch", projection.getName());
       return null;
     }
 
     matchBuilder = matchGrouping(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
     if (matchBuilder == null) {
+      logTrace(queryCursorBuildSpec.getQueryContext(), "matchAggregateProjection: projection [%s] rejected — grouping mismatch", projection.getName());
       return null;
     }
 
     matchBuilder = matchAggregators(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
     if (matchBuilder == null) {
+      logTrace(queryCursorBuildSpec.getQueryContext(), "matchAggregateProjection: projection [%s] rejected — aggregator mismatch", projection.getName());
       return null;
     }
 
@@ -213,6 +239,7 @@ public class Projections
           matchBuilder
       );
       if (matchBuilder == null) {
+        logTrace(queryCursorBuildSpec.getQueryContext(), "matchQueryVirtualColumns: projection [%s] rejected — virtual column [%s] could not be matched", projection.getName(), vc.getOutputName());
         return null;
       }
     }
@@ -231,7 +258,6 @@ public class Projections
     if (projection.getFilter() != null) {
       final Filter queryFilter = queryCursorBuildSpec.getFilter();
       if (queryFilter != null) {
-        final Set<String> originalRequired = queryFilter.getRequiredColumns();
         // try to rewrite the query filter into a projection filter, if the rewrite is valid, we can proceed
         final Filter projectionFilter = projection.getFilter().toOptimizedFilter(false);
         final Filter remappedQueryFilter = remapFilterToProjection(matchBuilder, queryFilter);
@@ -239,6 +265,7 @@ public class Projections
         final Filter rewritten = ProjectionFilterMatch.rewriteFilter(projectionFilter, remappedQueryFilter);
         // if the filter does not contain the projection filter, we cannot match this projection
         if (rewritten == null) {
+          logTrace(queryCursorBuildSpec.getQueryContext(), "matchFilter: projection [%s] rejected — query filter does not contain the projection filter", projection.getName());
           return null;
         }
         //noinspection ObjectEquality
@@ -251,6 +278,7 @@ public class Projections
         }
       } else {
         // projection has a filter, but the query doesn't, no good
+        logTrace(queryCursorBuildSpec.getQueryContext(), "matchFilter: projection [%s] rejected — projection has a filter but query does not", projection.getName());
         return null;
       }
     } else {
@@ -269,6 +297,7 @@ public class Projections
             matchBuilder
         );
         if (matchBuilder == null) {
+          logTrace(queryCursorBuildSpec.getQueryContext(), "matchFilter: projection [%s] rejected — required filter column [%s] not available on projection", projection.getName(), queryColumn);
           return null;
         }
       }
@@ -296,14 +325,17 @@ public class Projections
             matchBuilder
         );
         if (matchBuilder == null) {
+          logTrace(queryCursorBuildSpec.getQueryContext(), "matchGrouping: projection [%s] rejected — grouping column [%s] not available on projection", projection.getName(), queryColumn);
           return null;
         }
         // a query grouping column must also be defined as a projection grouping column
         if (projection.isInvalidGrouping(queryColumn)) {
+          logTrace(queryCursorBuildSpec.getQueryContext(), "matchGrouping: projection [%s] rejected — column [%s] is not a grouping column on the projection", projection.getName(), queryColumn);
           return null;
         }
         // even if remapped
         if (projection.isInvalidGrouping(matchBuilder.getRemapValue(queryColumn))) {
+          logTrace(queryCursorBuildSpec.getQueryContext(), "matchGrouping: projection [%s] rejected — remapped column [%s] is not a grouping column on the projection", projection.getName(), matchBuilder.getRemapValue(queryColumn));
           return null;
         }
       }
@@ -354,6 +386,7 @@ public class Projections
                   matchBuilder
               );
               if (matchBuilder == null) {
+                logTrace(queryCursorBuildSpec.getQueryContext(), "matchAggregators: projection [%s] rejected — filtered aggregator [%s] requires column [%s] not available on projection", projection.getName(), queryAgg.getName(), column);
                 return null;
               }
             }
@@ -375,6 +408,7 @@ public class Projections
     if (allMatch) {
       return matchBuilder;
     }
+    logTrace(queryCursorBuildSpec.getQueryContext(), "matchAggregators: projection [%s] rejected — one or more query aggregators could not be matched to a projection aggregator", projection.getName());
     return null;
   }
 
@@ -422,7 +456,7 @@ public class Projections
       );
     }
 
-    return matchQueryPhysicalColumn(column, projection, physicalColumnChecker, matchBuilder);
+    return matchQueryPhysicalColumn(column, projection, physicalColumnChecker, matchBuilder, queryCursorBuildSpec.getQueryContext());
   }
 
   @Nullable
@@ -482,12 +516,14 @@ public class Projections
         // 1. virtual gran is NONE, and projection gran is not
         // 2. projection gran is ALL, and virtual gran is not
         // 3. both are period granularities, but projection gran can't be mapped to virtual gran, e.x. PT2H can't be mapped to PT1H
+        logTrace(queryCursorBuildSpec.getQueryContext(), "matchQueryVirtualColumn: projection [%s] rejected — virtual column [%s] granularity [%s] is incompatible with projection granularity [%s]", projection.getName(), queryVirtualColumn.getOutputName(), virtualGranularity, projection.getEffectiveGranularity());
         return null;
       } else {
         // we can't decide query granularity for the virtual column with __time, requires none granularity to be safe
         if (Granularities.NONE.equals(projection.getEffectiveGranularity())) {
           return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
         }
+        logTrace(queryCursorBuildSpec.getQueryContext(), "matchQueryVirtualColumn: projection [%s] rejected — virtual column [%s] uses __time but projection granularity [%s] is not NONE", projection.getName(), queryVirtualColumn.getOutputName(), projection.getEffectiveGranularity());
         return null;
       }
     } else {
@@ -500,6 +536,7 @@ public class Projections
             matchBuilder
         );
         if (matchBuilder == null) {
+          logTrace(queryCursorBuildSpec.getQueryContext(), "matchQueryVirtualColumn: projection [%s] rejected — virtual column [%s] requires input [%s] not available on projection", projection.getName(), queryVirtualColumn.getOutputName(), required);
           return null;
         }
       }
@@ -512,7 +549,8 @@ public class Projections
       String column,
       AggregateProjectionSchema projection,
       PhysicalColumnChecker physicalColumnChecker,
-      ProjectionMatchBuilder matchBuilder
+      ProjectionMatchBuilder matchBuilder,
+      QueryContext context
   )
   {
     // if we need __time as a physical column, the projection must be grouping on __time directly
@@ -520,11 +558,13 @@ public class Projections
       if (ColumnHolder.TIME_COLUMN_NAME.equals(projection.getTimeColumnName())) {
         return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
       }
+      logTrace(context, "matchQueryPhysicalColumn: projection [%s] rejected — query requires __time as a physical column but projection does not group on __time", projection.getName());
       return null;
     }
     if (physicalColumnChecker.check(projection.getName(), column)) {
       return matchBuilder.addReferencedPhysicalColumn(column);
     }
+    logTrace(context, "matchQueryPhysicalColumn: projection [%s] rejected — column [%s] is not available on projection", projection.getName(), column);
     return null;
   }
 
