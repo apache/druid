@@ -38,6 +38,7 @@ import org.hamcrest.Matchers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 import org.joda.time.Period;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,7 @@ import org.junit.jupiter.api.Timeout;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.OPTIMAL_TASK_COUNT_METRIC;
@@ -62,6 +64,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
   private String topic;
   private final KafkaResource kafkaServer = new KafkaResource();
+  private ExecutorService backgroundPublishExecutor;
 
   @Override
   protected StreamIngestResource<?> getStreamIngestResource()
@@ -82,6 +85,14 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
   {
     topic = dataSource;
     kafkaServer.createTopicWithPartitions(topic, PARTITION_COUNT);
+  }
+
+  @AfterEach
+  public void shutdownBackgroundPublishExecutor()
+  {
+    if (backgroundPublishExecutor != null) {
+      backgroundPublishExecutor.shutdownNow();
+    }
   }
 
   @Test
@@ -137,7 +148,8 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
     // Produce additional records to create a backlog / lag
     // This ensures tasks are busy processing (low idle ratio)
-    Executors.newSingleThreadExecutor().submit(() -> {
+    backgroundPublishExecutor = Executors.newSingleThreadExecutor();
+    backgroundPublishExecutor.submit(() -> {
       for (int i = 0; i < 500; ++i) {
         publish1kRecords(topic, true);
       }
@@ -186,7 +198,8 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
     final int lowInitialTaskCount = 1;
     // This ensures tasks are busy processing (low idle ratio)
-    Executors.newSingleThreadExecutor().submit(() -> {
+    backgroundPublishExecutor = Executors.newSingleThreadExecutor();
+    backgroundPublishExecutor.submit(() -> {
       for (int i = 0; i < 500; ++i) {
         publish1kRecords(topic, true);
       }
