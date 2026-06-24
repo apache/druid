@@ -21,8 +21,11 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.projections.BaseTableProjectionSchema;
 
@@ -59,4 +62,41 @@ public interface BaseTableProjectionSpec
   AggregatorFactory[] getMetrics();
 
   List<OrderBy> getOrdering();
+
+  /**
+   * Returns the query granularity this spec represents. By default this is read from the
+   * {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME} virtual column in {@link #getVirtualColumns()} (absent or
+   * undecodable means {@link Granularities#NONE}); implementations that carry query granularity elsewhere override this.
+   */
+  default Granularity getQueryGranularity()
+  {
+    final VirtualColumn granularityVirtualColumn =
+        getVirtualColumns().getVirtualColumn(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    if (granularityVirtualColumn == null) {
+      return Granularities.NONE;
+    }
+    final Granularity granularity = Granularities.fromVirtualColumn(granularityVirtualColumn);
+    return granularity == null ? Granularities.NONE : granularity;
+  }
+
+  /**
+   * Returns a copy of this spec with the given query granularity applied (implementation-defined representation). Used
+   * by the ingestion and compaction config paths to attach the query-derived granularity to the operator-supplied spec.
+   */
+  BaseTableProjectionSpec withQueryGranularity(@Nullable Granularity queryGranularity);
+
+  /**
+   * Returns true if this spec is equivalent to {@code other} for the purpose of deciding whether a segment is already
+   * compacted. Segment granularity, query granularity, and rollup are each compared by their own compaction check
+   * (query granularity in particular lives in {@link #getVirtualColumns()} as a granularity-carrier virtual column), so
+   * an implementation must ignore those and compare all other state it carries, returning false for a different
+   * implementation type.
+   * <p>
+   * The default compares the whole spec via {@link #equals}; an implementation that carries state compared separately
+   * (such as the query-granularity carrier) overrides this to exclude it.
+   */
+  default boolean hasEqualCompactionState(BaseTableProjectionSpec other)
+  {
+    return equals(other);
+  }
 }

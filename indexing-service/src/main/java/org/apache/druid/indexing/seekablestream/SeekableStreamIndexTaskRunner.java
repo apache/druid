@@ -1087,11 +1087,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @VisibleForTesting
   DataSegment annotateSegmentWithPartitionDimensionValues(DataSegment s)
   {
-    final List<String> partitionDimensions =
-        StreamingPartitionsSpec.getPartitionDimensionsOrEmpty(tuningConfig.getStreamingPartitionsSpec());
+    final StreamingPartitionsSpec partitionsSpec = tuningConfig.getStreamingPartitionsSpec();
+    final List<String> partitionDimensions = StreamingPartitionsSpec.getPartitionDimensionsOrEmpty(partitionsSpec);
     if (CollectionUtils.isNullOrEmpty(partitionDimensions)) {
       return s;
     }
+    final Integer maxValuesPerDimension = StreamingPartitionsSpec.getMaxValuesPerDimensionOrNull(partitionsSpec);
     final Map<String, List<String>> snapshotFilters = new HashMap<>();
     final SegmentId lookupKey = s.getId();
     final Map<String, Set<String>> segObserved = observedPartitionDimValuesBySegment.get(lookupKey);
@@ -1106,6 +1107,20 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         final List<String> snapshot;
         synchronized (vals) {
           if (vals.isEmpty()) {
+            continue;
+          }
+          // Over-cap: omit this dim from the stamped filter map (still a DimensionValueSetShardSpec for
+          // class-uniformity; possibleInDomain treats an absent dim as unconstrained, so pruning is disabled
+          // for it on this segment).
+          if (maxValuesPerDimension != null && vals.size() > maxValuesPerDimension) {
+            log.warn(
+                "Segment[%s] dimension[%s] observed [%d] distinct values, exceeds maxValuesPerDimension[%d]; "
+                + "pruning disabled for this dimension on this segment.",
+                lookupKey,
+                dim,
+                vals.size(),
+                maxValuesPerDimension
+            );
             continue;
           }
           snapshot = new ArrayList<>(vals);

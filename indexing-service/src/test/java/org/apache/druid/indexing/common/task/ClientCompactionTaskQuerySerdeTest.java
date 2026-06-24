@@ -35,7 +35,10 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
@@ -153,6 +156,42 @@ public class ClientCompactionTaskQuerySerdeTest
 
     expected.getContext().put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
     Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testClientCompactionTaskQueryBaseTableSerde() throws IOException
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec baseTable =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new LongDimensionSchema("__time")
+                                                   )
+                                                   .clusteringColumns("tenant")
+                                                   .build();
+    final ClientCompactionTaskQuery query = new ClientCompactionTaskQuery(
+        "id",
+        "datasource",
+        new ClientCompactionIOConfig(
+            new ClientCompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"),
+            true
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        baseTable,
+        null,
+        ImmutableMap.of(),
+        new ClientCompactionRunnerInfo(CompactionEngine.MSQ)
+    );
+
+    final byte[] json = MAPPER.writeValueAsBytes(query);
+    final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) MAPPER.readValue(json, ClientTaskQuery.class);
+
+    Assert.assertEquals(baseTable, actual.getBaseTable());
+    Assert.assertEquals(query, actual);
   }
 
   private static ObjectMapper setupInjectablesInObjectMapper(ObjectMapper objectMapper)
@@ -329,6 +368,7 @@ public class ClientCompactionTaskQuerySerdeTest
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         METRICS_SPEC,
         transformSpec,
+        null,
         null,
         context,
         new ClientCompactionRunnerInfo(CompactionEngine.NATIVE)

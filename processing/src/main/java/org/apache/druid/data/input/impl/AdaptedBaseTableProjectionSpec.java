@@ -19,7 +19,9 @@
 
 package org.apache.druid.data.input.impl;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumns;
@@ -90,6 +92,20 @@ public final class AdaptedBaseTableProjectionSpec implements BaseTableProjection
   public List<OrderBy> getOrdering()
   {
     return ordering;
+  }
+
+  @Override
+  public Granularity getQueryGranularity()
+  {
+    return granularitySpec.getQueryGranularity();
+  }
+
+  @Override
+  public BaseTableProjectionSpec withQueryGranularity(@Nullable Granularity queryGranularity)
+  {
+    throw DruidException.defensive(
+        "Cannot apply query granularity to a legacy DataSchema adapter"
+    );
   }
 
   /**

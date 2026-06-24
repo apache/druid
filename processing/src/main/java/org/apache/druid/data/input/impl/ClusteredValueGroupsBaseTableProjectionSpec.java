@@ -28,8 +28,10 @@ import com.google.common.collect.Sets;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.projections.Projections;
@@ -168,6 +170,80 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
   public DimensionsSpec getDimensionsSpec()
   {
     return dimensionsSpec;
+  }
+
+  /**
+   * Returns a copy of this spec with a new {@code queryGranularity}, expressed as a
+   * {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME} virtual column added to {@link #getVirtualColumns()}. A
+   * {@code null} or {@code NONE} granularity is a no-op (no flooring), so this returns {@code this} unchanged.
+   * <p>
+   * {@code ALL} is rejected: it would floor {@code __time} to a single constant (the interval start) for the whole
+   * segment, which clustered base tables do not yet support.
+   * <p>
+   * Idempotent: if the spec already declares a query-granularity virtual column, that one is authoritative and this is
+   * a no-op. (The compaction path attaches the virtual column up front; the MSQ generation path then calls this again
+   * with the query-derived granularity, which must not double-add.)
+   */
+  @Override
+  public ClusteredValueGroupsBaseTableProjectionSpec withQueryGranularity(@Nullable Granularity queryGranularity)
+  {
+    if (Granularities.ALL.equals(queryGranularity)) {
+      throw InvalidInput.exception(
+          "Query granularity[ALL] is not supported for clusteredValueGroups base tables"
+      );
+    }
+    if (queryGranularity == null
+        || Granularities.NONE.equals(queryGranularity)
+        || virtualColumns.getVirtualColumn(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME) != null) {
+      return this;
+    }
+    final VirtualColumn granularityVirtualColumn =
+        Granularities.toVirtualColumn(queryGranularity, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    final List<VirtualColumn> merged = new ArrayList<>(Arrays.asList(virtualColumns.getVirtualColumns()));
+    merged.add(granularityVirtualColumn);
+    return builder()
+        .virtualColumns(VirtualColumns.create(merged))
+        .clusteringColumns(clusteringColumns)
+        .columns(columns)
+        .build();
+  }
+
+  /**
+   * Compares clustered-spec state for compaction up-to-date checks: query granularity is compared separately (via its
+   * carrier virtual column), so it is stripped from both sides; everything else (columns, clustering columns, any other
+   * virtual columns) must match. A spec of a different type is never equivalent.
+   */
+  @Override
+  public boolean hasEqualCompactionState(BaseTableProjectionSpec other)
+  {
+    if (!(other instanceof ClusteredValueGroupsBaseTableProjectionSpec)) {
+      return false;
+    }
+    return withoutQueryGranularity()
+        .equals(((ClusteredValueGroupsBaseTableProjectionSpec) other).withoutQueryGranularity());
+  }
+
+  /**
+   * Returns a copy of this spec with the {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME} virtual column removed,
+   * the inverse of {@link #withQueryGranularity(Granularity)}. If no such virtual column is present this returns
+   * {@code this} unchanged. Used to compare schema independently of query granularity in {@link #hasEqualCompactionState}.
+   */
+  private ClusteredValueGroupsBaseTableProjectionSpec withoutQueryGranularity()
+  {
+    if (virtualColumns.getVirtualColumn(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME) == null) {
+      return this;
+    }
+    final List<VirtualColumn> remaining = new ArrayList<>();
+    for (VirtualColumn vc : virtualColumns.getVirtualColumns()) {
+      if (!Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME.equals(vc.getOutputName())) {
+        remaining.add(vc);
+      }
+    }
+    return builder()
+        .virtualColumns(VirtualColumns.create(remaining))
+        .clusteringColumns(clusteringColumns)
+        .columns(columns)
+        .build();
   }
 
   private static void validate(List<DimensionSchema> columns, List<String> clusteringColumns)

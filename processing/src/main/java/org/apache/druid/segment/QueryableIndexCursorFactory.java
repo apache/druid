@@ -163,11 +163,19 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
 
   private CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec)
   {
-    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
-        new ArrayList<>(index.getClusterGroupSchemas()),
-        spec
+    return makeClusteredCursorHolder(
+        spec,
+        Projections.planClusterGroupQuery(new ArrayList<>(index.getClusterGroupSchemas()), spec)
     );
+  }
 
+  /**
+   * Build a clustered-base-table cursor holder from an already-computed {@link ClusterGroupQueryPlan}. Exposed so the
+   * partial (on-demand) cursor factory can plan the cluster groups once — to decide which group bundles to download —
+   * and reuse the same plan to build the holder, rather than re-running {@link Projections#planClusterGroupQuery}.
+   */
+  public CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec, ClusterGroupQueryPlan plan)
+  {
     if (plan.survivingGroups().isEmpty()) {
       return EmptyCursorHolder.INSTANCE;
     }

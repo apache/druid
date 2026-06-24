@@ -137,13 +137,10 @@ public class IndexMergerV10 extends IndexMergerBase
           allClustered,
           "Cannot merge clustered and non-clustered base table segments together"
       );
-      DruidException.conditionalDefensive(
-          CollectionUtils.isNullOrEmpty(segmentMetadata.getProjections()),
-          "Clustered base table segments do not yet support aggregate projections"
-      );
       return makeClusteredIndexFiles(
           adapters,
           clusterSchemas,
+          segmentMetadata,
           outDir,
           progress,
           mergedMetrics,
@@ -362,6 +359,7 @@ public class IndexMergerV10 extends IndexMergerBase
   private File makeClusteredIndexFiles(
       final List<IndexableAdapter> adapters,
       final List<ClusteredValueGroupsBaseTableSchema> clusterSchemas,
+      final Metadata segmentMetadata,
       final File outDir,
       final ProgressIndicator progress,
       final List<String> mergedMetrics,
@@ -420,9 +418,8 @@ public class IndexMergerV10 extends IndexMergerBase
 
       for (Map.Entry<List<Integer>, List<AdapterAndGroup>> groupEntry : merged.groupSources.entrySet()) {
         final List<Integer> mergedTuple = groupEntry.getKey();
-        final String groupPrefix = Projections.getClusterGroupSegmentInternalFilePrefix(mergedTuple);
-        // file-bundle name is the prefix without the trailing slash
-        final String groupName = groupPrefix.substring(0, groupPrefix.length() - 1);
+        final String groupName = Projections.getClusterGroupBundleName(mergedTuple);
+        final String groupPrefix = groupName + "/";
 
         final List<IndexableAdapter> groupAdapters = Lists.newArrayListWithCapacity(groupEntry.getValue().size());
         for (AdapterAndGroup source : groupEntry.getValue()) {
@@ -544,9 +541,32 @@ public class IndexMergerV10 extends IndexMergerBase
           mergedGroupSpecs
       );
 
-      v10Smoosher.addProjections(
-          List.of(new ProjectionMetadata(totalRows, mergedSchema, minTime, maxTime))
-      );
+      final List<ProjectionMetadata> projections = new ArrayList<>();
+      projections.add(new ProjectionMetadata(totalRows, mergedSchema, minTime, maxTime));
+
+      // Aggregate projections are segment-wide pre-aggregated views over the clustered base table. Unlike the
+      // non-clustered path, a clustered segment has no segment-wide base dimension mergers to attach to (columns are
+      // written per cluster group), so we pass empty parentMergers and the projection mergers build their own
+      // dictionaries.
+      if (!CollectionUtils.isNullOrEmpty(segmentMetadata.getProjections())) {
+        final Metadata updatedMetadata = makeProjections(
+            v10Smoosher,
+            segmentMetadata.getProjections(),
+            adapters,
+            indexSpec,
+            segmentWriteOutMedium,
+            progress,
+            outDir,
+            closer,
+            Map.of(),
+            segmentMetadata
+        );
+        for (AggregateProjectionMetadata aggMeta : updatedMetadata.getProjections()) {
+          projections.add(new ProjectionMetadata(aggMeta.getNumRows(), aggMeta.getSchema()));
+        }
+      }
+
+      v10Smoosher.addProjections(projections);
 
       progress.progress();
       v10Smoosher.close();
