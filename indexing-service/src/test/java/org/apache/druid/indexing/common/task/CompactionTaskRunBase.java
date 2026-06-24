@@ -667,27 +667,27 @@ public abstract class CompactionTaskRunBase
 
   public void validateCompactionState(CompactionState expected, CompactionState actual)
   {
-    Assert.assertEquals(new CompactionState(
-        expected.getPartitionsSpec(),
-        expected.getDimensionsSpec().toBuilder().setDimensionExclusions(List.of()).build(),
-        expected.getMetricsSpec(),
-        null,
-        expected.getIndexSpec(),
-        expected.getGranularitySpec().withIntervals(List.of()),
-        null,
-        null,
-        expected.getProjections()
-    ), new CompactionState(
-        actual.getPartitionsSpec(),
-        actual.getDimensionsSpec().toBuilder().setDimensionExclusions(List.of()).build(),
-        actual.getMetricsSpec(),
-        null,
-        actual.getIndexSpec(),
-        actual.getGranularitySpec().withIntervals(List.of()),
-        null,
-        null,
-        actual.getProjections()
-    ));
+    Assert.assertEquals(
+        CompactionState.builder()
+                       .partitionsSpec(expected.getPartitionsSpec())
+                       .dimensionsSpec(expected.getDimensionsSpec()
+                                               .toBuilder()
+                                               .setDimensionExclusions(List.of())
+                                               .build())
+                       .metricsSpec(expected.getMetricsSpec())
+                       .indexSpec(expected.getIndexSpec())
+                       .granularitySpec(expected.getGranularitySpec().withIntervals(List.of()))
+                       .projections(expected.getProjections())
+                       .build(),
+        CompactionState.builder()
+                       .partitionsSpec(actual.getPartitionsSpec())
+                       .dimensionsSpec(actual.getDimensionsSpec().toBuilder().setDimensionExclusions(List.of()).build())
+                       .metricsSpec(actual.getMetricsSpec())
+                       .indexSpec(actual.getIndexSpec())
+                       .granularitySpec(actual.getGranularitySpec().withIntervals(List.of()))
+                       .projections(actual.getProjections())
+                       .build()
+    );
   }
 
   @Test
@@ -1884,22 +1884,18 @@ public abstract class CompactionTaskRunBase
   )
   {
     // Expected compaction state to exist after compaction as we store compaction state by default
-    return new CompactionState(
-        new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-        expectedDims,
-        expectedMetrics,
-        null,
-        IndexSpec.getDefault().getEffectiveSpec(),
-        new UniformGranularitySpec(
-            segmentGranularity,
-            queryGranularity,
-            true,
-            intervals
-        ),
-        null,
-        null,
-        null
-    );
+    return CompactionState.builder()
+                          .partitionsSpec(new DynamicPartitionsSpec(5000000, Long.MAX_VALUE))
+                          .dimensionsSpec(expectedDims)
+                          .metricsSpec(expectedMetrics)
+                          .indexSpec(IndexSpec.getDefault().getEffectiveSpec())
+                          .granularitySpec(new UniformGranularitySpec(
+                              segmentGranularity,
+                              queryGranularity,
+                              true,
+                              intervals
+                          ))
+                          .build();
   }
 
   private static void verifySchema(Set<DataSegment> segments, SegmentSchemaMapping segmentSchemaMapping)

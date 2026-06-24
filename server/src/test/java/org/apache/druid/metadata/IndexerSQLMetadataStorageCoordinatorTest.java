@@ -4563,17 +4563,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
   private CompactionState createTestIndexingState()
   {
-    return new CompactionState(
-        new DynamicPartitionsSpec(100, null),
-        null,
-        null,
-        null,
-        IndexSpec.getDefault(),
-        null,
-        null,
-        null,
-        null
-    );
+    return CompactionState.builder()
+                          .partitionsSpec(new DynamicPartitionsSpec(100, null))
+                          .indexSpec(IndexSpec.getDefault())
+                          .build();
   }
 
   private SegmentIdWithShardSpec allocatePendingSegment(

@@ -241,7 +241,7 @@ public class CompactionStatusTest
   {
     final PartitionsSpec requiredPartitionsSpec = new DynamicPartitionsSpec(5_000_000, null);
     verifyCompactionStatusIsPendingBecause(
-        new CompactionState(null, null, null, null, null, null, null, null, null),
+        CompactionState.builder().build(),
         InlineSchemaDataSourceCompactionConfig
             .builder()
             .withTuningConfig(createTuningConfig(requiredPartitionsSpec, null))
@@ -258,7 +258,7 @@ public class CompactionStatusTest
     final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
 
     final CompactionState lastCompactionState
-        = new CompactionState(currentPartitionsSpec, null, null, null, null, null, null, null, null);
+        = CompactionState.builder().partitionsSpec(currentPartitionsSpec).build();
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .withTuningConfig(createTuningConfig(requiredPartitionsSpec, null))
@@ -280,17 +280,10 @@ public class CompactionStatusTest
         = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
 
     final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
-    final CompactionState lastCompactionState = new CompactionState(
-        currentPartitionsSpec,
-        null,
-        null,
-        null,
-        currentIndexSpec,
-        null,
-        null,
-        null,
-        null
-    );
+    final CompactionState lastCompactionState = CompactionState.builder()
+                                                               .partitionsSpec(currentPartitionsSpec)
+                                                               .indexSpec(currentIndexSpec)
+                                                               .build();
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
@@ -323,17 +316,11 @@ public class CompactionStatusTest
     final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
     final IndexSpec currentIndexSpec
         = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
-    final CompactionState lastCompactionState = new CompactionState(
-        currentPartitionsSpec,
-        null,
-        null,
-        null,
-        currentIndexSpec,
-        currentGranularitySpec,
-        null,
-        null,
-        null
-    );
+    final CompactionState lastCompactionState = CompactionState.builder()
+                                                               .partitionsSpec(currentPartitionsSpec)
+                                                               .indexSpec(currentIndexSpec)
+                                                               .granularitySpec(currentGranularitySpec)
+                                                               .build();
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
@@ -356,17 +343,11 @@ public class CompactionStatusTest
     final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
     final IndexSpec currentIndexSpec
         = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
-    final CompactionState lastCompactionState = new CompactionState(
-        currentPartitionsSpec,
-        null,
-        null,
-        null,
-        currentIndexSpec,
-        currentGranularitySpec,
-        null,
-        null,
-        null
-    );
+    final CompactionState lastCompactionState = CompactionState.builder()
+                                                               .partitionsSpec(currentPartitionsSpec)
+                                                               .indexSpec(currentIndexSpec)
+                                                               .granularitySpec(currentGranularitySpec)
+                                                               .build();
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
@@ -407,17 +388,12 @@ public class CompactionStatusTest
                                    new LongSumAggregatorFactory("sum_long", "long")
                                )
                                .build();
-    final CompactionState lastCompactionState = new CompactionState(
-        currentPartitionsSpec,
-        null,
-        null,
-        null,
-        currentIndexSpec,
-        currentGranularitySpec,
-        null,
-        null,
-        List.of(projection1)
-    );
+    final CompactionState lastCompactionState = CompactionState.builder()
+                                                               .partitionsSpec(currentPartitionsSpec)
+                                                               .indexSpec(currentIndexSpec)
+                                                               .granularitySpec(currentGranularitySpec)
+                                                               .projections(List.of(projection1))
+                                                               .build();
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
@@ -504,17 +480,12 @@ public class CompactionStatusTest
                                .aggregators(new LongSumAggregatorFactory("sum_long", "long"))
                                .build();
 
-    final CompactionState lastCompactionState = new CompactionState(
-        currentPartitionsSpec,
-        null,
-        null,
-        null,
-        currentIndexSpec,
-        currentGranularitySpec,
-        null,
-        null,
-        List.of(projection1)
-    );
+    final CompactionState lastCompactionState = CompactionState.builder()
+                                                               .partitionsSpec(currentPartitionsSpec)
+                                                               .indexSpec(currentIndexSpec)
+                                                               .granularitySpec(currentGranularitySpec)
+                                                               .projections(List.of(projection1))
+                                                               .build();
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
@@ -542,17 +513,10 @@ public class CompactionStatusTest
         new SelectorDimFilter("extractedField", "foo", null),
         VirtualColumns.create(vc)
     );
-    CompactionState lastCompactionState = new CompactionState(
-        null,
-        null,
-        null,
-        transformSpec,
-        IndexSpec.getDefault(),
-        null,
-        null,
-        null,
-        null
-    );
+    CompactionState lastCompactionState = CompactionState.builder()
+                                                         .transformSpec(transformSpec)
+                                                         .indexSpec(IndexSpec.getDefault())
+                                                         .build();
     DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
@@ -577,17 +541,15 @@ public class CompactionStatusTest
         "extractedField", "concat(metadata, '_new')", ColumnType.STRING, ExprMacroTable.nil()
     );
 
-    CompactionState lastCompactionState = new CompactionState(
-        null,
-        null,
-        null,
-        new CompactionTransformSpec(filter, VirtualColumns.create(oldVc)),
-        IndexSpec.getDefault(),
-        null,
-        null,
-        null,
-        null
-    );
+    CompactionState lastCompactionState = CompactionState.builder()
+                                                         .transformSpec(
+                                                             new CompactionTransformSpec(
+                                                                 filter,
+                                                                 VirtualColumns.create(oldVc)
+                                                             )
+                                                         )
+                                                         .indexSpec(IndexSpec.getDefault())
+                                                         .build();
     DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
@@ -642,24 +604,24 @@ public class CompactionStatusTest
         = new UniformGranularitySpec(Granularities.HOUR, null, null);
     final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
 
-    final CompactionState lastCompactionState = new CompactionState(
-        currentPartitionsSpec,
-        DimensionsSpec.builder()
-                      .setDimensions(
-                          List.of(
-                              AutoTypeColumnSchema.of("x").getEffectiveSchema(IndexSpec.getDefault().getEffectiveSpec()),
-                              AutoTypeColumnSchema.of("y").getEffectiveSchema(IndexSpec.getDefault().getEffectiveSpec())
-                          )
-                      )
-                      .build(),
-        null,
-        null,
-        IndexSpec.getDefault().getEffectiveSpec(),
-        currentGranularitySpec,
-        null,
-        null,
-        Collections.emptyList()
-    );
+    final IndexSpec indexSpec = IndexSpec.getDefault().getEffectiveSpec();
+    final CompactionState lastCompactionState =
+        CompactionState.builder()
+                       .partitionsSpec(currentPartitionsSpec)
+                       .dimensionsSpec(
+                           DimensionsSpec.builder()
+                                         .setDimensions(
+                                             List.of(
+                                                 AutoTypeColumnSchema.of("x").getEffectiveSchema(indexSpec),
+                                                 AutoTypeColumnSchema.of("y").getEffectiveSchema(indexSpec)
+                                             )
+                                         )
+                                         .build()
+                       )
+                       .indexSpec(indexSpec)
+                       .granularitySpec(currentGranularitySpec)
+                       .projections(Collections.emptyList())
+                       .build();
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
@@ -698,24 +660,23 @@ public class CompactionStatusTest
         = new UniformGranularitySpec(Granularities.HOUR, null, null);
     final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
 
-    final CompactionState lastCompactionState = new CompactionState(
-        currentPartitionsSpec,
-        DimensionsSpec.builder()
-                      .setDimensions(
-                          List.of(
-                              AutoTypeColumnSchema.of("x").getEffectiveSchema(IndexSpec.getDefault()),
-                              AutoTypeColumnSchema.of("y").getEffectiveSchema(IndexSpec.getDefault())
-                          )
-                      )
-                      .build(),
-        null,
-        null,
-        IndexSpec.getDefault(),
-        currentGranularitySpec,
-        null,
-        null,
-        Collections.emptyList()
-    );
+    final IndexSpec indexSpec = IndexSpec.getDefault();
+    final CompactionState lastCompactionState =
+        CompactionState.builder()
+                       .partitionsSpec(currentPartitionsSpec)
+                       .dimensionsSpec(DimensionsSpec.builder()
+                                                     .setDimensions(
+                                                         List.of(
+                                                             AutoTypeColumnSchema.of("x").getEffectiveSchema(indexSpec),
+                                                             AutoTypeColumnSchema.of("y").getEffectiveSchema(indexSpec)
+                                                         )
+                                                     )
+                                                     .build()
+                       )
+                       .indexSpec(IndexSpec.getDefault())
+                       .granularitySpec(currentGranularitySpec)
+                       .projections(Collections.emptyList())
+                       .build();
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
@@ -1039,16 +1000,9 @@ public class CompactionStatusTest
    */
   private static CompactionState createCompactionStateWithGranularity(Granularity segmentGranularity)
   {
-    return new CompactionState(
-        null,
-        null,
-        null,
-        null,
-        IndexSpec.getDefault(),
-        new UniformGranularitySpec(segmentGranularity, null, null, null),
-        null,
-        null,
-        null
-    );
+    return CompactionState.builder()
+                          .indexSpec(IndexSpec.getDefault())
+                          .granularitySpec(new UniformGranularitySpec(segmentGranularity, null, null, null))
+                          .build();
   }
 }
