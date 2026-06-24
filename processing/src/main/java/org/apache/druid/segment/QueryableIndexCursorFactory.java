@@ -58,7 +58,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-public class QueryableIndexCursorFactory implements CursorFactory
+public class QueryableIndexCursorFactory implements ResidentCursorFactory
 {
   private final QueryableIndex index;
   private final TimeBoundaryInspector timeBoundaryInspector;

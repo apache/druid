@@ -30,9 +30,9 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ConcatenatingCursor;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.EmptyCursorHolder;
+import org.apache.druid.segment.ResidentCursorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
@@ -50,7 +50,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class IncrementalIndexCursorFactory implements CursorFactory
+public class IncrementalIndexCursorFactory implements ResidentCursorFactory
 {
   private static final ColumnCapabilities.CoercionLogic COERCE_LOGIC =
       new ColumnCapabilities.CoercionLogic()
