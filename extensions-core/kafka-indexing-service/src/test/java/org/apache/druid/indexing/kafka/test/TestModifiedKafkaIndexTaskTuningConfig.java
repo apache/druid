@@ -82,6 +82,7 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
         maxSavedParseExceptions,
         numPersistThreads,
         maxColumnsToMerge,
+        null,
         null
     );
     this.extra = extra;

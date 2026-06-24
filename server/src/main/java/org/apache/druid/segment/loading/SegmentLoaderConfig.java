@@ -105,6 +105,15 @@ public class SegmentLoaderConfig
   @JsonProperty("virtualStorageMetadataReservationEstimate")
   private long virtualStorageMetadataReservationEstimate = 16L * 1024L * 1024L;
 
+  /**
+   * When true, partial-eligible V10 segments are mounted via the partial machinery and
+   * {@link SegmentCacheManager#acquireSegment} with {@link AcquireMode#PARTIAL} returns a metadata-anchored segment
+   * whose columns are downloaded on demand. When false (the default), {@link AcquireMode#PARTIAL} falls back to
+   * {@link AcquireMode#FULL} so the entire segment is downloaded up front (matching pre-partial-download behavior).
+   */
+  @JsonProperty("virtualStoragePartialDownloadsEnabled")
+  private boolean virtualStoragePartialDownloadsEnabled = false;
+
   private long combinedMaxSize = 0;
 
   public List<StorageLocationConfig> getLocations()
@@ -197,9 +206,20 @@ public class SegmentLoaderConfig
     return virtualStorageMetadataReservationEstimate;
   }
 
+  public boolean isVirtualStoragePartialDownloadsEnabled()
+  {
+    return virtualStorage && virtualStoragePartialDownloadsEnabled;
+  }
+
   public SegmentLoaderConfig setLocations(List<StorageLocationConfig> locations)
   {
     this.locations = Lists.newArrayList(locations);
+    return this;
+  }
+
+  public SegmentLoaderConfig setVirtualStoragePartialDownloadsEnabled(boolean enabled)
+  {
+    this.virtualStoragePartialDownloadsEnabled = enabled;
     return this;
   }
 
@@ -266,6 +286,7 @@ public class SegmentLoaderConfig
            ", virtualStorageUseVirtualThreads=" + virtualStorageUseVirtualThreads +
            ", virtualStorageIsEphemeral=" + virtualStorageIsEphemeral +
            ", virtualStorageMetadataReservationEstimate=" + virtualStorageMetadataReservationEstimate +
+           ", virtualStoragePartialDownloadsEnabled=" + virtualStoragePartialDownloadsEnabled +
            ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }

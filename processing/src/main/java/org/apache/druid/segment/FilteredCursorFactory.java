@@ -47,6 +47,15 @@ public class FilteredCursorFactory implements CursorFactory
   }
 
   @Override
+  public AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
+  {
+    if (filter == null) {
+      return delegate.makeCursorHolderAsync(spec);
+    }
+    return delegate.makeCursorHolderAsync(CursorBuildSpec.builder(spec).andFilter(filter.toFilter()).build());
+  }
+
+  @Override
   public RowSignature getRowSignature()
   {
     return delegate.getRowSignature();

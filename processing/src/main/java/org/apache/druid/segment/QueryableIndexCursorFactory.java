@@ -24,28 +24,25 @@ import com.google.common.base.Suppliers;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Offset;
-import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 import org.apache.druid.segment.projections.ClusterGroupQueryPlan;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.ClusteringColumnSelectorFactory;
 import org.apache.druid.segment.projections.ClusteringVectorColumnSelectorFactory;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
+import org.apache.druid.segment.projections.SingleGroupClusteringColumnSelectorFactory;
+import org.apache.druid.segment.projections.SingleGroupClusteringVectorColumnSelectorFactory;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.segment.vector.ConcatenatingVectorCursor;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
-import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -58,7 +55,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -89,6 +85,25 @@ public class QueryableIndexCursorFactory implements CursorFactory
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     QueryableProjection<QueryableIndex> projection = index.getProjection(spec);
+    if (projection != null) {
+      return makeAggregateProjectionCursorHolder(projection);
+    }
+
+    // Cluster-group dispatch runs after aggregate-projection match, before the regular base-table fallback
+    final ClusteredValueGroupsBaseTableSchema clusterSummary = index.getClusteredBaseSummary();
+    if (clusterSummary != null) {
+      return makeClusteredCursorHolder(spec);
+    }
+
+    // No projections, no clustering, regular full-segment cursor.
+    return new QueryableIndexCursorHolder(index, spec, timeBoundaryInspector);
+  }
+
+  public CursorHolder makeCursorHolderForProjection(
+      CursorBuildSpec spec,
+      @Nullable QueryableProjection<QueryableIndex> projection
+  )
+  {
     if (projection != null) {
       return makeAggregateProjectionCursorHolder(projection);
     }
@@ -150,43 +165,27 @@ public class QueryableIndexCursorFactory implements CursorFactory
 
   private CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec)
   {
-    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
-        new ArrayList<>(index.getClusterGroupSchemas()),
-        spec
+    return makeClusteredCursorHolder(
+        spec,
+        Projections.planClusterGroupQuery(new ArrayList<>(index.getClusterGroupSchemas()), spec)
     );
+  }
 
+  /**
+   * Build a clustered-base-table cursor holder from an already-computed {@link ClusterGroupQueryPlan}. Exposed so the
+   * partial (on-demand) cursor factory can plan the cluster groups once — to decide which group bundles to download —
+   * and reuse the same plan to build the holder, rather than re-running {@link Projections#planClusterGroupQuery}.
+   */
+  public CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec, ClusterGroupQueryPlan plan)
+  {
     if (plan.survivingGroups().isEmpty()) {
-      return EmptyClusteredCursorHolder.INSTANCE;
+      return EmptyCursorHolder.INSTANCE;
     }
 
     if (plan.survivingGroups().size() == 1) {
       return makeSingleGroupClusteredCursorHolder(spec, plan, plan.survivingGroups().getFirst());
     }
     return makeMultiGroupClusteredCursorHolder(spec, plan);
-  }
-
-  /**
-   * Rebuild {@code spec} for the per-group cursor holder of {@code valueGroup}, swapping in the plan's per-group
-   * filter rewrite: clustering-column leaves become {@link org.apache.druid.segment.filter.TrueFilter} /
-   * {@link org.apache.druid.segment.filter.FalseFilter} per the group's constant clustering tuple and fold through
-   * AND / OR / NOT, so the per-group {@link QueryableIndex}'s filter machinery never tries to look up indexes for
-   * clustering columns it doesn't physically carry. Selector-side access to clustering columns (SELECT / GROUP BY)
-   * is still served by {@link ClusteringColumnSelectorFactory} below.
-   */
-  private static CursorBuildSpec rebuildSpecForGroup(
-      CursorBuildSpec spec,
-      ClusterGroupQueryPlan plan,
-      TableClusterGroupSpec valueGroup
-  )
-  {
-    if (spec.getFilter() == null) {
-      return spec;
-    }
-    final Filter rewritten = plan.rewriteFor(valueGroup);
-    if (rewritten == spec.getFilter()) {
-      return spec;
-    }
-    return CursorBuildSpec.builder(spec).setFilter(rewritten).build();
   }
 
   private CursorHolder makeSingleGroupClusteredCursorHolder(
@@ -205,8 +204,9 @@ public class QueryableIndexCursorFactory implements CursorFactory
 
     return new QueryableIndexCursorHolder(
         groupIndex,
-        rebuildSpecForGroup(spec, plan, valueGroup),
-        QueryableIndexTimeBoundaryInspector.create(groupIndex)
+        plan.rebuildCursorBuildSpec(spec, valueGroup),
+        QueryableIndexTimeBoundaryInspector.create(groupIndex),
+        valueGroup.getSummary().getOrdering()
     )
     {
       @Override
@@ -215,7 +215,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
           Offset baseOffset
       )
       {
-        return new ClusteringColumnSelectorFactory(
+        return new SingleGroupClusteringColumnSelectorFactory(
             super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset),
             valueGroup.getSummary().getClusteringColumns(),
             valueGroup.lookupClusteringValues()
@@ -228,7 +228,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
           VectorOffset baseOffset
       )
       {
-        return new ClusteringVectorColumnSelectorFactory(
+        return new SingleGroupClusteringVectorColumnSelectorFactory(
             super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset),
             valueGroup.getSummary().getClusteringColumns(),
             valueGroup.lookupClusteringValues()
@@ -265,7 +265,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
             + Arrays.toString(valueGroup.lookupClusteringValues())
         );
       }
-      final CursorBuildSpec groupSpec = rebuildSpecForGroup(spec, plan, valueGroup);
+      final CursorBuildSpec groupSpec = plan.rebuildCursorBuildSpec(spec, valueGroup);
       holderSuppliers.add(
           Suppliers.memoize(
               () -> closer.register(
@@ -285,7 +285,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
     // queried for sizing, and the value is constant across groups anyway.
     final int vectorSize = spec.getQueryContext().getVectorSize();
     final ClusteringColumnSelectorFactory wrapperFactory = new ClusteringColumnSelectorFactory(
-        UNINITIALIZED_DELEGATE,
+        ClusteringColumnSelectorFactory.UNINITIALIZED_DELEGATE,
         clusteringColumns,
         clusteringValuesByGroup.get(0)
     );
@@ -360,34 +360,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
   }
 
   /**
-   * Placeholder delegate for the {@link ClusteringColumnSelectorFactory} constructed by
-   * {@link #makeMultiGroupClusteredCursorHolder}. Throws on any access; replaced by the concatenating cursor's
-   * lazy init before the wrapper is exposed to the caller.
-   */
-  private static final ColumnSelectorFactory UNINITIALIZED_DELEGATE = new ColumnSelectorFactory()
-  {
-    @Override
-    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
-    {
-      throw DruidException.defensive("ConcatenatingCursor delegate accessed before initialization");
-    }
-
-    @Override
-    public ColumnValueSelector makeColumnValueSelector(String columnName)
-    {
-      throw DruidException.defensive("ConcatenatingCursor delegate accessed before initialization");
-    }
-
-    @Nullable
-    @Override
-    public ColumnCapabilities getColumnCapabilities(String column)
-    {
-      return null;
-    }
-  };
-
-  /**
-   * Vector counterpart of {@link #UNINITIALIZED_DELEGATE}. Replaced by
+   * Vector counterpart of {@link ClusteringColumnSelectorFactory#UNINITIALIZED_DELEGATE}. Replaced by
    * {@link ConcatenatingVectorCursor}'s lazy init before the wrapper is exposed.
    */
   private static final VectorColumnSelectorFactory UNINITIALIZED_VECTOR_DELEGATE = new VectorColumnSelectorFactory()
@@ -429,174 +402,6 @@ public class QueryableIndexCursorFactory implements CursorFactory
       return null;
     }
   };
-
-  /**
-   * CursorHolder that yields no rows. Used when {@link Projections#planClusterGroupQuery} excludes every cluster
-   * group, so the filter is provably unsatisfiable on this segment.
-   */
-  private static final class EmptyClusteredCursorHolder implements CursorHolder
-  {
-    static final EmptyClusteredCursorHolder INSTANCE = new EmptyClusteredCursorHolder();
-
-    private static final ColumnSelectorFactory NIL_SELECTOR_FACTORY = new AllNullColumnSelectorFactory();
-
-    @Override
-    public Cursor asCursor()
-    {
-      return new Cursor()
-      {
-        @Override
-        public ColumnSelectorFactory getColumnSelectorFactory()
-        {
-          return NIL_SELECTOR_FACTORY;
-        }
-
-        @Override
-        public void advance()
-        {
-        }
-
-        @Override
-        public void advanceUninterruptibly()
-        {
-        }
-
-        @Override
-        public boolean isDone()
-        {
-          return true;
-        }
-
-        @Override
-        public boolean isDoneOrInterrupted()
-        {
-          return true;
-        }
-
-        @Override
-        public void reset()
-        {
-        }
-      };
-    }
-
-    @Override
-    public boolean canVectorize()
-    {
-      return true;
-    }
-
-    @Override
-    public VectorCursor asVectorCursor()
-    {
-      final ReadableVectorInspector inspector = new ReadableVectorInspector()
-      {
-        @Override
-        public int getId()
-        {
-          return 0;
-        }
-
-        @Override
-        public int getMaxVectorSize()
-        {
-          return QueryContexts.DEFAULT_VECTOR_SIZE;
-        }
-
-        @Override
-        public int getCurrentVectorSize()
-        {
-          return 0;
-        }
-      };
-      final VectorColumnSelectorFactory nilFactory = new VectorColumnSelectorFactory()
-      {
-        @Override
-        public ReadableVectorInspector getReadableVectorInspector()
-        {
-          return inspector;
-        }
-
-        @Override
-        public SingleValueDimensionVectorSelector makeSingleValueDimensionSelector(DimensionSpec dimensionSpec)
-        {
-          return NilVectorSelector.create(inspector);
-        }
-
-        @Override
-        public MultiValueDimensionVectorSelector makeMultiValueDimensionSelector(DimensionSpec dimensionSpec)
-        {
-          // Only valid on columns whose capabilities report multi-value strings; this factory reports null
-          // capabilities for every column, so engines should never route here.
-          throw DruidException.defensive(
-              "Cannot make multi-value dimension selector for column[%s] on an empty cluster-group cursor",
-              dimensionSpec.getDimension()
-          );
-        }
-
-        @Override
-        public VectorValueSelector makeValueSelector(String column)
-        {
-          return NilVectorSelector.create(inspector);
-        }
-
-        @Override
-        public VectorObjectSelector makeObjectSelector(String column)
-        {
-          return NilVectorSelector.create(inspector);
-        }
-
-        @Nullable
-        @Override
-        public ColumnCapabilities getColumnCapabilities(String column)
-        {
-          return null;
-        }
-      };
-      return new VectorCursor()
-      {
-        @Override
-        public VectorColumnSelectorFactory getColumnSelectorFactory()
-        {
-          return nilFactory;
-        }
-
-        @Override
-        public void advance()
-        {
-        }
-
-        @Override
-        public boolean isDone()
-        {
-          return true;
-        }
-
-        @Override
-        public void reset()
-        {
-        }
-
-        @Override
-        public int getMaxVectorSize()
-        {
-          return inspector.getMaxVectorSize();
-        }
-
-        @Override
-        public int getCurrentVectorSize()
-        {
-          return 0;
-        }
-      };
-    }
-
-    @Override
-    public List<OrderBy> getOrdering()
-    {
-      return Collections.emptyList();
-    }
-  }
 
   @Override
   public RowSignature getRowSignature()
@@ -647,7 +452,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
 
     final RowSignature.Builder builder = RowSignature.builder();
     for (final String column : columns) {
-      final ColumnType columnType = resolveClusteredColumnType(column, clusterSummary);
+      final ColumnType columnType = ColumnType.fromCapabilities(index.getColumnCapabilities(column));
       if (columnType != null) {
         builder.add(column, columnType);
       }
@@ -656,56 +461,9 @@ public class QueryableIndexCursorFactory implements CursorFactory
   }
 
   @Nullable
-  private ColumnType resolveClusteredColumnType(String column, ClusteredValueGroupsBaseTableSchema clusterSummary)
-  {
-    // 1. Clustering columns: typed RowSignature on the summary is authoritative.
-    final ColumnType clusteringType = clusterSummary.getClusteringColumns().getColumnType(column).orElse(null);
-    if (clusteringType != null) {
-      return clusteringType;
-    }
-    // 2. Data columns: ask the first cluster group's sub-index. All groups share the same column shape.
-    final List<TableClusterGroupSpec> groups = index.getClusterGroupSchemas();
-    if (groups.isEmpty()) {
-      return null;
-    }
-    final QueryableIndex firstGroupIndex = index.getClusterGroupQueryableIndex(groups.get(0));
-    if (firstGroupIndex == null) {
-      return null;
-    }
-    return ColumnType.fromCapabilities(firstGroupIndex.getColumnCapabilities(column));
-  }
-
-  @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    final ClusteredValueGroupsBaseTableSchema clusterSummary = index.getClusteredBaseSummary();
-    if (clusterSummary != null) {
-      return getClusteredColumnCapabilities(column, clusterSummary);
-    }
     return index.getColumnCapabilities(column);
-  }
-
-  @Nullable
-  private ColumnCapabilities getClusteredColumnCapabilities(String column, ClusteredValueGroupsBaseTableSchema clusterSummary)
-  {
-    // synthesize capabilities from the typed RowSignature.
-    final ColumnType clusteringType = clusterSummary.getClusteringColumns().getColumnType(column).orElse(null);
-    if (clusteringType != null) {
-      if (clusteringType.is(ValueType.STRING)) {
-        return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities();
-      }
-      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(clusteringType);
-    }
-    // ask the first cluster group's sub-index.
-    final List<TableClusterGroupSpec> groups = index.getClusterGroupSchemas();
-    if (groups.isEmpty()) {
-      return null;
-    }
-    final QueryableIndex firstGroupIndex = index.getClusterGroupQueryableIndex(groups.get(0));
-    if (firstGroupIndex == null) {
-      return null;
-    }
-    return firstGroupIndex.getColumnCapabilities(column);
   }
 }

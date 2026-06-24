@@ -25,6 +25,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -43,6 +44,17 @@ public abstract class StreamIndexFaultToleranceTest extends StreamIndexTestBase
   private int totalRecords = 0;
 
   private StreamIngestResource<?> streamResource;
+
+  /**
+   * Publishing all ingested rows can exceed the 60s {@link StreamIndexTestBase}
+   * default when the CI runner is busy, so match the longer timeout the Kinesis
+   * sibling already uses.
+   */
+  @Override
+  protected EmbeddedDruidCluster createCluster()
+  {
+    return super.createCluster().useDefaultTimeoutForLatchableEmitter(120);
+  }
 
   @BeforeEach
   public void setupTopicAndSupervisor()

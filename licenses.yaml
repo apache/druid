@@ -1357,7 +1357,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.12.Final
+version: 4.2.15.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1378,6 +1378,7 @@ libraries:
   - io.netty: netty-transport-native-epoll
   - io.netty: netty-transport-native-unix-common
   - io.netty: netty-codec-http2
+  - io.netty: netty-codec-classes-quic
   - io.netty: netty-resolver-dns-classes-macos
   - io.netty: netty-transport-classes-kqueue
   - io.netty: netty-resolver-dns-native-macos
@@ -4554,7 +4555,7 @@ name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.0.75.Final
+version: 2.0.77.Final
 libraries:
   - io.netty: netty-tcnative-boringssl-static
   - io.netty: netty-tcnative-classes
@@ -7004,7 +7005,15 @@ libraries:
 name: Javassist
 license_category: binary
 module: extensions-core/druid-kerberos
-license_name: Apache License version 2.0
+license_name: MPL 1.1
 version: 3.30.2-GA
 libraries:
   - org.javassist: javassist
+notice: |
+  Javassist is triple-licensed under MPL 1.1, LGPL 2.1, and Apache License 2.0.
+  Apache Druid uses Javassist under the Apache License 2.0 terms.
+
+  From the Javassist license page (https://www.javassist.org/):
+  "Javassist is distributed under the Mozilla Public License 1.1 (MPL),
+  the GNU Lesser General Public License 2.1 (LGPL), and the Apache License 2.0 (AL).
+  You can choose one of them."

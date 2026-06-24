@@ -20,6 +20,7 @@
 package org.apache.druid.segment.projections;
 
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.TrueFilter;
 
@@ -72,4 +73,24 @@ public final class ClusterGroupQueryPlan
   {
     return rewriter.apply(group);
   }
+
+  /**
+   * Rebuild {@code spec} for {@code group}'s per-group cursor by swapping in this plan's per-group filter rewrite
+   * (see {@link #rewriteFor}). Returns {@code spec} unchanged when there is no filter, or when the rewrite is
+   * identical to the original (no clustering leaves folded), so the common no-op case allocates nothing. Shared by
+   * the {@link org.apache.druid.segment.QueryableIndexCursorFactory} (historical) and
+   * {@link org.apache.druid.segment.incremental.IncrementalIndexCursorFactory} (realtime) clustered dispatch.
+   */
+  public CursorBuildSpec rebuildCursorBuildSpec(CursorBuildSpec spec, TableClusterGroupSpec group)
+  {
+    if (spec.getFilter() == null) {
+      return spec;
+    }
+    final Filter rewritten = rewriteFor(group);
+    if (rewritten == spec.getFilter()) {
+      return spec;
+    }
+    return CursorBuildSpec.builder(spec).setFilter(rewritten).build();
+  }
 }
+

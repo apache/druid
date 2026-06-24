@@ -42,7 +42,7 @@ class ClusteringVectorColumnSelectorFactoryTest
   private static final RowSignature CLUSTER_SIGNATURE = RowSignature.builder().add("tenant", ColumnType.STRING).build();
 
   @Test
-  void testStringClusteringSingleValueDimensionSelector()
+  void testSingleValueDimensionSelectorRejected()
   {
     StubDelegate delegate = new StubDelegate(inspectorFor(8));
     ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
@@ -51,10 +51,54 @@ class ClusteringVectorColumnSelectorFactoryTest
         new Object[]{"acme"}
     );
 
-    SingleValueDimensionVectorSelector sel = f.makeSingleValueDimensionSelector(DefaultDimensionSpec.of("tenant"));
-    Assertions.assertNull(delegate.lastSingleValDimRequest, "delegate must not be hit for clustering column");
-    Assertions.assertEquals("acme", sel.lookupName(0));
-    Assertions.assertEquals(1, sel.getValueCardinality());
+    // clusteredValueGroups columns are never dictionary-encoded, so a single-value dimension vector selector is never
+    // requested. Both a clustering column and a non-clustering column must throw.
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> f.makeSingleValueDimensionSelector(DefaultDimensionSpec.of("tenant"))
+    );
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> f.makeSingleValueDimensionSelector(DefaultDimensionSpec.of("region"))
+    );
+    Assertions.assertNull(delegate.lastSingleValDimRequest, "delegate must not be hit");
+  }
+
+  @Test
+  void testStringClusteringObjectSelector()
+  {
+    // STRING clustering columns are read through the object selector (they report non-dictionary-encoded). Verify the
+    // object selector returns the per-group clustering value without consulting the delegate.
+    StubDelegate delegate = new StubDelegate(inspectorFor(8));
+    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+        delegate,
+        CLUSTER_SIGNATURE,
+        new Object[]{"acme"}
+    );
+
+    VectorObjectSelector sel = f.makeObjectSelector("tenant");
+    Assertions.assertNull(delegate.lastObjectRequest, "delegate must not be hit for clustering column");
+    Object[] vec = sel.getObjectVector();
+    for (Object v : vec) {
+      Assertions.assertEquals("acme", v);
+    }
+  }
+
+  @Test
+  void testNullStringClusteringObjectSelectorIsNull()
+  {
+    StubDelegate delegate = new StubDelegate(inspectorFor(4));
+    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+        delegate,
+        CLUSTER_SIGNATURE,
+        new Object[]{null}
+    );
+
+    VectorObjectSelector sel = f.makeObjectSelector("tenant");
+    Object[] vec = sel.getObjectVector();
+    for (Object v : vec) {
+      Assertions.assertNull(v);
+    }
   }
 
   @Test
@@ -110,21 +154,6 @@ class ClusteringVectorColumnSelectorFactoryTest
   }
 
   @Test
-  void testNullStringClusteringValueDimensionSelectorIsNil()
-  {
-    StubDelegate delegate = new StubDelegate(inspectorFor(4));
-    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
-        delegate,
-        CLUSTER_SIGNATURE,
-        new Object[]{null}
-    );
-
-    SingleValueDimensionVectorSelector sel = f.makeSingleValueDimensionSelector(DefaultDimensionSpec.of("tenant"));
-    // Nil vector selector returns null on lookupName(0) regardless of id.
-    Assertions.assertNull(sel.lookupName(0));
-  }
-
-  @Test
   void testNonClusteringColumnDelegated()
   {
     StubDelegate delegate = new StubDelegate(inspectorFor(4));
@@ -137,17 +166,16 @@ class ClusteringVectorColumnSelectorFactoryTest
     // Non-clustering selectors are wrapped in lazy delegating wrappers; the delegate is only consulted on first
     // use, so a multi-group ConcatenatingVectorCursor can swap delegates between groups without recreating the
     // selector instance.
-    SingleValueDimensionVectorSelector svdSel =
-        f.makeSingleValueDimensionSelector(DefaultDimensionSpec.of("region"));
-    Assertions.assertNull(delegate.lastSingleValDimRequest, "delegate must not be hit until selector is used");
+    VectorObjectSelector regionObjSel = f.makeObjectSelector("region");
+    Assertions.assertNull(delegate.lastObjectRequest, "delegate must not be hit until selector is used");
     try {
-      svdSel.getRowVector();
+      regionObjSel.getObjectVector();
     }
     catch (NullPointerException expected) {
       // StubDelegate returns null for the inner selector; the wrapper forwards to it. We just want to confirm
-      // the delegate's makeSingleValueDimensionSelector was invoked.
+      // the delegate's makeObjectSelector was invoked.
     }
-    Assertions.assertEquals("region", delegate.lastSingleValDimRequest);
+    Assertions.assertEquals("region", delegate.lastObjectRequest);
 
     VectorValueSelector vvSel = f.makeValueSelector("metric");
     Assertions.assertNull(delegate.lastValueRequest);
@@ -158,15 +186,6 @@ class ClusteringVectorColumnSelectorFactoryTest
       // same ^, confirming the delegate was reached
     }
     Assertions.assertEquals("metric", delegate.lastValueRequest);
-
-    VectorObjectSelector voSel = f.makeObjectSelector("region");
-    try {
-      voSel.getObjectVector();
-    }
-    catch (NullPointerException expected) {
-      // same
-    }
-    Assertions.assertEquals("region", delegate.lastObjectRequest);
 
     // getColumnCapabilities is NOT lazy; it returns the result directly.
     f.getColumnCapabilities("metric");
@@ -209,26 +228,25 @@ class ClusteringVectorColumnSelectorFactoryTest
         new Object[]{"acme"}
     );
 
-    SingleValueDimensionVectorSelector sel =
-        f.makeSingleValueDimensionSelector(DefaultDimensionSpec.of("region"));
+    VectorObjectSelector sel = f.makeObjectSelector("region");
     try {
-      sel.getRowVector();   // warms the cache against the first delegate
+      sel.getObjectVector();   // warms the cache against the first delegate
     }
     catch (NullPointerException expected) {
       // expected; just confirming the route
     }
-    Assertions.assertEquals("region", first.lastSingleValDimRequest);
+    Assertions.assertEquals("region", first.lastObjectRequest);
 
     StubDelegate second = new StubDelegate(inspectorFor(4));
     f.setDelegate(second, new Object[]{"globex"});
 
     try {
-      sel.getRowVector();   // generation bumped → re-fetches against second delegate
+      sel.getObjectVector();   // generation bumped → re-fetches against second delegate
     }
     catch (NullPointerException expected) {
       // expected
     }
-    Assertions.assertEquals("region", second.lastSingleValDimRequest);
+    Assertions.assertEquals("region", second.lastObjectRequest);
   }
 
   @Test
@@ -254,16 +272,22 @@ class ClusteringVectorColumnSelectorFactoryTest
   }
 
   @Test
-  void testMultiValueDimensionSelectorOnClusteringRejected()
+  void testMultiValueDimensionSelectorRejected()
   {
     ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
         new StubDelegate(inspectorFor(4)),
         CLUSTER_SIGNATURE,
         new Object[]{"acme"}
     );
+    // clusteredValueGroups columns are never dictionary-encoded, so a multi-value dimension vector selector is never
+    // requested. Both a clustering column and a non-clustering column must throw.
     Assertions.assertThrows(
         DruidException.class,
         () -> f.makeMultiValueDimensionSelector(DefaultDimensionSpec.of("tenant"))
+    );
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> f.makeMultiValueDimensionSelector(DefaultDimensionSpec.of("region"))
     );
   }
 

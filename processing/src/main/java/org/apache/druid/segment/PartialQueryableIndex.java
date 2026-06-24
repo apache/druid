@@ -34,6 +34,8 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
@@ -41,10 +43,12 @@ import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.projections.BaseTableProjectionSchema;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.ConstantTimeColumn;
 import org.apache.druid.segment.projections.ProjectionMetadata;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
+import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -57,6 +61,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -74,6 +79,7 @@ public class PartialQueryableIndex implements QueryableIndex
 {
   private final Interval dataInterval;
   private final int baseNumRows;
+  private final ProjectionMetadata baseProjectionMetadata;
   private final Indexed<String> availableDimensions;
   private final List<String> columnNames;
   private final BitmapFactory bitmapFactory;
@@ -101,6 +107,16 @@ public class PartialQueryableIndex implements QueryableIndex
   private final ConcurrentHashMap<String, Map<String, Supplier<BaseColumnHolder>>> projectionColumnsByName =
       new ConcurrentHashMap<>();
 
+  // clustered base summary when this segment is a clustered base table, else null. when non-null, the base table has
+  // no top-level columns
+  @Nullable
+  private final ClusteredValueGroupsBaseTableSchema clusteredBaseSummary;
+
+  // per-cluster-group column suppliers, keyed by group index (into the summary's group list). built on demand like
+  // projectionColumnsByName; each supplier defers both mapFile() and deserialization until the column is read.
+  private final ConcurrentHashMap<Integer, Map<String, Supplier<BaseColumnHolder>>> clusterGroupColumnsByIndex =
+      new ConcurrentHashMap<>();
+
   // lazy dimension handlers
   private final Supplier<Map<String, DimensionHandler>> dimensionHandlers;
 
@@ -123,20 +139,40 @@ public class PartialQueryableIndex implements QueryableIndex
         baseProjection.getSchema().getName()
     );
     final BaseTableProjectionSchema baseSchema = (BaseTableProjectionSchema) baseProjection.getSchema();
+    this.clusteredBaseSummary = baseSchema instanceof ClusteredValueGroupsBaseTableSchema
+                                ? (ClusteredValueGroupsBaseTableSchema) baseSchema
+                                : null;
+    if (clusteredBaseSummary != null && !clusteredBaseSummary.getSharedColumns().isEmpty()) {
+      // Shared base columns aren't wired into partial loading yet
+      throw DruidException.defensive(
+          "Clustered V10 segments with shared columns%s are not yet supported for partial loading (interval[%s])",
+          clusteredBaseSummary.getSharedColumns(),
+          metadata.getInterval()
+      );
+    }
+    this.baseProjectionMetadata = baseProjection;
     this.baseNumRows = baseProjection.getNumRows();
     this.baseProjectionPrefix = Projections.getProjectionSegmentInternalFilePrefix(baseSchema);
     this.dataInterval = Intervals.of(metadata.getInterval());
     this.bitmapFactory = metadata.getBitmapEncoding().getBitmapFactory();
-    this.availableDimensions = new ListIndexed<>(baseSchema.getDimensionNames());
 
-    // build column names (dimensions first, then other columns, excluding __time)
-    final LinkedHashSet<String> dimsFirst = new LinkedHashSet<>(baseSchema.getDimensionNames());
-    for (String columnName : baseSchema.getColumnNames()) {
-      if (!ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
-        dimsFirst.add(columnName);
+    // A clustered base table has no top-level columns (its data lives in per-cluster-group bundles), so its available
+    // dimensions / column names are empty; logical columns are resolved via getColumnCapabilities + cluster-group
+    // dispatch (matching the eager SimpleQueryableIndex). A regular base table lists dimensions first, then the
+    // remaining columns (excluding __time).
+    if (clusteredBaseSummary != null) {
+      this.availableDimensions = new ListIndexed<>(List.of());
+      this.columnNames = List.of();
+    } else {
+      this.availableDimensions = new ListIndexed<>(baseSchema.getDimensionNames());
+      final LinkedHashSet<String> dimsFirst = new LinkedHashSet<>(baseSchema.getDimensionNames());
+      for (String columnName : baseSchema.getColumnNames()) {
+        if (!ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
+          dimsFirst.add(columnName);
+        }
       }
+      this.columnNames = List.copyOf(dimsFirst);
     }
-    this.columnNames = List.copyOf(dimsFirst);
 
     // build aggregate projection metadata for matching
     final List<AggregateProjectionMetadata> aggProjections = new ArrayList<>();
@@ -179,8 +215,11 @@ public class PartialQueryableIndex implements QueryableIndex
     }
 
     // build per-column suppliers for the base table. each supplier is memoized and defers both mapFile() and
-    // deserialization until the column is accessed.
-    this.baseColumns = buildProjectionColumnSuppliers(baseProjection, Map.of());
+    // deserialization until the column is accessed. A clustered base has no top-level columns (its data lives in
+    // per-cluster-group bundles), so its base column map is empty.
+    this.baseColumns = clusteredBaseSummary != null
+                       ? Map.of()
+                       : buildProjectionColumnSuppliers(baseProjection, Map.of());
 
     this.dimensionHandlers = Suppliers.memoize(this::initDimensionHandlers);
   }
@@ -213,6 +252,24 @@ public class PartialQueryableIndex implements QueryableIndex
   public Metadata getMetadata()
   {
     return reconstructedMetadata;
+  }
+
+  /**
+   * Returns the {@link ProjectionMetadata} for the base table projection.
+   */
+  public ProjectionMetadata getBaseProjectionMetadata()
+  {
+    return baseProjectionMetadata;
+  }
+
+  /**
+   * Whether every internal file referenced by this index's segment metadata (including any attached external file
+   * mappers) is already downloaded. Used by partial loaded segments to gate sync paths to confirm the segment
+   * is fully loaded before performing operations. Only async paths are allowed to perform on-demand downloads.
+   */
+  public boolean isFullyDownloaded()
+  {
+    return fileMapper.isFullyDownloaded();
   }
 
   @Override
@@ -249,9 +306,42 @@ public class PartialQueryableIndex implements QueryableIndex
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
+    if (clusteredBaseSummary != null) {
+      return getClusteredColumnCapabilities(column);
+    }
     // look up the column in the base table projection's namespace
     final String smooshName = baseProjectionPrefix + column;
-    final ColumnDescriptor descriptor = metadata.getColumnDescriptors().get(smooshName);
+    return capabilitiesFromDescriptor(metadata.getColumnDescriptors().get(smooshName));
+  }
+
+  /**
+   * Column capabilities for a clustered base table, answered from metadata only (no downloads): clustering columns
+   * resolve from the summary's typed clustering signature; data columns (and {@code __time}) resolve from the first
+   * cluster group's {@link ColumnDescriptor} (all groups share the same per-group shape). Mirrors the eager
+   * {@link SimpleQueryableIndex} clustered branch, but reads the descriptor directly rather than routing through a
+   * group sub-index's {@code getColumnHolder} (which would trigger a download).
+   */
+  @Nullable
+  private ColumnCapabilities getClusteredColumnCapabilities(String column)
+  {
+    final ColumnType clusteringType = clusteredBaseSummary.getClusteringColumns().getColumnType(column).orElse(null);
+    if (clusteringType != null) {
+      return clusteringType.is(ValueType.STRING)
+             ? ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities()
+             : ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(clusteringType);
+    }
+    final List<TableClusterGroupSpec> groups = clusteredBaseSummary.getClusterGroups();
+    if (groups.isEmpty()) {
+      return null;
+    }
+    final String smooshName =
+        Projections.getClusterGroupSegmentInternalFileName(groups.getFirst().getClusteringValueIds(), column);
+    return capabilitiesFromDescriptor(metadata.getColumnDescriptors().get(smooshName));
+  }
+
+  @Nullable
+  private static ColumnCapabilities capabilitiesFromDescriptor(@Nullable ColumnDescriptor descriptor)
+  {
     if (descriptor == null) {
       return null;
     }
@@ -268,18 +358,19 @@ public class PartialQueryableIndex implements QueryableIndex
         cursorBuildSpec,
         projections,
         dataInterval,
-        (projectionName, columnName) -> {
-          // check if the projection has this column using metadata column descriptors
-          final ProjectionMetadata projSpec = projectionSpecs.get(projectionName);
-          if (projSpec == null) {
-            return false;
-          }
-          final String smooshName = Projections.getProjectionSegmentInternalFileName(projSpec.getSchema(), columnName);
-          return metadata.getColumnDescriptors().containsKey(smooshName)
-                 || getColumnCapabilities(columnName) == null;
-        },
+        this::checkProjectionHasColumn,
         this::getProjectionQueryableIndex
     );
+  }
+
+  private boolean checkProjectionHasColumn(String projectionName, String columnName)
+  {
+    final ProjectionMetadata meta = projectionSpecs.get(projectionName);
+    if (meta == null) {
+      return false;
+    }
+    final String file = Projections.getProjectionSegmentInternalFileName(meta.getSchema(), columnName);
+    return metadata.getColumnDescriptors().containsKey(file) || getColumnCapabilities(columnName) == null;
   }
 
   @Nullable
@@ -305,6 +396,7 @@ public class PartialQueryableIndex implements QueryableIndex
         null,
         true,
         projectionMeta.getSchema().getOrderingWithTimeColumnSubstitution(),
+        null,
         null
     );
 
@@ -344,6 +436,74 @@ public class PartialQueryableIndex implements QueryableIndex
     };
   }
 
+  @Nullable
+  @Override
+  public ClusteredValueGroupsBaseTableSchema getClusteredBaseSummary()
+  {
+    return clusteredBaseSummary;
+  }
+
+  @Override
+  public List<TableClusterGroupSpec> getClusterGroupSchemas()
+  {
+    return clusteredBaseSummary == null ? List.of() : clusteredBaseSummary.getClusterGroups();
+  }
+
+  /**
+   * Returns a {@link QueryableIndex} sub-view scoped to a single cluster group's column data, The per-group column
+   * suppliers are memoized by group index so a pre-fetch (async path) and the later cursor build share the same
+   * already-downloaded columns. Clustering columns are NOT present in the returned index; they are injected at the
+   * cursor-factory level via {@code ClusteringColumnSelectorFactory}.
+   */
+  @Override
+  public QueryableIndex getClusterGroupQueryableIndex(TableClusterGroupSpec groupSpec)
+  {
+    if (clusteredBaseSummary == null) {
+      throw DruidException.defensive("getClusterGroupQueryableIndex called on a non-clustered segment");
+    }
+    final List<TableClusterGroupSpec> groups = clusteredBaseSummary.getClusterGroups();
+    final int groupIndex = groups.indexOf(groupSpec);
+    if (groupIndex < 0) {
+      throw DruidException.defensive("Cluster group spec is not part of this segment");
+    }
+    final Map<String, Supplier<BaseColumnHolder>> groupColumns = clusterGroupColumnsByIndex.computeIfAbsent(
+        groupIndex,
+        i -> buildColumnSuppliers(
+            clusteredBaseSummary.getTimeColumnName(),
+            groupSpec.getNumRows(),
+            clusteredBaseSummary.getGroupColumnNames(),
+            column -> Projections.getClusterGroupSegmentInternalFileName(groupSpec.getClusteringValueIds(), column),
+            Map.of()
+        )
+    );
+    final Metadata groupMetadata = new Metadata(
+        null,
+        null,
+        null,
+        clusteredBaseSummary.getEffectiveGranularity(),
+        false,
+        clusteredBaseSummary.getGroupOrdering(),
+        null,
+        null
+    );
+    return new SimpleQueryableIndex(
+        dataInterval,
+        new ListIndexed<>(clusteredBaseSummary.getGroupDimensionNames()),
+        bitmapFactory,
+        groupColumns,
+        fileMapper,
+        groupMetadata,
+        null
+    )
+    {
+      @Override
+      public Metadata getMetadata()
+      {
+        return groupMetadata;
+      }
+    };
+  }
+
   @Override
   public void close()
   {
@@ -372,12 +532,34 @@ public class PartialQueryableIndex implements QueryableIndex
       Map<String, Supplier<BaseColumnHolder>> parentColumns
   )
   {
-    final String timeColumnName = projectionSpec.getSchema().getTimeColumnName();
-    final boolean renameTime = !ColumnHolder.TIME_COLUMN_NAME.equals(timeColumnName);
-    final Map<String, Supplier<BaseColumnHolder>> projectionColumns = new LinkedHashMap<>();
+    return buildColumnSuppliers(
+        projectionSpec.getSchema().getTimeColumnName(),
+        projectionSpec.getNumRows(),
+        projectionSpec.getSchema().getColumnNames(),
+        column -> Projections.getProjectionSegmentInternalFileName(projectionSpec.getSchema(), column),
+        parentColumns
+    );
+  }
 
-    for (String column : projectionSpec.getSchema().getColumnNames()) {
-      final String smooshName = Projections.getProjectionSegmentInternalFileName(projectionSpec.getSchema(), column);
+  /**
+   * Shared builder for lazy per-column suppliers. Each supplier is memoized and defers both
+   * {@link SegmentFileMapper#mapFile} and {@link ColumnDescriptor#read} until the column is actually accessed, so
+   * queries only trigger downloads for the specific columns they use. {@code fileNameFn} maps a logical column name to
+   * its segment-internal (smoosh) file name in the right bundle namespace.
+   */
+  private Map<String, Supplier<BaseColumnHolder>> buildColumnSuppliers(
+      @Nullable String timeColumnName,
+      int numRows,
+      List<String> columnNames,
+      Function<String, String> fileNameFn,
+      Map<String, Supplier<BaseColumnHolder>> parentColumns
+  )
+  {
+    final boolean renameTime = !ColumnHolder.TIME_COLUMN_NAME.equals(timeColumnName);
+    final Map<String, Supplier<BaseColumnHolder>> columns = new LinkedHashMap<>();
+
+    for (String column : columnNames) {
+      final String smooshName = fileNameFn.apply(column);
       final ColumnDescriptor columnDescriptor = metadata.getColumnDescriptors().get(smooshName);
       if (columnDescriptor == null) {
         continue;
@@ -396,21 +578,21 @@ public class PartialQueryableIndex implements QueryableIndex
         }
       });
 
-      projectionColumns.put(internedColumnName, columnSupplier);
+      columns.put(internedColumnName, columnSupplier);
 
       if (column.equals(timeColumnName) && renameTime) {
-        projectionColumns.put(ColumnHolder.TIME_COLUMN_NAME, projectionColumns.get(column));
-        projectionColumns.remove(column);
+        columns.put(ColumnHolder.TIME_COLUMN_NAME, columns.get(column));
+        columns.remove(column);
       }
     }
 
     if (timeColumnName == null) {
-      projectionColumns.put(
+      columns.put(
           ColumnHolder.TIME_COLUMN_NAME,
-          ConstantTimeColumn.makeConstantTimeSupplier(projectionSpec.getNumRows(), dataInterval.getStartMillis())
+          ConstantTimeColumn.makeConstantTimeSupplier(numRows, dataInterval.getStartMillis())
       );
     }
 
-    return projectionColumns;
+    return columns;
   }
 }
