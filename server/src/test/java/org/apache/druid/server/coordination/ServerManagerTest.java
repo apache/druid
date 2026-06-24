@@ -52,6 +52,7 @@ import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.guava.YieldingSequenceBase;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -480,6 +481,29 @@ public class ServerManagerTest
         Collections.singletonList(interval)
     );
     Assert.assertSame(NoopQueryRunner.class, queryRunner.getClass());
+  }
+
+  @Test
+  public void testGetQueryRunnerForIntervalsEmitsQueriedSegmentCountMetric()
+  {
+    final StubServiceEmitter stubServiceEmitter = StubServiceEmitter.createStarted();
+    serviceEmitter = stubServiceEmitter;
+    factory = new MyQueryRunnerFactory(new CountDownLatch(0), new CountDownLatch(0), new CountDownLatch(0));
+    conglomerate = DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of(
+        SearchQuery.class,
+        factory
+    ));
+    serverManager = Guice.createInjector(BoundFieldModule.of(this)).getInstance(ServerManager.class);
+
+    final Interval interval = Intervals.of("P2d/2011-04-02");
+    final SearchQuery query = searchQuery("test", interval, Granularities.DAY);
+
+    serverManager.getQueryRunnerForIntervals(query, ImmutableList.of(interval))
+                 .run(QueryPlus.wrap(query))
+                 .toList();
+
+    stubServiceEmitter.verifyEmitted(DefaultQueryMetrics.QUERY_SEGMENTS_COUNT, 1);
+    stubServiceEmitter.verifyValue(DefaultQueryMetrics.QUERY_SEGMENTS_COUNT, 2L);
   }
 
   @Test
