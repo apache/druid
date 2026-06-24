@@ -21,10 +21,16 @@ package org.apache.druid.iceberg.input;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.LocalInputSourceFactory;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergEqualsFilter;
 import org.apache.druid.java.util.common.DateTimes;
@@ -55,6 +61,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -124,6 +131,91 @@ public class IcebergInputSourceTest
       Assert.assertEquals(tableData.get("id"), record.get(0));
       Assert.assertEquals(tableData.get("name"), record.get(1));
     }
+  }
+
+  // Reads the table without InputRowSchema and then once per column using InputRowSchema column filters.
+  @Test
+  public void testReadTableWithAndWithoutInputRowSchema() throws IOException
+  {
+    // Read the table with no InputRowSchema to preserve the legacy full-table scan behavior.
+    final IcebergInputSource inputSourceWithoutSchema = new IcebergInputSource(
+        TABLENAME,
+        NAMESPACE,
+        null,
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        null
+    );
+
+    inputSourceWithoutSchema.retrieveIcebergDatafiles(null);
+
+    final List<File> fullScanFiles = ((LocalInputSource) inputSourceWithoutSchema.getDelegateInputSource())
+        .getFiles();
+    Assert.assertEquals(1, fullScanFiles.size());
+
+    try (final CloseableIterable<Record> datafileReader = Parquet.read(Files.localInput(fullScanFiles.get(0)))
+                                                                 .project(tableSchema)
+                                                                 .createReaderFunc(fileSchema -> GenericParquetReaders.buildReader(
+                                                                     tableSchema,
+                                                                     fileSchema
+                                                                 ))
+                                                                 .build()) {
+      for (Record record : datafileReader) {
+        Assert.assertEquals(tableData.get("id"), record.get(0));
+        Assert.assertEquals(tableData.get("name"), record.get(1));
+      }
+    }
+
+    // Read the table once per column using InputRowSchema column filters to verify single-column projections.
+    for (final Types.NestedField column : tableSchema.columns()) {
+      final IcebergInputSource inputSourceWithSchema = new IcebergInputSource(
+          TABLENAME,
+          NAMESPACE,
+          null,
+          testCatalog,
+          new LocalInputSourceFactory(),
+          null,
+          null
+      );
+      final InputRowSchema inputRowSchema = createInputRowSchema(
+          ColumnsFilter.inclusionBased(ImmutableSet.of(column.name()))
+      );
+
+      inputSourceWithSchema.retrieveIcebergDatafiles(inputRowSchema);
+
+      final List<File> projectedFiles = ((LocalInputSource) inputSourceWithSchema.getDelegateInputSource())
+          .getFiles();
+      Assert.assertEquals(1, projectedFiles.size());
+
+      final Schema projectedSchema = new Schema(column);
+      try (final CloseableIterable<Record> datafileReader = Parquet.read(Files.localInput(projectedFiles.get(0)))
+                                                                   .project(projectedSchema)
+                                                                   .createReaderFunc(fileSchema -> GenericParquetReaders.buildReader(
+                                                                       projectedSchema,
+                                                                       fileSchema
+                                                                   ))
+                                                                   .build()) {
+        for (Record record : datafileReader) {
+          Assert.assertEquals(1, record.size());
+          Assert.assertEquals(tableData.get(column.name()), record.get(0));
+        }
+      }
+    }
+  }
+
+  private InputRowSchema createInputRowSchema(final ColumnsFilter columnsFilter)
+  {
+    return new InputRowSchema(
+        new TimestampSpec("id", "auto", null),
+        new DimensionsSpec(
+            ImmutableList.of(
+                new StringDimensionSchema("id"),
+                new StringDimensionSchema("name")
+            )
+        ),
+        columnsFilter
+    );
   }
 
   @Test
