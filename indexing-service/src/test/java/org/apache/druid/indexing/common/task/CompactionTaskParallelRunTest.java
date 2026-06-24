@@ -193,27 +193,24 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       );
       // Expect compaction state to exist as store compaction state by default
       LongSumAggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
-      CompactionState expectedState = new CompactionState(
-          new DynamicPartitionsSpec(null, Long.MAX_VALUE),
-          new DimensionsSpec(
-              ImmutableList.of(
-                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
-                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
-              )
-          ),
-          ImmutableList.of(expectedLongSumMetric),
-          null,
-          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
-          new UniformGranularitySpec(
-              Granularities.HOUR,
-              Granularities.MINUTE,
-              true,
-              ImmutableList.of(segment.getInterval())
-          ),
-          null,
-          null,
-          null
-      );
+      CompactionState expectedState =
+          CompactionState.builder()
+                         .partitionsSpec(new DynamicPartitionsSpec(null, Long.MAX_VALUE))
+                         .dimensionsSpec(new DimensionsSpec(
+                             ImmutableList.of(
+                                 new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                 new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+                             )
+                         ))
+                         .metricsSpec(ImmutableList.of(expectedLongSumMetric))
+                         .indexSpec(compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec())
+                         .granularitySpec(new UniformGranularitySpec(
+                             Granularities.HOUR,
+                             Granularities.MINUTE,
+                             true,
+                             ImmutableList.of(segment.getInterval())
+                         ))
+                         .build();
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
   }
@@ -243,27 +240,24 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       // Expect compaction state to exist as store compaction state by default
       LongSumAggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
       Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
-      CompactionState expectedState = new CompactionState(
-          new HashedPartitionsSpec(null, 3, null),
-          new DimensionsSpec(
-              ImmutableList.of(
-                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
-                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
-              )
-          ),
-          ImmutableList.of(expectedLongSumMetric),
-          null,
-          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
-          new UniformGranularitySpec(
-              Granularities.HOUR,
-              Granularities.MINUTE,
-              true,
-              ImmutableList.of(segment.getInterval())
-          ),
-          null,
-          null,
-          null
-      );
+      CompactionState expectedState =
+          CompactionState.builder()
+                         .partitionsSpec(new HashedPartitionsSpec(null, 3, null))
+                         .dimensionsSpec(new DimensionsSpec(
+                             ImmutableList.of(
+                                 new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                 new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+                             )
+                         ))
+                         .metricsSpec(ImmutableList.of(expectedLongSumMetric))
+                         .indexSpec(compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec())
+                         .granularitySpec(new UniformGranularitySpec(
+                             Granularities.HOUR,
+                             Granularities.MINUTE,
+                             true,
+                             ImmutableList.of(segment.getInterval())
+                         ))
+                         .build();
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
 
@@ -308,27 +302,24 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       // Expect compaction state to exist as store compaction state by default
       LongSumAggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
-      CompactionState expectedState = new CompactionState(
-          new SingleDimensionPartitionsSpec(7, null, "dim", false),
-          new DimensionsSpec(
-              ImmutableList.of(
-                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
-                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
-              )
-          ),
-          ImmutableList.of(expectedLongSumMetric),
-          null,
-          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
-          new UniformGranularitySpec(
-              Granularities.HOUR,
-              Granularities.MINUTE,
-              true,
-              ImmutableList.of(segment.getInterval())
-          ),
-          null,
-          null,
-          null
-      );
+      CompactionState expectedState =
+          CompactionState.builder()
+                         .partitionsSpec(new SingleDimensionPartitionsSpec(7, null, "dim", false))
+                         .dimensionsSpec(new DimensionsSpec(
+                             ImmutableList.of(
+                                 new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                 new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+                             )
+                         ))
+                         .metricsSpec(ImmutableList.of(expectedLongSumMetric))
+                         .indexSpec(compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec())
+                         .granularitySpec(new UniformGranularitySpec(
+                             Granularities.HOUR,
+                             Granularities.MINUTE,
+                             true,
+                             ImmutableList.of(segment.getInterval())
+                         ))
+                         .build();
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
   }
@@ -368,22 +359,28 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       // Expect compaction state to exist as store compaction state by default
       LongSumAggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
-      CompactionState expectedState = new CompactionState(
-          new SingleDimensionPartitionsSpec(7, null, "dim", false),
-          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
-          null,
-          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
-          new UniformGranularitySpec(
-              Granularities.HOUR,
-              Granularities.MINUTE,
-              true,
-              ImmutableList.of(Intervals.of("2014-01-01T00:00:00Z/2014-01-01T03:00:00Z"))
-          ),
-          null,
-          null,
-          null
-      );
+      CompactionState expectedState =
+          CompactionState.builder()
+                         .partitionsSpec(new SingleDimensionPartitionsSpec(7, null, "dim", false))
+                         .dimensionsSpec(
+                             new DimensionsSpec(
+                                 DimensionsSpec.getDefaultSchemas(
+                                     ImmutableList.of(
+                                         "ts",
+                                         "dim"
+                                     )
+                                 )
+                             )
+                         )
+                         .metricsSpec(ImmutableList.of(expectedLongSumMetric))
+                         .indexSpec(compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec())
+                         .granularitySpec(new UniformGranularitySpec(
+                             Granularities.HOUR,
+                             Granularities.MINUTE,
+                             true,
+                             ImmutableList.of(Intervals.of("2014-01-01T00:00:00Z/2014-01-01T03:00:00Z"))
+                         ))
+                         .build();
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
   }
@@ -416,27 +413,29 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       // Expect compaction state to exist as store compaction state by default
       LongSumAggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
       Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
-      CompactionState expectedState = new CompactionState(
-          new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
-          new DimensionsSpec(
-              ImmutableList.of(
-                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
-                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
-              )
-          ),
-          ImmutableList.of(expectedLongSumMetric),
-          null,
-          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
-          new UniformGranularitySpec(
-              Granularities.HOUR,
-              Granularities.MINUTE,
-              true,
-              ImmutableList.of(segment.getInterval())
-          ),
-          null,
-          null,
-          null
-      );
+      CompactionState expectedState =
+          CompactionState.builder()
+                         .partitionsSpec(new DimensionRangePartitionsSpec(
+                             7,
+                             null,
+                             Arrays.asList("dim1", "dim2"),
+                             false
+                         ))
+                         .dimensionsSpec(new DimensionsSpec(
+                             ImmutableList.of(
+                                 new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                 new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+                             )
+                         ))
+                         .metricsSpec(ImmutableList.of(expectedLongSumMetric))
+                         .indexSpec(compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec())
+                         .granularitySpec(new UniformGranularitySpec(
+                             Granularities.HOUR,
+                             Granularities.MINUTE,
+                             true,
+                             ImmutableList.of(segment.getInterval())
+                         ))
+                         .build();
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
   }
@@ -466,27 +465,24 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       // Expect compaction state to exist as store compaction state by default
       LongSumAggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
-      CompactionState expectedState = new CompactionState(
-          new SingleDimensionPartitionsSpec(7, null, "dim", false),
-          new DimensionsSpec(
-              ImmutableList.of(
-                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
-                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
-              )
-          ),
-          ImmutableList.of(expectedLongSumMetric),
-          null,
-          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
-          new UniformGranularitySpec(
-              Granularities.HOUR,
-              Granularities.MINUTE,
-              true,
-              ImmutableList.of(segment.getInterval())
-          ),
-          null,
-          null,
-          null
-      );
+      CompactionState expectedState =
+          CompactionState.builder()
+                         .partitionsSpec(new SingleDimensionPartitionsSpec(7, null, "dim", false))
+                         .dimensionsSpec(new DimensionsSpec(
+                             ImmutableList.of(
+                                 new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                 new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+                             )
+                         ))
+                         .metricsSpec(ImmutableList.of(expectedLongSumMetric))
+                         .indexSpec(compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec())
+                         .granularitySpec(new UniformGranularitySpec(
+                             Granularities.HOUR,
+                             Granularities.MINUTE,
+                             true,
+                             ImmutableList.of(segment.getInterval())
+                         ))
+                         .build();
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
   }
@@ -519,27 +515,29 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       // Expect compaction state to exist as store compaction state by default
       LongSumAggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
       Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
-      CompactionState expectedState = new CompactionState(
-          new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
-          new DimensionsSpec(
-              ImmutableList.of(
-                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
-                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
-              )
-          ),
-          ImmutableList.of(expectedLongSumMetric),
-          null,
-          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
-          new UniformGranularitySpec(
-              Granularities.HOUR,
-              Granularities.MINUTE,
-              true,
-              ImmutableList.of(segment.getInterval())
-          ),
-          null,
-          null,
-          null
-      );
+      CompactionState expectedState =
+          CompactionState.builder()
+                         .partitionsSpec(new DimensionRangePartitionsSpec(
+                             7,
+                             null,
+                             Arrays.asList("dim1", "dim2"),
+                             false
+                         ))
+                         .dimensionsSpec(new DimensionsSpec(
+                             ImmutableList.of(
+                                 new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                 new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+                             )
+                         ))
+                         .metricsSpec(ImmutableList.of(expectedLongSumMetric))
+                         .indexSpec(compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec())
+                         .granularitySpec(new UniformGranularitySpec(
+                             Granularities.HOUR,
+                             Granularities.MINUTE,
+                             true,
+                             ImmutableList.of(segment.getInterval())
+                         ))
+                         .build();
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
   }
@@ -602,27 +600,25 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           segment.getShardSpec().getClass()
       );
       LongSumAggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
-      CompactionState expectedState = new CompactionState(
-          new DynamicPartitionsSpec(null, Long.MAX_VALUE),
-          new DimensionsSpec(
-              ImmutableList.of(
-                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
-                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
-              )
-          ),
-          ImmutableList.of(expectedLongSumMetric),
-          compactionTask.getTransformSpec(),
-          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
-          new UniformGranularitySpec(
-              Granularities.HOUR,
-              Granularities.MINUTE,
-              true,
-              ImmutableList.of(segment.getInterval())
-          ),
-          null,
-          null,
-          null
-      );
+      CompactionState expectedState =
+          CompactionState.builder()
+                         .partitionsSpec(new DynamicPartitionsSpec(null, Long.MAX_VALUE))
+                         .dimensionsSpec(new DimensionsSpec(
+                             ImmutableList.of(
+                                 new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                 new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+                             )
+                         ))
+                         .metricsSpec(ImmutableList.of(expectedLongSumMetric))
+                         .transformSpec(compactionTask.getTransformSpec())
+                         .indexSpec(compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec())
+                         .granularitySpec(new UniformGranularitySpec(
+                             Granularities.HOUR,
+                             Granularities.MINUTE,
+                             true,
+                             ImmutableList.of(segment.getInterval())
+                         ))
+                         .build();
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
   }
@@ -659,27 +655,25 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       );
       CountAggregatorFactory expectedCountMetric = new CountAggregatorFactory("cnt");
       LongSumAggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
-      CompactionState expectedState = new CompactionState(
-          new DynamicPartitionsSpec(null, Long.MAX_VALUE),
-          new DimensionsSpec(
-              ImmutableList.of(
-                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
-                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
-              )
-          ),
-          ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
-          compactionTask.getTransformSpec(),
-          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
-          new UniformGranularitySpec(
-              Granularities.HOUR,
-              Granularities.MINUTE,
-              true,
-              ImmutableList.of(segment.getInterval())
-          ),
-          null,
-          null,
-          null
-      );
+      CompactionState expectedState =
+          CompactionState.builder()
+                         .partitionsSpec(new DynamicPartitionsSpec(null, Long.MAX_VALUE))
+                         .dimensionsSpec(new DimensionsSpec(
+                             ImmutableList.of(
+                                 new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                 new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+                             )
+                         ))
+                         .metricsSpec(ImmutableList.of(expectedCountMetric, expectedLongSumMetric))
+                         .transformSpec(compactionTask.getTransformSpec())
+                         .indexSpec(compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec())
+                         .granularitySpec(new UniformGranularitySpec(
+                             Granularities.HOUR,
+                             Granularities.MINUTE,
+                             true,
+                             ImmutableList.of(segment.getInterval())
+                         ))
+                         .build();
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
   }
@@ -936,28 +930,26 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           segment.getShardSpec().getClass()
       );
       // Expect compaction state to exist as store compaction state by default
-      CompactionState expectedState = new CompactionState(
-          new DynamicPartitionsSpec(null, Long.MAX_VALUE),
-          new DimensionsSpec(
-              ImmutableList.of(
-                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
-                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null),
-                  new LongDimensionSchema("val")
-              )
-          ),
-          Collections.emptyList(),
-          null,
-          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
-          new UniformGranularitySpec(
-              Granularities.HOUR,
-              Granularities.MINUTE,
-              true,
-              ImmutableList.of(segment.getInterval())
-          ),
-          null,
-          null,
-          ImmutableList.of(PROJECTION_SPEC)
-      );
+      CompactionState expectedState =
+          CompactionState.builder()
+                         .partitionsSpec(new DynamicPartitionsSpec(null, Long.MAX_VALUE))
+                         .dimensionsSpec(new DimensionsSpec(
+                             ImmutableList.of(
+                                 new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                 new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                 new LongDimensionSchema("val")
+                             )
+                         ))
+                         .metricsSpec(Collections.emptyList())
+                         .indexSpec(compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec())
+                         .granularitySpec(new UniformGranularitySpec(
+                             Granularities.HOUR,
+                             Granularities.MINUTE,
+                             true,
+                             ImmutableList.of(segment.getInterval())
+                         ))
+                         .projections(ImmutableList.of(PROJECTION_SPEC))
+                         .build();
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
   }
@@ -997,28 +989,26 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           segment.getShardSpec().getClass()
       );
       // Expect compaction state to exist as store compaction state by default
-      CompactionState expectedState = new CompactionState(
-          new DynamicPartitionsSpec(null, Long.MAX_VALUE),
-          new DimensionsSpec(
-              ImmutableList.of(
-                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
-                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null),
-                  new LongDimensionSchema("val")
-              )
-          ),
-          Collections.emptyList(),
-          null,
-          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
-          new UniformGranularitySpec(
-              Granularities.HOUR,
-              Granularities.MINUTE,
-              true,
-              ImmutableList.of(segment.getInterval())
-          ),
-          null,
-          null,
-          ImmutableList.of(PROJECTION_SPEC, addProjection)
-      );
+      CompactionState expectedState =
+          CompactionState.builder()
+                         .partitionsSpec(new DynamicPartitionsSpec(null, Long.MAX_VALUE))
+                         .dimensionsSpec(new DimensionsSpec(
+                             ImmutableList.of(
+                                 new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                 new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                 new LongDimensionSchema("val")
+                             )
+                         ))
+                         .metricsSpec(Collections.emptyList())
+                         .indexSpec(compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec())
+                         .granularitySpec(new UniformGranularitySpec(
+                             Granularities.HOUR,
+                             Granularities.MINUTE,
+                             true,
+                             ImmutableList.of(segment.getInterval())
+                         ))
+                         .projections(ImmutableList.of(PROJECTION_SPEC, addProjection))
+                         .build();
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
   }
