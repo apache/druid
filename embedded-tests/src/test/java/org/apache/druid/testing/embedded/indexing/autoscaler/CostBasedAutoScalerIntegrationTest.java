@@ -181,6 +181,54 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
   }
 
   @Test
+  public void test_autoScaler_computesOptimalTaskCountAndProducesScaleUp_withUtilizationRatio()
+  {
+
+    final int lowInitialTaskCount = 1;
+    // This ensures tasks are busy processing (low idle ratio)
+    Executors.newSingleThreadExecutor().submit(() -> {
+      for (int i = 0; i < 500; ++i) {
+        publish1kRecords(topic, true);
+      }
+    });
+
+    final CostBasedAutoScalerConfig autoScalerConfig = CostBasedAutoScalerConfig
+        .builder()
+        .enableTaskAutoScaler(true)
+        .taskCountMin(1)
+        .taskCountMax(50)
+        .taskCountStart(lowInitialTaskCount)
+        .scaleActionPeriodMillis(500)
+        .minTriggerScaleActionFrequencyMillis(1000)
+        .lagWeight(0.8)
+        .idleWeight(0.2)
+        .useUtilizationRatio(true)
+        .build();
+
+    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisorWithAutoScaler(
+        autoScalerConfig,
+        lowInitialTaskCount
+    );
+
+    Assertions.assertEquals(kafkaSupervisorSpec.getId(), cluster.callApi().postSupervisor(kafkaSupervisorSpec));
+
+    // Wait for the supervisor is running
+    overlord.latchableEmitter()
+            .waitForEvent(event -> event.hasMetricName("task/run/time")
+                                        .hasDimension(DruidMetrics.DATASOURCE, dataSource));
+
+    // With 50 partitions and high lag saturating the single task's processing rate,
+    // the utilization ratio must drive the cost function to recommend scaling up.
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
+                      .hasValueMatching(Matchers.greaterThan(1L))
+    );
+
+    // Suspend the supervisor
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
+  }
+
+  @Test
   public void test_autoScaler_scalesUpAndDown_withSlowPublish()
   {
     final String topic = EmbeddedClusterApis.createTestDatasourceName();
@@ -337,7 +385,9 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
     final String getSupervisorPath = StringUtils.format("/druid/indexer/v1/supervisor/%s", supervisorId);
     final KafkaSupervisorSpec supervisorSpec = cluster.callApi().serviceClient().onLeaderOverlord(
         mapper -> new RequestBuilder(HttpMethod.GET, getSupervisorPath),
-        new TypeReference<>(){}
+        new TypeReference<>()
+        {
+        }
     );
     Assertions.assertNotNull(supervisorSpec);
     return supervisorSpec.getSpec().getIOConfig().getTaskCount();
