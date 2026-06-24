@@ -73,6 +73,7 @@ public class GroupByStatsProvider
     private long maxMergeBufferAcquisitionTimeNs = 0;
     private long totalMergeBufferUsedBytes = 0;
     private long maxMergeBufferUsedBytes = 0;
+    private double maxSpillProximity = 0.0;
     private long spilledQueries = 0;
     private long spilledBytes = 0;
     private long maxSpilledBytes = 0;
@@ -91,6 +92,7 @@ public class GroupByStatsProvider
           aggregateStats.maxMergeBufferAcquisitionTimeNs,
           aggregateStats.totalMergeBufferUsedBytes,
           aggregateStats.maxMergeBufferUsedBytes,
+          aggregateStats.maxSpillProximity,
           aggregateStats.spilledQueries,
           aggregateStats.spilledBytes,
           aggregateStats.maxSpilledBytes,
@@ -105,6 +107,7 @@ public class GroupByStatsProvider
         long maxMergeBufferAcquisitionTimeNs,
         long totalMergeBufferUsedBytes,
         long maxMergeBufferUsedBytes,
+        double maxSpillProximity,
         long spilledQueries,
         long spilledBytes,
         long maxSpilledBytes,
@@ -117,6 +120,7 @@ public class GroupByStatsProvider
       this.maxMergeBufferAcquisitionTimeNs = maxMergeBufferAcquisitionTimeNs;
       this.totalMergeBufferUsedBytes = totalMergeBufferUsedBytes;
       this.maxMergeBufferUsedBytes = maxMergeBufferUsedBytes;
+      this.maxSpillProximity = maxSpillProximity;
       this.spilledQueries = spilledQueries;
       this.spilledBytes = spilledBytes;
       this.maxSpilledBytes = maxSpilledBytes;
@@ -149,6 +153,11 @@ public class GroupByStatsProvider
       return maxMergeBufferUsedBytes;
     }
 
+    public double getMaxSpillProximity()
+    {
+      return maxSpillProximity;
+    }
+
     public long getSpilledQueries()
     {
       return spilledQueries;
@@ -174,6 +183,19 @@ public class GroupByStatsProvider
       return maxMergeDictionarySize;
     }
 
+    /**
+     * Folds a completed query's stats into the running aggregate. For merge-buffer usage:
+     * <ul>
+     *   <li>{@code totalMergeBufferUsedBytes} (emitted as {@code mergeBuffer/bytesUsed}) sums each query's usage
+     *       across all queries, where each query's usage is itself the sum across the query's slices.</li>
+     *   <li>{@code maxMergeBufferUsedBytes} (emitted as {@code mergeBuffer/maxBytesUsed}) is the max such per-query
+     *       summed usage across queries.</li>
+     *   <li>{@code maxSpillProximity} (emitted as {@code mergeBuffer/maxSpillProximity}) is the max per-query spill
+     *       proximity across queries, where each query's value is its fullest slice's fill fraction of the spill
+     *       threshold. Unlike the byte sums above, this is a per-slice MAX so it reflects the slice that drives a
+     *       spill; 1.0 means at least one query reached the spill point.</li>
+     * </ul>
+     */
     public void addQueryStats(PerQueryStats perQueryStats)
     {
       if (perQueryStats.getMergeBufferAcquisitionTimeNs() > 0) {
@@ -183,8 +205,9 @@ public class GroupByStatsProvider
             maxMergeBufferAcquisitionTimeNs,
             perQueryStats.getMergeBufferAcquisitionTimeNs()
         );
-        totalMergeBufferUsedBytes += perQueryStats.getMaxMergeBufferUsedBytes();
-        maxMergeBufferUsedBytes = Math.max(maxMergeBufferUsedBytes, perQueryStats.getMaxMergeBufferUsedBytes());
+        totalMergeBufferUsedBytes += perQueryStats.getMergeBufferUsedBytes();
+        maxMergeBufferUsedBytes = Math.max(maxMergeBufferUsedBytes, perQueryStats.getMergeBufferUsedBytes());
+        maxSpillProximity = Math.max(maxSpillProximity, perQueryStats.getSpillProximity());
       }
 
       if (perQueryStats.getSpilledBytes() > 0) {
@@ -204,6 +227,7 @@ public class GroupByStatsProvider
       this.maxMergeBufferAcquisitionTimeNs = 0;
       this.totalMergeBufferUsedBytes = 0;
       this.maxMergeBufferUsedBytes = 0;
+      this.maxSpillProximity = 0.0;
       this.spilledQueries = 0;
       this.spilledBytes = 0;
       this.maxSpilledBytes = 0;
@@ -215,7 +239,25 @@ public class GroupByStatsProvider
   public static class PerQueryStats
   {
     private final AtomicLong mergeBufferAcquisitionTimeNs = new AtomicLong(0);
-    private final AtomicLong maxMergeBufferUsedBytes = new AtomicLong(0);
+    /**
+     * Sum of the peak merge-buffer usage of every grouper (slice) this query held. A
+     * {@code ConcurrentGrouper} slices a single merge buffer into one slice per processing thread, and each slice
+     * reports its own peak via
+     * {@link #addMergeBufferUsedBytes(long)} when closed, so the per-query value is the SUM across the query's slices.
+     */
+    private final AtomicLong mergeBufferUsedBytes = new AtomicLong(0);
+    /**
+     * Peak used bytes of the single fullest slice this query held, tracked as a MAX across the query's slices. A query
+     * spills as soon as one slice fills, so spill proximity is driven by the hottest slice, NOT the sum tracked by
+     * {@link #mergeBufferUsedBytes}. Compared against {@link #sliceSpillThresholdBytes}.
+     */
+    private final AtomicLong maxSliceUsedBytes = new AtomicLong(0);
+    /**
+     * Per-slice spill threshold in bytes, i.e. {@code sliceSize * maxLoadFactor}. A slice's hash table spills once its
+     * bucket count reaches the max load factor, so this (not the raw slice size) is the denominator that makes a
+     * usage ratio of 1.0 mean "at the spill point". Tracked as a max; all slices of a query share the same value.
+     */
+    private final AtomicLong sliceSpillThresholdBytes = new AtomicLong(0);
     private final AtomicLong spilledBytes = new AtomicLong(0);
     private final AtomicLong mergeDictionarySize = new AtomicLong(0);
 
@@ -224,9 +266,24 @@ public class GroupByStatsProvider
       mergeBufferAcquisitionTimeNs.addAndGet(delay);
     }
 
-    public void maxMergeBufferUsedBytes(long bytes)
+    /**
+     * Accumulates the peak merge-buffer usage of one grouper (slice). Despite the previous "max" naming, this method
+     * sums across the slices a query holds; see {@link #mergeBufferUsedBytes}.
+     */
+    public void addMergeBufferUsedBytes(long bytes)
     {
-      maxMergeBufferUsedBytes.addAndGet(bytes);
+      mergeBufferUsedBytes.addAndGet(bytes);
+    }
+
+    /**
+     * Records one slice's peak used bytes and its spill threshold ({@code sliceSize * maxLoadFactor}). Both are tracked
+     * as maxima, so after all slices close the pair describes the single fullest slice — the one that drives spilling.
+     * Used to compute {@code mergeBuffer/maxSpillProximity}.
+     */
+    public void sliceUsage(long usedBytes, long spillThresholdBytes)
+    {
+      maxSliceUsedBytes.accumulateAndGet(usedBytes, Math::max);
+      sliceSpillThresholdBytes.accumulateAndGet(spillThresholdBytes, Math::max);
     }
 
     public void spilledBytes(long bytes)
@@ -244,9 +301,23 @@ public class GroupByStatsProvider
       return mergeBufferAcquisitionTimeNs.get();
     }
 
-    public long getMaxMergeBufferUsedBytes()
+    public long getMergeBufferUsedBytes()
     {
-      return maxMergeBufferUsedBytes.get();
+      return mergeBufferUsedBytes.get();
+    }
+
+    /**
+     * Spill proximity for this query in [0.0, 1.0]: the fullest slice's used bytes divided by that slice's spill
+     * threshold. 1.0 means a slice reached the point at which it spills to disk. Returns 0.0 when no slice usage was
+     * recorded (e.g. a grouper that never initialized).
+     */
+    public double getSpillProximity()
+    {
+      long threshold = sliceSpillThresholdBytes.get();
+      if (threshold <= 0) {
+        return 0.0;
+      }
+      return Math.min(1.0, (double) maxSliceUsedBytes.get() / threshold);
     }
 
     public long getSpilledBytes()

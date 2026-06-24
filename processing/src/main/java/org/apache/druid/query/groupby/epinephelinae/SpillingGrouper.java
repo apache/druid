@@ -84,6 +84,11 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   private final Comparator<Grouper.Entry<KeyType>> defaultOrderKeyObjComparator;
   private final GroupByStatsProvider.PerQueryStats perQueryStats;
   private final long minSpillFileSize;
+  // Per-slice spill threshold in bytes: the slice's capacity scaled by the resolved max load factor. A slice's hash
+  // table spills once its bucket count reaches the load factor, so this (not the raw slice size) is what the slice's
+  // peak usage is compared against to produce mergeBuffer/maxSpillProximity. For a ConcurrentGrouper slice the slice
+  // size is the per-thread fraction of the merge buffer, not the full configured buffer.
+  private final long spillThresholdBytes;
 
   private final List<File> files = new ArrayList<>();
   private final List<File> dictionaryFiles = new ArrayList<>();
@@ -178,6 +183,8 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     this.sortHasNonGroupingFields = sortHasNonGroupingFields;
     this.minSpillFileSize = minSpillFileSize;
     this.perQueryStats = perQueryStats;
+    final float resolvedLoadFactor = BufferHashGrouper.resolveMaxLoadFactor(bufferGrouperMaxLoadFactor);
+    this.spillThresholdBytes = (long) (mergeBufferSize * resolvedLoadFactor);
   }
 
   @Override
@@ -249,7 +256,13 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   public void close()
   {
     perQueryStats.dictionarySize(getDictionarySizeEstimate());
-    perQueryStats.maxMergeBufferUsedBytes(getMaxMergeBufferUsedBytes());
+    final long sliceUsedBytes = getMaxMergeBufferUsedBytes();
+    perQueryStats.addMergeBufferUsedBytes(sliceUsedBytes);
+    if (grouper.isInitialized()) {
+      // Report this slice's peak usage against its spill threshold so the provider can compute spill proximity. Only
+      // recorded when the grouper was initialized, so a grouper that never touched the merge buffer is not counted.
+      perQueryStats.sliceUsage(sliceUsedBytes, spillThresholdBytes);
+    }
     // Record spilled bytes before deleteFiles() decrements bytesUsed in temporaryStorage.
     long spilledBytes = 0;
     for (final File file : files) {
