@@ -74,6 +74,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`segment/metadataCache/sync/time`|Time taken to poll segment metadata from the Coordinator and update the segment metadata cache. This metric is emitted only if [metadata cache](../configuration/index.md#sql) is enabled on the Broker.||Depends on the number of segments.|
 |`segment/schemaCache/refresh/count`|Number of segments refreshed in broker segment schema cache.|`dataSource`||
 |`segment/schemaCache/refresh/time`|Time taken to refresh segments in broker segment schema cache.|`dataSource`||
+|`segment/schemaCache/refresh/failed`|Number of dataSources whose schema refresh failed in the broker segment schema cache (for example, a segment metadata query timeout). Emitted only when a refresh fails; the failed dataSource is skipped for the cycle and retried later, while other dataSources are unaffected. Recurring emission indicates a dataSource missing from the SQL schema.|`dataSource`||
 |`segment/schemaCache/poll/count`|Number of coordinator polls to fetch datasource schema.|||
 |`segment/schemaCache/poll/failed`|Number of failed coordinator polls to fetch datasource schema.|||
 |`metadatacache/schemaPoll/time`|Time taken for coordinator polls to fetch datasource schema.|||
@@ -475,6 +476,7 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/schemaCache/refreshSkipped/count`|Number of segments for which schema refresh was skipped due to presence of segment metadata in datasource polled from coordinator.|`dataSource`||
 |`segment/schemaCache/dataSource/removed`|Emitted when a datasource is removed from the Broker cache due to segments being marked as unused.|`dataSource`||
 |`segment/schemaCache/refresh/time`|Time taken to refresh segments in coordinator segment schema cache.|`dataSource`||
+|`segment/schemaCache/refresh/failed`|Number of dataSources whose schema refresh failed in the coordinator segment schema cache (for example, a segment metadata query timeout). Emitted only when a refresh fails; the failed dataSource is skipped for the cycle and retried later, while other dataSources are unaffected. Recurring emission indicates a dataSource missing from the SQL schema.|`dataSource`||
 |`segment/schemaCache/backfill/count`|Number of segments for which schema was back filled in the database.|`dataSource`||
 |`segment/schemaCache/rowSignature/changed`|Emitted when the cached row signature on the Broker's segment metadata cache for a datasource changes, indicating schema evolution or some form of flapping.|`dataSource`||
 |`segment/schemaCache/rowSignature/column/count`|Number of columns in the row signature on the Broker's segment metadata cache for a datasource when it's initialized or updated.|`dataSource`||
