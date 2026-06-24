@@ -156,9 +156,7 @@ Consumer properties control how a supervisor reads and processes event messages 
 You must include `bootstrap.servers` in consumer properties with a list of Kafka brokers in the format `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.
 In some cases, you may need to retrieve consumer properties at runtime. For example, when `bootstrap.servers` is unknown or not static.
 
-The `isolation.level` property in `consumerProperties` determines how Druid reads messages written transactionally.
-With `read_committed`, which is the default in Druid, only committed transactions are read.
-If you use older versions of Kafka without transaction support, or you want to read even aborted transactions, set `isolation.level` to `read_uncommitted`.
+The `isolation.level` property determines how Druid handles transactional Kafka messages. Although standard Kafka consumers default to `read_uncommitted`, Druid's ingestion engine defaults `read_committed`. This ensures that only finalized data is indexed and aborted transactions are ignored. If you need to use legacy Kafka brokers or don’t want Druid to consume only committed transactions, explicitly set `isolation.level` to `read_uncommitted`. Note that using `read_uncommitted`  removes Druid's offset gap check, which requires the message source to ensure the message offsets are continuous.
 
 If your Kafka cluster enables consumer group ACLs, you can set `group.id` in `consumerProperties` to override the default auto generated group ID.
 
