@@ -765,25 +765,21 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
   )
   {
     // Expected compaction state to exist after compaction as we store compaction state by default
-    return new CompactionState(
-        new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-        expectedDims.withDimensionExclusions(Set.of("__time"))
-                    .withDimensionExclusions(expectedMetrics.stream()
-                                                            .map(AggregatorFactory::getName)
-                                                            .collect(Collectors.toSet())),
-        expectedMetrics,
-        null,
-        IndexSpec.getDefault().getEffectiveSpec(),
-        new UniformGranularitySpec(
-            segmentGranularity,
-            queryGranularity == null ? Granularities.MINUTE : queryGranularity,
-            true,
-            intervals
-        ),
-        null,
-        null,
-        null
-    );
+    return CompactionState.builder()
+                          .partitionsSpec(new DynamicPartitionsSpec(5000000, Long.MAX_VALUE))
+                          .dimensionsSpec(expectedDims.withDimensionExclusions(Set.of("__time"))
+                                                      .withDimensionExclusions(expectedMetrics.stream()
+                                                                                              .map(AggregatorFactory::getName)
+                                                                                              .collect(Collectors.toSet())))
+                          .metricsSpec(expectedMetrics)
+                          .indexSpec(IndexSpec.getDefault().getEffectiveSpec())
+                          .granularitySpec(new UniformGranularitySpec(
+                              segmentGranularity,
+                              queryGranularity == null ? Granularities.MINUTE : queryGranularity,
+                              true,
+                              intervals
+                          ))
+                          .build();
   }
 
   @Override

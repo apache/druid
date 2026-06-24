@@ -454,46 +454,28 @@ public class CompactSegmentsTest
         if (j == 3) {
           // Make two intervals on this day compacted (two compacted intervals back-to-back)
           beforeNoon = beforeNoon.withLastCompactionState(
-              new CompactionState(
-                  partitionsSpec,
-                  null,
-                  null,
-                  null,
-                  JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-                  JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
-                  null,
-                  null,
-                  null
-              )
+              CompactionState.builder()
+                             .partitionsSpec(partitionsSpec)
+                             .indexSpec(JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class))
+                             .granularitySpec(JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class))
+                             .build()
           );
           afterNoon = afterNoon.withLastCompactionState(
-              new CompactionState(
-                  partitionsSpec,
-                  null,
-                  null,
-                  null,
-                  JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-                  JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
-                  null,
-                  null,
-                  null
-              )
+              CompactionState.builder()
+                             .partitionsSpec(partitionsSpec)
+                             .indexSpec(JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class))
+                             .granularitySpec(JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class))
+                             .build()
           );
         }
         if (j == 1) {
           // Make one interval on this day compacted
           afterNoon = afterNoon.withLastCompactionState(
-              new CompactionState(
-                  partitionsSpec,
-                  null,
-                  null,
-                  null,
-                  JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-                  JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
-                  null,
-                  null,
-                  null
-              )
+              CompactionState.builder()
+                             .partitionsSpec(partitionsSpec)
+                             .indexSpec(JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class))
+                             .granularitySpec(JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class))
+                             .build()
           );
         }
         segments.add(beforeNoon);
@@ -2004,31 +1986,30 @@ public class CompactSegmentsTest
             segments.get(0).getDimensions(),
             segments.get(0).getMetrics(),
             shardSpecFactory.apply(i, 2),
-            new CompactionState(
-                compactionPartitionsSpec,
-                clientCompactionTaskQuery.getDimensionsSpec() == null ? null : new DimensionsSpec(
-                    clientCompactionTaskQuery.getDimensionsSpec().getDimensions()
-                ),
-                metricsSpec,
-                clientCompactionTaskQuery.getTransformSpec(),
-                jsonMapper.convertValue(
-                    ImmutableMap.of(
-                        "bitmap",
-                        ImmutableMap.of("type", "roaring"),
-                        "dimensionCompression",
-                        "lz4",
-                        "metricCompression",
-                        "lz4",
-                        "longEncoding",
-                        "longs"
-                    ),
-                    IndexSpec.class
-                ),
-                jsonMapper.convertValue(ImmutableMap.of(), GranularitySpec.class),
-                null,
-                null,
-                null
-            ),
+            CompactionState.builder()
+                           .partitionsSpec(compactionPartitionsSpec)
+                           .dimensionsSpec(clientCompactionTaskQuery.getDimensionsSpec() == null
+                                           ? null
+                                           : new DimensionsSpec(
+                                               clientCompactionTaskQuery.getDimensionsSpec().getDimensions()
+                                           ))
+                           .metricsSpec(metricsSpec)
+                           .transformSpec(clientCompactionTaskQuery.getTransformSpec())
+                           .indexSpec(jsonMapper.convertValue(
+                               ImmutableMap.of(
+                                   "bitmap",
+                                   ImmutableMap.of("type", "roaring"),
+                                   "dimensionCompression",
+                                   "lz4",
+                                   "metricCompression",
+                                   "lz4",
+                                   "longEncoding",
+                                   "longs"
+                               ),
+                               IndexSpec.class
+                           ))
+                           .granularitySpec(jsonMapper.convertValue(ImmutableMap.of(), GranularitySpec.class))
+                           .build(),
             1,
             segmentSize
         );

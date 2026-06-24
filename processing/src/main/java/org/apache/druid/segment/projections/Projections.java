@@ -569,6 +569,16 @@ public class Projections
 
   public static String getClusterGroupSegmentInternalFilePrefix(List<Integer> clusteringValueIds)
   {
+    return getClusterGroupBundleName(clusteringValueIds) + '/';
+  }
+
+  /**
+   * Bundle name for a cluster group's containers in the V10 file, matching the tag {@code IndexMergerV10} applies at
+   * write time: {@code __base$<id0>_<id1>...<idK>}. This is the cluster group's canonical identity; the per-group file
+   * prefix ({@link #getClusterGroupSegmentInternalFilePrefix}) is just this name plus a trailing {@code '/'} separator.
+   */
+  public static String getClusterGroupBundleName(List<Integer> clusteringValueIds)
+  {
     if (clusteringValueIds == null || clusteringValueIds.isEmpty()) {
       throw DruidException.defensive("clusteringValueIds must not be null or empty");
     }
@@ -579,7 +589,6 @@ public class Projections
       }
       sb.append(clusteringValueIds.get(i));
     }
-    sb.append('/');
     return sb.toString();
   }
 
