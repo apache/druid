@@ -176,6 +176,19 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
+  public void testModerateIdleScalesDownOverProvisioned()
+  {
+    // Over-provisioned: 100 tasks at 40% idle, minimal lag. Sublinear projection reads the
+    // consolidation as near-ideal idle (not a false overload), so it scales down; linear stayed at 100.
+    final int currentTaskCount = 100;
+    final int optimal = autoScaler.computeOptimalTaskCount(createMetrics(0.0, currentTaskCount, 100, 0.4));
+    Assert.assertTrue(
+        "Moderate idle (0.4) with minimal lag should scale an over-provisioned supervisor down",
+        optimal < currentTaskCount
+    );
+  }
+
+  @Test
   public void testComputeOptimalTaskCountLimitsTaskCountJumps()
   {
     final CostBasedAutoScalerConfig boundedScaleUpConfig = CostBasedAutoScalerConfig

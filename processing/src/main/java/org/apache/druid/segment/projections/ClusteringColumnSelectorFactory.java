@@ -280,7 +280,11 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
     @Override
     public int getValueCardinality()
     {
-      return currentSelector().getValueCardinality();
+      // The per-group constant selector reports cardinality 1 and always returns id 0, but that id is NOT stable
+      // across the concatenating cursor: id 0 resolves to a different clustering value in each group. Forwarding it
+      // would let the group-by engine take the dictionary-id-keyed (array) path and silently conflate every group
+      // into the single id-0 bucket.
+      return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
     }
 
     @Nullable
@@ -293,14 +297,14 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
     @Override
     public boolean nameLookupPossibleInAdvance()
     {
-      return currentSelector().nameLookupPossibleInAdvance();
+      return false;
     }
 
     @Nullable
     @Override
     public IdLookup idLookup()
     {
-      return currentSelector().idLookup();
+      return null;
     }
 
     @Nullable

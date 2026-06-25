@@ -29,8 +29,10 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.projections.ClusterGroupQueryPlan;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
+import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.utils.CloseableUtils;
 
@@ -42,6 +44,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 /**
  * Partial-aware {@link CursorFactory} for {@link PartialQueryableIndex}.
@@ -102,51 +105,102 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
   public AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
   {
     final QueryableProjection<QueryableIndex> matched = index.getProjection(spec);
+    if (matched == null && index.getClusteredBaseSummary() != null) {
+      return makeClusteredCursorHolderAsync(spec);
+    }
+
+    // Aggregate-projection match, or the plain base table: a single bundle (the projection's, or __base) with the
+    // query's required columns.
     final QueryableIndex rowSelector = matched != null ? matched.getRowSelector() : index;
-    final Set<String> requiredColumns = requiredColumns(rowSelector, matched, spec);
     final String bundleName = matched != null ? matched.getName() : Projections.BASE_TABLE_PROJECTION_NAME;
+    final DownloadBundle bundle = new DownloadBundle(bundleName, rowSelector, requiredColumns(rowSelector, matched, spec));
+    return buildAsyncCursorHolder(List.of(bundle), () -> delegate.makeCursorHolderForProjection(spec, matched));
+  }
 
-    // Mount the cache-layer bundle before submitting downloads. Released on the cancel/failure paths (requestRelease)
-    // or handed to the produced cursor holder on success (releaser), exactly once, and never while an in-flight column
-    // download is mid-mapFile(). See BundleHoldRelease.
-    final BundleHoldRelease holdRelease = new BundleHoldRelease(bundleAcquirer.acquire(bundleName));
+  /**
+   * Async cursor holder for a clustered base table. Cluster-group resolution is metadata-only
+   * ({@link Projections#planClusterGroupQuery}): only the groups whose clustering tuples survive the query's filters
+   * are downloaded, one bundle (and its required columns) per surviving group. Once every group is resident, the
+   * holder is built via the delegate's clustered path.
+   */
+  private AsyncCursorHolder makeClusteredCursorHolderAsync(CursorBuildSpec spec)
+  {
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        new ArrayList<>(index.getClusterGroupSchemas()),
+        spec
+    );
+    final List<TableClusterGroupSpec> surviving = plan.survivingGroups();
+    if (surviving.isEmpty()) {
+      // Filter rules out every group: no bundle to acquire, nothing to download.
+      return AsyncCursorHolder.completed(EmptyCursorHolder.INSTANCE);
+    }
 
+    final List<DownloadBundle> bundles = new ArrayList<>(surviving.size());
+    for (TableClusterGroupSpec group : surviving) {
+      final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(group);
+      final CursorBuildSpec groupSpec = plan.rebuildCursorBuildSpec(spec, group);
+      bundles.add(
+          new DownloadBundle(
+              Projections.getClusterGroupBundleName(group.getClusteringValueIds()),
+              groupIndex,
+              requiredColumns(groupIndex, null, groupSpec)
+          )
+      );
+    }
+    // Reuse the plan we already computed: delegate.makeClusteredCursorHolder skips a second planClusterGroupQuery and
+    // builds over the now-resident surviving groups (their columns memoized via getClusterGroupQueryableIndex).
+    return buildAsyncCursorHolder(bundles, () -> delegate.makeClusteredCursorHolder(spec, plan));
+  }
+
+  /**
+   * Generalized async-holder build over one or more bundles. Each {@link DownloadBundle} mounts its cache-layer bundle
+   * (its own {@link BundleHoldRelease}, since eviction is per-bundle) and submits a download per required column; the
+   * holder becomes ready once every column of every bundle is downloaded, at which point {@code innerBuilder} builds the
+   * (now fully-resident) cursor holder and the produced holder takes ownership of {@code inner} plus every bundle hold.
+   */
+  private AsyncCursorHolder buildAsyncCursorHolder(List<DownloadBundle> bundles, Supplier<CursorHolder> innerBuilder)
+  {
+    final List<BundleHoldRelease> holdReleases = new ArrayList<>(bundles.size());
     try {
-      // submit one materialization task per column so a multi-threaded download executor can fan them out
-      final List<AsyncResource<String>> columnDownloads = new ArrayList<>(requiredColumns.size());
-      for (String column : requiredColumns) {
-        columnDownloads.add(submitColumnDownload(rowSelector, column, holdRelease));
+      final List<AsyncResource<String>> columnDownloads = new ArrayList<>();
+      for (DownloadBundle bundle : bundles) {
+        final BundleHoldRelease holdRelease = new BundleHoldRelease(bundleAcquirer.acquire(bundle.bundleName()));
+        holdReleases.add(holdRelease);
+        // submit one materialization task per column so a multi-threaded download executor can fan them out
+        for (String column : bundle.requiredColumns()) {
+          columnDownloads.add(submitColumnDownload(bundle.rowSelector(), column, holdRelease));
+        }
       }
       final AsyncResource<List<String>> downloaded = AsyncResources.collect(columnDownloads);
 
       // Canceler runs if the awaiter closes this holder before it's ready (e.g. query cancel/timeout). Close the
       // collected resource to cancel every column download that hasn't begun its deep-storage read yet (queued tasks
       // are skipped; tasks parked on the download executor's permit are interrupted out of the interruptible wait
-      // before doing any I/O), then request the hold release through the handshake. Once the holder is produced and
-      // handed to set(), ownership transfers to the awaiter, which drains it via close() (cancel) or release()
-      // (success); the once-guard keeps the hold release safe across all of these paths.
+      // before doing any I/O), then request the hold release on every bundle through the handshake. Once the holder is
+      // produced and handed to set(), ownership transfers to the awaiter, which drains it via close() (cancel) or
+      // release() (success); each bundle's once-guard keeps its hold release safe across all of these paths.
       final AsyncCursorHolder asyncHolder = new AsyncCursorHolder(() -> {
         CloseableUtils.closeAndSuppressExceptions(downloaded, ignored -> {});
-        holdRelease.requestRelease();
+        holdReleases.forEach(BundleHoldRelease::requestRelease);
       });
       downloaded.addReadyCallback(() -> {
         final CursorHolder holder;
         try {
           downloaded.get(); // surfaces any column-download failure (or cancellation) as the cause
-          final CursorHolder inner = delegate.makeCursorHolderForProjection(spec, matched);
-          // The produced holder takes ownership of both inner and the bundle hold; from here, closing it releases both
-          holder = wrapWithBundleRelease(inner, holdRelease.releaser());
+          final CursorHolder inner = innerBuilder.get();
+          // The produced holder takes ownership of inner and every bundle hold; closing it releases all of them.
+          holder = wrapWithBundleRelease(inner, releasers(holdReleases));
         }
         catch (Throwable t) {
           // A column download failed or was canceled, this branch can fire while a sibling download is still
-          // mid-mapFile(), so the hold release must go through the handshake rather than dropping it here directly.
-          holdRelease.requestRelease();
+          // mid-mapFile(), so each hold release must go through the handshake rather than being dropped here directly.
+          holdReleases.forEach(BundleHoldRelease::requestRelease);
           asyncHolder.setException(t);
           return;
         }
         if (!asyncHolder.set(holder)) {
           // wrapper was closed (awaiter canceled) while we were producing the holder; close it ourselves so the
-          // holder, its inner, and the bundle hold don't leak.
+          // holder, its inner, and the bundle holds don't leak.
           holder.close();
         }
       });
@@ -154,9 +208,9 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     }
     catch (Throwable t) {
       // Failure while submitting downloads / wiring up the holder (e.g. submitDownload shutdown rejection). A column
-      // download submitted before the failure may already be in flight, so release the bundle hold through the
+      // download submitted before the failure may already be in flight, so release every bundle hold through the
       // handshake (requestRelease defers to the last in-flight body) rather than dropping it directly mid-mapFile().
-      throw CloseableUtils.closeAndWrapInCatch(t, holdRelease::requestRelease);
+      throw CloseableUtils.closeAndWrapInCatch(t, () -> holdReleases.forEach(BundleHoldRelease::requestRelease));
     }
   }
 
@@ -283,6 +337,25 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
         CloseableUtils.closeAndWrapExceptions(closer);
       }
     };
+  }
+
+  /**
+   * Compose every bundle's success-path {@link BundleHoldRelease#releaser} into one {@link Closeable} that the produced
+   * cursor holder owns: closing the holder releases all the bundle holds together.
+   */
+  private static Closeable releasers(List<BundleHoldRelease> holdReleases)
+  {
+    final Closer closer = Closer.create();
+    holdReleases.forEach(holdRelease -> closer.register(holdRelease.releaser()));
+    return closer;
+  }
+
+  /**
+   * One bundle's worth of async download work: the cache-layer {@code bundleName} to mount, the {@link QueryableIndex}
+   * row selector whose {@code getColumnHolder} triggers the per-column downloads, and the columns to pre-fetch.
+   */
+  private record DownloadBundle(String bundleName, QueryableIndex rowSelector, Set<String> requiredColumns)
+  {
   }
 
   /**

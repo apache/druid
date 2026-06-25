@@ -45,6 +45,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
@@ -717,11 +718,41 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                 .add(segmentId);
     }
 
+    // Refresh each dataSource independently so one failure (e.g. a metadata query timeout) does not
+    // abort the cycle and starve the rest.
     for (Map.Entry<String, TreeSet<SegmentId>> entry : segmentMap.entrySet()) {
-      updatedSegmentIds.addAll(refreshSegmentsForDataSource(entry.getKey(), entry.getValue()));
+      final String dataSource = entry.getKey();
+      try {
+        updatedSegmentIds.addAll(refreshSegmentsForDataSource(dataSource, entry.getValue()));
+      }
+      catch (QueryInterruptedException e) {
+        // QueryInterruptedException also wraps ordinary query failures, not just interruption
+        // Don't emit failures for interrupted exceptions (shutdown signal, etc.)
+        if (e.getCause() instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+          throw e;
+        }
+        recordDataSourceRefreshFailure(dataSource, e);
+      }
+      catch (Exception e) {
+        recordDataSourceRefreshFailure(dataSource, e);
+      }
     }
 
     return updatedSegmentIds;
+  }
+
+  /**
+   * Records a refresh failure for one dataSource; it is skipped this cycle and retried later while the rest continue.
+   */
+  private void recordDataSourceRefreshFailure(String dataSource, Exception e)
+  {
+    log.warn(e, "Failed to refresh segment schema for dataSource[%s]; skipping it this cycle.", dataSource);
+    emitMetric(
+        Metric.REFRESH_FAILED,
+        1,
+        new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
   }
 
   private long recomputeIsRealtime(ImmutableSet<DruidServerMetadata> servers)

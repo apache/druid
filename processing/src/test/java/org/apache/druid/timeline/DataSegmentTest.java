@@ -84,27 +84,29 @@ public class DataSegmentTest
     final SegmentId segmentId = SegmentId.of("something", interval, "1", shardSpec);
 
     final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
-    final CompactionState compactionState = new CompactionState(
-        new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))),
-        ImmutableList.of(new CountAggregatorFactory("count")),
-        new CompactionTransformSpec(
-            new SelectorDimFilter("dim1", "foo", null),
-            VirtualColumns.create(
-                new ExpressionVirtualColumn(
-                    "isRobotFiltered",
-                    "concat(isRobot, '_filtered')",
-                    ColumnType.STRING,
-                    ExprMacroTable.nil()
-                )
-            )
-        ),
-        MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-        MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
-        null,
-        null,
-        null
-    );
+    final CompactionState compactionState =
+        CompactionState.builder()
+                       .partitionsSpec(new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")))
+                       .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                           "dim1",
+                           "bar",
+                           "foo"
+                       ))))
+                       .metricsSpec(ImmutableList.of(new CountAggregatorFactory("count")))
+                       .transformSpec(new CompactionTransformSpec(
+                           new SelectorDimFilter("dim1", "foo", null),
+                           VirtualColumns.create(
+                               new ExpressionVirtualColumn(
+                                   "isRobotFiltered",
+                                   "concat(isRobot, '_filtered')",
+                                   ColumnType.STRING,
+                                   ExprMacroTable.nil()
+                               )
+                           )
+                       ))
+                       .indexSpec(MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class))
+                       .granularitySpec(MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class))
+                       .build();
     final DataSegment segment = DataSegment.builder(segmentId)
                                            .loadSpec(loadSpec)
                                            .dimensions(Arrays.asList("dim1", "dim2"))
@@ -159,29 +161,42 @@ public class DataSegmentTest
                                      .dimensions(Arrays.asList("dim1", "dim2"))
                                      .metrics(Arrays.asList("met1", "met2"))
                                      .shardSpec(new NumberedShardSpec(3, 0))
-                                     .lastCompactionState(new CompactionState(
-                                         new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
-                                         new DimensionsSpec(
-                                             DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
-                                         ),
-                                         ImmutableList.of(new CountAggregatorFactory("count")),
-                                         new CompactionTransformSpec(
-                                             new SelectorDimFilter("dim1", "foo", null),
-                                             VirtualColumns.create(
-                                                 new ExpressionVirtualColumn(
-                                                     "isRobotFiltered",
-                                                     "concat(isRobot, '_filtered')",
-                                                     ColumnType.STRING,
-                                                     ExprMacroTable.nil()
-                                                 )
-                                             )
-                                         ),
-                                         MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-                                         MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
-                                         null,
-                                         null,
-                                         null
-                                     ))
+                                     .lastCompactionState(
+                                         CompactionState.builder()
+                                                        .partitionsSpec(new HashedPartitionsSpec(
+                                                            100000,
+                                                            null,
+                                                            ImmutableList.of("dim1")
+                                                        ))
+                                                        .dimensionsSpec(new DimensionsSpec(
+                                                            DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                                                                "dim1",
+                                                                "bar",
+                                                                "foo"
+                                                            ))
+                                                        ))
+                                                        .metricsSpec(ImmutableList.of(new CountAggregatorFactory("count")))
+                                                        .transformSpec(new CompactionTransformSpec(
+                                                            new SelectorDimFilter("dim1", "foo", null),
+                                                            VirtualColumns.create(
+                                                                new ExpressionVirtualColumn(
+                                                                    "isRobotFiltered",
+                                                                    "concat(isRobot, '_filtered')",
+                                                                    ColumnType.STRING,
+                                                                    ExprMacroTable.nil()
+                                                                )
+                                                            )
+                                                        ))
+                                                        .indexSpec(MAPPER.convertValue(
+                                                            ImmutableMap.of(),
+                                                            IndexSpec.class
+                                                        ))
+                                                        .granularitySpec(MAPPER.convertValue(
+                                                            ImmutableMap.of(),
+                                                            GranularitySpec.class
+                                                        ))
+                                                        .build()
+                                     )
                                      .binaryVersion(TEST_VERSION)
                                      .size(1)
                                      .build();
@@ -224,17 +239,23 @@ public class DataSegmentTest
                                      .dimensions(Arrays.asList("dim1", "dim2"))
                                      .metrics(Arrays.asList("met1", "met2"))
                                      .shardSpec(new NumberedShardSpec(3, 0))
-                                     .lastCompactionState(new CompactionState(
-                                         new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
-                                         null,
-                                         null,
-                                         null,
-                                         MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-                                         MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
-                                         null,
-                                         null,
-                                         null
-                                     ))
+                                     .lastCompactionState(
+                                         CompactionState.builder()
+                                                        .partitionsSpec(new HashedPartitionsSpec(
+                                                            100000,
+                                                            null,
+                                                            ImmutableList.of("dim1")
+                                                        ))
+                                                        .indexSpec(MAPPER.convertValue(
+                                                            ImmutableMap.of(),
+                                                            IndexSpec.class
+                                                        ))
+                                                        .granularitySpec(MAPPER.convertValue(
+                                                            ImmutableMap.of(),
+                                                            GranularitySpec.class
+                                                        ))
+                                                        .build()
+                                     )
                                      .binaryVersion(TEST_VERSION)
                                      .size(1)
                                      .build();
@@ -375,27 +396,28 @@ public class DataSegmentTest
   @Test
   public void testWithLastCompactionState()
   {
-    final CompactionState compactionState = new CompactionState(
-        new DynamicPartitionsSpec(null, null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
-        ImmutableList.of(new CountAggregatorFactory("count")),
-        new CompactionTransformSpec(
-            new SelectorDimFilter("dim1", "foo", null),
-            VirtualColumns.create(
-                new ExpressionVirtualColumn(
-                    "isRobotFiltered",
-                    "concat(isRobot, '_filtered')",
-                    ColumnType.STRING,
-                    ExprMacroTable.nil()
-                )
-            )
-        ),
-        MAPPER.convertValue(Map.of("test", "map"), IndexSpec.class),
-        MAPPER.convertValue(Map.of("test2", "map2"), GranularitySpec.class),
-        null,
-        null,
-        null
-    );
+    final CompactionState compactionState =
+        CompactionState.builder()
+                       .partitionsSpec(new DynamicPartitionsSpec(null, null))
+                       .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                           "bar",
+                           "foo"
+                       ))))
+                       .metricsSpec(ImmutableList.of(new CountAggregatorFactory("count")))
+                       .transformSpec(new CompactionTransformSpec(
+                           new SelectorDimFilter("dim1", "foo", null),
+                           VirtualColumns.create(
+                               new ExpressionVirtualColumn(
+                                   "isRobotFiltered",
+                                   "concat(isRobot, '_filtered')",
+                                   ColumnType.STRING,
+                                   ExprMacroTable.nil()
+                               )
+                           )
+                       ))
+                       .indexSpec(MAPPER.convertValue(Map.of("test", "map"), IndexSpec.class))
+                       .granularitySpec(MAPPER.convertValue(Map.of("test2", "map2"), GranularitySpec.class))
+                       .build();
     final DataSegment segment1 = DataSegment.builder(SegmentId.of(
                                                 "foo",
                                                 Intervals.of("2012-01-01/2012-01-02"),
@@ -434,17 +456,15 @@ public class DataSegmentTest
     IndexSpec indexSpec = MAPPER.convertValue(Map.of("test", "map"), IndexSpec.class).getEffectiveSpec();
     GranularitySpec granularitySpec = MAPPER.convertValue(Map.of("test2", "map"), GranularitySpec.class);
 
-    final CompactionState compactionState = new CompactionState(
-        dynamicPartitionsSpec,
-        dimensionsSpec,
-        metricsSpec,
-        transformSpec,
-        indexSpec,
-        granularitySpec,
-        null,
-        null,
-        null
-    );
+    final CompactionState compactionState =
+        CompactionState.builder()
+                       .partitionsSpec(dynamicPartitionsSpec)
+                       .dimensionsSpec(dimensionsSpec)
+                       .metricsSpec(metricsSpec)
+                       .transformSpec(transformSpec)
+                       .indexSpec(indexSpec)
+                       .granularitySpec(granularitySpec)
+                       .build();
 
     final Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateFunction =
         CompactionState.addCompactionStateToSegments(

@@ -418,9 +418,8 @@ public class IndexMergerV10 extends IndexMergerBase
 
       for (Map.Entry<List<Integer>, List<AdapterAndGroup>> groupEntry : merged.groupSources.entrySet()) {
         final List<Integer> mergedTuple = groupEntry.getKey();
-        final String groupPrefix = Projections.getClusterGroupSegmentInternalFilePrefix(mergedTuple);
-        // file-bundle name is the prefix without the trailing slash
-        final String groupName = groupPrefix.substring(0, groupPrefix.length() - 1);
+        final String groupName = Projections.getClusterGroupBundleName(mergedTuple);
+        final String groupPrefix = groupName + "/";
 
         final List<IndexableAdapter> groupAdapters = Lists.newArrayListWithCapacity(groupEntry.getValue().size());
         for (AdapterAndGroup source : groupEntry.getValue()) {
