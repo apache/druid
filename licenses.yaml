@@ -2040,13 +2040,14 @@ name: Apache Log4j
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.25.4
+version: 2.26.0
 libraries:
   - org.apache.logging.log4j: log4j-1.2-api
   - org.apache.logging.log4j: log4j-api
   - org.apache.logging.log4j: log4j-core
   - org.apache.logging.log4j: log4j-jul
   - org.apache.logging.log4j: log4j-slf4j-impl
+  - org.apache.logging.log4j: log4j-layout-template-json
 notices:
   - log4j-1.2-api: |
       Apache Log4j 1.x Compatibility API
@@ -2068,6 +2069,9 @@ notices:
       Copyright 1999-2015 Apache Software Foundation
   - log4j-slf4j-impl: |
       Apache Log4j SLF4J Binding
+      Copyright 1999-2015 Apache Software Foundation
+  - log4j-layout-template-json: |
+      Apache Log4j Layout Template JSON
       Copyright 1999-2015 Apache Software Foundation
 
 ---
