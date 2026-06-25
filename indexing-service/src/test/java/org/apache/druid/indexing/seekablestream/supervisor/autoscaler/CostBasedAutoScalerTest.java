@@ -178,14 +178,16 @@ public class CostBasedAutoScalerTest
   @Test
   public void testComputeOptimalTaskCountLimitsTaskCountJumps()
   {
-    final CostBasedAutoScalerConfig boundedScaleUpConfig = CostBasedAutoScalerConfig.builder()
-                                                                                   .taskCountMax(100)
-                                                                                   .taskCountMin(1)
-                                                                                   .enableTaskAutoScaler(true)
-                                                                                   .lagWeight(1.0)
-                                                                                   .idleWeight(0.0)
-                                                                                   .useTaskCountBoundariesOnScaleUp(true)
-                                                                                   .build();
+    final CostBasedAutoScalerConfig boundedScaleUpConfig = CostBasedAutoScalerConfig
+        .builder()
+        .taskCountMax(100)
+        .taskCountMin(1)
+        .enableTaskAutoScaler(true)
+        .lagWeight(1.0)
+        .idleWeight(0.0)
+        .useTaskCountBoundariesOnScaleUp(
+            true)
+        .build();
     final CostBasedAutoScaler boundedScaleUpScaler = createAutoScaler(boundedScaleUpConfig);
 
     Assert.assertEquals(
@@ -194,13 +196,14 @@ public class CostBasedAutoScalerTest
         boundedScaleUpScaler.computeOptimalTaskCount(createMetrics(100_000.0, 10, 100, 0.25))
     );
 
-    final CostBasedAutoScalerConfig unboundedScaleUpConfig = CostBasedAutoScalerConfig.builder()
-                                                                                     .taskCountMax(100)
-                                                                                     .taskCountMin(1)
-                                                                                     .enableTaskAutoScaler(true)
-                                                                                     .lagWeight(1.0)
-                                                                                     .idleWeight(0.0)
-                                                                                     .build();
+    final CostBasedAutoScalerConfig unboundedScaleUpConfig = CostBasedAutoScalerConfig
+        .builder()
+        .taskCountMax(100)
+        .taskCountMin(1)
+        .enableTaskAutoScaler(true)
+        .lagWeight(1.0)
+        .idleWeight(0.0)
+        .build();
     final CostBasedAutoScaler unboundedScaleUpScaler = createAutoScaler(unboundedScaleUpConfig);
     Assert.assertEquals(
         "Without scale-up boundaries, lag-only optimization should jump to max task count",
@@ -208,14 +211,16 @@ public class CostBasedAutoScalerTest
         unboundedScaleUpScaler.computeOptimalTaskCount(createMetrics(100_000.0, 10, 100, 0.25))
     );
 
-    final CostBasedAutoScalerConfig boundedScaleDownConfig = CostBasedAutoScalerConfig.builder()
-                                                                                     .taskCountMax(100)
-                                                                                     .taskCountMin(1)
-                                                                                     .enableTaskAutoScaler(true)
-                                                                                     .lagWeight(0.0)
-                                                                                     .idleWeight(1.0)
-                                                                                     .useTaskCountBoundariesOnScaleDown(true)
-                                                                                     .build();
+    final CostBasedAutoScalerConfig boundedScaleDownConfig = CostBasedAutoScalerConfig
+        .builder()
+        .taskCountMax(100)
+        .taskCountMin(1)
+        .enableTaskAutoScaler(true)
+        .lagWeight(0.0)
+        .idleWeight(1.0)
+        .useTaskCountBoundariesOnScaleDown(
+            true)
+        .build();
     final CostBasedAutoScaler boundedScaleDownScaler = createAutoScaler(boundedScaleDownConfig);
 
     Assert.assertEquals(
@@ -224,13 +229,14 @@ public class CostBasedAutoScalerTest
         boundedScaleDownScaler.computeOptimalTaskCount(createMetrics(0.0, 100, 100, 0.9))
     );
 
-    final CostBasedAutoScalerConfig unboundedScaleDownConfig = CostBasedAutoScalerConfig.builder()
-                                                                                       .taskCountMax(25)
-                                                                                       .taskCountMin(1)
-                                                                                       .enableTaskAutoScaler(true)
-                                                                                       .lagWeight(0.0)
-                                                                                       .idleWeight(1.0)
-                                                                                       .build();
+    final CostBasedAutoScalerConfig unboundedScaleDownConfig = CostBasedAutoScalerConfig
+        .builder()
+        .taskCountMax(25)
+        .taskCountMin(1)
+        .enableTaskAutoScaler(true)
+        .lagWeight(0.0)
+        .idleWeight(1.0)
+        .build();
     final CostBasedAutoScaler unboundedScaleDownScaler = createAutoScaler(unboundedScaleDownConfig);
     Assert.assertEquals(
         "Without scale-down boundaries, idle-only optimization may select a much lower task count",
@@ -637,7 +643,8 @@ public class CostBasedAutoScalerTest
         partitionCount,
         pollIdleRatio,
         3600,
-        1000.0
+        1000.0,
+        0.
     );
   }
 

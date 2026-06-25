@@ -36,28 +36,7 @@ public class CostMetrics
   private final long taskDurationSeconds;
   private final double avgProcessingRate;
   private final double aggregateLag;
-  @Nullable
-  private final Double maxObservedRate;
-
-  public CostMetrics(
-      double avgPartitionLag,
-      int currentTaskCount,
-      int partitionCount,
-      double pollIdleRatio,
-      long taskDurationSeconds,
-      double avgProcessingRate
-  )
-  {
-    this(
-        avgPartitionLag,
-        currentTaskCount,
-        partitionCount,
-        pollIdleRatio,
-        taskDurationSeconds,
-        avgProcessingRate,
-        null
-    );
-  }
+  private final double maxObservedRate;
 
   public CostMetrics(
       double avgPartitionLag,
@@ -66,7 +45,7 @@ public class CostMetrics
       double pollIdleRatio,
       long taskDurationSeconds,
       double avgProcessingRate,
-      @Nullable Double maxObservedRate
+      double maxObservedRate
   )
   {
     this.avgPartitionLag = avgPartitionLag;
@@ -134,6 +113,16 @@ public class CostMetrics
   public Double getMaxObservedRate()
   {
     return maxObservedRate;
+  }
+
+
+  /**
+   * Derives the current idle ratio from measured utilization ({@code avgProcessingRate / maxObservedRate}).
+   */
+  double estimateIdleRatioFromProcessingRate(CostMetrics metrics)
+  {
+    final double utilization = Math.min(1.0, metrics.getAvgProcessingRate() / maxObservedRate);
+    return 1.0 - utilization;
   }
 
   @Override

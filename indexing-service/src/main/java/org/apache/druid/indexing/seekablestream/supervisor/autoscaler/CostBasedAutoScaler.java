@@ -456,7 +456,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         pollIdleRatio,
         supervisor.getIoConfig().getTaskDuration().getStandardSeconds(),
         movingAvgRate,
-        processingRateSamples.isEmpty() ? null : Collections.max(processingRateSamples)
+        processingRateSamples.isEmpty() ? 0 : Collections.max(processingRateSamples)
     );
   }
 

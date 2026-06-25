@@ -389,33 +389,21 @@ public class WeightedCostFunctionTest
   }
 
   @Test
-  public void testEstimateIdleFromUtilization()
+  public void testEstimateIdleRatioFromProcessingRate()
   {
-    // Cold start: no lag-gated sample observed yet → falls back to IDEAL_IDLE_RATIO
-    Assert.assertEquals(
-        WeightedCostFunction.IDEAL_IDLE_RATIO,
-        WeightedCostFunction.estimateIdleFromUtilization(createMetricsWithMaxObservedRate(500.0, null, 0.3)),
-        0.0001
-    );
-
-    // Non-positive watermark is treated the same as "no sample"
-    Assert.assertEquals(
-        WeightedCostFunction.IDEAL_IDLE_RATIO,
-        WeightedCostFunction.estimateIdleFromUtilization(createMetricsWithMaxObservedRate(500.0, 0.0, 0.3)),
-        0.0001
-    );
-
     // 75% utilization (750/1000) -> idle = 0.25
+    final CostMetrics utilized = createMetricsWithMaxObservedRate(750.0, 1000.0, 0.3);
     Assert.assertEquals(
         0.25,
-        WeightedCostFunction.estimateIdleFromUtilization(createMetricsWithMaxObservedRate(750.0, 1000.0, 0.3)),
+        utilized.estimateIdleRatioFromProcessingRate(utilized),
         0.0001
     );
 
     // Utilization above 100% (rate exceeds the watermark) clamps idle to 0, not negative
+    final CostMetrics overUtilized = createMetricsWithMaxObservedRate(1500.0, 1000.0, 0.3);
     Assert.assertEquals(
         0.0,
-        WeightedCostFunction.estimateIdleFromUtilization(createMetricsWithMaxObservedRate(1500.0, 1000.0, 0.3)),
+        overUtilized.estimateIdleRatioFromProcessingRate(overUtilized),
         0.0001
     );
   }
@@ -489,13 +477,14 @@ public class WeightedCostFunctionTest
         partitionCount,
         pollIdleRatio,
         3600,
+        1000.0,
         1000.0
     );
   }
 
   private CostMetrics createMetricsWithMaxObservedRate(
       double avgProcessingRate,
-      Double maxObservedRate,
+      double maxObservedRate,
       double pollIdleRatio
   )
   {
@@ -516,7 +505,8 @@ public class WeightedCostFunctionTest
         partitionCount,
         pollIdleRatio,
         3600,
-        avgProcessingRate
+        avgProcessingRate,
+        1000.0
     );
   }
 }
