@@ -43,8 +43,10 @@ public class WeightedCostFunction
   static final double LAG_AMPLIFICATION_MULTIPLIER = 0.4;
 
   /**
-   * Exponent (&lt; 1) for sublinear busy redistribution in the idle projection: busy grows as
-   * {@code (currentTaskCount / proposedTaskCount)^EXPONENT}, not linearly. Calibrated as log2(1.25) ~= 0.32.
+   * Exponent (< 1) for sublinear busy redistribution in the idle projection:
+   * busy grows as {@code (currentTaskCount / proposedTaskCount)^EXPONENT}, not linearly.
+   * The core idea around it - when task count is halved, the idle ratio increases roughly by 1.25.
+   * Calibrated as log2(1.25) ~= 0.32.
    */
   static final double IDLE_SUBLINEARITY_EXPONENT = 0.32;
 
