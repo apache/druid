@@ -436,7 +436,7 @@ public class WeightedCostFunctionTest
                                                                            .enableTaskAutoScaler(true)
                                                                            .lagWeight(0.0)
                                                                            .idleWeight(1.0)
-                                                                           .useUtilizationRatio(true)
+                                                                           .usePollIdleRatio(false)
                                                                            .build();
 
     // pollIdleRatio says 90% idle, but utilization (100/1000 used) says 90% idle too -- pick values that
@@ -453,7 +453,7 @@ public class WeightedCostFunctionTest
 
     double costWithUtilizationRatio = costFunction.computeCost(metrics, 10, utilizationConfig).totalCost();
     Assert.assertEquals(
-        "useUtilizationRatio=true should cost using the rate-derived idle ratio instead of pollIdleRatio",
+        "usePollIdleRatio=false should cost using the rate-derived idle ratio instead of pollIdleRatio",
         costFunction.uShapedIdleCost(0.9, 10),
         costWithUtilizationRatio,
         0.0001

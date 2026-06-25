@@ -67,7 +67,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final Duration minScaleUpDelay;
   private final Duration minScaleDownDelay;
   private final boolean scaleDownDuringTaskRolloverOnly;
-  private final boolean useUtilizationRatio;
+  private final boolean usePollIdleRatio;
 
   /**
    * Creates a new CostBasedAutoScalerConfig instance.
@@ -93,7 +93,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("minScaleUpDelay") Duration minScaleUpDelay,
       @Nullable @JsonProperty("minScaleDownDelay") Duration minScaleDownDelay,
       @Nullable @JsonProperty("scaleDownDuringTaskRolloverOnly") Boolean scaleDownDuringTaskRolloverOnly,
-      @Nullable @JsonProperty("useUtilizationRatio") Boolean useUtilizationRatio
+      @Nullable @JsonProperty("usePollIdleRatio") Boolean usePollIdleRatio
   )
   {
     this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
@@ -118,7 +118,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     );
     this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, DEFAULT_MIN_SCALE_DELAY);
     this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, false);
-    this.useUtilizationRatio = Configs.valueOrDefault(useUtilizationRatio, false);
+    this.usePollIdleRatio = Configs.valueOrDefault(usePollIdleRatio, true);
 
     if (this.enableTaskAutoScaler) {
       if (useTaskCountBoundaries != null) {
@@ -286,12 +286,13 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   /**
-   * Opt-in flag for replacing default idle-ratio with the rate-based utilization idle ratio.
+   * If true (the default), idle cost is derived from the poll idle ratio reported by tasks.
+   * If false, idle cost is derived from processing-rate utilization instead.
    */
-  @JsonProperty("useUtilizationRatio")
-  public boolean shouldUseUtilizationRatio()
+  @JsonProperty("usePollIdleRatio")
+  public boolean isUsePollIdleRatio()
   {
-    return useUtilizationRatio;
+    return usePollIdleRatio;
   }
 
   @Override
@@ -324,7 +325,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && Objects.equals(minScaleUpDelay, that.minScaleUpDelay)
            && Objects.equals(minScaleDownDelay, that.minScaleDownDelay)
            && scaleDownDuringTaskRolloverOnly == that.scaleDownDuringTaskRolloverOnly
-           && useUtilizationRatio == that.useUtilizationRatio
+           && usePollIdleRatio == that.usePollIdleRatio
            && Objects.equals(taskCountStart, that.taskCountStart)
            && Objects.equals(stopTaskCountRatio, that.stopTaskCountRatio);
   }
@@ -347,7 +348,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         minScaleUpDelay,
         minScaleDownDelay,
         scaleDownDuringTaskRolloverOnly,
-        useUtilizationRatio
+        usePollIdleRatio
     );
   }
 
@@ -369,7 +370,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", minScaleUpDelay=" + minScaleUpDelay +
            ", minScaleDownDelay=" + minScaleDownDelay +
            ", scaleDownDuringTaskRolloverOnly=" + scaleDownDuringTaskRolloverOnly +
-           ", useUtilizationRatio=" + useUtilizationRatio +
+           ", usePollIdleRatio=" + usePollIdleRatio +
            '}';
   }
 
@@ -393,7 +394,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Duration minScaleUpDelay;
     private Duration minScaleDownDelay;
     private Boolean scaleDownDuringTaskRolloverOnly;
-    private Boolean useUtilizationRatio;
+    private Boolean usePollIdleRatio;
 
     private Builder()
     {
@@ -471,9 +472,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
-    public Builder useUtilizationRatio(boolean useUtilizationRatio)
+    public Builder usePollIdleRatio(boolean usePollIdleRatio)
     {
-      this.useUtilizationRatio = useUtilizationRatio;
+      this.usePollIdleRatio = usePollIdleRatio;
       return this;
     }
 
@@ -508,7 +509,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           minScaleUpDelay,
           minScaleDownDelay,
           scaleDownDuringTaskRolloverOnly,
-          useUtilizationRatio
+          usePollIdleRatio
       );
     }
   }

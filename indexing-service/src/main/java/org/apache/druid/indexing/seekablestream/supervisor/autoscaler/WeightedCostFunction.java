@@ -112,20 +112,20 @@ public class WeightedCostFunction
     // Capacity-based idle prediction. When the proposed count would oversaturate the cluster
     // (busy work exceeds available capacity), the unmet demand becomes a virtual lag-recovery
     // time on the same axis as real lag — so the optimizer treats predicted saturation as predicted lag.
-    final double currentUtilizationRatio = config.shouldUseUtilizationRatio()
-                                           ? estimateIdleFromUtilization(metrics)
-                                           : metrics.getPollIdleRatio();
+    final double currentIdleRatio = config.isUsePollIdleRatio()
+                                    ? metrics.getPollIdleRatio()
+                                    : estimateIdleFromUtilization(metrics);
     final int currentTaskCount = metrics.getCurrentTaskCount();
     final double predictedIdleRatio;
     final double overrun;
-    if (currentUtilizationRatio < 0) {
+    if (currentIdleRatio < 0) {
       predictedIdleRatio = 0.5;
       overrun = 0.0;
     } else if (currentTaskCount <= 0 || proposedTaskCount == currentTaskCount) {
-      predictedIdleRatio = currentUtilizationRatio;
+      predictedIdleRatio = currentIdleRatio;
       overrun = 0.0;
     } else {
-      final double busyFraction = 1.0 - currentUtilizationRatio;
+      final double busyFraction = 1.0 - currentIdleRatio;
       final double taskRatio = (double) proposedTaskCount / currentTaskCount;
       final double rawIdle = 1.0 - busyFraction / taskRatio;
       if (rawIdle >= 0) {
@@ -163,9 +163,6 @@ public class WeightedCostFunction
   static double estimateIdleFromUtilization(CostMetrics metrics)
   {
     final Double maxObservedRate = metrics.getMaxObservedRate();
-    if (maxObservedRate == null || maxObservedRate <= 0) {
-      return IDEAL_IDLE_RATIO;
-    }
     final double utilization = Math.min(1.0, metrics.getAvgProcessingRate() / maxObservedRate);
     return 1.0 - utilization;
   }

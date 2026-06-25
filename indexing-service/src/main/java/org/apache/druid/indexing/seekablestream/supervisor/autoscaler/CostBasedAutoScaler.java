@@ -80,6 +80,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    */
   static final int MAX_IDLENESS_PARTITION_LAG = 10_000;
 
+  /**
+   * The number of most recent processing rate samples to maintain for auto-scaling decisions
+   * in case when {@link CostBasedAutoScalerConfig#usePollIdleRatio} is disabled.
+   */
+  static final int RATE_WINDOW_SIZE = 50;
+
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
   private final ServiceEmitter emitter;
@@ -87,16 +93,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private final CostBasedAutoScalerConfig config;
   private final ScheduledExecutorService autoscalerExecutor;
   private final WeightedCostFunction costFunction;
-  /**
-   * Recent {@code avgProcessingRate} readings, but only from ticks where lag was present.
-   * "Lag-gated" because lag is the condition that decides whether a reading counts as evidence
-   * of capacity at all: with no lag the task is only processing as fast as data arrives (an
-   * upstream supply number, not a capacity number); with lag present, demand isn't the
-   * bottleneck, so the rate observed is the task's own ceiling. The max of these samples
-   * becomes {@link CostMetrics#getMaxObservedRate()}.
-   */
-  private final EvictingQueue<Double> lagGatedRateSamples;
-  private final int lagGatedRateWindowSize;
+
+  private final EvictingQueue<Double> processingRateSamples;
   private volatile CostMetrics lastKnownMetrics;
 
   public CostBasedAutoScaler(
@@ -112,14 +110,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     this.supervisorId = spec.getId();
     this.emitter = emitter;
 
+    this.processingRateSamples = EvictingQueue.create(RATE_WINDOW_SIZE);
     this.costFunction = new WeightedCostFunction();
     this.autoscalerExecutor = Execs.scheduledSingleThreaded("CostBasedAutoScaler-"
                                                             + StringUtils.encodeForFormat(spec.getId()));
-
-    // Bound the rate watermark to roughly one task's lifetime (in collectMetrics() ticks).
-    final long taskDurationMillis = supervisor.getIoConfig().getTaskDuration().getStandardSeconds() * 1000L;
-    this.lagGatedRateWindowSize = Math.max(1, (int) (taskDurationMillis / config.getScaleActionPeriodMillis()));
-    this.lagGatedRateSamples = EvictingQueue.create(lagGatedRateWindowSize);
   }
 
   private ServiceMetricEvent.Builder getMetricBuilder()
@@ -451,12 +445,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final double movingAvgRate = extractMovingAverage(taskStats);
     final double pollIdleRatio = extractPollIdleRatio(taskStats);
 
-    // Lag present proves the task was supply-saturated (stream producer had more to offer),
-    // so the rate achieve at that moment is a genuine per-task capacity sample.
-    if (avgPartitionLag * partitionCount > 0 && movingAvgRate >= 0) {
-      lagGatedRateSamples.add(movingAvgRate);
+    if (!config.isUsePollIdleRatio() && movingAvgRate >= 0) {
+      processingRateSamples.add(movingAvgRate);
     }
-    final Double maxObservedRate = lagGatedRateSamples.isEmpty() ? null : Collections.max(lagGatedRateSamples);
 
     return new CostMetrics(
         avgPartitionLag,
@@ -465,7 +456,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         pollIdleRatio,
         supervisor.getIoConfig().getTaskDuration().getStandardSeconds(),
         movingAvgRate,
-        maxObservedRate
+        processingRateSamples.isEmpty() ? null : Collections.max(processingRateSamples)
     );
   }
 

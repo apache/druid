@@ -553,7 +553,7 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
-  public void testCollectMetricsTracksLagGatedRateWatermark()
+  public void testCollectMetricsTracksRateWatermarkOnlyWhenPollIdleRatioDisabled()
   {
     SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
     SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
@@ -567,59 +567,52 @@ public class CostBasedAutoScalerTest
     when(ioConfig.getStream()).thenReturn("test-stream");
     when(ioConfig.getTaskDuration()).thenReturn(Duration.standardHours(1));
     when(supervisor.getPartitionCount()).thenReturn(1);
+    when(supervisor.computeLagStats()).thenReturn(new LagStats(0, 0, 0));
 
-    // windowSize = taskDurationMillis / scaleActionPeriodMillis = 3,600,000 / 1,800,000 = 2
-    CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig.builder()
-                                                                .taskCountMax(10)
-                                                                .taskCountMin(1)
-                                                                .enableTaskAutoScaler(true)
-                                                                .scaleActionPeriodMillis(1_800_000)
-                                                                .build();
-
-    when(supervisor.computeLagStats()).thenReturn(
-        new LagStats(0, 0, 0),
-        new LagStats(100, 100, 100),
-        new LagStats(0, 0, 0),
-        new LagStats(100, 100, 100),
-        new LagStats(100, 100, 100)
+    // usePollIdleRatio defaults to true, which disables rate-watermark tracking entirely.
+    CostBasedAutoScalerConfig defaultConfig = CostBasedAutoScalerConfig.builder()
+                                                                       .taskCountMax(10)
+                                                                       .taskCountMin(1)
+                                                                       .enableTaskAutoScaler(true)
+                                                                       .build();
+    when(supervisor.getStats()).thenReturn(buildTaskStatsForRate(500.0));
+    CostBasedAutoScaler defaultScaler = new CostBasedAutoScaler(supervisor, defaultConfig, spec, emitter);
+    Assert.assertNull(
+        "With usePollIdleRatio=true (the default), samples are never collected",
+        defaultScaler.collectMetrics().getMaxObservedRate()
     );
+
+    // Disabling usePollIdleRatio switches the idle cost to processing-rate utilization,
+    // which requires tracking a watermark of observed rates.
+    CostBasedAutoScalerConfig utilizationConfig = CostBasedAutoScalerConfig.builder()
+                                                                           .taskCountMax(10)
+                                                                           .taskCountMin(1)
+                                                                           .enableTaskAutoScaler(true)
+                                                                           .usePollIdleRatio(false)
+                                                                           .build();
     when(supervisor.getStats()).thenReturn(
-        buildTaskStatsForRate(999.0),
         buildTaskStatsForRate(500.0),
         buildTaskStatsForRate(9000.0),
-        buildTaskStatsForRate(300.0),
-        buildTaskStatsForRate(700.0)
+        buildTaskStatsForRate(300.0)
     );
+    CostBasedAutoScaler utilizationScaler = new CostBasedAutoScaler(supervisor, utilizationConfig, spec, emitter);
 
-    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, config, spec, emitter);
-
-    Assert.assertNull(
-        "No lag-gated sample observed yet, so the watermark should be unset",
-        scaler.collectMetrics().getMaxObservedRate()
-    );
     Assert.assertEquals(
-        "First lag-gated sample becomes the watermark",
+        "First sample becomes the watermark",
         500.0,
-        scaler.collectMetrics().getMaxObservedRate(),
+        utilizationScaler.collectMetrics().getMaxObservedRate(),
         0.0001
     );
     Assert.assertEquals(
-        "A tick with no lag is not a capacity sample and must not move the watermark",
-        500.0,
-        scaler.collectMetrics().getMaxObservedRate(),
+        "Watermark tracks the max across observed samples",
+        9000.0,
+        utilizationScaler.collectMetrics().getMaxObservedRate(),
         0.0001
     );
     Assert.assertEquals(
-        "Watermark is the max across lag-gated samples still within the window",
-        500.0,
-        scaler.collectMetrics().getMaxObservedRate(),
-        0.0001
-    );
-    Assert.assertEquals(
-        "Once the window (size 2) fills, the oldest lag-gated sample (500) is evicted, "
-        + "letting a lower new max (700) surface",
-        700.0,
-        scaler.collectMetrics().getMaxObservedRate(),
+        "Watermark does not drop when a lower rate is observed",
+        9000.0,
+        utilizationScaler.collectMetrics().getMaxObservedRate(),
         0.0001
     );
   }

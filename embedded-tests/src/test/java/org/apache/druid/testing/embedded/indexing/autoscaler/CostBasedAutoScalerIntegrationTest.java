@@ -215,7 +215,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .minTriggerScaleActionFrequencyMillis(1000)
         .lagWeight(0.8)
         .idleWeight(0.2)
-        .useUtilizationRatio(true)
+        .usePollIdleRatio(false)
         .build();
 
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisorWithAutoScaler(
@@ -398,9 +398,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
     final String getSupervisorPath = StringUtils.format("/druid/indexer/v1/supervisor/%s", supervisorId);
     final KafkaSupervisorSpec supervisorSpec = cluster.callApi().serviceClient().onLeaderOverlord(
         mapper -> new RequestBuilder(HttpMethod.GET, getSupervisorPath),
-        new TypeReference<>()
-        {
-        }
+        new TypeReference<>() {}
     );
     Assertions.assertNotNull(supervisorSpec);
     return supervisorSpec.getSpec().getIOConfig().getTaskCount();
