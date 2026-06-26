@@ -244,7 +244,7 @@ public class AuthorizationUtilsTest
 
     Assert.assertFalse(result.allowBasicAccess());
 
-    final List<ServiceMetricEvent> events = emitter.getMetricEvents("auth/accessDenied");
+    final List<ServiceMetricEvent> events = emitter.getMetricEvents("auth/forbidden");
     Assert.assertEquals(1, events.size());
     final Map<String, Object> dims = events.get(0).getUserDims();
     Assert.assertEquals("someUser", dims.get("identity"));
@@ -281,7 +281,7 @@ public class AuthorizationUtilsTest
     );
 
     Assert.assertTrue(result.allowBasicAccess());
-    Assert.assertEquals(0, emitter.getMetricEventCount("auth/accessDenied"));
+    Assert.assertEquals(0, emitter.getMetricEventCount("auth/forbidden"));
   }
 
   @Test
@@ -338,7 +338,7 @@ public class AuthorizationUtilsTest
     );
 
     Assert.assertEquals(1, emitter.getMetricEventCount("auth/exception"));
-    Assert.assertEquals(0, emitter.getMetricEventCount("auth/accessDenied"));
+    Assert.assertEquals(0, emitter.getMetricEventCount("auth/forbidden"));
     final Map<String, Object> dims = emitter.getMetricEvents("auth/exception").get(0).getUserDims();
     Assert.assertEquals("someUser", dims.get("identity"));
     Assert.assertEquals(authorizerName, dims.get("authorizerName"));
@@ -371,13 +371,55 @@ public class AuthorizationUtilsTest
 
     final List<ServiceMetricEvent> events = emitter.getMetricEvents("auth/exception");
     Assert.assertEquals(1, events.size());
-    Assert.assertEquals(0, emitter.getMetricEventCount("auth/accessDenied"));
+    Assert.assertEquals(0, emitter.getMetricEventCount("auth/forbidden"));
     final Map<String, Object> dims = events.get(0).getUserDims();
     Assert.assertEquals("someUser", dims.get("identity"));
     Assert.assertEquals(authorizerName, dims.get("authorizerName"));
     Assert.assertEquals("myDatasource", dims.get("resourceName"));
     Assert.assertEquals(Action.WRITE.toString(), dims.get("action"));
     Assert.assertEquals(e.getMessage(), dims.get("errorMessage"));
+  }
+
+  @Test
+  public void testVerifyUnrestrictedAccessToDatasource_emitsForbiddenOnPolicyDeny()
+  {
+    final String authorizerName = "testAuthorizer";
+    final AuthenticationResult authenticationResult = new AuthenticationResult(
+        "someUser",
+        authorizerName,
+        "authenticator",
+        null
+    );
+    // Authorizer grants basic access but attaches a row-filter policy — triggering the policy-deny path.
+    final Authorizer policyAuthorizer = (ar, resource, action) ->
+        Access.allowWithRestriction(RowFilterPolicy.from(new EqualityFilter("col", ColumnType.STRING, "val", null)));
+
+    final Map<String, Authorizer> authorizerMap = new HashMap<>();
+    authorizerMap.put(authorizerName, policyAuthorizer);
+
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
+    final AuthorizerMapper mapper = new AuthorizerMapper(authorizerMap, emitter);
+
+    final MockHttpServletRequest request = new MockHttpServletRequest();
+    request.method = "GET";
+    request.attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
+
+    Assert.assertThrows(
+        ForbiddenException.class,
+        () -> AuthorizationUtils.verifyUnrestrictedAccessToDatasource(request, "myDatasource", mapper)
+    );
+
+    // The policy deny path in verifyUnrestrictedAccessToDatasource should emit auth/forbidden.
+    // auth/forbidden is NOT emitted by authorizeAllResourceActions here because basic access was allowed.
+    Assert.assertEquals(1, emitter.getMetricEventCount("auth/forbidden"));
+    Assert.assertEquals(0, emitter.getMetricEventCount("auth/exception"));
+
+    final Map<String, Object> dims = emitter.getMetricEvents("auth/forbidden").get(0).getUserDims();
+    Assert.assertEquals("someUser", dims.get("identity"));
+    Assert.assertEquals(authorizerName, dims.get("authorizerName"));
+    Assert.assertEquals("myDatasource", dims.get("resourceName"));
+    Assert.assertEquals(ResourceType.DATASOURCE, dims.get("resourceType"));
+    Assert.assertEquals(Action.READ.toString(), dims.get("action"));
   }
 
   @Test
