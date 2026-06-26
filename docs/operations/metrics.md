@@ -318,8 +318,10 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`task/autoScaler/requiredCount`|Count of required tasks based on the calculations of the auto scaler.|`supervisorId`, `dataSource`, `stream`, `scalingSkipReason`|Depends on auto scaler config.|
 |`task/autoScaler/scaleActionTime`|Time taken in milliseconds to complete the scale action.|`supervisorId`, `dataSource`, `stream`, `tags`|Depends on auto scaler config.|
 |`task/autoScaler/costBased/optimalTaskCount`|Optimal task count computed by the cost-based auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
-|`task/autoScaler/costBased/lagCost`|Lag cost component of the cost-based auto scaler's cost function.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
-|`task/autoScaler/costBased/idleCost`|Idle cost component of the cost-based auto scaler's cost function.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/lagWeight`|Lag weight used in the cost function for the auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/idleWeight`|Idle weight used in the cost function for the auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/avgProcessingRate`|Windowed average rate of processing records across all tasks in the supervisor.|`supervisorId`, `dataSource`, `stream`|Depends on rate of incoming data and processing capacity of the tasks.|
+|`task/autoScaler/costBased/avgPollIdleRatio`|Poll-to-idle-ratio as reported by the streaming consumer averaged across all tasks in the supervisor. Currently supported only with Kafka supervisors.|`supervisorId`, `dataSource`, `stream`|0 if the consumer is never idle, 1 if the consumer is always idle, -1 if ratio is not available.|
 
 If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 

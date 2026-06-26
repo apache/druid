@@ -63,10 +63,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 {
   private static final EmittingLogger log = new EmittingLogger(CostBasedAutoScaler.class);
 
-  public static final String LAG_COST_METRIC = "task/autoScaler/costBased/lagCost";
-  public static final String IDLE_COST_METRIC = "task/autoScaler/costBased/idleCost";
+  public static final String LAG_WEIGHT_METRIC = "task/autoScaler/costBased/lagWeight";
+  public static final String IDLE_WEIGHT_METRIC = "task/autoScaler/costBased/idleWeight";
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
   public static final String INVALID_METRICS_COUNT = "task/autoScaler/costBased/invalidMetrics";
+  public static final String AVG_PROCESSING_RATE_METRIC = "task/autoScaler/costBased/avgProcessingRate";
+  public static final String AVG_POLL_IDLE_RATIO = "task/autoScaler/costBased/avgPollIdleRatio";
 
   /**
    * Maximum number of candidate task counts to evaluate above or below the current task count
@@ -266,14 +268,14 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     int startIndex = 0;
     int endIndex = validTaskCounts.length - 1;
 
-    if (config.shouldUseTaskCountBoundariesOnScaleUp()) {
+    if (config.isUseTaskCountBoundariesOnScaleUp()) {
       int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
       endIndex = currentTaskCountIndex >= 0
                  ? Math.min(currentTaskCountIndex + BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK, endIndex)
                  : endIndex;
     }
 
-    if (config.shouldUseTaskCountBoundariesOnScaleDown()) {
+    if (config.isUseTaskCountBoundariesOnScaleDown()) {
       int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
       startIndex = currentTaskCountIndex >= 0
                    ? Math.max(currentTaskCountIndex - BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK, startIndex)
@@ -293,8 +295,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
 
     emitter.emit(getMetricBuilder().setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
-    emitter.emit(getMetricBuilder().setMetric(LAG_COST_METRIC, optimalCost.lagCost()));
-    emitter.emit(getMetricBuilder().setMetric(IDLE_COST_METRIC, optimalCost.idleCost()));
+    emitter.emit(getMetricBuilder().setMetric(LAG_WEIGHT_METRIC, optimalCost.lagCost()));
+    emitter.emit(getMetricBuilder().setMetric(IDLE_WEIGHT_METRIC, optimalCost.idleCost()));
+    emitter.emit(getMetricBuilder().setMetric(AVG_PROCESSING_RATE_METRIC, metrics.getAvgProcessingRate()));
+    emitter.emit(getMetricBuilder().setMetric(AVG_POLL_IDLE_RATIO, metrics.getPollIdleRatio()));
 
     if (optimalTaskCount != currentTaskCount) {
       log.info(
