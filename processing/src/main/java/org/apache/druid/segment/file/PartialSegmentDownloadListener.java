@@ -25,7 +25,20 @@ package org.apache.druid.segment.file;
  */
 public interface PartialSegmentDownloadListener
 {
-  PartialSegmentDownloadListener NOOP = new PartialSegmentDownloadListener() {};
+  PartialSegmentDownloadListener NOOP = new PartialSegmentDownloadListener()
+  {
+    @Override
+    public void onBytesDownloaded(long bytes)
+    {
+      // no-op
+    }
+
+    @Override
+    public void onRangeRead(long bytes, long nanos)
+    {
+      // no-op
+    }
+  };
 
   /**
    * Bytes were newly materialized on local disk from deep storage and are now resident and usable: an internal file as
@@ -35,9 +48,7 @@ public interface PartialSegmentDownloadListener
    *
    * @param bytes the materialized byte count
    */
-  default void onBytesDownloaded(long bytes)
-  {
-  }
+  void onBytesDownloaded(long bytes);
 
   /**
    * A single deep-storage range read completed: the actual request granularity (one read may cover many files when a
@@ -47,7 +58,5 @@ public interface PartialSegmentDownloadListener
    * @param bytes the number of bytes read from deep storage in this request
    * @param nanos the wall-clock time the read took, in nanoseconds
    */
-  default void onRangeRead(long bytes, long nanos)
-  {
-  }
+  void onRangeRead(long bytes, long nanos);
 }

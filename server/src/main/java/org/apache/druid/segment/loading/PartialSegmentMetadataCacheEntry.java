@@ -290,8 +290,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
    * the race where the entry's reservation gets evicted (e.g. cache picks a weak entry whose lone hold was released
    * by a concurrent canceler, or {@link StorageLocation#release} fires on the static entry from a coordinator drop)
    * while mount() is still in progress. Without this check, mount would commit local state for an entry the cache
-   * manager no longer knows about, leaking files on disk and memory mappings. Mirrors the same defensive check in
-   * {@code SegmentCacheEntry.mount}. Returns normally if rollback fires; callers detect via {@link #isMounted}.
+   * manager no longer knows about, leaking files on disk and memory mappings.
    */
   private void verifyStillReservedOrRollback(StorageLocation mountLocation)
   {
@@ -338,20 +337,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
           localCacheDir,
           targetFilename,
           externalFilenames,
-          new PartialSegmentDownloadListener()
-          {
-            @Override
-            public void onBytesDownloaded(long bytes)
-            {
-              mountLocation.trackWeakLoad(bytes);
-            }
-
-            @Override
-            public void onRangeRead(long bytes, long nanos)
-            {
-              mountLocation.trackWeakRangeRead(bytes, nanos);
-            }
-          }
+          new WeakLoadTracker(mountLocation)
       );
 
       final long sizeToAdjust;
@@ -992,6 +978,21 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   {
     if (file.exists() && !file.delete()) {
       LOG.warn("Failed to delete header file[%s] during unmount of partial segment[%s]", file, segmentId);
+    }
+  }
+
+  private record WeakLoadTracker(StorageLocation mountLocation) implements PartialSegmentDownloadListener
+  {
+    @Override
+    public void onBytesDownloaded(long bytes)
+    {
+      mountLocation.trackWeakLoad(bytes);
+    }
+
+    @Override
+    public void onRangeRead(long bytes, long nanos)
+    {
+      mountLocation.trackWeakRangeRead(bytes, nanos);
     }
   }
 }
