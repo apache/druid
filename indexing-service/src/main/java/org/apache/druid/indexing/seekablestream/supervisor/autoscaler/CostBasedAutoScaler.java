@@ -84,7 +84,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    * The number of most recent processing rate samples to maintain for auto-scaling decisions
    * in case when {@link CostBasedAutoScalerConfig#usePollIdleRatio} is disabled.
    */
-  static final int RATE_WINDOW_SIZE = 50;
+  static final int PROCESSING_RATE_WINDOW_SIZE = 50;
 
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
@@ -110,7 +110,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     this.supervisorId = spec.getId();
     this.emitter = emitter;
 
-    this.processingRateSamples = EvictingQueue.create(RATE_WINDOW_SIZE);
+    this.processingRateSamples = EvictingQueue.create(PROCESSING_RATE_WINDOW_SIZE);
     this.costFunction = new WeightedCostFunction();
     this.autoscalerExecutor = Execs.scheduledSingleThreaded("CostBasedAutoScaler-"
                                                             + StringUtils.encodeForFormat(spec.getId()));
@@ -456,7 +456,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         pollIdleRatio,
         supervisor.getIoConfig().getTaskDuration().getStandardSeconds(),
         movingAvgRate,
-        processingRateSamples.isEmpty() ? 0 : Collections.max(processingRateSamples)
+        processingRateSamples.isEmpty() ? null : Collections.max(processingRateSamples)
     );
   }
 

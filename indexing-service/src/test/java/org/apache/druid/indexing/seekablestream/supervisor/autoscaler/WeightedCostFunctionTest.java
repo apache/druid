@@ -426,7 +426,7 @@ public class WeightedCostFunctionTest
     final CostMetrics utilized = createMetricsWithMaxObservedRate(750.0, 1000.0, 0.3);
     Assert.assertEquals(
         0.25,
-        utilized.estimateIdleRatioFromProcessingRate(utilized),
+        utilized.estimateIdleRatioFromProcessingRate(),
         0.0001
     );
 
@@ -434,13 +434,13 @@ public class WeightedCostFunctionTest
     final CostMetrics overUtilized = createMetricsWithMaxObservedRate(1500.0, 1000.0, 0.3);
     Assert.assertEquals(
         0.0,
-        overUtilized.estimateIdleRatioFromProcessingRate(overUtilized),
+        overUtilized.estimateIdleRatioFromProcessingRate(),
         0.0001
     );
 
     // No throughput baseline yet (maxObservedRate=0) -> return negative (unknown), never NaN from 0/0
     final CostMetrics noBaseline = createMetricsWithMaxObservedRate(0.0, 0.0, 0.3);
-    Assert.assertTrue(noBaseline.estimateIdleRatioFromProcessingRate(noBaseline) < 0);
+    Assert.assertTrue(noBaseline.estimateIdleRatioFromProcessingRate() < 0);
   }
 
   @Test

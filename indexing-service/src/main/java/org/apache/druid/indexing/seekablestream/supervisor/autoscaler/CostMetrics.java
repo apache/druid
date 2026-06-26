@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -35,7 +36,8 @@ public class CostMetrics
   private final long taskDurationSeconds;
   private final double avgProcessingRate;
   private final double aggregateLag;
-  private final double maxObservedRate;
+  @Nullable
+  private final Double maxObservedRate;
 
   public CostMetrics(
       double avgPartitionLag,
@@ -44,7 +46,7 @@ public class CostMetrics
       double pollIdleRatio,
       long taskDurationSeconds,
       double avgProcessingRate,
-      double maxObservedRate
+      @Nullable Double maxObservedRate
   )
   {
     this.avgPartitionLag = avgPartitionLag;
@@ -108,6 +110,7 @@ public class CostMetrics
     return avgProcessingRate;
   }
 
+  @Nullable
   public Double getMaxObservedRate()
   {
     return maxObservedRate;
@@ -115,17 +118,17 @@ public class CostMetrics
 
 
   /**
-   * Derives the current idle ratio from measured utilization ({@code avgProcessingRate / maxObservedRate}).
+   * Derives the current idle ratio from the processing rate relative to the max observed rate
+   * ({@code avgProcessingRate / maxObservedRate}). Returns a negative value when no rate baseline
+   * is available yet (no observed rate samples, or a zero watermark), signalling an unknown idle ratio.
    */
-  double estimateIdleRatioFromProcessingRate(CostMetrics metrics)
+  double estimateIdleRatioFromProcessingRate()
   {
-    if (maxObservedRate <= 0) {
-      // No throughput baseline yet (e.g. only zero-rate samples at startup). Returning a negative
-      // value routes computeCost to its neutral idle branch instead of producing NaN from 0/0.
+    if (maxObservedRate == null || maxObservedRate <= 0) {
       return -1.0;
     }
-    final double utilization = Math.min(1.0, metrics.getAvgProcessingRate() / maxObservedRate);
-    return 1.0 - utilization;
+    final double ratio = Math.min(1.0, avgProcessingRate / maxObservedRate);
+    return 1.0 - ratio;
   }
 
   @Override

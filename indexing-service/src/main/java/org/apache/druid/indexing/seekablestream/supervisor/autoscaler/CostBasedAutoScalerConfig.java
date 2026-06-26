@@ -289,7 +289,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
    * If true (the default), idle cost is derived from the poll idle ratio reported by tasks.
    * If false, idle cost is derived from processing-rate utilization instead.
    */
-  @JsonProperty("usePollIdleRatio")
+  @JsonProperty
   public boolean isUsePollIdleRatio()
   {
     return usePollIdleRatio;

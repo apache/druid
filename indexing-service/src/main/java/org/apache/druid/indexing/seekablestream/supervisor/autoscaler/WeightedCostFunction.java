@@ -122,7 +122,7 @@ public class WeightedCostFunction
     // time on the same axis as real lag — so the optimizer treats predicted saturation as predicted lag.
     final double currentIdleRatio = config.isUsePollIdleRatio()
                                     ? metrics.getPollIdleRatio()
-                                    : metrics.estimateIdleRatioFromProcessingRate(metrics);
+                                    : metrics.estimateIdleRatioFromProcessingRate();
     final int currentTaskCount = metrics.getCurrentTaskCount();
     final double predictedIdleRatio;
     final double overrun;

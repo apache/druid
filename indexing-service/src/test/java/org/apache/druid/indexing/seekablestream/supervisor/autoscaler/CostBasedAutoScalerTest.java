@@ -572,7 +572,7 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
-  public void testCollectMetricsTracksRateWatermarkOnlyWhenPollIdleRatioDisabled()
+  public void testCollectMetricsTracksMaxProcessingRateOnlyWhenPollIdleRatioDisabled()
   {
     SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
     SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
@@ -601,9 +601,9 @@ public class CostBasedAutoScalerTest
         defaultScaler.collectMetrics().getMaxObservedRate()
     );
 
-    // Disabling usePollIdleRatio switches the idle cost to processing-rate utilization,
-    // which requires tracking a watermark of observed rates.
-    CostBasedAutoScalerConfig utilizationConfig = CostBasedAutoScalerConfig.builder()
+    // Disabling usePollIdleRatio switches the idle cost to the processing-rate-based estimate,
+    // which requires tracking the max observed processing rate.
+    CostBasedAutoScalerConfig configWithoutPollIdleRatio = CostBasedAutoScalerConfig.builder()
                                                                            .taskCountMax(10)
                                                                            .taskCountMin(1)
                                                                            .enableTaskAutoScaler(true)
@@ -614,24 +614,25 @@ public class CostBasedAutoScalerTest
         buildTaskStatsForRate(9000.0),
         buildTaskStatsForRate(300.0)
     );
-    CostBasedAutoScaler utilizationScaler = new CostBasedAutoScaler(supervisor, utilizationConfig, spec, emitter);
+    CostBasedAutoScaler autoScalerWithoutPollIdleRatio =
+        new CostBasedAutoScaler(supervisor, configWithoutPollIdleRatio, spec, emitter);
 
     Assert.assertEquals(
         "First sample becomes the watermark",
         500.0,
-        utilizationScaler.collectMetrics().getMaxObservedRate(),
+        autoScalerWithoutPollIdleRatio.collectMetrics().getMaxObservedRate(),
         0.0001
     );
     Assert.assertEquals(
         "Watermark tracks the max across observed samples",
         9000.0,
-        utilizationScaler.collectMetrics().getMaxObservedRate(),
+        autoScalerWithoutPollIdleRatio.collectMetrics().getMaxObservedRate(),
         0.0001
     );
     Assert.assertEquals(
         "Watermark does not drop when a lower rate is observed",
         9000.0,
-        utilizationScaler.collectMetrics().getMaxObservedRate(),
+        autoScalerWithoutPollIdleRatio.collectMetrics().getMaxObservedRate(),
         0.0001
     );
   }
