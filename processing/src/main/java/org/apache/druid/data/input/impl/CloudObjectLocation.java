@@ -63,7 +63,7 @@ public class CloudObjectLocation
   @JsonCreator
   public CloudObjectLocation(@JsonProperty("bucket") String bucket, @JsonProperty("path") String path)
   {
-    this.bucket = Preconditions.checkNotNull(StringUtils.maybeRemoveTrailingSlash(bucket),
+    this.bucket = Preconditions.checkNotNull(normalizeBucket(bucket),
                  "bucket name cannot be null. Please verify if bucket name adheres to naming rules");
     this.path = Preconditions.checkNotNull(StringUtils.maybeRemoveLeadingSlash(path));
     Preconditions.checkArgument(
@@ -71,6 +71,17 @@ public class CloudObjectLocation
       "bucket must follow DNS-compliant naming conventions or be a valid S3 Access Point ARN"
       + " or S3 Multi-Region Access Point ARN"
     );
+  }
+
+  private static String normalizeBucket(String bucket)
+  {
+    String trimmed = StringUtils.maybeRemoveTrailingSlash(bucket);
+
+    if (trimmed != null && isS3Arn(trimmed)) {
+      return trimmed.replace('/', ':');
+    }
+
+    return trimmed;
   }
 
   public CloudObjectLocation(URI uri)
