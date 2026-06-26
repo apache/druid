@@ -85,8 +85,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("scaleActionPeriodMillis") Long scaleActionPeriodMillis,
       @Nullable @JsonProperty("lagWeight") Double lagWeight,
       @Nullable @JsonProperty("idleWeight") Double idleWeight,
-      @Nullable @JsonProperty("useTaskCountBoundaries") Boolean useTaskCountBoundaries,
-      @Nullable @JsonProperty("highLagThreshold") Integer highLagThreshold,
       @Nullable @JsonProperty("useTaskCountBoundariesOnScaleUp") Boolean useTaskCountBoundariesOnScaleUp,
       @Nullable @JsonProperty("useTaskCountBoundariesOnScaleDown") Boolean useTaskCountBoundariesOnScaleDown,
       @Nullable @JsonProperty("minScaleUpDelay") Duration minScaleUpDelay,
@@ -118,14 +116,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, false);
 
     if (this.enableTaskAutoScaler) {
-      if (useTaskCountBoundaries != null) {
-        LOG.warn("useTaskCountBoundaries is removed, "
-                 + "use useTaskCountBoundariesOnScaleUp and useTaskCountBoundariesOnScaleDown instead");
-      }
-      if (highLagThreshold != null) {
-        LOG.warn("highLagThreshold is removed, the autoscaler behavior is good enough just with cost function");
-      }
-
       Preconditions.checkNotNull(taskCountMax, "taskCountMax is required when enableTaskAutoScaler is true");
       Preconditions.checkNotNull(taskCountMin, "taskCountMin is required when enableTaskAutoScaler is true");
       Preconditions.checkArgument(taskCountMax >= taskCountMin, "taskCountMax must be >= taskCountMin");
@@ -231,23 +221,23 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   /**
-   * Enables or disables the task-count evaluation window when considering scale-up candidates.
-   * If enabled, the optimizer only evaluates a small number of candidate task counts above the current count,
-   * which prevents large scale-up jumps.
+   * If true, the auto-scaler evaluates a small number of candidate task counts
+   * (dictated by {@link CostBasedAutoScaler#BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK})
+   * above the current count, which prevents large scale-up jumps.
    */
-  @JsonProperty("useTaskCountBoundariesOnScaleUp")
-  public boolean shouldUseTaskCountBoundariesOnScaleUp()
+  @JsonProperty
+  public boolean isUseTaskCountBoundariesOnScaleUp()
   {
     return useTaskCountBoundariesOnScaleUp;
   }
 
   /**
-   * Enables or disables the task-count evaluation window when considering scale-down candidates.
-   * If enabled, the optimizer only evaluates a small number of candidate task counts below the current count,
-   * which prevents large scale-down drops.
+   * If true, the auto-scaler evaluates a small number of candidate task counts
+   * (dictated by {@link CostBasedAutoScaler#BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK})
+   * below the current count, which prevents large scale-down drops.
    */
-  @JsonProperty("useTaskCountBoundariesOnScaleDown")
-  public boolean shouldUseTaskCountBoundariesOnScaleDown()
+  @JsonProperty
+  public boolean isUseTaskCountBoundariesOnScaleDown()
   {
     return useTaskCountBoundariesOnScaleDown;
   }
@@ -479,8 +469,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           scaleActionPeriodMillis,
           lagWeight,
           idleWeight,
-          null,
-          null,
           useTaskCountBoundariesOnScaleUp,
           useTaskCountBoundariesOnScaleDown,
           minScaleUpDelay,

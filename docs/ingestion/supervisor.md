@@ -204,8 +204,6 @@ The sweet spot is roughly 25% idle, giving headroom to absorb traffic spikes wit
 
 At every evaluation interval, Druid computes the score for each candidate task count and picks the one with the lowest total cost.
 
-Note: Kinesis is not supported yet, support is in progress.
-
 The following table outlines the configuration properties related to the `costBased` autoscaler strategy:
 
 | Property | Description | Required | Default                   |
