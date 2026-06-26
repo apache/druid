@@ -437,6 +437,10 @@ public class WeightedCostFunctionTest
         overUtilized.estimateIdleRatioFromProcessingRate(overUtilized),
         0.0001
     );
+
+    // No throughput baseline yet (maxObservedRate=0) -> return negative (unknown), never NaN from 0/0
+    final CostMetrics noBaseline = createMetricsWithMaxObservedRate(0.0, 0.0, 0.3);
+    Assert.assertTrue(noBaseline.estimateIdleRatioFromProcessingRate(noBaseline) < 0);
   }
 
   @Test

@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
-import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -109,7 +108,6 @@ public class CostMetrics
     return avgProcessingRate;
   }
 
-  @Nullable
   public Double getMaxObservedRate()
   {
     return maxObservedRate;
@@ -121,6 +119,11 @@ public class CostMetrics
    */
   double estimateIdleRatioFromProcessingRate(CostMetrics metrics)
   {
+    if (maxObservedRate <= 0) {
+      // No throughput baseline yet (e.g. only zero-rate samples at startup). Returning a negative
+      // value routes computeCost to its neutral idle branch instead of producing NaN from 0/0.
+      return -1.0;
+    }
     final double utilization = Math.min(1.0, metrics.getAvgProcessingRate() / maxObservedRate);
     return 1.0 - utilization;
   }
