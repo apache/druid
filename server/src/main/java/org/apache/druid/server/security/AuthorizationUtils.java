@@ -95,7 +95,7 @@ public class AuthorizationUtils
   {
     ResourceAction resourceAction = createDatasourceResourceAction(datasource, req);
     AuthorizationResult authResult = authorizeResourceAction(req, resourceAction, authorizerMapper);
- if (!authResult.allowAccessWithNoRestriction()) {
+    if (!authResult.allowAccessWithNoRestriction()) {
       if (authResult.allowBasicAccess()) {
         // Basic access was granted, but access was restricted by a policy.
         // This is checked to avoid double emitting the forbidden metric if the basic access was denied,
@@ -109,7 +109,7 @@ public class AuthorizationUtils
         );
       }
       throw new ForbiddenException(authResult.getErrorMessage());
-  }
+    }
   }
 
   /**
