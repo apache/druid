@@ -20,6 +20,7 @@
 package org.apache.druid.server.security;
 
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class AuthorizationUtilsTest
 {
@@ -242,5 +244,183 @@ public class AuthorizationUtilsTest
         () -> AuthorizationUtils.authorizeAllResourceActions(authenticationResult, resourceActions, mapper)
     );
     Assert.assertTrue(exception.getMessage().contains("Policy should only present when reading a table"));
+  }
+
+
+  @Test
+  public void testAuthorizeAllResourceActions_contextPassedToAuthorizer()
+  {
+    final String authorizerName = "testAuthorizer";
+    final AuthenticationResult authenticationResult =
+        new AuthenticationResult("identity", authorizerName, "authenticator", null);
+
+    final Map<String, Object> expectedContext = ImmutableMap.of("testKey", "testValue");
+    final AtomicReference<Map<String, Object>> capturedContext = new AtomicReference<>();
+
+    final Authorizer authorizer = new Authorizer()
+    {
+      @Override
+      public Access authorize(AuthenticationResult authResult, Resource resource, Action action)
+      {
+        return Access.OK;
+      }
+
+      @Override
+      public Access authorize(
+          AuthenticationResult authResult,
+          Resource resource,
+          Action action,
+          Map<String, Object> context
+      )
+      {
+        capturedContext.set(context);
+        return Access.OK;
+      }
+    };
+
+    final Map<String, Authorizer> authorizerMap = new HashMap<>();
+    authorizerMap.put(authorizerName, authorizer);
+    final AuthorizerMapper mapper = new AuthorizerMapper(authorizerMap);
+
+    final List<ResourceAction> resourceActions = Collections.singletonList(
+        new ResourceAction(Resource.STATE_RESOURCE, Action.READ)
+    );
+
+    AuthorizationUtils.authorizeAllResourceActions(
+        authenticationResult,
+        resourceActions,
+        mapper,
+        expectedContext
+    );
+
+    Assert.assertEquals(expectedContext, capturedContext.get());
+  }
+
+  @Test
+  public void testAuthorizeAllResourceActions_emptyContextByDefault()
+  {
+    final String authorizerName = "testAuthorizer";
+    final AuthenticationResult authenticationResult =
+        new AuthenticationResult("identity", authorizerName, "authenticator", null);
+
+    final AtomicReference<Map<String, Object>> capturedContext = new AtomicReference<>();
+
+    final Authorizer authorizer = new Authorizer()
+    {
+      @Override
+      public Access authorize(AuthenticationResult authResult, Resource resource, Action action)
+      {
+        return Access.OK;
+      }
+
+      @Override
+      public Access authorize(
+          AuthenticationResult authResult,
+          Resource resource,
+          Action action,
+          Map<String, Object> context
+      )
+      {
+        capturedContext.set(context);
+        return Access.OK;
+      }
+    };
+
+    final Map<String, Authorizer> authorizerMap = new HashMap<>();
+    authorizerMap.put(authorizerName, authorizer);
+    final AuthorizerMapper mapper = new AuthorizerMapper(authorizerMap);
+
+    final List<ResourceAction> resourceActions = Collections.singletonList(
+        new ResourceAction(Resource.STATE_RESOURCE, Action.READ)
+    );
+
+    AuthorizationUtils.authorizeAllResourceActions(
+        authenticationResult,
+        resourceActions,
+        mapper
+    );
+
+    Assert.assertEquals(Map.of(), capturedContext.get());
+  }
+
+  @Test
+  public void testFilterAuthorizedResources_contextPassedToAuthorizer()
+  {
+    final String authorizerName = "testAuthorizer";
+    final AuthenticationResult authenticationResult =
+        new AuthenticationResult("identity", authorizerName, "authenticator", null);
+
+    final Map<String, Object> expectedContext = ImmutableMap.of("testKey", "testValue");
+    final List<Map<String, Object>> capturedContext = new ArrayList<>();
+
+    final Authorizer authorizer = new Authorizer()
+    {
+      @Override
+      public Access authorize(AuthenticationResult authResult, Resource resource, Action action)
+      {
+        return Access.OK;
+      }
+
+      @Override
+      public Access authorize(
+          AuthenticationResult authResult,
+          Resource resource,
+          Action action,
+          Map<String, Object> context
+      )
+      {
+        capturedContext.add(context);
+        return Access.OK;
+      }
+    };
+
+    final Map<String, Authorizer> authorizerMap = new HashMap<>();
+    authorizerMap.put(authorizerName, authorizer);
+    final AuthorizerMapper mapper = new AuthorizerMapper(authorizerMap);
+
+    final List<String> resources = Arrays.asList("resource1", "resource2");
+    final Function<String, Iterable<ResourceAction>> raGenerator =
+        input -> Collections.singletonList(new ResourceAction(new Resource(input, ResourceType.DATASOURCE), Action.READ));
+
+    Iterable<String> filtered = AuthorizationUtils.filterAuthorizedResources(
+        authenticationResult,
+        resources,
+        raGenerator,
+        mapper,
+        expectedContext
+    );
+
+    // Consume the iterable to trigger authorization
+    Iterator<String> itr = filtered.iterator();
+    while (itr.hasNext()) {
+      itr.next();
+    }
+    Assert.assertEquals(2, capturedContext.size());
+    for (Map<String, Object> context : capturedContext) {
+      Assert.assertEquals(expectedContext, context);
+    }
+  }
+
+  @Test
+  public void testAuthorizerDefaultMethodDelegatesToThreeArgMethod()
+  {
+    final AtomicReference<String> capturedResource = new AtomicReference<>();
+
+    // An authorizer that only implements the 3-arg method (simulating existing subclasses)
+    final Authorizer authorizer = (authResult, resource, action) -> {
+      capturedResource.set(resource.getName());
+      return Access.OK;
+    };
+
+    final AuthenticationResult authResult =
+        new AuthenticationResult("identity", "authorizerName", "authenticator", null);
+    final Resource resource = new Resource("testResource", ResourceType.DATASOURCE);
+    final Map<String, Object> context = ImmutableMap.of("callerPath", "TestCaller");
+
+    // Calling the 4-arg default method should delegate to the 3-arg method
+    Access access = authorizer.authorize(authResult, resource, Action.READ, context);
+
+    Assert.assertTrue(access.isAllowed());
+    Assert.assertEquals("testResource", capturedResource.get());
   }
 }

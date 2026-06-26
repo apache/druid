@@ -404,7 +404,7 @@ public class QueryLifecycleTest
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
-    EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ))
+    EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ, Map.of()))
             .andReturn(access).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest).anyTimes();
@@ -444,7 +444,7 @@ public class QueryLifecycleTest
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
-    EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ))
+    EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ, Map.of()))
             .andReturn(access).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest).anyTimes();
@@ -478,7 +478,7 @@ public class QueryLifecycleTest
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
-    EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ))
+    EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ, Map.of()))
             .andReturn(access).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest).anyTimes();
@@ -507,19 +507,22 @@ public class QueryLifecycleTest
     EasyMock.expect(authorizer.authorize(
                 authenticationResult,
                 new Resource(DATASOURCE, ResourceType.DATASOURCE),
-                Action.READ
+                Action.READ,
+                Map.of()
             ))
             .andReturn(Access.OK).times(2);
     EasyMock.expect(authorizer.authorize(
                 authenticationResult,
                 new Resource("foo", ResourceType.QUERY_CONTEXT),
-                Action.WRITE
+                Action.WRITE,
+                Map.of()
             ))
             .andReturn(Access.OK).times(2);
     EasyMock.expect(authorizer.authorize(
                 authenticationResult,
                 new Resource("baz", ResourceType.QUERY_CONTEXT),
-                Action.WRITE
+                Action.WRITE,
+                Map.of()
             ))
             .andReturn(Access.OK).times(2);
 
@@ -565,14 +568,16 @@ public class QueryLifecycleTest
     EasyMock.expect(authorizer.authorize(
                 authenticationResult,
                 new Resource(DATASOURCE, ResourceType.DATASOURCE),
-                Action.READ
+                Action.READ,
+                Map.of()
             ))
             .andReturn(Access.OK)
             .times(2);
     EasyMock.expect(authorizer.authorize(
                 authenticationResult,
                 new Resource("foo", ResourceType.QUERY_CONTEXT),
-                Action.WRITE
+                Action.WRITE,
+                Map.of()
             ))
             .andReturn(Access.DENIED)
             .times(2);
@@ -606,7 +611,7 @@ public class QueryLifecycleTest
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
-    EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ))
+    EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ, Map.of()))
             .andReturn(Access.OK)
             .times(2);
 
@@ -655,7 +660,8 @@ public class QueryLifecycleTest
     EasyMock.expect(authorizer.authorize(
                 authenticationResult,
                 new Resource(DATASOURCE, ResourceType.DATASOURCE),
-                Action.READ
+                Action.READ,
+                Map.of()
             ))
             .andReturn(Access.OK)
             .times(2);
@@ -706,14 +712,16 @@ public class QueryLifecycleTest
     EasyMock.expect(authorizer.authorize(
                 authenticationResult,
                 new Resource(DATASOURCE, ResourceType.DATASOURCE),
-                Action.READ
+                Action.READ,
+                Map.of()
             ))
             .andReturn(Access.OK)
             .times(2);
     EasyMock.expect(authorizer.authorize(
                 authenticationResult,
                 new Resource("foo", ResourceType.QUERY_CONTEXT),
-                Action.WRITE
+                Action.WRITE,
+                Map.of()
             ))
             .andReturn(Access.DENIED)
             .times(2);
@@ -755,21 +763,24 @@ public class QueryLifecycleTest
     EasyMock.expect(authorizer.authorize(
                 authenticationResult,
                 new Resource("fake", ResourceType.DATASOURCE),
-                Action.READ
+                Action.READ,
+                Map.of()
             ))
             .andReturn(Access.OK)
             .times(2);
     EasyMock.expect(authorizer.authorize(
                 authenticationResult,
                 new Resource("foo", ResourceType.QUERY_CONTEXT),
-                Action.WRITE
+                Action.WRITE,
+                Map.of()
             ))
             .andReturn(Access.OK)
             .times(2);
     EasyMock.expect(authorizer.authorize(
                 authenticationResult,
                 new Resource("baz", ResourceType.QUERY_CONTEXT),
-                Action.WRITE
+                Action.WRITE,
+                Map.of()
             ))
             .andReturn(Access.OK)
             .times(2);
