@@ -26,6 +26,7 @@ import org.apache.druid.common.asyncresource.AsyncResources;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.file.CountingRangeReader;
+import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.io.TempDir;
@@ -62,7 +63,8 @@ abstract class PartialQueryableIndexCursorFactoryTestBase extends InitializedNul
         TestHelper.makeJsonMapper(),
         cacheDir,
         IndexIO.V10_FILE_NAME,
-        Collections.emptyList()
+        Collections.emptyList(),
+        PartialSegmentDownloadListener.NOOP
     );
     return new IndexAndMapper(
         new PartialQueryableIndex(mapper.getSegmentFileMetadata(), mapper, COLUMN_CONFIG),

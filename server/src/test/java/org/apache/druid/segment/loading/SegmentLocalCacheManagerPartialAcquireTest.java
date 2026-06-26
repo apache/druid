@@ -58,6 +58,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
@@ -563,10 +564,58 @@ class SegmentLocalCacheManagerPartialAcquireTest
     // Confirm the metadata entry exists on the location and reports fully downloaded.
     final CacheEntry entry = loc.getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID));
     Assertions.assertInstanceOf(PartialSegmentMetadataCacheEntry.class, entry);
+    final PartialSegmentMetadataCacheEntry metaEntry = (PartialSegmentMetadataCacheEntry) entry;
     Assertions.assertTrue(
-        ((PartialSegmentMetadataCacheEntry) entry).isFullyDownloaded(),
+        metaEntry.isFullyDownloaded(),
         "force-download path must leave the segment fully downloaded after acquire returns"
     );
+    Assertions.assertEquals(
+        metaEntry.getFileMapper().getOnDiskHeaderSize() + metaEntry.getFileMapper().getDownloadedBytes(),
+        loc.getWeakStats().getLoadBytes(),
+        "full-download bytes (header + every column file) must each be recorded exactly once"
+    );
+  }
+
+  @Test
+  void testLazyColumnDownloadsAreRecordedInWeakLoadStats()
+      throws ExecutionException, InterruptedException, IOException
+  {
+    final StorageLocation loc = manager.getLocations().get(0);
+    try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
+      final AcquireSegmentResult result = action.getSegmentFuture().get();
+      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+        // After a lazy mount only the metadata header has been pulled; no column files yet.
+        final long headerLoadBytes = loc.getWeakStats().getLoadBytes();
+        Assertions.assertTrue(headerLoadBytes > 0, "lazy mount records the header load");
+
+        // A base-table scan downloads the base bundle's columns on demand at cursor-build time.
+        try (var asyncHolder = segment.as(CursorFactory.class).makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN)) {
+          final CountDownLatch ready = new CountDownLatch(1);
+          asyncHolder.addReadyCallback(ready::countDown);
+          Assertions.assertTrue(ready.await(15, TimeUnit.SECONDS));
+          try (CursorHolder cursorHolder = asyncHolder.release()) {
+            Assertions.assertNotNull(cursorHolder.asCursor());
+          }
+        }
+
+        // Those on-demand column downloads are now reflected in the per-location completed-load metrics (previously
+        // they were recorded nowhere): loadBytes grew past the header, and loadCount grew per downloaded file.
+        final StorageLocation.WeakStats after = loc.getWeakStats();
+        Assertions.assertTrue(
+            after.getLoadBytes() > headerLoadBytes,
+            "on-demand column downloads must add to VSF_LOAD_BYTES; header=" + headerLoadBytes
+            + " after=" + after.getLoadBytes()
+        );
+        Assertions.assertTrue(after.getLoadCount() > 1, "each downloaded column file increments the load count");
+
+        // The deep-storage range reads that pulled those columns are recorded in the request-level VSF_READ_* stats:
+        // one or more range reads, with wire bytes and nonzero latency. (The header range-read at mount time is not
+        // counted here — it predates the listener and is accounted as the load header above.)
+        Assertions.assertTrue(after.getReadCount() > 0, "on-demand range reads must increment VSF_READ_COUNT");
+        Assertions.assertTrue(after.getReadBytes() > 0, "range reads must record wire bytes in VSF_READ_BYTES");
+        Assertions.assertTrue(after.getReadTimeNanos() > 0, "range reads must record latency in VSF_READ_TIME");
+      }
+    }
   }
 
   @Test
@@ -806,7 +855,8 @@ class SegmentLocalCacheManagerPartialAcquireTest
                  jsonMapper,
                  partialDir,
                  IndexIO.V10_FILE_NAME,
-                 List.of()
+                 List.of(),
+                 PartialSegmentDownloadListener.NOOP
              )) {
       final int numContainers = seed.getSegmentFileMetadata().getContainers().size();
       for (int i = 0; i < numContainers; i++) {

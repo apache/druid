@@ -34,6 +34,7 @@ import org.apache.druid.segment.PartialQueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingCloseableObject;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.file.SegmentFileMetadata;
@@ -336,7 +337,21 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
           jsonMapper,
           localCacheDir,
           targetFilename,
-          externalFilenames
+          externalFilenames,
+          new PartialSegmentDownloadListener()
+          {
+            @Override
+            public void onBytesDownloaded(long bytes)
+            {
+              mountLocation.trackWeakLoad(bytes);
+            }
+
+            @Override
+            public void onRangeRead(long bytes, long nanos)
+            {
+              mountLocation.trackWeakRangeRead(bytes, nanos);
+            }
+          }
       );
 
       final long sizeToAdjust;
