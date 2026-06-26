@@ -56,6 +56,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
   @Nullable
   private final Integer maxRowsPerSegment;
   private final Period skipOffsetFromLatest;
+  private final Period skipOffsetFromEarliest;
   @Nullable
   private final UserCompactionTaskQueryTuningConfig tuningConfig;
   @Nullable
@@ -84,6 +85,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
       @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
+      @JsonProperty("skipOffsetFromEarliest") @Nullable Period skipOffsetFromEarliest,
       @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("granularitySpec") @Nullable UserCompactionTaskGranularityConfig granularitySpec,
       @JsonProperty("dimensionsSpec") @Nullable UserCompactionTaskDimensionsConfig dimensionsSpec,
@@ -105,6 +107,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
                                  : inputSegmentSizeBytes;
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
+    this.skipOffsetFromEarliest = skipOffsetFromEarliest == null ? DEFAULT_SKIP_OFFSET_FROM_EARLIEST : skipOffsetFromEarliest;
     this.tuningConfig = tuningConfig;
     this.ioConfig = ioConfig;
     this.granularitySpec = granularitySpec;
@@ -152,6 +155,13 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
   public Period getSkipOffsetFromLatest()
   {
     return skipOffsetFromLatest;
+  }
+
+  @JsonProperty
+  @Override
+  public Period getSkipOffsetFromEarliest()
+  {
+    return skipOffsetFromEarliest;
   }
 
   @JsonProperty
@@ -263,6 +273,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
            Objects.equals(dataSource, that.dataSource) &&
            Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
            Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest) &&
+           Objects.equals(skipOffsetFromEarliest, that.skipOffsetFromEarliest) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(granularitySpec, that.granularitySpec) &&
            Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
@@ -284,6 +295,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
         inputSegmentSizeBytes,
         maxRowsPerSegment,
         skipOffsetFromLatest,
+        skipOffsetFromEarliest,
         tuningConfig,
         granularitySpec,
         dimensionsSpec,
@@ -310,6 +322,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
         .withInputSegmentSizeBytes(this.inputSegmentSizeBytes)
         .withMaxRowsPerSegment(this.maxRowsPerSegment)
         .withSkipOffsetFromLatest(this.skipOffsetFromLatest)
+        .withSkipOffsetFromEarliest(this.skipOffsetFromEarliest)
         .withTuningConfig(this.tuningConfig)
         .withGranularitySpec(this.granularitySpec)
         .withDimensionsSpec(this.dimensionsSpec)
@@ -329,6 +342,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
     private Long inputSegmentSizeBytes;
     private Integer maxRowsPerSegment;
     private Period skipOffsetFromLatest;
+    private Period skipOffsetFromEarliest;
     private UserCompactionTaskQueryTuningConfig tuningConfig;
     private UserCompactionTaskGranularityConfig granularitySpec;
     private UserCompactionTaskDimensionsConfig dimensionsSpec;
@@ -348,6 +362,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
           inputSegmentSizeBytes,
           maxRowsPerSegment,
           skipOffsetFromLatest,
+          skipOffsetFromEarliest,
           tuningConfig,
           granularitySpec,
           dimensionsSpec,
@@ -389,6 +404,12 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
     public Builder withSkipOffsetFromLatest(Period skipOffsetFromLatest)
     {
       this.skipOffsetFromLatest = skipOffsetFromLatest;
+      return this;
+    }
+
+    public Builder withSkipOffsetFromEarliest(Period skipOffsetFromEarliest)
+    {
+      this.skipOffsetFromEarliest = skipOffsetFromEarliest;
       return this;
     }
 
