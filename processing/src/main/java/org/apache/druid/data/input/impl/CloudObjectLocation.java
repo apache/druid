@@ -47,7 +47,7 @@ import java.util.regex.Pattern;
  */
 public class CloudObjectLocation
 {
-  private static final Pattern S3_ARN = Pattern.compile("^arn:(aws|aws-cn|aws-us-gov):s3:[a-z0-9-]*:\\d{12}:accesspoint[:/][A-Za-z0-9.-]+$");
+  private static final Pattern S3_ARN = Pattern.compile("^arn:(aws|aws-cn|aws-us-gov):s3:[a-z0-9-]*:\\d{12}:accesspoint:[A-Za-z0-9.-]+$");
 
   public static URI validateUriScheme(String scheme, URI uri)
   {
@@ -69,7 +69,7 @@ public class CloudObjectLocation
     Preconditions.checkArgument(
       this.bucket.equals(StringUtils.urlEncode(this.bucket)) || isS3Arn(this.bucket),
       "bucket must follow DNS-compliant naming conventions or be a valid S3 Access Point ARN"
-      + " or S3 Multi-Region Access Point ARN"
+      + " or S3 Multi-Region Access Point ARN. Use colon form: arn:...:accesspoint:name"
     );
   }
 
