@@ -51,7 +51,8 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"idleWeight\": 0.4,\n"
                   + "  \"minScaleUpDelay\": \"PT5M\",\n"
                   + "  \"minScaleDownDelay\": \"PT10M\",\n"
-                  + "  \"scaleDownDuringTaskRolloverOnly\": true\n"
+                  + "  \"scaleDownDuringTaskRolloverOnly\": true,\n"
+                  + "  \"usePollIdleRatio\": false\n"
                   + "}";
 
     CostBasedAutoScalerConfig config = mapper.readValue(json, CostBasedAutoScalerConfig.class);
@@ -67,6 +68,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(Duration.standardMinutes(5), config.getMinScaleUpDelay());
     Assert.assertEquals(Duration.standardMinutes(10), config.getMinScaleDownDelay());
     Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
+    Assert.assertFalse(config.isUsePollIdleRatio());
     Assert.assertFalse(config.isUseTaskCountBoundariesOnScaleUp());
     Assert.assertTrue(config.isUseTaskCountBoundariesOnScaleDown());
 
@@ -101,6 +103,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(Duration.millis(DEFAULT_SCALE_ACTION_PERIOD_MILLIS), config.getMinScaleUpDelay());
     Assert.assertEquals(DEFAULT_MIN_SCALE_DELAY, config.getMinScaleDownDelay());
     Assert.assertFalse(config.isScaleDownOnTaskRolloverOnly());
+    Assert.assertTrue(config.isUsePollIdleRatio());
     Assert.assertFalse(config.isUseTaskCountBoundariesOnScaleUp());
     Assert.assertTrue(config.isUseTaskCountBoundariesOnScaleDown());
     Assert.assertNull(config.getTaskCountStart());
@@ -190,6 +193,7 @@ public class CostBasedAutoScalerConfigTest
                                                                 .minScaleUpDelay(Duration.standardMinutes(5))
                                                                 .minScaleDownDelay(Duration.standardMinutes(10))
                                                                 .scaleDownDuringTaskRolloverOnly(true)
+                                                                .usePollIdleRatio(false)
                                                                 .build();
 
     Assert.assertTrue(config.getEnableTaskAutoScaler());
@@ -205,6 +209,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(Duration.standardMinutes(5), config.getMinScaleUpDelay());
     Assert.assertEquals(Duration.standardMinutes(10), config.getMinScaleDownDelay());
     Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
+    Assert.assertFalse(config.isUsePollIdleRatio());
   }
 
   @Test

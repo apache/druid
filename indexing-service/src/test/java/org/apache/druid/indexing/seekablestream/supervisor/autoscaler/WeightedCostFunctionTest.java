@@ -419,6 +419,86 @@ public class WeightedCostFunctionTest
     );
   }
 
+  @Test
+  public void testEstimateIdleRatioFromProcessingRate()
+  {
+    // 75% utilization (750/1000) -> idle = 0.25
+    final CostMetrics utilized = createMetricsWithMaxObservedRate(750.0, 1000.0, 0.3);
+    Assert.assertEquals(
+        0.25,
+        utilized.estimateIdleRatioFromProcessingRate(),
+        0.0001
+    );
+
+    // Utilization above 100% (rate exceeds the watermark) clamps idle to 0, not negative
+    final CostMetrics overUtilized = createMetricsWithMaxObservedRate(1500.0, 1000.0, 0.3);
+    Assert.assertEquals(
+        0.0,
+        overUtilized.estimateIdleRatioFromProcessingRate(),
+        0.0001
+    );
+
+    // No throughput baseline yet (maxObservedRate=0) -> return negative (unknown), never NaN from 0/0
+    final CostMetrics noBaseline = createMetricsWithMaxObservedRate(0.0, 0.0, 0.3);
+    Assert.assertTrue(noBaseline.estimateIdleRatioFromProcessingRate() < 0);
+  }
+
+  @Test
+  public void testComputeCostSwitchesBetweenPollIdleRatioAndUtilizationRatio()
+  {
+    CostBasedAutoScalerConfig idleOnlyConfig = CostBasedAutoScalerConfig.builder()
+                                                                        .taskCountMax(100)
+                                                                        .taskCountMin(1)
+                                                                        .enableTaskAutoScaler(true)
+                                                                        .lagWeight(0.0)
+                                                                        .idleWeight(1.0)
+                                                                        .build();
+    CostBasedAutoScalerConfig utilizationConfig = CostBasedAutoScalerConfig.builder()
+                                                                           .taskCountMax(100)
+                                                                           .taskCountMin(1)
+                                                                           .enableTaskAutoScaler(true)
+                                                                           .lagWeight(0.0)
+                                                                           .idleWeight(1.0)
+                                                                           .usePollIdleRatio(false)
+                                                                           .build();
+
+    // pollIdleRatio says 90% idle, but utilization (100/1000 used) says 90% idle too -- pick values that
+    // diverge so the two code paths are distinguishable.
+    CostMetrics metrics = createMetricsWithMaxObservedRate(100.0, 1000.0, 0.9);
+
+    double costWithPollIdleRatio = costFunction.computeCost(metrics, 10, idleOnlyConfig).totalCost();
+    Assert.assertEquals(
+        "Default config should cost using the raw pollIdleRatio",
+        costFunction.uShapedIdleCost(0.9, 10),
+        costWithPollIdleRatio,
+        0.0001
+    );
+
+    double costWithUtilizationRatio = costFunction.computeCost(metrics, 10, utilizationConfig).totalCost();
+    Assert.assertEquals(
+        "usePollIdleRatio=false should cost using the rate-derived idle ratio instead of pollIdleRatio",
+        costFunction.uShapedIdleCost(0.9, 10),
+        costWithUtilizationRatio,
+        0.0001
+    );
+
+    // Now diverge pollIdleRatio from the utilization-derived value to prove the flag actually switches sources.
+    CostMetrics divergingMetrics = createMetricsWithMaxObservedRate(100.0, 1000.0, 0.1);
+    double costStillPollIdle = costFunction.computeCost(divergingMetrics, 10, idleOnlyConfig).totalCost();
+    double costStillUtilization = costFunction.computeCost(divergingMetrics, 10, utilizationConfig).totalCost();
+    Assert.assertEquals(
+        costFunction.uShapedIdleCost(0.1, 10),
+        costStillPollIdle,
+        0.0001
+    );
+    Assert.assertEquals(
+        "Utilization-derived idle ratio (0.9) should be used instead of the diverging pollIdleRatio (0.1)",
+        costFunction.uShapedIdleCost(0.9, 10),
+        costStillUtilization,
+        0.0001
+    );
+  }
+
   private CostMetrics createMetrics(
       double avgPartitionLag,
       int currentTaskCount,
@@ -432,8 +512,18 @@ public class WeightedCostFunctionTest
         partitionCount,
         pollIdleRatio,
         3600,
+        1000.0,
         1000.0
     );
+  }
+
+  private CostMetrics createMetricsWithMaxObservedRate(
+      double avgProcessingRate,
+      double maxObservedRate,
+      double pollIdleRatio
+  )
+  {
+    return new CostMetrics(0.0, 10, 100, pollIdleRatio, 3600, avgProcessingRate, maxObservedRate);
   }
 
   private CostMetrics createMetricsWithRate(
@@ -450,7 +540,8 @@ public class WeightedCostFunctionTest
         partitionCount,
         pollIdleRatio,
         3600,
-        avgProcessingRate
+        avgProcessingRate,
+        1000.0
     );
   }
 }

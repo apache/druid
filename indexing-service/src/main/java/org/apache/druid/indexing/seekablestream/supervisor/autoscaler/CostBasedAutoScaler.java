@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import com.google.common.collect.EvictingQueue;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.error.DruidException;
@@ -40,6 +41,7 @@ import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -80,6 +82,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    */
   static final int MAX_IDLENESS_PARTITION_LAG = 10_000;
 
+  /**
+   * The number of most recent processing rate samples to maintain for auto-scaling decisions
+   * in case when {@link CostBasedAutoScalerConfig#usePollIdleRatio} is disabled.
+   */
+  static final int PROCESSING_RATE_WINDOW_SIZE = 50;
+
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
   private final ServiceEmitter emitter;
@@ -87,6 +95,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private final CostBasedAutoScalerConfig config;
   private final ScheduledExecutorService autoscalerExecutor;
   private final WeightedCostFunction costFunction;
+
+  private final EvictingQueue<Double> processingRateSamples;
   private volatile CostMetrics lastKnownMetrics;
 
   public CostBasedAutoScaler(
@@ -102,6 +112,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     this.supervisorId = spec.getId();
     this.emitter = emitter;
 
+    this.processingRateSamples = EvictingQueue.create(PROCESSING_RATE_WINDOW_SIZE);
     this.costFunction = new WeightedCostFunction();
     this.autoscalerExecutor = Execs.scheduledSingleThreaded("CostBasedAutoScaler-"
                                                             + StringUtils.encodeForFormat(spec.getId()));
@@ -438,13 +449,18 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final double movingAvgRate = extractMovingAverage(taskStats);
     final double pollIdleRatio = extractPollIdleRatio(taskStats);
 
+    if (!config.isUsePollIdleRatio() && movingAvgRate > 0) {
+      processingRateSamples.add(movingAvgRate);
+    }
+
     return new CostMetrics(
         avgPartitionLag,
         currentTaskCount,
         partitionCount,
         pollIdleRatio,
         supervisor.getIoConfig().getTaskDuration().getStandardSeconds(),
-        movingAvgRate
+        movingAvgRate,
+        processingRateSamples.isEmpty() ? null : Collections.max(processingRateSamples)
     );
   }
 

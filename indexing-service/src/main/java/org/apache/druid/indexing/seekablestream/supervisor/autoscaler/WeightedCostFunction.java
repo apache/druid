@@ -117,26 +117,27 @@ public class WeightedCostFunction
       lagRecoveryTime = metrics.getAggregateLag() * amplification / (proposedTaskCount * adjustedProcessingRate);
     }
 
-    // Capacity-based idle prediction with sublinear busy redistribution. When the proposed count
-    // would oversaturate the cluster (busy work exceeds available capacity), the unmet demand
-    // becomes a virtual lag-recovery time on the same axis as real lag — so the optimizer treats
-    // predicted saturation as predicted lag, not as "perfect utilization".
-    final double currentPollIdleRatio = metrics.getPollIdleRatio();
+    // Capacity-based idle prediction. When the proposed count would oversaturate the cluster
+    // (busy work exceeds available capacity), the unmet demand becomes a virtual lag-recovery
+    // time on the same axis as real lag — so the optimizer treats predicted saturation as predicted lag.
+    final double currentIdleRatio = config.isUsePollIdleRatio()
+                                    ? metrics.getPollIdleRatio()
+                                    : metrics.estimateIdleRatioFromProcessingRate();
     final int currentTaskCount = metrics.getCurrentTaskCount();
     final double predictedIdleRatio;
     final double overrun;
-    if (currentPollIdleRatio < 0) {
+    if (currentIdleRatio < 0) {
       predictedIdleRatio = 0.5;
       overrun = 0.0;
     } else if (currentTaskCount <= 0 || proposedTaskCount == currentTaskCount) {
-      predictedIdleRatio = currentPollIdleRatio;
+      predictedIdleRatio = currentIdleRatio;
       overrun = 0.0;
     } else {
-      final double busyFraction = 1.0 - currentPollIdleRatio;
+      final double busyFraction = 1.0 - currentIdleRatio;
       // Sublinear redistribution factor: keeps a healthy consolidation from projecting negative idle,
       // yet still diverges as proposed -> 0 so extreme consolidation registers as overrun.
-      final double idle = Math.pow((double) currentTaskCount / proposedTaskCount, IDLE_SUBLINEARITY_EXPONENT);
-      final double rawIdle = 1.0 - busyFraction * idle;
+      final double taskRatio = Math.pow((double) currentTaskCount / proposedTaskCount, IDLE_SUBLINEARITY_EXPONENT);
+      final double rawIdle = 1.0 - busyFraction * taskRatio;
       if (rawIdle >= 0) {
         predictedIdleRatio = Math.min(1.0, rawIdle);
         overrun = 0.0;
