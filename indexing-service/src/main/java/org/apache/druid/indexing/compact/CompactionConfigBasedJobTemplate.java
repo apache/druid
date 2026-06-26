@@ -28,7 +28,9 @@ import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
+import org.apache.druid.server.compaction.CompactionTaskStatus;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
 import org.apache.druid.server.compaction.Eligibility;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
@@ -94,10 +96,18 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
     // Create a job for each CompactionCandidate
     while (segmentIterator.hasNext()) {
       final CompactionCandidate candidate = segmentIterator.next();
-      final Eligibility eligibility =
-          params.getClusterCompactionConfig()
-                .getCompactionPolicy()
-                .checkEligibilityForCompaction(candidate, params.getLatestTaskStatus(candidate));
+      final CompactionCandidateSearchPolicy policy = params.getClusterCompactionConfig().getCompactionPolicy();
+      final CompactionTaskStatus latestTaskStatus = params.getLatestTaskStatus(candidate);
+
+      Eligibility eligibility = policy.checkEligibilityForCompaction(candidate, latestTaskStatus);
+      if (policy.isForcePendingDeletionCompaction()
+          && !eligibility.isEligible()
+          && configOptimizer.hasUnappliedDeletionRules(config, candidate, params)) {
+        // When the operator has opted in, a cascading reindexing interval with unapplied deletion rules
+        // must be reindexed for compliance even when it is below the policy's size thresholds; bypass
+        // those gates but keep its full-vs-minor decision.
+        eligibility = policy.checkEligibilityForMandatoryCompaction(candidate, latestTaskStatus);
+      }
       if (!eligibility.isEligible()) {
         continue;
       }

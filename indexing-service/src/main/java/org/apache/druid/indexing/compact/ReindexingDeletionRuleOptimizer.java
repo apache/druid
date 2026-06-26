@@ -95,6 +95,31 @@ public class ReindexingDeletionRuleOptimizer implements ReindexingConfigOptimize
         .build();
   }
 
+  @Override
+  public boolean hasUnappliedDeletionRules(
+      DataSourceCompactionConfig config,
+      CompactionCandidate candidate,
+      CompactionJobParams params
+  )
+  {
+    if (config.getTransformSpec() == null) {
+      return false;
+    }
+    final DimFilter filter = config.getTransformSpec().getFilter();
+    if (!(filter instanceof NotDimFilter)) {
+      return false;
+    }
+
+    // Compare the decomposed NOT(OR(...)) clauses (as optimizeConfig does) rather than the whole
+    // transformSpec, so a spec differing only by folded-in partitioning virtual columns isn't mistaken
+    // for a pending deletion. Unlike optimizeConfig, never-compacted candidates are not short-circuited.
+    return computeRequiredSetOfFilterRulesForCandidate(
+        candidate,
+        (NotDimFilter) filter,
+        params.getFingerprintMapper()
+    ) != null;
+  }
+
   /**
    * Computes the required set of deletion rules to be applied for the given {@link CompactionCandidate}.
    * <p>

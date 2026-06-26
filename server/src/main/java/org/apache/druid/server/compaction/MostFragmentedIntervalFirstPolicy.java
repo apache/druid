@@ -51,6 +51,34 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   private final HumanReadableBytes maxAverageUncompactedBytesPerSegment;
   private final int minUncompactedBytesPercentForFullCompaction;
   private final int minUncompactedRowsPercentForFullCompaction;
+  /**
+   * When true, intervals with unapplied cascading reindexing deletion rules bypass this policy's
+   * minimum interval-size gates. See {@link CompactionCandidateSearchPolicy#isForcePendingDeletionCompaction()}.
+   */
+  private final boolean forcePendingDeletionCompaction;
+
+  /**
+   * Convenience constructor that defaults {@link #forcePendingDeletionCompaction} to false.
+   */
+  public MostFragmentedIntervalFirstPolicy(
+      @Nullable Integer minUncompactedCount,
+      @Nullable HumanReadableBytes minUncompactedBytes,
+      @Nullable HumanReadableBytes maxAverageUncompactedBytesPerSegment,
+      @Nullable Integer minUncompactedBytesPercentForFullCompaction,
+      @Nullable Integer minUncompactedRowsPercentForFullCompaction,
+      @Nullable String priorityDatasource
+  )
+  {
+    this(
+        minUncompactedCount,
+        minUncompactedBytes,
+        maxAverageUncompactedBytesPerSegment,
+        minUncompactedBytesPercentForFullCompaction,
+        minUncompactedRowsPercentForFullCompaction,
+        priorityDatasource,
+        null
+    );
+  }
 
   @JsonCreator
   public MostFragmentedIntervalFirstPolicy(
@@ -62,7 +90,8 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
       Integer minUncompactedBytesPercentForFullCompaction,
       @JsonProperty("minUncompactedRowsPercentForFullCompaction") @Nullable
       Integer minUncompactedRowsPercentForFullCompaction,
-      @JsonProperty("priorityDatasource") @Nullable String priorityDatasource
+      @JsonProperty("priorityDatasource") @Nullable String priorityDatasource,
+      @JsonProperty("forcePendingDeletionCompaction") @Nullable Boolean forcePendingDeletionCompaction
   )
   {
     super(priorityDatasource);
@@ -100,6 +129,7 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
         Configs.valueOrDefault(minUncompactedBytesPercentForFullCompaction, 0);
     this.minUncompactedRowsPercentForFullCompaction =
         Configs.valueOrDefault(minUncompactedRowsPercentForFullCompaction, 0);
+    this.forcePendingDeletionCompaction = Configs.valueOrDefault(forcePendingDeletionCompaction, false);
   }
 
   /**
@@ -154,6 +184,13 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
     return minUncompactedRowsPercentForFullCompaction;
   }
 
+  @JsonProperty
+  @Override
+  public boolean isForcePendingDeletionCompaction()
+  {
+    return forcePendingDeletionCompaction;
+  }
+
   @Override
   protected Comparator<CompactionCandidate> getSegmentComparator()
   {
@@ -174,7 +211,8 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
            && Objects.equals(minUncompactedBytes, policy.minUncompactedBytes)
            && Objects.equals(maxAverageUncompactedBytesPerSegment, policy.maxAverageUncompactedBytesPerSegment)
            && minUncompactedBytesPercentForFullCompaction == policy.minUncompactedBytesPercentForFullCompaction
-           && minUncompactedRowsPercentForFullCompaction == policy.minUncompactedRowsPercentForFullCompaction;
+           && minUncompactedRowsPercentForFullCompaction == policy.minUncompactedRowsPercentForFullCompaction
+           && forcePendingDeletionCompaction == policy.forcePendingDeletionCompaction;
   }
 
   @Override
@@ -186,7 +224,8 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
         minUncompactedBytes,
         maxAverageUncompactedBytesPerSegment,
         minUncompactedBytesPercentForFullCompaction,
-        minUncompactedRowsPercentForFullCompaction
+        minUncompactedRowsPercentForFullCompaction,
+        forcePendingDeletionCompaction
     );
   }
 
@@ -201,6 +240,7 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
         ", minUncompactedBytesPercentForFullCompaction=" + minUncompactedBytesPercentForFullCompaction +
         ", minUncompactedRowsPercentForFullCompaction=" + minUncompactedRowsPercentForFullCompaction +
         ", priorityDataSource='" + getPriorityDatasource() + '\'' +
+        ", forcePendingDeletionCompaction=" + forcePendingDeletionCompaction +
         '}';
   }
 
@@ -240,6 +280,33 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
           "Average size[%,d] of uncompacted segments in interval must be at most [%,d]",
           avgSegmentSize, maxAverageUncompactedBytesPerSegment.getBytes()
       );
+    }
+
+    return determineCompactionMode(candidate);
+  }
+
+  /**
+   * Skips the minimum interval-size gates enforced by {@link #checkEligibilityForCompaction} and keeps
+   * only the full-vs-minor ratio decision, since the interval must be compacted regardless of its size.
+   */
+  @Override
+  public Eligibility checkEligibilityForMandatoryCompaction(
+      CompactionCandidate candidate,
+      CompactionTaskStatus latestTaskStatus
+  )
+  {
+    return determineCompactionMode(candidate);
+  }
+
+  /**
+   * Chooses full vs. minor compaction from the ratio of uncompacted data (segments needing compaction
+   * for any reason) to total data: minor when the bytes or rows ratio is below the configured threshold.
+   */
+  private Eligibility determineCompactionMode(CompactionCandidate candidate)
+  {
+    final CompactionStatistics uncompacted = candidate.getUncompactedStats();
+    if (uncompacted == null || uncompacted.getNumSegments() < 1) {
+      return Eligibility.FULL;
     }
 
     final double uncompactedBytesRatio = (double) uncompacted.getTotalBytes() /

@@ -629,6 +629,148 @@ public class ReindexingDeletionRuleOptimizerTest
     Assertions.assertSame(config, result);
   }
 
+  @Test
+  public void testHasUnappliedDeletionRules_NoFingerprints_ReturnsTrue()
+  {
+    DimFilter filterA = new SelectorDimFilter("country", "US", null);
+    DimFilter filterB = new SelectorDimFilter("country", "UK", null);
+    NotDimFilter expectedFilter = new NotDimFilter(new OrDimFilter(Arrays.asList(filterA, filterB)));
+
+    CompactionCandidate candidate = createCandidateWithNullFingerprints(2);
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
+
+    Assertions.assertTrue(optimizer.hasUnappliedDeletionRules(config, candidate, params));
+  }
+
+  @Test
+  public void testHasUnappliedDeletionRules_PartiallyApplied_ReturnsTrue()
+  {
+    DimFilter filterA = new SelectorDimFilter("country", "US", null);
+    DimFilter filterB = new SelectorDimFilter("country", "UK", null);
+
+    CompactionState state = createStateWithSingleFilter(filterA);
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp1", state, DateTimes.nowUtc());
+    syncCacheFromManager();
+
+    NotDimFilter expectedFilter = new NotDimFilter(new OrDimFilter(Arrays.asList(filterA, filterB)));
+    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
+
+    Assertions.assertTrue(optimizer.hasUnappliedDeletionRules(config, candidate, params));
+  }
+
+  @Test
+  public void testHasUnappliedDeletionRules_AllApplied_ReturnsFalse()
+  {
+    DimFilter filterA = new SelectorDimFilter("country", "US", null);
+    DimFilter filterB = new SelectorDimFilter("country", "UK", null);
+
+    CompactionState state = createStateWithFilters(filterA, filterB);
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp1", state, DateTimes.nowUtc());
+    syncCacheFromManager();
+
+    NotDimFilter expectedFilter = new NotDimFilter(new OrDimFilter(Arrays.asList(filterA, filterB)));
+    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
+
+    Assertions.assertFalse(optimizer.hasUnappliedDeletionRules(config, candidate, params));
+  }
+
+  @Test
+  public void testHasUnappliedDeletionRules_MissingState_ReturnsTrue()
+  {
+    DimFilter filterA = new SelectorDimFilter("country", "US", null);
+    NotDimFilter expectedFilter = new NotDimFilter(filterA);
+
+    // No cached state for fp1, so the rule can't be proven applied.
+    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
+
+    Assertions.assertTrue(optimizer.hasUnappliedDeletionRules(config, candidate, params));
+  }
+
+  @Test
+  public void testHasUnappliedDeletionRules_NeverCompactedCandidate_ReturnsTrue()
+  {
+    DimFilter filterA = new SelectorDimFilter("country", "US", null);
+    NotDimFilter expectedFilter = new NotDimFilter(filterA);
+
+    // optimizeConfig short-circuits never-compacted candidates; this must still report them unapplied.
+    List<DataSegment> segments = new ArrayList<>();
+    segments.add(DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(null).build());
+    CompactionCandidate candidate = CompactionCandidate.from(
+        segments,
+        null,
+        CompactionStatus.pending(CompactionStatus.NEVER_COMPACTED_REASON)
+    );
+
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
+
+    Assertions.assertTrue(optimizer.hasUnappliedDeletionRules(config, candidate, params));
+  }
+
+  @Test
+  public void testHasUnappliedDeletionRules_NoTransformSpec_ReturnsFalse()
+  {
+    InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig.builder()
+        .forDataSource(TestDataSource.WIKI)
+        .build();
+    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    CompactionJobParams params = createParams();
+
+    Assertions.assertFalse(optimizer.hasUnappliedDeletionRules(config, candidate, params));
+  }
+
+  @Test
+  public void testHasUnappliedDeletionRules_FilterNotNegated_ReturnsFalse()
+  {
+    InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig.builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withTransformSpec(new CompactionTransformSpec(new SelectorDimFilter("country", "US", null), null))
+        .build();
+    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    CompactionJobParams params = createParams();
+
+    Assertions.assertFalse(optimizer.hasUnappliedDeletionRules(config, candidate, params));
+  }
+
+  @Test
+  public void testHasUnappliedDeletionRules_AllAppliedButVirtualColumnsDiffer_ReturnsFalse()
+  {
+    DimFilter ruleA = new SelectorDimFilter("vc_deletion", "x", null);
+    DimFilter ruleB = new SelectorDimFilter("country", "UK", null);
+    NotDimFilter deletionFilter = new NotDimFilter(new OrDimFilter(Arrays.asList(ruleA, ruleB)));
+
+    // Both deletion rules applied, carrying only the deletion virtual column.
+    CompactionState appliedState = CompactionState.builder()
+        .transformSpec(new CompactionTransformSpec(
+            deletionFilter,
+            VirtualColumns.create(
+                new ExpressionVirtualColumn("vc_deletion", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE)
+            )
+        ))
+        .indexSpec(IndexSpec.getDefault())
+        .build();
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp1", appliedState, DateTimes.nowUtc());
+    syncCacheFromManager();
+
+    // Same deletion rules, but the desired config adds a partitioning virtual column on top.
+    VirtualColumns desiredVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("vc_deletion", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("vc_partition", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE)
+    );
+    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(deletionFilter, desiredVcs);
+    CompactionJobParams params = createParams();
+
+    Assertions.assertFalse(optimizer.hasUnappliedDeletionRules(config, candidate, params));
+  }
+
   /**
    * Helper to sync the cache with states stored in the manager (for tests that persist states).
    */

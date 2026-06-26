@@ -383,6 +383,107 @@ public class MostFragmentedIntervalFirstPolicyTest
     Assertions.assertTrue(eligibility.isEligible());
   }
 
+  @Test
+  public void test_checkEligibilityForMandatoryCompaction_bypassesMinimumSizeGates_andReturnsFull()
+  {
+    final MostFragmentedIntervalFirstPolicy policy = new MostFragmentedIntervalFirstPolicy(
+        10_000,
+        HumanReadableBytes.valueOf(10_000),
+        HumanReadableBytes.valueOf(100),
+        null,
+        null,
+        null
+    );
+
+    final CompactionCandidate candidate = createCandidate(1, 100L);
+    Assertions.assertFalse(policy.checkEligibilityForCompaction(candidate, null).isEligible());
+
+    final Eligibility mandatory = policy.checkEligibilityForMandatoryCompaction(candidate, null);
+    Assertions.assertTrue(mandatory.isEligible());
+    Assertions.assertEquals(CompactionMode.ALL_SEGMENTS, mandatory.getMode());
+  }
+
+  @Test
+  public void test_checkEligibilityForMandatoryCompaction_appliesRatioDecision_andReturnsMinor()
+  {
+    final MostFragmentedIntervalFirstPolicy policy = new MostFragmentedIntervalFirstPolicy(
+        10_000,
+        HumanReadableBytes.valueOf(1),
+        HumanReadableBytes.valueOf(10_000),
+        50,
+        50,
+        null
+    );
+
+    final CompactionStatistics compacted = CompactionStatistics.create(1200L, 400L, 10, 1L);
+    final CompactionStatistics uncompacted = CompactionStatistics.create(400L, 600L, 100, 1L);
+    final CompactionStatus status = CompactionStatus.pending(compacted, uncompacted, List.of(SEGMENT), "");
+    final CompactionCandidate candidate = CompactionCandidate.from(List.of(SEGMENT), null, status);
+
+    Assertions.assertFalse(policy.checkEligibilityForCompaction(candidate, null).isEligible());
+
+    // uncompacted bytes ratio 400/1600 = 25%, below the 50% threshold, so minor is selected.
+    final Eligibility mandatory = policy.checkEligibilityForMandatoryCompaction(candidate, null);
+    Assertions.assertTrue(mandatory.isEligible());
+    Assertions.assertEquals(CompactionMode.UNCOMPACTED_SEGMENTS_ONLY, mandatory.getMode());
+  }
+
+  @Test
+  public void test_checkEligibilityForMandatoryCompaction_defaultImplementation_upgradesRejectionToFull()
+  {
+    final CompactionCandidate candidate = createCandidate(1, 100L);
+
+    final CompactionCandidateSearchPolicy rejectingPolicy = new CompactionCandidateSearchPolicy()
+    {
+      @Override
+      public int compareCandidates(CompactionCandidate a, CompactionCandidate b)
+      {
+        return 0;
+      }
+
+      @Override
+      public Eligibility checkEligibilityForCompaction(CompactionCandidate c, CompactionTaskStatus s)
+      {
+        return Eligibility.fail("not eligible");
+      }
+    };
+
+    Assertions.assertEquals(
+        Eligibility.FULL,
+        rejectingPolicy.checkEligibilityForMandatoryCompaction(candidate, null)
+    );
+  }
+
+  @Test
+  public void test_isForcePendingDeletionCompaction_defaultsToFalse()
+  {
+    Assertions.assertFalse(
+        new MostFragmentedIntervalFirstPolicy(null, null, null, null, null, null).isForcePendingDeletionCompaction()
+    );
+    Assertions.assertFalse(new NewestSegmentFirstPolicy(null).isForcePendingDeletionCompaction());
+  }
+
+  @Test
+  public void test_serde_forcePendingDeletionCompaction() throws IOException
+  {
+    final MostFragmentedIntervalFirstPolicy policy = new MostFragmentedIntervalFirstPolicy(
+        1,
+        HumanReadableBytes.valueOf(2),
+        HumanReadableBytes.valueOf(3),
+        50,
+        51,
+        "foo",
+        true
+    );
+    Assertions.assertTrue(policy.isForcePendingDeletionCompaction());
+
+    final DefaultObjectMapper mapper = new DefaultObjectMapper();
+    final CompactionCandidateSearchPolicy roundTripped =
+        mapper.readValue(mapper.writeValueAsString(policy), CompactionCandidateSearchPolicy.class);
+    Assertions.assertEquals(policy, roundTripped);
+    Assertions.assertTrue(roundTripped.isForcePendingDeletionCompaction());
+  }
+
   private CompactionCandidate createCandidate(int numSegments, long avgSizeBytes)
   {
     final CompactionStatistics dummyCompactedStats = CompactionStatistics.create(1L, null, 1L, 1L);
