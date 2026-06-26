@@ -107,7 +107,7 @@
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.21.4</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
-        <log4j.version>2.25.4</log4j.version>
+        <log4j.version>2.26.0</log4j.version>
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
@@ -930,6 +930,11 @@
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
                 <artifactId>log4j-1.2-api</artifactId>
+                <version>${log4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-layout-template-json</artifactId>
                 <version>${log4j.version}</version>
             </dependency>
             <dependency>
