@@ -86,7 +86,7 @@ public class DeltaLakeInputSourceIngestionTest extends EmbeddedClusterTestBase
 
     final File deltaTableDir = Resources.getFileForResource(DELTA_TABLE_RESOURCE);
     // Escape backslashes so a Windows path stays valid inside the JSON input source spec.
-    final String tablePath = deltaTableDir.getAbsolutePath().replace("\\", "\\\\");
+    final String tablePath = StringUtils.replace(deltaTableDir.getAbsolutePath(), "\\", "\\\\");
 
     final String sql = StringUtils.format(
         "INSERT INTO %s\n"
