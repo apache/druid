@@ -486,6 +486,15 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/schemaCache/deepStorageOnly/count`|Number of deep storage only segments with cached schema.|`dataSource`||
 |`segment/schemaCache/deepStorageOnly/refresh/time`|Time taken in milliseconds to refresh schemas of deep storage only segments.||Under a minute|
 
+## Security
+
+These metrics are emitted when `druid.auth.emitAuthMetrics` is set to `true`.
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
+|`auth/forbidden`|Emitted when a request is denied due to insufficient permissions. This includes both outright access denials and cases where basic access is granted but a row-level policy restricts full access.|`identity`, `authorizerName`, `resourceName`, `resourceType`, `action`, `errorMessage`|1|
+|`auth/exception`|Emitted when an internal authorization error occurs, such as a missing authorizer, duplicate resource policies, or a double-authorization check on the same request.|`identity`, `authorizerName`, `resourceName` (when available), `resourceType` (when available), `action` (when available), `errorMessage` (when available)|1|
+
 ## General Health
 
 ### Service Health
