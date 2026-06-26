@@ -67,6 +67,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final Duration minScaleUpDelay;
   private final Duration minScaleDownDelay;
   private final boolean scaleDownDuringTaskRolloverOnly;
+  private final boolean usePollIdleRatio;
 
   /**
    * Creates a new CostBasedAutoScalerConfig instance.
@@ -85,13 +86,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("scaleActionPeriodMillis") Long scaleActionPeriodMillis,
       @Nullable @JsonProperty("lagWeight") Double lagWeight,
       @Nullable @JsonProperty("idleWeight") Double idleWeight,
-      @Nullable @JsonProperty("useTaskCountBoundaries") Boolean useTaskCountBoundaries,
-      @Nullable @JsonProperty("highLagThreshold") Integer highLagThreshold,
       @Nullable @JsonProperty("useTaskCountBoundariesOnScaleUp") Boolean useTaskCountBoundariesOnScaleUp,
       @Nullable @JsonProperty("useTaskCountBoundariesOnScaleDown") Boolean useTaskCountBoundariesOnScaleDown,
       @Nullable @JsonProperty("minScaleUpDelay") Duration minScaleUpDelay,
       @Nullable @JsonProperty("minScaleDownDelay") Duration minScaleDownDelay,
-      @Nullable @JsonProperty("scaleDownDuringTaskRolloverOnly") Boolean scaleDownDuringTaskRolloverOnly
+      @Nullable @JsonProperty("scaleDownDuringTaskRolloverOnly") Boolean scaleDownDuringTaskRolloverOnly,
+      @Nullable @JsonProperty("usePollIdleRatio") Boolean usePollIdleRatio
   )
   {
     this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
@@ -116,16 +116,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     );
     this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, DEFAULT_MIN_SCALE_DELAY);
     this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, false);
+    this.usePollIdleRatio = Configs.valueOrDefault(usePollIdleRatio, true);
 
     if (this.enableTaskAutoScaler) {
-      if (useTaskCountBoundaries != null) {
-        LOG.warn("useTaskCountBoundaries is removed, "
-                 + "use useTaskCountBoundariesOnScaleUp and useTaskCountBoundariesOnScaleDown instead");
-      }
-      if (highLagThreshold != null) {
-        LOG.warn("highLagThreshold is removed, the autoscaler behavior is good enough just with cost function");
-      }
-
       Preconditions.checkNotNull(taskCountMax, "taskCountMax is required when enableTaskAutoScaler is true");
       Preconditions.checkNotNull(taskCountMin, "taskCountMin is required when enableTaskAutoScaler is true");
       Preconditions.checkArgument(taskCountMax >= taskCountMin, "taskCountMax must be >= taskCountMin");
@@ -231,23 +224,23 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   /**
-   * Enables or disables the task-count evaluation window when considering scale-up candidates.
-   * If enabled, the optimizer only evaluates a small number of candidate task counts above the current count,
-   * which prevents large scale-up jumps.
+   * If true, the auto-scaler evaluates a small number of candidate task counts
+   * (dictated by {@link CostBasedAutoScaler#BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK})
+   * above the current count, which prevents large scale-up jumps.
    */
-  @JsonProperty("useTaskCountBoundariesOnScaleUp")
-  public boolean shouldUseTaskCountBoundariesOnScaleUp()
+  @JsonProperty
+  public boolean isUseTaskCountBoundariesOnScaleUp()
   {
     return useTaskCountBoundariesOnScaleUp;
   }
 
   /**
-   * Enables or disables the task-count evaluation window when considering scale-down candidates.
-   * If enabled, the optimizer only evaluates a small number of candidate task counts below the current count,
-   * which prevents large scale-down drops.
+   * If true, the auto-scaler evaluates a small number of candidate task counts
+   * (dictated by {@link CostBasedAutoScaler#BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK})
+   * below the current count, which prevents large scale-down drops.
    */
-  @JsonProperty("useTaskCountBoundariesOnScaleDown")
-  public boolean shouldUseTaskCountBoundariesOnScaleDown()
+  @JsonProperty
+  public boolean isUseTaskCountBoundariesOnScaleDown()
   {
     return useTaskCountBoundariesOnScaleDown;
   }
@@ -282,6 +275,16 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     return scaleDownDuringTaskRolloverOnly;
   }
 
+  /**
+   * If true (the default), idle cost is derived from the poll idle ratio reported by tasks.
+   * If false, idle cost is derived from processing-rate utilization instead.
+   */
+  @JsonProperty
+  public boolean isUsePollIdleRatio()
+  {
+    return usePollIdleRatio;
+  }
+
   @Override
   public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter)
   {
@@ -312,6 +315,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && Objects.equals(minScaleUpDelay, that.minScaleUpDelay)
            && Objects.equals(minScaleDownDelay, that.minScaleDownDelay)
            && scaleDownDuringTaskRolloverOnly == that.scaleDownDuringTaskRolloverOnly
+           && usePollIdleRatio == that.usePollIdleRatio
            && Objects.equals(taskCountStart, that.taskCountStart)
            && Objects.equals(stopTaskCountRatio, that.stopTaskCountRatio);
   }
@@ -333,7 +337,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         useTaskCountBoundariesOnScaleDown,
         minScaleUpDelay,
         minScaleDownDelay,
-        scaleDownDuringTaskRolloverOnly
+        scaleDownDuringTaskRolloverOnly,
+        usePollIdleRatio
     );
   }
 
@@ -355,6 +360,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", minScaleUpDelay=" + minScaleUpDelay +
            ", minScaleDownDelay=" + minScaleDownDelay +
            ", scaleDownDuringTaskRolloverOnly=" + scaleDownDuringTaskRolloverOnly +
+           ", usePollIdleRatio=" + usePollIdleRatio +
            '}';
   }
 
@@ -378,6 +384,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Duration minScaleUpDelay;
     private Duration minScaleDownDelay;
     private Boolean scaleDownDuringTaskRolloverOnly;
+    private Boolean usePollIdleRatio;
 
     private Builder()
     {
@@ -455,6 +462,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
+    public Builder usePollIdleRatio(boolean usePollIdleRatio)
+    {
+      this.usePollIdleRatio = usePollIdleRatio;
+      return this;
+    }
+
     public Builder useTaskCountBoundariesOnScaleUp(boolean useTaskCountBoundariesOnScaleUp)
     {
       this.useTaskCountBoundariesOnScaleUp = useTaskCountBoundariesOnScaleUp;
@@ -479,13 +492,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           scaleActionPeriodMillis,
           lagWeight,
           idleWeight,
-          null,
-          null,
           useTaskCountBoundariesOnScaleUp,
           useTaskCountBoundariesOnScaleDown,
           minScaleUpDelay,
           minScaleDownDelay,
-          scaleDownDuringTaskRolloverOnly
+          scaleDownDuringTaskRolloverOnly,
+          usePollIdleRatio
       );
     }
   }
