@@ -53,7 +53,7 @@ public class AuthorizationUtils
       ResourceType.DATASOURCE
   );
 
-  private static final String METRIC_ACCESS_DENIED = "auth/accessDenied";
+  private static final String METRIC_FORBIDDEN = "auth/forbidden";
   private static final String METRIC_EXCEPTION = "auth/exception";
 
   /**
@@ -98,13 +98,13 @@ public class AuthorizationUtils
  if (!authResult.allowAccessWithNoRestriction()) {
       if (authResult.allowBasicAccess()) {
         // Basic access was granted, but access was restricted by a policy.
-        // This is checked to avoid double emitting the access denied metric if the basic access was denied,
+        // This is checked to avoid double emitting the forbidden metric if the basic access was denied,
         // since the authorizeResourceAction method already emits the metric in that case.
         emitAuthMetric(
             authorizerMapper.getServiceEmitter(),
             authenticationResultFromRequest(req),
             resourceAction,
-            METRIC_ACCESS_DENIED,
+            METRIC_FORBIDDEN,
             authResult.getErrorMessage()
         );
       }
@@ -222,7 +222,7 @@ public class AuthorizationUtils
           resourceAction.getAction()
       );
       if (!access.isAllowed()) {
-        emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, resourceAction, METRIC_ACCESS_DENIED, access.getMessage());
+        emitAuthMetric(authorizerMapper.getServiceEmitter(), authenticationResult, resourceAction, METRIC_FORBIDDEN, access.getMessage());
         return AuthorizationResult.deny(access.getMessage());
       } else {
         resultCache.add(resourceAction);
