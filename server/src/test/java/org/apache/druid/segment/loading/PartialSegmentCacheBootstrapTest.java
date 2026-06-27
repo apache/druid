@@ -40,6 +40,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
@@ -194,13 +195,7 @@ class PartialSegmentCacheBootstrapTest
     primeOnDiskState();
 
     // remove the aggregate bundle's container file(s), base's containers stay
-    final PartialSegmentFileMapperV10 introspect = PartialSegmentFileMapperV10.create(
-        new DirectoryBackedRangeReader(deepStorageDir),
-        JSON_MAPPER,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of()
-    );
+    final PartialSegmentFileMapperV10 introspect = createMapper(deepStorageDir, cacheDir);
     final List<Integer> aggContainers = new ArrayList<>();
     final String prefix = AGG_BUNDLE + "/";
     for (var entry : introspect.getSegmentFileMetadata().getFiles().entrySet()) {
@@ -236,13 +231,7 @@ class PartialSegmentCacheBootstrapTest
 
     // Remove base's container files. After this, base is unrestorable on disk, which makes the aggregate (which
     // depends on base) an orphan that must be deleted rather than restored in a degenerate state.
-    final PartialSegmentFileMapperV10 introspect = PartialSegmentFileMapperV10.create(
-        new DirectoryBackedRangeReader(deepStorageDir),
-        JSON_MAPPER,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of()
-    );
+    final PartialSegmentFileMapperV10 introspect = createMapper(deepStorageDir, cacheDir);
     final Set<Integer> baseContainers = new HashSet<>();
     final Set<Integer> aggContainers = new HashSet<>();
     for (var entry : introspect.getSegmentFileMetadata().getFiles().entrySet()) {
@@ -439,13 +428,7 @@ class PartialSegmentCacheBootstrapTest
   {
     primeOnDiskState();
     // download a file in the aggregate bundle to set a bit, then close (persists the bitmap)
-    final PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
-        new DirectoryBackedRangeReader(deepStorageDir),
-        JSON_MAPPER,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of()
-    );
+    final PartialSegmentFileMapperV10 mapper = createMapper(deepStorageDir, cacheDir);
     final String prefix = AGG_BUNDLE + "/";
     String fileInAgg = null;
     int aggContainerIdx = -1;
@@ -482,13 +465,7 @@ class PartialSegmentCacheBootstrapTest
     Assertions.assertTrue(aggContainer.delete());
 
     // re-open the mapper: the bitmap-vs-container repair should clear the bit for the missing file
-    try (PartialSegmentFileMapperV10 restored = PartialSegmentFileMapperV10.create(
-        new DirectoryBackedRangeReader(deepStorageDir),
-        JSON_MAPPER,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of()
-    )) {
+    try (PartialSegmentFileMapperV10 restored = createMapper(deepStorageDir, cacheDir)) {
       Assertions.assertFalse(
           restored.getDownloadedFiles().contains(fileInAgg),
           "bitmap repair should have cleared the bit for " + fileInAgg
@@ -565,4 +542,15 @@ class PartialSegmentCacheBootstrapTest
     return metadata;
   }
 
+  private static PartialSegmentFileMapperV10 createMapper(File deepStorageDir, File cacheDir) throws IOException
+  {
+    return PartialSegmentFileMapperV10.create(
+        new DirectoryBackedRangeReader(deepStorageDir),
+        JSON_MAPPER,
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(),
+        PartialSegmentDownloadListener.NOOP
+    );
+  }
 }

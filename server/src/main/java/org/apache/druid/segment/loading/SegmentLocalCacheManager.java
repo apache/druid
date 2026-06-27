@@ -678,33 +678,18 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   final PartialSegmentFileMapperV10 mapper = reserved.metadata.getFileMapper();
                   final long loadSizeBytes;
                   if (fullDownload) {
-                    // Delta of internal-file bytes downloaded by this task. The small header range-read isn't
-                    // counted in getDownloadedBytes; it's the negligible mount cost.
+                    // Delta of internal-file bytes downloaded by this task
                     final long downloadedBefore = mapper.getDownloadedBytes();
-                    // Mount every bundle so the containers it owns are reserved on the location, SIEVE-evictable, and
-                    // deleted on drop. Writing through the file mapper alone (ensureAllDownloaded) would leave those
-                    // containers unmanaged by any cache entry. Each acquire returns a hold added to loadCleanup, so
-                    // the fully-materialized segment stays resident for the eager (sync-cursor) caller until the
-                    // action closes; on later eviction acquireCachedSegment returns empty and the caller re-downloads.
-                    // acquire() mounts each bundle's parents first, so iteration order doesn't matter.
+                    // Mount every bundle so the containers it owns are reserved on the location
                     for (String bundleName : PartialSegmentBundleCacheEntry.bundleNames(mapper)) {
                       holdHolder.add(reserved.metadata.getBundleAcquirer().acquire(bundleName));
                     }
                     mapper.ensureAllDownloaded();
                     loadSizeBytes = mapper.getDownloadedBytes() - downloadedBefore;
                   } else {
-                    // Lazy mount: report the header bytes when this task caused the mount; 0 when the entry was
-                    // already mounted (a concurrent acquirer or earlier query did the load).
+                    // Lazy mount: the header bytes when this task caused the mount; 0 when the entry was already
+                    // mounted (a concurrent acquirer or earlier query did the load).
                     loadSizeBytes = wasMounted ? 0L : mapper.getOnDiskHeaderSize();
-                  }
-                  // Record the actual-load bytes on the location (VSF_LOAD_*): the header bytes for a lazy mount, or the
-                  // full downloaded delta for a full download. The partial metadata entry is always weak (reservePartial
-                  // uses addWeakReservationHold). Skip when nothing was pulled (a cache hit / already-mounted re-acquire
-                  // reports 0) so we don't log a spurious 0-byte load. On-demand per-column downloads on the lazy path
-                  // happen later at query time and are captured by the query-layer load metrics (the
-                  // AcquireSegmentResult load size), not by this per-location stat.
-                  if (loadSizeBytes > 0) {
-                    reserved.location.trackWeakLoad(loadSizeBytes);
                   }
                   final long loadNanos = System.nanoTime() - taskStartNanos;
                   return new AcquireSegmentResult(
