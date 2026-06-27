@@ -234,8 +234,8 @@ public class WeightedCostFunctionTest
                                                                         .build();
 
     // Extreme scale-down: 10 tasks → 2 tasks with 40% idle
-    // busyFraction = 0.6, taskRatio = 0.2
-    // predictedIdle = 1 - 0.6/0.2 = 1 - 3 = -2 → clamped to 0
+    // busyFraction = 0.6; projectedBusy = 0.6 * (10/2)^0.32 ≈ 1.004
+    // predictedIdle = 1 - 1.004 ≈ -0.004 → still clamped to 0 at this extreme
     CostMetrics metrics = createMetrics(0.0, 10, 100, 0.4);
     double costAt2 = costFunction.computeCost(metrics, 2, idleOnlyConfig).totalCost();
 
@@ -246,11 +246,42 @@ public class WeightedCostFunctionTest
 
     // Extreme scale-up shouldn't exceed 1.0 for idle ratio
     // 10 tasks → 100 tasks with 10% idle
-    // busyFraction = 0.9, taskRatio = 10
-    // predictedIdle = 1 - 0.9/10 = 1 - 0.09 = 0.91 (within bounds)
+    // busyFraction = 0.9; projectedBusy = 0.9 * (10/100)^0.32 ≈ 0.431
+    // predictedIdle = 1 - 0.431 ≈ 0.569 (within bounds)
     CostMetrics lowIdle = createMetrics(0.0, 10, 100, 0.1);
     double costAt100 = costFunction.computeCost(lowIdle, 100, idleOnlyConfig).totalCost();
     Assert.assertTrue("Cost should be finite and positive", Double.isFinite(costAt100) && costAt100 > 0);
+  }
+
+  @Test
+  public void testModerateConsolidationProjectsHealthyIdle()
+  {
+    // The regime the linear model got wrong: a healthy 2x consolidation from 40% idle.
+    // Sublinear gives predictedIdle ≈ 0.25 (near ideal, no overrun), not the linear -0.2 that clamps to 0.
+    CostBasedAutoScalerConfig idleOnlyConfig = CostBasedAutoScalerConfig.builder()
+                                                                        .taskCountMax(100)
+                                                                        .taskCountMin(1)
+                                                                        .enableTaskAutoScaler(true)
+                                                                        .lagWeight(0.0)
+                                                                        .idleWeight(1.0)
+                                                                        .build();
+
+    CostMetrics metrics = createMetrics(0.0, 10, 100, 0.4);
+    double costCurrent = costFunction.computeCost(metrics, 10, idleOnlyConfig).totalCost();
+    double costScaleDown = costFunction.computeCost(metrics, 5, idleOnlyConfig).totalCost();
+
+    Assert.assertTrue(
+        "Healthy 2x consolidation should be cheaper than staying at the current count",
+        costScaleDown < costCurrent
+    );
+
+    // Far below the clamped-to-zero cost the linear model produced: idle is healthy, not clamped.
+    double clampedToZeroCost =
+        5 * (WeightedCostFunction.IDEAL_IDLE_RATIO + WeightedCostFunction.UNDER_PROVISIONING_PENALTY);
+    Assert.assertTrue(
+        "Predicted idle should be healthy, not clamped to zero",
+        costScaleDown < clampedToZeroCost
+    );
   }
 
   @Test

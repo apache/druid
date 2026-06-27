@@ -100,5 +100,13 @@ public interface HttpResponseHandler<IntermediateType, FinalType>
      * @return time that backpressure was applied (channel was closed for reads)
      */
     long resume(long chunkNum);
+
+    /**
+     * Closes the underlying connection, abandoning any remaining response.
+     *
+     * Intended for callers that decide they no longer need the rest of the response (for example, because the
+     * consumer of the resulting stream has been closed early)
+     */
+    void abort();
   }
 }

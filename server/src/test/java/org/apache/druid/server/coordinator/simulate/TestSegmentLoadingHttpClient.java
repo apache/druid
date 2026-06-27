@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import org.apache.druid.client.TestHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -51,7 +52,6 @@ import java.util.stream.Collectors;
 
 public class TestSegmentLoadingHttpClient implements HttpClient
 {
-  private static final HttpResponseHandler.TrafficCop NOOP_TRAFFIC_COP = checkNum -> 0L;
   private static final DataSegmentChangeCallback NOOP_CALLBACK = () -> {
   };
 
@@ -105,7 +105,7 @@ public class TestSegmentLoadingHttpClient implements HttpClient
       if (changeHandler == null) {
         final HttpResponse failureResponse =
             new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
-        handler.handleResponse(failureResponse, NOOP_TRAFFIC_COP);
+        handler.handleResponse(failureResponse, TestHttpClient.NOOP_TRAFFIC_COP);
         return (Final) new ByteArrayInputStream(new byte[0]);
       }
 
@@ -119,7 +119,7 @@ public class TestSegmentLoadingHttpClient implements HttpClient
       // Set response content and status
       final HttpResponse response =
           new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-      handler.handleResponse(response, NOOP_TRAFFIC_COP);
+      handler.handleResponse(response, TestHttpClient.NOOP_TRAFFIC_COP);
       return (Final) new ByteArrayInputStream(serializedContent);
     }
     catch (Exception e) {
@@ -153,7 +153,7 @@ public class TestSegmentLoadingHttpClient implements HttpClient
     try {
       // Set response content and status
       final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-      handler.handleResponse(response, NOOP_TRAFFIC_COP);
+      handler.handleResponse(response, TestHttpClient.NOOP_TRAFFIC_COP);
 
       // Serialize
       SettableFuture future = SettableFuture.create();

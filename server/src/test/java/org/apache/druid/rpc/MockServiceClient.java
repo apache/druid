@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import org.apache.druid.client.TestHttpClient;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -62,7 +63,7 @@ public class MockServiceClient implements ServiceClient
 
     if (expectation.response.isValue()) {
       ClientResponse<IntermediateType> interm =
-          handler.handleResponse(expectation.response.valueOrThrow(), chunkNum -> 0);
+          handler.handleResponse(expectation.response.valueOrThrow(), TestHttpClient.NOOP_TRAFFIC_COP);
       // Netty 4: body content arrives via HttpContent chunks after the initial HttpResponse.
       if (expectation.content != null) {
         interm = handler.handleChunk(

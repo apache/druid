@@ -214,22 +214,35 @@ public class NettyHttpClient extends AbstractHttpClient
                   log.debug("[%s] Got response: %s", requestDesc, httpResponse.status());
                 }
 
-                HttpResponseHandler.TrafficCop trafficCop = resumeChunkNum -> {
-                  synchronized (watermarkLock) {
-                    resumeWatermark = Math.max(resumeWatermark, resumeChunkNum);
+                HttpResponseHandler.TrafficCop trafficCop = new HttpResponseHandler.TrafficCop()
+                {
+                  @Override
+                  public long resume(long resumeChunkNum)
+                  {
+                    synchronized (watermarkLock) {
+                      resumeWatermark = Math.max(resumeWatermark, resumeChunkNum);
 
-                    if (suspendWatermark >= 0 && resumeWatermark >= suspendWatermark) {
-                      suspendWatermark = -1;
-                      channel.config().setAutoRead(true);
-                      channel.read();
-                      long backPressureDuration = System.nanoTime() - backPressureStartTimeNs;
-                      log.debug("[%s] Resumed reads from channel (chunkNum = %,d).", requestDesc, resumeChunkNum);
-                      return backPressureDuration;
+                      if (suspendWatermark >= 0 && resumeWatermark >= suspendWatermark) {
+                        suspendWatermark = -1;
+                        channel.config().setAutoRead(true);
+                        channel.read();
+                        long backPressureDuration = System.nanoTime() - backPressureStartTimeNs;
+                        log.debug("[%s] Resumed reads from channel (chunkNum = %,d).", requestDesc, resumeChunkNum);
+                        return backPressureDuration;
+                      }
                     }
+
+                    return 0; //If we didn't resume, don't know if backpressure was happening
                   }
 
-                  return 0; //If we didn't resume, don't know if backpressure was happening
+                  @Override
+                  public void abort()
+                  {
+                    log.debug("[%s] Aborted connection at caller's request.", requestDesc);
+                    channel.close();
+                  }
                 };
+
                 response = handler.handleResponse(httpResponse, trafficCop);
                 if (response.isFinished()) {
                   retVal.set((Final) response.getObj());
