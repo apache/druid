@@ -792,6 +792,76 @@ class SegmentLocalCacheManagerPartialAcquireTest
     }
   }
 
+  @Test
+  void testGetCachedSegmentsDeletesPartialLayoutWhenRangeReaderUnavailable() throws IOException
+  {
+    // Prime a valid partial on-disk layout (header written from the real deep-storage dir) as a previous run left it.
+    final File partialDir = new File(cacheRoot, SEGMENT_ID.toString());
+    FileUtils.mkdirp(partialDir);
+    primePartialOnDiskState(partialDir);
+
+    // ...but record the segment with a loadSpec whose storage can't produce a range reader: an existing directory
+    // that holds no V10 file, so LocalLoadSpec.openRangeReader returns null. This is the "shouldn't happen" case — a
+    // partial layout on disk means range reads worked when it was written — so partial-enabled bootstrap must reclaim
+    // the layout rather than reserve an entry that could never lazily fetch.
+    final File noRangeReaderStorage = new File(perTestTempDir, "no_range_reader_storage");
+    FileUtils.mkdirp(noRangeReaderStorage);
+    final DataSegment unreadableSegment =
+        DataSegment.builder(SEGMENT_ID)
+                   .shardSpec(NoneShardSpec.instance())
+                   .loadSpec(Map.of("type", "local", "path", noRangeReaderStorage.getAbsolutePath()))
+                   .size(0)
+                   .build();
+    manager.storeInfoFile(unreadableSegment);
+    Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+
+    final List<DataSegment> cached = manager.getCachedSegments();
+    Assertions.assertFalse(
+        cached.contains(unreadableSegment),
+        "bootstrap must not return a partial segment whose deep storage can't produce a range reader"
+    );
+    Assertions.assertFalse(
+        partialDir.exists(),
+        "bootstrap must delete the unusable partial layout from disk"
+    );
+    Assertions.assertNull(
+        manager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
+        "no cache entry should be reserved for the deleted partial layout"
+    );
+  }
+
+  @Test
+  void testGetCachedSegmentsDeletesPartialLayoutWhenLoadSpecUnconvertible() throws IOException
+  {
+    // Prime a valid partial on-disk layout as a previous run left it...
+    final File partialDir = new File(cacheRoot, SEGMENT_ID.toString());
+    FileUtils.mkdirp(partialDir);
+    primePartialOnDiskState(partialDir);
+
+    // ...but record the segment with a loadSpec whose type is no longer registered, so converting it to a LoadSpec
+    // throws. Bootstrap must treat that broken segment like a null reader: delete the unusable layout and continue,
+    // rather than aborting or reserving an entry that could never fetch.
+    final DataSegment unconvertibleSegment =
+        DataSegment.builder(SEGMENT_ID)
+                   .shardSpec(NoneShardSpec.instance())
+                   .loadSpec(Map.of("type", "no-such-loadspec-type"))
+                   .size(0)
+                   .build();
+    manager.storeInfoFile(unconvertibleSegment);
+    Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+
+    final List<DataSegment> cached = manager.getCachedSegments();
+    Assertions.assertFalse(
+        cached.contains(unconvertibleSegment),
+        "bootstrap must not return a partial segment whose loadSpec can't be converted to a range reader"
+    );
+    Assertions.assertFalse(partialDir.exists(), "bootstrap must delete the unusable partial layout from disk");
+    Assertions.assertNull(
+        manager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
+        "no cache entry should be reserved for the deleted partial layout"
+    );
+  }
+
   /**
    * Lay down the on-disk artifacts a previous process run would have left behind in the given partial directory:
    * a V10 header file and sparse-allocated container files for every container the segment metadata declares. The

@@ -327,26 +327,22 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           atomicMoveAndDeleteCacheEntryDirectory(partialDir);
           continue;
         }
-        final SegmentRangeReader rangeReader;
+        SegmentRangeReader rangeReader;
         try {
           rangeReader = tryOpenRangeReader(segment);
         }
-        catch (Throwable t) {
-          log.warn(
-              t,
-              "Failed to open range reader for partial segment[%s] during bootstrap; cold fetch on next access",
-              segment.getId()
-          );
-          continue;
+        catch (Exception e) {
+          log.warn(e, "Failed to open a range reader for partial segment[%s] during bootstrap", segment.getId());
+          rangeReader = null;
         }
         if (rangeReader == null) {
-          // Anomalous: a partial-load layout on disk means range reads worked when it was written, so this is very
-          // unexpected and worth flagging. Reclaim it and complain instead of exploding since this is better than
-          // requiring manual intervention (an operator having to delete files from disk). Leave removeInfo true so the
-          // segment is treated as uncached.
+          // Anomalous: a layout on disk means range reads worked when it was written, so this should not happen (the
+          // loadSpec is now non-range-capable, or no longer converts to a known type). Reclaim it and let the segment
+          // re-load fresh on next access rather than failing bootstrap or reserving an entry that could never fetch.
+          // Leave removeInfo true so it's treated as uncached.
           log.warn(
-              "Found an on-disk partial-load layout for segment[%s] in [%s] but its deep storage no longer supports "
-              + "range reads (unexpected, this should never happen); deleting so that bootstrap can continue.",
+              "On-disk partial-load layout for segment[%s] in [%s] has no usable range reader (this should not "
+              + "happen); deleting it so bootstrap can continue.",
               segment.getId(),
               partialDir
           );
