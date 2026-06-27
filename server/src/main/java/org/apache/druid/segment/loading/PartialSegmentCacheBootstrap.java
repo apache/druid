@@ -30,12 +30,10 @@ import org.apache.druid.timeline.SegmentId;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -74,12 +72,13 @@ public final class PartialSegmentCacheBootstrap
    * the runtime acquire path), so it is evictable once mounted; bootstrap-restored data is treated as a cache
    * optimization, not a permanent fixture. The caller is expected to drive the actual mount through
    * {@code metadata.mount(location)} later (typically via {@code SegmentCacheManager#bootstrap}), which builds the
-   * file mapper and cascades into {@link #restoreBundlesFromDisk}.
+   * file mapper (parsing the header from local disk, no fetch) and cascades into {@link #restoreBundlesFromDisk}.
    *
    * @param segmentId         the segment whose entries are being restored
    * @param localCacheDir     the per-segment directory containing the header + container files
    * @param targetFilename    the V10 entry-point filename
    * @param externalFilenames any external segment file names that were registered as children of the entry-point file
+   * @param rangeReader       the segment's deep-storage range reader, retained for later on-demand fetches
    * @param jsonMapper        used by the metadata entry's mount path to parse the header
    * @param storagePool       thread pool the async cursor path submits on-demand column downloads to (which bounds
    *                          load concurrency itself); may be null in tests that never invoke the cursor factory
@@ -92,6 +91,7 @@ public final class PartialSegmentCacheBootstrap
       File localCacheDir,
       String targetFilename,
       List<String> externalFilenames,
+      SegmentRangeReader rangeReader,
       ObjectMapper jsonMapper,
       @Nullable StorageLoadingThreadPool storagePool,
       StorageLocation location
@@ -113,7 +113,7 @@ public final class PartialSegmentCacheBootstrap
         localCacheDir,
         targetFilename,
         externalFilenames,
-        BootstrapRangeReader.INSTANCE,
+        rangeReader,
         jsonMapper,
         storagePool,
         actualMetadataSize
@@ -338,27 +338,6 @@ public final class PartialSegmentCacheBootstrap
   private PartialSegmentCacheBootstrap()
   {
     // utility class
-  }
-
-  /**
-   * Stub range reader used during bootstrap: the on-disk header is expected to exist and parse, so no fetch is needed.
-   * If for any reason {@link PartialSegmentFileMapperV10#create} decides to re-fetch (e.g. header corruption), this
-   * reader throws so we fail loudly rather than silently re-downloading without the operator's knowledge.
-   */
-  private static final class BootstrapRangeReader implements SegmentRangeReader
-  {
-    static final BootstrapRangeReader INSTANCE = new BootstrapRangeReader();
-
-    @Override
-    public InputStream readRange(String filename, long offset, long length)
-    {
-      throw DruidException.defensive(
-          "BootstrapRangeReader was asked to fetch [%s] @[%d:%d]; bootstrap should only read from local disk",
-          Objects.toString(filename),
-          offset,
-          length
-      );
-    }
   }
 
 }

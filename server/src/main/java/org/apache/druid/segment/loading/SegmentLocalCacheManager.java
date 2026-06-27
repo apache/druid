@@ -327,6 +327,28 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           atomicMoveAndDeleteCacheEntryDirectory(partialDir);
           continue;
         }
+        SegmentRangeReader rangeReader;
+        try {
+          rangeReader = tryOpenRangeReader(segment);
+        }
+        catch (Exception e) {
+          log.warn(e, "Failed to open a range reader for partial segment[%s] during bootstrap", segment.getId());
+          rangeReader = null;
+        }
+        if (rangeReader == null) {
+          // Anomalous: a layout on disk means range reads worked when it was written, so this should not happen (the
+          // loadSpec is now non-range-capable, or no longer converts to a known type). Reclaim it and let the segment
+          // re-load fresh on next access rather than failing bootstrap or reserving an entry that could never fetch.
+          // Leave removeInfo true so it's treated as uncached.
+          log.warn(
+              "On-disk partial-load layout for segment[%s] in [%s] has no usable range reader (this should not "
+              + "happen); deleting it so bootstrap can continue.",
+              segment.getId(),
+              partialDir
+          );
+          atomicMoveAndDeleteCacheEntryDirectory(partialDir);
+          continue;
+        }
         removeInfo = false;
         try {
           PartialSegmentCacheBootstrap.reserveFromDisk(
@@ -334,6 +356,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               partialDir,
               IndexIO.V10_FILE_NAME,
               List.of(),
+              rangeReader,
               jsonMapper,
               virtualStorageLoadingThreadPool,
               location
@@ -1121,8 +1144,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   /**
    * Testing use only please, any callers that want to do stuff with segments should use
-   * {@link #acquireCachedSegment(SegmentId)} or {@link #acquireSegment(DataSegment)} instead. Does not hold locks
-   * and so is not really safe to use while the cache manager is active
+   * {@link #acquireCachedSegment(SegmentId, AcquireMode)} or {@link #acquireSegment(DataSegment, AcquireMode)} instead.
+   * Does not hold locks and so is not really safe to use while the cache manager is active
    */
   @VisibleForTesting
   @Nullable

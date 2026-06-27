@@ -335,22 +335,26 @@ class PartialSegmentCacheBootstrapTest
     final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
     final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(SEGMENT_ID);
 
-    // Reserve the metadata entry weakly, exactly as the bootstrap path does (no protecting hold).
+    // Reserve the metadata entry weakly, exactly as the bootstrap path does (no protecting hold), but with a range
+    // reader that fails every fetch so we can force a mount failure below.
+    final SegmentRangeReader failingReader = (filename, offset, length) -> {
+      throw new IOException("simulated deep-storage fetch failure during mount");
+    };
     final PartialSegmentMetadataCacheEntry metadata = PartialSegmentCacheBootstrap.reserveFromDisk(
         SEGMENT_ID,
         cacheDir,
         IndexIO.V10_FILE_NAME,
         List.of(),
+        failingReader,
         JSON_MAPPER,
         null,
         location
     );
     Assertions.assertTrue(location.isWeakReserved(id));
 
-    // Delete the header so the mount's file-mapper build must re-fetch it from deep storage; the bootstrap
-    // disk-only range reader throws, failing the mount (the same poison that arises when create() detects header
-    // corruption and tries to re-fetch). The mount rollback deletes the header, so the entry is now both unmounted
-    // and un-re-mountable.
+    // Delete the header so the mount's file-mapper build must re-fetch it from deep storage; the failing reader throws,
+    // failing the mount (the same poison that arises when create() detects header corruption and the deep-storage
+    // fetch fails). The mount rollback deletes the header, so the entry is now both unmounted and un-re-mountable.
     final File headerFile = new File(
         cacheDir,
         IndexIO.V10_FILE_NAME + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX
@@ -360,11 +364,41 @@ class PartialSegmentCacheBootstrapTest
     Assertions.assertThrows(Throwable.class, () -> metadata.mount(location));
 
     // The failed mount must not leave the lingering weak entry behind: a later findExistingPartialWithHold would
-    // otherwise resurrect it and re-mount would fail forever (disk-only reader + deleted header). It must be gone so
+    // otherwise resurrect it and re-mount would fail forever (failing reader + deleted header). It must be gone so
     // the cold acquire path rebuilds a fresh, deep-storage-capable entry via reservePartial.
     Assertions.assertEquals(0, location.getWeakEntryCount(), "failed mount must remove the lingering weak entry");
     Assertions.assertFalse(location.isWeakReserved(id));
     Assertions.assertEquals(0, location.currentSizeBytes(), "failed mount must release the reservation");
+  }
+
+  @Test
+  void testRestoredEntryCanLazilyFetchUndownloadedFile() throws IOException
+  {
+    // a bootstrap-restored entry must keep the segment's real deep-storage range reader so a later query can lazily
+    // fetch a bundle/column that wasn't on disk at startup. Previously the entry held a throwing disk-only reader, so
+    // this fetch failed with "bootstrap should only read from local disk".
+    primeOnDiskState();
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    final PartialSegmentMetadataCacheEntry metadata = restoreFromDisk(location);
+
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+    Assertions.assertNotNull(mapper, "restored entry must be mounted");
+
+    // Priming sparse-allocated the containers but downloaded no column data, so every internal file is un-downloaded.
+    final String fileToFetch = mapper.getSegmentFileMetadata().getFiles().keySet().stream()
+                                     .filter(f -> f.startsWith(Projections.BASE_TABLE_PROJECTION_NAME + "/"))
+                                     .findFirst()
+                                     .orElseThrow();
+    Assertions.assertFalse(
+        mapper.getDownloadedFiles().contains(fileToFetch),
+        "precondition: " + fileToFetch + " should not be downloaded yet"
+    );
+
+    Assertions.assertNotNull(
+        mapper.mapFile(fileToFetch),
+        "restored entry must lazily fetch an un-downloaded file from deep storage"
+    );
+    Assertions.assertTrue(mapper.getDownloadedFiles().contains(fileToFetch));
   }
 
   @Test
@@ -379,6 +413,7 @@ class PartialSegmentCacheBootstrapTest
             cacheDir,
             IndexIO.V10_FILE_NAME,
             List.of(),
+            new DirectoryBackedRangeReader(deepStorageDir),
             JSON_MAPPER,
             null,
             location
@@ -521,6 +556,7 @@ class PartialSegmentCacheBootstrapTest
         cacheDir,
         IndexIO.V10_FILE_NAME,
         List.of(),
+        new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
         null,
         location
