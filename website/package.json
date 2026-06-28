@@ -3,6 +3,7 @@
   "scripts": {
     "start": "docusaurus start",
     "build": "docusaurus build",
+    "serve": "docusaurus serve",
     "compile-scss": "sass scss/custom.scss > static/css/custom.css",
     "link-lint": "node script/link-lint.js",
     "spellcheck": "mdspell --en-us --ignore-numbers --report '../docs/**/*.md' || (./script/notify-spellcheck-issues && false)",
