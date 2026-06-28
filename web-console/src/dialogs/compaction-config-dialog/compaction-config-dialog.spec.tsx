@@ -81,4 +81,47 @@ describe('CompactionConfigDialog', () => {
     );
     expect(compactionDialog).toMatchSnapshot();
   });
+
+  it('matches snapshot with useSupervisors (inline template)', () => {
+    const compactionDialog = shallow(
+      <CompactionConfigDialog
+        onClose={() => {}}
+        onSave={() => {}}
+        onDelete={() => {}}
+        datasource="test1"
+        compactionConfig={undefined}
+        useSupervisors
+      />,
+    );
+    expect(compactionDialog).toMatchSnapshot();
+  });
+
+  it('matches snapshot with reindexCascade compactionConfig', () => {
+    const compactionDialog = shallow(
+      <CompactionConfigDialog
+        onClose={() => {}}
+        onSave={() => {}}
+        onDelete={() => {}}
+        datasource="test1"
+        compactionConfig={{
+          type: 'reindexCascade',
+          dataSource: 'test1',
+          defaultSegmentGranularity: 'DAY',
+          defaultPartitionsSpec: { type: 'dynamic', maxRowsPerSegment: 5000000 },
+          ruleProvider: {
+            type: 'inline',
+            deletionRules: [
+              {
+                id: 'remove-bots',
+                olderThan: 'P90D',
+                deleteWhere: { type: 'equals', column: 'isRobot', matchValue: 'true' },
+              },
+            ],
+          },
+        }}
+        useSupervisors
+      />,
+    );
+    expect(compactionDialog).toMatchSnapshot();
+  });
 });
