@@ -302,15 +302,15 @@ public class SystemSchemaTest extends CalciteTestBase
     );
   }
 
-  private final CompactionState expectedCompactionState = new CompactionState(
-      new DynamicPartitionsSpec(null, null),
-      null,
-      null,
-      null,
-      MAPPER.convertValue(Collections.singletonMap("test", "map"), IndexSpec.class),
-      MAPPER.convertValue(Collections.singletonMap("test2", "map2"), GranularitySpec.class),
-      null
-  );
+  private final CompactionState expectedCompactionState =
+      CompactionState.builder()
+                     .partitionsSpec(new DynamicPartitionsSpec(null, null))
+                     .indexSpec(MAPPER.convertValue(Collections.singletonMap("test", "map"), IndexSpec.class))
+                     .granularitySpec(MAPPER.convertValue(
+                         Collections.singletonMap("test2", "map2"),
+                         GranularitySpec.class
+                     ))
+                     .build();
 
   private final DataSegment publishedCompactedSegment1 =
       DataSegment.builder(SegmentId.of("wikipedia1", Intervals.of("2007/2008"), "version1", null))

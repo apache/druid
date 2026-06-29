@@ -30,6 +30,7 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerClient;
@@ -60,7 +61,10 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SpecificTaskRetryPolicy;
 import org.apache.druid.rpc.indexing.SpecificTaskServiceLocator;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.loading.external.StorageLocationVirtualStorageManager;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.StorageMonitor;
@@ -88,6 +92,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final ServiceLocator controllerLocator;
   private final IndexIO indexIO;
   private final SegmentManager segmentManager;
+  private final VirtualStorageManager virtualStorageManager;
   private final StorageMonitor storageMonitor;
   @Nullable
   private final CoordinatorClient coordinatorClient;
@@ -113,6 +118,7 @@ public class IndexerWorkerContext implements WorkerContext
       final ServiceLocator controllerLocator,
       final IndexIO indexIO,
       final SegmentManager segmentManager,
+      final VirtualStorageManager virtualStorageManager,
       final StorageMonitor storageMonitor,
       @Nullable final CoordinatorClient coordinatorClient,
       final ServiceClientFactory clientFactory,
@@ -128,6 +134,7 @@ public class IndexerWorkerContext implements WorkerContext
     this.controllerLocator = controllerLocator;
     this.indexIO = indexIO;
     this.segmentManager = segmentManager;
+    this.virtualStorageManager = virtualStorageManager;
     this.storageMonitor = storageMonitor;
     this.coordinatorClient = coordinatorClient;
     this.clientFactory = clientFactory;
@@ -166,10 +173,23 @@ public class IndexerWorkerContext implements WorkerContext
   )
   {
     final IndexIO indexIO = injector.getInstance(IndexIO.class);
+    final TaskConfig taskConfig = injector.getInstance(TaskConfig.class);
     final SegmentCacheManager cacheManager =
         injector.getInstance(SegmentCacheManagerFactory.class)
-                .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"), true);
+                .manufacturate(
+                    new File(toolbox.getIndexingTmpDir(), "segment-fetch"),
+                    // Divide tmpStorageBytesPerTask by 3 so the local cache never takes up the majority of space.
+                    // In a typical leaf stage run, we may need some disk space for inputs and some for outputs.
+                    taskConfig.getTmpStorageBytesPerTask() > 0 ? taskConfig.getTmpStorageBytesPerTask() / 3 : null,
+                    true
+                );
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
+    final VirtualStorageManager virtualStorageManager =
+        new StorageLocationVirtualStorageManager(
+            cacheManager.getLocations(),
+            new LeastBytesUsedStorageLocationSelectorStrategy(cacheManager.getLocations()),
+            cacheManager.getLoadingThreadPool()
+        );
     final StorageMonitor storageMonitor = new StorageMonitor(cacheManager.getLocations(), task::getMetricBuilder);
     toolbox.addMonitor(storageMonitor);
     final ServiceClientFactory serviceClientFactory =
@@ -190,6 +210,7 @@ public class IndexerWorkerContext implements WorkerContext
         new SpecificTaskServiceLocator(task.getControllerTaskId(), overlordClient),
         indexIO,
         segmentManager,
+        virtualStorageManager,
         storageMonitor,
         toolbox.getCoordinatorClient(),
         serviceClientFactory,
@@ -320,6 +341,7 @@ public class IndexerWorkerContext implements WorkerContext
         FrameWriterSpec.fromContext(workOrder.getWorkerContext()),
         indexIO,
         segmentManager,
+        virtualStorageManager,
         coordinatorClient,
         workOrder.getStageDefinition().getProcessor().usesProcessingBuffers() ? processingBuffersSet.get() : null,
         dataServerQueryHandlerFactory,

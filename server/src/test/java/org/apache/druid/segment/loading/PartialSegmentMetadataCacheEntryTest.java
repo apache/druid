@@ -31,8 +31,8 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.file.CountingRangeReader;
-import org.apache.druid.segment.file.DirectoryBackedRangeReader;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.file.SegmentFileBuilderV10;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.timeline.SegmentId;
@@ -45,6 +45,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -62,6 +63,7 @@ class PartialSegmentMetadataCacheEntryTest
 
   private File segmentFile;
   private File cacheDir;
+  private int fixtureSeq;
 
   @BeforeEach
   void setup() throws IOException
@@ -229,6 +231,7 @@ class PartialSegmentMetadataCacheEntryTest
             List.of(),
             new DirectoryBackedRangeReader(segmentFile.getParentFile()),
             JSON_MAPPER,
+            null,
             0
         )
     );
@@ -257,7 +260,7 @@ class PartialSegmentMetadataCacheEntryTest
     );
     Assertions.assertTrue(headerFile.exists());
 
-    final Closeable ref = entry.acquireReference();
+    final Closeable ref = entry.acquireMetadataReference();
     Assertions.assertTrue(entry.isMounted());
 
     entry.unmount();
@@ -283,6 +286,7 @@ class PartialSegmentMetadataCacheEntryTest
         List.of(),
         rangeReader,
         JSON_MAPPER,
+        null,
         ESTIMATE
     );
     Assertions.assertTrue(location.reserve(entry));
@@ -352,14 +356,14 @@ class PartialSegmentMetadataCacheEntryTest
   }
 
   @Test
-  void testAcquireReferenceBeforeMountThrows()
+  void testAcquireMetadataReferenceBeforeMountThrows()
   {
     final PartialSegmentMetadataCacheEntry entry = newEntry(ESTIMATE);
-    Assertions.assertThrows(DruidException.class, entry::acquireReference);
+    Assertions.assertThrows(DruidException.class, entry::acquireMetadataReference);
   }
 
   @Test
-  void testAcquireReferenceAfterCleanupCompletesThrows() throws Exception
+  void testAcquireMetadataReferenceAfterCleanupCompletesThrows() throws Exception
   {
     final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 4, null);
     final PartialSegmentMetadataCacheEntry entry = newEntry(ESTIMATE);
@@ -367,7 +371,17 @@ class PartialSegmentMetadataCacheEntryTest
     entry.mount(location);
     entry.unmount(); // no references; cleanup runs synchronously
     Assertions.assertFalse(entry.isMounted());
-    Assertions.assertThrows(DruidException.class, entry::acquireReference);
+    Assertions.assertThrows(DruidException.class, entry::acquireMetadataReference);
+  }
+
+  @Test
+  void testAcquireReferenceBeforeMountReturnsEmpty()
+  {
+    // Segment-level acquireReference returns empty (not throw) when the entry isn't mounted, matches the
+    // SegmentCacheEntry contract used by SegmentLocalCacheManager.acquireCachedSegment to skip locations that don't
+    // have the segment.
+    final PartialSegmentMetadataCacheEntry entry = newEntry(ESTIMATE);
+    Assertions.assertEquals(Optional.empty(), entry.acquireReference());
   }
 
   @Test
@@ -381,16 +395,51 @@ class PartialSegmentMetadataCacheEntryTest
   }
 
   @Test
-  void testInferParentBundlesForAggregateReturnsBase()
+  void testInferParentBundlesForRootReturnsEmpty()
   {
     final PartialSegmentMetadataCacheEntry entry = newEntry(ESTIMATE);
-    final List<PartialSegmentBundleCacheEntryIdentifier> parents = entry.inferParentBundles("some_aggregate_projection");
-    Assertions.assertEquals(1, parents.size());
-    Assertions.assertEquals(SEGMENT_ID, parents.getFirst().segmentId());
     Assertions.assertEquals(
-        Projections.BASE_TABLE_PROJECTION_NAME,
-        parents.getFirst().bundleName()
+        List.of(),
+        entry.inferParentBundles(SegmentFileBuilder.ROOT_BUNDLE_NAME)
     );
+  }
+
+  @Test
+  void testInferParentBundlesDependsOnBaseWhenBaseBundlePresent() throws IOException
+  {
+    // A segment that carries a __base bundle (the non-clustered base+projection shape): every non-base/root bundle
+    // depends on it. Asserted uniformly for an aggregate-projection bundle and for a cluster-group bundle name (the
+    // latter standing in for the future clustered+shared-columns layout, where groups will share __base).
+    final PartialSegmentMetadataCacheEntry entry = mountedEntryOver(
+        buildSegmentWithBundles(Projections.BASE_TABLE_PROJECTION_NAME, "some_projection")
+    );
+    for (String dependent : List.of("some_projection", Projections.getClusterGroupBundleName(List.of(0, 1)))) {
+      final List<PartialSegmentBundleCacheEntryIdentifier> parents = entry.inferParentBundles(dependent);
+      Assertions.assertEquals(1, parents.size(), "expected a __base parent for bundle[" + dependent + "]");
+      Assertions.assertEquals(SEGMENT_ID, parents.getFirst().segmentId());
+      Assertions.assertEquals(Projections.BASE_TABLE_PROJECTION_NAME, parents.getFirst().bundleName());
+    }
+  }
+
+  @Test
+  void testInferParentBundlesEmptyWhenSegmentHasNoBaseBundle() throws IOException
+  {
+    // A clustered + aggregate-projection segment with no shared columns has no __base bundle: the base data lives in
+    // per-group __base$<ids> bundles and the aggregate projection is self-contained. So neither a cluster group nor
+    // the aggregate projection has a parent to depend on. (Pre-shared-columns; the old "aggregate always depends on
+    // __base" rule would have wrongly tried to mount a nonexistent __base for the projection bundle.)
+    final PartialSegmentMetadataCacheEntry entry = mountedEntryOver(
+        buildSegmentWithBundles(
+            Projections.getClusterGroupBundleName(List.of(0)),
+            Projections.getClusterGroupBundleName(List.of(1)),
+            "some_projection"
+        )
+    );
+    Assertions.assertEquals(
+        List.of(),
+        entry.inferParentBundles(Projections.getClusterGroupBundleName(List.of(0)))
+    );
+    Assertions.assertEquals(List.of(), entry.inferParentBundles("some_projection"));
   }
 
   private PartialSegmentMetadataCacheEntry newEntry(long estimate)
@@ -402,6 +451,7 @@ class PartialSegmentMetadataCacheEntryTest
         List.of(),
         new DirectoryBackedRangeReader(segmentFile.getParentFile()),
         JSON_MAPPER,
+        null,
         estimate
     );
   }
@@ -418,6 +468,51 @@ class PartialSegmentMetadataCacheEntryTest
       }
     }
     return new File(baseDir, IndexIO.V10_FILE_NAME);
+  }
+
+  /**
+   * Build a V10 segment whose containers are tagged with exactly the given bundle names (one column file per bundle),
+   * so {@link PartialSegmentMetadataCacheEntry#inferParentBundles} can be exercised against a known bundle set without
+   * a full ingestion. Returns the deep-storage directory containing the V10 file.
+   */
+  private File buildSegmentWithBundles(String... bundleNames) throws IOException
+  {
+    final int seq = fixtureSeq++;
+    final File baseDir = new File(tempDir, "deep_" + seq);
+    FileUtils.mkdirp(baseDir);
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir, CompressionStrategy.NONE)) {
+      for (int i = 0; i < bundleNames.length; ++i) {
+        builder.startFileBundle(bundleNames[i]);
+        final File tmpFile = new File(tempDir, StringUtils.format("fixture-%d-%d.bin", seq, i));
+        Files.write(Ints.toByteArray(i), tmpFile);
+        builder.add(bundleNames[i] + "/col", tmpFile);
+      }
+    }
+    return baseDir;
+  }
+
+  /**
+   * Reserve and mount a fresh metadata entry over the segment in {@code deepStorageDir}, into a per-call cache
+   * directory. The mounted entry's file mapper is what {@code inferParentBundles} probes for the base-bundle existence.
+   */
+  private PartialSegmentMetadataCacheEntry mountedEntryOver(File deepStorageDir) throws IOException
+  {
+    final File cache = new File(tempDir, "cache_" + (fixtureSeq++));
+    FileUtils.mkdirp(cache);
+    final StorageLocation location = new StorageLocation(cache, ESTIMATE * 4, null);
+    final PartialSegmentMetadataCacheEntry entry = new PartialSegmentMetadataCacheEntry(
+        SEGMENT_ID,
+        cache,
+        IndexIO.V10_FILE_NAME,
+        List.of(),
+        new DirectoryBackedRangeReader(deepStorageDir),
+        JSON_MAPPER,
+        null,
+        ESTIMATE
+    );
+    Assertions.assertTrue(location.reserve(entry));
+    entry.mount(location);
+    return entry;
   }
 
 }

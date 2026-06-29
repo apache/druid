@@ -124,7 +124,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   /**
    * Typed clustering tuples for clustered base-table segments, or {@code null} for non-clustered segments. Each tuple
    * is one cluster group's clustering-column values in the order declared by
-   * {@link ClusterGroupTuples#getClusteringColumns()}. Consumed by cluster-group partial-load matchers.
+   * {@link ClusterGroupTuples#clusteringColumns()}. Consumed by cluster-group partial-load matchers.
    */
   @Nullable
   private final ClusterGroupTuples clusterGroups;

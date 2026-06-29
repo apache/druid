@@ -321,7 +321,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.21.3
+version: 2.21.4
 libraries:
   - com.fasterxml.jackson.core: jackson-core
   - com.fasterxml.jackson.core: jackson-annotations
@@ -374,7 +374,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.21.3
+version: 2.21.4
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -1002,7 +1002,7 @@ name: Jackson
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.21.3
+version: 2.21.4
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-properties
 notice: |
@@ -1485,7 +1485,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.12.Final
+version: 4.2.15.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1506,6 +1506,7 @@ libraries:
   - io.netty: netty-transport-native-epoll
   - io.netty: netty-transport-native-unix-common
   - io.netty: netty-codec-http2
+  - io.netty: netty-codec-classes-quic
   - io.netty: netty-resolver-dns-classes-macos
   - io.netty: netty-transport-classes-kqueue
   - io.netty: netty-resolver-dns-native-macos
@@ -2039,13 +2040,14 @@ name: Apache Log4j
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.25.4
+version: 2.26.0
 libraries:
   - org.apache.logging.log4j: log4j-1.2-api
   - org.apache.logging.log4j: log4j-api
   - org.apache.logging.log4j: log4j-core
   - org.apache.logging.log4j: log4j-jul
   - org.apache.logging.log4j: log4j-slf4j-impl
+  - org.apache.logging.log4j: log4j-layout-template-json
 notices:
   - log4j-1.2-api: |
       Apache Log4j 1.x Compatibility API
@@ -2068,6 +2070,9 @@ notices:
   - log4j-slf4j-impl: |
       Apache Log4j SLF4J Binding
       Copyright 1999-2015 Apache Software Foundation
+  - log4j-layout-template-json: |
+      Apache Log4j JSON Template Layout
+      Copyright 1999-2026 The Apache Software Foundation
 
 ---
 
@@ -3075,7 +3080,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.21.3
+version: 2.21.4
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -4682,7 +4687,7 @@ name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.0.75.Final
+version: 2.0.77.Final
 libraries:
   - io.netty: netty-tcnative-boringssl-static
   - io.netty: netty-tcnative-classes
@@ -7132,7 +7137,15 @@ libraries:
 name: Javassist
 license_category: binary
 module: extensions-core/druid-kerberos
-license_name: Apache License version 2.0
+license_name: MPL 1.1
 version: 3.30.2-GA
 libraries:
   - org.javassist: javassist
+notice: |
+  Javassist is triple-licensed under MPL 1.1, LGPL 2.1, and Apache License 2.0.
+  Apache Druid uses Javassist under the Apache License 2.0 terms.
+
+  From the Javassist license page (https://www.javassist.org/):
+  "Javassist is distributed under the Mozilla Public License 1.1 (MPL),
+  the GNU Lesser General Public License 2.1 (LGPL), and the Apache License 2.0 (AL).
+  You can choose one of them."

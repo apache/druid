@@ -22,10 +22,10 @@ package org.apache.druid.segment.loading;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.DimensionDictionarySelector;
-import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.PhysicalSegmentColumnInspector;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedSegment;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -74,13 +74,13 @@ public class VirtualPlaceholderSegment extends RowBasedSegment<Row>
   @Override
   public <T> T as(@Nonnull Class<T> clazz)
   {
-    if (PhysicalSegmentInspector.class.equals(clazz)) {
+    if (RowCountInspector.class.equals(clazz) || PhysicalSegmentColumnInspector.class.equals(clazz)) {
       return (T) EmptyPhysicalInspector.INSTANCE;
     }
     return super.as(clazz);
   }
 
-  private static class EmptyPhysicalInspector implements PhysicalSegmentInspector
+  private static class EmptyPhysicalInspector implements RowCountInspector, PhysicalSegmentColumnInspector
   {
     private static final EmptyPhysicalInspector INSTANCE = new EmptyPhysicalInspector();
 
@@ -91,13 +91,6 @@ public class VirtualPlaceholderSegment extends RowBasedSegment<Row>
       if (ColumnHolder.TIME_COLUMN_NAME.equals(column)) {
         return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG);
       }
-      return null;
-    }
-
-    @Nullable
-    @Override
-    public Metadata getMetadata()
-    {
       return null;
     }
 

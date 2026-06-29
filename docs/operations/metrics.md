@@ -74,6 +74,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`segment/metadataCache/sync/time`|Time taken to poll segment metadata from the Coordinator and update the segment metadata cache. This metric is emitted only if [metadata cache](../configuration/index.md#sql) is enabled on the Broker.||Depends on the number of segments.|
 |`segment/schemaCache/refresh/count`|Number of segments refreshed in broker segment schema cache.|`dataSource`||
 |`segment/schemaCache/refresh/time`|Time taken to refresh segments in broker segment schema cache.|`dataSource`||
+|`segment/schemaCache/refresh/failed`|Number of dataSources whose schema refresh failed in the broker segment schema cache (for example, a segment metadata query timeout). Emitted only when a refresh fails; the failed dataSource is skipped for the cycle and retried later, while other dataSources are unaffected. Recurring emission indicates a dataSource missing from the SQL schema.|`dataSource`||
 |`segment/schemaCache/poll/count`|Number of coordinator polls to fetch datasource schema.|||
 |`segment/schemaCache/poll/failed`|Number of failed coordinator polls to fetch datasource schema.|||
 |`metadatacache/schemaPoll/time`|Time taken for coordinator polls to fetch datasource schema.|||
@@ -317,8 +318,10 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`task/autoScaler/requiredCount`|Count of required tasks based on the calculations of the auto scaler.|`supervisorId`, `dataSource`, `stream`, `scalingSkipReason`|Depends on auto scaler config.|
 |`task/autoScaler/scaleActionTime`|Time taken in milliseconds to complete the scale action.|`supervisorId`, `dataSource`, `stream`, `tags`|Depends on auto scaler config.|
 |`task/autoScaler/costBased/optimalTaskCount`|Optimal task count computed by the cost-based auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
-|`task/autoScaler/costBased/lagCost`|Lag cost component of the cost-based auto scaler's cost function.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
-|`task/autoScaler/costBased/idleCost`|Idle cost component of the cost-based auto scaler's cost function.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/lagWeight`|Lag weight used in the cost function for the auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/idleWeight`|Idle weight used in the cost function for the auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/avgProcessingRate`|Windowed average rate of processing records across all tasks in the supervisor.|`supervisorId`, `dataSource`, `stream`|Depends on rate of incoming data and processing capacity of the tasks.|
+|`task/autoScaler/costBased/avgPollIdleRatio`|Poll-to-idle-ratio as reported by the streaming consumer averaged across all tasks in the supervisor. Currently supported only with Kafka supervisors.|`supervisorId`, `dataSource`, `stream`|0 if the consumer is never idle, 1 if the consumer is always idle, -1 if ratio is not available.|
 
 If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 
@@ -439,10 +442,10 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/unavailable/count`|Number of unique segments left to load until all used segments are available for queries.|`dataSource`|0|
 |`segment/underReplicated/count`|Number of segments, including replicas, left to load until all used segments are available for queries.|`tier`, `dataSource`|0|
 |`segment/availableDeepStorageOnly/count`|Number of unique segments that are only available for querying directly from deep storage.|`dataSource`|Varies|
-|`tier/historical/count`|Number of available historical nodes in each tier.|`tier`|Varies|
-|`tier/replication/factor`|Configured maximum replication factor in each tier.|`tier`|Varies|
-|`tier/required/capacity`|Total capacity in bytes required in each tier.|`tier`|Varies|
-|`tier/total/capacity`|Total capacity in bytes available in each tier.|`tier`|Varies|
+|`tier/historical/count`|Number of available historical nodes in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration), and can be used to aggregate metrics across the tiers in an alias.|`tier`, `tierAlias`|Varies|
+|`tier/replication/factor`|Configured maximum replication factor in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/required/capacity`|Total capacity in bytes required in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/total/capacity`|Total capacity in bytes available in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
 |`compact/task/count`|Number of tasks issued in the auto compaction run.| |Varies|
 |`compactTask/maxSlot/count`|Maximum number of task slots available for auto compaction tasks in the auto compaction run.| |Varies|
 |`compactTask/availableSlot/count`|Number of currently vacant task slots out of the total slots allocated for auto compaction tasks. This value is computed as the difference between the total number of task slots allocated for auto compaction and the estimated number of task slots currently occupied by running compaction tasks. The number of sub-tasks of each compaction task is estimated to be `maxNumConcurrentSubTasks`.| |Varies|
@@ -475,6 +478,7 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/schemaCache/refreshSkipped/count`|Number of segments for which schema refresh was skipped due to presence of segment metadata in datasource polled from coordinator.|`dataSource`||
 |`segment/schemaCache/dataSource/removed`|Emitted when a datasource is removed from the Broker cache due to segments being marked as unused.|`dataSource`||
 |`segment/schemaCache/refresh/time`|Time taken to refresh segments in coordinator segment schema cache.|`dataSource`||
+|`segment/schemaCache/refresh/failed`|Number of dataSources whose schema refresh failed in the coordinator segment schema cache (for example, a segment metadata query timeout). Emitted only when a refresh fails; the failed dataSource is skipped for the cycle and retried later, while other dataSources are unaffected. Recurring emission indicates a dataSource missing from the SQL schema.|`dataSource`||
 |`segment/schemaCache/backfill/count`|Number of segments for which schema was back filled in the database.|`dataSource`||
 |`segment/schemaCache/rowSignature/changed`|Emitted when the cached row signature on the Broker's segment metadata cache for a datasource changes, indicating schema evolution or some form of flapping.|`dataSource`||
 |`segment/schemaCache/rowSignature/column/count`|Number of columns in the row signature on the Broker's segment metadata cache for a datasource when it's initialized or updated.|`dataSource`||
@@ -485,6 +489,15 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/used/deepStorageOnly/count`|Number of published used segments present only on deep storage.|`dataSource`||
 |`segment/schemaCache/deepStorageOnly/count`|Number of deep storage only segments with cached schema.|`dataSource`||
 |`segment/schemaCache/deepStorageOnly/refresh/time`|Time taken in milliseconds to refresh schemas of deep storage only segments.||Under a minute|
+
+## Security
+
+These metrics are emitted when `druid.auth.emitAuthMetrics` is set to `true`.
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
+|`auth/forbidden`|Emitted when a request is denied due to insufficient permissions. This includes both outright access denials and cases where basic access is granted but a row-level policy restricts full access.|`identity`, `authorizerName`, `resourceName`, `resourceType`, `action`, `errorMessage`|1|
+|`auth/exception`|Emitted when an internal authorization error occurs, such as a missing authorizer, duplicate resource policies, or a double-authorization check on the same request.|`identity`, `authorizerName`, `resourceName` (when available), `resourceType` (when available), `action` (when available), `errorMessage` (when available)|1|
 
 ## General Health
 

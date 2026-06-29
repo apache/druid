@@ -93,6 +93,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.server.security.Escalator;
@@ -213,7 +214,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     ComplexMetrics.registerSerde(NestedDataComplexTypeSerde.TYPE_NAME, NestedDataComplexTypeSerde.INSTANCE);
 
     SegmentCacheManager segmentCacheManager = mock(SegmentCacheManager.class);
-    when(segmentCacheManager.acquireSegment(any())).thenAnswer(invocation -> {
+    when(segmentCacheManager.acquireSegment(any(), any())).thenAnswer(invocation -> {
       DataSegment segment = invocation.getArgument(0);
       QueryableIndexSegment index = new QueryableIndexSegment(
           new TestUtils().getTestIndexIO().loadIndex(new File((String) segment.getLoadSpec().get("path"))),
@@ -224,7 +225,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
           null
       );
     });
-    when(segmentCacheManager.acquireCachedSegment(any())).thenReturn(Optional.empty());
+    when(segmentCacheManager.acquireCachedSegment(any(), any())).thenReturn(Optional.empty());
     GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         new GroupByQueryConfig(),
         TestGroupByBuffers.createDefault()
@@ -249,6 +250,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
                         .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool"))),
         binder -> binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(objectMapper),
         binder -> binder.bind(SegmentCacheManager.class).toInstance(segmentCacheManager),
+        binder -> binder.bind(VirtualStorageManager.class).toInstance(MSQTestBase.makeNilVirtualStorageManager()),
         binder -> binder.bind(GroupingEngine.class).toInstance(groupingEngine)
     );
     injector = Guice.createInjector(modules);
@@ -763,23 +765,21 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
   )
   {
     // Expected compaction state to exist after compaction as we store compaction state by default
-    return new CompactionState(
-        new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-        expectedDims.withDimensionExclusions(Set.of("__time"))
-                    .withDimensionExclusions(expectedMetrics.stream()
-                                                            .map(AggregatorFactory::getName)
-                                                            .collect(Collectors.toSet())),
-        expectedMetrics,
-        null,
-        IndexSpec.getDefault().getEffectiveSpec(),
-        new UniformGranularitySpec(
-            segmentGranularity,
-            queryGranularity == null ? Granularities.MINUTE : queryGranularity,
-            true,
-            intervals
-        ),
-        null
-    );
+    return CompactionState.builder()
+                          .partitionsSpec(new DynamicPartitionsSpec(5000000, Long.MAX_VALUE))
+                          .dimensionsSpec(expectedDims.withDimensionExclusions(Set.of("__time"))
+                                                      .withDimensionExclusions(expectedMetrics.stream()
+                                                                                              .map(AggregatorFactory::getName)
+                                                                                              .collect(Collectors.toSet())))
+                          .metricsSpec(expectedMetrics)
+                          .indexSpec(IndexSpec.getDefault().getEffectiveSpec())
+                          .granularitySpec(new UniformGranularitySpec(
+                              segmentGranularity,
+                              queryGranularity == null ? Granularities.MINUTE : queryGranularity,
+                              true,
+                              intervals
+                          ))
+                          .build();
   }
 
   @Override

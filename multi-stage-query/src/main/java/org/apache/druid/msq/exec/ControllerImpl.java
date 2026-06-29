@@ -58,6 +58,7 @@ import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -252,11 +253,19 @@ public class ControllerImpl implements Controller
   private final AtomicReference<MSQErrorReport> workerErrorRef = new AtomicReference<>();
 
   /**
-   * Set by {@link #stop(CancellationReason)}. If non-null, this reason takes priority over any exception
-   * encountered during execution when building the error report. If we didn't do this, interrupts arising
-   * from cancellation could produce errors that are less informative than the actual cancellation reason.
+   * Set by {@link #stop(CancellationReason, Throwable)}. If non-null, this reason takes priority over any
+   * exception encountered during execution when building the error report. If we didn't do this, interrupts
+   * arising from cancellation could produce errors that are less informative than the actual cancellation reason.
    */
   private volatile CancellationReason cancelReason;
+
+  /**
+   * Set by {@link #stop(CancellationReason, Throwable)} when cancellation was triggered by an external error
+   * (such as a failure writing results back to the client). If non-null, this exception is logged and included
+   * in the error report instead of a bare {@link CanceledFault}, so the original error is not lost.
+   */
+  @Nullable
+  private volatile Throwable cancelException;
 
   // For system warning reporting
   private final ConcurrentLinkedQueue<MSQErrorReport> workerWarnings = new ConcurrentLinkedQueue<>();
@@ -375,14 +384,20 @@ public class ControllerImpl implements Controller
   }
 
   @Override
-  public void stop(CancellationReason reason)
+  public void stop(CancellationReason reason, @Nullable Throwable cause)
   {
     final QueryDefinition queryDef = queryDefRef.get();
 
     // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
-    log.info("Query [%s] canceled.", queryDef != null ? queryDef.getQueryId() : "<no id yet>");
+    final String queryIdForLog = queryDef != null ? queryDef.getQueryId() : "<no id yet>";
+    if (cause != null) {
+      log.warn(cause, "Query[%s] canceled, reason[%s].", queryIdForLog, reason);
+    } else {
+      log.info("Query[%s] canceled, reason[%s].", queryIdForLog, reason);
+    }
 
     cancelReason = reason;
+    cancelException = cause;
     stopExternalFetchers();
     kernelManipulationQueue.clear(); // No point processing any possibly-queued commands.
     addToKernelManipulationQueue(
@@ -483,7 +498,14 @@ public class ControllerImpl implements Controller
 
       taskStateForReport = TaskState.FAILED;
 
-      if (cancelReason != null) {
+      if (cancelReason == CancellationReason.UNKNOWN && cancelException != null) {
+        // Cancellation triggered by an external error. Report the original error.
+        if (exceptionEncountered != null) {
+          cancelException.addSuppressed(exceptionEncountered);
+        }
+        errorForReport =
+            MSQErrorReport.fromException(queryId(), selfHost, null, cancelException, querySpec.getColumnMappings());
+      } else if (cancelReason != null) {
         errorForReport = MSQErrorReport.fromFault(queryId(), selfHost, null, new CanceledFault(cancelReason));
       } else {
         errorForReport = MSQTasks.makeErrorReport(queryId(), selfHost, controllerError, workerError);
@@ -1855,13 +1877,26 @@ public class ControllerImpl implements Controller
 
     Granularity segmentGranularity = destination.getSegmentGranularity();
 
-    GranularitySpec granularitySpec = new UniformGranularitySpec(
-        segmentGranularity,
-        querySpec.getContext().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
-        dataSchema.getGranularitySpec().isRollup(),
-        // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
-        destination.getReplaceTimeChunks()
-    );
+    // For baseTable (clustered) mode, segment granularity + intervals live in a SegmentGranularitySpec and query
+    // granularity lives in the baseTable spec's virtual column (already recorded via dataSchema.getBaseTable()), so the
+    // legacy UniformGranularitySpec is left null. For the legacy (non-baseTable) path, the GranularitySpec carries
+    // everything as before and the SegmentGranularitySpec is left null.
+    final GranularitySpec granularitySpec;
+    final SegmentGranularitySpec segmentGranularitySpec;
+    if (dataSchema.getBaseTable() != null) {
+      // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
+      segmentGranularitySpec = new SegmentGranularitySpec(segmentGranularity, destination.getReplaceTimeChunks());
+      granularitySpec = null;
+    } else {
+      granularitySpec = new UniformGranularitySpec(
+          segmentGranularity,
+          querySpec.getContext().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
+          dataSchema.getGranularitySpec().isRollup(),
+          // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
+          destination.getReplaceTimeChunks()
+      );
+      segmentGranularitySpec = null;
+    }
 
     DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
 
@@ -1895,6 +1930,8 @@ public class ControllerImpl implements Controller
         transformSpec,
         indexSpec,
         granularitySpec,
+        segmentGranularitySpec,
+        dataSchema.getBaseTable(),
         dataSchema.getProjections()
     );
   }

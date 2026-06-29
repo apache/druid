@@ -424,6 +424,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
             Granularities.NONE,
             Boolean.TRUE,
             makeOrderBys(ColumnHolder.TIME_COLUMN_NAME, "dim1", "dim2"),
+            null,
             null
         ),
         index.getMetadata()
@@ -1694,7 +1695,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         ImmutableSet.of("A", "C"),
-        Arrays.stream(segment.as(PhysicalSegmentInspector.class).getMetadata().getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
+        Arrays.stream(segment.as(Metadata.class).getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
     );
   }
 
@@ -1770,7 +1771,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         ImmutableSet.of("A", "C"),
-        Arrays.stream(segment.as(PhysicalSegmentInspector.class).getMetadata().getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
+        Arrays.stream(segment.as(Metadata.class).getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
     );
 
   }
@@ -1842,7 +1843,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         ImmutableSet.of("A", "B", "C"),
-        Arrays.stream(segment.as(PhysicalSegmentInspector.class).getMetadata().getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
+        Arrays.stream(segment.as(Metadata.class).getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
     );
   }
 
@@ -1890,7 +1891,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         ImmutableSet.of("A", "B", "C"),
-        Arrays.stream(segment.as(PhysicalSegmentInspector.class).getMetadata().getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
+        Arrays.stream(segment.as(Metadata.class).getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
     );
   }
 

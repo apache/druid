@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import com.google.common.collect.EvictingQueue;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.error.DruidException;
@@ -40,6 +41,7 @@ import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -61,10 +63,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 {
   private static final EmittingLogger log = new EmittingLogger(CostBasedAutoScaler.class);
 
-  public static final String LAG_COST_METRIC = "task/autoScaler/costBased/lagCost";
-  public static final String IDLE_COST_METRIC = "task/autoScaler/costBased/idleCost";
+  public static final String LAG_WEIGHT_METRIC = "task/autoScaler/costBased/lagWeight";
+  public static final String IDLE_WEIGHT_METRIC = "task/autoScaler/costBased/idleWeight";
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
   public static final String INVALID_METRICS_COUNT = "task/autoScaler/costBased/invalidMetrics";
+  public static final String AVG_PROCESSING_RATE_METRIC = "task/autoScaler/costBased/avgProcessingRate";
+  public static final String AVG_POLL_IDLE_RATIO = "task/autoScaler/costBased/avgPollIdleRatio";
 
   /**
    * Maximum number of candidate task counts to evaluate above or below the current task count
@@ -78,6 +82,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    */
   static final int MAX_IDLENESS_PARTITION_LAG = 10_000;
 
+  /**
+   * The number of most recent processing rate samples to maintain for auto-scaling decisions
+   * in case when {@link CostBasedAutoScalerConfig#usePollIdleRatio} is disabled.
+   */
+  static final int PROCESSING_RATE_WINDOW_SIZE = 50;
+
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
   private final ServiceEmitter emitter;
@@ -85,6 +95,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private final CostBasedAutoScalerConfig config;
   private final ScheduledExecutorService autoscalerExecutor;
   private final WeightedCostFunction costFunction;
+
+  private final EvictingQueue<Double> processingRateSamples;
   private volatile CostMetrics lastKnownMetrics;
 
   public CostBasedAutoScaler(
@@ -100,6 +112,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     this.supervisorId = spec.getId();
     this.emitter = emitter;
 
+    this.processingRateSamples = EvictingQueue.create(PROCESSING_RATE_WINDOW_SIZE);
     this.costFunction = new WeightedCostFunction();
     this.autoscalerExecutor = Execs.scheduledSingleThreaded("CostBasedAutoScaler-"
                                                             + StringUtils.encodeForFormat(spec.getId()));
@@ -255,14 +268,14 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     int startIndex = 0;
     int endIndex = validTaskCounts.length - 1;
 
-    if (config.shouldUseTaskCountBoundariesOnScaleUp()) {
+    if (config.isUseTaskCountBoundariesOnScaleUp()) {
       int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
       endIndex = currentTaskCountIndex >= 0
                  ? Math.min(currentTaskCountIndex + BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK, endIndex)
                  : endIndex;
     }
 
-    if (config.shouldUseTaskCountBoundariesOnScaleDown()) {
+    if (config.isUseTaskCountBoundariesOnScaleDown()) {
       int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
       startIndex = currentTaskCountIndex >= 0
                    ? Math.max(currentTaskCountIndex - BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK, startIndex)
@@ -282,8 +295,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
 
     emitter.emit(getMetricBuilder().setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
-    emitter.emit(getMetricBuilder().setMetric(LAG_COST_METRIC, optimalCost.lagCost()));
-    emitter.emit(getMetricBuilder().setMetric(IDLE_COST_METRIC, optimalCost.idleCost()));
+    emitter.emit(getMetricBuilder().setMetric(LAG_WEIGHT_METRIC, optimalCost.lagCost()));
+    emitter.emit(getMetricBuilder().setMetric(IDLE_WEIGHT_METRIC, optimalCost.idleCost()));
+    emitter.emit(getMetricBuilder().setMetric(AVG_PROCESSING_RATE_METRIC, metrics.getAvgProcessingRate()));
+    emitter.emit(getMetricBuilder().setMetric(AVG_POLL_IDLE_RATIO, metrics.getPollIdleRatio()));
 
     if (optimalTaskCount != currentTaskCount) {
       log.info(
@@ -434,13 +449,18 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final double movingAvgRate = extractMovingAverage(taskStats);
     final double pollIdleRatio = extractPollIdleRatio(taskStats);
 
+    if (!config.isUsePollIdleRatio() && movingAvgRate > 0) {
+      processingRateSamples.add(movingAvgRate);
+    }
+
     return new CostMetrics(
         avgPartitionLag,
         currentTaskCount,
         partitionCount,
         pollIdleRatio,
         supervisor.getIoConfig().getTaskDuration().getStandardSeconds(),
-        movingAvgRate
+        movingAvgRate,
+        processingRateSamples.isEmpty() ? null : Collections.max(processingRateSamples)
     );
   }
 

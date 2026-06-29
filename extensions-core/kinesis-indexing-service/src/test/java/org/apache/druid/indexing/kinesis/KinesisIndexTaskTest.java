@@ -876,7 +876,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyAll();
 
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSize(RECORDS, 0, 5))
-                                     .thrownAwayByReason(InputRowFilterResult.NULL_OR_EMPTY_RECORD, 4).totalProcessed(1));
+                                     .thrownAwayByReason(InputRowFilterResult.CUSTOM_FILTER, 4).totalProcessed(1));
 
     // Check published metadata
     assertEqualsExceptVersion(ImmutableList.of(sdd("2009/P1D", 0)), publishedDescriptors());

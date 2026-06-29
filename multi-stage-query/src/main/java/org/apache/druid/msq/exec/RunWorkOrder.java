@@ -392,6 +392,7 @@ public class RunWorkOrder
         frameContext,
         counterTracker,
         workerContext.threadCount(),
+        workerContext.segmentLoadAheadCount(workOrder),
         cancellationId,
         listener
     );
@@ -403,7 +404,14 @@ public class RunWorkOrder
     LinkedHashMap<Class<? extends InputSlice>, InputSliceReader> readers = new LinkedHashMap<>();
     readers.put(NilInputSlice.class, NilInputSliceReader.INSTANCE);
     readers.put(StageInputSlice.class, StageInputSliceReader.INSTANCE);
-    readers.put(ExternalInputSlice.class, new ExternalInputSliceReader(frameContext.tempDir("external")));
+    readers.put(
+        ExternalInputSlice.class,
+        new ExternalInputSliceReader(
+            frameContext.virtualStorageManager(),
+            frameContext.tempDir("external"),
+            MultiStageQueryContext.isBackgroundFetchExternalFiles(workOrder.getWorkerContext())
+        )
+    );
     readers.put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()));
     readers.put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()));
     readers.put(SegmentsInputSlice.class, new SegmentsInputSliceReader(frameContext, reindex));

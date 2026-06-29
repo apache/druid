@@ -69,25 +69,29 @@ public class LoadableDataSegmentTest
     final SegmentId segmentId = SegmentId.of("something", interval, "1", shardSpec);
 
     final Map<String, Object> loadSpec = Map.of("something", "or_other");
-    final CompactionState compactionState = new CompactionState(
-        new HashedPartitionsSpec(100000, null, List.of("dim1")),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("dim1", "bar", "foo"))),
-        List.of(new CountAggregatorFactory("count")),
-        new CompactionTransformSpec(
-            new SelectorDimFilter("dim1", "foo", null),
-            VirtualColumns.create(
-                new ExpressionVirtualColumn(
-                    "isRobotFiltered",
-                    "concat(isRobot, '_filtered')",
-                    ColumnType.STRING,
-                    ExprMacroTable.nil()
-                )
-            )
-        ),
-        MAPPER.convertValue(Map.of(), IndexSpec.class),
-        MAPPER.convertValue(Map.of(), GranularitySpec.class),
-        null
-    );
+    final CompactionState compactionState =
+        CompactionState.builder()
+                       .partitionsSpec(new HashedPartitionsSpec(100000, null, List.of("dim1")))
+                       .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of(
+                           "dim1",
+                           "bar",
+                           "foo"
+                       ))))
+                       .metricsSpec(List.of(new CountAggregatorFactory("count")))
+                       .transformSpec(new CompactionTransformSpec(
+                           new SelectorDimFilter("dim1", "foo", null),
+                           VirtualColumns.create(
+                               new ExpressionVirtualColumn(
+                                   "isRobotFiltered",
+                                   "concat(isRobot, '_filtered')",
+                                   ColumnType.STRING,
+                                   ExprMacroTable.nil()
+                               )
+                           )
+                       ))
+                       .indexSpec(MAPPER.convertValue(Map.of(), IndexSpec.class))
+                       .granularitySpec(MAPPER.convertValue(Map.of(), GranularitySpec.class))
+                       .build();
     final DataSegment segment = DataSegment.builder(segmentId)
                                            .loadSpec(loadSpec)
                                            .dimensions(Arrays.asList("dim1", "dim2"))

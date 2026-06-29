@@ -24,9 +24,13 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -92,6 +96,30 @@ public class SegmentsAndCommitMetadata
         this.commitMetadata,
         this.segmentSchemaMapping,
         upgradedSegments,
+        this.wasPublished
+    );
+  }
+
+  /**
+   * Returns a copy whose segments are replaced (matched by id, preserving order) with the corresponding entries from
+   * {@code publishedSegments}, so the metadata carries the actually-published shard specs rather than the pre-publish
+   * ones. Ids not present in {@code publishedSegments} keep their original entry.
+   */
+  public SegmentsAndCommitMetadata withPublishedSegments(Set<DataSegment> publishedSegments)
+  {
+    final Map<SegmentId, DataSegment> byId = new HashMap<>();
+    for (DataSegment published : publishedSegments) {
+      byId.put(published.getId(), published);
+    }
+    final List<DataSegment> reconciled = new ArrayList<>(segments.size());
+    for (DataSegment original : segments) {
+      reconciled.add(byId.getOrDefault(original.getId(), original));
+    }
+    return new SegmentsAndCommitMetadata(
+        reconciled,
+        this.commitMetadata,
+        this.segmentSchemaMapping,
+        this.upgradedSegments,
         this.wasPublished
     );
   }

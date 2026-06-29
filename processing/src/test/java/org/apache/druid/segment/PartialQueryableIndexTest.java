@@ -38,9 +38,11 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.file.CountingRangeReader;
-import org.apache.druid.segment.file.DirectoryBackedRangeReader;
+import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.loading.DirectoryBackedRangeReader;
+import org.apache.druid.segment.loading.SegmentRangeReader;
 import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -139,13 +141,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
     final File cacheDir = newCacheDir("schema");
 
-    try (PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
-        rangeReader,
-        TestHelper.makeJsonMapper(),
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        Collections.emptyList()
-    )) {
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
       rangeReader.resetCount();
 
       final PartialQueryableIndex index = new PartialQueryableIndex(
@@ -175,13 +171,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
     final File cacheDir = newCacheDir("caps");
 
-    try (PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
-        rangeReader,
-        TestHelper.makeJsonMapper(),
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        Collections.emptyList()
-    )) {
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
       rangeReader.resetCount();
 
       final PartialQueryableIndex index = new PartialQueryableIndex(
@@ -219,13 +209,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
     final File cacheDir = newCacheDir("colholder");
 
-    try (PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
-        rangeReader,
-        TestHelper.makeJsonMapper(),
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        Collections.emptyList()
-    )) {
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
       rangeReader.resetCount();
 
       final PartialQueryableIndex index = new PartialQueryableIndex(
@@ -255,13 +239,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
     final File cacheDir = newCacheDir("projection");
 
-    try (PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
-        rangeReader,
-        TestHelper.makeJsonMapper(),
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        Collections.emptyList()
-    )) {
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
       final PartialQueryableIndex index = new PartialQueryableIndex(
           mapper.getSegmentFileMetadata(),
           mapper,
@@ -336,13 +314,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
     final File cacheDir = newCacheDir("per_col");
 
-    try (PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
-        rangeReader,
-        TestHelper.makeJsonMapper(),
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        Collections.emptyList()
-    )) {
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
       final PartialQueryableIndex index = new PartialQueryableIndex(
           mapper.getSegmentFileMetadata(),
           mapper,
@@ -389,13 +361,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
     final File cacheDir = newCacheDir("no_proj");
 
-    try (PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
-        rangeReader,
-        TestHelper.makeJsonMapper(),
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        Collections.emptyList()
-    )) {
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
       final PartialQueryableIndex index = new PartialQueryableIndex(
           mapper.getSegmentFileMetadata(),
           mapper,
@@ -421,13 +387,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
 
     try (
         QueryableIndex eagerIndex = indexIO.loadIndex(segmentDir);
-        PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
-            rangeReader,
-            TestHelper.makeJsonMapper(),
-            cacheDir,
-            IndexIO.V10_FILE_NAME,
-            Collections.emptyList()
-        )
+        PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)
     ) {
       final PartialQueryableIndex partialIndex = new PartialQueryableIndex(
           mapper.getSegmentFileMetadata(),
@@ -465,5 +425,17 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
     final File dir = new File(sharedTempDir, name + "_" + ThreadLocalRandom.current().nextInt());
     FileUtils.mkdirp(dir);
     return dir;
+  }
+
+  private static PartialSegmentFileMapperV10 createMapper(SegmentRangeReader rangeReader, File cacheDir) throws IOException
+  {
+    return PartialSegmentFileMapperV10.create(
+        rangeReader,
+        TestHelper.makeJsonMapper(),
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        Collections.emptyList(),
+        PartialSegmentDownloadListener.NOOP
+    );
   }
 }

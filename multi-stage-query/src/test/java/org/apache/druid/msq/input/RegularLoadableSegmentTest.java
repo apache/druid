@@ -44,10 +44,11 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
@@ -55,6 +56,7 @@ import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
@@ -164,12 +166,15 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     cacheDir = tempDir.resolve("cache").toFile();
     final SegmentLoaderConfig virtualLoaderConfig = new SegmentLoaderConfig()
         .setLocations(ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null)))
-        .setVirtualStorage(true, true);
+        .setVirtualStorage(true)
+        .setVirtualStorageIsEphemeral(true)
+        .setVirtualStoragePartialDownloadsEnabled(true);
     final List<StorageLocation> virtualLocations = virtualLoaderConfig.toStorageLocations();
     segmentManagerDynamic = new SegmentManager(
         new SegmentLocalCacheManager(
             virtualLocations,
             virtualLoaderConfig,
+            StorageLoadingThreadPool.createFromConfig(virtualLoaderConfig),
             new LeastBytesUsedStorageLocationSelectorStrategy(virtualLocations),
             TestIndex.INDEX_IO,
             jsonMapper
@@ -185,6 +190,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
         new SegmentLocalCacheManager(
             localLocations,
             localLoaderConfig,
+            StorageLoadingThreadPool.createFromConfig(localLoaderConfig),
             new LeastBytesUsedStorageLocationSelectorStrategy(localLocations),
             TestIndex.INDEX_IO,
             jsonMapper
@@ -233,7 +239,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
               FutureUtils.transformAsync(
                   f,
                   ls -> {
-                    final AcquireSegmentAction acquireAction = ls.acquire();
+                    final AcquireSegmentAction acquireAction = ls.acquire(AcquireMode.PARTIAL);
                     return FutureUtils.transform(acquireAction.getSegmentFuture(), f2 -> Pair.of(acquireAction, f2));
                   }
               ),
@@ -246,7 +252,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
                 try (final AcquireSegmentAction ignored = pair.lhs;
                      final Segment acquiredSegment = acquiredSegmentOptional.get()) {
                   Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
-                  PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+                  RowCountInspector gadget = acquiredSegment.as(RowCountInspector.class);
                   Assertions.assertNotNull(gadget);
                   Assertions.assertEquals(1209, gadget.getNumRows());
                   return true;
@@ -304,7 +310,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
               FutureUtils.transformAsync(
                   f,
                   ls -> {
-                    final AcquireSegmentAction acquireAction = ls.acquire();
+                    final AcquireSegmentAction acquireAction = ls.acquire(AcquireMode.PARTIAL);
                     return FutureUtils.transform(acquireAction.getSegmentFuture(), f2 -> Pair.of(acquireAction, f2));
                   }
               ),
@@ -317,7 +323,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
                 try (final AcquireSegmentAction ignored = pair.lhs;
                      final Segment acquiredSegment = acquiredSegmentOptional.get()) {
                   Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
-                  PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+                  RowCountInspector gadget = acquiredSegment.as(RowCountInspector.class);
                   Assertions.assertNotNull(gadget);
                   Assertions.assertEquals(1209, gadget.getNumRows());
                   return true;
@@ -369,12 +375,12 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     );
 
     // acquireIfCached should return a segment since it's loaded
-    final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached();
+    final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached(AcquireMode.PARTIAL);
     Assertions.assertTrue(cachedSegment.isPresent());
 
     try (final Segment acquiredSegment = cachedSegment.get()) {
       Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
-      final PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+      final RowCountInspector gadget = acquiredSegment.as(RowCountInspector.class);
       Assertions.assertNotNull(gadget);
       Assertions.assertEquals(1209, gadget.getNumRows());
     }
@@ -402,7 +408,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     );
 
     // acquireIfCached should return empty since it's not loaded locally
-    final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached();
+    final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached(AcquireMode.PARTIAL);
     Assertions.assertFalse(cachedSegment.isPresent());
   }
 
@@ -429,7 +435,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     Assertions.assertEquals(segment, fetchedDataSegment);
 
     // Verify segment acquisition works.
-    final AcquireSegmentAction acquireAction = loadableSegment.acquire();
+    final AcquireSegmentAction acquireAction = loadableSegment.acquire(AcquireMode.PARTIAL);
     final AcquireSegmentResult acquireResult = FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), false);
     final Optional<Segment> acquiredSegmentOptional = acquireResult.getReferenceProvider().acquireReference();
     Assertions.assertTrue(acquiredSegmentOptional.isPresent());
@@ -437,7 +443,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     try (final AcquireSegmentAction ignored = acquireAction;
          final Segment acquiredSegment = acquiredSegmentOptional.get()) {
       Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
-      final PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+      final RowCountInspector gadget = acquiredSegment.as(RowCountInspector.class);
       Assertions.assertNotNull(gadget);
       Assertions.assertEquals(1209, gadget.getNumRows());
     }
@@ -468,7 +474,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     Assertions.assertEquals(segment, fetchedDataSegment);
 
     // Verify segment acquisition works.
-    final AcquireSegmentAction acquireAction = loadableSegment.acquire();
+    final AcquireSegmentAction acquireAction = loadableSegment.acquire(AcquireMode.PARTIAL);
     final AcquireSegmentResult acquireResult = FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), false);
     final Optional<Segment> acquiredSegmentOptional = acquireResult.getReferenceProvider().acquireReference();
     Assertions.assertTrue(acquiredSegmentOptional.isPresent());
@@ -476,7 +482,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     try (final AcquireSegmentAction ignored = acquireAction;
          final Segment acquiredSegment = acquiredSegmentOptional.get()) {
       Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
-      final PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+      final RowCountInspector gadget = acquiredSegment.as(RowCountInspector.class);
       Assertions.assertNotNull(gadget);
       Assertions.assertEquals(1209, gadget.getNumRows());
     }
