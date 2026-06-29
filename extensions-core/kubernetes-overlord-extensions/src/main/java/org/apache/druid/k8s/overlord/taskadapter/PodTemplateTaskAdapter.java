@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.EnvVarSourceBuilder;
@@ -119,7 +120,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   @Override
   public Job fromTask(Task task) throws IOException
   {
-    Optional<PodTemplateWithName> selectedPodTemplate = podTemplateSelector.getPodTemplateForTask(task);
+    final Optional<PodTemplateWithName> selectedPodTemplate = podTemplateSelector.getPodTemplateForTask(task);
     if (selectedPodTemplate == null || !selectedPodTemplate.isPresent()) {
       throw InternalServerError.exception(
           "Could not find pod template for task [%s]."
@@ -127,9 +128,9 @@ public class PodTemplateTaskAdapter implements TaskAdapter
           task.getId()
       );
     }
-    PodTemplateWithName podTemplateWithName = selectedPodTemplate.get();
+    final PodTemplateWithName podTemplateWithName = selectedPodTemplate.get();
 
-    return new JobBuilder()
+    final Job job = new JobBuilder()
         .withNewMetadata()
         .withName(new K8sTaskId(taskRunnerConfig.getK8sTaskPodNamePrefix(), task).getK8sJobName())
         .addToLabels(getJobLabels(taskRunnerConfig, task))
@@ -157,6 +158,16 @@ public class PodTemplateTaskAdapter implements TaskAdapter
                                                            .getStandardSeconds())
         .endSpec()
         .build();
+    applyTaskResourceOverrides(job, task);
+    return job;
+  }
+
+  private void applyTaskResourceOverrides(Job job, Task task)
+  {
+    final Container mainContainer = job.getSpec().getTemplate().getSpec().getContainers().get(0);
+    mainContainer.setResources(
+        K8sTaskResourceContext.applyTaskResourceOverrides(mainContainer.getResources(), task)
+    );
   }
 
   /**

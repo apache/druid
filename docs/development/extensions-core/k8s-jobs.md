@@ -775,6 +775,71 @@ Set the `podTemplateSelectionKey` key in a task's context to pick a configured p
 
 This is gated by the runtime property `druid.indexer.runner.allowTaskPodTemplateSelection`, which defaults to `false`. If the key doesn't match any configured template, the task fails to launch.
 
+##### Override task pod resources via context
+
+Set the `k8sTaskResources` key in a task's context to override Kubernetes resource requests and limits for the task
+container. Resource names are Kubernetes resource names, so this supports standard resources such as `cpu`, `memory`,
+and `ephemeral-storage`, as well as cluster-specific extended resources.
+
+Resource entries at the top level are applied to both requests and limits. Use the `requests` and `limits` objects when
+the request and limit should differ.
+
+```json
+"context": {
+  "k8sTaskResources": {
+    "cpu": "2",
+    "memory": "8Gi",
+    "ephemeral-storage": "100Gi",
+    "requests": {
+      "example.com/custom-resource": "1"
+    },
+    "limits": {
+      "example.com/custom-resource": "1"
+    }
+  }
+}
+```
+
+Use `byTaskType` to override resources for specific task types. Druid applies the generic resource entries first, then
+applies the section matching the task's concrete `type`. This is useful for `index_parallel`, whose supervisor task
+creates subtasks with different task types. The subtask context inherits the supervisor context, so each subtask can
+resolve its own resource override when the Kubernetes task runner launches it.
+
+```json
+"context": {
+  "k8sTaskResources": {
+    "cpu": "1",
+    "memory": "4Gi",
+    "byTaskType": {
+      "partial_index_generate": {
+        "cpu": "2",
+        "memory": "8Gi",
+        "ephemeral-storage": "200Gi"
+      },
+      "partial_index_generic_merge": {
+        "requests": {
+          "cpu": "500m",
+          "memory": "2Gi"
+        },
+        "limits": {
+          "cpu": "1",
+          "memory": "4Gi"
+        }
+      }
+    }
+  }
+}
+```
+
+Common parallel indexing task types include `index_parallel`, `single_phase_sub_task`, `partial_dimension_cardinality`,
+`partial_dimension_distribution`, `partial_index_generate`, `partial_range_index_generate`, and
+`partial_index_generic_merge`.
+
+For `overlordSingleContainer` and `overlordMultiContainer`, Druid still computes default `cpu` and `memory` resources
+from `druid.indexer.runner.cpuCoreInMicro` and `druid.indexer.runner.javaOptsArray`; `k8sTaskResources` overrides only
+the resources it names. For `customTemplateAdapter`, Druid applies the overrides to the first container in the selected
+pod template. Existing resource entries that are not overridden are preserved.
+
 #### Running Task Pods in Another Namespace
 
 It is possible to run task pods in a different namespace from the rest of your Druid cluster.
