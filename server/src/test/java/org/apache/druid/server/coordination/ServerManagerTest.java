@@ -57,6 +57,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.EmittingQueryMetrics;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
@@ -854,7 +855,7 @@ public class ServerManagerTest
     @Override
     public QueryMetrics<Query<?>> makeMetrics(QueryType query)
     {
-      return new DefaultQueryMetrics<>();
+      return new EmittingQueryMetrics<>();
     }
 
     @Override
