@@ -216,6 +216,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             mockProvider,
             null,
             Period.days(7),  // skipOffsetFromLatest
+            null,  // skipOffsetFromEarliest
             Period.days(3),   // skipOffsetFromNow
             Granularities.DAY,
             new DynamicPartitionsSpec(5000000, null),
@@ -224,7 +225,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         )
     );
 
-    Assertions.assertEquals("Cannot set both skipOffsetFromNow and skipOffsetFromLatest", exception.getMessage());
+    Assertions.assertTrue(exception.getMessage().contains("Cannot set more than one of"));
     EasyMock.verify(mockProvider);
   }
 
@@ -241,6 +242,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             null,
             null,
             mockProvider,
+            null,
             null,
             null,
             null,
@@ -268,6 +270,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             null,
             null,
             null,
+            null,
             Granularities.DAY,
             new DynamicPartitionsSpec(5000000, null),
             null,
@@ -291,6 +294,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             null,
             null,
             mockProvider,
+            null,
             null,
             null,
             null,
@@ -322,6 +326,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             null,
             null,
             mockProvider,
+            null,
             null,
             null,
             null,
