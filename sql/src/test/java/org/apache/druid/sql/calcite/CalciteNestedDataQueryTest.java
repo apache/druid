@@ -7249,7 +7249,7 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     ),
                     expressionVirtualColumn("v2", "notnull(nvl(\"v1\",1.0))", ColumnType.LONG)
                 )
-                .filters(range("v0", ColumnType.LONG, 0.0, null, true, false))
+                .filters(range("v0", ColumnType.DOUBLE, 0.0, null, true, false))
                 .limit(1)
                 .columns("v1", "v0", "v2")
                 .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.LONG)
@@ -7281,7 +7281,7 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 .virtualColumns(
                     new NestedFieldVirtualColumn("nest", "$.y", "v0", ColumnType.DOUBLE),
                     expressionVirtualColumn("v1", "nvl(\"v0\",1.0)", ColumnType.DOUBLE),
-                    expressionVirtualColumn("v2", "(nvl(\"v0\",1.0) > 0)", ColumnType.LONG),
+                    expressionVirtualColumn("v2", "(nvl(\"v0\",1.0) > 0.0)", ColumnType.LONG),
                     expressionVirtualColumn("v3", "(nvl(\"v0\",1.0) == 1.0)", ColumnType.LONG)
                 )
                 .columns("v0", "v1", "v2", "v3")
@@ -7325,7 +7325,7 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     new NestedFieldVirtualColumn("nest", "$.y", "v1", ColumnType.DOUBLE),
                     expressionVirtualColumn("v2", "notnull(nvl(\"v1\",1.0))", ColumnType.LONG)
                 )
-                .filters(range("v0", ColumnType.LONG, 0.0, null, true, false))
+                .filters(range("v0", ColumnType.DOUBLE, 0.0, null, true, false))
                 .columns("v1", "v0", "v2")
                 .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.LONG)
                 .build()

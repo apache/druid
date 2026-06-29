@@ -57,6 +57,7 @@ import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -155,28 +156,32 @@ public class DruidJoinRule extends RelOptRule
       leftFilter = null;
     }
 
+    RightHoistPlan rightHoist = null;
     if (!joinAlgorithm.requiresSubquery()
         && right.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
         && right.getPartialDruidQuery().getWhereFilter() == null
         && !right.getPartialDruidQuery().getSelectProject().isMapping()
         && conditionAnalysis.onlyUsesMappingsFromRightProject(right.getPartialDruidQuery().getSelectProject())) {
+      rightHoist = planRightHoist(join, right.getPartialDruidQuery().getSelectProject(), conditionAnalysis);
+    }
+
+    if (rightHoist != null) {
       // Swap the right-side projection above the join, so the right side is a simple scan or mapping. This helps us
       // avoid subqueries.
       final RelNode rightScan = right.getPartialDruidQuery().getScan();
       final Project rightProject = right.getPartialDruidQuery().getSelectProject();
-
-      // Right-side projection expressions rewritten to be on top of the join.
-      
-      for (final RexNode rexNode : RexUtil.shift(rightProject.getProjects(), newLeft.getRowType().getFieldCount())) {
-        if (join.getJoinType().generatesNullsOnRight()) {
-          newProjectExprs.add(makeNullableIfLiteral(rexNode, rexBuilder));
-        } else {
-          newProjectExprs.add(rexNode);
-        }
+      final List<RexNode> shiftedProjects =
+          RexUtil.shift(rightProject.getProjects(), newLeft.getRowType().getFieldCount());
+      for (int i = 0; i < shiftedProjects.size(); i++) {
+        newProjectExprs.add(
+            rightHoist.matchIndicator != null && rightHoist.isConstant[i]
+            ? nullGateOuterJoin(shiftedProjects.get(i), rightHoist.matchIndicator, rexBuilder)
+            : shiftedProjects.get(i)
+        );
       }
 
       newRight = right.withPartialQuery(PartialDruidQuery.create(rightScan));
-      conditionAnalysis = conditionAnalysis.pushThroughRightProject(rightProject);
+      conditionAnalysis = rightHoist.pushedAnalysis;
     } else {
       // Leave right as-is. Write input refs that do nothing.
       for (int i = 0; i < right.getRowType().getFieldCount(); i++) {
@@ -223,19 +228,6 @@ public class DruidJoinRule extends RelOptRule
     }
     relBuilder.convert(join.getRowType(), false);
     call.transformTo(relBuilder.build());
-  }
-
-  private static RexNode makeNullableIfLiteral(final RexNode rexNode, final RexBuilder rexBuilder)
-  {
-    if (rexNode.isA(SqlKind.LITERAL)) {
-      return rexBuilder.makeLiteral(
-          RexLiteral.value(rexNode),
-          rexBuilder.getTypeFactory().createTypeWithNullability(rexNode.getType(), true),
-          true
-      );
-    } else {
-      return rexNode;
-    }
   }
 
   /**
@@ -582,6 +574,90 @@ public class DruidJoinRule extends RelOptRule
     return rexNode.isA(SqlKind.INPUT_REF) && ((RexInputRef) rexNode).getIndex() >= numLeftFields;
   }
 
+  /**
+   * Plan for hoisting a right-side {@link Project} above {@link Join}. Computes the pushed-down condition
+   * analysis, flags each projection expression as constant (no input refs) or not, and (if necessary)
+   * selects an equi-condition's right column to use as a match indicator for {@link #nullGateOuterJoin}.
+   *
+   * <p>Returns null if the right project cannot be hoisted.
+   */
+  @Nullable
+  private static RightHoistPlan planRightHoist(
+      final Join join,
+      final Project rightProject,
+      final ConditionAnalysis analysis
+  )
+  {
+    final List<RexNode> projects = rightProject.getProjects();
+    final boolean[] isConstant = new boolean[projects.size()];
+    boolean hasConstant = false;
+
+    for (int i = 0; i < projects.size(); i++) {
+      isConstant[i] = !RexUtil.containsInputRef(projects.get(i));
+      hasConstant = hasConstant || isConstant[i];
+    }
+
+    final ConditionAnalysis pushed = analysis.pushThroughRightProject(rightProject);
+    if (!hasConstant || !join.getJoinType().generatesNullsOnRight()) {
+      // No null-gating needed: either there are no constants to gate, or the join type does not
+      // null-extend the right side.
+      return new RightHoistPlan(pushed, null, isConstant);
+    }
+
+    if (join.getJoinType() != JoinRelType.LEFT) {
+      // Only LEFT is safely gateable with the matchIndicator scheme. FULL (and any future
+      // null-extending-on-right join types) are skipped. See the Javadoc above for details.
+      return null;
+    }
+
+    RexNode indicator = null;
+    for (RexEquality eq : pushed.equalitySubConditions) {
+      // Exclude IS_NOT_DISTINCT_FROM, because it allows NULL = NULL matches, which would mean
+      // the rhs could potentially be NULL even when the join matches.
+      if (eq.kind == SqlKind.EQUALS) {
+        indicator = eq.right;
+        break;
+      }
+    }
+
+    return indicator == null ? null : new RightHoistPlan(pushed, indicator, isConstant);
+  }
+
+  /**
+   * Wrap a right-side constant expression in a CASE keyed on {@code matchIndicator}, so it evaluates to NULL
+   * for non-matching rows of an outer join. Non-constant expressions don't need this because their input refs
+   * are already NULL-extended by the join.
+   */
+  private static RexNode nullGateOuterJoin(
+      final RexNode rexNode,
+      final RexNode matchIndicator,
+      final RexBuilder rexBuilder
+  )
+  {
+    final RelDataType nullableType =
+        rexBuilder.getTypeFactory().createTypeWithNullability(rexNode.getType(), true);
+    return rexBuilder.makeCall(
+        SqlStdOperatorTable.CASE,
+        rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, matchIndicator),
+        rexBuilder.ensureType(nullableType, rexNode, false),
+        rexBuilder.makeNullLiteral(nullableType)
+    );
+  }
+
+  /**
+   * Return value from {@link #planRightHoist(Join, Project, ConditionAnalysis)}.
+   *
+   * @param pushedAnalysis modified condition analysis for the hoisted plan
+   * @param matchIndicator indicator field that can be used to determine if a join happened
+   * @param isConstant whether each field (by index) is a constant
+   */
+  private record RightHoistPlan(
+      ConditionAnalysis pushedAnalysis,
+      @Nullable RexNode matchIndicator,
+      boolean[] isConstant
+  )
+  {
+  }
 
   /**
    * Like {@link org.apache.druid.segment.join.Equality} but uses {@link RexNode} instead of
