@@ -35,10 +35,12 @@ It will also be helpful to have finished [Load a file](../tutorials/tutorial-bat
 
 For this tutorial, we'll be using the Wikipedia edits sample data, with an ingestion task spec that will create a separate segment for each hour in the input data.
 
-The ingestion spec can be found at `quickstart/tutorial/retention-index.json`. Let's submit that spec, which will create a datasource called `retention-tutorial`:
+The ingestion spec can be found at `quickstart/tutorial/retention-index.json`. Let's submit that spec by calling Druid Overlord, which will create a datasource called `retention-tutorial`:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/retention-index.json --url http://localhost:8081
+curl -X POST http://localhost:8081/druid/indexer/v1/task \
+  -H "Content-Type: application/json" \
+  -d @quickstart/tutorial/retention-index.json
 ```
 
 After the ingestion completes, go to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to access the web console's datasource view.

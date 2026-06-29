@@ -583,7 +583,9 @@ We've finished defining the ingestion spec, it should now look like the followin
 From the `apache-druid-{{DRUIDVERSION}}` package root, run the following command:
 
 ```bash
-bin/post-index-task --file quickstart/ingestion-tutorial-index.json --url http://localhost:8081
+curl -X POST http://localhost:8081/druid/indexer/v1/task \
+  -H "Content-Type: application/json" \
+  -d @quickstart/tutorial/ingestion-tutorial-index.json
 ```
 
 After the script completes, we will query the data.

@@ -34,10 +34,12 @@ This tutorial requires the following:
 
 In this tutorial, we will use the Wikipedia edits data, with an indexing spec that creates hourly segments. This spec is located at `quickstart/tutorial/deletion-index.json`, and it creates a datasource called `deletion-tutorial`.
 
-Let's load this initial data:
+Let's load this initial data by calling the Druid Overlord API:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/deletion-index.json --url http://localhost:8081
+curl -X POST http://localhost:8081/druid/indexer/v1/task \
+  -H "Content-Type: application/json" \
+  -d @quickstart/tutorial/deletion-index.json
 ```
 
 When the load finishes, open [http://localhost:8888/unified-console.md#datasources](http://localhost:8888/unified-console.html#datasources) in a browser.
