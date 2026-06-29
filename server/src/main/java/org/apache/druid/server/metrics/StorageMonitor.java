@@ -31,6 +31,7 @@ import org.apache.druid.segment.loading.VirtualStorageLocationStats;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Monitor to emit stats from {@link StorageLocation}.
@@ -114,22 +115,33 @@ public class StorageMonitor extends AbstractMonitor
   /**
    * Number of weakly-held objects whose load was started during the measurement period. Incremented when space is
    * reserved, before the object has been downloaded.
+   * <p>
+   * For partial (on-demand) V10 segments, reservation is pessimistic: a bundle reserves its full container size up
+   * front even though a query may download only a subset of that bundle's columns. So begin (reserved) and complete
+   * (actually downloaded) deliberately diverge on the partial path; begin reflects reserved space, the
+   * {@link #VSF_LOAD_BYTES} complete metrics reflect bytes actually pulled from deep storage.
    */
   public static final String VSF_LOAD_BEGIN_COUNT = "storage/virtual/load/begin/count";
 
   /**
-   * Total bytes of weakly-held objects whose load was started during the measurement period.
+   * Total bytes of weakly-held objects whose load was started during the measurement period. See
+   * {@link #VSF_LOAD_BEGIN_COUNT} for why this (reserved) can exceed {@link #VSF_LOAD_BYTES} (actually downloaded) for
+   * partial segments.
    */
   public static final String VSF_LOAD_BEGIN_BYTES = "storage/virtual/load/begin/bytes";
 
   /**
-   * Number of weakly-held objects whose load completed during the measurement period. Incremented after the object has
-   * been downloaded and is usable.
+   * Number of load completions during the measurement period. For fully-downloaded weak entries this is incremented
+   * once per object after it has been downloaded and is usable. For partial (on-demand) V10 segments it additionally
+   * counts each individual internal-file download (a query lazily pulls only the columns it needs), so on the partial
+   * path this is file-granular and may exceed {@link #VSF_LOAD_BEGIN_COUNT} (which is per reserved entry).
    */
   public static final String VSF_LOAD_COUNT = "storage/virtual/load/count";
 
   /**
-   * Total bytes of weakly-held objects whose load completed during the measurement period.
+   * Total bytes whose load completed during the measurement period: bytes actually downloaded from deep storage. For
+   * partial segments this includes header range-reads plus every lazily-downloaded column, and is the accurate measure
+   * of bandwidth used (vs {@link #VSF_LOAD_BEGIN_BYTES}, which is reserved space).
    */
   public static final String VSF_LOAD_BYTES = "storage/virtual/load/bytes";
 
@@ -148,6 +160,25 @@ public class StorageMonitor extends AbstractMonitor
    * insufficient space in virtual storage.
    */
   public static final String VSF_REJECT_COUNT = "storage/virtual/reject/count";
+
+  /**
+   * Number of deep-storage range reads issued during the measurement period for on-demand partial downloads. One read
+   * can cover several internal files (a whole-container fetch), so this is the actual deep-storage request count;
+   * distinct from {@link #VSF_LOAD_COUNT} (file/object load completions).
+   */
+  public static final String VSF_READ_COUNT = "storage/virtual/read/count";
+
+  /**
+   * Total bytes pulled from deep storage by range reads during the measurement period. Can exceed
+   * {@link #VSF_LOAD_BYTES} when a partially-present container is re-fetched in full.
+   */
+  public static final String VSF_READ_BYTES = "storage/virtual/read/bytes";
+
+  /**
+   * Total wall-clock time spent in deep-storage range reads during the measurement period, in milliseconds. Combined
+   * with {@link #VSF_READ_COUNT} this gives average per-read latency.
+   */
+  public static final String VSF_READ_TIME = "storage/virtual/read/time";
 
   private final List<StorageLocation> locations;
   private final Supplier<ServiceMetricEvent.Builder> builderSupplier;
@@ -193,6 +224,9 @@ public class StorageMonitor extends AbstractMonitor
         emitter.emit(builder.setMetric(VSF_EVICT_COUNT, weakStats.getEvictionCount()));
         emitter.emit(builder.setMetric(VSF_EVICT_BYTES, weakStats.getEvictionBytes()));
         emitter.emit(builder.setMetric(VSF_REJECT_COUNT, weakStats.getRejectCount()));
+        emitter.emit(builder.setMetric(VSF_READ_COUNT, weakStats.getReadCount()));
+        emitter.emit(builder.setMetric(VSF_READ_BYTES, weakStats.getReadBytes()));
+        emitter.emit(builder.setMetric(VSF_READ_TIME, TimeUnit.NANOSECONDS.toMillis(weakStats.getReadTimeNanos())));
       }
     }
     return true;
