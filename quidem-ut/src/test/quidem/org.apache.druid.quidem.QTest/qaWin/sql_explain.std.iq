@@ -192,7 +192,13 @@ WHERE client_ip IN ('107.13.54.103',
       "processors" : [ {
         "type" : "first",
         "inputColumn" : "d2",
-        "outputColumn" : "w0"
+        "outputColumn" : "w0",
+        "frame" : {
+          "type" : "groups",
+          "lowerOffset" : null,
+          "upperOffset" : 0,
+          "orderByColumns" : [ "d0", "p2", "p3", "d2", "p0" ]
+        }
       }, {
         "type" : "offset",
         "inputColumn" : "d2",
@@ -407,7 +413,13 @@ WHERE client_ip IN ('107.13.54.103',
       "processors" : [ {
         "type" : "first",
         "inputColumn" : "d2",
-        "outputColumn" : "w0"
+        "outputColumn" : "w0",
+        "frame" : {
+          "type" : "groups",
+          "lowerOffset" : null,
+          "upperOffset" : 0,
+          "orderByColumns" : [ "d0", "p2", "p3", "d2", "p0" ]
+        }
       }, {
         "type" : "offset",
         "inputColumn" : "d2",
@@ -611,7 +623,13 @@ GROUP BY server_ip,
       "processors" : [ {
         "type" : "first",
         "inputColumn" : "d2",
-        "outputColumn" : "w0"
+        "outputColumn" : "w0",
+        "frame" : {
+          "type" : "groups",
+          "lowerOffset" : null,
+          "upperOffset" : 0,
+          "orderByColumns" : [ "d0", "p1", "p2", "d2", "d3" ]
+        }
       }, {
         "type" : "offset",
         "inputColumn" : "d2",
@@ -816,7 +834,13 @@ GROUP BY server_ip,
       "processors" : [ {
         "type" : "first",
         "inputColumn" : "d2",
-        "outputColumn" : "w0"
+        "outputColumn" : "w0",
+        "frame" : {
+          "type" : "groups",
+          "lowerOffset" : null,
+          "upperOffset" : 0,
+          "orderByColumns" : [ "d0", "p1", "p2", "d2", "d3" ]
+        }
       }, {
         "type" : "offset",
         "inputColumn" : "d2",
