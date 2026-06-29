@@ -593,7 +593,10 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   {
     // toStandardDuration assumes days are always 24h, and hours are always 60 minutes,
     // which may not always be the case, e.g if there are daylight saving changes.
-    if (chronology.days().isPrecise() && chronology.hours().isPrecise()) {
+    // However, if the period only contains hours, minutes, seconds, and millis,
+    // their duration is always precise even across daylight saving transitions.
+    if ((chronology.days().isPrecise() && chronology.hours().isPrecise())
+        || (period.getYears() == 0 && period.getMonths() == 0 && period.getWeeks() == 0 && period.getDays() == 0)) {
       final long millis = period.toStandardDuration().getMillis();
       long offset = t % millis - origin % millis;
       if (offset < 0) {
