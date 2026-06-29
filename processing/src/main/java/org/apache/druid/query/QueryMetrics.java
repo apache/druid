@@ -331,7 +331,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
   /**
    * Registers the {@code query/segments/count} metric, the number of segments touched by the query.
    *
-   * Emitted once per query. The value's meaning depends on the emitting process:
+   * Emitted once per query. The meaning of the metric depends on the emitting process:
    * <ul>
    *   <li>On the Broker, it is the number of segments in the planned query distribution (a snapshot-based
    *       count that may double-count segments that moved and were re-fetched).</li>

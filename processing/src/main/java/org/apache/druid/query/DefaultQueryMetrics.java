@@ -444,7 +444,8 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public QueryMetrics<QueryType> reportQueriedSegmentCount(long segmentCount)
   {
-    return reportMetric(QUERY_SEGMENTS_COUNT, segmentCount);
+    // Don't emit by default.
+    return this;
   }
 
   @Override

@@ -580,6 +580,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                   }
                 }
 
+                // Emit total segmentCount once per query
                 if (segmentCount != null) {
                   final QueryMetrics<?> segmentCountMetrics =
                       queryPlus.withoutThreadUnsafeState().withQueryMetrics(queryToolChest).getQueryMetrics();
