@@ -88,6 +88,24 @@ public interface VirtualStorageLocationStats
   long getRejectCount();
 
   /**
+   * Number of deep-storage range reads issued during the measurement period (on-demand partial downloads). One read
+   * may cover several internal files, so this is the actual request count, distinct from {@link #getLoadCount()}.
+   */
+  long getReadCount();
+
+  /**
+   * Total bytes pulled from deep storage by range reads during the measurement period. May exceed
+   * {@link #getLoadBytes()} when a partially-present container is re-fetched in full.
+   */
+  long getReadBytes();
+
+  /**
+   * Total wall-clock time spent in deep-storage range reads during the measurement period, in nanoseconds. Divide by
+   * {@link #getReadCount()} for the average per-read latency.
+   */
+  long getReadTimeNanos();
+
+  /**
    * Whether any stats are nonzero.
    */
   default boolean hasStats()
@@ -103,6 +121,9 @@ public interface VirtualStorageLocationStats
            || getLoadBytes() != 0
            || getEvictionCount() != 0
            || getEvictionBytes() != 0
-           || getRejectCount() != 0;
+           || getRejectCount() != 0
+           || getReadCount() != 0
+           || getReadBytes() != 0
+           || getReadTimeNanos() != 0;
   }
 }

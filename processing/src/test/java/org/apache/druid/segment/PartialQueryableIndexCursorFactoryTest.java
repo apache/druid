@@ -47,6 +47,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.file.CountingRangeReader;
+import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
@@ -323,7 +324,8 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
         TestHelper.makeJsonMapper(),
         cacheDir,
         IndexIO.V10_FILE_NAME,
-        Collections.emptyList()
+        Collections.emptyList(),
+        PartialSegmentDownloadListener.NOOP
     );
     try {
       final PartialQueryableIndex index =
