@@ -44,7 +44,7 @@ public interface SegmentMetadataCache
   void stop();
 
   /**
-   * Refreshes the cache once the service is elected leader.
+   * Notifies the cache that the service is elected leader.
    */
   void becomeLeader();
 
@@ -108,8 +108,7 @@ public interface SegmentMetadataCache
     /**
      * Always read from the cache. Service start-up may be blocked until cache
      * has synced with the metadata store at least once. Transactions may block
-     * until cache has synced with the metadata store at least once after
-     * becoming leader.
+     * until cache has synced with the metadata store at least once.
      */
     ALWAYS("always"),
 

@@ -27,8 +27,8 @@ import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.joda.time.Period;
 
 /**
- * Config that dictates polling and caching of segment metadata on leader
- * Coordinator or Overlord services.
+ * Config that dictates polling and caching of segment metadata on Coordinator
+ * or Overlord services.
  */
 public class SegmentsMetadataManagerConfig
 {

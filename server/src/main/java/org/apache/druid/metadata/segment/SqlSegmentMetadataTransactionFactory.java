@@ -86,7 +86,7 @@ public class SqlSegmentMetadataTransactionFactory extends SqlSegmentMetadataRead
           final SegmentMetadataTransaction sqlTransaction
               = createSqlTransaction(dataSource, handle, status);
 
-          if (segmentMetadataCache.isSyncedForRead()) {
+          if (leaderSelector.isLeader() && segmentMetadataCache.isSyncedForRead()) {
             // Use cache as it is already synced with the metadata store
             emitTransactionCount(Metric.READ_ONLY_TRANSACTIONS, dataSource);
             return segmentMetadataCache.readCacheForDataSource(dataSource, dataSourceCache -> {

@@ -171,7 +171,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     emitter = new StubServiceEmitter();
     leaderSelector = new TestDruidLeaderSelector();
+    leaderSelector.becomeLeader();
 
+    initializeCacheAndCoordinator(true);
+  }
+
+  private void initializeCacheAndCoordinator(boolean shouldSyncCache)
+  {
     cachePollExecutor = new BlockingExecutorService("test-cache-poll-exec");
 
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
@@ -189,14 +195,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         emitter
     );
 
-    leaderSelector.becomeLeader();
-
     // Get the cache ready if required
     if (isCacheEnabled()) {
       segmentMetadataCache.start();
       segmentMetadataCache.becomeLeader();
-      refreshCache();
-      refreshCache();
+      if (shouldSyncCache) {
+        refreshCache();
+        refreshCache();
+      }
     }
 
     transactionFactory = new SqlSegmentMetadataTransactionFactory(
@@ -240,6 +246,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     };
   }
 
+  private void reinitializeUnsyncedCacheAndCoordinator()
+  {
+    segmentMetadataCache.stop();
+    initializeCacheAndCoordinator(false);
+  }
+
   @After
   public void tearDown()
   {
@@ -254,7 +266,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       cachePollExecutor.finishNextPendingTasks(2);
     }
   }
-  
+
   private boolean isCacheEnabled()
   {
     return cacheMode != SegmentMetadataCache.UsageMode.NEVER;
@@ -4592,7 +4604,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
             Segments.INCLUDING_OVERSHADOWED
         );
 
-    // Retrieve returns empty since cache is not synced with metadata store yet
+    // Retrieve returns empty since cache has not picked up this segment yet
     Assert.assertTrue(retrieveAction.get().isEmpty());
 
     refreshCache();
@@ -4604,9 +4616,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testReadOperation_doesNotUseCache_ifNotSynced()
   {
-    Assume.assumeTrue(isCacheEnabled());
+    Assume.assumeTrue(cacheMode == SegmentMetadataCache.UsageMode.IF_SYNCED);
 
-    segmentMetadataCache.stopBeingLeader();
+    reinitializeUnsyncedCacheAndCoordinator();
     Assert.assertFalse(segmentMetadataCache.isSyncedForRead());
 
     final Supplier<Set<DataSegment>> retrieveAction =
@@ -4620,14 +4632,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(Set.of(defaultSegment), retrieveAction.get());
     emitter.verifyNotEmitted(Metric.READ_ONLY_TRANSACTIONS);
 
-    // Become leader but cache will still not be used
-    segmentMetadataCache.becomeLeader();
-    Assert.assertFalse(segmentMetadataCache.isSyncedForRead());
-    Assert.assertEquals(Set.of(defaultSegment), retrieveAction.get());
-    emitter.verifyNotEmitted(Metric.READ_ONLY_TRANSACTIONS);
-
     // Sync the cache so that it becomes ready for use
-    refreshCache();
     refreshCache();
     Assert.assertTrue(segmentMetadataCache.isSyncedForRead());
     Assert.assertEquals(Set.of(defaultSegment), retrieveAction.get());
@@ -4635,13 +4640,28 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
+  public void testReadOperation_doesNotUseCache_ifNotLeader()
+  {
+    Assume.assumeTrue(isCacheEnabled());
+
+    Assert.assertTrue(segmentMetadataCache.isSyncedForRead());
+    leaderSelector.stopBeingLeader();
+
+    insertUsedSegments(Set.of(defaultSegment), Map.of());
+
+    Assert.assertEquals(
+        Set.of(defaultSegment),
+        coordinator.retrieveAllUsedSegments(defaultSegment.getDataSource(), Segments.INCLUDING_OVERSHADOWED)
+    );
+    emitter.verifyNotEmitted(Metric.READ_ONLY_TRANSACTIONS);
+  }
+
+  @Test
   public void testWriteOperation_alwaysUsesCache_inModeIfSynced()
   {
     Assume.assumeTrue(cacheMode == SegmentMetadataCache.UsageMode.IF_SYNCED);
 
-    // Lose and regain leadership
-    segmentMetadataCache.stopBeingLeader();
-    segmentMetadataCache.becomeLeader();
+    reinitializeUnsyncedCacheAndCoordinator();
 
     Assert.assertTrue(segmentMetadataCache.isEnabled());
     Assert.assertFalse(segmentMetadataCache.isSyncedForRead());
@@ -4654,7 +4674,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     emitter.verifyValue(Metric.WRITE_ONLY_TRANSACTIONS, 1L);
 
     // Sync the cache to use it for both read and write operations
-    refreshCache();
     refreshCache();
     Assert.assertTrue(segmentMetadataCache.isSyncedForRead());
 

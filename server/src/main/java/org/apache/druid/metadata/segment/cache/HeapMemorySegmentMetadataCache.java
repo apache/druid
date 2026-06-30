@@ -86,7 +86,7 @@ import java.util.stream.Collectors;
  * Only used segments (excluding num_rows and schema_fingerprint) and
  * pending segments are cached. Unused segments are not cached.
  * <p>
- * Non-leader Overlords also keep polling the metadata store to keep the cache
+ * Non-leader services also keep polling the metadata store to keep the cache
  * up-to-date in case leadership changes.
  * <p>
  * For cache usage modes, see {@link UsageMode}.
@@ -119,7 +119,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
    * where an entry with an updated time just before the sync start is added to
    * the cache just after the sync has started.
    * <p>
-   * This means that non-leader Overlord and all Coordinators will continue to
+   * This means that non-leader services will continue to
    * consider a segment as used if it was marked as unused within the buffer period
    * of a previous update (e.g. segment created, marked used or schema info updated).
    */
@@ -127,7 +127,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
   private enum CacheState
   {
-    STOPPED, FOLLOWER, LEADER_FIRST_SYNC_PENDING, LEADER_FIRST_SYNC_STARTED, LEADER_READY
+    STOPPED, FIRST_SYNC_PENDING, FIRST_SYNC_STARTED, READY
   }
 
   private final ObjectMapper jsonMapper;
@@ -148,7 +148,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private final Object cacheStateLock = new Object();
 
   /**
-   * Denotes that the cache is in state {@link CacheState#LEADER_READY}.
+   * Denotes that the cache is in state {@link CacheState#READY}.
    * Maintained as a separate variable to avoid acquiring the {@link #cacheStateLock}
    * whenever {@link #isSyncedForRead()} is checked in a transaction.
    */
@@ -205,7 +205,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
     synchronized (cacheStateLock) {
       if (currentCacheState == CacheState.STOPPED) {
-        updateCacheState(CacheState.FOLLOWER, "Scheduling sync with metadata store");
+        updateCacheState(CacheState.FIRST_SYNC_PENDING, "Scheduling sync with metadata store");
       }
 
       if (cacheMode == UsageMode.ALWAYS) {
@@ -213,7 +213,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         performFirstSync();
       }
 
-      scheduleSyncWithMetadataStore(pollDuration.getMillis());
+      scheduleSyncWithMetadataStore(isCacheReady.get() ? pollDuration.getMillis() : 0);
     }
   }
 
@@ -257,15 +257,8 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       if (isEnabled()) {
         if (currentCacheState == CacheState.STOPPED) {
           throw DruidException.defensive("Cache has not been started yet");
-        } else if (currentCacheState == CacheState.FOLLOWER) {
-          updateCacheState(CacheState.LEADER_FIRST_SYNC_PENDING, "We are now leader");
-
-          // Cancel the current sync so that a fresh one is scheduled and cache becomes ready sooner
-          if (nextSyncFuture != null && !nextSyncFuture.isDone()) {
-            nextSyncFuture.cancel(true);
-          }
         } else {
-          log.info("We are already the leader. Cache is in state[%s].", currentCacheState);
+          log.info("Service is now leader. Cache is in state[%s].", currentCacheState);
         }
       }
     }
@@ -276,7 +269,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   {
     synchronized (cacheStateLock) {
       if (isEnabled()) {
-        updateCacheState(CacheState.FOLLOWER, "Not leader anymore");
+        log.info("Service is not leader anymore. Cache is in state[%s].", currentCacheState);
       }
     }
   }
@@ -377,11 +370,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   }
 
   /**
-   * Verifies that the cache is enabled, started and has become leader.
-   * Also waits for the cache to be synced with the metadata store after becoming
-   * leader if {@code shouldWait} is true.
+   * Verifies that the cache is enabled and started. Also waits for the cache to
+   * be synced with the metadata store if {@code shouldWait} is true.
    *
-   * @throws DruidException if the cache is disabled, stopped or not leader.
+   * @throws DruidException if the cache is disabled or stopped.
    */
   private void verifyCacheIsUsableAndAwaitSyncIf(boolean shouldWait)
   {
@@ -393,25 +385,23 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       switch (currentCacheState) {
         case STOPPED:
           throw InternalServerError.exception("Segment metadata cache has not been started yet.");
-        case FOLLOWER:
-          throw InternalServerError.exception("Not leader yet. Segment metadata cache is not usable.");
-        case LEADER_FIRST_SYNC_PENDING:
-        case LEADER_FIRST_SYNC_STARTED:
+        case FIRST_SYNC_PENDING:
+        case FIRST_SYNC_STARTED:
           if (shouldWait) {
-            waitForCacheToFinishSyncWhile(this::isLeaderSyncPending, READY_TIMEOUT_MILLIS);
+            waitForCacheToFinishSyncWhile(this::isFirstSyncPending, READY_TIMEOUT_MILLIS);
             verifyCacheIsUsableAndAwaitSyncIf(true);
           }
-        case LEADER_READY:
+        case READY:
           // Cache is now ready for use
       }
     }
   }
 
-  private boolean isLeaderSyncPending()
+  private boolean isFirstSyncPending()
   {
     synchronized (cacheStateLock) {
-      return currentCacheState == CacheState.LEADER_FIRST_SYNC_PENDING
-             || currentCacheState == CacheState.LEADER_FIRST_SYNC_STARTED;
+      return currentCacheState == CacheState.FIRST_SYNC_PENDING
+             || currentCacheState == CacheState.FIRST_SYNC_STARTED;
     }
   }
 
@@ -448,7 +438,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       currentCacheState = targetState;
       log.info("%s. Cache is now in state[%s].", message, currentCacheState);
 
-      isCacheReady.set(currentCacheState == CacheState.LEADER_READY);
+      isCacheReady.set(currentCacheState == CacheState.READY);
       notifyThreadsWaitingOnCacheSync();
     }
   }
@@ -475,31 +465,18 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
             @Override
             public void onSuccess(Long previousSyncDurationMillis)
             {
-              synchronized (cacheStateLock) {
-                if (currentCacheState == CacheState.LEADER_FIRST_SYNC_STARTED) {
-                  updateCacheState(
-                      CacheState.LEADER_READY,
-                      StringUtils.format(
-                          "Finished sync with metadata store in [%d] millis",
-                          previousSyncDurationMillis
-                      )
-                  );
-                } else {
-                  notifyThreadsWaitingOnCacheSync();
-                }
-              }
+              notifyThreadsWaitingOnCacheSync();
 
               emitMetric(Metric.SYNC_DURATION_MILLIS, previousSyncDurationMillis);
 
               // Schedule the next sync
               final long nextSyncDelay;
               synchronized (cacheStateLock) {
-                consecutiveSyncFailures = 0;
-                if (currentCacheState == CacheState.LEADER_FIRST_SYNC_PENDING) {
-                  nextSyncDelay = 0;
-                } else {
-                  nextSyncDelay = Math.max(pollDuration.getMillis() - previousSyncDurationMillis, 0);
+                if (currentCacheState == CacheState.STOPPED) {
+                  return;
                 }
+                consecutiveSyncFailures = 0;
+                nextSyncDelay = Math.max(pollDuration.getMillis() - previousSyncDurationMillis, 0);
               }
               scheduleSyncWithMetadataStore(nextSyncDelay);
             }
@@ -518,9 +495,12 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
               // Schedule the next sync
               final long nextSyncDelay;
               synchronized (cacheStateLock) {
+                if (currentCacheState == CacheState.STOPPED) {
+                  return;
+                }
                 // Retry immediately if first sync is pending or number of consecutive failures is low
                 if (++consecutiveSyncFailures > MAX_IMMEDIATE_SYNC_RETRIES
-                    || currentCacheState != CacheState.LEADER_FIRST_SYNC_PENDING) {
+                    || currentCacheState != CacheState.FIRST_SYNC_PENDING) {
                   nextSyncDelay = pollDuration.getMillis();
                 } else {
                   nextSyncDelay = MIN_SYNC_DELAY_MILLIS;
@@ -547,7 +527,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
    * <li>If schema caching is enabled, retrieve segment schemas and reset them
    * in the {@link SegmentSchemaCache}.</li>
    * <li>Clean up entries for datasources which have no segments in the cache anymore.</li>
-   * <li>Change the cache state to ready if it is leader and waiting for first sync.</li>
+   * <li>Change the cache state to ready if it is waiting for first sync.</li>
    * <li>Emit metrics</li>
    * </ul>
    * </p>
@@ -560,9 +540,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     final Stopwatch totalSyncDuration = Stopwatch.createStarted();
 
     synchronized (cacheStateLock) {
-      if (currentCacheState == CacheState.LEADER_FIRST_SYNC_PENDING) {
+      if (currentCacheState == CacheState.FIRST_SYNC_PENDING) {
         updateCacheState(
-            CacheState.LEADER_FIRST_SYNC_STARTED,
+            CacheState.FIRST_SYNC_STARTED,
             "Started sync of latest updates from metadata store"
         );
       }
@@ -594,7 +574,18 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     markCacheSynced(syncStartTime);
 
     syncFinishTime.set(DateTimes.nowUtc());
-    return totalSyncDuration.millisElapsed();
+    final long syncDurationMillis = totalSyncDuration.millisElapsed();
+
+    synchronized (cacheStateLock) {
+      if (currentCacheState == CacheState.FIRST_SYNC_STARTED) {
+        updateCacheState(
+            CacheState.READY,
+            StringUtils.format("Finished sync with metadata store in [%d] millis", syncDurationMillis)
+        );
+      }
+    }
+
+    return syncDurationMillis;
   }
 
   /**

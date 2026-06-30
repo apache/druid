@@ -139,25 +139,12 @@ public class HeapMemorySegmentMetadataCacheTest
   {
     setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS, true);
     cache.start();
-    cache.becomeLeader();
-    syncCacheAfterBecomingLeader();
   }
 
   private void setupAndSyncCache()
   {
     setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     cache.start();
-    cache.becomeLeader();
-    syncCacheAfterBecomingLeader();
-  }
-
-  /**
-   * Completes the cancelled sync and the fresh sync after becoming leader.
-   */
-  private void syncCacheAfterBecomingLeader()
-  {
-    syncCache();
-    syncCache();
   }
 
   /**
@@ -244,7 +231,7 @@ public class HeapMemorySegmentMetadataCacheTest
   }
 
   @Test
-  public void testReadCacheForDataSource_throwsException_ifCacheIsStoppedOrNotLeader()
+  public void testReadCacheForDataSource_throwsException_ifCacheIsStopped()
   {
     setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     Assert.assertTrue(cache.isEnabled());
@@ -254,21 +241,13 @@ public class HeapMemorySegmentMetadataCacheTest
     ).assertThrowsAndMatches(
         () -> cache.readCacheForDataSource(TestDataSource.WIKI, d -> 0)
     );
-
-    cache.start();
-    DruidExceptionMatcher.internalServerError().expectMessageIs(
-        "Not leader yet. Segment metadata cache is not usable."
-    ).assertThrowsAndMatches(
-        () -> cache.readCacheForDataSource(TestDataSource.WIKI, d -> 0)
-    );
   }
 
   @Test(timeout = 60_000)
-  public void testReadCacheForDataSource_waitsForOneSync_afterBecomingLeader() throws InterruptedException
+  public void testReadCacheForDataSource_waitsForFirstSync() throws InterruptedException
   {
-    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.IF_SYNCED);
     cache.start();
-    cache.becomeLeader();
 
     final List<String> observedEventOrder = new ArrayList<>();
 
@@ -283,7 +262,7 @@ public class HeapMemorySegmentMetadataCacheTest
     Thread.sleep(100);
     final Thread syncCompleteThread = new Thread(() -> {
       observedEventOrder.add("before first sync");
-      syncCacheAfterBecomingLeader();
+      syncCache();
     });
     syncCompleteThread.start();
 
@@ -307,6 +286,31 @@ public class HeapMemorySegmentMetadataCacheTest
         List.of("before first sync", "getDatasource completed", "getDatasource 2 completed"),
         observedEventOrder
     );
+  }
+
+  @Test
+  public void testSyncMakesCacheReady_beforeBecomingLeader()
+  {
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.IF_SYNCED);
+    cache.start();
+    Assert.assertFalse(cache.isSyncedForRead());
+
+    syncCache();
+    Assert.assertTrue(cache.isSyncedForRead());
+
+    cache.becomeLeader();
+    Assert.assertTrue(cache.isSyncedForRead());
+  }
+
+  @Test
+  public void testStopBeingLeader_doesNotResetCacheReadiness()
+  {
+    setupAndSyncCache();
+    Assert.assertTrue(cache.isSyncedForRead());
+
+    cache.becomeLeader();
+    cache.stopBeingLeader();
+    Assert.assertTrue(cache.isSyncedForRead());
   }
 
   @Test

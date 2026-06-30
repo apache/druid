@@ -114,12 +114,6 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
     manager.start();
   }
 
-  private void syncSegmentMetadataCache()
-  {
-    segmentMetadataCacheExec.finishNextPendingTasks(2);
-    segmentMetadataCacheExec.finishNextPendingTasks(2);
-  }
-
   @After
   public void tearDown()
   {
@@ -141,7 +135,6 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
     manager.startPollingDatabasePeriodically();
     Assert.assertTrue(manager.isPollingDatabasePeriodically());
 
-    syncSegmentMetadataCache();
     verifyDatasourceSnapshot();
 
     // isPolling returns true even after stop since cache is still polling the metadata store
@@ -153,7 +146,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
     emitter.verifyNotEmitted(Metric.RETRIEVE_SEGMENT_SCHEMAS_DURATION_MILLIS);
     emitter.verifyNotEmitted("segment/schemaCache/used/count");
 
-    emitter.verifyEmitted(Metric.SYNC_DURATION_MILLIS, 2);
+    emitter.verifyEmitted(Metric.SYNC_DURATION_MILLIS, 1);
   }
 
   @Test
@@ -181,7 +174,6 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
     manager.startPollingDatabasePeriodically();
     Assert.assertTrue(manager.isPollingDatabasePeriodically());
 
-    syncSegmentMetadataCache();
     verifyDatasourceSnapshot();
 
     // isPolling returns true even after stop since cache is still polling the metadata store
@@ -190,9 +182,9 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
 
     emitter.verifyNotEmitted("segment/poll/time");
     emitter.verifyNotEmitted("segment/pollWithSchema/time");
-    emitter.verifyEmitted(Metric.SYNC_DURATION_MILLIS, 2);
-    emitter.verifyEmitted(Metric.RETRIEVE_SEGMENT_SCHEMAS_DURATION_MILLIS, 2);
-    emitter.verifyEmitted("segment/schemaCache/used/count", 2);
+    emitter.verifyEmitted(Metric.SYNC_DURATION_MILLIS, 1);
+    emitter.verifyEmitted(Metric.RETRIEVE_SEGMENT_SCHEMAS_DURATION_MILLIS, 1);
+    emitter.verifyEmitted("segment/schemaCache/used/count", 1);
   }
 
   private void verifyDatasourceSnapshot()
