@@ -62,6 +62,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class KinesisSamplerSpecTest extends EasyMockSupport
 {
@@ -121,7 +122,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
         null,
         new KinesisIOConfigBuilder()
             .withStream(STREAM)
-            .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+            .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
             .withUseEarliestSequenceNumber(true)
             .build(),
         null,
@@ -158,7 +159,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
         null,
         new KinesisIOConfigBuilder()
             .withStream(STREAM)
-            .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+            .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
             .withUseEarliestSequenceNumber(true)
             .build(),
         null,

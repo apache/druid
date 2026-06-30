@@ -687,7 +687,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
         .withStream("stream")
-        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
         .withReplicas(1)
         .withTaskCount(1)
         .withTaskDuration(new Period("PT1H"))
@@ -787,7 +787,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getContextValue("tags")).andReturn("").anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
         .withStream("stream")
-        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
         .withReplicas(1)
         .withTaskCount(1)
         .withTaskDuration(new Period("PT1H"))
@@ -1079,7 +1079,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     DateTime startTime = DateTimes.nowUtc();
     SeekableStreamSupervisorIOConfig ioConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
         .withStream(STREAM)
-        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
         .withReplicas(1)
         .withTaskCount(1)
         .withTaskDuration(new Period("PT1H"))
@@ -1292,7 +1292,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     int stopTaskCount = 1;
     SeekableStreamSupervisorIOConfig ioConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
         .withStream(STREAM)
-        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
         .withReplicas(1)
         .withTaskCount(3)
         .withTaskDuration(new Period("PT1H"))
@@ -1521,7 +1521,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     DateTime startTime = DateTimes.nowUtc();
     SeekableStreamSupervisorIOConfig ioConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
         .withStream(STREAM)
-        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
         .withReplicas(1)
         .withTaskCount(1)
         .withTaskDuration(new Period("PT1H"))
@@ -2694,7 +2694,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
         .withStream("stream")
-        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
         .withReplicas(1)
         .withTaskCount(1)
         .withTaskDuration(new Period("PT1H"))
@@ -3060,7 +3060,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
         .withStream("stream")
-        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
         .withReplicas(serverPriorityToReplicas == null
                       ? 1
                       : serverPriorityToReplicas.values().stream().mapToInt(Integer::intValue).sum())

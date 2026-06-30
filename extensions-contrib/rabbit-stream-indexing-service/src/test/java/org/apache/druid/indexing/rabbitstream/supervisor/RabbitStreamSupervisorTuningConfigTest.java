@@ -21,8 +21,6 @@ package org.apache.druid.indexing.rabbitstream.supervisor;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
@@ -39,6 +37,9 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import java.util.List;
+import java.util.Map;
 
 public class RabbitStreamSupervisorTuningConfigTest
 {
@@ -162,7 +163,7 @@ public class RabbitStreamSupervisorTuningConfigTest
                          new UniformGranularitySpec(
                              Granularities.HOUR,
                              Granularities.NONE,
-                             ImmutableList.of()
+                             List.of()
                          )
                      )
                      .build();
@@ -185,7 +186,7 @@ public class RabbitStreamSupervisorTuningConfigTest
   )
   {
     return mapper.convertValue(
-        ImmutableMap.of(
+        Map.of(
             "type", "rabbit",
             "recordBufferSize", recordBufferSize,
             "recordBufferOfferTimeout", recordBufferOfferTimeout,

@@ -207,26 +207,29 @@ public class SupervisorManager implements SupervisorStatsProvider
         return SupervisorSpecUpdateResult.of(true, true);
       }
 
-      if (!isSpecChangedAndValidate(spec)) {
+      if (!isSpecChanged(spec, current.rhs)) {
         return SupervisorSpecUpdateResult.of(false, false);
       }
 
       // merge() may carry forward omitted fields (e.g. taskCount); compare the effective spec.
       spec.merge(current.rhs);
-      final boolean specChanged = isSpecChangedAndValidate(spec);
-      if (!specChanged) {
+      if (!isSpecChanged(spec, current.rhs)) {
         return SupervisorSpecUpdateResult.of(false, false);
       }
+
+      // The effective (merged) spec is what will be persisted, so validate that transition exactly once.
+      current.rhs.validateSpecUpdateTo(spec);
+
       if (!current.rhs.requireRestart(spec)) {
         metadataSupervisorManager.insert(spec.getId(), spec);
         supervisors.put(spec.getId(), Pair.of(current.lhs, spec));
         return SupervisorSpecUpdateResult.of(true, false);
       }
 
-      // Restart path: stop+recreate, persisting the spec when it changed.
+      // Restart path: stop+recreate, persisting the changed spec.
       possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
-      createAndStartSupervisorInternal(spec, specChanged);
-      return SupervisorSpecUpdateResult.of(specChanged, true);
+      createAndStartSupervisorInternal(spec, true);
+      return SupervisorSpecUpdateResult.of(true, true);
     }
   }
 
@@ -234,20 +237,32 @@ public class SupervisorManager implements SupervisorStatsProvider
   private boolean isSpecChangedAndValidate(SupervisorSpec spec)
   {
     final Pair<Supervisor, SupervisorSpec> current = supervisors.get(spec.getId());
-    if (current == null || current.rhs == null) {
+    final SupervisorSpec currentSpec = current == null ? null : current.rhs;
+    if (!isSpecChanged(spec, currentSpec)) {
+      return false;
+    }
+    if (currentSpec != null) {
+      currentSpec.validateSpecUpdateTo(spec);
+    }
+    return true;
+  }
+
+  /**
+   * Byte-level diff of {@code spec} against {@code against}. A missing {@code against} (new supervisor)
+   * counts as changed. Does not validate the transition.
+   */
+  private boolean isSpecChanged(SupervisorSpec spec, @Nullable SupervisorSpec against)
+  {
+    if (against == null) {
       return true;
     }
     try {
-      if (Arrays.equals(jsonMapper.writeValueAsBytes(spec), jsonMapper.writeValueAsBytes(current.rhs))) {
-        return false;
-      }
+      return !Arrays.equals(jsonMapper.writeValueAsBytes(spec), jsonMapper.writeValueAsBytes(against));
     }
     catch (JsonProcessingException ex) {
-      log.warn("Failed to write spec as bytes for spec_id[%s]", spec.getId());
+      log.warn(ex, "Failed to write spec as bytes for spec_id[%s]", spec.getId());
       return true;
     }
-    current.rhs.validateSpecUpdateTo(spec);
-    return true;
   }
 
   public boolean stopAndRemoveSupervisor(String id)
