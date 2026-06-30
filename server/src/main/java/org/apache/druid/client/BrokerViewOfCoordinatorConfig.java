@@ -114,23 +114,42 @@ public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<Coordi
       CloneQueryMode mode
   )
   {
+    if (mode == CloneQueryMode.EXCLUDESOURCE) {
+      return filterServers(historicalServers, getCurrentTargetCloneServers(), true);
+    }
+
     final Set<String> serversToIgnore = getCurrentServersToIgnore(mode);
 
     if (serversToIgnore.isEmpty()) {
       return historicalServers;
     }
 
+    return filterServers(historicalServers, serversToIgnore, false);
+  }
+
+  private Int2ObjectRBTreeMap<Set<QueryableDruidServer>> filterServers(
+      final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers,
+      final Set<String> servers,
+      final boolean includeMatchingServers
+  )
+  {
     final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> filteredHistoricals = new Int2ObjectRBTreeMap<>();
-    for (int priority : historicalServers.keySet()) {
-      Set<QueryableDruidServer> servers = historicalServers.get(priority);
-      filteredHistoricals.put(priority,
-                              servers.stream()
-                                     .filter(server -> !serversToIgnore.contains(server.getServer().getHost()))
-                                     .collect(Collectors.toSet())
+    for (final int priority : historicalServers.keySet()) {
+      final Set<QueryableDruidServer> priorityServers = historicalServers.get(priority);
+      filteredHistoricals.put(
+          priority,
+          priorityServers.stream()
+                         .filter(server -> includeMatchingServers == servers.contains(server.getServer().getHost()))
+                         .collect(Collectors.toSet())
       );
     }
 
     return filteredHistoricals;
+  }
+
+  private synchronized Set<String> getCurrentTargetCloneServers()
+  {
+    return targetCloneServers;
   }
 
   /**
@@ -145,6 +164,8 @@ public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<Coordi
       case EXCLUDECLONES:
         // Remove clones, so that only source servers are queried.
         return targetCloneServers;
+      case EXCLUDESOURCE:
+        throw DruidException.defensive("Unexpected value of cloneQueryMode[%s]", cloneQueryMode);
       case INCLUDECLONES:
         // Don't remove either.
         return Set.of();
