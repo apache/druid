@@ -58,9 +58,9 @@ public interface CompactionCandidateSearchPolicy
 
   /**
    * Like {@link #checkEligibilityForCompaction} but for an interval that must be compacted regardless
-   * of any minimum interval-size criteria the policy enforces (e.g. an interval with unapplied deletion
-   * rules). Implementations skip the size gates but still choose the full-vs-minor compaction mode. The
-   * default upgrades a rejection to a {@link Eligibility#FULL full} compaction.
+   * of any implementation-specific eligibility criteria. By default, this method calls
+   * {@link #checkEligibilityForCompaction} and by default upgrades a rejection to a {@link Eligibility#FULL full}
+   * compaction.
    */
   default Eligibility checkEligibilityForMandatoryCompaction(
       CompactionCandidate candidate,
@@ -72,13 +72,13 @@ public interface CompactionCandidateSearchPolicy
   }
 
   /**
-   * Whether intervals with unapplied cascading reindexing deletion rules should be compacted even when
-   * they fail this policy's normal eligibility criteria (see {@link #checkEligibilityForMandatoryCompaction}).
-   * This applies <em>only</em> to cascading reindexing supervisors and their deletion rules; it has no
-   * effect on any other compaction. Defaults to false, so deletion rules otherwise ride along with
-   * regular threshold-gated compaction; operators who must apply deletions for compliance can opt in.
+   * Whether an interval that is below this policy's normal eligibility criteria should still be compacted
+   * via {@link #checkEligibilityForMandatoryCompaction} when an external trigger requires it. The caller
+   * decides what constitutes such a trigger; today the only one is a cascading reindexing interval with
+   * deletion rules not yet applied to all of its segments. Defaults to false, so mandatory compaction is
+   * never forced unless a policy opts in.
    */
-  default boolean isForcePendingDeletionCompaction()
+  default boolean isForceMandatoryCompactionEnabled()
   {
     return false;
   }

@@ -100,7 +100,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
       final CompactionTaskStatus latestTaskStatus = params.getLatestTaskStatus(candidate);
 
       Eligibility eligibility = policy.checkEligibilityForCompaction(candidate, latestTaskStatus);
-      if (policy.isForcePendingDeletionCompaction()
+      if (policy.isForceMandatoryCompactionEnabled()
           && !eligibility.isEligible()
           && configOptimizer.hasUnappliedDeletionRules(config, candidate, params)) {
         // When the operator has opted in, a cascading reindexing interval with unapplied deletion rules

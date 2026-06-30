@@ -53,32 +53,9 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   private final int minUncompactedRowsPercentForFullCompaction;
   /**
    * When true, intervals with unapplied cascading reindexing deletion rules bypass this policy's
-   * minimum interval-size gates. See {@link CompactionCandidateSearchPolicy#isForcePendingDeletionCompaction()}.
+   * minimum interval-size gates. See {@link CompactionCandidateSearchPolicy#isForceMandatoryCompactionEnabled()}.
    */
   private final boolean forcePendingDeletionCompaction;
-
-  /**
-   * Convenience constructor that defaults {@link #forcePendingDeletionCompaction} to false.
-   */
-  public MostFragmentedIntervalFirstPolicy(
-      @Nullable Integer minUncompactedCount,
-      @Nullable HumanReadableBytes minUncompactedBytes,
-      @Nullable HumanReadableBytes maxAverageUncompactedBytesPerSegment,
-      @Nullable Integer minUncompactedBytesPercentForFullCompaction,
-      @Nullable Integer minUncompactedRowsPercentForFullCompaction,
-      @Nullable String priorityDatasource
-  )
-  {
-    this(
-        minUncompactedCount,
-        minUncompactedBytes,
-        maxAverageUncompactedBytesPerSegment,
-        minUncompactedBytesPercentForFullCompaction,
-        minUncompactedRowsPercentForFullCompaction,
-        priorityDatasource,
-        null
-    );
-  }
 
   @JsonCreator
   public MostFragmentedIntervalFirstPolicy(
@@ -185,8 +162,17 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   }
 
   @JsonProperty
-  @Override
   public boolean isForcePendingDeletionCompaction()
+  {
+    return forcePendingDeletionCompaction;
+  }
+
+  /**
+   * Forced when the operator has opted into compacting intervals with pending deletion rules. Other
+   * triggers can be OR'd in here in the future without affecting how this policy is serialized.
+   */
+  @Override
+  public boolean isForceMandatoryCompactionEnabled()
   {
     return forcePendingDeletionCompaction;
   }

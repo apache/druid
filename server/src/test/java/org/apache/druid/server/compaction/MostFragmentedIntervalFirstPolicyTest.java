@@ -40,7 +40,7 @@ public class MostFragmentedIntervalFirstPolicyTest
   public void test_thresholdValues_ofDefaultPolicy()
   {
     final MostFragmentedIntervalFirstPolicy policy =
-        new MostFragmentedIntervalFirstPolicy(null, null, null, null, null, null);
+        new MostFragmentedIntervalFirstPolicy(null, null, null, null, null, null, null);
     Assertions.assertEquals(100, policy.getMinUncompactedCount());
     Assertions.assertEquals(new HumanReadableBytes("10MiB"), policy.getMinUncompactedBytes());
     Assertions.assertEquals(new HumanReadableBytes("2GiB"), policy.getMaxAverageUncompactedBytesPerSegment());
@@ -55,6 +55,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         minUncompactedCount,
         HumanReadableBytes.valueOf(1),
         HumanReadableBytes.valueOf(10_000),
+        null,
         null,
         null,
         null
@@ -82,6 +83,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         HumanReadableBytes.valueOf(10_000),
         null,
         null,
+        null,
         null
     );
 
@@ -105,6 +107,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         1,
         HumanReadableBytes.valueOf(100),
         maxAvgSegmentSize,
+        null,
         null,
         null,
         null
@@ -131,6 +134,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         HumanReadableBytes.valueOf(10_000),
         null,
         null,
+        null,
         null
     );
 
@@ -151,6 +155,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         1,
         HumanReadableBytes.valueOf(1),
         HumanReadableBytes.valueOf(10_000),
+        null,
         null,
         null,
         null
@@ -175,6 +180,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         HumanReadableBytes.valueOf(10_000),
         null,
         null,
+        null,
         null
     );
 
@@ -195,6 +201,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         100,
         HumanReadableBytes.valueOf(1),
         HumanReadableBytes.valueOf(100),
+        null,
         null,
         null,
         null
@@ -228,7 +235,8 @@ public class MostFragmentedIntervalFirstPolicyTest
         HumanReadableBytes.valueOf(3),
         50,
         51,
-        "foo"
+        "foo",
+        null
     );
     final DefaultObjectMapper mapper = new DefaultObjectMapper();
     final CompactionCandidateSearchPolicy policy2 =
@@ -240,7 +248,7 @@ public class MostFragmentedIntervalFirstPolicyTest
   public void test_serde_noFieldsSet() throws IOException
   {
     final MostFragmentedIntervalFirstPolicy policy =
-        new MostFragmentedIntervalFirstPolicy(null, null, null, null, null, null);
+        new MostFragmentedIntervalFirstPolicy(null, null, null, null, null, null, null);
     final DefaultObjectMapper mapper = new DefaultObjectMapper();
     final CompactionCandidateSearchPolicy policy2 =
         mapper.readValue(mapper.writeValueAsString(policy), CompactionCandidateSearchPolicy.class);
@@ -257,6 +265,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         HumanReadableBytes.valueOf(10_000),
         50,
         50,
+        null,
         null
     );
 
@@ -282,6 +291,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         HumanReadableBytes.valueOf(10_000),
         50,
         50,
+        null,
         null
     );
 
@@ -309,6 +319,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         HumanReadableBytes.valueOf(10_000),
         50,
         50,
+        null,
         null
     );
 
@@ -336,6 +347,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         HumanReadableBytes.valueOf(10_000),
         50,
         50,
+        null,
         null
     );
 
@@ -362,6 +374,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         1,
         HumanReadableBytes.valueOf(1),
         HumanReadableBytes.valueOf(10_000),
+        null,
         null,
         null,
         null
@@ -392,6 +405,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         HumanReadableBytes.valueOf(100),
         null,
         null,
+        null,
         null
     );
 
@@ -412,6 +426,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         HumanReadableBytes.valueOf(10_000),
         50,
         50,
+        null,
         null
     );
 
@@ -455,12 +470,20 @@ public class MostFragmentedIntervalFirstPolicyTest
   }
 
   @Test
-  public void test_isForcePendingDeletionCompaction_defaultsToFalse()
+  public void test_isForceMandatoryCompactionEnabled_defaultsToFalse()
   {
     Assertions.assertFalse(
-        new MostFragmentedIntervalFirstPolicy(null, null, null, null, null, null).isForcePendingDeletionCompaction()
+        new MostFragmentedIntervalFirstPolicy(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ).isForceMandatoryCompactionEnabled()
     );
-    Assertions.assertFalse(new NewestSegmentFirstPolicy(null).isForcePendingDeletionCompaction());
+    Assertions.assertFalse(new NewestSegmentFirstPolicy(null).isForceMandatoryCompactionEnabled());
   }
 
   @Test
@@ -476,12 +499,13 @@ public class MostFragmentedIntervalFirstPolicyTest
         true
     );
     Assertions.assertTrue(policy.isForcePendingDeletionCompaction());
+    Assertions.assertTrue(policy.isForceMandatoryCompactionEnabled());
 
     final DefaultObjectMapper mapper = new DefaultObjectMapper();
     final CompactionCandidateSearchPolicy roundTripped =
         mapper.readValue(mapper.writeValueAsString(policy), CompactionCandidateSearchPolicy.class);
     Assertions.assertEquals(policy, roundTripped);
-    Assertions.assertTrue(roundTripped.isForcePendingDeletionCompaction());
+    Assertions.assertTrue(roundTripped.isForceMandatoryCompactionEnabled());
   }
 
   private CompactionCandidate createCandidate(int numSegments, long avgSizeBytes)

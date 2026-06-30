@@ -1288,12 +1288,12 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     return List.of(
         new Object[]{
             // decides minor compaction based on bytes percent
-            new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, 80, null, null),
+            new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, 80, null, null, null),
             new DimensionRangePartitionsSpec(null, 10_000, List.of("page"), false)
         },
         new Object[]{
             // decides minor compaction based on rows percent
-            new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, null, 51, null),
+            new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, null, 51, null, null),
             new DynamicPartitionsSpec(null, null)
         }
     );

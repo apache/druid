@@ -274,9 +274,9 @@ Example:
 
 **Applying deletions regardless of compaction thresholds:**
 
-When the cluster compaction policy is [`mostFragmentedFirst`](../api-reference/automatic-compaction-api.md#compaction-policy-mostfragmentedfirst), an interval must meet minimum size thresholds (such as `minUncompactedCount`) before it is compacted. An interval that recently crossed a deletion rule's `olderThan` threshold may have too few uncompacted segments to qualify, which delays applying the deletion.
+When the cluster compaction policy is [`mostFragmentedFirst`](../api-reference/automatic-compaction-api.md#compaction-policy-mostfragmentedfirst), an interval must meet various minimum thresholds (such as `minUncompactedCount`) before it is compacted. This intentionally avoids compacting intervals with low fragmentation.
 
-Operators who apply deletion rules for data compliance can set `forcePendingDeletionCompaction: true` on the policy. Any interval that has deletion rules not yet applied to all of its segments is then compacted regardless of those thresholds, while still using the policy's full-vs-minor decision. This applies only to cascading reindexing deletion rules; it does not change eligibility for any other compaction. The setting defaults to `false`, so by default deletions wait until the interval qualifies for compaction on its own.
+Operators who apply deletion rules for data compliance (or are generally interested in eagerly applying their deletion rules) can set `forcePendingDeletionCompaction: true` on the policy. Any interval that has deletion rules not yet applied to all of its segments is then compacted regardless of those thresholds, while still using the policy's full-vs-minor decision. This applies only to cascading reindexing deletion rules; it does not change eligibility for any other compaction. The setting defaults to `false`, so by default deletions wait until the interval qualifies for compaction on its own.
 
 #### Index spec rules
 

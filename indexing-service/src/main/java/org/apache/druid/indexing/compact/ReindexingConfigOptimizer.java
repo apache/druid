@@ -49,8 +49,8 @@ public interface ReindexingConfigOptimizer
 
   /**
    * Whether {@code candidate} has deletion rules not yet applied to all of its segments. The job
-   * template uses this to force compaction eligibility for intervals that must be reindexed for data
-   * compliance, regardless of the policy's minimum interval-size thresholds. Defaults to false.
+   * template uses this to force compaction eligibility for intervals that must be reindexed to apply
+   * deletion rules, regardless of the policy's minimum interval-size thresholds. Defaults to false.
    */
   default boolean hasUnappliedDeletionRules(
       DataSourceCompactionConfig config,
