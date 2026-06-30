@@ -82,6 +82,7 @@ public final class PartialSegmentCacheBootstrap
    * @param jsonMapper        used by the metadata entry's mount path to parse the header
    * @param storagePool       thread pool the async cursor path submits on-demand column downloads to (which bounds
    *                          load concurrency itself); may be null in tests that never invoke the cursor factory
+   * @param coalesceConfig    range-coalescing thresholds applied to on-demand downloads once the entry is mounted
    * @param location          the storage location to reserve the metadata entry on
    * @return the reserved {@link PartialSegmentMetadataCacheEntry}; the caller is responsible for mounting it
    * @throws DruidException if the expected header file is missing or the location cannot accept the reservation
@@ -94,6 +95,31 @@ public final class PartialSegmentCacheBootstrap
       SegmentRangeReader rangeReader,
       ObjectMapper jsonMapper,
       @Nullable StorageLoadingThreadPool storagePool,
+      StorageLocation location
+  )
+  {
+    return reserveFromDisk(
+        segmentId,
+        localCacheDir,
+        targetFilename,
+        externalFilenames,
+        rangeReader,
+        jsonMapper,
+        storagePool,
+        PartialSegmentFileMapperV10.CoalesceConfig.DEFAULT,
+        location
+    );
+  }
+
+  public static PartialSegmentMetadataCacheEntry reserveFromDisk(
+      SegmentId segmentId,
+      File localCacheDir,
+      String targetFilename,
+      List<String> externalFilenames,
+      SegmentRangeReader rangeReader,
+      ObjectMapper jsonMapper,
+      @Nullable StorageLoadingThreadPool storagePool,
+      PartialSegmentFileMapperV10.CoalesceConfig coalesceConfig,
       StorageLocation location
   )
   {
@@ -116,7 +142,8 @@ public final class PartialSegmentCacheBootstrap
         rangeReader,
         jsonMapper,
         storagePool,
-        actualMetadataSize
+        actualMetadataSize,
+        coalesceConfig
     );
 
     if (!location.reserveWeak(metadata)) {

@@ -175,6 +175,13 @@ public class StorageMonitor extends AbstractMonitor
   public static final String VSF_READ_BYTES = "storage/virtual/read/bytes";
 
   /**
+   * Of {@link #VSF_READ_BYTES}, the bytes pulled that were not part of a requested file: data read through only to
+   * coalesce adjacent requested files into one range read (unrequested files spanned plus inter-file padding). Measures
+   * the over-fetch cost of range coalescing; the ratio to {@link #VSF_READ_BYTES} is the over-fetch fraction.
+   */
+  public static final String VSF_READ_GAP_BYTES = "storage/virtual/read/gapBytes";
+
+  /**
    * Total wall-clock time spent in deep-storage range reads during the measurement period, in milliseconds. Combined
    * with {@link #VSF_READ_COUNT} this gives average per-read latency.
    */
@@ -226,6 +233,7 @@ public class StorageMonitor extends AbstractMonitor
         emitter.emit(builder.setMetric(VSF_REJECT_COUNT, weakStats.getRejectCount()));
         emitter.emit(builder.setMetric(VSF_READ_COUNT, weakStats.getReadCount()));
         emitter.emit(builder.setMetric(VSF_READ_BYTES, weakStats.getReadBytes()));
+        emitter.emit(builder.setMetric(VSF_READ_GAP_BYTES, weakStats.getReadGapFillBytes()));
         emitter.emit(builder.setMetric(VSF_READ_TIME, TimeUnit.NANOSECONDS.toMillis(weakStats.getReadTimeNanos())));
       }
     }

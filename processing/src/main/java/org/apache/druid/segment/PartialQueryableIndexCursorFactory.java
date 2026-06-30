@@ -29,6 +29,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.projections.ClusterGroupQueryPlan;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
@@ -38,9 +39,13 @@ import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -113,7 +118,15 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     // query's required columns.
     final QueryableIndex rowSelector = matched != null ? matched.getRowSelector() : index;
     final String bundleName = matched != null ? matched.getName() : Projections.BASE_TABLE_PROJECTION_NAME;
-    final DownloadBundle bundle = new DownloadBundle(bundleName, rowSelector, requiredColumns(rowSelector, matched, spec));
+    final Map<String, String> columnToFile = matched != null
+                                             ? index.getProjectionColumnFileNames(matched.getName())
+                                             : index.getBaseColumnFileNames();
+    final DownloadBundle bundle = new DownloadBundle(
+        bundleName,
+        rowSelector,
+        requiredColumns(rowSelector, matched, spec),
+        columnToFile
+    );
     return buildAsyncCursorHolder(List.of(bundle), () -> delegate.makeCursorHolderForProjection(spec, matched));
   }
 
@@ -143,7 +156,8 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
           new DownloadBundle(
               Projections.getClusterGroupBundleName(group.getClusteringValueIds()),
               groupIndex,
-              requiredColumns(groupIndex, null, groupSpec)
+              requiredColumns(groupIndex, null, groupSpec),
+              index.getClusterGroupColumnFileNames(group)
           )
       );
     }
@@ -162,16 +176,42 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
   {
     final List<BundleHoldRelease> holdReleases = new ArrayList<>(bundles.size());
     try {
-      final List<AsyncResource<String>> columnDownloads = new ArrayList<>();
+      final List<AsyncResource<String>> downloads = new ArrayList<>();
       for (DownloadBundle bundle : bundles) {
         final BundleHoldRelease holdRelease = new BundleHoldRelease(bundleAcquirer.acquire(bundle.bundleName()));
         holdReleases.add(holdRelease);
-        // submit one materialization task per column so a multi-threaded download executor can fan them out
+
+        // Resolve the query's required columns to their primary smoosh files, invert to file -> columns, and coalesce
+        // contiguous files into runs. We submit one task per run (rather than one per column) so adjacent columns are
+        // fetched in a single range read, while distinct runs still download concurrently on the executor. Columns
+        // whose file is already resident (dropped by planDownloadRuns) or that have no downloadable file
+        // (constant/synthesized columns) are materialized by the trailing task below. Together the run tasks and that
+        // task call getColumnHolder exactly once per required column here during pre-fetch, so the column is never
+        // deserialized lazily when the cursor is later read on a query-processing thread (which must not block on I/O).
+        final Map<String, List<String>> columnsByFile = new HashMap<>();
         for (String column : bundle.requiredColumns()) {
-          columnDownloads.add(submitColumnDownload(bundle.rowSelector(), column, holdRelease));
+          final String file = bundle.columnToFile().get(column);
+          if (file != null) {
+            columnsByFile.computeIfAbsent(file, k -> new ArrayList<>()).add(column);
+          }
+        }
+        final Set<String> coveredColumns = new HashSet<>();
+        for (PartialSegmentFileMapperV10.DownloadRun run : index.planDownloadRuns(columnsByFile.keySet())) {
+          final List<String> runColumns = new ArrayList<>();
+          for (String file : run.wantedFiles()) {
+            runColumns.addAll(columnsByFile.getOrDefault(file, List.of()));
+          }
+          coveredColumns.addAll(runColumns);
+          downloads.add(submitRunDownload(bundle.rowSelector(), run, runColumns, holdRelease));
+        }
+
+        final Set<String> materializeOnly = new LinkedHashSet<>(bundle.requiredColumns());
+        materializeOnly.removeAll(coveredColumns);
+        if (!materializeOnly.isEmpty()) {
+          downloads.add(submitColumnMaterialization(bundle.rowSelector(), materializeOnly, holdRelease));
         }
       }
-      final AsyncResource<List<String>> downloaded = AsyncResources.collect(columnDownloads);
+      final AsyncResource<List<String>> downloaded = AsyncResources.collect(downloads);
 
       // Canceler runs if the awaiter closes this holder before it's ready (e.g. query cancel/timeout). Close the
       // collected resource to cancel every column download that hasn't begun its deep-storage read yet (queued tasks
@@ -228,22 +268,54 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
   }
 
   /**
-   * Submit one column's materialization as a download task, running its body under the bundle-hold handshake (see
-   * {@link BundleHoldRelease#runDownloadBody}) so the hold stays alive until this body's
-   * {@link QueryableIndex#getColumnHolder} (and the
-   * {@link org.apache.druid.segment.file.PartialSegmentFileMapperV10#mapFile} it triggers) has finished. The returned
-   * token (the column name) is unused, the task's effect is the side effect of materializing the column into the file
-   * mapper.
+   * Submit one coalesced {@link PartialSegmentFileMapperV10.DownloadRun} as a download task: fetch the run's span in a
+   * single range read, then materialize the columns it covers via {@link QueryableIndex#getColumnHolder} (which finds
+   * the primary file bytes already resident; any nested sub-files not in the run fault in individually). The whole body
+   * runs under the bundle-hold handshake (see {@link BundleHoldRelease#runDownloadBody}) so the hold stays alive until
+   * the last {@code mapFile()} has finished. The returned token is a completion signal and is unused.
    */
-  private AsyncResource<String> submitColumnDownload(
+  private AsyncResource<String> submitRunDownload(
       QueryableIndex rowSelector,
-      String column,
+      PartialSegmentFileMapperV10.DownloadRun run,
+      List<String> columns,
       BundleHoldRelease holdRelease
   )
   {
     return bundleAcquirer.submitDownload(() -> {
-      holdRelease.runDownloadBody(() -> rowSelector.getColumnHolder(column));
-      return column;
+      holdRelease.runDownloadBody(() -> {
+        try {
+          index.fetchDownloadRun(run);
+        }
+        catch (IOException e) {
+          throw DruidException.defensive(e, "Failed to fetch download run for container[%d]", run.containerIndex());
+        }
+        for (String column : columns) {
+          rowSelector.getColumnHolder(column);
+        }
+      });
+      return "run:" + run.containerIndex();
+    });
+  }
+
+  /**
+   * Submit a download task that only materializes columns (no deep-storage read): the columns either have no
+   * downloadable file (constant/synthesized columns such as a constant {@code __time}) or their file is already
+   * resident. Runs under the same bundle-hold handshake as {@link #submitRunDownload}. The returned token is a
+   * completion signal and is unused.
+   */
+  private AsyncResource<String> submitColumnMaterialization(
+      QueryableIndex rowSelector,
+      Set<String> columns,
+      BundleHoldRelease holdRelease
+  )
+  {
+    return bundleAcquirer.submitDownload(() -> {
+      holdRelease.runDownloadBody(() -> {
+        for (String column : columns) {
+          rowSelector.getColumnHolder(column);
+        }
+      });
+      return "materialize";
     });
   }
 
@@ -352,9 +424,16 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
 
   /**
    * One bundle's worth of async download work: the cache-layer {@code bundleName} to mount, the {@link QueryableIndex}
-   * row selector whose {@code getColumnHolder} triggers the per-column downloads, and the columns to pre-fetch.
+   * row selector whose {@code getColumnHolder} materializes columns, the columns to pre-fetch, and the resolution of
+   * those columns to their primary segment-internal (smoosh) file names ({@code columnToFile}, missing the entries that
+   * resolve to a constant/synthesized column with no downloadable file).
    */
-  private record DownloadBundle(String bundleName, QueryableIndex rowSelector, Set<String> requiredColumns)
+  private record DownloadBundle(
+      String bundleName,
+      QueryableIndex rowSelector,
+      Set<String> requiredColumns,
+      Map<String, String> columnToFile
+  )
   {
   }
 

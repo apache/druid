@@ -100,6 +100,13 @@ public interface VirtualStorageLocationStats
   long getReadBytes();
 
   /**
+   * Of {@link #getReadBytes()}, the bytes that were not part of a requested file: data read through only to coalesce
+   * adjacent requested files into one range read (unrequested files spanned plus inter-file padding). Quantifies the
+   * over-fetch cost of range coalescing; compare against {@link #getReadBytes()} for the over-fetch fraction.
+   */
+  long getReadGapFillBytes();
+
+  /**
    * Total wall-clock time spent in deep-storage range reads during the measurement period, in nanoseconds. Divide by
    * {@link #getReadCount()} for the average per-read latency.
    */
