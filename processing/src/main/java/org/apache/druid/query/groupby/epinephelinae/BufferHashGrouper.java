@@ -36,7 +36,8 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
 {
   private static final int MIN_INITIAL_BUCKETS = 4;
   private static final int DEFAULT_INITIAL_BUCKETS = 1024;
-  private static final float DEFAULT_MAX_LOAD_FACTOR = 0.7f;
+  // Package-private so SpillingGrouper can mirror the default-resolution when computing per-slice spill proximity.
+  static final float DEFAULT_MAX_LOAD_FACTOR = 0.7f;
 
   private boolean initialized = false;
 
@@ -63,7 +64,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   {
     super(bufferSupplier, keySerde, aggregators, HASH_SIZE + keySerde.keySize(), bufferGrouperMaxSize);
 
-    this.maxLoadFactor = maxLoadFactor > 0 ? maxLoadFactor : DEFAULT_MAX_LOAD_FACTOR;
+    this.maxLoadFactor = resolveMaxLoadFactor(maxLoadFactor);
     this.initialBuckets = initialBuckets > 0 ? Math.max(MIN_INITIAL_BUCKETS, initialBuckets) : DEFAULT_INITIAL_BUCKETS;
 
     if (this.maxLoadFactor >= 1.0f) {
@@ -72,6 +73,16 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
 
     this.bucketSize = HASH_SIZE + keySerde.keySize() + aggregators.spaceNeeded();
     this.useDefaultSorting = useDefaultSorting;
+  }
+
+  /**
+   * Resolves the effective max load factor, applying {@link #DEFAULT_MAX_LOAD_FACTOR} when a non-positive value is
+   * configured. A hash table spills once its bucket count reaches this fraction of capacity, so this is the value to
+   * compare per-slice usage against when computing spill proximity (see {@code SpillingGrouper}).
+   */
+  static float resolveMaxLoadFactor(float maxLoadFactor)
+  {
+    return maxLoadFactor > 0 ? maxLoadFactor : DEFAULT_MAX_LOAD_FACTOR;
   }
 
   @Override

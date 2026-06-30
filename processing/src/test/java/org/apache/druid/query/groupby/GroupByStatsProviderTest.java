@@ -25,6 +25,8 @@ import org.junit.jupiter.api.Test;
 
 public class GroupByStatsProviderTest
 {
+  private static final double DELTA = 1e-9;
+
   @Test
   public void testMetricCollection()
   {
@@ -35,7 +37,12 @@ public class GroupByStatsProviderTest
 
     stats1.mergeBufferAcquisitionTime(300);
     stats1.mergeBufferAcquisitionTime(400);
-    stats1.maxMergeBufferUsedBytes(50);
+    // Two slices of the same query: usage SUMS to 80, while spill proximity is the per-slice MAX. Slice 1 is at
+    // 50/1000 of its threshold, slice 2 at 30/1000; the fullest slice (0.05) drives proximity.
+    stats1.addMergeBufferUsedBytes(50);
+    stats1.sliceUsage(50, 1000);
+    stats1.addMergeBufferUsedBytes(30);
+    stats1.sliceUsage(30, 1000);
     stats1.spilledBytes(200);
     stats1.spilledBytes(400);
     stats1.dictionarySize(100);
@@ -46,7 +53,9 @@ public class GroupByStatsProviderTest
 
     stats2.mergeBufferAcquisitionTime(500);
     stats2.mergeBufferAcquisitionTime(600);
-    stats2.maxMergeBufferUsedBytes(100);
+    // Single slice at 100/2000 = 0.05.
+    stats2.addMergeBufferUsedBytes(100);
+    stats2.sliceUsage(100, 2000);
     stats2.spilledBytes(400);
     stats2.spilledBytes(600);
     stats2.dictionarySize(300);
@@ -58,6 +67,7 @@ public class GroupByStatsProviderTest
     Assertions.assertEquals(0L, aggregateStats.getMaxMergeBufferAcquisitionTimeNs());
     Assertions.assertEquals(0L, aggregateStats.getTotalMergeBufferUsedBytes());
     Assertions.assertEquals(0L, aggregateStats.getMaxMergeBufferUsedBytes());
+    Assertions.assertEquals(0.0, aggregateStats.getMaxSpillProximity(), DELTA);
     Assertions.assertEquals(0L, aggregateStats.getSpilledQueries());
     Assertions.assertEquals(0L, aggregateStats.getSpilledBytes());
     Assertions.assertEquals(0L, aggregateStats.getMaxSpilledBytes());
@@ -71,8 +81,13 @@ public class GroupByStatsProviderTest
     Assertions.assertEquals(2, aggregateStats.getMergeBufferQueries());
     Assertions.assertEquals(1800L, aggregateStats.getMergeBufferAcquisitionTimeNs());
     Assertions.assertEquals(1100L, aggregateStats.getMaxMergeBufferAcquisitionTimeNs());
-    Assertions.assertEquals(150L, aggregateStats.getTotalMergeBufferUsedBytes());
+    // bytesUsed sums across queries AND across each query's slices: (50 + 30) + 100 = 180.
+    Assertions.assertEquals(180L, aggregateStats.getTotalMergeBufferUsedBytes());
+    // maxBytesUsed is the max per-query summed usage: max(80, 100) = 100.
     Assertions.assertEquals(100L, aggregateStats.getMaxMergeBufferUsedBytes());
+    // maxSpillProximity is the max per-query proximity, where each query's proximity is its fullest slice's
+    // fill fraction: q1 -> max(50/1000, 30/1000) = 0.05, q2 -> 100/2000 = 0.05, so max = 0.05.
+    Assertions.assertEquals(0.05, aggregateStats.getMaxSpillProximity(), DELTA);
     Assertions.assertEquals(2L, aggregateStats.getSpilledQueries());
     Assertions.assertEquals(1600L, aggregateStats.getSpilledBytes());
     Assertions.assertEquals(1000L, aggregateStats.getMaxSpilledBytes());
@@ -88,28 +103,32 @@ public class GroupByStatsProviderTest
     QueryResourceId r1 = new QueryResourceId("r1");
     GroupByStatsProvider.PerQueryStats stats1 = statsProvider.getPerQueryStatsContainer(r1);
     stats1.mergeBufferAcquisitionTime(2000);
-    stats1.maxMergeBufferUsedBytes(50);
+    stats1.addMergeBufferUsedBytes(50);
+    stats1.sliceUsage(50, 1000); // 0.05
     stats1.spilledBytes(100);
     stats1.dictionarySize(200);
 
     QueryResourceId r2 = new QueryResourceId("r2");
     GroupByStatsProvider.PerQueryStats stats2 = statsProvider.getPerQueryStatsContainer(r2);
     stats2.mergeBufferAcquisitionTime(100);
-    stats2.maxMergeBufferUsedBytes(500);
+    stats2.addMergeBufferUsedBytes(500);
+    stats2.sliceUsage(500, 1000); // 0.5
     stats2.spilledBytes(150);
     stats2.dictionarySize(250);
 
     QueryResourceId r3 = new QueryResourceId("r3");
     GroupByStatsProvider.PerQueryStats stats3 = statsProvider.getPerQueryStatsContainer(r3);
     stats3.mergeBufferAcquisitionTime(200);
-    stats3.maxMergeBufferUsedBytes(100);
+    stats3.addMergeBufferUsedBytes(100);
+    stats3.sliceUsage(100, 1000); // 0.1
     stats3.spilledBytes(3000);
     stats3.dictionarySize(300);
 
     QueryResourceId r4 = new QueryResourceId("r4");
     GroupByStatsProvider.PerQueryStats stats4 = statsProvider.getPerQueryStatsContainer(r4);
     stats4.mergeBufferAcquisitionTime(300);
-    stats4.maxMergeBufferUsedBytes(75);
+    stats4.addMergeBufferUsedBytes(75);
+    stats4.sliceUsage(75, 1000); // 0.075
     stats4.spilledBytes(200);
     stats4.dictionarySize(1500);
 
@@ -122,6 +141,8 @@ public class GroupByStatsProviderTest
 
     Assertions.assertEquals(2000L, aggregateStats.getMaxMergeBufferAcquisitionTimeNs());
     Assertions.assertEquals(500L, aggregateStats.getMaxMergeBufferUsedBytes());
+    // Max per-query proximity across the four queries: max(0.05, 0.5, 0.1, 0.075) = 0.5.
+    Assertions.assertEquals(0.5, aggregateStats.getMaxSpillProximity(), DELTA);
     Assertions.assertEquals(3000L, aggregateStats.getMaxSpilledBytes());
     Assertions.assertEquals(1500L, aggregateStats.getMaxMergeDictionarySize());
 
@@ -131,5 +152,194 @@ public class GroupByStatsProviderTest
     Assertions.assertEquals(4L, aggregateStats.getSpilledQueries());
     Assertions.assertEquals(3450L, aggregateStats.getSpilledBytes());
     Assertions.assertEquals(2250L, aggregateStats.getMergeDictionarySize());
+  }
+
+  @Test
+  public void testPerQueryUsedBytesSumsWhileSpillProximityTakesSliceMax()
+  {
+    GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
+
+    // Simulate a ConcurrentGrouper closing four equally-sized slices. Each slice reports its own peak usage and the
+    // shared per-slice spill threshold. Used bytes accumulate (sum); spill proximity is driven by the fullest slice.
+    stats.addMergeBufferUsedBytes(10);
+    stats.sliceUsage(10, 1000);
+    stats.addMergeBufferUsedBytes(20);
+    stats.sliceUsage(20, 1000);
+    stats.addMergeBufferUsedBytes(30);
+    stats.sliceUsage(30, 1000);
+    stats.addMergeBufferUsedBytes(40);
+    stats.sliceUsage(40, 1000);
+
+    // Used bytes are summed across slices.
+    Assertions.assertEquals(100L, stats.getMergeBufferUsedBytes());
+    // Proximity is the fullest slice's fill fraction (40/1000), NOT the summed fraction (100/1000 = 0.1).
+    Assertions.assertEquals(0.04, stats.getSpillProximity(), DELTA);
+  }
+
+  @Test
+  public void testSpillProximityClampsToOneAtSpillPoint()
+  {
+    GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
+    // A slice that reached its threshold exactly.
+    stats.sliceUsage(700, 700);
+    Assertions.assertEquals(1.0, stats.getSpillProximity(), DELTA);
+
+    // The offset-list term can push raw used bytes slightly above the threshold; proximity must clamp at 1.0.
+    GroupByStatsProvider.PerQueryStats over = new GroupByStatsProvider.PerQueryStats();
+    over.sliceUsage(750, 700);
+    Assertions.assertEquals(1.0, over.getSpillProximity(), DELTA);
+  }
+
+  @Test
+  public void testSpillProximityZeroWhenNoSliceUsageRecorded()
+  {
+    GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
+    // No sliceUsage() call: threshold is 0, so proximity is 0.0 rather than dividing by zero.
+    stats.addMergeBufferUsedBytes(500);
+    Assertions.assertEquals(0.0, stats.getSpillProximity(), DELTA);
+  }
+
+  @Test
+  public void testSpillProximityPicksFullestSliceWhenSlicesDiffer()
+  {
+    GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
+    // Slices with differing usage AND thresholds. maxSliceUsedBytes and sliceSpillThresholdBytes are each tracked
+    // as independent maxima; in practice all slices of a query share the same threshold, so this exercises the
+    // max-of-each behaviour for the dominating slice.
+    stats.sliceUsage(200, 1000);
+    stats.sliceUsage(900, 1000);
+    stats.sliceUsage(100, 1000);
+    // Fullest slice is 900/1000 = 0.9.
+    Assertions.assertEquals(0.9, stats.getSpillProximity(), DELTA);
+  }
+
+  @Test
+  public void testAggregateStatsResetZeroesSpillProximity()
+  {
+    GroupByStatsProvider.AggregateStats aggregateStats = new GroupByStatsProvider.AggregateStats(
+        1L,
+        100L,
+        100L,
+        200L,
+        200L,
+        0.75,
+        2L,
+        200L,
+        200L,
+        300L,
+        300L
+    );
+    Assertions.assertEquals(0.75, aggregateStats.getMaxSpillProximity(), DELTA);
+
+    aggregateStats.reset();
+    Assertions.assertEquals(0.0, aggregateStats.getMaxSpillProximity(), DELTA);
+  }
+
+  @Test
+  public void testAggregateStatsCopyConstructorRoundTripsSpillProximity()
+  {
+    GroupByStatsProvider.AggregateStats original = new GroupByStatsProvider.AggregateStats(
+        1L,
+        100L,
+        100L,
+        200L,
+        200L,
+        0.42,
+        2L,
+        200L,
+        200L,
+        300L,
+        300L
+    );
+    GroupByStatsProvider.AggregateStats copy = new GroupByStatsProvider.AggregateStats(original);
+
+    Assertions.assertEquals(0.42, copy.getMaxSpillProximity(), DELTA);
+    // Spill proximity is the 6th ctor arg, sitting between maxBytesUsed and spilledQueries; verify neighbours
+    // did not shift position.
+    Assertions.assertEquals(200L, copy.getMaxMergeBufferUsedBytes());
+    Assertions.assertEquals(2L, copy.getSpilledQueries());
+  }
+
+  @Test
+  public void testAggregateStatsTakesMaxSpillProximityAcrossQueries()
+  {
+    GroupByStatsProvider.AggregateStats agg = new GroupByStatsProvider.AggregateStats();
+
+    GroupByStatsProvider.PerQueryStats low = new GroupByStatsProvider.PerQueryStats();
+    low.mergeBufferAcquisitionTime(10);
+    low.sliceUsage(300, 1000); // 0.3
+    agg.addQueryStats(low);
+
+    GroupByStatsProvider.PerQueryStats high = new GroupByStatsProvider.PerQueryStats();
+    high.mergeBufferAcquisitionTime(10);
+    high.sliceUsage(800, 1000); // 0.8
+    agg.addQueryStats(high);
+
+    GroupByStatsProvider.PerQueryStats mid = new GroupByStatsProvider.PerQueryStats();
+    mid.mergeBufferAcquisitionTime(10);
+    mid.sliceUsage(500, 1000); // 0.5
+    agg.addQueryStats(mid);
+
+    Assertions.assertEquals(0.8, agg.getMaxSpillProximity(), DELTA);
+  }
+
+  @Test
+  public void testSpillProximityDroppedWhenNoAcquisitionTimeRecorded()
+  {
+    // A PerQueryStats with slice usage but no acquisition time is not folded into the mergeBuffer block, mirroring
+    // the monitor guard. In practice this never happens: acquisition time is recorded in
+    // GroupByResourcesReservationPool.reserve() before any grouper initializes.
+    GroupByStatsProvider.AggregateStats agg = new GroupByStatsProvider.AggregateStats();
+    GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
+    stats.sliceUsage(900, 1000);
+    agg.addQueryStats(stats);
+
+    Assertions.assertEquals(0L, agg.getMergeBufferQueries());
+    Assertions.assertEquals(0.0, agg.getMaxSpillProximity(), DELTA);
+  }
+
+  /**
+   * End-to-end through {@link GroupByStatsProvider} reproducing the user's scenario: a 125MiB merge buffer divided
+   * into 240 per-thread slices (sliceSize ~= 546KiB). Each slice fills well below the configured buffer size, yet the
+   * fullest slice reaches its spill threshold (sliceSize * 0.7) and the query spills. The summed {@code bytesUsed} is
+   * far below {@code sizeBytes}, which is exactly why comparing it to {@code sizeBytes} was misleading; {@code
+   * maxSpillProximity} instead reports ~1.0, correctly indicating the query was at the spill point.
+   */
+  @Test
+  public void testEndToEndSlicedBufferSpillScenario()
+  {
+    final long sizeBytes = 125L * 1024 * 1024;            // druid.processing.buffer.sizeBytes (125MiB)
+    final int numThreads = 240;                           // concurrencyHint / numThreads
+    final long sliceSize = sizeBytes / numThreads;        // per-slice capacity (~546KiB)
+    final float loadFactor = 0.7f;                        // BufferHashGrouper.DEFAULT_MAX_LOAD_FACTOR
+    final long sliceThreshold = (long) (sliceSize * loadFactor);
+
+    GroupByStatsProvider statsProvider = new GroupByStatsProvider();
+    QueryResourceId id = new QueryResourceId("spilly");
+    GroupByStatsProvider.PerQueryStats stats = statsProvider.getPerQueryStatsContainer(id);
+
+    stats.mergeBufferAcquisitionTime(42);
+    long expectedUsed = 0;
+    for (int i = 0; i < numThreads; i++) {
+      // Most slices stay light; one slice (i == 0) reaches its threshold and triggers the spill.
+      final long sliceUsed = (i == 0) ? sliceThreshold : sliceThreshold / 10;
+      stats.addMergeBufferUsedBytes(sliceUsed);
+      stats.sliceUsage(sliceUsed, sliceThreshold);
+      expectedUsed += sliceUsed;
+    }
+    stats.spilledBytes(1_000_000L);
+
+    statsProvider.closeQuery(id);
+    GroupByStatsProvider.AggregateStats aggregateStats = statsProvider.getStatsSince();
+
+    // The fullest slice is at its threshold, so proximity is 1.0: the query spilled.
+    Assertions.assertEquals(1.0, aggregateStats.getMaxSpillProximity(), DELTA);
+    // ...even though the summed usage across slices is a tiny fraction of the configured buffer size.
+    Assertions.assertEquals(expectedUsed, aggregateStats.getTotalMergeBufferUsedBytes());
+    Assertions.assertTrue(
+        aggregateStats.getTotalMergeBufferUsedBytes() < sizeBytes / 2,
+        "summed bytesUsed should look small next to sizeBytes, despite the spill"
+    );
+    Assertions.assertEquals(1L, aggregateStats.getSpilledQueries());
   }
 }
