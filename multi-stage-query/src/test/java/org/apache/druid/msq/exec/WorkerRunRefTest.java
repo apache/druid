@@ -120,7 +120,7 @@ public class WorkerRunRefTest
   }
 
   @Test
-  public void testSuccessfulCompletionOfWorker()
+  public void testSuccessfulCompletionOfWorker() throws InterruptedException
   {
     final Worker worker = new TestWorker("test-worker")
     {
@@ -156,7 +156,7 @@ public class WorkerRunRefTest
   }
 
   @Test
-  public void testUnsuccessfulCompletionOfWorker()
+  public void testUnsuccessfulCompletionOfWorker() throws InterruptedException
   {
     final RuntimeException expectedException = new RuntimeException("Worker failed");
     final Worker worker = new TestWorker("test-worker")
