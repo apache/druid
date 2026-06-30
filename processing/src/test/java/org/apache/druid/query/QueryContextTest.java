@@ -459,6 +459,11 @@ public class QueryContextTest
                    .getRealtimeSegmentsMode()
     );
     assertEquals(
+            QueryContexts.RealtimeSegmentsMode.EXCLUDE_INCREMENTAL,
+            QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "exclude_incremental"))
+                    .getRealtimeSegmentsMode()
+    );
+    assertEquals(
         QueryContexts.RealtimeSegmentsMode.INCLUDE,
         QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "include"))
                    .getRealtimeSegmentsMode()
@@ -507,7 +512,7 @@ public class QueryContextTest
                          .getRealtimeSegmentsMode()
     );
     assertEquals(
-        "Expected key [realtimeSegmentsMode] to be referring to one of the values [INCLUDE,EXCLUSIVE,EXCLUDE] of enum [RealtimeSegmentsMode], but got [badvalue]",
+        "Expected key [realtimeSegmentsMode] to be referring to one of the values [INCLUDE,EXCLUSIVE,EXCLUDE,EXCLUDE_INCREMENTAL] of enum [RealtimeSegmentsMode], but got [badvalue]",
         e.getMessage()
     );
   }
