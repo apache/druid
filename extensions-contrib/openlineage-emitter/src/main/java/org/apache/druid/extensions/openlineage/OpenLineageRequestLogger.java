@@ -31,6 +31,28 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DataSource;
+import org.apache.druid.query.FilteredDataSource;
+import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.RestrictedDataSource;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.UnnestDataSource;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.planning.JoinDataSourceAnalysis;
+import org.apache.druid.query.planning.PreJoinableClause;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.topn.TopNQuery;
+import org.apache.druid.query.union.UnionQuery;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.join.JoinPrefixUtils;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.sql.calcite.parser.DruidSqlParser;
@@ -48,10 +70,15 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -85,6 +112,12 @@ public class OpenLineageRequestLogger implements RequestLogger
       + "/src/main/resources/openlineage-schema/";
   private static final String CONTEXT_FACET_SCHEMA_URL = CUSTOM_SCHEMA_BASE + "DruidQueryContextRunFacet.json";
   private static final String STATS_FACET_SCHEMA_URL = CUSTOM_SCHEMA_BASE + "DruidQueryStatisticsRunFacet.json";
+  // Standard OpenLineage SchemaDatasetFacet listing the input columns referenced by the query (names only).
+  private static final String SCHEMA_FACET_SCHEMA_URL =
+      "https://openlineage.io/spec/facets/1-1-1/SchemaDatasetFacet.json";
+  // Custom dataset facet describing how each referenced column was used (filter, group-by, aggregation, ...).
+  private static final String COLUMN_USAGE_FACET_SCHEMA_URL =
+      CUSTOM_SCHEMA_BASE + "DruidColumnUsageDatasetFacet.json";
   static final int SQL_FACET_MAX_LENGTH = 64 * 1024;
   static final int DEFAULT_EMIT_QUEUE_CAPACITY = 1000;
   static final int DEFAULT_EMIT_THREAD_COUNT = 1;
@@ -105,6 +138,7 @@ public class OpenLineageRequestLogger implements RequestLogger
   @Nullable
   private final String transportUrl;
   private final Set<String> excludedNativeQueryTypes;
+  private final boolean columnLineageEnabled;
   @Nullable
   private final HttpClient httpClient;
   @Nullable
@@ -120,7 +154,7 @@ public class OpenLineageRequestLogger implements RequestLogger
   )
   {
     this(jsonMapper, namespace, transportType, transportUrl, excludedNativeQueryTypes,
-         DEFAULT_EMIT_QUEUE_CAPACITY, DEFAULT_EMIT_THREAD_COUNT, null);
+         true, DEFAULT_EMIT_QUEUE_CAPACITY, DEFAULT_EMIT_THREAD_COUNT, null);
   }
 
   public OpenLineageRequestLogger(
@@ -129,6 +163,7 @@ public class OpenLineageRequestLogger implements RequestLogger
       OpenLineageRequestLoggerProvider.TransportType transportType,
       @Nullable String transportUrl,
       Set<String> excludedNativeQueryTypes,
+      boolean columnLineageEnabled,
       int emitQueueCapacity,
       int emitThreadCount,
       @Nullable HttpClient httpClient
@@ -139,6 +174,7 @@ public class OpenLineageRequestLogger implements RequestLogger
     this.transportType = transportType;
     this.transportUrl = transportUrl;
     this.excludedNativeQueryTypes = excludedNativeQueryTypes;
+    this.columnLineageEnabled = columnLineageEnabled;
     if (transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP && transportUrl == null) {
       throw new IllegalStateException(
           "druid.request.logging.transportUrl must be set when transportType=HTTP"
@@ -222,7 +258,9 @@ public class OpenLineageRequestLogger implements RequestLogger
       queryId = UNKNOWN_QUERY_ID;
     }
 
-    emit(buildRunEvent(queryId, queryType, requestLogLine, inputs, null));
+    Map<String, Map<String, EnumSet<ColumnRole>>> columnsByTable =
+        columnLineageEnabled ? extractColumnsByTable(requestLogLine.getQuery()) : null;
+    emit(buildRunEvent(queryId, queryType, requestLogLine, inputs, columnsByTable, null));
   }
 
   /**
@@ -254,7 +292,7 @@ public class OpenLineageRequestLogger implements RequestLogger
       queryId = UNKNOWN_QUERY_ID;
     }
 
-    emit(buildRunEvent(queryId, "msq", requestLogLine, List.of(), outputTable));
+    emit(buildRunEvent(queryId, "msq", requestLogLine, List.of(), null, outputTable));
   }
 
   /**
@@ -309,11 +347,275 @@ public class OpenLineageRequestLogger implements RequestLogger
     }
   }
 
+  /**
+   * Column usage roles for the custom {@code druid_columnUsage} dataset facet. Names align with
+   * OpenLineage transformation subtypes where they exist (GROUP_BY, AGGREGATION, FILTER, JOIN);
+   * PROJECTION corresponds to OpenLineage IDENTITY/TRANSFORMATION (a selected/projected column).
+   */
+  enum ColumnRole
+  {
+    PROJECTION, GROUP_BY, AGGREGATION, FILTER, JOIN
+  }
+
+  /**
+   * Resolves the per-base-table column-usage map for a native query, used to attach the {@code schema}
+   * and {@code druid_columnUsage} dataset facets to input datasets. Handles all datasource shapes:
+   * tables, joins (attributing columns per side via the planner's join prefixes), unions, sub-queries
+   * (recursing into the sub-query's own columns), and datasource wrappers (restricted/filtered/unnest).
+   * Columns that have no base table (lookups, inline data) are dropped rather than fabricated.
+   *
+   * <p>Returns {@code null} (yielding table-level lineage only) when no base-table columns can be
+   * determined, or on any error -- it never fabricates or mis-attributes columns.
+   */
+  @Nullable
+  private Map<String, Map<String, EnumSet<ColumnRole>>> extractColumnsByTable(Query<?> query)
+  {
+    try {
+      Map<String, Map<String, EnumSet<ColumnRole>>> result = new TreeMap<>();
+      collectInto(result, query);
+      return result.isEmpty() ? null : result;
+    }
+    // StackOverflowError (an Error, not an Exception) is caught too so that a pathologically deep
+    // query plan degrades to table-level lineage rather than breaking the request-logging path.
+    catch (Exception | StackOverflowError e) {
+      log.debug(e, "Failed to extract column lineage; falling back to table-level lineage");
+      return null;
+    }
+  }
+
+  /**
+   * Walks {@code query}'s column-bearing parts and attributes the referenced columns to the base
+   * tables of its datasource. {@link UnionQuery} (whose {@code getDataSource()} is undefined) is
+   * handled by recursing into each of its branches.
+   */
+  private void collectInto(Map<String, Map<String, EnumSet<ColumnRole>>> result, Query<?> query)
+  {
+    if (query instanceof UnionQuery) {
+      for (DataSource branch : ((UnionQuery) query).getDataSources()) {
+        attribute(result, branch, Collections.emptyMap());
+      }
+      return;
+    }
+    attribute(result, query.getDataSource(), collectColumnRoles(query));
+  }
+
+  /**
+   * Attributes {@code roles} (column to roles, expressed in {@code dataSource}'s output namespace) to
+   * the underlying base tables, recursing through the datasource tree. Sub-queries are recursed into
+   * via {@link #collectInto} (their columns come from their own parts, not the outer references).
+   */
+  private void attribute(
+      Map<String, Map<String, EnumSet<ColumnRole>>> result,
+      DataSource dataSource,
+      Map<String, EnumSet<ColumnRole>> roles
+  )
+  {
+    if (dataSource instanceof TableDataSource) {
+      // Also covers GlobalTableDataSource (a TableDataSource subclass); it is a real named table, so
+      // handling it here is intentional. Keep this branch ahead of the wrapper branches below.
+      String table = ((TableDataSource) dataSource).getName();
+      for (Map.Entry<String, EnumSet<ColumnRole>> entry : roles.entrySet()) {
+        addRoles(result, table, entry.getKey(), entry.getValue());
+      }
+    } else if (dataSource instanceof RestrictedDataSource) {
+      attribute(result, ((RestrictedDataSource) dataSource).getBase(), roles);
+    } else if (dataSource instanceof FilteredDataSource) {
+      attribute(result, ((FilteredDataSource) dataSource).getBase(), roles);
+    } else if (dataSource instanceof UnnestDataSource) {
+      UnnestDataSource unnest = (UnnestDataSource) dataSource;
+      VirtualColumn unnestColumn = unnest.getVirtualColumn();
+      Map<String, EnumSet<ColumnRole>> baseRoles = new TreeMap<>(roles);
+      // The unnest output column is synthetic (not a base column); drop it and instead record the
+      // underlying column(s) being unnested as projected from the base.
+      baseRoles.remove(unnestColumn.getOutputName());
+      for (String required : unnestColumn.requiredColumns()) {
+        baseRoles.computeIfAbsent(required, k -> EnumSet.noneOf(ColumnRole.class)).add(ColumnRole.PROJECTION);
+      }
+      attribute(result, unnest.getBase(), baseRoles);
+    } else if (dataSource instanceof UnionDataSource) {
+      // Union members share the same output schema, so the referenced columns apply to each.
+      for (DataSource member : dataSource.getChildren()) {
+        attribute(result, member, roles);
+      }
+    } else if (dataSource instanceof QueryDataSource) {
+      // The outer references are this sub-query's OUTPUT columns, not base columns; the sub-query's
+      // own base-table columns are captured by recursing into its parts.
+      collectInto(result, ((QueryDataSource) dataSource).getQuery());
+    } else if (dataSource instanceof JoinDataSource) {
+      attributeJoin(result, (JoinDataSource) dataSource, roles);
+    }
+    // LookupDataSource, InlineDataSource and any other shape have no base table: drop (never fabricate).
+  }
+
+  /**
+   * Splits {@code roles} (plus the join-condition columns, tagged {@link ColumnRole#JOIN}) across the
+   * base datasource and each joinable clause using the planner's join prefixes, then recurses. Clauses
+   * are matched longest-prefix-first; right-side columns arrive already prefixed and are un-prefixed
+   * before attribution to the clause's datasource (which may itself be a table, join, or sub-query).
+   */
+  private void attributeJoin(
+      Map<String, Map<String, EnumSet<ColumnRole>>> result,
+      JoinDataSource join,
+      Map<String, EnumSet<ColumnRole>> roles
+  )
+  {
+    JoinDataSourceAnalysis analysis = JoinDataSourceAnalysis.constructAnalysis(join);
+    DataSource base = analysis.getBaseDataSource();
+    List<PreJoinableClause> clauses = new ArrayList<>(analysis.getPreJoinableClauses());
+    // Longest prefix first so that, e.g., "j0.x" matches clause "j0." rather than a shorter prefix.
+    clauses.sort((a, b) -> Integer.compare(b.getPrefix().length(), a.getPrefix().length()));
+
+    Map<String, EnumSet<ColumnRole>> all = new TreeMap<>(roles);
+    for (PreJoinableClause clause : clauses) {
+      for (String column : clause.getCondition().getRequiredColumns()) {
+        all.computeIfAbsent(column, k -> EnumSet.noneOf(ColumnRole.class)).add(ColumnRole.JOIN);
+      }
+    }
+
+    Map<DataSource, Map<String, EnumSet<ColumnRole>>> partitioned = new LinkedHashMap<>();
+    for (Map.Entry<String, EnumSet<ColumnRole>> entry : all.entrySet()) {
+      String column = entry.getKey();
+      DataSource target = base;
+      String resolved = column;
+      for (PreJoinableClause clause : clauses) {
+        if (JoinPrefixUtils.isPrefixedBy(column, clause.getPrefix())) {
+          target = clause.getDataSource();
+          resolved = JoinPrefixUtils.unprefix(column, clause.getPrefix());
+          break;
+        }
+      }
+      partitioned.computeIfAbsent(target, k -> new TreeMap<>())
+                 .computeIfAbsent(resolved, k -> EnumSet.noneOf(ColumnRole.class))
+                 .addAll(entry.getValue());
+    }
+    for (Map.Entry<DataSource, Map<String, EnumSet<ColumnRole>>> entry : partitioned.entrySet()) {
+      attribute(result, entry.getKey(), entry.getValue());
+    }
+  }
+
+  private static void addRoles(
+      Map<String, Map<String, EnumSet<ColumnRole>>> result,
+      String table,
+      String column,
+      EnumSet<ColumnRole> roles
+  )
+  {
+    result.computeIfAbsent(table, k -> new TreeMap<>())
+          .computeIfAbsent(column, k -> EnumSet.noneOf(ColumnRole.class))
+          .addAll(roles);
+  }
+
+  /**
+   * Walks the query's column-bearing parts (projected columns, dimensions, aggregator inputs, filter
+   * columns) and records each referenced base column with the role(s) it was used in. Virtual columns
+   * are expanded transitively to their underlying base columns, carrying the consuming role. Only
+   * explicitly-referenced columns are captured (notably {@code __time} is included only when it
+   * actually appears in a part, never its implicit interval usage). Returns an empty map for
+   * unsupported query types and for a bare {@code SELECT *} (a Scan with neither explicit columns nor
+   * a filter); a {@code SELECT *} that carries a filter still contributes its filter columns.
+   */
+  private Map<String, EnumSet<ColumnRole>> collectColumnRoles(Query<?> query)
+  {
+    Map<String, EnumSet<ColumnRole>> roles = new TreeMap<>();
+    if (query instanceof ScanQuery) {
+      ScanQuery scan = (ScanQuery) query;
+      VirtualColumns vcs = scan.getVirtualColumns();
+      if (scan.getColumns() != null) {
+        for (String column : scan.getColumns()) {
+          addColumn(roles, vcs, column, ColumnRole.PROJECTION);
+        }
+      }
+      addFilterColumns(roles, vcs, scan.getFilter());
+    } else if (query instanceof GroupByQuery) {
+      GroupByQuery groupBy = (GroupByQuery) query;
+      VirtualColumns vcs = groupBy.getVirtualColumns();
+      for (DimensionSpec dimension : groupBy.getDimensions()) {
+        addColumn(roles, vcs, dimension.getDimension(), ColumnRole.GROUP_BY);
+      }
+      addAggregatorColumns(roles, vcs, groupBy.getAggregatorSpecs());
+      addFilterColumns(roles, vcs, groupBy.getDimFilter());
+    } else if (query instanceof TopNQuery) {
+      TopNQuery topN = (TopNQuery) query;
+      VirtualColumns vcs = topN.getVirtualColumns();
+      addColumn(roles, vcs, topN.getDimensionSpec().getDimension(), ColumnRole.GROUP_BY);
+      addAggregatorColumns(roles, vcs, topN.getAggregatorSpecs());
+      addFilterColumns(roles, vcs, topN.getFilter());
+    } else if (query instanceof TimeseriesQuery) {
+      TimeseriesQuery timeseries = (TimeseriesQuery) query;
+      VirtualColumns vcs = timeseries.getVirtualColumns();
+      addAggregatorColumns(roles, vcs, timeseries.getAggregatorSpecs());
+      addFilterColumns(roles, vcs, timeseries.getFilter());
+    } else {
+      // Unsupported query type: emit table-level lineage only.
+      return Collections.emptyMap();
+    }
+    return roles;
+  }
+
+  private void addAggregatorColumns(
+      Map<String, EnumSet<ColumnRole>> roles,
+      VirtualColumns vcs,
+      List<AggregatorFactory> aggregators
+  )
+  {
+    for (AggregatorFactory aggregator : aggregators) {
+      for (String column : aggregator.requiredFields()) {
+        addColumn(roles, vcs, column, ColumnRole.AGGREGATION);
+      }
+    }
+  }
+
+  private void addFilterColumns(
+      Map<String, EnumSet<ColumnRole>> roles,
+      VirtualColumns vcs,
+      @Nullable DimFilter filter
+  )
+  {
+    if (filter != null) {
+      for (String column : filter.getRequiredColumns()) {
+        addColumn(roles, vcs, column, ColumnRole.FILTER);
+      }
+    }
+  }
+
+  private void addColumn(Map<String, EnumSet<ColumnRole>> roles, VirtualColumns vcs, String column, ColumnRole role)
+  {
+    expandColumn(roles, vcs, column, role, new HashSet<>());
+  }
+
+  /**
+   * Adds {@code column} with {@code role}, expanding virtual columns transitively to their underlying
+   * base columns. The {@code visited} set guards against virtual columns that reference one another.
+   */
+  private void expandColumn(
+      Map<String, EnumSet<ColumnRole>> roles,
+      VirtualColumns vcs,
+      @Nullable String column,
+      ColumnRole role,
+      Set<String> visited
+  )
+  {
+    if (column == null || !visited.add(column)) {
+      return;
+    }
+    if (vcs != null && vcs.exists(column)) {
+      VirtualColumn virtualColumn = vcs.getVirtualColumn(column);
+      if (virtualColumn != null) {
+        for (String required : virtualColumn.requiredColumns()) {
+          expandColumn(roles, vcs, required, role, visited);
+        }
+        return;
+      }
+    }
+    roles.computeIfAbsent(column, k -> EnumSet.noneOf(ColumnRole.class)).add(role);
+  }
+
   private ObjectNode buildRunEvent(
       String queryId,
       String queryType,
       RequestLogLine requestLogLine,
       List<String> inputs,
+      @Nullable Map<String, Map<String, EnumSet<ColumnRole>>> columnsByTable,
       @Nullable String output
   )
   {
@@ -327,8 +629,8 @@ public class OpenLineageRequestLogger implements RequestLogger
     event.put("schemaURL", SCHEMA_URL);
     event.set("run", buildRun(queryId, queryType, requestLogLine, stats, success));
     event.set("job", buildJob(queryId, requestLogLine.getSql()));
-    event.set("inputs", buildDatasets(inputs));
-    event.set("outputs", buildDatasets(output != null ? List.of(output) : List.of()));
+    event.set("inputs", buildDatasets(inputs, columnsByTable));
+    event.set("outputs", buildDatasets(output != null ? List.of(output) : List.of(), null));
     return event;
   }
 
@@ -434,17 +736,57 @@ public class OpenLineageRequestLogger implements RequestLogger
     return facet;
   }
 
-  private ArrayNode buildDatasets(List<String> tableNames)
+  private ArrayNode buildDatasets(
+      List<String> tableNames,
+      @Nullable Map<String, Map<String, EnumSet<ColumnRole>>> columnsByTable
+  )
   {
     ArrayNode array = jsonMapper.createArrayNode();
     for (String name : tableNames) {
       ObjectNode node = jsonMapper.createObjectNode();
       node.put("namespace", namespace);
       node.put("name", name);
-      node.set("facets", jsonMapper.createObjectNode());
+      ObjectNode facets = jsonMapper.createObjectNode();
+      Map<String, EnumSet<ColumnRole>> columns = columnsByTable == null ? null : columnsByTable.get(name);
+      if (columns != null && !columns.isEmpty()) {
+        addColumnFacets(facets, columns);
+      }
+      node.set("facets", facets);
       array.add(node);
     }
     return array;
+  }
+
+  /**
+   * Attaches the standard OpenLineage {@code schema} facet (referenced column names, sorted) and the
+   * custom {@code druid_columnUsage} facet (column to usage roles) to an input dataset's facets.
+   */
+  private void addColumnFacets(ObjectNode facets, Map<String, EnumSet<ColumnRole>> columns)
+  {
+    ObjectNode schemaFacet = createFacet(SCHEMA_FACET_SCHEMA_URL);
+    ArrayNode fields = jsonMapper.createArrayNode();
+    ObjectNode usageFields = jsonMapper.createObjectNode();
+    // columns is a TreeMap, so iteration (and the emitted JSON) is deterministically sorted by name.
+    for (Map.Entry<String, EnumSet<ColumnRole>> entry : columns.entrySet()) {
+      ObjectNode field = jsonMapper.createObjectNode();
+      field.put("name", entry.getKey());
+      fields.add(field);
+
+      ArrayNode usages = jsonMapper.createArrayNode();
+      // EnumSet iterates in enum declaration order, so usage lists are deterministic too.
+      for (ColumnRole role : entry.getValue()) {
+        usages.add(role.name());
+      }
+      ObjectNode usageEntry = jsonMapper.createObjectNode();
+      usageEntry.set("usages", usages);
+      usageFields.set(entry.getKey(), usageEntry);
+    }
+    schemaFacet.set("fields", fields);
+    facets.set("schema", schemaFacet);
+
+    ObjectNode usageFacet = createFacet(COLUMN_USAGE_FACET_SCHEMA_URL);
+    usageFacet.set("fields", usageFields);
+    facets.set("druid_columnUsage", usageFacet);
   }
 
 
