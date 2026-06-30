@@ -58,6 +58,7 @@ import javax.annotation.Nullable;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -675,7 +676,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     // supervisor's bounds and the scaler's bounds agree.
     EasyMock.expect(spec.getIoConfig()).andReturn(new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
         .withStream("stream")
-        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
         .withReplicas(1)
         .withTaskDuration(new Period("PT1H"))
         .withStartDelay(new Period("P1D"))
@@ -742,7 +743,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     scaleInProps.put("taskCountMin", 2);
     final SeekableStreamSupervisorIOConfig customIoConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
         .withStream("stream")
-        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
         .withReplicas(1)
         .withTaskDuration(new Period("PT1H"))
         .withStartDelay(new Period("P1D"))
@@ -812,7 +813,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   {
     SeekableStreamSupervisorIOConfig ioConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
         .withStream("stream")
-        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
         .withReplicas(1)
         .withTaskCount(1)
         .withTaskDuration(new Period("PT1H"))
@@ -861,7 +862,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   {
     SeekableStreamSupervisorIOConfig ioConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
         .withStream("stream")
-        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
         .withReplicas(1)
         .withTaskCount(1)
         .withTaskDuration(new Period("PT1H"))
@@ -1457,7 +1458,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     final TestSeekableStreamSupervisorSpec seed =
         buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
     final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().build();
-    final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().context(ImmutableMap.of("k", "v")).build();
+    final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().context(Map.of("k", "v")).build();
     Assert.assertTrue(oldSpec.requireRestart(newSpec));
   }
 
@@ -1486,7 +1487,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   {
     final TestSeekableStreamSupervisorSpec seed =
         buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
-    Assert.assertTrue(seed.toBuilder().build().requireRestart(new NoopSupervisorSpec("id", ImmutableList.of("ds"))));
+    Assert.assertTrue(seed.toBuilder().build().requireRestart(new NoopSupervisorSpec("id", List.of("ds"))));
   }
 
   @Test
@@ -1594,7 +1595,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     // taskCountStart/taskCountMin.
     return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
         .withStream("stream")
-        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
         .withReplicas(1)
         .withTaskDuration(new Period("PT1H"))
         .withStartDelay(new Period("P1D"))
@@ -1662,7 +1663,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     SeekableStreamSupervisorIOConfig boundedIoConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
         .withStream("stream")
-        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
         .withReplicas(1)
         .withTaskCount(1)
         .withTaskDuration(new Period("PT1H"))

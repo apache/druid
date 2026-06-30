@@ -21,7 +21,6 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -609,7 +608,7 @@ public abstract class SeekableStreamSupervisorTestBase
   {
     return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
         .withStream(STREAM)
-        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false))
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
         .withReplicas(1)
         .withTaskCount(taskCount)
         .withTaskDuration(new Period("PT1H"))

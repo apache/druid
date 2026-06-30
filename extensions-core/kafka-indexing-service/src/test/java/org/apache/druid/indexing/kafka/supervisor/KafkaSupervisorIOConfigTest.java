@@ -631,7 +631,7 @@ public class KafkaSupervisorIOConfigTest
   {
     return new KafkaIOConfigBuilder()
         .withTopic("topic")
-        .withConsumerProperties(ImmutableMap.of("bootstrap.servers", "localhost:9092"))
+        .withConsumerProperties(Map.of("bootstrap.servers", "localhost:9092"))
         .withReplicas(1)
         .withTaskCount(2)
         .withTaskDuration(new Period("PT1H"));
@@ -650,7 +650,7 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertNotEquals(config, ioConfigBuilder().withTaskCount(9).build());
     Assert.assertNotEquals(
         config,
-        ioConfigBuilder().withConsumerProperties(ImmutableMap.of("bootstrap.servers", "other:9092")).build()
+        ioConfigBuilder().withConsumerProperties(Map.of("bootstrap.servers", "other:9092")).build()
     );
     Assert.assertNotEquals(config, ioConfigBuilder().withEmitTimeLagMetrics(true).build());
   }

@@ -242,7 +242,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   public void testUnchangedSpecDoesNotRestart()
   {
     SupervisorSpec spec = new TestSupervisorSpec("id1", supervisor1);
-    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", spec);
+    Map<String, SupervisorSpec> existingSpecs = Map.of("id1", spec);
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
     EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
@@ -284,7 +284,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   {
     final Capture<TestSupervisorSpec> capturedInsert = Capture.newInstance();
     final Map<String, SupervisorSpec> existingSpecs =
-        ImmutableMap.of("id1", new VersionedTestSupervisorSpec("id1", supervisor1, 1));
+        Map.of("id1", new VersionedTestSupervisorSpec("id1", supervisor1, 1));
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
     EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
@@ -306,7 +306,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void testCreateOrUpdateSkipRestart_identicalSpec_isNoop()
   {
-    final Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", new TestSupervisorSpec("id1", supervisor1));
+    final Map<String, SupervisorSpec> existingSpecs = Map.of("id1", new TestSupervisorSpec("id1", supervisor1));
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
     EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
@@ -326,7 +326,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   {
     // The restart decision belongs to the running spec, so requireRestart=true is set on the existing spec.
     final Map<String, SupervisorSpec> existingSpecs =
-        ImmutableMap.of("id1", new VersionedTestSupervisorSpec("id1", supervisor1, 1, true));
+        Map.of("id1", new VersionedTestSupervisorSpec("id1", supervisor1, 1, true));
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
     EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
@@ -356,7 +356,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   {
     final MergingVersionedTestSupervisorSpec existing =
         new MergingVersionedTestSupervisorSpec("id1", supervisor1, 1);
-    final Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", existing);
+    final Map<String, SupervisorSpec> existingSpecs = Map.of("id1", existing);
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
     EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
@@ -376,7 +376,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void testCreateOrUpdateWithoutSkipRestart_forcesRestartWhenSpecUnchanged()
   {
-    final Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of("id1", new TestSupervisorSpec("id1", supervisor1));
+    final Map<String, SupervisorSpec> existingSpecs = Map.of("id1", new TestSupervisorSpec("id1", supervisor1));
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
     EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();

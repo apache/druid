@@ -173,7 +173,7 @@ public class SupervisorResource
           }
 
           return Response.ok(
-              ImmutableMap.of(
+              Map.of(
                   "id", spec.getId(),
                   "modified", updateResult.isModified(),
                   "restarted", updateResult.isRestarted()
