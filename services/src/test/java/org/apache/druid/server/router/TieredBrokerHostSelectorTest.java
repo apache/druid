@@ -20,6 +20,7 @@
 package org.apache.druid.server.router;
 
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -35,6 +36,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -63,6 +65,7 @@ public class TieredBrokerHostSelectorTest
 {
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
   private DruidNodeDiscovery druidNodeDiscovery;
+  private DruidNodeDiscovery.Listener druidNodeDiscoveryListener;
   private TieredBrokerHostSelector brokerSelector;
 
   private DiscoveryDruidNode node1;
@@ -103,6 +106,7 @@ public class TieredBrokerHostSelectorTest
       @Override
       public void registerListener(Listener listener)
       {
+        druidNodeDiscoveryListener = listener;
         listener.nodesAdded(ImmutableList.of(node1, node2, node3));
         listener.nodeViewInitialized();
       }
@@ -139,7 +143,8 @@ public class TieredBrokerHostSelectorTest
         Arrays.asList(
             new ManualTieredBrokerSelectorStrategy(null),
             new TimeBoundaryTieredBrokerSelectorStrategy(),
-            new PriorityTieredBrokerSelectorStrategy(0, 1)
+            new PriorityTieredBrokerSelectorStrategy(0, 1),
+            new BrokerHostFilteringStrategy("coldHost3")
         )
     );
 
@@ -383,6 +388,27 @@ public class TieredBrokerHostSelectorTest
     );
   }
 
+  @Test
+  public void testNodesAddedAppliesStrategyBrokerFilter()
+  {
+    druidNodeDiscoveryListener.nodesAdded(
+        ImmutableList.of(
+            new DiscoveryDruidNode(
+                new DruidNode("coldBroker", "coldHost3", false, 8080, null, true, false),
+                NodeRole.BROKER,
+                ImmutableMap.of()
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of("coldHost1:8080", "coldHost2:8080"),
+        ImmutableSet.copyOf(
+            Lists.transform(brokerSelector.getAllBrokers().get("coldBroker"), server -> server.getHost())
+        )
+    );
+  }
+
   private SqlQuery createSqlQueryWithContext(Map<String, Object> queryContext)
   {
     return new SqlQuery(
@@ -394,6 +420,28 @@ public class TieredBrokerHostSelectorTest
         queryContext,
         null
     );
+  }
+
+  private static class BrokerHostFilteringStrategy implements TieredBrokerSelectorStrategy
+  {
+    private final String filteredHost;
+
+    private BrokerHostFilteringStrategy(String filteredHost)
+    {
+      this.filteredHost = filteredHost;
+    }
+
+    @Override
+    public Optional<String> getBrokerServiceName(TieredBrokerConfig config, Query<?> query)
+    {
+      return Optional.absent();
+    }
+
+    @Override
+    public boolean isBrokerEligible(DiscoveryDruidNode brokerNode)
+    {
+      return !filteredHost.equals(brokerNode.getDruidNode().getHost());
+    }
   }
 
   private static class TestRuleManager extends CoordinatorRuleManager
