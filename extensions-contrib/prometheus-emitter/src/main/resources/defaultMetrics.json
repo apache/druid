@@ -28,6 +28,7 @@
   "schemacache/inTransitSMQPublishedResults/count" : { "dimensions" : [], "type" : "count", "help": "Number of segments for which schema is cached after back filling in the database."},
   "serverview/sync/healthy" : { "dimensions" : ["server"], "type" : "gauge", "help": "Sync status of the Broker with a segment-loading server such as a Historical or Peon."},
   "serverview/sync/unstableTime" : { "dimensions" : ["server"], "type" : "timer", "conversionFactor": 1000.0, "help": "Time in seconds for which the Broker has been failing to sync with a segment-loading server."},
+  "query/segments/count" : { "dimensions" : ["dataSource", "type"], "type" : "count", "help": "Number of segments this data node scans for a query."},
   "query/segment/time" : { "dimensions" : [], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to query individual segment. Includes time to page in the segment from disk."},
   "query/wait/time" : { "dimensions" : [], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds spent waiting for a segment to be scanned."},
   "segment/scan/pending" : { "dimensions" : [], "type" : "gauge", "help": "Number of segments in queue waiting to be scanned."},
