@@ -28,7 +28,6 @@ import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.joda.time.Duration;
 
@@ -45,18 +44,15 @@ import java.util.Objects;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CostBasedAutoScalerConfig implements AutoScalerConfig
 {
-  private static final EmittingLogger LOG = new EmittingLogger(CostBasedAutoScalerConfig.class);
-
-  static final long DEFAULT_SCALE_ACTION_PERIOD_MILLIS = 10 * 60 * 1000; // 10 minutes
   static final double DEFAULT_LAG_WEIGHT = 0.4;
   static final double DEFAULT_IDLE_WEIGHT = 0.6;
-  static final Duration DEFAULT_MIN_SCALE_DELAY = Duration.millis(DEFAULT_SCALE_ACTION_PERIOD_MILLIS * 3);
+  static final Duration DEFAULT_MIN_SCALE_UP_DELAY = Duration.standardMinutes(10);
+  static final Duration DEFAULT_MIN_SCALE_DOWN_DELAY = Duration.standardMinutes(30);
 
   private final boolean enableTaskAutoScaler;
   private final int taskCountMax;
   private final int taskCountMin;
   private final Integer taskCountStart;
-  private final long minTriggerScaleActionFrequencyMillis;
   private final Double stopTaskCountRatio;
   private final long scaleActionPeriodMillis;
 
@@ -71,9 +67,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
 
   /**
    * Creates a new CostBasedAutoScalerConfig instance.
-   * <p>
-   * Note: useTaskCountBoundaries and highLagThreshold are kept for backward compatibility,
-   * but effectively they are removed.
    */
   @JsonCreator
   public CostBasedAutoScalerConfig(
@@ -81,7 +74,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @JsonProperty("taskCountMin") Integer taskCountMin,
       @Nullable @JsonProperty("enableTaskAutoScaler") Boolean enableTaskAutoScaler,
       @Nullable @JsonProperty("taskCountStart") Integer taskCountStart,
-      @Nullable @JsonProperty("minTriggerScaleActionFrequencyMillis") Long minTriggerScaleActionFrequencyMillis,
       @Nullable @JsonProperty("stopTaskCountRatio") Double stopTaskCountRatio,
       @Nullable @JsonProperty("scaleActionPeriodMillis") Long scaleActionPeriodMillis,
       @Nullable @JsonProperty("lagWeight") Double lagWeight,
@@ -94,27 +86,15 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("usePollIdleRatio") Boolean usePollIdleRatio
   )
   {
-    this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
+    this.enableTaskAutoScaler = Configs.valueOrDefault(enableTaskAutoScaler, false);
+    this.scaleActionPeriodMillis = Configs.valueOrDefault(scaleActionPeriodMillis, DEFAULT_MIN_SCALE_UP_DELAY.getMillis());
 
-    // Timing configuration with defaults
-    this.scaleActionPeriodMillis = scaleActionPeriodMillis != null
-                                   ? scaleActionPeriodMillis
-                                   : DEFAULT_SCALE_ACTION_PERIOD_MILLIS;
-    this.minTriggerScaleActionFrequencyMillis = Configs.valueOrDefault(
-        minTriggerScaleActionFrequencyMillis,
-        DEFAULT_SCALE_ACTION_PERIOD_MILLIS
-    );
-
-    // Cost function weights with defaults
     this.lagWeight = Configs.valueOrDefault(lagWeight, DEFAULT_LAG_WEIGHT);
     this.idleWeight = Configs.valueOrDefault(idleWeight, DEFAULT_IDLE_WEIGHT);
     this.useTaskCountBoundariesOnScaleUp = Configs.valueOrDefault(useTaskCountBoundariesOnScaleUp, false);
     this.useTaskCountBoundariesOnScaleDown = Configs.valueOrDefault(useTaskCountBoundariesOnScaleDown, true);
-    this.minScaleUpDelay = Configs.valueOrDefault(
-        minScaleUpDelay,
-        Duration.millis(this.minTriggerScaleActionFrequencyMillis)
-    );
-    this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, DEFAULT_MIN_SCALE_DELAY);
+    this.minScaleUpDelay = Configs.valueOrDefault(minScaleUpDelay, DEFAULT_MIN_SCALE_UP_DELAY);
+    this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, DEFAULT_MIN_SCALE_DOWN_DELAY);
     this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, false);
     this.usePollIdleRatio = Configs.valueOrDefault(usePollIdleRatio, true);
 
@@ -194,7 +174,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   @JsonProperty
   public long getMinTriggerScaleActionFrequencyMillis()
   {
-    return minTriggerScaleActionFrequencyMillis;
+    return -1;
   }
 
   @Override
@@ -288,7 +268,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   @Override
   public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter)
   {
-    return new CostBasedAutoScaler((SeekableStreamSupervisor) supervisor, this, spec, emitter);
+    return new CostBasedAutoScaler((SeekableStreamSupervisor<?, ?, ?>) supervisor, this, spec, emitter);
   }
 
   @Override
@@ -306,7 +286,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     return enableTaskAutoScaler == that.enableTaskAutoScaler
            && taskCountMax == that.taskCountMax
            && taskCountMin == that.taskCountMin
-           && minTriggerScaleActionFrequencyMillis == that.minTriggerScaleActionFrequencyMillis
            && scaleActionPeriodMillis == that.scaleActionPeriodMillis
            && Double.compare(that.lagWeight, lagWeight) == 0
            && Double.compare(that.idleWeight, idleWeight) == 0
@@ -328,7 +307,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         taskCountMax,
         taskCountMin,
         taskCountStart,
-        minTriggerScaleActionFrequencyMillis,
         stopTaskCountRatio,
         scaleActionPeriodMillis,
         lagWeight,
@@ -350,7 +328,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", taskCountMax=" + taskCountMax +
            ", taskCountMin=" + taskCountMin +
            ", taskCountStart=" + taskCountStart +
-           ", minTriggerScaleActionFrequencyMillis=" + minTriggerScaleActionFrequencyMillis +
            ", stopTaskCountRatio=" + stopTaskCountRatio +
            ", scaleActionPeriodMillis=" + scaleActionPeriodMillis +
            ", lagWeight=" + lagWeight +
@@ -374,7 +351,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Integer taskCountMin;
     private Boolean enableTaskAutoScaler = true;
     private Integer taskCountStart;
-    private Long minTriggerScaleActionFrequencyMillis;
     private Double stopTaskCountRatio;
     private Long scaleActionPeriodMillis;
     private Double lagWeight;
@@ -411,12 +387,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     public Builder taskCountStart(Integer taskCountStart)
     {
       this.taskCountStart = taskCountStart;
-      return this;
-    }
-
-    public Builder minTriggerScaleActionFrequencyMillis(long minTriggerScaleActionFrequencyMillis)
-    {
-      this.minTriggerScaleActionFrequencyMillis = minTriggerScaleActionFrequencyMillis;
       return this;
     }
 
@@ -487,7 +457,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           taskCountMin,
           enableTaskAutoScaler,
           taskCountStart,
-          minTriggerScaleActionFrequencyMillis,
           stopTaskCountRatio,
           scaleActionPeriodMillis,
           lagWeight,

@@ -27,8 +27,8 @@ import org.junit.Test;
 
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_IDLE_WEIGHT;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_LAG_WEIGHT;
-import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DELAY;
-import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_SCALE_ACTION_PERIOD_MILLIS;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DOWN_DELAY;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_UP_DELAY;
 
 @SuppressWarnings("TextBlockMigration")
 public class CostBasedAutoScalerConfigTest
@@ -96,12 +96,12 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(2, config.getTaskCountMin());
 
     // Check defaults
-    Assert.assertEquals(DEFAULT_SCALE_ACTION_PERIOD_MILLIS, config.getScaleActionPeriodMillis());
+    Assert.assertEquals(DEFAULT_MIN_SCALE_UP_DELAY.getMillis(), config.getScaleActionPeriodMillis());
     Assert.assertEquals(DEFAULT_LAG_WEIGHT, config.getLagWeight(), 0.001);
     Assert.assertEquals(DEFAULT_IDLE_WEIGHT, config.getIdleWeight(), 0.001);
     // minScaleUpDelay and minScaleDownDelay each have their own independent default
-    Assert.assertEquals(Duration.millis(DEFAULT_SCALE_ACTION_PERIOD_MILLIS), config.getMinScaleUpDelay());
-    Assert.assertEquals(DEFAULT_MIN_SCALE_DELAY, config.getMinScaleDownDelay());
+    Assert.assertEquals(DEFAULT_MIN_SCALE_UP_DELAY, config.getMinScaleUpDelay());
+    Assert.assertEquals(DEFAULT_MIN_SCALE_DOWN_DELAY, config.getMinScaleDownDelay());
     Assert.assertFalse(config.isScaleDownOnTaskRolloverOnly());
     Assert.assertTrue(config.isUsePollIdleRatio());
     Assert.assertFalse(config.isUseTaskCountBoundariesOnScaleUp());
@@ -220,8 +220,8 @@ public class CostBasedAutoScalerConfigTest
                                                                   .taskCountMax(10)
                                                                   .taskCountMin(1)
                                                                   .build();
-    Assert.assertEquals(Duration.millis(DEFAULT_SCALE_ACTION_PERIOD_MILLIS), defaults.getMinScaleUpDelay());
-    Assert.assertEquals(DEFAULT_MIN_SCALE_DELAY, defaults.getMinScaleDownDelay());
+    Assert.assertEquals(DEFAULT_MIN_SCALE_UP_DELAY, defaults.getMinScaleUpDelay());
+    Assert.assertEquals(DEFAULT_MIN_SCALE_DOWN_DELAY, defaults.getMinScaleDownDelay());
 
     // Only minScaleUpDelay set: up uses explicit value, down uses its default
     CostBasedAutoScalerConfig upOnly = CostBasedAutoScalerConfig.builder()
@@ -230,7 +230,7 @@ public class CostBasedAutoScalerConfigTest
                                                                 .minScaleUpDelay(Duration.standardMinutes(5))
                                                                 .build();
     Assert.assertEquals(Duration.standardMinutes(5), upOnly.getMinScaleUpDelay());
-    Assert.assertEquals(DEFAULT_MIN_SCALE_DELAY, upOnly.getMinScaleDownDelay());
+    Assert.assertEquals(DEFAULT_MIN_SCALE_DOWN_DELAY, upOnly.getMinScaleDownDelay());
 
     // Only minScaleDownDelay set: down uses explicit value, up uses its own default (does not fall back to down)
     CostBasedAutoScalerConfig downOnly = CostBasedAutoScalerConfig.builder()
@@ -238,7 +238,7 @@ public class CostBasedAutoScalerConfigTest
                                                                   .taskCountMin(1)
                                                                   .minScaleDownDelay(Duration.standardMinutes(20))
                                                                   .build();
-    Assert.assertEquals(Duration.millis(DEFAULT_SCALE_ACTION_PERIOD_MILLIS), downOnly.getMinScaleUpDelay());
+    Assert.assertEquals(DEFAULT_MIN_SCALE_UP_DELAY, downOnly.getMinScaleUpDelay());
     Assert.assertEquals(Duration.standardMinutes(20), downOnly.getMinScaleDownDelay());
 
     // Both set: serde roundtrip preserves values
@@ -261,9 +261,9 @@ public class CostBasedAutoScalerConfigTest
   @SuppressWarnings("deprecation")
   public void testMinTriggerScaleActionFrequencyMillisSerdeCompat() throws Exception
   {
-    final long defaultMinTriggerMillis = DEFAULT_SCALE_ACTION_PERIOD_MILLIS;
-    final Duration defaultUp = Duration.millis(DEFAULT_SCALE_ACTION_PERIOD_MILLIS);
-    final Duration defaultDown = DEFAULT_MIN_SCALE_DELAY;
+    final long defaultMinTriggerMillis = -1;
+    final Duration defaultUp = DEFAULT_MIN_SCALE_UP_DELAY;
+    final Duration defaultDown = DEFAULT_MIN_SCALE_DOWN_DELAY;
 
     // Backwards-compat: nothing set -> everything uses its own default.
     {
@@ -285,8 +285,7 @@ public class CostBasedAutoScalerConfigTest
           + "\"minTriggerScaleActionFrequencyMillis\":900000}",
           CostBasedAutoScalerConfig.class
       );
-      Assert.assertEquals(900_000L, config.getMinTriggerScaleActionFrequencyMillis());
-      Assert.assertEquals(Duration.millis(900_000L), config.getMinScaleUpDelay());
+      Assert.assertEquals(defaultUp, config.getMinScaleUpDelay());
       Assert.assertEquals(defaultDown, config.getMinScaleDownDelay());
       assertRoundTrips(config);
     }
@@ -313,7 +312,6 @@ public class CostBasedAutoScalerConfigTest
           + "\"minScaleUpDelay\":\"PT2M\",\"minScaleDownDelay\":\"PT15M\"}",
           CostBasedAutoScalerConfig.class
       );
-      Assert.assertEquals(900_000L, config.getMinTriggerScaleActionFrequencyMillis());
       Assert.assertEquals(Duration.standardMinutes(2), config.getMinScaleUpDelay());
       Assert.assertEquals(Duration.standardMinutes(15), config.getMinScaleDownDelay());
       assertRoundTrips(config);
@@ -328,7 +326,6 @@ public class CostBasedAutoScalerConfigTest
           + "\"minScaleUpDelay\":\"PT2M\"}",
           CostBasedAutoScalerConfig.class
       );
-      Assert.assertEquals(900_000L, config.getMinTriggerScaleActionFrequencyMillis());
       Assert.assertEquals(Duration.standardMinutes(2), config.getMinScaleUpDelay());
       Assert.assertEquals(defaultDown, config.getMinScaleDownDelay());
       assertRoundTrips(config);
@@ -342,8 +339,7 @@ public class CostBasedAutoScalerConfigTest
           + "\"minScaleDownDelay\":\"PT15M\"}",
           CostBasedAutoScalerConfig.class
       );
-      Assert.assertEquals(900_000L, config.getMinTriggerScaleActionFrequencyMillis());
-      Assert.assertEquals(Duration.millis(900_000L), config.getMinScaleUpDelay());
+      Assert.assertEquals(defaultUp, config.getMinScaleUpDelay());
       Assert.assertEquals(Duration.standardMinutes(15), config.getMinScaleDownDelay());
       assertRoundTrips(config);
     }

@@ -512,7 +512,7 @@ public class CostBasedAutoScalerTest
                                                                          .enableTaskAutoScaler(true)
                                                                          .build();
     Assert.assertEquals(
-        CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DELAY,
+        CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DOWN_DELAY,
         cfgWithDefaults.getMinScaleDownDelay()
     );
     Assert.assertFalse(cfgWithDefaults.isScaleDownOnTaskRolloverOnly());

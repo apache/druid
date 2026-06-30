@@ -906,8 +906,6 @@ c3.2xlarge
 defaultManualBrokerService
 maxPriority
 minPriority
-minScaleUpDelay
-minScaleDownDelay
 NUMBER_FEATURES
 NUMBER_OF_CONTRIBUTORS
 PreparedStatement
