@@ -62,7 +62,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
 
   private final double lagWeight;
   private final double idleWeight;
-  private final double idealIdleRatio;
+  private final double optimalTaskIdleRatio;
   private final boolean useTaskCountBoundariesOnScaleUp;
   private final boolean useTaskCountBoundariesOnScaleDown;
   private final Duration minScaleUpDelay;
@@ -87,7 +87,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("scaleActionPeriodMillis") Long scaleActionPeriodMillis,
       @Nullable @JsonProperty("lagWeight") Double lagWeight,
       @Nullable @JsonProperty("idleWeight") Double idleWeight,
-      @Nullable @JsonProperty("idealIdleRatio") Double idealIdleRatio,
+      @Nullable @JsonProperty("optimalTaskIdleRatio") Double optimalTaskIdleRatio,
       @Nullable @JsonProperty("useTaskCountBoundariesOnScaleUp") Boolean useTaskCountBoundariesOnScaleUp,
       @Nullable @JsonProperty("useTaskCountBoundariesOnScaleDown") Boolean useTaskCountBoundariesOnScaleDown,
       @Nullable @JsonProperty("minScaleUpDelay") Duration minScaleUpDelay,
@@ -110,7 +110,10 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     // Cost function weights with defaults
     this.lagWeight = Configs.valueOrDefault(lagWeight, DEFAULT_LAG_WEIGHT);
     this.idleWeight = Configs.valueOrDefault(idleWeight, DEFAULT_IDLE_WEIGHT);
-    this.idealIdleRatio = Configs.valueOrDefault(idealIdleRatio, WeightedCostFunction.IDEAL_IDLE_RATIO);
+    this.optimalTaskIdleRatio = Configs.valueOrDefault(
+        optimalTaskIdleRatio,
+        WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO
+    );
     this.useTaskCountBoundariesOnScaleUp = Configs.valueOrDefault(useTaskCountBoundariesOnScaleUp, false);
     this.useTaskCountBoundariesOnScaleDown = Configs.valueOrDefault(useTaskCountBoundariesOnScaleDown, true);
     this.minScaleUpDelay = Configs.valueOrDefault(
@@ -146,8 +149,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     Preconditions.checkArgument(this.lagWeight >= 0, "lagWeight must be >= 0");
     Preconditions.checkArgument(this.idleWeight >= 0, "idleWeight must be >= 0");
     Preconditions.checkArgument(
-        this.idealIdleRatio > 0.0 && this.idealIdleRatio < 1.0,
-        "idealIdleRatio must be > 0 and < 1"
+        this.optimalTaskIdleRatio > 0.0 && this.optimalTaskIdleRatio < 1.0,
+        "optimalTaskIdleRatio must be > 0 and < 1"
     );
     Preconditions.checkArgument(
         this.minScaleUpDelay.getMillis() >= 0,
@@ -235,9 +238,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
    * in {@link WeightedCostFunction}.
    */
   @JsonProperty
-  public double getIdealIdleRatio()
+  public double getOptimalTaskIdleRatio()
   {
-    return idealIdleRatio;
+    return optimalTaskIdleRatio;
   }
 
   /**
@@ -327,7 +330,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && scaleActionPeriodMillis == that.scaleActionPeriodMillis
            && Double.compare(that.lagWeight, lagWeight) == 0
            && Double.compare(that.idleWeight, idleWeight) == 0
-           && Double.compare(that.idealIdleRatio, idealIdleRatio) == 0
+           && Double.compare(that.optimalTaskIdleRatio, optimalTaskIdleRatio) == 0
            && useTaskCountBoundariesOnScaleUp == that.useTaskCountBoundariesOnScaleUp
            && useTaskCountBoundariesOnScaleDown == that.useTaskCountBoundariesOnScaleDown
            && Objects.equals(minScaleUpDelay, that.minScaleUpDelay)
@@ -351,7 +354,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         scaleActionPeriodMillis,
         lagWeight,
         idleWeight,
-        idealIdleRatio,
+        optimalTaskIdleRatio,
         useTaskCountBoundariesOnScaleUp,
         useTaskCountBoundariesOnScaleDown,
         minScaleUpDelay,
@@ -374,7 +377,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", scaleActionPeriodMillis=" + scaleActionPeriodMillis +
            ", lagWeight=" + lagWeight +
            ", idleWeight=" + idleWeight +
-           ", idealIdleRatio=" + idealIdleRatio +
+           ", optimalTaskIdleRatio=" + optimalTaskIdleRatio +
            ", useTaskCountBoundariesOnScaleUp=" + useTaskCountBoundariesOnScaleUp +
            ", useTaskCountBoundariesOnScaleDown=" + useTaskCountBoundariesOnScaleDown +
            ", minScaleUpDelay=" + minScaleUpDelay +
@@ -399,7 +402,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Long scaleActionPeriodMillis;
     private Double lagWeight;
     private Double idleWeight;
-    private Double idealIdleRatio;
+    private Double optimalTaskIdleRatio;
     private Boolean useTaskCountBoundariesOnScaleUp;
     private Boolean useTaskCountBoundariesOnScaleDown;
     private Duration minScaleUpDelay;
@@ -465,9 +468,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
-    public Builder idealIdleRatio(double idealIdleRatio)
+    public Builder optimalTaskIdleRatio(double optimalTaskIdleRatio)
     {
-      this.idealIdleRatio = idealIdleRatio;
+      this.optimalTaskIdleRatio = optimalTaskIdleRatio;
       return this;
     }
 
@@ -519,7 +522,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           scaleActionPeriodMillis,
           lagWeight,
           idleWeight,
-          idealIdleRatio,
+          optimalTaskIdleRatio,
           useTaskCountBoundariesOnScaleUp,
           useTaskCountBoundariesOnScaleDown,
           minScaleUpDelay,

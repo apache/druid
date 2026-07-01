@@ -210,10 +210,10 @@ public class WeightedCostFunctionTest
   }
 
   @Test
-  public void testIdleCostIsUShapedAroundIdealRatio()
+  public void testIdleCostIsUShapedAroundOptimalTaskIdleRatio()
   {
-    // U-shaped cost: minimum near IDEAL_IDLE_RATIO=0.25, higher on both sides.
-    // Current: 10 tasks with 25% idle (already at ideal).
+    // U-shaped cost: minimum near OPTIMAL_TASK_IDLE_RATIO=0.25, higher on both sides.
+    // Current: 10 tasks with 25% idle (already at optimum).
     CostBasedAutoScalerConfig idleOnlyConfig = CostBasedAutoScalerConfig.builder()
                                                                         .taskCountMax(100)
                                                                         .taskCountMin(1)
@@ -255,7 +255,10 @@ public class WeightedCostFunctionTest
     double costAt2 = costFunction.computeCost(metrics, 2, idleOnlyConfig).totalCost();
 
     // idle = 0: max under-provisioning penalty; cost = taskCount * (IDEAL + UNDER_PENALTY)
-    double expectedAt2 = 2 * (WeightedCostFunction.IDEAL_IDLE_RATIO + WeightedCostFunction.UNDER_PROVISIONING_PENALTY);
+    double expectedAt2 = 2 * (
+        WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO
+        + WeightedCostFunction.UNDER_PROVISIONING_PENALTY
+    );
     Assert.assertEquals("Idle cost at clamped-to-zero idle ratio should reflect full under-provisioning penalty",
                         expectedAt2, costAt2, 0.0001);
 
@@ -292,7 +295,7 @@ public class WeightedCostFunctionTest
 
     // Far below the clamped-to-zero cost the linear model produced: idle is healthy, not clamped.
     double clampedToZeroCost =
-        5 * (WeightedCostFunction.IDEAL_IDLE_RATIO + WeightedCostFunction.UNDER_PROVISIONING_PENALTY);
+        5 * (WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO + WeightedCostFunction.UNDER_PROVISIONING_PENALTY);
     Assert.assertTrue(
         "Predicted idle should be healthy, not clamped to zero",
         costScaleDown < clampedToZeroCost
@@ -318,7 +321,7 @@ public class WeightedCostFunctionTest
 
     // With missing data, predicted idle = 0.5 for all task counts regardless of proposed count.
     // U-shaped cost at idle=0.5: idle > IDEAL(0.25), norm=(0.5-0.25)/0.75=1/3, penalty=1*(1/3)^2=1/9
-    double expectedCostPerTask = WeightedCostFunction.IDEAL_IDLE_RATIO
+    double expectedCostPerTask = WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO
                                  + WeightedCostFunction.OVER_PROVISIONING_PENALTY * (1.0 / 3.0) * (1.0 / 3.0);
     Assert.assertEquals("Cost at 10 tasks with missing idle data", 10 * expectedCostPerTask, cost10, 0.0001);
     Assert.assertEquals("Cost at 20 tasks with missing idle data", 20 * expectedCostPerTask, cost20, 0.0001);
@@ -394,42 +397,57 @@ public class WeightedCostFunctionTest
   {
     int n = 10;
 
-    // At ideal ratio: penalty = 0, cost = n * IDEAL_IDLE_RATIO
+    // At optimal ratio: penalty = 0, cost = n * OPTIMAL_TASK_IDLE_RATIO
     Assert.assertEquals(
-        n * WeightedCostFunction.IDEAL_IDLE_RATIO,
-        costFunction.uShapedIdleCost(WeightedCostFunction.IDEAL_IDLE_RATIO, n, WeightedCostFunction.IDEAL_IDLE_RATIO),
+        n * WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO,
+        costFunction.uShapedIdleCost(
+            WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO,
+            n,
+            WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO
+        ),
         1e-9
     );
 
     // At idle = 0 (fully under-provisioned): norm = 1, penalty = UNDER_PROVISIONING_PENALTY
     Assert.assertEquals(
-        n * (WeightedCostFunction.IDEAL_IDLE_RATIO + WeightedCostFunction.UNDER_PROVISIONING_PENALTY),
-        costFunction.uShapedIdleCost(0.0, n, WeightedCostFunction.IDEAL_IDLE_RATIO),
+        n * (WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO + WeightedCostFunction.UNDER_PROVISIONING_PENALTY),
+        costFunction.uShapedIdleCost(0.0, n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
         1e-9
     );
 
     // At idle = 1 (fully over-provisioned): norm = 1, penalty = OVER_PROVISIONING_PENALTY
     Assert.assertEquals(
-        n * (WeightedCostFunction.IDEAL_IDLE_RATIO + WeightedCostFunction.OVER_PROVISIONING_PENALTY),
-        costFunction.uShapedIdleCost(1.0, n, WeightedCostFunction.IDEAL_IDLE_RATIO),
+        n * (WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO + WeightedCostFunction.OVER_PROVISIONING_PENALTY),
+        costFunction.uShapedIdleCost(1.0, n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
         1e-9
     );
 
-    // Both extremes exceed the ideal cost
-    double idealCost = costFunction.uShapedIdleCost(WeightedCostFunction.IDEAL_IDLE_RATIO, n, WeightedCostFunction.IDEAL_IDLE_RATIO);
-    Assert.assertTrue("idle=0 costs more than ideal", costFunction.uShapedIdleCost(0.0, n, WeightedCostFunction.IDEAL_IDLE_RATIO) > idealCost);
-    Assert.assertTrue("idle=1 costs more than ideal", costFunction.uShapedIdleCost(1.0, n, WeightedCostFunction.IDEAL_IDLE_RATIO) > idealCost);
+    // Both extremes exceed the optimal cost
+    final double optimalCost = costFunction.uShapedIdleCost(
+        WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO,
+        n,
+        WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO
+    );
+    Assert.assertTrue(
+        "idle=0 costs more than optimal",
+        costFunction.uShapedIdleCost(0.0, n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO) > optimalCost
+    );
+    Assert.assertTrue(
+        "idle=1 costs more than optimal",
+        costFunction.uShapedIdleCost(1.0, n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO) > optimalCost
+    );
 
     // Over-provisioning is penalized more than under-provisioning (OVER > UNDER)
     Assert.assertTrue(
         "over-provisioning penalty exceeds under-provisioning penalty",
-        costFunction.uShapedIdleCost(1.0, n, WeightedCostFunction.IDEAL_IDLE_RATIO) > costFunction.uShapedIdleCost(0.0, n, WeightedCostFunction.IDEAL_IDLE_RATIO)
+        costFunction.uShapedIdleCost(1.0, n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO)
+        > costFunction.uShapedIdleCost(0.0, n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO)
     );
 
     // Cost scales linearly with task count at any fixed idle ratio
     Assert.assertEquals(
-        2 * costFunction.uShapedIdleCost(0.5, n, WeightedCostFunction.IDEAL_IDLE_RATIO),
-        costFunction.uShapedIdleCost(0.5, 2 * n, WeightedCostFunction.IDEAL_IDLE_RATIO),
+        2 * costFunction.uShapedIdleCost(0.5, n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
+        costFunction.uShapedIdleCost(0.5, 2 * n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
         1e-9
     );
   }
@@ -484,7 +502,7 @@ public class WeightedCostFunctionTest
     double costWithPollIdleRatio = costFunction.computeCost(metrics, 10, idleOnlyConfig).totalCost();
     Assert.assertEquals(
         "Default config should cost using the raw pollIdleRatio",
-        costFunction.uShapedIdleCost(0.9, 10, WeightedCostFunction.IDEAL_IDLE_RATIO),
+        costFunction.uShapedIdleCost(0.9, 10, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
         costWithPollIdleRatio,
         0.0001
     );
@@ -492,7 +510,7 @@ public class WeightedCostFunctionTest
     double costWithUtilizationRatio = costFunction.computeCost(metrics, 10, utilizationConfig).totalCost();
     Assert.assertEquals(
         "usePollIdleRatio=false should cost using the rate-derived idle ratio instead of pollIdleRatio",
-        costFunction.uShapedIdleCost(0.9, 10, WeightedCostFunction.IDEAL_IDLE_RATIO),
+        costFunction.uShapedIdleCost(0.9, 10, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
         costWithUtilizationRatio,
         0.0001
     );
@@ -502,13 +520,13 @@ public class WeightedCostFunctionTest
     double costStillPollIdle = costFunction.computeCost(divergingMetrics, 10, idleOnlyConfig).totalCost();
     double costStillUtilization = costFunction.computeCost(divergingMetrics, 10, utilizationConfig).totalCost();
     Assert.assertEquals(
-        costFunction.uShapedIdleCost(0.1, 10, WeightedCostFunction.IDEAL_IDLE_RATIO),
+        costFunction.uShapedIdleCost(0.1, 10, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
         costStillPollIdle,
         0.0001
     );
     Assert.assertEquals(
         "Utilization-derived idle ratio (0.9) should be used instead of the diverging pollIdleRatio (0.1)",
-        costFunction.uShapedIdleCost(0.9, 10, WeightedCostFunction.IDEAL_IDLE_RATIO),
+        costFunction.uShapedIdleCost(0.9, 10, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
         costStillUtilization,
         0.0001
     );

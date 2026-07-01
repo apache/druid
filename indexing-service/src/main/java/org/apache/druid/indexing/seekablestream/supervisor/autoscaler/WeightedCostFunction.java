@@ -27,7 +27,7 @@ import org.apache.druid.java.util.common.logger.Logger;
  * Lag cost is based on recovery time in seconds; idle cost is a penalty derived from
  * the predicted idle ratio.
  *
- * <p>Idle cost uses a U-shaped penalty with minimum at {@link #IDEAL_IDLE_RATIO}.
+ * <p>Idle cost uses a U-shaped penalty with minimum at {@link #OPTIMAL_TASK_IDLE_RATIO}.
  * This penalizes both under-provisioning (low idle, no safety margin, lag risk) and
  * over-provisioning (high idle, wasted capacity), with asymmetric severity controlled by
  * {@link #UNDER_PROVISIONING_PENALTY} and {@link #OVER_PROVISIONING_PENALTY}.
@@ -60,9 +60,9 @@ public class WeightedCostFunction
   /**
    * Default target idle ratio representing the optimal operating point for the U-shaped idle cost.
    * At this ratio the idle cost is at its minimum; both lower (risk) and higher (waste) are penalized.
-   * Configurable via {@link CostBasedAutoScalerConfig#getIdealIdleRatio()}.
+   * Configurable via {@link CostBasedAutoScalerConfig#getOptimalTaskIdleRatio()}.
    */
-  static final double IDEAL_IDLE_RATIO = 0.25;
+  static final double OPTIMAL_TASK_IDLE_RATIO = 0.25;
 
   /**
    * Penalty magnitude applied when idle ratio is 0 (no safety margin).
@@ -149,7 +149,7 @@ public class WeightedCostFunction
     }
     final double virtualLagRecoveryTime = overrun * metrics.getTaskDurationSeconds();
 
-    final double idleCost = uShapedIdleCost(predictedIdleRatio, proposedTaskCount, config.getIdealIdleRatio());
+    final double idleCost = uShapedIdleCost(predictedIdleRatio, proposedTaskCount, config.getOptimalTaskIdleRatio());
     final double lagCost = config.getLagWeight() * (lagRecoveryTime + virtualLagRecoveryTime);
     final double weightedIdleCost = config.getIdleWeight() * idleCost;
     final double cost = lagCost + weightedIdleCost;
@@ -169,28 +169,28 @@ public class WeightedCostFunction
   }
 
   /**
-   * U-shaped idle cost with minimum at {@link #IDEAL_IDLE_RATIO}.
+   * U-shaped idle cost with minimum at {@link #OPTIMAL_TASK_IDLE_RATIO}.
    *
    * <ul>
    *   <li>idle &lt; ideal: under-provisioning penalty, no safety margin, lag risk</li>
-   *   <li>idle = ideal: baseline cost only ({@code taskCount * IDEAL_IDLE_RATIO})</li>
+   *   <li>idle = ideal: baseline cost only ({@code taskCount * OPTIMAL_TASK_IDLE_RATIO})</li>
    *   <li>idle &gt; ideal: over-provisioning penalty, wasted capacity</li>
    * </ul>
    * <p>
-   * The ideal-idle baseline keeps cost non-zero at the optimum so the optimizer
+   * The optimal-task-idle baseline keeps cost non-zero at the optimum so the optimizer
    * always has a finite trade-off against lag cost.
    */
-  double uShapedIdleCost(double predictedIdleRatio, int taskCount, double idealIdleRatio)
+  double uShapedIdleCost(double predictedIdleRatio, int taskCount, double optimalTaskIdleRatio)
   {
     final double penalty;
-    if (predictedIdleRatio < idealIdleRatio) {
-      final double norm = (idealIdleRatio - predictedIdleRatio) / idealIdleRatio;
+    if (predictedIdleRatio < optimalTaskIdleRatio) {
+      final double norm = (optimalTaskIdleRatio - predictedIdleRatio) / optimalTaskIdleRatio;
       penalty = UNDER_PROVISIONING_PENALTY * norm * norm;
     } else {
-      final double norm = (predictedIdleRatio - idealIdleRatio) / (1.0 - idealIdleRatio);
+      final double norm = (predictedIdleRatio - optimalTaskIdleRatio) / (1.0 - optimalTaskIdleRatio);
       penalty = OVER_PROVISIONING_PENALTY * norm * norm;
     }
-    return taskCount * (idealIdleRatio + penalty);
+    return taskCount * (optimalTaskIdleRatio + penalty);
   }
 
 }

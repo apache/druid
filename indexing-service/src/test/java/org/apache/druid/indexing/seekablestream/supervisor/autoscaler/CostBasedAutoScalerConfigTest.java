@@ -29,7 +29,7 @@ import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.Cos
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_LAG_WEIGHT;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DELAY;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_SCALE_ACTION_PERIOD_MILLIS;
-import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.WeightedCostFunction.IDEAL_IDLE_RATIO;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO;
 
 @SuppressWarnings("TextBlockMigration")
 public class CostBasedAutoScalerConfigTest
@@ -50,7 +50,7 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"scaleActionPeriodMillis\": 60000,\n"
                   + "  \"lagWeight\": 0.6,\n"
                   + "  \"idleWeight\": 0.4,\n"
-                  + "  \"idealIdleRatio\": 0.3,\n"
+                  + "  \"optimalTaskIdleRatio\": 0.3,\n"
                   + "  \"minScaleUpDelay\": \"PT5M\",\n"
                   + "  \"minScaleDownDelay\": \"PT10M\",\n"
                   + "  \"scaleDownDuringTaskRolloverOnly\": true,\n"
@@ -67,7 +67,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(60000L, config.getScaleActionPeriodMillis());
     Assert.assertEquals(0.6, config.getLagWeight(), 0.001);
     Assert.assertEquals(0.4, config.getIdleWeight(), 0.001);
-    Assert.assertEquals(0.3, config.getIdealIdleRatio(), 0.001);
+    Assert.assertEquals(0.3, config.getOptimalTaskIdleRatio(), 0.001);
     Assert.assertEquals(Duration.standardMinutes(5), config.getMinScaleUpDelay());
     Assert.assertEquals(Duration.standardMinutes(10), config.getMinScaleDownDelay());
     Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
@@ -102,7 +102,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(DEFAULT_SCALE_ACTION_PERIOD_MILLIS, config.getScaleActionPeriodMillis());
     Assert.assertEquals(DEFAULT_LAG_WEIGHT, config.getLagWeight(), 0.001);
     Assert.assertEquals(DEFAULT_IDLE_WEIGHT, config.getIdleWeight(), 0.001);
-    Assert.assertEquals(IDEAL_IDLE_RATIO, config.getIdealIdleRatio(), 0.001);
+    Assert.assertEquals(OPTIMAL_TASK_IDLE_RATIO, config.getOptimalTaskIdleRatio(), 0.001);
     // minScaleUpDelay and minScaleDownDelay each have their own independent default
     Assert.assertEquals(Duration.millis(DEFAULT_SCALE_ACTION_PERIOD_MILLIS), config.getMinScaleUpDelay());
     Assert.assertEquals(DEFAULT_MIN_SCALE_DELAY, config.getMinScaleDownDelay());
@@ -181,23 +181,23 @@ public class CostBasedAutoScalerConfigTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testValidationZeroIdealIdleRatio()
+  public void testValidationZeroOptimalTaskIdleRatio()
   {
     CostBasedAutoScalerConfig.builder()
                              .taskCountMax(100)
                              .taskCountMin(5)
-                             .idealIdleRatio(0.0)
+                             .optimalTaskIdleRatio(0.0)
                              .enableTaskAutoScaler(true)
                              .build();
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testValidationOneIdealIdleRatio()
+  public void testValidationOneOptimalTaskIdleRatio()
   {
     CostBasedAutoScalerConfig.builder()
                              .taskCountMax(100)
                              .taskCountMin(5)
-                             .idealIdleRatio(1.0)
+                             .optimalTaskIdleRatio(1.0)
                              .enableTaskAutoScaler(true)
                              .build();
   }
@@ -214,7 +214,7 @@ public class CostBasedAutoScalerConfigTest
                                                                       .scaleActionPeriodMillis(60000L)
                                                                       .lagWeight(0.6)
                                                                       .idleWeight(0.4)
-                                                                      .idealIdleRatio(0.3)
+                                                                      .optimalTaskIdleRatio(0.3)
                                                                       .useTaskCountBoundariesOnScaleUp(true)
                                                                       .useTaskCountBoundariesOnScaleDown(true)
                                                                       .minScaleUpDelay(Duration.standardMinutes(5))
@@ -231,7 +231,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(60000L, config.getScaleActionPeriodMillis());
     Assert.assertEquals(0.6, config.getLagWeight(), 0.001);
     Assert.assertEquals(0.4, config.getIdleWeight(), 0.001);
-    Assert.assertEquals(0.3, config.getIdealIdleRatio(), 0.001);
+    Assert.assertEquals(0.3, config.getOptimalTaskIdleRatio(), 0.001);
     Assert.assertTrue(config.isUseTaskCountBoundariesOnScaleUp());
     Assert.assertTrue(config.isUseTaskCountBoundariesOnScaleDown());
     Assert.assertEquals(Duration.standardMinutes(5), config.getMinScaleUpDelay());
