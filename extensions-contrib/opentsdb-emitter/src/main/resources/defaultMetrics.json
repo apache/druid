@@ -105,6 +105,29 @@
   "ingest/events/messageGap": [
     "dataSource"
   ],
+  "ingest/segmentUpgrade/count": [
+    "dataSource"
+  ],
+  "ingest/segmentUpgrade/notified": [
+    "dataSource",
+    "stream"
+  ],
+  "ingest/segmentUpgrade/unmatched": [
+    "dataSource",
+    "stream"
+  ],
+  "ingest/segmentUpgrade/sendFailed": [
+    "dataSource",
+    "stream",
+    "taskId"
+  ],
+  "ingest/segmentUpgrade/announced": [
+    "dataSource"
+  ],
+  "ingest/segmentUpgrade/skipped": [
+    "dataSource",
+    "reason"
+  ],
   "ingest/kafka/lag": [
     "dataSource",
     "stream"

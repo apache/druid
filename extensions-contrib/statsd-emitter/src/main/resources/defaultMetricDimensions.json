@@ -57,6 +57,13 @@
   "ingest/segments/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/rows/published": { "dimensions" : ["dataSource"], "type" : "count" },
 
+  "ingest/segmentUpgrade/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "ingest/segmentUpgrade/notified" : { "dimensions" : ["dataSource", "stream"], "type" : "count" },
+  "ingest/segmentUpgrade/unmatched" : { "dimensions" : ["dataSource", "stream"], "type" : "count" },
+  "ingest/segmentUpgrade/sendFailed" : { "dimensions" : ["dataSource", "stream", "taskId"], "type" : "count" },
+  "ingest/segmentUpgrade/announced" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "ingest/segmentUpgrade/skipped" : { "dimensions" : ["dataSource", "reason"], "type" : "count" },
+
   "ingest/kafka/lag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
   "ingest/kafka/maxLag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
   "ingest/kafka/avgLag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
