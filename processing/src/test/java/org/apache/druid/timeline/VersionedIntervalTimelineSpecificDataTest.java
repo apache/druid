@@ -32,20 +32,40 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 
 /**
  * This test class is separated from {@link VersionedIntervalTimelineTest} because it populates specific data for tests
  * in {@link #setUp()}.
  */
+@RunWith(Parameterized.class)
 public class VersionedIntervalTimelineSpecificDataTest extends VersionedIntervalTimelineTestBase
 {
+  @Parameterized.Parameters
+  public static Collection<Boolean> parameters()
+  {
+    return Arrays.asList(
+            false,
+            true
+    );
+  }
+
+  public VersionedIntervalTimelineSpecificDataTest(boolean fastIntervalSearch)
+  {
+    this.fastIntervalSearch = fastIntervalSearch;
+  }
+
+  private final boolean fastIntervalSearch;
+
   @Before
   public void setUp()
   {
-    timeline = makeStringIntegerTimeline();
+    timeline = makeStringIntegerTimeline(fastIntervalSearch);
 
     add("2011-04-01/2011-04-03", "1", 2);
     add("2011-04-03/2011-04-06", "1", 3);
