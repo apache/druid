@@ -101,13 +101,28 @@ public class WeightedCostFunctionTest
     double amplification = 1.0 + WeightedCostFunction.LAG_AMPLIFICATION_MULTIPLIER * Math.log(aggregateLag / 100);
 
     double costCurrent = costFunction.computeCost(metrics, 10, lagOnlyConfig).totalCost();
-    Assert.assertEquals("Cost of current tasks", aggregateLag * amplification / (10 * 1000.0), costCurrent, 0.1);
+    Assert.assertEquals(
+        "Cost of current tasks",
+        aggregateLag * amplification / (10 * WeightedCostFunction.MIN_PROCESSING_RATE),
+        costCurrent,
+        0.1
+    );
 
     double costUp5 = costFunction.computeCost(metrics, 15, lagOnlyConfig).totalCost();
-    Assert.assertEquals("Cost when scaling up by 5", aggregateLag * amplification / (15 * 1000.0), costUp5, 0.1);
+    Assert.assertEquals(
+        "Cost when scaling up by 5",
+        aggregateLag * amplification / (15 * WeightedCostFunction.MIN_PROCESSING_RATE),
+        costUp5,
+        0.1
+    );
 
     double costUp10 = costFunction.computeCost(metrics, 20, lagOnlyConfig).totalCost();
-    Assert.assertEquals("Cost when scaling up by 10", aggregateLag * amplification / (20 * 1000.0), costUp10, 0.1);
+    Assert.assertEquals(
+        "Cost when scaling up by 10",
+        aggregateLag * amplification / (20 * WeightedCostFunction.MIN_PROCESSING_RATE),
+        costUp10,
+        0.1
+    );
 
     // Adding more tasks reduces lag recovery time
     Assert.assertTrue("Adding more tasks reduces lag cost", costUp10 < costUp5);
@@ -334,7 +349,7 @@ public class WeightedCostFunctionTest
     double aggregateLag = 150.0 * partitionCount;
     double lagPerPartition = aggregateLag / partitionCount;
     double amplification = 1.0 + WeightedCostFunction.LAG_AMPLIFICATION_MULTIPLIER * Math.log(lagPerPartition);
-    double expected = aggregateLag * amplification / (proposedTaskCount * 1000.0);
+    double expected = aggregateLag * amplification / (proposedTaskCount * WeightedCostFunction.MIN_PROCESSING_RATE);
 
     Assert.assertEquals("Lag amplification should increase lag recovery time", expected, costWithAmp, 0.0001);
   }
@@ -382,39 +397,39 @@ public class WeightedCostFunctionTest
     // At ideal ratio: penalty = 0, cost = n * IDEAL_IDLE_RATIO
     Assert.assertEquals(
         n * WeightedCostFunction.IDEAL_IDLE_RATIO,
-        costFunction.uShapedIdleCost(WeightedCostFunction.IDEAL_IDLE_RATIO, n),
+        costFunction.uShapedIdleCost(WeightedCostFunction.IDEAL_IDLE_RATIO, n, WeightedCostFunction.IDEAL_IDLE_RATIO),
         1e-9
     );
 
     // At idle = 0 (fully under-provisioned): norm = 1, penalty = UNDER_PROVISIONING_PENALTY
     Assert.assertEquals(
         n * (WeightedCostFunction.IDEAL_IDLE_RATIO + WeightedCostFunction.UNDER_PROVISIONING_PENALTY),
-        costFunction.uShapedIdleCost(0.0, n),
+        costFunction.uShapedIdleCost(0.0, n, WeightedCostFunction.IDEAL_IDLE_RATIO),
         1e-9
     );
 
     // At idle = 1 (fully over-provisioned): norm = 1, penalty = OVER_PROVISIONING_PENALTY
     Assert.assertEquals(
         n * (WeightedCostFunction.IDEAL_IDLE_RATIO + WeightedCostFunction.OVER_PROVISIONING_PENALTY),
-        costFunction.uShapedIdleCost(1.0, n),
+        costFunction.uShapedIdleCost(1.0, n, WeightedCostFunction.IDEAL_IDLE_RATIO),
         1e-9
     );
 
     // Both extremes exceed the ideal cost
-    double idealCost = costFunction.uShapedIdleCost(WeightedCostFunction.IDEAL_IDLE_RATIO, n);
-    Assert.assertTrue("idle=0 costs more than ideal", costFunction.uShapedIdleCost(0.0, n) > idealCost);
-    Assert.assertTrue("idle=1 costs more than ideal", costFunction.uShapedIdleCost(1.0, n) > idealCost);
+    double idealCost = costFunction.uShapedIdleCost(WeightedCostFunction.IDEAL_IDLE_RATIO, n, WeightedCostFunction.IDEAL_IDLE_RATIO);
+    Assert.assertTrue("idle=0 costs more than ideal", costFunction.uShapedIdleCost(0.0, n, WeightedCostFunction.IDEAL_IDLE_RATIO) > idealCost);
+    Assert.assertTrue("idle=1 costs more than ideal", costFunction.uShapedIdleCost(1.0, n, WeightedCostFunction.IDEAL_IDLE_RATIO) > idealCost);
 
-    // Under-provisioning is penalized more than over-provisioning (UNDER > OVER)
+    // Over-provisioning is penalized more than under-provisioning (OVER > UNDER)
     Assert.assertTrue(
-        "under-provisioning penalty exceeds over-provisioning penalty",
-        costFunction.uShapedIdleCost(0.0, n) > costFunction.uShapedIdleCost(1.0, n)
+        "over-provisioning penalty exceeds under-provisioning penalty",
+        costFunction.uShapedIdleCost(1.0, n, WeightedCostFunction.IDEAL_IDLE_RATIO) > costFunction.uShapedIdleCost(0.0, n, WeightedCostFunction.IDEAL_IDLE_RATIO)
     );
 
     // Cost scales linearly with task count at any fixed idle ratio
     Assert.assertEquals(
-        2 * costFunction.uShapedIdleCost(0.5, n),
-        costFunction.uShapedIdleCost(0.5, 2 * n),
+        2 * costFunction.uShapedIdleCost(0.5, n, WeightedCostFunction.IDEAL_IDLE_RATIO),
+        costFunction.uShapedIdleCost(0.5, 2 * n, WeightedCostFunction.IDEAL_IDLE_RATIO),
         1e-9
     );
   }
@@ -469,7 +484,7 @@ public class WeightedCostFunctionTest
     double costWithPollIdleRatio = costFunction.computeCost(metrics, 10, idleOnlyConfig).totalCost();
     Assert.assertEquals(
         "Default config should cost using the raw pollIdleRatio",
-        costFunction.uShapedIdleCost(0.9, 10),
+        costFunction.uShapedIdleCost(0.9, 10, WeightedCostFunction.IDEAL_IDLE_RATIO),
         costWithPollIdleRatio,
         0.0001
     );
@@ -477,7 +492,7 @@ public class WeightedCostFunctionTest
     double costWithUtilizationRatio = costFunction.computeCost(metrics, 10, utilizationConfig).totalCost();
     Assert.assertEquals(
         "usePollIdleRatio=false should cost using the rate-derived idle ratio instead of pollIdleRatio",
-        costFunction.uShapedIdleCost(0.9, 10),
+        costFunction.uShapedIdleCost(0.9, 10, WeightedCostFunction.IDEAL_IDLE_RATIO),
         costWithUtilizationRatio,
         0.0001
     );
@@ -487,13 +502,13 @@ public class WeightedCostFunctionTest
     double costStillPollIdle = costFunction.computeCost(divergingMetrics, 10, idleOnlyConfig).totalCost();
     double costStillUtilization = costFunction.computeCost(divergingMetrics, 10, utilizationConfig).totalCost();
     Assert.assertEquals(
-        costFunction.uShapedIdleCost(0.1, 10),
+        costFunction.uShapedIdleCost(0.1, 10, WeightedCostFunction.IDEAL_IDLE_RATIO),
         costStillPollIdle,
         0.0001
     );
     Assert.assertEquals(
         "Utilization-derived idle ratio (0.9) should be used instead of the diverging pollIdleRatio (0.1)",
-        costFunction.uShapedIdleCost(0.9, 10),
+        costFunction.uShapedIdleCost(0.9, 10, WeightedCostFunction.IDEAL_IDLE_RATIO),
         costStillUtilization,
         0.0001
     );

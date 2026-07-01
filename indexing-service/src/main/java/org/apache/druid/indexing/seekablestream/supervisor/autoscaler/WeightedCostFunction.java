@@ -40,7 +40,7 @@ public class WeightedCostFunction
    * Multiplier for a lag amplification factor; it was carefully chosen
    * during extensive testing as the most balanced multiplier for high-lag recovery.
    */
-  static final double LAG_AMPLIFICATION_MULTIPLIER = 0.4;
+  static final double LAG_AMPLIFICATION_MULTIPLIER = 0.3;
 
   /**
    * Exponent (< 1) for sublinear busy redistribution in the idle projection:
@@ -53,13 +53,14 @@ public class WeightedCostFunction
   /**
    * Minimum rate of processing for any task in records per second. This is used
    * as a placeholder if avg rate is not available to ensure that cost computations
-   * do not return infinitely large lag recovery times.
+   * do not return infinitely large lag recovery times, at the expense of underestimating the lag cost.
    */
-  static final double MIN_PROCESSING_RATE = 1_000;
+  static final double MIN_PROCESSING_RATE = 5_000;
 
   /**
-   * Target idle ratio representing the optimal operating point for the U-shaped idle cost.
+   * Default target idle ratio representing the optimal operating point for the U-shaped idle cost.
    * At this ratio the idle cost is at its minimum; both lower (risk) and higher (waste) are penalized.
+   * Configurable via {@link CostBasedAutoScalerConfig#getIdealIdleRatio()}.
    */
   static final double IDEAL_IDLE_RATIO = 0.25;
 
@@ -67,13 +68,13 @@ public class WeightedCostFunction
    * Penalty magnitude applied when idle ratio is 0 (no safety margin).
    * Controls the steepness of the U-shape on the under-provisioning side.
    */
-  static final double UNDER_PROVISIONING_PENALTY = 2.0;
+  static final double UNDER_PROVISIONING_PENALTY = 1.0;
 
   /**
    * Penalty magnitude applied when idle ratio is 1 (fully wasted capacity).
    * Controls the steepness of the U-shape on the over-provisioning side.
    */
-  static final double OVER_PROVISIONING_PENALTY = 1.0;
+  static final double OVER_PROVISIONING_PENALTY = 2.5;
 
   /**
    * Computes cost for a given task count using compute time metrics.
@@ -148,7 +149,7 @@ public class WeightedCostFunction
     }
     final double virtualLagRecoveryTime = overrun * metrics.getTaskDurationSeconds();
 
-    final double idleCost = uShapedIdleCost(predictedIdleRatio, proposedTaskCount);
+    final double idleCost = uShapedIdleCost(predictedIdleRatio, proposedTaskCount, config.getIdealIdleRatio());
     final double lagCost = config.getLagWeight() * (lagRecoveryTime + virtualLagRecoveryTime);
     final double weightedIdleCost = config.getIdleWeight() * idleCost;
     final double cost = lagCost + weightedIdleCost;
@@ -179,17 +180,17 @@ public class WeightedCostFunction
    * The ideal-idle baseline keeps cost non-zero at the optimum so the optimizer
    * always has a finite trade-off against lag cost.
    */
-  double uShapedIdleCost(double predictedIdleRatio, int taskCount)
+  double uShapedIdleCost(double predictedIdleRatio, int taskCount, double idealIdleRatio)
   {
     final double penalty;
-    if (predictedIdleRatio < IDEAL_IDLE_RATIO) {
-      final double norm = (IDEAL_IDLE_RATIO - predictedIdleRatio) / IDEAL_IDLE_RATIO;
+    if (predictedIdleRatio < idealIdleRatio) {
+      final double norm = (idealIdleRatio - predictedIdleRatio) / idealIdleRatio;
       penalty = UNDER_PROVISIONING_PENALTY * norm * norm;
     } else {
-      final double norm = (predictedIdleRatio - IDEAL_IDLE_RATIO) / (1.0 - IDEAL_IDLE_RATIO);
+      final double norm = (predictedIdleRatio - idealIdleRatio) / (1.0 - idealIdleRatio);
       penalty = OVER_PROVISIONING_PENALTY * norm * norm;
     }
-    return taskCount * (IDEAL_IDLE_RATIO + penalty);
+    return taskCount * (idealIdleRatio + penalty);
   }
 
 }
