@@ -444,17 +444,6 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     }
   }
 
-  /*
-  @VisibleForTesting
-  Iterator<Map.Entry<Interval, T>> inOrderTraverse()
-  {
-    List<Map.Entry<Interval, T>> nodes = new ArrayList<>(size);
-    inOrderTraverse(root, (List)nodes);
-    return nodes.iterator();
-    //return nodes.stream().map(node -> new ReEntry<T>(node.interval, node.value)).iterator();
-  }
-  */
-
   private void inOrderTraverse(Node<T> node, List<Node<T>> nodes)
   {
     if (node == null) {
@@ -739,7 +728,6 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     @Override
     public Iterator<Map.Entry<Interval, T>> iterator()
     {
-      //return inOrderTraverse();
       return new EntrySetIterator();
     }
 

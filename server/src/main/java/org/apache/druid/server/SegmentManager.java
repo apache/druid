@@ -507,7 +507,6 @@ public class SegmentManager
     private long rowCount;
     private final SegmentRowCountDistribution segmentRowCountDistribution = new SegmentRowCountDistribution();
 
-    @Inject
     public DataSourceState(TimelineConfig timelineConfig)
     {
       timeline = new VersionedIntervalTimeline<>(Ordering.natural(), false, timelineConfig.isFastIntervalSearch());
