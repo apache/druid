@@ -69,6 +69,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -145,6 +146,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -177,6 +179,7 @@ public class SeekableStreamSupervisorIOConfigTest
             DateTimes.nowUtc(),
             null,
             null,
+            null,
             null
         )
         {
@@ -197,6 +200,7 @@ public class SeekableStreamSupervisorIOConfigTest
         DruidException.class,
         () -> new SeekableStreamSupervisorIOConfig(
             "stream",
+            null,
             null,
             null,
             null,
@@ -245,6 +249,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -269,6 +274,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         3,
+        null,
         null
     )
     {
@@ -305,6 +311,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         1,
+        null,
         null
     )
     {
@@ -338,6 +345,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         1,
+        null,
         null
     )
     {
@@ -365,6 +373,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         autoScalerConfig,
         lagAggregator,
+        null,
         null,
         null,
         null,
@@ -455,9 +464,111 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         null,
-        serverPriorityToReplicas
+        serverPriorityToReplicas,
+        null
     )
     {
     };
+  }
+
+  @Test
+  public void testBoundedModeWithValidConfig()
+  {
+    Map<String, Integer> startOffsets = Map.of("0", 100, "1", 200);
+    Map<String, Integer> endOffsets = Map.of("0", 500, "1", 600);
+    BoundedStreamConfig boundedConfig = new BoundedStreamConfig(startOffsets, endOffsets);
+
+    LagAggregator lagAggregator = mock(LagAggregator.class);
+
+    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        lagAggregator,
+        null,
+        null,
+        null,
+        null,
+        boundedConfig
+    )
+    {
+    };
+
+    Assert.assertTrue(config.isBounded());
+    Assert.assertNotNull(config.getBoundedStreamConfig());
+    Assert.assertEquals(boundedConfig, config.getBoundedStreamConfig());
+  }
+
+  @Test
+  public void testUnboundedModeByDefault()
+  {
+    LagAggregator lagAggregator = mock(LagAggregator.class);
+
+    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        lagAggregator,
+        null,
+        null,
+        null,
+        null,
+        null
+    )
+    {
+    };
+
+    Assert.assertFalse(config.isBounded());
+    Assert.assertNull(config.getBoundedStreamConfig());
+  }
+
+  @Test
+  public void testBoundedModeWithNullConfig()
+  {
+    LagAggregator lagAggregator = mock(LagAggregator.class);
+
+    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        lagAggregator,
+        null,
+        null,
+        null,
+        null,
+        null
+    )
+    {
+    };
+
+    Assert.assertFalse(config.isBounded());
+    Assert.assertNull(config.getBoundedStreamConfig());
   }
 }

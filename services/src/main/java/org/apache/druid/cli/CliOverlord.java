@@ -77,7 +77,6 @@ import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.MetadataTaskStorage;
-import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
@@ -121,7 +120,6 @@ import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -261,7 +259,7 @@ public class CliOverlord extends ServerRunnable
 
             binder.bind(ParallelIndexSupervisorTaskClientProvider.class).toProvider(Providers.of(null));
             binder.bind(ShuffleClient.class).toProvider(Providers.of(null));
-            binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(new NoopChatHandlerProvider()));
+            binder.bind(ChatHandlerProvider.class).in(LazySingleton.class);
 
             CliPeon.bindDataSegmentKiller(binder);
 
@@ -387,11 +385,6 @@ public class CliOverlord extends ServerRunnable
                 IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
                 biddy.addBinding("local").to(ForkingTaskRunnerFactory.class);
                 binder.bind(ForkingTaskRunnerFactory.class).in(LazySingleton.class);
-
-                biddy.addBinding(RemoteTaskRunnerFactory.TYPE_NAME)
-                     .to(RemoteTaskRunnerFactory.class)
-                     .in(LazySingleton.class);
-                binder.bind(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
 
                 biddy.addBinding(HttpRemoteTaskRunnerFactory.TYPE_NAME)
                      .to(HttpRemoteTaskRunnerFactory.class)

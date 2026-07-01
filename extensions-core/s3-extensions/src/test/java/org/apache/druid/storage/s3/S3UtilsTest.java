@@ -19,6 +19,9 @@
 
 package org.apache.druid.storage.s3;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.common.aws.AWSClientConfig;
+import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
@@ -31,8 +34,11 @@ import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
+import javax.crypto.AEADBadTagException;
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -49,6 +55,24 @@ public class S3UtilsTest
             () -> {
               count.incrementAndGet();
               throw new IOException("hmm");
+            },
+            maxRetries
+        ));
+    Assert.assertEquals(maxRetries, count.get());
+  }
+
+  @Test
+  public void testRetryWithSslExceptionWrappingAeadBadTag()
+  {
+    // Transient TLS "Tag mismatch!" should be retried, not treated as terminal. See issue #19616.
+    final int maxRetries = 3;
+    final AtomicInteger count = new AtomicInteger();
+    Assert.assertThrows(
+        SSLException.class,
+        () -> S3Utils.retryS3Operation(
+            () -> {
+              count.incrementAndGet();
+              throw new SSLException("Tag mismatch!", new AEADBadTagException("Tag mismatch!"));
             },
             maxRetries
         ));
@@ -141,6 +165,31 @@ public class S3UtilsTest
                     + "Must provide an explicit region in the builder or setup environment to supply a region."
                 )
                 .build();
+          }
+        },
+        maxRetries
+    );
+    Assert.assertEquals(maxRetries, count.get());
+  }
+
+  @Test
+  public void testRetryWithAsyncCredentialProviderChainException() throws Exception
+  {
+    final int maxRetries = 3;
+    final AtomicInteger count = new AtomicInteger();
+    S3Utils.retryS3Operation(
+        () -> {
+          if (count.incrementAndGet() >= maxRetries) {
+            return "hey";
+          } else {
+            throw new CompletionException(
+                SdkClientException.builder()
+                                  .message(
+                                      "Unable to load credentials from any of the providers in the chain "
+                                      + "AwsCredentialsProviderChain"
+                                  )
+                                  .build()
+            );
           }
         },
         maxRetries
@@ -381,5 +430,43 @@ public class S3UtilsTest
         maxRetries
     );
     Assert.assertEquals(maxRetries, count.get());
+  }
+
+  private static final ObjectMapper JSON = new ObjectMapper();
+
+  private static AWSEndpointConfig endpointWith(String json) throws IOException
+  {
+    return JSON.readValue(json, AWSEndpointConfig.class);
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigSchemelessEndpointReturnsTrue() throws IOException
+  {
+    Assert.assertTrue(S3Utils.useHttps(null, endpointWith("{\"url\":\"s3.example.com\"}")));
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigHttpEndpointReturnsFalse() throws IOException
+  {
+    Assert.assertFalse(S3Utils.useHttps(null, endpointWith("{\"url\":\"http://s3.example.com\"}")));
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigHttpsEndpointReturnsTrue() throws IOException
+  {
+    Assert.assertTrue(S3Utils.useHttps(null, endpointWith("{\"url\":\"https://s3.example.com\"}")));
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigNullEndpointUrlReturnsTrue() throws IOException
+  {
+    Assert.assertTrue(S3Utils.useHttps(null, new AWSEndpointConfig()));
+  }
+
+  @Test
+  public void testUseHttpsDefaultClientConfigSchemelessEndpointReturnsTrue() throws IOException
+  {
+    // Sanity check: default AWSClientConfig protocol is "https"; schemeless URL inherits "https".
+    Assert.assertTrue(S3Utils.useHttps(new AWSClientConfig(), endpointWith("{\"url\":\"s3.example.com\"}")));
   }
 }

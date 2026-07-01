@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
@@ -66,7 +67,8 @@ public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOCo
       @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
       @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
       @JsonProperty("stopTaskCount") Integer stopTaskCount,
-      @Nullable @JsonProperty("serverPriorityToReplicas") Map<Integer, Integer> serverPriorityToReplicas
+      @Nullable @JsonProperty("serverPriorityToReplicas") Map<Integer, Integer> serverPriorityToReplicas,
+      @Nullable @JsonProperty("boundedStreamConfig") BoundedStreamConfig boundedStreamConfig
   )
   {
     super(
@@ -86,7 +88,8 @@ public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOCo
         lateMessageRejectionStartDateTime,
         new IdleConfig(null, null),
         stopTaskCount,
-        serverPriorityToReplicas
+        serverPriorityToReplicas,
+        boundedStreamConfig
     );
 
     this.consumerProperties = consumerProperties;

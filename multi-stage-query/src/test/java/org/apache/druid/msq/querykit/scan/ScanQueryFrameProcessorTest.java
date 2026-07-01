@@ -133,7 +133,6 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
                     segmentReferenceProvider.acquireReference(),
                     null
                 ),
-                null,
                 null
             )
         ),
@@ -396,7 +395,6 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
                     segmentReferenceProvider.acquireReference(),
                     null
                 ),
-                null,
                 null
             )
         ),

@@ -128,7 +128,7 @@ import org.apache.druid.segment.loading.LocalDataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
@@ -596,7 +596,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new NoopTestTaskReportFileWriter(),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
+        new ChatHandlerProvider(),
         TEST_UTILS.getRowIngestionMetersFactory(),
         appenderatorsManager,
         new NoopOverlordClient(),

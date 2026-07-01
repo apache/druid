@@ -30,6 +30,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.controller.messages.PostCounters;
+import org.apache.druid.msq.dart.guice.DartWorkerConfig;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
@@ -43,20 +44,23 @@ import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
+import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+import javax.annotation.Nullable;
 import java.io.File;
+import java.util.List;
 
 /**
  * Dart implementation of {@link WorkerContext}.
@@ -79,8 +83,8 @@ public class DartWorkerContext implements WorkerContext
   private final Injector injector;
   private final DartWorkerClient workerClient;
   private final SegmentWrangler segmentWrangler;
-  private final GroupingEngine groupingEngine;
   private final SegmentManager segmentManager;
+  private final VirtualStorageManager virtualStorageManager;
   private final CoordinatorClient coordinatorClient;
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
@@ -91,11 +95,19 @@ public class DartWorkerContext implements WorkerContext
   private final int threadCount;
 
   /**
+   * Worker-local segment load-ahead count from {@link DartWorkerConfig#getSegmentLoadAheadCount()}, or null if unset.
+   * Used as the default in {@link #segmentLoadAheadCount(WorkOrder)} when the query context does not supply a value.
+   */
+  @Nullable
+  private final Integer segmentLoadAheadCountConfig;
+
+  /**
    * Lazy initialized upon call to {@link #frameContext(WorkOrder)}.
    */
   @MonotonicNonNull
   private volatile ResourceHolder<ProcessingBuffersSet> processingBuffersSet;
   private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
+  private final List<InputSliceReaderProvider> inputSliceReaderProviders;
 
   DartWorkerContext(
       final String queryId,
@@ -106,9 +118,10 @@ public class DartWorkerContext implements WorkerContext
       final Injector injector,
       final DartWorkerClient workerClient,
       final DruidProcessingConfig processingConfig,
+      final DartWorkerConfig workerConfig,
       final SegmentWrangler segmentWrangler,
-      final GroupingEngine groupingEngine,
       final SegmentManager segmentManager,
+      final VirtualStorageManager virtualStorageManager,
       final CoordinatorClient coordinatorClient,
       final MemoryIntrospector memoryIntrospector,
       final ProcessingBuffersProvider processingBuffersProvider,
@@ -116,7 +129,8 @@ public class DartWorkerContext implements WorkerContext
       final File tempDir,
       final QueryContext queryContext,
       final DataServerQueryHandlerFactory dataServerQueryHandlerFactory,
-      final ServiceEmitter emitter
+      final ServiceEmitter emitter,
+      final List<InputSliceReaderProvider> inputSliceReaderProviders
   )
   {
     this.queryId = queryId;
@@ -129,8 +143,8 @@ public class DartWorkerContext implements WorkerContext
     this.injector = injector;
     this.workerClient = workerClient;
     this.segmentWrangler = segmentWrangler;
-    this.groupingEngine = groupingEngine;
     this.segmentManager = segmentManager;
+    this.virtualStorageManager = virtualStorageManager;
     this.coordinatorClient = coordinatorClient;
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
@@ -138,11 +152,15 @@ public class DartWorkerContext implements WorkerContext
     this.tempDir = tempDir;
     this.queryContext = Preconditions.checkNotNull(queryContext, "queryContext");
     this.emitter = emitter;
+    this.inputSliceReaderProviders = inputSliceReaderProviders;
 
     // Compute thread count once in constructor
     final int baseThreadCount = processingConfig.getNumThreads();
     final Integer maxThreads = MultiStageQueryContext.getMaxThreads(queryContext);
     this.threadCount = (maxThreads != null && maxThreads > 0) ? Math.min(baseThreadCount, maxThreads) : baseThreadCount;
+
+    // Worker-local segment load-ahead config from this worker's DartWorkerConfig.
+    this.segmentLoadAheadCountConfig = workerConfig.getSegmentLoadAheadCount();
   }
 
   @Override
@@ -173,6 +191,12 @@ public class DartWorkerContext implements WorkerContext
   public Injector injector()
   {
     return injector;
+  }
+
+  @Override
+  public List<InputSliceReaderProvider> inputSliceReaderProviders()
+  {
+    return inputSliceReaderProviders;
   }
 
   @Override
@@ -250,10 +274,10 @@ public class DartWorkerContext implements WorkerContext
         this,
         FrameWriterSpec.fromContext(workOrder.getWorkerContext()),
         segmentWrangler,
-        groupingEngine,
         segmentManager,
+        virtualStorageManager,
         coordinatorClient,
-        processingBuffersSet.get().acquireForStage(workOrder.getStageDefinition()),
+        workOrder.getStageDefinition().getProcessor().usesProcessingBuffers() ? processingBuffersSet.get() : null,
         memoryParameters,
         storageParameters,
         dataServerQueryHandlerFactory
@@ -264,6 +288,32 @@ public class DartWorkerContext implements WorkerContext
   public int threadCount()
   {
     return threadCount;
+  }
+
+  @Override
+  public int segmentLoadAheadCount(final WorkOrder workOrder)
+  {
+    final Integer fromContext = MultiStageQueryContext.getSegmentLoadAheadCount(workOrder.getWorkerContext());
+    return resolveSegmentLoadAheadCount(fromContext, segmentLoadAheadCountConfig, threadCount);
+  }
+
+  /**
+   * Determine which of the three potential sources of segment load ahead count to use.
+   * <p>
+   * Precedence is: a value supplied in the query context wins when set; otherwise the worker-local config is used
+   * when set to a positive value; lastly we fall back to {@code 2 * threadCount}.
+   */
+  static int resolveSegmentLoadAheadCount(
+      @Nullable final Integer fromContext,
+      @Nullable final Integer workerConfig,
+      final int threadCount
+  )
+  {
+    if (fromContext != null) {
+      return fromContext;
+    }
+    final boolean hasWorkerConfig = workerConfig != null && workerConfig > 0;
+    return hasWorkerConfig ? workerConfig : threadCount * 2;
   }
 
   @Override

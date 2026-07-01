@@ -41,10 +41,10 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestIndex;
@@ -296,7 +296,7 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
     checkColumnSelectorFactory(columnName);
     try (final Closer closer = Closer.create()) {
       final int columnIndex = columnNames.indexOf(columnName);
-      final int numRows = backingSegment.as(PhysicalSegmentInspector.class).getNumRows();
+      final int numRows = backingSegment.as(RowCountInspector.class).getNumRows();
       final IndexedTable.Reader reader = broadcastTable.columnReader(columnIndex);
       closer.register(reader);
       final SimpleAscendingOffset offset = new SimpleAscendingOffset(numRows);
@@ -326,7 +326,7 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
   private void checkColumnSelectorFactory(String columnName)
   {
     try (final Closer closer = Closer.create()) {
-      final int numRows = backingSegment.as(PhysicalSegmentInspector.class).getNumRows();
+      final int numRows = backingSegment.as(RowCountInspector.class).getNumRows();
 
       final SimpleAscendingOffset offset = new SimpleAscendingOffset(numRows);
       final BaseColumn theColumn = backingSegment.as(QueryableIndex.class)

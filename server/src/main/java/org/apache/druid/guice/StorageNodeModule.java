@@ -21,7 +21,6 @@ package org.apache.druid.guice;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
-import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
@@ -37,8 +36,12 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.indexing.TimelineConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationSelectorStrategy;
+import org.apache.druid.segment.loading.external.StorageLocationVirtualStorageManager;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -66,6 +69,8 @@ public class StorageNodeModule implements Module
     bindLocationSelectorStrategy(binder);
     binder.bind(ServerTypeConfig.class).toProvider(Providers.of(null));
     binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class).in(LazySingleton.class);
+    binder.bind(SegmentCacheManager.class).to(SegmentLocalCacheManager.class).in(LazySingleton.class);
+    binder.bind(VirtualStorageManager.class).to(StorageLocationVirtualStorageManager.class).in(LazySingleton.class);
     MetricsModule.register(binder, StorageMonitor.class);
   }
 
@@ -125,6 +130,13 @@ public class StorageNodeModule implements Module
   }
 
   @Provides
+  @ManageLifecycle
+  public StorageLoadingThreadPool getStorageLoadingThreadPool(SegmentLoaderConfig config)
+  {
+    return StorageLoadingThreadPool.createFromConfig(config);
+  }
+
+  @Provides
   @LazySingleton
   @Named(IS_SEGMENT_CACHE_CONFIGURED)
   public Boolean isSegmentCacheConfigured(SegmentLoaderConfig segmentLoaderConfig)
@@ -145,12 +157,9 @@ public class StorageNodeModule implements Module
 
   @Provides
   @LazySingleton
-  @Nullable
-  public StorageMonitor provideStorageMonitor(
-      Injector injector
-  )
+  public StorageMonitor provideStorageMonitor(List<StorageLocation> locations)
   {
-    return new StorageMonitor(injector.getInstance(SegmentCacheManager.class), null);
+    return new StorageMonitor(locations, null);
   }
 
   /**

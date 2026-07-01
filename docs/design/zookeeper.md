@@ -36,9 +36,8 @@ The operations that happen over ZK are:
 1. [Coordinator](../design/coordinator.md) leader election
 2. [Overlord](../design/overlord.md) leader election
 3. Service (node) announcement and discovery — services announce their presence so other services can find them
-4. [Overlord](../design/overlord.md) and [Middle Manager](../design/middlemanager.md) task management
 
-Segment loading, dropping, and discovery no longer use ZooKeeper — they are served over HTTP.
+Segment loading, segment discovery, and Overlord ↔ Middle Manager task management no longer use ZooKeeper — they are served over HTTP.
 
 ## Coordinator leader election
 

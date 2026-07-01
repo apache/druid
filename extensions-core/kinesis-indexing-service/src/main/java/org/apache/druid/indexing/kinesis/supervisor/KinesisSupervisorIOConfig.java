@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskIOConfig;
 import org.apache.druid.indexing.kinesis.KinesisRegion;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
@@ -79,7 +80,8 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("awsExternalId") String awsExternalId,
       @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
       @JsonProperty("deaggregate") @Deprecated boolean deaggregate,
-      @Nullable @JsonProperty("serverPriorityToReplicas") Map<Integer, Integer> serverPriorityToReplicas
+      @Nullable @JsonProperty("serverPriorityToReplicas") Map<Integer, Integer> serverPriorityToReplicas,
+      @Nullable @JsonProperty("boundedStreamConfig") BoundedStreamConfig boundedStreamConfig
   )
   {
     super(
@@ -99,7 +101,8 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         lateMessageRejectionStartDateTime,
         new IdleConfig(null, null),
         null,
-        serverPriorityToReplicas
+        serverPriorityToReplicas,
+        boundedStreamConfig
     );
 
     this.endpoint = endpoint != null

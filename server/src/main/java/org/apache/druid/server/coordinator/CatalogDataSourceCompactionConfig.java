@@ -32,6 +32,7 @@ import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -188,6 +189,14 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
       return null;
     }
     return projections.stream().map(DatasourceProjectionMetadata::getSpec).collect(Collectors.toList());
+  }
+
+  @JsonIgnore
+  @Nullable
+  @Override
+  public BaseTableProjectionSpec getBaseTable()
+  {
+    return null;
   }
 
   @JsonIgnore

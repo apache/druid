@@ -216,6 +216,34 @@ public class StartupInjectorBuilderTest
   }
 
   @Test
+  public void testValidator_rejectsRemoteIndexerRunnerType()
+  {
+    final Properties props = new Properties();
+    props.setProperty(StartupInjectorBuilder.INDEXER_RUNNER_TYPE_CONFIG_STRING, "remote");
+
+    final StartupInjectorBuilder builder = new StartupInjectorBuilder().withExtensions().withProperties(props);
+
+    Throwable t = Assertions.assertThrows(ISE.class, builder::build);
+    Assertions.assertEquals(
+        "Invalid value[remote] for property[druid.indexer.runner.type]. The ZooKeeper-based"
+        + " 'remote' task runner has been removed. Remove this property to use the default"
+        + " 'httpRemote' runner (or set it to 'local' for single-process testing). See the"
+        + " Druid upgrade notes for details.",
+        t.getMessage()
+    );
+  }
+
+  @Test
+  public void testValidator_acceptsHttpRemoteIndexerRunnerType()
+  {
+    final Properties props = new Properties();
+    props.setProperty(StartupInjectorBuilder.INDEXER_RUNNER_TYPE_CONFIG_STRING, "httpRemote");
+
+    // Should not throw
+    new StartupInjectorBuilder().withExtensions().withProperties(props).build();
+  }
+
+  @Test
   public void verifyInjectorBuild_withDeletedConfig_throwsException()
   {
     verifyInjectorBuild_withDeletedConfig_throwsException(

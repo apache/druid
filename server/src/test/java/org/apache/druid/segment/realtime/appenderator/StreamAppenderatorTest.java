@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryPlus;
@@ -2293,17 +2294,91 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  public void testQueryByIntervalsEmitsQueriedSegmentCountMetric() throws Exception
+  {
+    try (
+        StubServiceEmitter serviceEmitter = new StubServiceEmitter();
+        final StreamAppenderatorTester tester =
+            new StreamAppenderatorTester.Builder().maxRowsInMemory(100)
+                                                  .basePersistDirectory(temporaryFolder.newFolder())
+                                                  .withServiceEmitter(serviceEmitter)
+                                                  .build()) {
+      final Appenderator appenderator = tester.getAppenderator();
+
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "foo", 4), Suppliers.ofInstance(Committers.nil()));
+
+      final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                          .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                          .intervals(ImmutableList.of(Intervals.of("2000/2001")))
+                                          .aggregators(
+                                              Collections.singletonList(
+                                                  new LongSumAggregatorFactory("count", "count")
+                                              )
+                                          )
+                                          .granularity(Granularities.DAY)
+                                          .build();
+
+      QueryPlus.wrap(query).run(appenderator, ResponseContext.createEmpty()).toList();
+
+      serviceEmitter.verifyEmitted(DefaultQueryMetrics.QUERY_SEGMENTS_COUNT, 1);
+      serviceEmitter.verifyValue(DefaultQueryMetrics.QUERY_SEGMENTS_COUNT, 2L);
+    }
+  }
+
+  @Test
+  public void testQueryEmitsQueriedSegmentCountCountsSinksNotHydrants() throws Exception
+  {
+    try (
+        StubServiceEmitter serviceEmitter = new StubServiceEmitter();
+        final StreamAppenderatorTester tester =
+            new StreamAppenderatorTester.Builder().maxRowsInMemory(100)
+                                                  .basePersistDirectory(temporaryFolder.newFolder())
+                                                  .withServiceEmitter(serviceEmitter)
+                                                  .build()) {
+      final Appenderator appenderator = tester.getAppenderator();
+
+      appenderator.startJob();
+      // Persisting between adds to the same identifier swaps the current FireHydrant for a new one, so this single
+      // Sink ends up with multiple hydrants. query/segments/count must report 1 (the Sink/segment), not the hydrant count.
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
+      appenderator.persistAll(Committers.nil()).get();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar", 2), Suppliers.ofInstance(Committers.nil()));
+      appenderator.persistAll(Committers.nil()).get();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "baz", 3), Suppliers.ofInstance(Committers.nil()));
+
+      final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                          .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                          .intervals(ImmutableList.of(Intervals.of("2000/2001")))
+                                          .aggregators(
+                                              Collections.singletonList(
+                                                  new LongSumAggregatorFactory("count", "count")
+                                              )
+                                          )
+                                          .granularity(Granularities.DAY)
+                                          .build();
+
+      QueryPlus.wrap(query).run(appenderator, ResponseContext.createEmpty()).toList();
+
+      serviceEmitter.verifyEmitted(DefaultQueryMetrics.QUERY_SEGMENTS_COUNT, 1);
+      serviceEmitter.verifyValue(DefaultQueryMetrics.QUERY_SEGMENTS_COUNT, 1L);
+    }
+  }
+
   private void verifySinkMetrics(StubServiceEmitter emitter, Set<String> segmentIds)
   {
-    int segments = segmentIds.size();
-    emitter.verifyEmitted("query/cpu/time", 1);
-    Assert.assertEquals(segments, emitter.getMetricEvents("query/segment/time").size());
-    Assert.assertEquals(segments, emitter.getMetricEvents("query/segmentAndCache/time").size());
-    Assert.assertEquals(segments, emitter.getMetricEvents("query/wait/time").size());
+    final int segments = segmentIds.size();
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_CPU_TIME, 1);
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_SEGMENTS_COUNT, 1);
+    Assert.assertEquals(segments, emitter.getMetricEvents(DefaultQueryMetrics.QUERY_SEGMENT_TIME).size());
+    Assert.assertEquals(segments, emitter.getMetricEvents(DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME).size());
+    Assert.assertEquals(segments, emitter.getMetricEvents(DefaultQueryMetrics.QUERY_WAIT_TIME).size());
     for (String id : segmentIds) {
-      Assert.assertTrue(emitter.getMetricEvents("query/segment/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
-      Assert.assertTrue(emitter.getMetricEvents("query/segmentAndCache/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
-      Assert.assertTrue(emitter.getMetricEvents("query/wait/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
+      Assert.assertTrue(emitter.getMetricEvents(DefaultQueryMetrics.QUERY_SEGMENT_TIME).stream().anyMatch(value -> value.getUserDims().containsValue(id)));
+      Assert.assertTrue(emitter.getMetricEvents(DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME).stream().anyMatch(value -> value.getUserDims().containsValue(id)));
+      Assert.assertTrue(emitter.getMetricEvents(DefaultQueryMetrics.QUERY_WAIT_TIME).stream().anyMatch(value -> value.getUserDims().containsValue(id)));
     }
   }
 

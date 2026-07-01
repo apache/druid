@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import com.google.common.collect.EvictingQueue;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.error.DruidException;
@@ -40,6 +41,7 @@ import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -61,10 +63,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 {
   private static final EmittingLogger log = new EmittingLogger(CostBasedAutoScaler.class);
 
-  public static final String LAG_COST_METRIC = "task/autoScaler/costBased/lagCost";
-  public static final String IDLE_COST_METRIC = "task/autoScaler/costBased/idleCost";
+  public static final String LAG_WEIGHT_METRIC = "task/autoScaler/costBased/lagWeight";
+  public static final String IDLE_WEIGHT_METRIC = "task/autoScaler/costBased/idleWeight";
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
   public static final String INVALID_METRICS_COUNT = "task/autoScaler/costBased/invalidMetrics";
+  public static final String AVG_PROCESSING_RATE_METRIC = "task/autoScaler/costBased/avgProcessingRate";
+  public static final String AVG_POLL_IDLE_RATIO = "task/autoScaler/costBased/avgPollIdleRatio";
 
   /**
    * Maximum number of candidate task counts to evaluate above or below the current task count
@@ -78,6 +82,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    */
   static final int MAX_IDLENESS_PARTITION_LAG = 10_000;
 
+  /**
+   * The number of most recent processing rate samples to maintain for auto-scaling decisions
+   * in case when {@link CostBasedAutoScalerConfig#usePollIdleRatio} is disabled.
+   */
+  static final int PROCESSING_RATE_WINDOW_SIZE = 50;
+
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
   private final ServiceEmitter emitter;
@@ -85,6 +95,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private final CostBasedAutoScalerConfig config;
   private final ScheduledExecutorService autoscalerExecutor;
   private final WeightedCostFunction costFunction;
+
+  private final EvictingQueue<Double> processingRateSamples;
   private volatile CostMetrics lastKnownMetrics;
 
   public CostBasedAutoScaler(
@@ -100,6 +112,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     this.supervisorId = spec.getId();
     this.emitter = emitter;
 
+    this.processingRateSamples = EvictingQueue.create(PROCESSING_RATE_WINDOW_SIZE);
     this.costFunction = new WeightedCostFunction();
     this.autoscalerExecutor = Execs.scheduledSingleThreaded("CostBasedAutoScaler-"
                                                             + StringUtils.encodeForFormat(spec.getId()));
@@ -160,7 +173,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     if (config.isScaleDownOnTaskRolloverOnly()) {
       return computeOptimalTaskCount(lastKnownMetrics);
     } else {
-      return -1;
+      return CANNOT_COMPUTE;
     }
   }
 
@@ -169,68 +182,24 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     lastKnownMetrics = collectMetrics();
 
     final int optimalTaskCount = computeOptimalTaskCount(lastKnownMetrics);
-    int currentTaskCount = supervisor.getIoConfig().getTaskCount();
-
-    // Take the current task count but clamp it to the configured boundaries if it is outside the boundaries.
-    // There might be a configuration instance with a handwritten taskCount that is outside the boundaries.
-    final boolean isTaskCountOutOfBounds = currentTaskCount < config.getTaskCountMin()
-                                           || currentTaskCount > config.getTaskCountMax();
-    if (isTaskCountOutOfBounds) {
-      currentTaskCount = Math.min(config.getTaskCountMax(), Math.max(config.getTaskCountMin(), currentTaskCount));
+    if (optimalTaskCount <= 0) {
+      return CANNOT_COMPUTE;
     }
 
-    // Perform scale-up actions; scale-down actions only if configured.
-    final int taskCount;
+    final int currentTaskCount = supervisor.getIoConfig().getTaskCount();
 
-    // If task count is out of bounds, scale to the configured boundary
-    // regardless of optimal task count, to get back to a safe state.
-    if (isTaskCountOutOfBounds) {
-      taskCount = currentTaskCount;
-      log.info(
-          "Task count for supervisor[%s] was out of bounds [%d,%d], urgently scaling from [%d] to [%d].",
-          supervisorId, config.getTaskCountMin(), config.getTaskCountMax(), currentTaskCount, currentTaskCount
-      );
-    } else if (optimalTaskCount > currentTaskCount) {
-      taskCount = optimalTaskCount;
-      log.info(
-          "Updating taskCount for supervisor[%s] from [%d] to [%d] (scale up).",
-          supervisorId,
-          currentTaskCount,
-          taskCount
-      );
-    } else if (!config.isScaleDownOnTaskRolloverOnly()
-               && optimalTaskCount < currentTaskCount
-               && optimalTaskCount > 0) {
-      taskCount = optimalTaskCount;
-      log.info(
-          "Updating taskCount for supervisor[%s] from [%d] to [%d] (scale down).",
-          supervisorId,
-          currentTaskCount,
-          taskCount
-      );
-    } else {
-      taskCount = -1;
-      log.debug("No scaling required for supervisor[%s]", supervisorId);
-
-      // Emit metrics for scaling skip reasons; in case of min == max, signaling reaching
-      // max task count has bigger priority for the external observers / trackers
-      if (optimalTaskCount >= config.getTaskCountMax() || currentTaskCount == config.getTaskCountMax()) {
-        emitter.emit(getMetricBuilder()
-                         .setDimension(
-                             SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,
-                             "Already at max task count"
-                         )
-                         .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, currentTaskCount));
-      } else if (optimalTaskCount == config.getTaskCountMin() || currentTaskCount == config.getTaskCountMin()) {
-        emitter.emit(getMetricBuilder()
-                         .setDimension(
-                             SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,
-                             "Already at min task count"
-                         )
-                         .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, currentTaskCount));
-      }
+    // Rollover-only scale-down mode: don't proactively scale down here.
+    if (config.isScaleDownOnTaskRolloverOnly() && optimalTaskCount < currentTaskCount) {
+      return currentTaskCount;
     }
-    return taskCount;
+
+    log.info(
+        "CostBasedAutoScaler for supervisor[%s] wants taskCount[%d] (current[%d]).",
+        supervisorId,
+        optimalTaskCount,
+        currentTaskCount
+    );
+    return optimalTaskCount;
   }
 
   public CostBasedAutoScalerConfig getConfig()
@@ -239,15 +208,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
   /**
-   * Computes the optimal task count based on current metrics.
-   * <p>
-   * Returns -1 (no scaling needed) in the following cases:
-   * <ul>
-   *   <li>Metrics are not available</li>
-   *   <li>Current task count already optimal</li>
-   * </ul>
-   *
-   * @return optimal task count, or -1 if no scaling action is needed
+   * Returns the lowest-cost task count given {@code metrics}, or {@link #CANNOT_COMPUTE} when
+   * metrics are unusable. Returning the current task count means the current count is already
+   * optimal (or no better candidate could be evaluated).
    */
   int computeOptimalTaskCount(CostMetrics metrics)
   {
@@ -259,13 +222,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
               .setDimension(DruidMetrics.DESCRIPTION, result.error())
               .setMetric(INVALID_METRICS_COUNT, 1L)
       );
-      return -1;
+      return CANNOT_COMPUTE;
     }
 
     final int partitionCount = metrics.getPartitionCount();
     final int currentTaskCount = metrics.getCurrentTaskCount();
     if (partitionCount <= 0 || currentTaskCount <= 0) {
-      return -1;
+      return CANNOT_COMPUTE;
     }
 
     final int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(
@@ -276,8 +239,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     );
 
     if (validTaskCounts.length == 0) {
+      // Return current count (not an error) so the supervisor can clamp it back into bounds.
       log.warn("No valid task counts after applying constraints for supervisor[%s]", supervisorId);
-      return -1;
+      return currentTaskCount;
     }
 
     // Start with the current task count as optimal
@@ -304,14 +268,14 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     int startIndex = 0;
     int endIndex = validTaskCounts.length - 1;
 
-    if (config.shouldUseTaskCountBoundariesOnScaleUp()) {
+    if (config.isUseTaskCountBoundariesOnScaleUp()) {
       int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
       endIndex = currentTaskCountIndex >= 0
                  ? Math.min(currentTaskCountIndex + BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK, endIndex)
                  : endIndex;
     }
 
-    if (config.shouldUseTaskCountBoundariesOnScaleDown()) {
+    if (config.isUseTaskCountBoundariesOnScaleDown()) {
       int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
       startIndex = currentTaskCountIndex >= 0
                    ? Math.max(currentTaskCountIndex - BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK, startIndex)
@@ -331,12 +295,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
 
     emitter.emit(getMetricBuilder().setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
-    emitter.emit(getMetricBuilder().setMetric(LAG_COST_METRIC, optimalCost.lagCost()));
-    emitter.emit(getMetricBuilder().setMetric(IDLE_COST_METRIC, optimalCost.idleCost()));
+    emitter.emit(getMetricBuilder().setMetric(LAG_WEIGHT_METRIC, optimalCost.lagCost()));
+    emitter.emit(getMetricBuilder().setMetric(IDLE_WEIGHT_METRIC, optimalCost.idleCost()));
+    emitter.emit(getMetricBuilder().setMetric(AVG_PROCESSING_RATE_METRIC, metrics.getAvgProcessingRate()));
+    emitter.emit(getMetricBuilder().setMetric(AVG_POLL_IDLE_RATIO, metrics.getPollIdleRatio()));
 
-    if (optimalTaskCount == currentTaskCount) {
-      return -1;
-    } else {
+    if (optimalTaskCount != currentTaskCount) {
       log.info(
           "Optimal taskCount[%d] for supervisor[%s] has lowest cost[%.4f] out of the following candidates: %n%s",
           optimalTaskCount, supervisorId, optimalCost.totalCost(), constructCostTable(validTaskCounts, costResults)
@@ -485,13 +449,18 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final double movingAvgRate = extractMovingAverage(taskStats);
     final double pollIdleRatio = extractPollIdleRatio(taskStats);
 
+    if (!config.isUsePollIdleRatio() && movingAvgRate > 0) {
+      processingRateSamples.add(movingAvgRate);
+    }
+
     return new CostMetrics(
         avgPartitionLag,
         currentTaskCount,
         partitionCount,
         pollIdleRatio,
         supervisor.getIoConfig().getTaskDuration().getStandardSeconds(),
-        movingAvgRate
+        movingAvgRate,
+        processingRateSamples.isEmpty() ? null : Collections.max(processingRateSamples)
     );
   }
 

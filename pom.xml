@@ -75,7 +75,7 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.8.0</apache.curator.version>
-        <apache.kafka.version>3.9.2</apache.kafka.version>
+        <apache.kafka.version>4.2.0</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
         and update as needed in extensions-contrib/druid-ranger-security/pom.xml  -->
         <apache.ranger.version>2.8.0</apache.ranger.version>
@@ -94,24 +94,25 @@
         <cronutils.version>9.2.0</cronutils.version>
         <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
-        <derby.version>10.14.2.0</derby.version>
+        <derby.version>10.17.1.0</derby.version>
         <dropwizard.metrics.version>4.2.22</dropwizard.metrics.version>
-        <errorprone.version>2.41.0</errorprone.version>
+        <errorprone.version>2.49.0</errorprone.version>
         <fabric8.version>7.6.0</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>32.1.3-jre</guava.version>
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>2.2</hamcrest.version>
+        <iceberg.core.version>1.10.0</iceberg.core.version>
         <jetty.version>12.1.8</jetty.version>
         <jersey.version>1.19.4</jersey.version>
-        <jackson.version>2.20.2</jackson.version>
+        <jackson.version>2.21.4</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
-        <log4j.version>2.25.4</log4j.version>
+        <log4j.version>2.26.0</log4j.version>
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.2.12.Final</netty4.version>
-        <postgresql.version>42.7.2</postgresql.version>
+        <netty4.version>4.2.15.Final</netty4.version>
+        <postgresql.version>42.7.11</postgresql.version>
         <protobuf.version>3.25.8</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <slf4j.version>2.0.17</slf4j.version>
@@ -124,7 +125,7 @@
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
         <aws.sdk.v1.version>1.12.793</aws.sdk.v1.version>
         <aws.sdk.v2.version>2.40.0</aws.sdk.v2.version>
-        <caffeine.version>2.9.3</caffeine.version>
+        <caffeine.version>3.2.4</caffeine.version>
         <jacoco.version>0.8.14</jacoco.version>
         <testcontainers.version>2.0.3</testcontainers.version>
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
@@ -163,6 +164,9 @@
 
             <!-- required for certain EqualsVerifier tests (not required in production) -->
             --add-opens=java.base/java.util=ALL-UNNAMED
+
+            <!-- required for SIMD for druid.expressions.useVectorApi -->
+            --add-modules=jdk.incubator.vector
         </jdk.strong.encapsulation.argLine>
         <jdk.security.manager.allow.argLine><!-- empty placeholder --></jdk.security.manager.allow.argLine>
         <repoOrgId>maven.org</repoOrgId>
@@ -250,6 +254,7 @@
         <module>extensions-contrib/ambari-metrics-emitter</module>
         <module>extensions-contrib/sqlserver-metadata-storage</module>
         <module>extensions-contrib/kafka-emitter</module>
+        <module>extensions-contrib/openlineage-emitter</module>
         <module>extensions-contrib/redis-cache</module>
         <module>extensions-contrib/opentsdb-emitter</module>
         <module>extensions-contrib/momentsketch</module>
@@ -460,12 +465,12 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
-                <version>1.82</version>
+                <version>1.84</version>
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>
-                <version>1.82</version>
+                <version>1.84</version>
             </dependency>
             <!-- Transitive dependency of hive-common in druid-kerberos, druid-ranger-security and
             druid-iceberg-extension  -->
@@ -587,17 +592,6 @@
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-recipes</artifactId>
                 <version>${apache.curator.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.curator</groupId>
-                <artifactId>curator-x-discovery</artifactId>
-                <version>${apache.curator.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-databind</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
@@ -936,6 +930,11 @@
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
                 <artifactId>log4j-1.2-api</artifactId>
+                <version>${log4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-layout-template-json</artifactId>
                 <version>${log4j.version}</version>
             </dependency>
             <dependency>
@@ -1793,6 +1792,8 @@
                       <exclude>**/*_jmhType_*.class</exclude>
                       <exclude>**/*_jmhTest_*.class</exclude>
                       <exclude>**/*_generated*.class</exclude>
+                      <!-- forbidden-apis can't resolve jdk.incubator.vector classes from its own classpath -->
+                      <exclude>**/math/expr/vector/simd/Simd*.class</exclude>
                     </excludes>
                     <suppressAnnotations>
                         <annotation>**.SuppressForbidden</annotation>
@@ -2142,6 +2143,11 @@
 
                         <!-- HadoopFsWrapper javadocs cannot be generated due to missing annotations -->
                         <excludePackageNames>org.apache.hadoop.fs</excludePackageNames>
+
+                        <!-- required for SIMD expression vector processors that import jdk.incubator.vector -->
+                        <additionalOptions>
+                            <additionalOption>--add-modules=jdk.incubator.vector</additionalOption>
+                        </additionalOptions>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -2151,6 +2157,9 @@
                     <inherited>true</inherited>
                     <configuration>
                         <release>${maven.compiler.release}</release>
+                        <compilerArgs>
+                            <arg>--add-modules=jdk.incubator.vector</arg>
+                        </compilerArgs>
                     </configuration>
                 </plugin>
               <plugin>
@@ -2211,6 +2220,8 @@
                                 <arg>-J--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</arg>
                                 <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
                                 <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                                <arg>-J--add-modules=jdk.incubator.vector</arg>
+                                <arg>--add-modules=jdk.incubator.vector</arg>
                             </compilerArgs>
                               <annotationProcessorPaths>
                                 <path>
