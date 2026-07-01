@@ -68,17 +68,17 @@ import java.util.function.BiConsumer;
 public class IntervalTree<T> extends AbstractMap<Interval, T> implements NavigableMap<Interval, T>
 {
   // The compartor for comparing the interval start timnes
-  Comparator<Interval> startComparator;
+  private final Comparator<Interval> startComparator;
   // The comparator for comparing interval end times
-  Comparator<Interval> endComparator;
+  private final Comparator<Interval> endComparator;
 
   @VisibleForTesting
-  Node<T> root;
-  int size;
+  private Node<T> root;
+  private int size;
 
   // Deviation allowed from ideal height for the maximum height on either side of the tree, expressed as a
   // percentage of ideal height
-  int imbalanceTolerance = 50;
+  private int imbalanceTolerance = 50;
 
   EntrySet entrySet = new EntrySet();
 

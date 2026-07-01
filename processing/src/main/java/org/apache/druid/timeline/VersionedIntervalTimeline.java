@@ -87,7 +87,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   final NavigableMap<Interval, TimelineEntry> incompletePartitionsTimeline;
   // true interval -> version -> timelineEntry
   private final Map<Interval, TreeMap<VersionType, TimelineEntry>> allTimelineEntries = new HashMap<>();
-  private final IntervalTree<TreeMap<VersionType, TimelineEntry>> allTimeIntervals = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
+  // Only instantiated and used when fastIntervalSearch is enabled
+  private IntervalTree<TreeMap<VersionType, TimelineEntry>> allTimeIntervals;
   private final AtomicInteger numObjects = new AtomicInteger();
 
   private final Comparator<? super VersionType> versionComparator;
@@ -114,6 +115,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     this.skipObjectsWithNoData = skipObjectsWithNoData;
     this.fastIntervalSearch = fastIntervalSearch;
     if (fastIntervalSearch) {
+      allTimeIntervals = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
       this.completePartitionsTimeline = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
       this.incompletePartitionsTimeline = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
     } else {
