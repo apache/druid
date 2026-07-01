@@ -235,7 +235,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     final int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(
         partitionCount,
-        currentTaskCount,
         config.getTaskCountMin(),
         config.getTaskCountMax()
     );
@@ -325,17 +324,16 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    * Generates valid task counts by converting every possible partitions-per-task ratio
    * into a task count and filtering by configured min/max task count bounds.
    *
-   * @return list of valid task counts within bounds
+   * @return array of valid task counts within bounds
    */
   @SuppressWarnings({"ReassignedVariable"})
   static int[] computeValidTaskCounts(
       int partitionCount,
-      int currentTaskCount,
       int taskCountMin,
       int taskCountMax
   )
   {
-    if (partitionCount <= 0 || currentTaskCount <= 0) {
+    if (partitionCount <= 0) {
       return new int[]{};
     }
 
