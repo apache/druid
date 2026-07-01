@@ -80,7 +80,7 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
   // percentage of ideal height
   private int imbalanceTolerance = 50;
 
-  EntrySet entrySet = new EntrySet();
+  private final EntrySet entrySet = new EntrySet();
 
   public IntervalTree(Comparator<Interval> startComparator, Comparator<Interval> endComparator)
   {
@@ -774,6 +774,15 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
 
   }
 
+  /**
+   * Perform a tree rebalance if the imbalance between the left and right sides of the tree has increased beyond a
+   * tolerated limit, as opposed to rebalancing all the time. This is to done to strike a balance between performance
+   * degradation arising from an imbalance tree and the processing overheard of rebalancing each time the contents of
+   * the tree changes.
+   *
+   * The limit is defined using a configurable tolerance percentage in excess of an ideal balanced tree height for the
+   * number of entries in the tree.
+   */
   private void checkRebalance()
   {
     if (root != null) {

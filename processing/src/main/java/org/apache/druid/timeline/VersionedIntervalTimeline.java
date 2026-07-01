@@ -109,6 +109,12 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     this(versionComparator, skipObjectsWithNoData, false);
   }
 
+  /**
+   * Constructor
+   * @param versionComparator The version comparator
+   * @param skipObjectsWithNoData Skip tombstones during lookup
+   * @param fastIntervalSearch Use the faster segment retrieval index based on interval tree
+   */
   public VersionedIntervalTimeline(Comparator<? super VersionType> versionComparator, boolean skipObjectsWithNoData, boolean fastIntervalSearch)
   {
     this.versionComparator = versionComparator;
