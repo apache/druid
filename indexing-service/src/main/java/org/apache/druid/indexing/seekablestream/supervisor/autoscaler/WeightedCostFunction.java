@@ -55,7 +55,7 @@ public class WeightedCostFunction
    * as a placeholder if avg rate is not available to ensure that cost computations
    * do not return infinitely large lag recovery times, at the expense of underestimating the lag cost.
    */
-  static final double MIN_PROCESSING_RATE = 5_000;
+  static final double MIN_PROCESSING_RATE = 1_000;
 
   /**
    * Default target idle ratio representing the optimal operating point for the U-shaped idle cost.
