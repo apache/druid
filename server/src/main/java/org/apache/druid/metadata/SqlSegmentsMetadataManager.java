@@ -90,7 +90,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
      * leadership changes.
      */
     final CompletableFuture<Void> firstPollCompletionFuture = new CompletableFuture<>();
-    long lastPollStartTimestampInMs = -1;
+    long lastPollStartTimestampInNanos = -1;
   }
 
   /**
@@ -429,7 +429,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       lock.lock();
       try {
         if (startOrder == currentStartPollingOrder) {
-          periodicDatabasePoll.lastPollStartTimestampInMs = System.currentTimeMillis();
+          periodicDatabasePoll.lastPollStartTimestampInNanos = System.nanoTime();
           poll();
           periodicDatabasePoll.firstPollCompletionFuture.complete(null);
           latestDatabasePoll = periodicDatabasePoll;
@@ -556,7 +556,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @VisibleForTesting
   void forceOrWaitOngoingDatabasePoll()
   {
-    long checkStartTime = System.currentTimeMillis();
+    long checkStartTimeNanos = System.nanoTime();
     ReentrantReadWriteLock.WriteLock lock = startStopPollLock.writeLock();
     lock.lock();
     try {
@@ -564,14 +564,14 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       try {
         //Verify if there was a periodic poll completed while we were waiting for the lock
         if (latestDatabasePoll instanceof PeriodicDatabasePoll
-            && ((PeriodicDatabasePoll) latestDatabasePoll).lastPollStartTimestampInMs > checkStartTime) {
+            && ((PeriodicDatabasePoll) latestDatabasePoll).lastPollStartTimestampInNanos > checkStartTimeNanos) {
           return;
         }
-        // Verify if there was a on-demand poll completed while we were waiting for the lock
+        // Verify if there was an on-demand poll completed while we were waiting for the lock
         if (latestDatabasePoll instanceof OnDemandDatabasePoll) {
-          long checkStartTimeNanos = TimeUnit.MILLISECONDS.toNanos(checkStartTime);
           OnDemandDatabasePoll latestOnDemandPoll = (OnDemandDatabasePoll) latestDatabasePoll;
           if (latestOnDemandPoll.initiationTimeNanos > checkStartTimeNanos) {
+            Futures.getUnchecked(latestOnDemandPoll.pollCompletionFuture);
             return;
           }
         }
