@@ -680,6 +680,34 @@ public class ReindexingDeletionRuleOptimizerTest
   }
 
   @Test
+  public void testHasUnappliedDeletionRules_AppliedFingerprintPlusNullFingerprint_ReturnsTrue()
+  {
+    DimFilter filterA = new SelectorDimFilter("country", "US", null);
+
+    // fp1 already has the deletion rule applied...
+    CompactionState state = createStateWithSingleFilter(filterA);
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp1", state, DateTimes.nowUtc());
+    syncCacheFromManager();
+
+    // ...but the candidate also contains a never-compacted (null fingerprint) segment that has not, so the
+    // rule is unapplied for at least one segment and this must return true.
+    List<DataSegment> segments = new ArrayList<>();
+    segments.add(DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint("fp1").build());
+    segments.add(DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(null).build());
+    CompactionCandidate candidate = CompactionCandidate.from(
+        segments,
+        null,
+        CompactionStatus.pending("segments need compaction")
+    );
+
+    NotDimFilter expectedFilter = new NotDimFilter(filterA);
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
+
+    Assertions.assertTrue(optimizer.hasUnappliedDeletionRules(config, candidate, params));
+  }
+
+  @Test
   public void testHasUnappliedDeletionRules_MissingState_ReturnsTrue()
   {
     DimFilter filterA = new SelectorDimFilter("country", "US", null);

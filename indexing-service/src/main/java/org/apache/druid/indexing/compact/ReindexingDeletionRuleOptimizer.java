@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -146,15 +145,19 @@ public class ReindexingDeletionRuleOptimizer implements ReindexingConfigOptimize
       expectedFilters = ((OrDimFilter) expectedFilter.getField()).getFields();
     }
 
-    Set<String> uniqueFingerprints = candidateSegments.getSegments().stream()
-                                                      .map(DataSegment::getIndexingStateFingerprint)
-                                                      .filter(Objects::nonNull)
-                                                      .collect(Collectors.toSet());
-
-    if (uniqueFingerprints.isEmpty()) {
-      // no fingerprints means that no candidate segments have transforms to compare against. Return all filters eagerly.
+    // If any segment has no fingerprint, we cannot prove the deletion rules were applied to it, so we
+    // cannot prune anything: report every rule as unapplied. This also subsumes the all-null case (no
+    // segment can prove application). Only when every segment has a fingerprint do we compare applied
+    // filters against expected.
+    final boolean anySegmentMissingFingerprint = candidateSegments.getSegments().stream()
+                                                                  .anyMatch(s -> s.getIndexingStateFingerprint() == null);
+    if (anySegmentMissingFingerprint) {
       return expectedFilter;
     }
+
+    Set<String> uniqueFingerprints = candidateSegments.getSegments().stream()
+                                                      .map(DataSegment::getIndexingStateFingerprint)
+                                                      .collect(Collectors.toSet());
 
     Set<DimFilter> unappliedRules = new HashSet<>();
 
