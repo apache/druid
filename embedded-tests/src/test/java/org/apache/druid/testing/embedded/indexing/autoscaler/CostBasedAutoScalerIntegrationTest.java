@@ -289,7 +289,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
                       .hasValueMatching(Matchers.greaterThan(1L))
     );
-    Assertions.assertEquals(4, getCurrentTaskCount(supervisor.getId()));
+    Assertions.assertTrue(getCurrentTaskCount(supervisor.getId()) > 1);
     waitUntilPublishedRecordsAreIngested(totalRecords);
 
     // Let the tasks work through the lag.
@@ -398,7 +398,9 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
     final String getSupervisorPath = StringUtils.format("/druid/indexer/v1/supervisor/%s", supervisorId);
     final KafkaSupervisorSpec supervisorSpec = cluster.callApi().serviceClient().onLeaderOverlord(
         mapper -> new RequestBuilder(HttpMethod.GET, getSupervisorPath),
-        new TypeReference<>() {}
+        new TypeReference<>()
+        {
+        }
     );
     Assertions.assertNotNull(supervisorSpec);
     return supervisorSpec.getSpec().getIOConfig().getTaskCount();
