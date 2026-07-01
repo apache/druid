@@ -20,6 +20,7 @@
 package org.apache.druid.server;
 
 import com.google.inject.Inject;
+import org.apache.druid.audit.RequestHeaderContextConfig;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -51,8 +52,16 @@ public class QueryLifecycleFactory
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
   private final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig;
+  private final RequestHeaderContextConfig requestHeaderContextConfig;
 
-  @Inject
+  /**
+   * Convenience constructor for callers (chiefly tests) that don't have access to
+   * {@link RequestHeaderContextConfig}. Delegates to the full constructor with the default
+   * config — which has {@code X-Druid-Trace-Id → traceId} enabled. Tests that need the
+   * propagation feature fully disabled should construct an explicit
+   * {@code new RequestHeaderContextConfig(java.util.Collections.emptyMap())} and use the
+   * full constructor instead.
+   */
   public QueryLifecycleFactory(
       final QueryRunnerFactoryConglomerate conglomerate,
       final QuerySegmentWalker texasRanger,
@@ -66,6 +75,36 @@ public class QueryLifecycleFactory
       @Nullable final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig
   )
   {
+    this(
+        conglomerate,
+        texasRanger,
+        queryMetricsFactory,
+        emitter,
+        requestLogger,
+        authConfig,
+        policyEnforcer,
+        authorizerMapper,
+        queryConfigProvider,
+        brokerViewOfBrokerConfig,
+        null
+    );
+  }
+
+  @Inject
+  public QueryLifecycleFactory(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final QuerySegmentWalker texasRanger,
+      final GenericQueryMetricsFactory queryMetricsFactory,
+      final ServiceEmitter emitter,
+      final RequestLogger requestLogger,
+      final AuthConfig authConfig,
+      final PolicyEnforcer policyEnforcer,
+      final AuthorizerMapper authorizerMapper,
+      final QueryConfigProvider queryConfigProvider,
+      @Nullable final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig,
+      @Nullable final RequestHeaderContextConfig requestHeaderContextConfig
+  )
+  {
     this.conglomerate = conglomerate;
     this.texasRanger = texasRanger;
     this.queryMetricsFactory = queryMetricsFactory;
@@ -76,6 +115,12 @@ public class QueryLifecycleFactory
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
     this.brokerViewOfBrokerConfig = brokerViewOfBrokerConfig;
+    // Fall back to the default config when not injected (e.g. tests that pass null).
+    // The default has X-Druid-Trace-Id → traceId enabled; pass an explicit empty-map
+    // config to disable the feature. Production injection is wired via JettyServerModule
+    // binding `druid.audit.requestHeaders.*`.
+    this.requestHeaderContextConfig =
+        requestHeaderContextConfig != null ? requestHeaderContextConfig : new RequestHeaderContextConfig();
   }
 
   public QueryLifecycle factorize()
@@ -102,6 +147,7 @@ public class QueryLifecycleFactory
         policyEnforcer,
         queryBlocklist,
         perSegmentTimeoutConfig,
+        requestHeaderContextConfig,
         System.currentTimeMillis(),
         System.nanoTime()
     );

@@ -27,6 +27,7 @@ import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.audit.RequestInfo;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -113,6 +114,26 @@ public class JacksonConfigManager
       AuditInfo auditInfo
   )
   {
+    return set(key, oldValue, newValue, auditInfo, null);
+  }
+
+  /**
+   * Set the config and add an audit entry that also carries request metadata.
+   *
+   * @param requestInfo details of the REST request that triggered the change (service,
+   *                    method, URI, and trace ID). May be null for non-HTTP-triggered
+   *                    changes; when provided it lands on the audit entry's {@code request}
+   *                    field so config-change audits can be correlated with distributed
+   *                    traces. See {@code AuthorizationUtils.buildRequestInfo}.
+   */
+  public <T> SetResult set(
+      String key,
+      @Nullable byte[] oldValue,
+      T newValue,
+      AuditInfo auditInfo,
+      @Nullable RequestInfo requestInfo
+  )
+  {
     ConfigSerde configSerde = create(newValue.getClass(), null);
     // Audit and actual config change are done in separate transactions
     // there can be phantom audits and reOrdering in audit changes as well.
@@ -121,6 +142,7 @@ public class JacksonConfigManager
                   .key(key)
                   .type(key)
                   .auditInfo(auditInfo)
+                  .request(requestInfo)
                   .payload(newValue)
                   .build()
     );

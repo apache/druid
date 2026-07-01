@@ -90,7 +90,8 @@ public class CoordinatorDynamicConfigsResource
 
       final SetResult setResult = manager.setDynamicConfig(
           dynamicConfigBuilder.build(current),
-          AuthorizationUtils.buildAuditInfo(req)
+          AuthorizationUtils.buildAuditInfo(req),
+          AuthorizationUtils.buildRequestInfo("coordinator", req)
       );
 
       if (setResult.isOk()) {

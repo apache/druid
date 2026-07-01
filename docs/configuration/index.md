@@ -349,6 +349,24 @@ Coordinator and Overlord log changes to lookups, segment load/drop rules, and dy
 |`druid.audit.manager.maxPayloadSizeBytes`|The maximum size of audit payload to store in Druid's metadata store audit table. If the size of audit payload exceeds this value, the audit log would be stored with a message indicating that the payload was omitted instead. Setting `maxPayloadSizeBytes` to -1 (default value) disables this check, meaning Druid will always store audit payload regardless of it's size. Setting to any negative number other than `-1` is invalid. Human-readable format is supported, see [here](human-readable-byte.md).  |-1|
 |`druid.audit.manager.skipNullField`|If true, the audit payload stored in metadata store will exclude any field with null value. |false|
 
+### Request header propagation
+
+Druid can capture configured inbound HTTP headers and propagate their values through the query context and into audit events. This is useful for correlating Druid queries and configuration changes with an external distributed-trace or request-tracking system.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.audit.requestHeaders.headerToContextKey`|JSON map of inbound HTTP header name to the [query context](../querying/query-context.md) key the header value is bound to. For each configured header present on a request, the value is captured by a servlet filter and injected into the query context, from where Druid's native sub-query context propagation carries it to data servers (for example, broker to historical). The captured header values are also recorded, keyed by their context key (for example `traceId`), in the `requestMetadata` map of the audit entry for any configuration change made via an audited API. Mapping a header to a reserved Druid context key (`queryId`, `subQueryId`, or `sqlQueryId`) is rejected at startup, because it would let a client overwrite the server-assigned value. Set to an empty map (`{}`) to disable header propagation.|`{"X-Druid-Trace-Id":"traceId"}`|
+
+For example, to also capture a tenant identifier:
+
+```properties
+druid.audit.requestHeaders.headerToContextKey={"X-Druid-Trace-Id":"traceId","X-Tenant-Id":"tenantId"}
+```
+
+A client-supplied value for a configured context key in the query body is ignored (stripped); only a value captured from the corresponding inbound header takes effect. This prevents a client from spoofing the trace identifier by setting it in the query JSON.
+
+When query-context authorization is enabled (`druid.auth.authorizeQueryContextParams=true`), a value captured from a header is subject to the same `QUERY_CONTEXT` `WRITE` authorization as a value supplied in the query body. To allow the default `traceId` (or any other propagated key) without an explicit grant, add it to `druid.auth.unsecuredContextKeys`.
+
 ### Metadata storage
 
 These properties specify the JDBC connection and other configuration around the metadata storage. The only services that connect to the metadata storage with these properties are the [Coordinator](../design/coordinator.md) and [Overlord](../design/overlord.md).

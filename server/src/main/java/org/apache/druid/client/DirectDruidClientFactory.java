@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.druid.audit.RequestHeaderContextConfig;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Smile;
@@ -45,6 +46,7 @@ public class DirectDruidClientFactory implements QueryableDruidServer.Maker
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
   private final ScheduledExecutorService queryCancellationExecutor;
+  private final RequestHeaderContextConfig requestHeaderContextConfig;
 
   @Inject
   public DirectDruidClientFactory(
@@ -52,7 +54,8 @@ public class DirectDruidClientFactory implements QueryableDruidServer.Maker
       final QueryRunnerFactoryConglomerate conglomerate,
       final QueryWatcher queryWatcher,
       final @Smile ObjectMapper smileMapper,
-      final @EscalatedClient HttpClient httpClient
+      final @EscalatedClient HttpClient httpClient,
+      final RequestHeaderContextConfig requestHeaderContextConfig
   )
   {
     this.emitter = emitter;
@@ -60,6 +63,7 @@ public class DirectDruidClientFactory implements QueryableDruidServer.Maker
     this.queryWatcher = queryWatcher;
     this.smileMapper = smileMapper;
     this.httpClient = httpClient;
+    this.requestHeaderContextConfig = requestHeaderContextConfig;
 
     int threadCount = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
     this.queryCancellationExecutor = ScheduledExecutors.fixed(threadCount, "query-cancellation-executor");
@@ -75,7 +79,8 @@ public class DirectDruidClientFactory implements QueryableDruidServer.Maker
         server.getScheme(),
         server.getHost(),
         emitter,
-        queryCancellationExecutor
+        queryCancellationExecutor,
+        requestHeaderContextConfig
     );
   }
 
