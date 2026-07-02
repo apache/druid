@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.MergeIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -40,6 +41,8 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A QueryRunner that combines a list of other QueryRunners and executes them in parallel on an executor.
@@ -85,6 +88,13 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
     final QueryContext context = query.context();
     final boolean usePerSegmentTimeout = context.usePerSegmentTimeout();
     final long perSegmentTimeout = context.getPerSegmentTimeout();
+    final int samplingWindow = context.getPerSegmentSamplingWindow();
+    final long queryStartNanos = System.nanoTime();
+
+    // Shared state for extrapolation — only allocated when sampling is enabled
+    final AtomicInteger completedSegments = samplingWindow > 0 ? new AtomicInteger(0) : null;
+    final AtomicBoolean extrapolationCancelled = samplingWindow > 0 ? new AtomicBoolean(false) : null;
+
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<>()
         {
@@ -120,6 +130,10 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                   throw new ISE("Got a null list of results");
                                 }
 
+                                if (completedSegments != null) {
+                                  completedSegments.incrementAndGet();
+                                }
+
                                 return retVal;
                               }
                               catch (QueryInterruptedException e) {
@@ -153,8 +167,32 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                     )
                 );
 
+            final int totalSegments = futures.size();
             ListenableFuture<List<Iterable<T>>> future = Futures.allAsList(futures);
             queryWatcher.registerQueryFuture(query, future);
+            
+            if (completedSegments != null && totalSegments >= samplingWindow && context.hasTimeout()) {
+              for (ListenableFuture<?> f : futures) {
+                f.addListener(
+                    () -> {
+                      if (extrapolationCancelled.get()) {
+                        return;
+                      }
+                      int completed = completedSegments.get();
+                      if (completed >= samplingWindow) {
+                        long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - queryStartNanos);
+                        long extrapolatedMs = elapsedMs * totalSegments / completed;
+                        long remainingMs = context.getTimeout() - elapsedMs;
+                        if (extrapolatedMs > context.getTimeout() && remainingMs < extrapolatedMs - elapsedMs) {
+                          extrapolationCancelled.set(true);
+                          GuavaUtils.cancelAll(true, future, futures);
+                        }
+                      }
+                    },
+                    Execs.directExecutor()
+                );
+              }
+            }
 
             try {
               return new MergeIterable<>(
@@ -165,8 +203,21 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               ).iterator();
             }
             catch (CancellationException | InterruptedException e) {
-              log.noStackTrace().warn(e, "Query interrupted, cancelling pending results for query [%s]", query.getId());
               GuavaUtils.cancelAll(true, future, futures);
+              if (extrapolationCancelled != null && extrapolationCancelled.get()) {
+                int completed = completedSegments.get();
+                long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - queryStartNanos);
+                throw new QueryTimeoutException(
+                    StringUtils.nonStrictFormat(
+                        "Query [%s] cancelled: extrapolated wall-clock time exceeds timeout after %d of %d segments completed in %d ms.",
+                        query.getId(),
+                        completed,
+                        totalSegments,
+                        elapsedMs
+                    )
+                );
+              }
+              log.noStackTrace().warn(e, "Query interrupted, cancelling pending results for query [%s]", query.getId());
               throw new QueryInterruptedException(e);
             }
             catch (TimeoutException | QueryTimeoutException e) {
