@@ -32,19 +32,21 @@ import org.apache.druid.server.QueryLaningStrategy;
 import org.apache.druid.server.QueryScheduler;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.base.AbstractInterval;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
 /**
- * Query laning strategy that scores queries by how many configured thresholds they breach,
- * then assigns them to the most restrictive matching lane. This provides more nuanced lane
- * assignment than {@link HiLoQueryLaningStrategy}, which uses a binary high/low split.
+ * Query laning strategy that assigns a cost to queries based on how many configured thresholds
+ * they breach, then assigns them to the most restrictive matching lane. This provides more nuanced
+ * lane assignment than {@link HiLoQueryLaningStrategy}, which uses a binary high/low split.
  *
  * <p>Configuration example:
  * <pre>{@code
@@ -53,8 +55,8 @@ import java.util.Set;
  *   "periodThreshold": "P1M",
  *   "segmentCountThreshold": 1000,
  *   "lanes": {
- *     "low": { "minScore": 1, "maxPercent": 30 },
- *     "very-low": { "minScore": 3, "maxPercent": 10 }
+ *     "low": { "minCost": 1, "maxPercent": 30 },
+ *     "very-low": { "minCost": 3, "maxPercent": 10 }
  *   }
  * }
  * }</pre>
@@ -118,9 +120,10 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
       try {
         parsedDuration = new Period(durationThresholdString).toStandardDuration();
       }
-      catch (UnsupportedOperationException e) {
+      catch (IllegalArgumentException | UnsupportedOperationException e) {
         throw new IllegalArgumentException(
-            "durationThreshold must not contain month or year components, got [" + durationThresholdString + "]"
+            "durationThreshold is not a valid ISO 8601 duration, "
+            + "got [" + durationThresholdString + "]"
         );
       }
     }
@@ -131,9 +134,10 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
       try {
         parsedSegmentRange = new Period(segmentRangeThresholdString).toStandardDuration();
       }
-      catch (UnsupportedOperationException e) {
+      catch (IllegalArgumentException | UnsupportedOperationException e) {
         throw new IllegalArgumentException(
-            "segmentRangeThreshold must not contain month or year components, got [" + segmentRangeThresholdString + "]"
+            "segmentRangeThreshold is not a valid ISO 8601 duration, "
+            + "got [" + segmentRangeThresholdString + "]"
         );
       }
     }
@@ -165,18 +169,18 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
     );
     Preconditions.checkArgument(
         !lanes.containsKey(QueryScheduler.TOTAL),
-        "Lane cannot be named 'total'"
+        "Lane cannot be named '%s'", QueryScheduler.TOTAL
     );
     Preconditions.checkArgument(
-        !lanes.containsKey("default"),
-        "Lane cannot be named 'default'"
+        !lanes.containsKey(QueryScheduler.DEFAULT),
+        "Lane cannot be named '%s'", QueryScheduler.DEFAULT
     );
-    long distinctScores = lanes.values().stream().mapToInt(LaneConfig::getMinScore).distinct().count();
+    long distinctCosts = lanes.values().stream().mapToInt(LaneConfig::getMinCost).distinct().count();
     Preconditions.checkArgument(
-        distinctScores == lanes.size(),
-        "Each lane must have a unique minScore so that lane selection is deterministic "
-        + "(a query is assigned to the lane with the highest minScore it meets; equal scores "
-        + "produce non-deterministic results). Found duplicate minScore values in lanes: [%s]",
+        distinctCosts == lanes.size(),
+        "Each lane must have a unique minCost so that lane selection is deterministic "
+        + "(a query is assigned to the lane with the highest minCost it meets; equal costs "
+        + "produce non-deterministic results). Found duplicate minCost values in lanes: [%s]",
         lanes
     );
 
@@ -208,42 +212,46 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
       return Optional.of(existingLane);
     }
 
-    int score = computeScore(query.getQuery(), segments);
-    if (score == 0) {
+    int cost = computeCost(query.getQuery(), segments);
+    if (cost == 0) {
       return Optional.empty();
     }
 
-    // Find the lane with the highest minScore that this query meets
-    String bestLane = null;
-    int bestMinScore = 0;
+    // Find the lane with the highest minCost that this query meets
+    String highestLane = null;
+    int highestMinCost = 0;
     for (Map.Entry<String, LaneConfig> entry : lanes.entrySet()) {
-      int minScore = entry.getValue().minScore;
-      if (score >= minScore && minScore > bestMinScore) {
-        bestLane = entry.getKey();
-        bestMinScore = minScore;
+      int minCost = entry.getValue().minCost;
+      if (cost >= minCost && minCost > highestMinCost) {
+        highestLane = entry.getKey();
+        highestMinCost = minCost;
       }
     }
-    return Optional.ofNullable(bestLane);
+    return Optional.ofNullable(highestLane);
   }
 
-  private <T> int computeScore(Query<T> query, Set<SegmentServerSelector> segments)
+  private <T> int computeCost(Query<T> query, Set<SegmentServerSelector> segments)
   {
-    int score = 0;
+    int cost = 0;
 
     if (periodThreshold != null) {
       final DateTime now = DateTimes.nowUtc();
       final DateTime cutoff = now.minus(periodThreshold.toDurationFrom(now));
-      if (query.getIntervals().stream().anyMatch(interval -> interval.getStart().isBefore(cutoff))) {
-        score++;
+      // Query intervals are condensed and sorted ascending by start (see JodaUtils.condenseIntervals, applied by
+      // every QuerySegmentSpec), so the earliest start is the first interval. Checking only it avoids scanning a
+      // query with hundreds of intervals.
+      final List<Interval> intervals = query.getIntervals();
+      if (!intervals.isEmpty() && intervals.get(0).getStart().isBefore(cutoff)) {
+        cost++;
       }
     }
 
     if (durationThreshold != null && query.getDuration().isLongerThan(durationThreshold)) {
-      score++;
+      cost++;
     }
 
     if (segmentCountThreshold != null && segments.size() > segmentCountThreshold) {
-      score++;
+      cost++;
     }
 
     if (segmentRangeThreshold != null) {
@@ -254,37 +262,37 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
                                     .mapToLong(AbstractInterval::toDurationMillis)
                                     .sum();
       if (segmentRangeMs > segmentRangeThreshold.getMillis()) {
-        score++;
+        cost++;
       }
     }
 
-    return score;
+    return cost;
   }
 
   public static class LaneConfig
   {
-    private final int minScore;
+    private final int minCost;
     private final int maxPercent;
 
     @JsonCreator
     public LaneConfig(
-        @JsonProperty("minScore") int minScore,
+        @JsonProperty("minCost") int minCost,
         @JsonProperty("maxPercent") int maxPercent
     )
     {
-      Preconditions.checkArgument(minScore > 0, "minScore must be > 0, got [%s]", minScore);
+      Preconditions.checkArgument(minCost > 0, "minCost must be > 0, got [%s]", minCost);
       Preconditions.checkArgument(
           maxPercent > 0 && maxPercent <= 100,
           "maxPercent must be in the range 1 to 100, got [%s]", maxPercent
       );
-      this.minScore = minScore;
+      this.minCost = minCost;
       this.maxPercent = maxPercent;
     }
 
     @JsonProperty
-    public int getMinScore()
+    public int getMinCost()
     {
-      return minScore;
+      return minCost;
     }
 
     @JsonProperty
@@ -303,13 +311,13 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
         return false;
       }
       LaneConfig that = (LaneConfig) o;
-      return minScore == that.minScore && maxPercent == that.maxPercent;
+      return minCost == that.minCost && maxPercent == that.maxPercent;
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(minScore, maxPercent);
+      return Objects.hash(minCost, maxPercent);
     }
   }
 }

@@ -622,7 +622,7 @@ public class QuerySchedulerTest
     properties.setProperty(propertyPrefix + ".numThreads", "10");
     properties.setProperty(propertyPrefix + ".laning.strategy", "weighted");
     properties.setProperty(propertyPrefix + ".laning.segmentCountThreshold", "1");
-    properties.setProperty(propertyPrefix + ".laning.lanes", "{\"low\": {\"minScore\": 1, \"maxPercent\": 30}}");
+    properties.setProperty(propertyPrefix + ".laning.lanes", "{\"low\": {\"minCost\": 1, \"maxPercent\": 30}}");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final QueryScheduler scheduler = provider.get().get();
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());

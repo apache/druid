@@ -84,7 +84,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testComputeLane_oneViolation_segmentCount()
   {
-    // segmentCountThreshold=1, query has 5 segments → score=1 → "low"
+    // segmentCountThreshold=1, query has 5 segments → cost=1 → "low"
     WeightedQueryLaningStrategy strategy = newStrategy(null, null, 1, null);
     TimeseriesQuery query = queryBuilder.build();
     Set<SegmentServerSelector> segments = makeSegments(5);
@@ -94,10 +94,10 @@ public class WeightedQueryLaningStrategyTest
   }
 
   @Test
-  public void testComputeLane_twoViolations_matchesLowerMinScore()
+  public void testComputeLane_twoViolations_matchesLowerMinCost()
   {
-    // segmentCountThreshold=1 + durationThreshold=PT1S → score=2
-    // Matches "low" (minScore=1) but NOT "very-low" (minScore=3)
+    // segmentCountThreshold=1 + durationThreshold=PT1S → cost=2
+    // Matches "low" (minCost=1) but NOT "very-low" (minCost=3)
     WeightedQueryLaningStrategy strategy = new WeightedQueryLaningStrategy(
         null,
         "PT1S",
@@ -115,7 +115,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testComputeLane_allViolations_mostRestrictiveLane()
   {
-    // All 4 thresholds set very low → score=4 → meets "very-low" (minScore=3)
+    // All 4 thresholds set very low → cost=4 → meets "very-low" (minCost=3)
     WeightedQueryLaningStrategy strategy = new WeightedQueryLaningStrategy(
         "PT1S",
         "PT1S",
@@ -155,8 +155,26 @@ public class WeightedQueryLaningStrategyTest
     segments.add(new SegmentServerSelector(
         new SegmentDescriptor(Intervals.of("2020-01-02/2020-01-03"), "v1", 1)
     ));
-    // Total range = 1 day + 1 day = 2 days > 1 second → score=1 → "low"
+    // Total range = 1 day + 1 day = 2 days > 1 second → cost=1 → "low"
     Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), segments);
+    Assert.assertTrue(lane.isPresent());
+    Assert.assertEquals("low", lane.get());
+  }
+
+  @Test
+  public void testComputeLane_periodThreshold_usesEarliestInterval()
+  {
+    // periodThreshold=P1D → cutoff is ~1 day ago. Provide multiple intervals in unsorted order where only the
+    // earliest (old) interval is before the cutoff. getIntervals() is condensed/sorted ascending by start, so the
+    // period check inspects the earliest interval and must charge cost even though later intervals are recent.
+    WeightedQueryLaningStrategy strategy = newStrategy("P1D", null, null, null);
+    TimeseriesQuery query = queryBuilder
+        .intervals(List.of(
+            Intervals.of("2038-01-01/2038-01-02"),
+            Intervals.of("2000-01-01/2000-01-02")
+        ))
+        .build();
+    Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), Set.of());
     Assert.assertTrue(lane.isPresent());
     Assert.assertEquals("low", lane.get());
   }
@@ -231,7 +249,7 @@ public class WeightedQueryLaningStrategyTest
   }
 
   @Test
-  public void testLaneConfig_invalidMinScore()
+  public void testLaneConfig_invalidMinCost()
   {
     Assert.assertThrows(
         IllegalArgumentException.class,
@@ -257,8 +275,8 @@ public class WeightedQueryLaningStrategyTest
                   + "  \"segmentCountThreshold\": 1000,\n"
                   + "  \"durationThreshold\": \"P1D\",\n"
                   + "  \"lanes\": {\n"
-                  + "    \"low\": { \"minScore\": 1, \"maxPercent\": 30 },\n"
-                  + "    \"very-low\": { \"minScore\": 3, \"maxPercent\": 10 }\n"
+                  + "    \"low\": { \"minCost\": 1, \"maxPercent\": 30 },\n"
+                  + "    \"very-low\": { \"minCost\": 3, \"maxPercent\": 10 }\n"
                   + "  }\n"
                   + "}";
 

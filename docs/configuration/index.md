@@ -1770,6 +1770,39 @@ This laning strategy is best suited for cases where one or more external applica
 |`druid.query.scheduler.laning.lanes.{name}`|Maximum percent or exact limit of queries that can concurrently run in the defined lanes. Any number of lanes may be defined like this. The lane names 'total' and 'default' are reserved for internal use.|No default, must define at least one lane with a limit above 0. If `druid.query.scheduler.laning.isLimitPercent` is set to `true`, values must be integers in the range of 1 to 100.|
 |`druid.query.scheduler.laning.isLimitPercent`|If set to `true`, the values set for `druid.query.scheduler.laning.lanes` will be treated as a percent of the smaller number of `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`. Note that in this mode, these lane values across lanes are _not_ required to add up to, and can exceed, 100%.|`false`|
 
+###### Weighted laning strategy
+
+This laning strategy assigns a cost to each query based on how many of a configurable set of thresholds it breaches, then routes the query to the most restrictive lane whose `minCost` the query meets. It is a more granular alternative to the 'High/Low' strategy: rather than a binary split, a query that breaches one threshold can be laned differently than one that breaches several. The thresholds are the same ones used by the [threshold prioritization strategy](#threshold-prioritization-strategy) (data age, query interval duration, segment count, and total segment range). Each threshold a query breaches adds 1 to its cost. A query with cost 0 is not assigned a lane and runs in the interactive (default) pool.
+
+If a lane is specified in the [query context](../querying/query-context-reference.md) `lane` parameter, this will override the computed lane.
+
+This strategy can be enabled by setting `druid.query.scheduler.laning.strategy=weighted`.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.scheduler.laning.periodThreshold`|ISO 8601 period. A query is charged 1 if any of its intervals starts before `now - periodThreshold` (that is, it reads data older than this).|null (not evaluated)|
+|`druid.query.scheduler.laning.durationThreshold`|ISO 8601 duration (must not contain month or year components). A query is charged 1 if its total interval duration exceeds this.|null (not evaluated)|
+|`druid.query.scheduler.laning.segmentCountThreshold`|A query is charged 1 if the number of segments it involves exceeds this. Must be greater than 0.|null (not evaluated)|
+|`druid.query.scheduler.laning.segmentRangeThreshold`|ISO 8601 duration (must not contain month or year components). A query is charged 1 if the summed time range of its distinct segments exceeds this.|null (not evaluated)|
+|`druid.query.scheduler.laning.lanes.{name}.minCost`|Minimum query cost required to be assigned to this lane. A query is assigned to the lane with the highest `minCost` it meets. Each lane must have a unique `minCost` so that lane selection is deterministic. Must be greater than 0. The lane names 'total' and 'default' are reserved for internal use.|No default, must define at least one lane|
+|`druid.query.scheduler.laning.lanes.{name}.maxPercent`|Maximum percent of the smaller number of `druid.server.http.numThreads` or `druid.query.scheduler.numThreads` that queries in this lane may use concurrently. Must be an integer in the range 1 to 100.|No default, must be set for each lane|
+
+At least one of `periodThreshold`, `durationThreshold`, `segmentCountThreshold`, or `segmentRangeThreshold` must be set. For example, the following configuration routes queries breaching 1 or 2 thresholds to a `low` lane capped at 30% capacity, and queries breaching 3 or 4 thresholds to a `very-low` lane capped at 10%:
+
+```json
+{
+  "strategy": "weighted",
+  "periodThreshold": "P1M",
+  "durationThreshold": "P1D",
+  "segmentCountThreshold": 1000,
+  "segmentRangeThreshold": "P180D",
+  "lanes": {
+    "low": { "minCost": 1, "maxPercent": 30 },
+    "very-low": { "minCost": 3, "maxPercent": 10 }
+  }
+}
+```
+
 ##### Server configuration
 
 Druid uses Jetty to serve HTTP requests. Each query being processed consumes a single thread from `druid.server.http.numThreads`, so consider defining `druid.query.scheduler.numThreads` to a lower value in order to reserve HTTP threads for responding to health checks, lookup loading, and other non-query, (in most cases) comparatively very short-lived, HTTP requests.
