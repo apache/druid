@@ -1,7 +1,7 @@
 ---
 id: caching
 title: "Query caching"
-description: "Describes Apache Druid per-segment and whole-query cache types. Identifies services where you can enable caching and suggestions for caching strategy."
+description: "Describes Apache&circledR; Druid per-segment and whole-query cache types. Identifies services where you can enable caching and suggestions for caching strategy."
 ---
 
 <!--
@@ -23,7 +23,7 @@ description: "Describes Apache Druid per-segment and whole-query cache types. Id
   ~ under the License.
   -->
 
-You can enable caching in Apache Druid to improve query times for frequently accessed data. This topic defines the different types of caching for Druid. It describes the default caching behavior and provides guidance and examples to help you hone your caching strategy.
+You can enable caching in Apache&circledR; Druid to improve query times for frequently accessed data. This topic defines the different types of caching for Druid. It describes the default caching behavior and provides guidance and examples to help you hone your caching strategy.
 
 If you're unfamiliar with Druid architecture, review the following topics before proceeding with caching:
 - [Druid Design](../design/architecture.md)

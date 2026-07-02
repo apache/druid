@@ -22,7 +22,7 @@ title: "Lookups"
   ~ under the License.
   -->
 
-Lookups are a concept in Apache Druid where dimension values are (optionally) replaced with new values, allowing join-like
+Lookups are a concept in Apache&circledR; Druid where dimension values are (optionally) replaced with new values, allowing join-like
 functionality. Applying lookups in Druid is similar to joining a dimension table in a data warehouse. See
 [dimension specs](./dimensionspecs.md) for more information. For the purpose of these documents, a "key"
 refers to a dimension value to match, and a "value" refers to its replacement. So if you wanted to map
