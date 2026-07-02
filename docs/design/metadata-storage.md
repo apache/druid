@@ -23,7 +23,7 @@ title: "Metadata storage"
   -->
 
 
-Apache Druid relies on an external dependency for metadata storage.
+Apache&circledR; Druid relies on an external dependency for metadata storage.
 Druid uses the metadata store to house various metadata about the system, but not to store the actual data.
 The metadata store retains all metadata essential for a Druid cluster to work.
 

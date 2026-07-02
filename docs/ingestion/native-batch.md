@@ -27,7 +27,7 @@ sidebar_label: JSON-based batch
  This page describes JSON-based batch ingestion using [ingestion specs](ingestion-spec.md). For SQL-based batch ingestion using the [multi-stage query (MSQ) task engine](../multi-stage-query/index.md), see [SQL-based ingestion](../multi-stage-query/index.md). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
 :::
 
-Apache Druid supports the following types of JSON-based batch indexing tasks:
+Apache&circledR; Druid supports the following types of JSON-based batch indexing tasks:
 
 - Parallel task indexing (`index_parallel`) that can run multiple indexing tasks concurrently. Parallel task works well for production ingestion tasks.
 - Simple task indexing (`index`) that run a single indexing task at a time. Simple task indexing is suitable for development and test environments.

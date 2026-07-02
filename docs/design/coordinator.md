@@ -43,7 +43,7 @@ service loads the segment and begins servicing it.
 
 ## Configuration
 
-For Apache Druid Coordinator service configuration, see [Coordinator configuration](../configuration/index.md#coordinator).
+For Apache&circledR; Druid Coordinator service configuration, see [Coordinator configuration](../configuration/index.md#coordinator).
 
 For basic tuning guidance for the Coordinator service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#coordinator).
 
