@@ -345,19 +345,18 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
 
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
-      log.info("Query[%s] found [%d] segments from timeline lookup.", query.getId(), segmentServers.size());
       if (query.context().isDebug()) {
-        final Map<String, Long> segmentCountByKey = segmentServers.stream().collect(
-            Collectors.groupingBy(
-                s -> s.getSegmentDescriptor().getInterval()
-                     + "_" + s.getSegmentDescriptor().getVersion()
-                     + "_" + (s.getServer() != null && s.getServer().isRealtimeSegment() ? "realtime" : "historical"),
-                Collectors.counting()
-            )
-        );
-        segmentCountByKey.forEach(
-            (key, count) ->
-                log.info("Query[%s] interval/version/type[%s] partitions[%d]", query.getId(), key, count)
+        final String dataSource = ev.getBaseTableDataSource().getName();
+        log.infoSegmentIds(
+            segmentServers.stream().map(
+                s -> SegmentId.of(
+                    dataSource,
+                    s.getSegmentDescriptor().getInterval(),
+                    s.getSegmentDescriptor().getVersion(),
+                    s.getSegmentDescriptor().getPartitionNumber()
+                )
+            ),
+            StringUtils.format("Query[%s] found segments from timeline lookup", query.getId())
         );
       }
       final CloneQueryMode cloneQueryMode = query.context().getCloneQueryMode();
