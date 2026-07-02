@@ -118,6 +118,29 @@ public class SegmentReplicationStatusTest
     );
   }
 
+  @Test
+  public void testConstructorSnapshotsInputAndIsUnaffectedByLaterMutation()
+  {
+    final Map<SegmentId, Map<String, SegmentReplicaCount>> replicaCountsInTier = new HashMap<>();
+    final SegmentReplicaCount count = countOf(2, 2, 1);
+    final Map<String, SegmentReplicaCount> tierMap = new HashMap<>();
+    tierMap.put(TIER_1, count);
+    replicaCountsInTier.put(segments.get(0).getId(), tierMap);
+
+    final SegmentReplicationStatus status = new SegmentReplicationStatus(replicaCountsInTier);
+    final SegmentReplicaCount totalBefore = status.getReplicaCountsInCluster(segments.get(0).getId());
+    Assert.assertEquals(1, totalBefore.totalLoaded());
+
+    // Mutate the caller's inputs after construction, as BalanceSegments does later in the same
+    // coordinator cycle: add a brand new segment key and mutate an already-tracked count in place.
+    count.incrementLoaded();
+    tierMap.put(TIER_2, countOf(1, 1, 1));
+    replicaCountsInTier.put(segments.get(1).getId(), Map.of(TIER_1, countOf(1, 1, 1)));
+
+    Assert.assertEquals(1, status.getReplicaCountsInCluster(segments.get(0).getId()).totalLoaded());
+    Assert.assertNull(status.getReplicaCountsInCluster(segments.get(1).getId()));
+  }
+
   private static SegmentReplicaCount countOf(int required, int requiredAndLoadable, int loaded)
   {
     final SegmentReplicaCount count = new SegmentReplicaCount();
