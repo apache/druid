@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.batch.parallel.DeepStoragePartitionStat;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
@@ -38,6 +39,7 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
 {
   public static final String SHUFFLE_DATA_DIR_PREFIX = "shuffle-data";
   private final DataSegmentPusher dataSegmentPusher;
+  private final DataSegmentKiller dataSegmentKiller;
 
   /**
    * Deep storage path to the directory that holds all shuffle intermediate files for {@code supervisorTaskId},
@@ -50,9 +52,10 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
   }
 
   @Inject
-  public DeepStorageIntermediaryDataManager(DataSegmentPusher dataSegmentPusher)
+  public DeepStorageIntermediaryDataManager(DataSegmentPusher dataSegmentPusher, DataSegmentKiller dataSegmentKiller)
   {
     this.dataSegmentPusher = dataSegmentPusher;
+    this.dataSegmentKiller = dataSegmentKiller;
   }
 
   @Override
@@ -109,18 +112,16 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
    * Not implemented for deep storage mode. Unlike {@link LocalIntermediaryDataManager},
    * which can walk the local filesystem to find and delete files by supervisorTaskId,
    * this manager has no way to discover what files were pushed: it has no
-   * {@link org.apache.druid.segment.loading.DataSegmentKiller}, does not track pushed
+   * {@link DataSegmentKiller}, does not track pushed
    * paths, and runs on short-lived peon processes whose state is lost on exit.
    * <p>
    * Deep storage shuffle cleanup is handled in {@link org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask#cleanUp}
-   * via {@link org.apache.druid.segment.loading.DataSegmentKiller#killRecursively} on
+   * via {@link DataSegmentKiller#killRecursively} on
    * {@link #retrieveShuffleDataStoragePath(String)} (recursive delete of that directory).
    */
   @Override
-  public void deletePartitions(String supervisorTaskId)
+  public void deletePartitions(String supervisorTaskId) throws IOException
   {
-    throw new UnsupportedOperationException(
-        "Deep storage shuffle cleanup is handled by ParallelIndexSupervisorTask, not by the data manager"
-    );
+    dataSegmentKiller.killRecursively(retrieveShuffleDataStoragePath(supervisorTaskId));
   }
 }

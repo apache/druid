@@ -24,7 +24,9 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
+import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
+import com.google.inject.name.Named;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.segment.loading.DataSegmentKiller;
@@ -36,12 +38,14 @@ import org.apache.druid.segment.loading.LocalFileTimestampVersionFinder;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 
 import java.util.List;
+import java.util.Properties;
 
 /**
  */
 public class LocalDataStorageDruidModule implements DruidModule
 {
   public static final String SCHEME = "local";
+  public static final String STORAGE_TYPE = "druid.storage.type";
 
   @Override
   public void configure(Binder binder)
@@ -50,17 +54,24 @@ public class LocalDataStorageDruidModule implements DruidModule
 
     PolyBind.createChoice(
         binder,
-        "druid.storage.type",
+        STORAGE_TYPE,
         Key.get(DataSegmentPusher.class),
         Key.get(LocalDataSegmentPusher.class)
     );
 
     PolyBind.createChoice(
         binder,
-        "druid.storage.type",
+        STORAGE_TYPE,
         Key.get(DataSegmentKiller.class),
         Key.get(LocalDataSegmentKiller.class)
     );
+  }
+
+  @Provides
+  @Named(STORAGE_TYPE)
+  public String getDeepStorageType(Properties properties)
+  {
+    return properties.getProperty(STORAGE_TYPE, SCHEME);
   }
 
   private static void bindDeepStorageLocal(Binder binder)

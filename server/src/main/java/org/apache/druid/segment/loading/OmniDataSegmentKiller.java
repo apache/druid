@@ -24,6 +24,9 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.google.inject.name.Named;
+import org.apache.druid.guice.LocalDataStorageDruidModule;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.timeline.DataSegment;
 
@@ -38,13 +41,16 @@ import java.util.Map;
  */
 public class OmniDataSegmentKiller implements DataSegmentKiller
 {
+  private final String deepStorageType;
   private final Map<String, Supplier<DataSegmentKiller>> killers;
 
   @Inject
   public OmniDataSegmentKiller(
+      @Named(LocalDataStorageDruidModule.STORAGE_TYPE) String deepStorageType,
       Map<String, Provider<DataSegmentKiller>> killers
   )
   {
+    this.deepStorageType = deepStorageType;
     this.killers = new HashMap<>();
     for (Map.Entry<String, Provider<DataSegmentKiller>> entry : killers.entrySet()) {
       String type = entry.getKey();
@@ -97,27 +103,26 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
   @Override
   public void killAll()
   {
+    // Do not invoke killAll() for cloud-specific DataSegmentKiller implementations
+    // as this is a potentially dangerous operation
     throw new UnsupportedOperationException("not implemented");
   }
 
   @Override
   public void killRecursively(String relativePath) throws IOException
   {
-    IOException firstFailure = null;
-    for (Supplier<DataSegmentKiller> supplier : killers.values()) {
-      try {
-        supplier.get().killRecursively(relativePath);
-      }
-      catch (IOException e) {
-        if (firstFailure == null) {
-          firstFailure = e;
-        } else {
-          firstFailure.addSuppressed(e);
-        }
-      }
-    }
-    if (firstFailure != null) {
-      throw firstFailure;
+    // Delegate kill to the currently bound deep storage implementation only.
+    // It is unnecessary and also potentially unsafe to kill all files under the
+    // same folder name on inactive deep storage bindings provided by other extensions.
+    final Supplier<DataSegmentKiller> killer = killers.get(deepStorageType);
+
+    if (killer == null) {
+      throw new ISE(
+          "Unknown segment killer type[%s]. Known types are %s",
+          deepStorageType, killers.keySet()
+      );
+    } else {
+      killer.get().killRecursively(relativePath);
     }
   }
 
