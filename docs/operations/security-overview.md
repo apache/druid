@@ -1,7 +1,7 @@
 ---
 id: security-overview
 title: "Security overview"
-description: Overiew of Apache Druid security. Includes best practices, configuration instructions, a description of the security model and documentation on how to report security issues.
+description: Overview of Apache&circledR; Druid security. Includes best practices, configuration instructions, a description of the security model and documentation on how to report security issues.
 ---
 
 <!--
@@ -24,7 +24,7 @@ description: Overiew of Apache Druid security. Includes best practices, configur
   -->
 
 
-This document provides an overview of Apache Druid security features, configuration instructions, and some best practices to secure Druid.
+This document provides an overview of Apache&circledR; Druid security features, configuration instructions, and some best practices to secure Druid.
 
 By default, security features in Druid are disabled, which simplifies the initial deployment experience. However, security features must be configured in a production deployment. These features include TLS, authentication, and authorization.
 
