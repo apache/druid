@@ -324,6 +324,40 @@ class QueryableIndexCursorFactoryClusteredTest
   }
 
   @Test
+  void testEquivalentVcFilterPrunesToSingleGroupNotConcatenated()
+  {
+    // A filter on the ORIGINAL expression used to build the clustering column (lower(tenant) = 'acme', planned as a
+    // query VC) must prune to the single matching cluster group and take the single-group cursor path -- NOT survive
+    // every group and post-filter through the ConcatenatingCursor.
+    segmentIndex = buildVirtualClusteringSegment();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+
+    // Control: unfiltered -> both groups survive -> multi-group ConcatenatingCursor.
+    try (CursorHolder holder =
+             factory.makeCursorHolder(CursorBuildSpec.builder().setVirtualColumns(queryVcs).build())) {
+      Assertions.assertInstanceOf(ConcatenatingCursor.class, holder.asCursor());
+    }
+
+    // Filtered on the equivalent VC -> the clustering leaf resolves to tenant_lower and folds, pruning to the single
+    // acme group -> single-group cursor (not a ConcatenatingCursor), and no residual filter on the missing raw column.
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+        .setVirtualColumns(queryVcs)
+        .setFilter(new EqualityFilter("v0", ColumnType.STRING, "acme", null))
+        .build();
+    try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = holder.asCursor();
+      Assertions.assertFalse(cursor instanceof ConcatenatingCursor);
+      Assertions.assertEquals(List.of("us-east-1", "us-west-2"), collectDimension(cursor, "region"));
+    }
+  }
+
+  @Test
   void testQueryVcEquivalentToClusteringColumnReadsMaterializedColumnViaVectorCursor()
   {
     // the query-VC -> materialized-column remap is applied on the vector factory too, so a
