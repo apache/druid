@@ -33,12 +33,14 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
@@ -66,7 +68,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 
 public class OpenLineageRequestLoggerTest
 {
@@ -839,6 +840,77 @@ public class OpenLineageRequestLoggerTest
     JsonNode sales = inputByName(capturedEvents.get(0), "sales");
     Assertions.assertNull(sales.get("facets").get("schema"), "column lineage disabled -> no schema facet");
     Assertions.assertNull(sales.get("facets").get("druid_columnUsage"));
+  }
+
+  @Test
+  public void testFilteredAggregatorSplitsAggregationAndFilterRoles() throws IOException
+  {
+    // SUM(added) FILTER (WHERE status = 'active'): "added" is the aggregation input, "status" the filter.
+    Query<?> query = Druids.newTimeseriesQueryBuilder()
+        .dataSource("sales")
+        .intervals(everyInterval())
+        .granularity(Granularities.ALL)
+        .aggregators(new FilteredAggregatorFactory(
+            new LongSumAggregatorFactory("s", "added"),
+            new SelectorDimFilter("status", "active", null)
+        ))
+        .context(ImmutableMap.of("queryId", "filtagg-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode sales = inputByName(capturedEvents.get(0), "sales");
+    Assertions.assertEquals(ImmutableList.of("added", "status"), schemaFieldNames(sales));
+    Assertions.assertEquals(ImmutableList.of("AGGREGATION"), usagesOf(sales, "added"));
+    Assertions.assertEquals(ImmutableList.of("FILTER"), usagesOf(sales, "status"));
+  }
+
+  @Test
+  public void testJoinBaseTableFilterColumns() throws IOException
+  {
+    JoinDataSource join = JoinDataSource.create(
+        new TableDataSource("sales"),
+        new TableDataSource("users"),
+        "j0.",
+        "\"country\" == \"j0.country\"",
+        JoinType.INNER,
+        new SelectorDimFilter("status", "active", null),
+        ExprMacroTable.nil(),
+        null,
+        null
+    );
+    ScanQuery query = Druids.newScanQueryBuilder()
+        .dataSource(join)
+        .intervals(everyInterval())
+        .columns("country")
+        .context(ImmutableMap.of("queryId", "joinfilter-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode sales = inputByName(capturedEvents.get(0), "sales");
+    // The join's base-table (left) filter on "status" is captured as FILTER on the base table.
+    Assertions.assertEquals(ImmutableList.of("FILTER"), usagesOf(sales, "status"));
+    Assertions.assertEquals(ImmutableList.of("PROJECTION", "JOIN"), usagesOf(sales, "country"));
+  }
+
+  @Test
+  public void testFilteredDataSourceCapturesFilterColumns() throws IOException
+  {
+    FilteredDataSource filtered = FilteredDataSource.create(
+        new TableDataSource("sales"),
+        new SelectorDimFilter("status", "active", null)
+    );
+    ScanQuery query = Druids.newScanQueryBuilder()
+        .dataSource(filtered)
+        .intervals(everyInterval())
+        .columns("country")
+        .context(ImmutableMap.of("queryId", "filtds-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode sales = inputByName(capturedEvents.get(0), "sales");
+    Assertions.assertEquals(ImmutableList.of("country", "status"), schemaFieldNames(sales));
+    Assertions.assertEquals(ImmutableList.of("PROJECTION"), usagesOf(sales, "country"));
+    Assertions.assertEquals(ImmutableList.of("FILTER"), usagesOf(sales, "status"));
   }
 
   private static QuerySegmentSpec everyInterval()
