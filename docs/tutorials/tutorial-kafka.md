@@ -1,6 +1,6 @@
 ---
 id: tutorial-kafka
-title: Load streaming data from Apache Kafka
+title: Load streaming data from Apache Kafka&circledR;
 sidebar_label: Load from Apache Kafka
 ---
 
@@ -24,7 +24,7 @@ sidebar_label: Load from Apache Kafka
   -->
 
 
-This tutorial shows you how to load data into Apache Druid from a Kafka stream, using Druid's Kafka indexing service. 
+This tutorial shows you how to load data into Apache&circledR; Druid from a Kafka stream, using Druid's Kafka indexing service. 
 
 The tutorial guides you through the steps to load sample nested clickstream data from the [Koalas to the Max](https://www.koalastothemax.com/) game into a Kafka topic, then ingest the data into Druid.
 
@@ -34,7 +34,7 @@ Before you follow the steps in this tutorial, download Druid as described in the
 
 ## Download and start Kafka
 
-[Apache Kafka](http://kafka.apache.org/) is a high-throughput message bus that works well with Druid. For this tutorial, use Kafka 2.7.0. 
+[Apache Kafka&circledR;](http://kafka.apache.org/) is a high-throughput message bus that works well with Druid. For this tutorial, use Kafka 2.7.0. 
 
 1. To download Kafka, run the following commands in your terminal:
 
