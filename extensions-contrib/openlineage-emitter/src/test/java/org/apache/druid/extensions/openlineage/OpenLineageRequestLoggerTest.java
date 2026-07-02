@@ -23,18 +23,37 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.FilteredDataSource;
+import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
@@ -49,7 +68,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 
 public class OpenLineageRequestLoggerTest
 {
@@ -525,6 +543,408 @@ public class OpenLineageRequestLoggerTest
     );
     // Covers the executor-shutdown and httpClient-close branches in stop()
     Assertions.assertDoesNotThrow(httpLogger::stop);
+  }
+
+  // --- Column-level lineage tests (BDCE-559) ---
+
+  @Test
+  public void testScanColumnLineage() throws IOException
+  {
+    ScanQuery query = Druids.newScanQueryBuilder()
+        .dataSource("events")
+        .intervals(everyInterval())
+        .columns("userId", "page")
+        .filters(new SelectorDimFilter("country", "US", null))
+        .context(ImmutableMap.of("queryId", "scan-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode input = inputByName(capturedEvents.get(0), "events");
+    Assertions.assertEquals(ImmutableList.of("country", "page", "userId"), schemaFieldNames(input));
+    Assertions.assertEquals(ImmutableList.of("PROJECTION"), usagesOf(input, "userId"));
+    Assertions.assertEquals(ImmutableList.of("PROJECTION"), usagesOf(input, "page"));
+    Assertions.assertEquals(ImmutableList.of("FILTER"), usagesOf(input, "country"));
+  }
+
+  @Test
+  public void testGroupByColumnLineage() throws IOException
+  {
+    GroupByQuery query = GroupByQuery.builder()
+        .setDataSource("sales")
+        .setQuerySegmentSpec(everyInterval())
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("country", "country"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("total", "amount"))
+        .setDimFilter(new SelectorDimFilter("status", "active", null))
+        .setContext(ImmutableMap.of("queryId", "gb-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode input = inputByName(capturedEvents.get(0), "sales");
+    Assertions.assertEquals(ImmutableList.of("amount", "country", "status"), schemaFieldNames(input));
+    Assertions.assertEquals(ImmutableList.of("AGGREGATION"), usagesOf(input, "amount"));
+    Assertions.assertEquals(ImmutableList.of("GROUP_BY"), usagesOf(input, "country"));
+    Assertions.assertEquals(ImmutableList.of("FILTER"), usagesOf(input, "status"));
+  }
+
+  @Test
+  public void testVirtualColumnExpandsToBaseColumns() throws IOException
+  {
+    GroupByQuery query = GroupByQuery.builder()
+        .setDataSource("sales")
+        .setQuerySegmentSpec(everyInterval())
+        .setGranularity(Granularities.ALL)
+        .setVirtualColumns(VirtualColumns.create(ImmutableList.of(
+            new ExpressionVirtualColumn("v0", "\"base\" * 2", ColumnType.LONG, ExprMacroTable.nil())
+        )))
+        .setDimensions(new DefaultDimensionSpec("v0", "v0"))
+        .setContext(ImmutableMap.of("queryId", "vc-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode input = inputByName(capturedEvents.get(0), "sales");
+    // The virtual column "v0" is expanded to its underlying base column "base"; "v0" is not emitted.
+    Assertions.assertEquals(ImmutableList.of("base"), schemaFieldNames(input));
+    Assertions.assertEquals(ImmutableList.of("GROUP_BY"), usagesOf(input, "base"));
+  }
+
+  @Test
+  public void testSelectStarEmitsNoColumnFacets() throws IOException
+  {
+    // Scan with no explicit columns (SELECT *) -> table-level lineage only, no column facets.
+    ScanQuery query = Druids.newScanQueryBuilder()
+        .dataSource("events")
+        .intervals(everyInterval())
+        .context(ImmutableMap.of("queryId", "scan-star"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode input = inputByName(capturedEvents.get(0), "events");
+    Assertions.assertNotNull(input);
+    Assertions.assertNull(input.get("facets").get("schema"));
+    Assertions.assertNull(input.get("facets").get("druid_columnUsage"));
+  }
+
+  @Test
+  public void testUnionReplicatesColumnsToMembers() throws IOException
+  {
+    // Union members share the same output schema, so referenced columns are attributed to each member.
+    GroupByQuery query = GroupByQuery.builder()
+        .setDataSource(new UnionDataSource(ImmutableList.of(
+            new TableDataSource("sales_a"),
+            new TableDataSource("sales_b")
+        )))
+        .setQuerySegmentSpec(everyInterval())
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("country", "country"))
+        .setContext(ImmutableMap.of("queryId", "union-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode event = capturedEvents.get(0);
+    Set<String> names = inputNames(event);
+    Assertions.assertEquals(2, names.size());
+    Assertions.assertTrue(names.contains("sales_a") && names.contains("sales_b"));
+    for (String table : ImmutableList.of("sales_a", "sales_b")) {
+      JsonNode input = inputByName(event, table);
+      Assertions.assertEquals(ImmutableList.of("country"), schemaFieldNames(input), table);
+      Assertions.assertEquals(ImmutableList.of("GROUP_BY"), usagesOf(input, "country"));
+    }
+  }
+
+  @Test
+  public void testJoinColumnLineageAttributedPerSide() throws IOException
+  {
+    JoinDataSource join = JoinDataSource.create(
+        new TableDataSource("sales"),
+        new TableDataSource("users"),
+        "j0.",
+        "\"country\" == \"j0.country\"",
+        JoinType.INNER,
+        null,
+        ExprMacroTable.nil(),
+        null,
+        null
+    );
+    ScanQuery query = Druids.newScanQueryBuilder()
+        .dataSource(join)
+        .intervals(everyInterval())
+        .columns("country", "j0.age")
+        .context(ImmutableMap.of("queryId", "join-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode event = capturedEvents.get(0);
+    JsonNode sales = inputByName(event, "sales");
+    JsonNode users = inputByName(event, "users");
+
+    // Left-side column "country" is both projected and used as a join key.
+    Assertions.assertEquals(ImmutableList.of("country"), schemaFieldNames(sales));
+    Assertions.assertEquals(ImmutableList.of("PROJECTION", "JOIN"), usagesOf(sales, "country"));
+    // Right-side columns are un-prefixed and attributed to "users".
+    Assertions.assertEquals(ImmutableList.of("age", "country"), schemaFieldNames(users));
+    Assertions.assertEquals(ImmutableList.of("PROJECTION"), usagesOf(users, "age"));
+    Assertions.assertEquals(ImmutableList.of("JOIN"), usagesOf(users, "country"));
+  }
+
+  @Test
+  public void testSubQueryColumnLineageRecursesToBaseTable() throws IOException
+  {
+    GroupByQuery inner = GroupByQuery.builder()
+        .setDataSource("sales")
+        .setQuerySegmentSpec(everyInterval())
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("country", "country"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("total", "amount"))
+        .build();
+    GroupByQuery outer = GroupByQuery.builder()
+        .setDataSource(new QueryDataSource(inner))
+        .setQuerySegmentSpec(everyInterval())
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("country", "country"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("grand", "total"))
+        .setContext(ImmutableMap.of("queryId", "subq-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(outer, ImmutableMap.of("success", true)));
+
+    JsonNode sales = inputByName(capturedEvents.get(0), "sales");
+    // Base columns come from the sub-query's own parts; the outer references to sub-query outputs
+    // ("total", "grand") must not be fabricated as base columns.
+    Assertions.assertEquals(ImmutableList.of("amount", "country"), schemaFieldNames(sales));
+    Assertions.assertEquals(ImmutableList.of("AGGREGATION"), usagesOf(sales, "amount"));
+    Assertions.assertEquals(ImmutableList.of("GROUP_BY"), usagesOf(sales, "country"));
+  }
+
+  @Test
+  public void testTopNColumnLineage() throws IOException
+  {
+    Query<?> query = new TopNQueryBuilder()
+        .dataSource("sales")
+        .intervals(everyInterval())
+        .granularity(Granularities.ALL)
+        .dimension(new DefaultDimensionSpec("country", "country"))
+        .metric("total")
+        .threshold(10)
+        .aggregators(new LongSumAggregatorFactory("total", "amount"))
+        .filters(new SelectorDimFilter("status", "active", null))
+        .context(ImmutableMap.of("queryId", "topn-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode sales = inputByName(capturedEvents.get(0), "sales");
+    Assertions.assertEquals(ImmutableList.of("amount", "country", "status"), schemaFieldNames(sales));
+    Assertions.assertEquals(ImmutableList.of("GROUP_BY"), usagesOf(sales, "country"));
+    Assertions.assertEquals(ImmutableList.of("AGGREGATION"), usagesOf(sales, "amount"));
+    Assertions.assertEquals(ImmutableList.of("FILTER"), usagesOf(sales, "status"));
+  }
+
+  @Test
+  public void testTimeseriesColumnLineage() throws IOException
+  {
+    Query<?> query = Druids.newTimeseriesQueryBuilder()
+        .dataSource("sales")
+        .intervals(everyInterval())
+        .granularity(Granularities.ALL)
+        .aggregators(new LongSumAggregatorFactory("total", "amount"))
+        .filters(new SelectorDimFilter("status", "active", null))
+        .context(ImmutableMap.of("queryId", "ts-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode sales = inputByName(capturedEvents.get(0), "sales");
+    // Timeseries has no dimensions, so no GROUP_BY role.
+    Assertions.assertEquals(ImmutableList.of("amount", "status"), schemaFieldNames(sales));
+    Assertions.assertEquals(ImmutableList.of("AGGREGATION"), usagesOf(sales, "amount"));
+    Assertions.assertEquals(ImmutableList.of("FILTER"), usagesOf(sales, "status"));
+  }
+
+  @Test
+  public void testColumnUsedInMultipleRoles() throws IOException
+  {
+    GroupByQuery query = GroupByQuery.builder()
+        .setDataSource("sales")
+        .setQuerySegmentSpec(everyInterval())
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("country", "country"))
+        .setDimFilter(new SelectorDimFilter("country", "US", null))
+        .setContext(ImmutableMap.of("queryId", "multirole-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode sales = inputByName(capturedEvents.get(0), "sales");
+    // "country" is both a grouping dimension and a filter; roles merge in enum declaration order.
+    Assertions.assertEquals(ImmutableList.of("GROUP_BY", "FILTER"), usagesOf(sales, "country"));
+  }
+
+  @Test
+  public void testLookupJoinDropsRightColumnsNotFabricated() throws IOException
+  {
+    JoinDataSource join = JoinDataSource.create(
+        new TableDataSource("sales"),
+        new LookupDataSource("country_lookup"),
+        "j0.",
+        "\"country\" == \"j0.k\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        null,
+        null
+    );
+    ScanQuery query = Druids.newScanQueryBuilder()
+        .dataSource(join)
+        .intervals(everyInterval())
+        .columns("country", "j0.v")
+        .context(ImmutableMap.of("queryId", "lookupjoin-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode event = capturedEvents.get(0);
+    // The lookup has no base table -> it contributes no input dataset and no fabricated columns.
+    Assertions.assertEquals(Collections.singleton("sales"), inputNames(event));
+    JsonNode sales = inputByName(event, "sales");
+    Assertions.assertEquals(ImmutableList.of("country"), schemaFieldNames(sales));
+    // "j0.v" (lookup value) and "j0.k" (lookup key) are dropped, not attributed to "sales".
+    Assertions.assertEquals(ImmutableList.of("PROJECTION", "JOIN"), usagesOf(sales, "country"));
+  }
+
+  @Test
+  public void testColumnLineageDisabledEmitsTableLevelOnly() throws IOException
+  {
+    OpenLineageRequestLogger disabled = new OpenLineageRequestLogger(
+        MAPPER,
+        NAMESPACE,
+        OpenLineageRequestLoggerProvider.TransportType.CONSOLE,
+        null,
+        DEFAULT_EXCLUDED_NATIVE_QUERY_TYPES,
+        false,
+        OpenLineageRequestLogger.DEFAULT_EMIT_QUEUE_CAPACITY,
+        OpenLineageRequestLogger.DEFAULT_EMIT_THREAD_COUNT,
+        null
+    )
+    {
+      @Override
+      protected void emit(ObjectNode event)
+      {
+        capturedEvents.add(event);
+      }
+    };
+    GroupByQuery query = GroupByQuery.builder()
+        .setDataSource("sales")
+        .setQuerySegmentSpec(everyInterval())
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("country", "country"))
+        .setContext(ImmutableMap.of("queryId", "disabled-1"))
+        .build();
+    disabled.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode sales = inputByName(capturedEvents.get(0), "sales");
+    Assertions.assertNull(sales.get("facets").get("schema"), "column lineage disabled -> no schema facet");
+    Assertions.assertNull(sales.get("facets").get("druid_columnUsage"));
+  }
+
+  @Test
+  public void testFilteredAggregatorSplitsAggregationAndFilterRoles() throws IOException
+  {
+    // SUM(added) FILTER (WHERE status = 'active'): "added" is the aggregation input, "status" the filter.
+    Query<?> query = Druids.newTimeseriesQueryBuilder()
+        .dataSource("sales")
+        .intervals(everyInterval())
+        .granularity(Granularities.ALL)
+        .aggregators(new FilteredAggregatorFactory(
+            new LongSumAggregatorFactory("s", "added"),
+            new SelectorDimFilter("status", "active", null)
+        ))
+        .context(ImmutableMap.of("queryId", "filtagg-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode sales = inputByName(capturedEvents.get(0), "sales");
+    Assertions.assertEquals(ImmutableList.of("added", "status"), schemaFieldNames(sales));
+    Assertions.assertEquals(ImmutableList.of("AGGREGATION"), usagesOf(sales, "added"));
+    Assertions.assertEquals(ImmutableList.of("FILTER"), usagesOf(sales, "status"));
+  }
+
+  @Test
+  public void testJoinBaseTableFilterColumns() throws IOException
+  {
+    JoinDataSource join = JoinDataSource.create(
+        new TableDataSource("sales"),
+        new TableDataSource("users"),
+        "j0.",
+        "\"country\" == \"j0.country\"",
+        JoinType.INNER,
+        new SelectorDimFilter("status", "active", null),
+        ExprMacroTable.nil(),
+        null,
+        null
+    );
+    ScanQuery query = Druids.newScanQueryBuilder()
+        .dataSource(join)
+        .intervals(everyInterval())
+        .columns("country")
+        .context(ImmutableMap.of("queryId", "joinfilter-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode sales = inputByName(capturedEvents.get(0), "sales");
+    // The join's base-table (left) filter on "status" is captured as FILTER on the base table.
+    Assertions.assertEquals(ImmutableList.of("FILTER"), usagesOf(sales, "status"));
+    Assertions.assertEquals(ImmutableList.of("PROJECTION", "JOIN"), usagesOf(sales, "country"));
+  }
+
+  @Test
+  public void testFilteredDataSourceCapturesFilterColumns() throws IOException
+  {
+    FilteredDataSource filtered = FilteredDataSource.create(
+        new TableDataSource("sales"),
+        new SelectorDimFilter("status", "active", null)
+    );
+    ScanQuery query = Druids.newScanQueryBuilder()
+        .dataSource(filtered)
+        .intervals(everyInterval())
+        .columns("country")
+        .context(ImmutableMap.of("queryId", "filtds-1"))
+        .build();
+    logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    JsonNode sales = inputByName(capturedEvents.get(0), "sales");
+    Assertions.assertEquals(ImmutableList.of("country", "status"), schemaFieldNames(sales));
+    Assertions.assertEquals(ImmutableList.of("PROJECTION"), usagesOf(sales, "country"));
+    Assertions.assertEquals(ImmutableList.of("FILTER"), usagesOf(sales, "status"));
+  }
+
+  private static QuerySegmentSpec everyInterval()
+  {
+    return new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2024-01-01/2024-01-02")));
+  }
+
+  private static JsonNode inputByName(JsonNode event, String name)
+  {
+    for (JsonNode input : event.get("inputs")) {
+      if (input.get("name").asText().equals(name)) {
+        return input;
+      }
+    }
+    return null;
+  }
+
+  private static List<String> schemaFieldNames(JsonNode dataset)
+  {
+    List<String> names = new ArrayList<>();
+    for (JsonNode field : dataset.get("facets").get("schema").get("fields")) {
+      names.add(field.get("name").asText());
+    }
+    return names;
+  }
+
+  private static List<String> usagesOf(JsonNode dataset, String column)
+  {
+    List<String> usages = new ArrayList<>();
+    JsonNode entry = dataset.get("facets").get("druid_columnUsage").get("fields").get(column);
+    for (JsonNode usage : entry.get("usages")) {
+      usages.add(usage.asText());
+    }
+    return usages;
   }
 
   private static RequestLogLine sqlLine(String sql, Map<String, Object> context, Map<String, Object> stats)
