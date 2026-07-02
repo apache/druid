@@ -21,6 +21,10 @@
     "dataSource",
     "type"
   ],
+  "query/segments/count": [
+    "dataSource",
+    "type"
+  ],
   "query/segment/time": [
     "dataSource",
     "type"
