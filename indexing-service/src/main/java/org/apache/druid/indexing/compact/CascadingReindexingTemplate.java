@@ -101,6 +101,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   private final int taskPriority;
   private final long inputSegmentSizeBytes;
   private final Period skipOffsetFromLatest;
+  private final Period skipOffsetFromEarliest;
   private final Period skipOffsetFromNow;
   private final Granularity defaultSegmentGranularity;
   private final PartitionsSpec defaultPartitionsSpec;
@@ -118,6 +119,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       @JsonProperty("ruleProvider") ReindexingRuleProvider ruleProvider,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
+      @JsonProperty("skipOffsetFromEarliest") @Nullable Period skipOffsetFromEarliest,
       @JsonProperty("skipOffsetFromNow") @Nullable Period skipOffsetFromNow,
       @JsonProperty("defaultSegmentGranularity") Granularity defaultSegmentGranularity,
       @JsonProperty("defaultPartitionsSpec") PartitionsSpec defaultPartitionsSpec,
@@ -152,11 +154,15 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     }
     this.tuningConfig = tuningConfig;
 
-    if (skipOffsetFromNow != null && skipOffsetFromLatest != null) {
-      throw InvalidInput.exception("Cannot set both skipOffsetFromNow and skipOffsetFromLatest");
+    int skipOffsetCount = (skipOffsetFromNow != null ? 1 : 0)
+                        + (skipOffsetFromLatest != null ? 1 : 0)
+                        + (skipOffsetFromEarliest != null ? 1 : 0);
+    if (skipOffsetCount > 1) {
+      throw InvalidInput.exception("Cannot set more than one of: skipOffsetFromNow, skipOffsetFromLatest, skipOffsetFromEarliest");
     }
     this.skipOffsetFromNow = skipOffsetFromNow;
     this.skipOffsetFromLatest = skipOffsetFromLatest;
+    this.skipOffsetFromEarliest = skipOffsetFromEarliest;
 
     this.defaultPartitioningRule = ReindexingPartitioningRule.syntheticRule(
         defaultSegmentGranularity,
@@ -218,6 +224,14 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   public Period getSkipOffsetFromLatest()
   {
     return skipOffsetFromLatest;
+  }
+
+  @Override
+  @JsonProperty
+  @Nullable
+  public Period getSkipOffsetFromEarliest()
+  {
+    return skipOffsetFromEarliest;
   }
 
   @JsonProperty
@@ -366,7 +380,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       }
 
       // Skip offsets, if configured, can result in needing to truncate a search interval. If the truncation makes the interval invalid, skip it.
-      if ((skipOffsetFromNow != null || skipOffsetFromLatest != null) &&
+      if ((skipOffsetFromNow != null || skipOffsetFromLatest != null || skipOffsetFromEarliest != null) &&
           intervalEndsAfter(reindexingInterval, adjustedTimelineInterval.getEnd())) {
 
         DateTime alignedEnd = intervalInfo.getGranularity().bucketStart(adjustedTimelineInterval.getEnd());
@@ -422,13 +436,14 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   }
 
   /**
-   * Applies the configured skip offset to an interval by adjusting its end time. Uses either
-   * skipOffsetFromNow (relative to reference time) or skipOffsetFromLatest (relative to interval end).
-   * Returns null if the adjusted end would be before the interval start.
+   * Applies the configured skip offset to an interval by adjusting its start or end time. Uses either
+   * skipOffsetFromNow (relative to reference time), skipOffsetFromLatest (relative to interval end),
+   * or skipOffsetFromEarliest (relative to interval start).
+   * Returns null if the adjusted interval would be invalid.
    *
    * @param interval the interval to adjust
    * @param skipFromNowReferenceTime the reference time for skipOffsetFromNow calculation
-   * @return the interval with adjusted end time, or null if the result would be invalid
+   * @return the interval with adjusted boundaries, or null if the result would be invalid
    */
   @Nullable
   private Interval applySkipOffset(
@@ -436,16 +451,21 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       DateTime skipFromNowReferenceTime
   )
   {
+    DateTime maybeAdjustedStart = interval.getStart();
     DateTime maybeAdjustedEnd = interval.getEnd();
+
     if (skipOffsetFromNow != null) {
       maybeAdjustedEnd = skipFromNowReferenceTime.minus(skipOffsetFromNow);
     } else if (skipOffsetFromLatest != null) {
       maybeAdjustedEnd = maybeAdjustedEnd.minus(skipOffsetFromLatest);
+    } else if (skipOffsetFromEarliest != null) {
+      maybeAdjustedStart = maybeAdjustedStart.plus(skipOffsetFromEarliest);
     }
-    if (maybeAdjustedEnd.isBefore(interval.getStart())) {
+
+    if (maybeAdjustedEnd.isBefore(maybeAdjustedStart) || maybeAdjustedEnd.equals(maybeAdjustedStart)) {
       return null;
     } else {
-      return new Interval(interval.getStart(), maybeAdjustedEnd);
+      return new Interval(maybeAdjustedStart, maybeAdjustedEnd);
     }
   }
 
@@ -458,7 +478,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         .withInputSegmentSizeBytes(inputSegmentSizeBytes)
         .withEngine(CompactionEngine.MSQ)
         .withTaskContext(taskContext)
-        .withSkipOffsetFromLatest(Period.ZERO); // We handle skip offsets at the timeline level, we know we want to cover the entirety of the interval
+        .withSkipOffsetFromLatest(Period.ZERO) // We handle skip offsets at the timeline level
+        .withSkipOffsetFromEarliest(Period.ZERO); // We handle skip offsets at the timeline level
   }
 
   /**
