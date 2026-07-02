@@ -23,7 +23,7 @@ title: "Build from source"
   -->
 
 
-You can build Apache Druid directly from source. Use the version of this page
+You can build Apache&circledR; Druid directly from source. Use the version of this page
 that matches the version you want to build.
 For building the latest code in master, follow the latest version of this page
 [here](https://github.com/apache/druid/blob/master/docs/development/build.md):

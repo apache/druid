@@ -23,7 +23,7 @@ sidebar_label: Local quickstart
   ~ under the License.
   -->
 
-This quickstart helps you install Apache Druid and introduces you to Druid ingestion and query features. For this tutorial, you need a machine with at least 6 GiB of RAM.
+This quickstart helps you install Apache&circledR; Druid and introduces you to Druid ingestion and query features. For this tutorial, you need a machine with at least 6 GiB of RAM.
 
 In this quickstart, you'll:
 - install Druid
@@ -219,7 +219,7 @@ See the following topics for more information:
 * [Ingestion overview](../ingestion/index.md) to explore options for ingesting more data.
 * [Tutorial: Load files using SQL](./tutorial-msq-extern.md) to learn how to generate a SQL query that loads external data into a Druid datasource.
 * [Tutorial: Load data with native batch ingestion](tutorial-batch-native.md) to load and query data with Druid's native batch ingestion feature.
-* [Tutorial: Load stream data from Apache Kafka](./tutorial-kafka.md) to load streaming data from a Kafka topic.
+* [Tutorial: Load stream data from Apache Kafka&circledR;](./tutorial-kafka.md) to load streaming data from a Kafka topic.
 * [Extensions](../configuration/extensions.md) for details on Druid extensions.
 
 Remember that after stopping Druid services, you can start clean next time by deleting the `var` directory from the Druid root directory and running the `bin/start-druid` script again. You may want to do this before using other data ingestion tutorials, since they use the same Wikipedia datasource.

@@ -24,7 +24,7 @@ sidebar_label: Compact segments
   -->
 
 
-This tutorial demonstrates how to compact existing segments into fewer but larger segments in Apache Druid.
+This tutorial demonstrates how to compact existing segments into fewer but larger segments in Apache&circledR; Druid.
 
 There is some per-segment memory and processing overhead during query processing.
 Therefore, it can be beneficial to reduce the total number of segments.
@@ -45,10 +45,12 @@ This tutorial uses the Wikipedia edits sample data included with the Druid distr
 To load the initial data, you use an ingestion spec that loads batch data with segment granularity of `HOUR` and creates between one and three segments per hour.
 
 You can review the ingestion spec at `quickstart/tutorial/compaction-init-index.json`.
-Submit the spec as follows to create a datasource called `compaction-tutorial`:
+Submit the spec as follows to the Druid Overlord API to create a datasource called `compaction-tutorial`:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/compaction-init-index.json --url http://localhost:8081
+curl -X POST http://localhost:8081/druid/indexer/v1/task \
+  -H "Content-Type: application/json" \
+  -d @quickstart/tutorial/compaction-init-index.json
 ```
 
 :::info
@@ -106,7 +108,9 @@ This datasource only has 39,244 rows. 39,244 is below the default limit of 5,000
 Submit the compaction task now:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/compaction-keep-granularity.json --url http://localhost:8081
+curl -X POST http://localhost:8081/druid/indexer/v1/task \
+  -H "Content-Type: application/json" \
+  -d @quickstart/tutorial/compaction-keep-granularity.json
 ```
 
 After the task finishes, refresh the [segments view](http://localhost:8888/unified-console.html#segments).
@@ -172,7 +176,9 @@ Note that `segmentGranularity` is set to `DAY` in this compaction task spec.
 Submit this task now:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/compaction-day-granularity.json --url http://localhost:8081
+curl -X POST http://localhost:8081/druid/indexer/v1/task \
+  -H "Content-Type: application/json" \
+  -d @quickstart/tutorial/compaction-day-granularity.json
 ```
 
 It takes some time before the Coordinator marks the old input segments as unused, so you may see an intermediate state with 25 total segments. Eventually, only one DAY granularity segment remains:

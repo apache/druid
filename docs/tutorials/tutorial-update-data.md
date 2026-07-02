@@ -2,7 +2,7 @@
 id: tutorial-update-data
 title: Update data
 sidebar_label: Update data
-description: Learn how to update data in Apache Druid.
+description: Learn how to update data in Apache&circledR; Druid.
 ---
 
 <!--
@@ -24,7 +24,7 @@ description: Learn how to update data in Apache Druid.
   ~ under the License.
   -->
 
-Apache Druid stores data and indexes in [segment files](../design/segments.md) partitioned by time.
+Apache&circledR; Druid stores data and indexes in [segment files](../design/segments.md) partitioned by time.
 After Druid creates a segment, its contents can't be modified.
 You can either replace data for the whole segment, or, in some cases, overshadow a portion of the segment data.
 
