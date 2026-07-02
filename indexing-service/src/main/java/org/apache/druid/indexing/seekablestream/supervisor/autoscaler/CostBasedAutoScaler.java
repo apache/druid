@@ -250,12 +250,14 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     log.info(
         "Computing optimal taskCount for supervisor[%s] with metrics:"
-        + " currentTaskCount[%d], avgPartitionLag[%.1f], avgProcessingRate[%.1f],"
-        + " pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f].",
+        + " currentTaskCount[%d], avgPartitionLag[%.1f], avgProcessingRate[%.1f], maxProcessingRate[%.1f]"
+        + " idleRatio[%.1f], pollIdleRatio[%.1f], lagWeight[%.2f], idleWeight[%.2f].",
         supervisorId,
         currentTaskCount,
         metrics.getAvgPartitionLag(),
         metrics.getAvgProcessingRate(),
+        metrics.getMaxObservedRate(),
+        metrics.estimateIdleRatioFromProcessingRate(),
         metrics.getPollIdleRatio(),
         config.getLagWeight(),
         config.getIdleWeight()
