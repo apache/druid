@@ -71,6 +71,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public static final String INVALID_METRICS_COUNT = "task/autoScaler/costBased/invalidMetrics";
   public static final String AVG_PROCESSING_RATE_METRIC = "task/autoScaler/costBased/avgProcessingRate";
   public static final String AVG_POLL_IDLE_RATIO = "task/autoScaler/costBased/avgPollIdleRatio";
+  public static final String IDLE_RATIO_ESTIMATED_FROM_RATE = "task/autoScaler/costBased/idleRatioFromRate";
 
   /**
    * Maximum number of candidate task counts to evaluate above or below the current task count
@@ -248,6 +249,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     // Start with the current task count as optimal
     int optimalTaskCount = currentTaskCount;
     CostResult optimalCost = costFunction.computeCost(metrics, currentTaskCount, config);
+    final double idleRatioEstimatedFromRate = metrics.estimateIdleRatioFromProcessingRate();
 
     log.info(
         "Computing optimal taskCount for supervisor[%s] with metrics:"
@@ -258,7 +260,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         metrics.getAvgPartitionLag(),
         metrics.getAvgProcessingRate(),
         metrics.getMaxObservedRate(),
-        metrics.estimateIdleRatioFromProcessingRate(),
+        idleRatioEstimatedFromRate,
         metrics.getPollIdleRatio(),
         config.getLagWeight(),
         config.getIdleWeight()
@@ -309,6 +311,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
     if (metrics.getPollIdleRatio() >= 0) {
       emitter.emit(getMetricBuilder().setMetric(AVG_POLL_IDLE_RATIO, metrics.getPollIdleRatio()));
+    }
+    if (idleRatioEstimatedFromRate >= 0) {
+      emitter.emit(getMetricBuilder().setMetric(IDLE_RATIO_ESTIMATED_FROM_RATE, idleRatioEstimatedFromRate));
     }
 
     if (optimalTaskCount != currentTaskCount) {
