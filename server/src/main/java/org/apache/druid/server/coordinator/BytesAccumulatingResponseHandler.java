@@ -19,10 +19,10 @@
 
 package org.apache.druid.server.coordinator;
 
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 /**
  * An async BytesAccumulatingResponseHandler which returns unfinished response
@@ -35,8 +35,8 @@ public class BytesAccumulatingResponseHandler extends InputStreamResponseHandler
   @Override
   public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    status = response.getStatus().getCode();
-    description = response.getStatus().getReasonPhrase();
+    status = response.status().code();
+    description = response.status().reasonPhrase();
     return ClientResponse.unfinished(super.handleResponse(response, trafficCop).getObj());
   }
 
