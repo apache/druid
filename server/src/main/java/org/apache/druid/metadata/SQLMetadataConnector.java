@@ -404,6 +404,22 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             "start"
         )
     );
+    // Sort-serving index for KillUnusedSegments' find-interval query
+    // (WHERE dataSource=? AND used=? AND end<=? [AND start>=?] ORDER BY start, end LIMIT n).
+    // Leading (dataSource, used) equality + (start, end) matches the ORDER BY, so MySQL avoids a
+    // filesort and the LIMIT short-circuits the scan; used_status_last_updated trailing makes the
+    // query covering. See SqlSegmentsMetadataQuery#retrieveUnusedSegmentIntervals.
+    createIndex(
+        tableName,
+        "IDX_%S_DATASOURCE_USED_START_END_LASTUPDATED",
+        List.of(
+            "dataSource",
+            "used",
+            "start",
+            quoteColumn("end"),
+            "used_status_last_updated"
+        )
+    );
   }
 
   private void createUpgradeSegmentsTable(final String tableName)
@@ -662,6 +678,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         tableName,
         "IDX_%S_DATASOURCE_UPGRADED_FROM_SEGMENT_ID",
         List.of("dataSource", "upgraded_from_segment_id")
+    );
+    createIndex(
+        tableName,
+        "IDX_%S_DATASOURCE_USED_START_END_LASTUPDATED",
+        List.of(
+            "dataSource",
+            "used",
+            "start",
+            quoteColumn("end"),
+            "used_status_last_updated"
+        )
     );
   }
 
