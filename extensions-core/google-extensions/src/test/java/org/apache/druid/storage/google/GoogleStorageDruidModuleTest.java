@@ -20,12 +20,14 @@
 package org.apache.druid.storage.google;
 
 import com.google.cloud.storage.Storage;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.List;
 
 public class GoogleStorageDruidModuleTest
 {
@@ -37,7 +39,9 @@ public class GoogleStorageDruidModuleTest
     //    HttpRquestInitializer, the test throws an exception from that method, meaning that if they are not loaded
     //    lazily, the exception should end up thrown.
     // 2. That the same object is returned.
-    Injector injector = GuiceInjectors.makeStartupInjectorWithModules(ImmutableList.of(new GoogleStorageDruidModule()));
+    Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
+        List.of(new LocalDataStorageDruidModule(), new GoogleStorageDruidModule())
+    );
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertTrue(killer.getKillers().containsKey(GoogleStorageDruidModule.SCHEME));
     Assert.assertSame(
@@ -57,7 +61,7 @@ public class GoogleStorageDruidModuleTest
     //    HttpRquestInitializer, the test throws an exception from that method, meaning that if they are not loaded
     //    lazily, the exception should end up thrown.
     // 2. That the same object is returned.
-    Injector injector = GuiceInjectors.makeStartupInjectorWithModules(ImmutableList.of(new GoogleStorageDruidModule()));
+    Injector injector = GuiceInjectors.makeStartupInjectorWithModules(List.of(new GoogleStorageDruidModule()));
     final GoogleStorage instance = injector.getInstance(GoogleStorage.class);
     Assert.assertSame(instance, injector.getInstance(GoogleStorage.class));
   }

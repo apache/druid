@@ -97,6 +97,11 @@ public class S3StorageDruidModule implements DruidModule
              .addBinding(SCHEME_S3N)
              .to(S3TimestampVersionedDataFinder.class)
              .in(LazySingleton.class);
+
+    // Segment killer, mover and archiver use type "s3_zip" (instead of "s3") to align with S3LoadSpec.
+    // This means S3DataSegmentKiller cannot currently be injected as DataSegmentKiller
+    // and would only be invoked via OmniDataSegmentKiller.
+    // If needed in the future, the S3DataSegmentKiller would need to be bound to the "s3" scheme as well.
     Binders.dataSegmentKillerBinder(binder)
            .addBinding(SCHEME_S3_ZIP)
            .to(S3DataSegmentKiller.class)

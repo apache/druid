@@ -27,6 +27,7 @@ import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.inputsource.hdfs.HdfsInputSourceConfig;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -89,6 +90,7 @@ public class HdfsStorageDruidModuleTest
               binder.bind(Properties.class).toInstance(props);
               binder.bind(ServiceEmitter.class).toInstance(new ServiceEmitter("test", "localhost", new NoopEmitter()));
             },
+            new LocalDataStorageDruidModule(),
             new HdfsStorageDruidModule()
         )
     );

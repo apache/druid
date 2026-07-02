@@ -59,7 +59,6 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
-import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -1837,13 +1836,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
     try {
-      toolbox.getDataSegmentKiller().killRecursively(
-          DeepStorageIntermediaryDataManager.retrieveShuffleDataStoragePath(getId())
-      );
+      toolbox.getIntermediaryDataManager().deletePartitions(getId());
     }
     catch (Exception e) {
       // Best effort cleanup, do not fail the task if cleanup fails
-      LOG.warn(e, "Failed recursive deep storage cleanup for intermediary path for task[%s]", getId());
+      LOG.warn(e, "Failed cleanup of intermediary data for task[%s]", getId());
     }
 
     if (!isCompactionTask) {
