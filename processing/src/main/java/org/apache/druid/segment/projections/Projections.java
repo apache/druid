@@ -56,8 +56,11 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -652,9 +655,9 @@ public class Projections
   {
     final Filter queryFilter = cursorBuildSpec.getFilter();
     final VirtualColumns queryVcs = cursorBuildSpec.getVirtualColumns();
-    if (groups.isEmpty() || queryFilter == null) {
-      // No filter (or no groups): every group survives, per-group rewrite is a no-op (null filter).
-      return new ClusterGroupQueryPlan(groups, group -> null);
+    if (groups.isEmpty()) {
+      // No groups: nothing to plan, nothing to remap.
+      return new ClusterGroupQueryPlan(groups, group -> null, Map.of());
     }
 
     // Every spec in the list shares one summary by construction (set once in the schema constructor), so
@@ -662,6 +665,14 @@ public class Projections
     final ClusteredValueGroupsBaseTableSchema summary = groups.getFirst().getSummary();
     final RowSignature clusteringColumns = summary.getClusteringColumns();
     final VirtualColumns groupVcs = summary.getVirtualColumns();
+
+    final Map<String, String> virtualColumnRemap = buildClusterVirtualColumnRemap(queryVcs, groupVcs);
+
+    if (queryFilter == null) {
+      // No filter: every group survives, per-group filter rewrite is a no-op (null filter), but the VC remap (if any)
+      // still drives grouping / select substitution at cursor build time.
+      return new ClusterGroupQueryPlan(groups, group -> null, virtualColumnRemap);
+    }
 
     // Single walk per group: produces the rewritten filter, and a top-level FalseFilter means the group prunes.
     // Cache the rewrite for every group (including pruned ones, where it's FalseFilter) so rewriteFor doesn't
@@ -681,7 +692,74 @@ public class Projections
         kept.add(group);
       }
     }
-    return new ClusterGroupQueryPlan(kept, rewriteCache::get);
+    return new ClusterGroupQueryPlan(kept, rewriteCache::get, virtualColumnRemap);
+  }
+
+  /**
+   * Build a query-level remap of {@code queryVirtualColumnOutputName -> materializedColumnName} for each query virtual
+   * column that has an equivalent materialized column in the clustered base table (a clustering column produced by a
+   * group virtual column, or a non-clustering materialized virtual-column output).
+   * <p>
+   * A substituted (dropped) query virtual column is read from its materialized column and never recomputes, so it
+   * imposes no requirement on its own inputs. A query virtual column must therefore be kept (recomputed, not
+   * substituted) only when it is transitively required by a kept query virtual column (because query VCs are computed
+   * in the per-group cursor, below the concat-level remap, so a dropped input a kept VC still references would
+   * incorrectly resolve to null.)
+   */
+  private static Map<String, String> buildClusterVirtualColumnRemap(VirtualColumns queryVcs, VirtualColumns groupVcs)
+  {
+    final VirtualColumn[] all = queryVcs.getVirtualColumns();
+    if (all.length == 0) {
+      return Map.of();
+    }
+    // Candidate substitutions: query VCs that have a differently-named equivalent materialized column.
+    final Map<String, String> candidates = new HashMap<>();
+    final Map<String, VirtualColumn> byName = new HashMap<>();
+    for (VirtualColumn vc : all) {
+      final String outputName = vc.getOutputName();
+      byName.put(outputName, vc);
+      final VirtualColumns.Node queryNode = queryVcs.getNode(outputName);
+      if (queryNode == null) {
+        continue;
+      }
+      final VirtualColumn equivalent = groupVcs.findEquivalent(queryNode);
+      if (equivalent != null && !outputName.equals(equivalent.getOutputName())) {
+        candidates.put(outputName, equivalent.getOutputName());
+      }
+    }
+    if (candidates.isEmpty()) {
+      return Map.of();
+    }
+
+    // Transitive "must keep" closure: seed with the non-substituted query VCs (those recompute), then follow
+    // requiredColumns() to every query VC they depend on.
+    final Set<String> keep = new HashSet<>();
+    final Deque<String> toVisit = new ArrayDeque<>();
+    for (VirtualColumn vc : all) {
+      if (!candidates.containsKey(vc.getOutputName())) {
+        toVisit.add(vc.getOutputName());
+      }
+    }
+    while (!toVisit.isEmpty()) {
+      final VirtualColumn vc = byName.get(toVisit.poll());
+      if (vc == null) {
+        continue;
+      }
+      for (String dep : vc.requiredColumns()) {
+        // Only query VCs matter here; a dep that a kept VC recomputes from must itself be kept (and its deps)
+        if (byName.containsKey(dep) && keep.add(dep)) {
+          toVisit.add(dep);
+        }
+      }
+    }
+
+    final Map<String, String> remap = new HashMap<>();
+    for (Map.Entry<String, String> e : candidates.entrySet()) {
+      if (!keep.contains(e.getKey())) {
+        remap.put(e.getKey(), e.getValue());
+      }
+    }
+    return remap;
   }
 
   /**

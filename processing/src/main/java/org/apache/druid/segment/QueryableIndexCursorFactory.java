@@ -44,6 +44,7 @@ import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.segment.vector.ConcatenatingVectorCursor;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
+import org.apache.druid.segment.vector.RemapVectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -215,11 +216,15 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
           Offset baseOffset
       )
       {
-        return new SingleGroupClusteringColumnSelectorFactory(
+        final ColumnSelectorFactory clusteringFactory = new SingleGroupClusteringColumnSelectorFactory(
             super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset),
             valueGroup.getSummary().getClusteringColumns(),
             valueGroup.lookupClusteringValues()
         );
+        if (plan.virtualColumnRemap().isEmpty()) {
+          return clusteringFactory;
+        }
+        return new RemapColumnSelectorFactory(clusteringFactory, plan.virtualColumnRemap());
       }
 
       @Override
@@ -228,11 +233,15 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
           VectorOffset baseOffset
       )
       {
-        return new SingleGroupClusteringVectorColumnSelectorFactory(
+        final VectorColumnSelectorFactory clusteringVectorFactory = new SingleGroupClusteringVectorColumnSelectorFactory(
             super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset),
             valueGroup.getSummary().getClusteringColumns(),
             valueGroup.lookupClusteringValues()
         );
+        if (plan.virtualColumnRemap().isEmpty()) {
+          return clusteringVectorFactory;
+        }
+        return new RemapVectorColumnSelectorFactory(clusteringVectorFactory, plan.virtualColumnRemap());
       }
     };
   }
@@ -299,12 +308,14 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     final ConcatenatingCursor cursor = new ConcatenatingCursor(
         holderSuppliers,
         clusteringValuesByGroup,
-        wrapperFactory
+        wrapperFactory,
+        plan.virtualColumnRemap()
     );
     final ConcatenatingVectorCursor vectorCursor = new ConcatenatingVectorCursor(
         holderSuppliers,
         clusteringValuesByGroup,
-        vectorWrapperFactory
+        vectorWrapperFactory,
+        plan.virtualColumnRemap()
     );
 
     // each group gets a different rewritten filter, so the conservative thing to do here is require the original query
@@ -313,8 +324,8 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     final Filter queryFilter = spec.getFilter();
     final boolean filterCanVectorize =
         queryFilter == null || queryFilter.canVectorizeMatcher(spec.getVirtualColumns().wrapInspector(this));
-    // we still check that the first holder is vectorizable to make sure all the non-filter parts can be vectorized
-    final boolean canVectorize = filterCanVectorize && holderSuppliers.get(0).get().canVectorize();
+    // we still check that the first holder is vectorizable to make sure all the non-filter parts can be vectorized.
+    final boolean canVectorize = filterCanVectorize && holderSuppliers.getFirst().get().canVectorize();
 
     return new CursorHolder()
     {

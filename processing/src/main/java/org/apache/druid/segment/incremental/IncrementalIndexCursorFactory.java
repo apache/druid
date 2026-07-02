@@ -175,9 +175,14 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
     final ClusteringColumnSelectorFactory wrapperFactory = new ClusteringColumnSelectorFactory(
         ClusteringColumnSelectorFactory.UNINITIALIZED_DELEGATE,
         clusteringColumns,
-        clusteringValuesByGroup.get(0)
+        clusteringValuesByGroup.getFirst()
     );
-    final ConcatenatingCursor cursor = new ConcatenatingCursor(holderSuppliers, clusteringValuesByGroup, wrapperFactory);
+    final ConcatenatingCursor cursor = new ConcatenatingCursor(
+        holderSuppliers,
+        clusteringValuesByGroup,
+        wrapperFactory,
+        plan.virtualColumnRemap()
+    );
 
     return new CursorHolder()
     {

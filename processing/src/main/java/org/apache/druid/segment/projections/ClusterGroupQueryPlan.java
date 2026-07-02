@@ -21,11 +21,15 @@ package org.apache.druid.segment.projections;
 
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.TrueFilter;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 /**
@@ -39,14 +43,17 @@ public final class ClusterGroupQueryPlan
 {
   private final List<TableClusterGroupSpec> survivingGroups;
   private final Function<TableClusterGroupSpec, Filter> rewriter;
+  private final Map<String, String> virtualColumnRemap;
 
   ClusterGroupQueryPlan(
       List<TableClusterGroupSpec> survivingGroups,
-      Function<TableClusterGroupSpec, Filter> rewriter
+      Function<TableClusterGroupSpec, Filter> rewriter,
+      Map<String, String> virtualColumnRemap
   )
   {
     this.survivingGroups = survivingGroups;
     this.rewriter = rewriter;
+    this.virtualColumnRemap = virtualColumnRemap;
   }
 
   /**
@@ -56,6 +63,16 @@ public final class ClusterGroupQueryPlan
   public List<TableClusterGroupSpec> survivingGroups()
   {
     return survivingGroups;
+  }
+
+  /**
+   * Query-level mapping of {@code queryVirtualColumnOutputName -> materializedColumnName} for query virtual columns
+   * that are equivalent to a clustering column or a non-clustering materialized column in the clustered base table.
+   * Empty when no query virtual column has a materialized equivalent (or there are no query virtual columns).
+   */
+  public Map<String, String> virtualColumnRemap()
+  {
+    return virtualColumnRemap;
   }
 
   /**
@@ -76,21 +93,51 @@ public final class ClusterGroupQueryPlan
 
   /**
    * Rebuild {@code spec} for {@code group}'s per-group cursor by swapping in this plan's per-group filter rewrite
-   * (see {@link #rewriteFor}). Returns {@code spec} unchanged when there is no filter, or when the rewrite is
-   * identical to the original (no clustering leaves folded), so the common no-op case allocates nothing. Shared by
-   * the {@link org.apache.druid.segment.QueryableIndexCursorFactory} (historical) and
-   * {@link org.apache.druid.segment.incremental.IncrementalIndexCursorFactory} (realtime) clustered dispatch.
+   * (see {@link #rewriteFor}) and, when {@link #virtualColumnRemap()} is non-empty, substituting any query virtual
+   * columns that are equivalent to a materialized column.
+   * <p>
+   * When there is a remap, the matched query virtual columns (the remap keys) are dropped from the spec's virtual
+   * columns, and the per-group filter's required columns are rewritten via the remap so that non-clustering-VC filter
+   * leaves point at the materialized physical column (clustering-VC leaves were already folded to TRUE / FALSE by the
+   * per-group rewrite walk, so they won't reference the dropped virtual columns). The grouping / select / aggregator
+   * references are served instead by the {@link org.apache.druid.segment.RemapColumnSelectorFactory} the cursor
+   * factory wraps around the {@link ClusteringColumnSelectorFactory}.
    */
   public CursorBuildSpec rebuildCursorBuildSpec(CursorBuildSpec spec, TableClusterGroupSpec group)
   {
-    if (spec.getFilter() == null) {
-      return spec;
+    if (virtualColumnRemap.isEmpty()) {
+      if (spec.getFilter() == null) {
+        return spec;
+      }
+      final Filter rewritten = rewriteFor(group);
+      if (rewritten == spec.getFilter()) {
+        return spec;
+      }
+      return CursorBuildSpec.builder(spec).setFilter(rewritten).build();
     }
-    final Filter rewritten = rewriteFor(group);
-    if (rewritten == spec.getFilter()) {
-      return spec;
+
+    // Drop the remapped query virtual columns from the per-group spec; the materialized columns they map to are
+    // either the per-group constant clustering column or a per-group physical column, both served directly by the
+    // ClusteringColumnSelectorFactory (the cursor factory additionally wraps it with a RemapColumnSelectorFactory so
+    // the original query VC names resolve to the materialized columns).
+    final List<VirtualColumn> prunedVcs = new ArrayList<>();
+    for (VirtualColumn vc : spec.getVirtualColumns().getVirtualColumns()) {
+      if (!virtualColumnRemap.containsKey(vc.getOutputName())) {
+        prunedVcs.add(vc);
+      }
     }
-    return CursorBuildSpec.builder(spec).setFilter(rewritten).build();
+
+    // Per-group filter rewrite first (folds clustering leaves), then remap any surviving non-clustering-VC leaves to
+    // the materialized physical column.
+    Filter rewritten = spec.getFilter() == null ? null : rewriteFor(group);
+    if (rewritten != null) {
+      rewritten = rewritten.rewriteRequiredColumns(virtualColumnRemap);
+    }
+
+    return CursorBuildSpec.builder(spec)
+                          .setFilter(rewritten)
+                          .setVirtualColumns(VirtualColumns.create(prunedVcs))
+                          .build();
   }
 }
 

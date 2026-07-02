@@ -45,6 +45,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Coverage for {@link Projections#planClusterGroupQuery}, exercised through both facets of the returned
@@ -185,6 +186,60 @@ class ProjectionsPlanClusterGroupQueryTest
             )
         ),
         List.of("tenant_lower", ColumnHolder.TIME_COLUMN_NAME, "metric"),
+        List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
+        clustering,
+        null,
+        built.dictionaries(),
+        built.specs()
+    );
+    return built.specs().get(0);
+  }
+
+  /**
+   * Group clustered on {@code tenant_lower := lower(tenant)} (a clustering column produced by a group VC; raw
+   * {@code tenant} is NOT stored) with a non-clustering materialized column {@code region_upper := upper(region)}.
+   * Both equivalences exercise the query-VC -> materialized-column remap.
+   */
+  private static TableClusterGroupSpec materializedVcGroup(String loweredTenant)
+  {
+    final RowSignature clustering = RowSignature.builder().add("tenant_lower", ColumnType.STRING).build();
+    final ClusterGroupSchemaTestHelpers.Built built = ClusterGroupSchemaTestHelpers.buildClusterGroups(
+        clustering,
+        List.of(Arrays.asList(loweredTenant))
+    );
+    new ClusteredValueGroupsBaseTableSchema(
+        VirtualColumns.create(
+            new ExpressionVirtualColumn("tenant_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+            new ExpressionVirtualColumn("region_upper", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ),
+        List.of("tenant_lower", "region_upper", ColumnHolder.TIME_COLUMN_NAME, "metric"),
+        List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
+        clustering,
+        null,
+        built.dictionaries(),
+        built.specs()
+    );
+    return built.specs().get(0);
+  }
+
+  /**
+   * Like {@link #materializedVcGroup} but also materializes a NESTED virtual column
+   * {@code tenant_upper_lower := upper(tenant_lower)} (derived from the clustering column), so a query VC chain
+   * {@code v0 := lower(tenant)} -> {@code v1 := upper(v0)} can be materialized end-to-end.
+   */
+  private static TableClusterGroupSpec nestedMaterializedVcGroup(String loweredTenant)
+  {
+    final RowSignature clustering = RowSignature.builder().add("tenant_lower", ColumnType.STRING).build();
+    final ClusterGroupSchemaTestHelpers.Built built = ClusterGroupSchemaTestHelpers.buildClusterGroups(
+        clustering,
+        List.of(Arrays.asList(loweredTenant))
+    );
+    new ClusteredValueGroupsBaseTableSchema(
+        VirtualColumns.create(
+            new ExpressionVirtualColumn("tenant_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+            new ExpressionVirtualColumn("tenant_upper_lower", "upper(tenant_lower)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ),
+        List.of("tenant_lower", "tenant_upper_lower", ColumnHolder.TIME_COLUMN_NAME, "metric"),
         List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         clustering,
         null,
@@ -899,5 +954,127 @@ class ProjectionsPlanClusterGroupQueryTest
         f,
         Projections.planClusterGroupQuery(List.of(group), buildSpec(f, queryVcs)).rewriteFor(group)
     );
+  }
+
+  @Test
+  void testVirtualColumnRemapMapsQueryVcEquivalentToClusteringColumn()
+  {
+    // Query VC v0 := lower(tenant) is equivalent to the group's clustering column tenant_lower (also lower(tenant)).
+    // The remap should map v0 -> tenant_lower so grouping/select reads the materialized clustering column.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(materializedVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertEquals(Map.of("v0", "tenant_lower"), plan.virtualColumnRemap());
+  }
+
+  @Test
+  void testVirtualColumnRemapMapsQueryVcEquivalentToNonClusteringMaterializedColumn()
+  {
+    // Query VC v1 := upper(region) is equivalent to the group's non-clustering materialized column region_upper.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(materializedVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertEquals(Map.of("v1", "region_upper"), plan.virtualColumnRemap());
+  }
+
+  @Test
+  void testVirtualColumnRemapEmptyWhenNoEquivalent()
+  {
+    // Query VC has no materialized equivalent in the group (no length(region) column / VC) → no remap.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "strlen(region)", ColumnType.LONG, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(materializedVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertTrue(plan.virtualColumnRemap().isEmpty());
+  }
+
+  @Test
+  void testVirtualColumnRemapEmptyWhenNoQueryVirtualColumns()
+  {
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(materializedVcGroup("acme")),
+        buildSpec(null)
+    );
+    Assertions.assertTrue(plan.virtualColumnRemap().isEmpty());
+  }
+
+  @Test
+  void testVirtualColumnRemapBuiltEvenWithFilter()
+  {
+    // The remap must be computed even when the query has a filter (grouping/select substitution applies regardless).
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final Filter f = new EqualityFilter("v0", ColumnType.STRING, "acme", null);
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(materializedVcGroup("acme")),
+        buildSpec(f, queryVcs)
+    );
+    Assertions.assertEquals(Map.of("v0", "tenant_lower"), plan.virtualColumnRemap());
+  }
+
+  @Test
+  void testVirtualColumnRemapRespectsDependencyGuard()
+  {
+    // v0 := lower(tenant) (equivalent to clustering tenant_lower) AND v1 := concat(v0, 'x') which DEPENDS on v0.
+    // v0 must NOT be remapped/dropped because v1 still needs it as an input; v1 itself has no equivalent → no remap.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("v1", "concat(v0, 'x')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(materializedVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertTrue(plan.virtualColumnRemap().isEmpty());
+  }
+
+  @Test
+  void testVirtualColumnRemapSubstitutesFullyMaterializedDependencyChain()
+  {
+    // v0 := lower(tenant) (equivalent to clustering tenant_lower) AND v1 := upper(v0) which DEPENDS on v0 but is
+    // ALSO materialized (equivalent to tenant_upper_lower := upper(tenant_lower)). Because v1 is substituted (dropped,
+    // read from its materialized column) it never recomputes, so it does not force v0 to be kept -> BOTH substitute.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("v1", "upper(v0)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(nestedMaterializedVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertEquals(
+        Map.of("v0", "tenant_lower", "v1", "tenant_upper_lower"),
+        plan.virtualColumnRemap()
+    );
+  }
+
+  @Test
+  void testVirtualColumnRemapKeepsMaterializedChainNeededByNonMaterializedDependent()
+  {
+    // Transitive keep: v0 := lower(tenant) and v1 := upper(v0) are both materialized, but v2 := strlen(v1) is NOT
+    // (no strlen column). v2 is kept and recomputes -> needs v1 -> v1 kept -> v1 recomputes -> needs v0 -> v0 kept.
+    // So nothing substitutes, even though v0/v1's only direct dependents are themselves materialized.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("v1", "upper(v0)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("v2", "strlen(v1)", ColumnType.LONG, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(nestedMaterializedVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertTrue(plan.virtualColumnRemap().isEmpty());
   }
 }

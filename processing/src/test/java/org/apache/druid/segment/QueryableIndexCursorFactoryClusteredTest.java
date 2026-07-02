@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.OrderBy;
@@ -39,6 +40,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
@@ -62,6 +64,9 @@ import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.vector.VectorCursor;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -106,6 +111,9 @@ class QueryableIndexCursorFactoryClusteredTest
   @BeforeAll
   static void setUpEngines()
   {
+    // Some tests build segments with ExpressionVirtualColumn clustering / materialized columns, which require the
+    // expression processing module to be initialized.
+    ExpressionProcessing.initializeForTests();
     engineCloser = Closer.create();
     nonBlockingPool = engineCloser.register(
         new CloseableStupidPool<>("ClusteredCursorFactoryTest-bufferPool", () -> ByteBuffer.allocate(50000))
@@ -180,6 +188,233 @@ class QueryableIndexCursorFactoryClusteredTest
         row("acme", "2025-01-01T01:00:00", "us-west-2"),
         row("globex", "2025-01-01T00:30:00", "eu-west-1")
     ));
+  }
+
+  /**
+   * Cluster spec for a segment clustered on {@code tenant_lower := lower(tenant)} (a clustering column produced by a
+   * group VC; raw {@code tenant} is NOT a stored column) plus a non-clustering materialized
+   * {@code region_upper := upper(region)} column. Columns: {@code [tenant_lower (clustering), region, region_upper,
+   * __time]}.
+   */
+  private static final ClusteredValueGroupsBaseTableProjectionSpec VIRTUAL_CLUSTER_SPEC =
+      ClusteredValueGroupsBaseTableProjectionSpec.builder()
+          .virtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("tenant_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+              new ExpressionVirtualColumn("region_upper", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .columns(
+              new StringDimensionSchema("tenant_lower"),
+              StringDimensionSchema.create("region"),
+              StringDimensionSchema.create("region_upper"),
+              new LongDimensionSchema("__time")
+          )
+          .clusteringColumns("tenant_lower")
+          .build();
+
+  private QueryableIndex buildVirtualClusteringSegment()
+  {
+    final IncrementalIndexSchema schema =
+        IncrementalIndexSchema.builder()
+                              .withMinTimestamp(INTERVAL.getStartMillis())
+                              .withTimestampSpec(new TimestampSpec("__time", "auto", null))
+                              .withQueryGranularity(Granularities.NONE)
+                              .withDimensionsSpec(VIRTUAL_CLUSTER_SPEC.getDimensionsSpec())
+                              .withRollup(false)
+                              .withClusterSpec(VIRTUAL_CLUSTER_SPEC)
+                              .build();
+    return IndexBuilder.create()
+                       .useV10()
+                       .tmpDir(tmpDir)
+                       .schema(schema)
+                       .rows(List.of(
+                           row("Acme", "2025-01-01T00:00:00", "us-east-1"),
+                           row("Acme", "2025-01-01T01:00:00", "us-west-2"),
+                           row("Globex", "2025-01-01T00:30:00", "eu-west-1")
+                       ))
+                       .buildMMappedIndex(INTERVAL);
+  }
+
+  @Test
+  void testQueryVcEquivalentToClusteringColumnReadsMaterializedColumnViaAsCursor()
+  {
+    // Raw `tenant` is NOT stored; query VC v0 := lower(tenant) is equivalent to the clustering column tenant_lower.
+    // The scalar selector remap must substitute the materialized tenant_lower clustering constant — recompute would
+    // be null. Read via asCursor() (non-vector) to exercise the scalar ClusteringColumnSelectorFactory path.
+    segmentIndex = buildVirtualClusteringSegment();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+        .setVirtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .build();
+    try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+      Assertions.assertEquals(List.of("acme", "acme", "globex"), collectDimension(holder.asCursor(), "v0"));
+    }
+  }
+
+  @Test
+  void testQueryVcEquivalentToNonClusteringMaterializedColumnReadsMaterializedColumnViaAsCursor()
+  {
+    // Query VC v1 := upper(region) is equivalent to the non-clustering materialized column region_upper. The remap
+    // makes makeDimensionSelector("v1") read the per-group physical region_upper column.
+    segmentIndex = buildVirtualClusteringSegment();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+        .setVirtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .build();
+    try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+      Assertions.assertEquals(
+          List.of("US-EAST-1", "US-WEST-2", "EU-WEST-1"),
+          collectDimension(holder.asCursor(), "v1")
+      );
+    }
+  }
+
+  @Test
+  void testQueryVcWithNoEquivalentStillRecomputesViaAsCursor()
+  {
+    // No-regression: query VC with no materialized equivalent (lower(region_upper)) is recomputed from the stored
+    // region_upper column, not remapped.
+    segmentIndex = buildVirtualClusteringSegment();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+        .setVirtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("v2", "lower(region_upper)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .build();
+    try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+      Assertions.assertEquals(
+          List.of("us-east-1", "us-west-2", "eu-west-1"),
+          collectDimension(holder.asCursor(), "v2")
+      );
+    }
+  }
+
+  @Test
+  void testQueryVcEquivalentToClusteringColumnSingleGroupReadsMaterializedColumn()
+  {
+    // Single surviving group (filter on the equivalent VC prunes to one group), exercising the single-group cursor
+    // holder path's scalar remap wrap. Raw `tenant` is not stored, so the materialized clustering constant is the
+    // only correct source.
+    segmentIndex = buildVirtualClusteringSegment();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+        .setVirtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .setFilter(new EqualityFilter("v0", ColumnType.STRING, "globex", null))
+        .build();
+    try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+      Assertions.assertEquals(List.of("globex"), collectDimension(holder.asCursor(), "v0"));
+    }
+  }
+
+  @Test
+  void testQueryVcEquivalentToClusteringColumnReadsMaterializedColumnViaVectorCursor()
+  {
+    // the query-VC -> materialized-column remap is applied on the vector factory too, so a
+    // vectorized read of v0 := lower(tenant) resolves to the materialized clustering column tenant_lower (raw tenant
+    // not stored -> recompute would be null), and the remap no longer forces the scalar path.
+    segmentIndex = buildVirtualClusteringSegment();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+        .setVirtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .build();
+    try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+      Assertions.assertTrue(holder.canVectorize());
+      Assertions.assertEquals(List.of("acme", "acme", "globex"), collectObjectVector(holder.asVectorCursor(), "v0"));
+    }
+  }
+
+  @Test
+  void testQueryVcEquivalentToNonClusteringMaterializedColumnReadsMaterializedColumnViaVectorCursor()
+  {
+    // non-clustering: v1 := upper(region) resolves to the materialized region_upper physical column.
+    segmentIndex = buildVirtualClusteringSegment();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+        .setVirtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .build();
+    try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+      Assertions.assertTrue(holder.canVectorize());
+      Assertions.assertEquals(
+          List.of("US-EAST-1", "US-WEST-2", "EU-WEST-1"),
+          collectObjectVector(holder.asVectorCursor(), "v1")
+      );
+    }
+  }
+
+  @Test
+  void testQueryVcEquivalentToClusteringColumnSingleGroupVectorCursor()
+  {
+    // single surviving group (filter on the equivalent VC prunes to one group): exercises the single-group holder's
+    // vector remap wrap.
+    segmentIndex = buildVirtualClusteringSegment();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+        .setVirtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .setFilter(new EqualityFilter("v0", ColumnType.STRING, "globex", null))
+        .build();
+    try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+      Assertions.assertTrue(holder.canVectorize());
+      Assertions.assertEquals(List.of("globex"), collectObjectVector(holder.asVectorCursor(), "v0"));
+    }
+  }
+
+  private static List<String> collectDimension(Cursor cursor, String column)
+  {
+    final DimensionSelector sel =
+        cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of(column));
+    final List<String> out = new ArrayList<>();
+    while (!cursor.isDone()) {
+      out.add(sel.getRow().size() == 0 ? null : sel.lookupName(sel.getRow().get(0)));
+      cursor.advance();
+    }
+    return out;
+  }
+
+  private static List<String> collectObjectVector(VectorCursor cursor, String column)
+  {
+    final VectorObjectSelector sel = cursor.getColumnSelectorFactory().makeObjectSelector(column);
+    final List<String> out = new ArrayList<>();
+    while (!cursor.isDone()) {
+      final Object[] vector = sel.getObjectVector();
+      final int size = cursor.getCurrentVectorSize();
+      for (int i = 0; i < size; i++) {
+        out.add((String) vector[i]);
+      }
+      cursor.advance();
+    }
+    return out;
   }
 
   @Test

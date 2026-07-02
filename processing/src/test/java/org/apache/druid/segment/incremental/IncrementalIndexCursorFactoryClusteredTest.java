@@ -176,6 +176,125 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
     }
   }
 
+  /**
+   * Build an index clustered on {@code tenant_lower := lower(tenant)} (a clustering column produced by a group VC;
+   * raw {@code tenant} is NOT a stored column) with a non-clustering materialized {@code region_upper := upper(region)}
+   * column. Columns are {@code [tenant_lower (clustering), region, region_upper, __time]}.
+   */
+  private static OnheapIncrementalIndex virtualClusteringIndex()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .virtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("tenant_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+            new ExpressionVirtualColumn("region_upper", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .columns(
+            new StringDimensionSchema("tenant_lower"),
+            new StringDimensionSchema("region"),
+            new StringDimensionSchema("region_upper"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant_lower")
+        .build();
+    final IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
+        .withMinTimestamp(T0)
+        .withTimestampSpec(TIMESTAMP_SPEC)
+        .withQueryGranularity(Granularities.NONE)
+        .withDimensionsSpec(spec.getDimensionsSpec())
+        .withRollup(false)
+        .withClusterSpec(spec)
+        .build();
+    final OnheapIncrementalIndex index = (OnheapIncrementalIndex) new OnheapIncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(10_000)
+        .build();
+    index.add(row(T0, "Acme", "us-east-1"));
+    index.add(row(T0 + 1, "Acme", "us-west-2"));
+    index.add(row(T0 + 2, "Globex", "eu-west-1"));
+    return index;
+  }
+
+  @Test
+  void testQueryVirtualColumnEquivalentToClusteringColumnReadsMaterializedColumn()
+  {
+    // Query VC v0 := lower(tenant) is equivalent to the clustering column tenant_lower (also lower(tenant)). Since
+    // raw `tenant` is NOT stored, recomputing the expression per-group would yield null; the remap substitutes the
+    // materialized tenant_lower clustering constant so makeDimensionSelector("v0") returns the per-group value.
+    try (OnheapIncrementalIndex index = virtualClusteringIndex()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+          .setVirtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .build();
+      try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+        final Cursor cursor = holder.asCursor();
+        final DimensionSelector v0Sel =
+            cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("v0"));
+        final List<String> out = new ArrayList<>();
+        while (!cursor.isDone()) {
+          out.add(v0Sel.getRow().size() == 0 ? null : v0Sel.lookupName(v0Sel.getRow().get(0)));
+          cursor.advance();
+        }
+        // acme group (tenant_lower=acme) first, then globex; both materialized from the clustering constant.
+        Assertions.assertEquals(List.of("acme", "acme", "globex"), out);
+      }
+    }
+  }
+
+  @Test
+  void testQueryVirtualColumnEquivalentToNonClusteringMaterializedColumnReadsMaterializedColumn()
+  {
+    // Query VC v1 := upper(region) is equivalent to the non-clustering materialized column region_upper. The remap
+    // makes makeDimensionSelector("v1") read the per-group physical region_upper column.
+    try (OnheapIncrementalIndex index = virtualClusteringIndex()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+          .setVirtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .build();
+      try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+        final Cursor cursor = holder.asCursor();
+        final DimensionSelector v1Sel =
+            cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("v1"));
+        final List<String> out = new ArrayList<>();
+        while (!cursor.isDone()) {
+          out.add(v1Sel.getRow().size() == 0 ? null : v1Sel.lookupName(v1Sel.getRow().get(0)));
+          cursor.advance();
+        }
+        Assertions.assertEquals(List.of("US-EAST-1", "US-WEST-2", "EU-WEST-1"), out);
+      }
+    }
+  }
+
+  @Test
+  void testQueryVirtualColumnWithoutEquivalentStillRecomputes()
+  {
+    // a query VC with NO materialized equivalent (upper(region_upper) -> a different expression) is not remapped and
+    // is recomputed normally from the stored region_upper column.
+    try (OnheapIncrementalIndex index = virtualClusteringIndex()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+          .setVirtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("v2", "lower(region_upper)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .build();
+      try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+        final Cursor cursor = holder.asCursor();
+        final DimensionSelector v2Sel =
+            cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("v2"));
+        final List<String> out = new ArrayList<>();
+        while (!cursor.isDone()) {
+          out.add(v2Sel.getRow().size() == 0 ? null : v2Sel.lookupName(v2Sel.getRow().get(0)));
+          cursor.advance();
+        }
+        // lower(upper(region)) recomputed from the materialized region_upper column.
+        Assertions.assertEquals(List.of("us-east-1", "us-west-2", "eu-west-1"), out);
+      }
+    }
+  }
+
   @Test
   void testRowSignatureExposesClusteringAndNonClusteringColumns()
   {
