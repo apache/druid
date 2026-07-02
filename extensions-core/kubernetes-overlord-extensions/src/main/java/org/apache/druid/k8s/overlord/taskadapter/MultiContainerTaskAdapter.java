@@ -109,7 +109,7 @@ public class MultiContainerTaskAdapter extends K8sTaskAdapter
     // compress the task.json to set as an env variables
     String taskContents = Base64Compression.compressBase64(mapper.writeValueAsString(task));
 
-    setupMainContainer(podSpec, context, containerSize, taskContents);
+    setupMainContainer(podSpec, task, context, containerSize, taskContents);
 
     // add any optional annotations or labels.
     Map<String, String> annotations = addJobSpecificAnnotations(context, k8sTaskId);
