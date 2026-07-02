@@ -39,6 +39,7 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
+import org.apache.druid.indexing.common.SegmentUpgradeMetrics;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -2116,6 +2117,85 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     Assert.assertEquals(pendingSegmentRecord0, captured0.getValue());
     Assert.assertEquals(pendingSegmentRecord1, captured1.getValue());
+
+    // Both records matched a running task, so each emits a notified metric and none is unmatched.
+    Assert.assertEquals(2, emitter.getMetricEventCount(SegmentUpgradeMetrics.NOTIFIED));
+    Assert.assertEquals(0, emitter.getMetricEventCount(SegmentUpgradeMetrics.UNMATCHED));
+    verifyAll();
+  }
+
+  @Test
+  public void testRegisterNewVersionOfPendingSegmentUnmatchedEmitsMetric()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false);
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.getIoConfig().setTaskCount(3);
+    supervisor.start();
+
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("0"),
+        ImmutableMap.of("0", "5"),
+        null,
+        null,
+        ImmutableSet.of("task0"),
+        ImmutableSet.of(),
+        null
+    );
+
+    // A taskAllocatorId that matches no running task group
+    final PendingSegmentRecord record = PendingSegmentRecord.create(
+        new SegmentIdWithShardSpec("DS", Intervals.of("2024/2025"), "2024", new NumberedShardSpec(1, 0)),
+        "no-such-allocator",
+        "prevId",
+        "someAppendedSegment",
+        "no-such-allocator"
+    );
+
+    supervisor.registerNewVersionOfPendingSegment(record);
+
+    Assert.assertEquals(1, emitter.getMetricEventCount(SegmentUpgradeMetrics.UNMATCHED));
+    Assert.assertEquals(0, emitter.getMetricEventCount(SegmentUpgradeMetrics.NOTIFIED));
+    verifyAll();
+  }
+
+  @Test
+  public void testRegisterNewVersionOfPendingSegmentSendFailureEmitsMetric()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.expect(
+        indexTaskClient.registerNewVersionOfPendingSegmentAsync(EasyMock.eq("task0"), EasyMock.anyObject())
+    ).andReturn(Futures.immediateFailedFuture(new RuntimeException("boom")));
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.getIoConfig().setTaskCount(3);
+    supervisor.start();
+
+    final SeekableStreamSupervisor.TaskGroup taskGroup0 = supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("0"),
+        ImmutableMap.of("0", "5"),
+        null,
+        null,
+        ImmutableSet.of("task0"),
+        ImmutableSet.of(),
+        null
+    );
+
+    final PendingSegmentRecord record = PendingSegmentRecord.create(
+        new SegmentIdWithShardSpec("DS", Intervals.of("2024/2025"), "2024", new NumberedShardSpec(1, 0)),
+        taskGroup0.getBaseSequenceName(),
+        "prevId",
+        "someAppendedSegment",
+        taskGroup0.getBaseSequenceName()
+    );
+
+    supervisor.registerNewVersionOfPendingSegment(record);
+
+    // The record matched task0 (so notified fires) but delivery failed over the wire (so sendFailed fires).
+    Assert.assertEquals(1, emitter.getMetricEventCount(SegmentUpgradeMetrics.NOTIFIED));
+    Assert.assertEquals(1, emitter.getMetricEventCount(SegmentUpgradeMetrics.SEND_FAILED));
     verifyAll();
   }
 

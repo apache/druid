@@ -58,6 +58,7 @@ import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskContextReport;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.SegmentUpgradeMetrics;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -80,6 +81,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -1846,7 +1848,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req);
     try {
-      ((StreamAppenderator) appenderator).registerUpgradedPendingSegment(upgradedPendingSegment);
+      final StreamAppenderator.UpgradeAnnouncementOutcome outcome =
+          ((StreamAppenderator) appenderator).registerUpgradedPendingSegment(upgradedPendingSegment);
+      emitUpgradeAnnouncementMetric(outcome);
       return Response.ok().build();
     }
     catch (DruidException e) {
@@ -1863,6 +1867,33 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       );
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
     }
+  }
+
+  private void emitUpgradeAnnouncementMetric(StreamAppenderator.UpgradeAnnouncementOutcome outcome)
+  {
+    if (outcome == StreamAppenderator.UpgradeAnnouncementOutcome.ANNOUNCED) {
+      task.emitMetric(toolbox.getEmitter(), SegmentUpgradeMetrics.ANNOUNCED, 1);
+      return;
+    }
+    final String reason;
+    switch (outcome) {
+      case SKIPPED_UNKNOWN_BASE:
+        reason = SegmentUpgradeMetrics.REASON_UNKNOWN_BASE;
+        break;
+      case SKIPPED_NO_SINK:
+        reason = SegmentUpgradeMetrics.REASON_NO_SINK;
+        break;
+      case SKIPPED_DROPPING:
+        reason = SegmentUpgradeMetrics.REASON_DROPPING;
+        break;
+      default:
+        return;
+    }
+    toolbox.getEmitter().emit(
+        task.getMetricBuilder()
+            .setDimension(DruidMetrics.REASON, reason)
+            .setMetric(SegmentUpgradeMetrics.SKIPPED, 1)
+    );
   }
 
   public Map<String, Object> doGetRowStats()

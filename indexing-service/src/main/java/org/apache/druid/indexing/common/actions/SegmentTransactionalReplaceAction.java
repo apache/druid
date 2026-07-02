@@ -24,12 +24,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.common.SegmentUpgradeMetrics;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -169,14 +171,33 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       List<PendingSegmentRecord> upgradedPendingSegments
   )
   {
+    // Emit the count of upgrades this commit produced regardless of whether a supervisor exists to
+    // receive them, so it can be compared against the count actually announced by tasks.
+    if (!upgradedPendingSegments.isEmpty()) {
+      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+      IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+      toolbox.getEmitter().emit(metricBuilder.setMetric(SegmentUpgradeMetrics.COUNT, upgradedPendingSegments.size()));
+    }
+
     final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
     final Optional<String> activeSupervisorIdWithAppendLock =
         supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(task.getDataSource());
 
     if (!activeSupervisorIdWithAppendLock.isPresent()) {
+      log.info("No active streaming supervisor for datasource[%s]; the [%d] upgraded pending segment(s) from task[%s]"
+               + " will become queryable when their tasks hand off.",
+                task.getDataSource(),
+                upgradedPendingSegments.size(),
+                task.getId()
+      );
       return;
     }
 
+    log.info("Registering [%d] upgraded pending segments created by task[%s] on supervisor[%s]",
+             upgradedPendingSegments.size(),
+             task.getId(),
+             activeSupervisorIdWithAppendLock.get()
+    );
     upgradedPendingSegments.forEach(
         upgradedPendingSegment -> supervisorManager.registerUpgradedPendingSegmentOnSupervisor(
             activeSupervisorIdWithAppendLock.get(),
