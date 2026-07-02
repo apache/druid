@@ -139,4 +139,13 @@ public interface SupervisorSpec
   {
     // No-op by default
   }
+
+  /**
+   * Returns true if replacing this (running) spec with {@code proposedSpec} requires a supervisor restart.
+   * Invoked on the running spec; default is conservative (always restart).
+   */
+  default boolean requireRestart(SupervisorSpec proposedSpec)
+  {
+    return true;
+  }
 }

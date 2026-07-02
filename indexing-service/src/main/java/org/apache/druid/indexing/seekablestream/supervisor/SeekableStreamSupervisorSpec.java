@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
@@ -45,6 +46,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 {
@@ -295,6 +297,56 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     }
   }
 
+  @Override
+  public boolean requireRestart(SupervisorSpec proposedSpec)
+  {
+    if (!(proposedSpec instanceof SeekableStreamSupervisorSpec proposed)) {
+      return true;
+    }
+
+    final Builder<?> proposedCopy;
+    try {
+      proposedCopy = proposed.toBuilder();
+    }
+    catch (UnsupportedOperationException e) {
+      return true;
+    }
+
+    if (isAutoScalerEnabled() || proposed.isAutoScalerEnabled()) {
+      proposedCopy.taskCount(getIoConfig().getTaskCount());
+    }
+
+    return !proposedCopy.build().equals(this);
+  }
+
+  private boolean isAutoScalerEnabled()
+  {
+    final AutoScalerConfig autoScalerConfig = getIoConfig().getAutoScalerConfig();
+    return autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SeekableStreamSupervisorSpec that = (SeekableStreamSupervisorSpec) o;
+    return suspended == that.suspended
+           && Objects.equals(id, that.id)
+           && Objects.equals(ingestionSchema, that.ingestionSchema)
+           && Objects.equals(context, that.context);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(id, ingestionSchema, context, suspended);
+  }
+
   protected abstract SeekableStreamSupervisorSpec toggleSuspend(boolean suspend);
 
   public abstract SeekableStreamSupervisorSpec createBackfillSpec(
@@ -302,5 +354,88 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       BoundedStreamConfig boundedStreamConfig,
       @Nullable Integer taskCount
   );
+
+  /**
+   * Copy builder for restart comparison. Subclasses override; default requires restart on any change.
+   */
+  public Builder<?> toBuilder()
+  {
+    throw new UnsupportedOperationException("toBuilder() not implemented");
+  }
+
+  @SuppressFBWarnings(
+      value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
+      justification = "Fields are populated via copyFrom() and read by build() in concrete subclasses, which "
+                      + "live in other modules and so are invisible to SpotBugs' per-module analysis."
+  )
+  public abstract static class Builder<T extends Builder<T>>
+  {
+    protected String id;
+    protected DataSchema dataSchema;
+    protected SeekableStreamSupervisorIOConfig ioConfig;
+    protected SeekableStreamSupervisorTuningConfig tuningConfig;
+    protected Map<String, Object> context;
+    protected Boolean suspended;
+
+    protected abstract T self();
+
+    public abstract SeekableStreamSupervisorSpec build();
+
+    public T copyFrom(SeekableStreamSupervisorSpec spec)
+    {
+      this.id = spec.id;
+      this.dataSchema = spec.getSpec().getDataSchema();
+      this.ioConfig = spec.getIoConfig();
+      this.tuningConfig = spec.getTuningConfig();
+      this.context = spec.context;
+      this.suspended = spec.suspended;
+      return self();
+    }
+
+    public T id(String id)
+    {
+      this.id = id;
+      return self();
+    }
+
+    public T dataSchema(DataSchema dataSchema)
+    {
+      this.dataSchema = dataSchema;
+      return self();
+    }
+
+    public T ioConfig(SeekableStreamSupervisorIOConfig ioConfig)
+    {
+      this.ioConfig = ioConfig;
+      return self();
+    }
+
+    public T tuningConfig(SeekableStreamSupervisorTuningConfig tuningConfig)
+    {
+      this.tuningConfig = tuningConfig;
+      return self();
+    }
+
+    public T context(Map<String, Object> context)
+    {
+      this.context = context;
+      return self();
+    }
+
+    public T suspended(boolean suspended)
+    {
+      this.suspended = suspended;
+      return self();
+    }
+
+    /**
+     * Sets {@code ioConfig.taskCount} on a copy (does not mutate the builder's current ioConfig reference).
+     */
+    public T taskCount(int taskCount)
+    {
+      this.ioConfig = this.ioConfig.toBuilder().withTaskCount(taskCount).build();
+      return self();
+    }
+  }
 
 }

@@ -172,12 +172,14 @@ public class SupervisorManager implements SupervisorStatsProvider
   }
 
   /**
-   * Creates or updates a supervisor and then starts it.
-   * If no change has been made to the supervisor spec, it is only restarted.
-   *
-   * @return true if the supervisor was updated, false otherwise
+   * Applies {@code spec} under a single lock. With {@code skipRestartIfUnmodified=true}, an unchanged spec
+   * is a no-op; a changed spec is persisted without restart when {@link SupervisorSpec#requireRestart} is
+   * false. With {@code skipRestartIfUnmodified=false}, the supervisor is always recreated (legacy behavior).
    */
-  public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)
+  public SupervisorSpecUpdateResult createOrUpdateAndStartSupervisor(
+      final SupervisorSpec spec,
+      final boolean skipRestartIfUnmodified
+  )
   {
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(spec, "spec");
@@ -186,47 +188,81 @@ public class SupervisorManager implements SupervisorStatsProvider
 
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
-      final boolean shouldUpdateSpec = shouldUpdateSupervisor(spec);
-      SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
-      spec.merge(existingSpec);
-      createAndStartSupervisorInternal(spec, shouldUpdateSpec);
-      return shouldUpdateSpec;
+
+      if (!skipRestartIfUnmodified) {
+        // Always stop/recreate, persisting whenever the spec actually changed (or is new).
+        final boolean specChanged = isSpecChangedAndValidate(spec);
+        final SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
+        spec.merge(existingSpec);
+        createAndStartSupervisorInternal(spec, specChanged);
+        return SupervisorSpecUpdateResult.of(specChanged, true);
+      }
+
+      final Pair<Supervisor, SupervisorSpec> current = supervisors.get(spec.getId());
+      final boolean isNew = current == null || current.rhs == null;
+
+      if (isNew) {
+        spec.merge(null);
+        createAndStartSupervisorInternal(spec, true);
+        return SupervisorSpecUpdateResult.of(true, true);
+      }
+
+      if (!isSpecChanged(spec, current.rhs)) {
+        return SupervisorSpecUpdateResult.of(false, false);
+      }
+
+      // merge() may carry forward omitted fields (e.g. taskCount); compare the effective spec.
+      spec.merge(current.rhs);
+      if (!isSpecChanged(spec, current.rhs)) {
+        return SupervisorSpecUpdateResult.of(false, false);
+      }
+
+      // The effective (merged) spec is what will be persisted, so validate that transition exactly once.
+      current.rhs.validateSpecUpdateTo(spec);
+
+      if (!current.rhs.requireRestart(spec)) {
+        metadataSupervisorManager.insert(spec.getId(), spec);
+        supervisors.put(spec.getId(), Pair.of(current.lhs, spec));
+        return SupervisorSpecUpdateResult.of(true, false);
+      }
+
+      // Restart path: stop+recreate, persisting the changed spec.
+      possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
+      createAndStartSupervisorInternal(spec, true);
+      return SupervisorSpecUpdateResult.of(true, true);
     }
   }
 
-  /**
-   * Checks whether the submitted SupervisorSpec differs from the current spec in SupervisorManager's supervisor list.
-   * This is used in SupervisorResource specPost to determine whether the Supervisor needs to be restarted
-   *
-   * @param spec The spec submitted
-   * @return boolean - true only if the spec has been modified, false otherwise
-   */
-  public boolean shouldUpdateSupervisor(SupervisorSpec spec)
+  /** Byte-level diff against the running spec; validates allowed updates when bytes differ. */
+  private boolean isSpecChangedAndValidate(SupervisorSpec spec)
   {
-    Preconditions.checkState(started, "SupervisorManager not started");
-    Preconditions.checkNotNull(spec, "spec");
-    Preconditions.checkNotNull(spec.getId(), "spec.getId()");
-    Preconditions.checkNotNull(spec.getDataSources(), "spec.getDatasources()");
-    synchronized (lock) {
-      Preconditions.checkState(started, "SupervisorManager not started");
-      try {
-        byte[] specAsBytes = jsonMapper.writeValueAsBytes(spec);
-        Pair<Supervisor, SupervisorSpec> currentSupervisor = supervisors.get(spec.getId());
-        if (currentSupervisor == null || currentSupervisor.rhs == null) {
-          return true;
-        } else if (Arrays.equals(specAsBytes, jsonMapper.writeValueAsBytes(currentSupervisor.rhs))) {
-          return false;
-        } else {
-          // The spec bytes are different, so we need to check if the update is allowed
-          currentSupervisor.rhs.validateSpecUpdateTo(spec);
-          return true;
-        }
-      }
-      catch (JsonProcessingException ex) {
-        log.warn("Failed to write spec as bytes for spec_id[%s]", spec.getId());
-      }
+    final Pair<Supervisor, SupervisorSpec> current = supervisors.get(spec.getId());
+    final SupervisorSpec currentSpec = current == null ? null : current.rhs;
+    if (!isSpecChanged(spec, currentSpec)) {
+      return false;
+    }
+    if (currentSpec != null) {
+      currentSpec.validateSpecUpdateTo(spec);
     }
     return true;
+  }
+
+  /**
+   * Byte-level diff of {@code spec} against {@code against}. A missing {@code against} (new supervisor)
+   * counts as changed. Does not validate the transition.
+   */
+  private boolean isSpecChanged(SupervisorSpec spec, @Nullable SupervisorSpec against)
+  {
+    if (against == null) {
+      return true;
+    }
+    try {
+      return !Arrays.equals(jsonMapper.writeValueAsBytes(spec), jsonMapper.writeValueAsBytes(against));
+    }
+    catch (JsonProcessingException ex) {
+      log.warn(ex, "Failed to write spec as bytes for spec_id[%s]", spec.getId());
+      return true;
+    }
   }
 
   public boolean stopAndRemoveSupervisor(String id)
@@ -428,7 +464,7 @@ public class SupervisorManager implements SupervisorStatsProvider
       Map<String, Object> normalizedEndOffsets = jsonMapper.readValue(jsonMapper.writeValueAsString(endOffsets), Map.class);
       BoundedStreamConfig boundedStreamConfig = new BoundedStreamConfig(normalizedStartOffsets, normalizedEndOffsets);
       SupervisorSpec backfillSpec = streamSpec.createBackfillSpec(backfillSupervisorId, boundedStreamConfig, backfillTaskCount);
-      createOrUpdateAndStartSupervisor(backfillSpec);
+      createOrUpdateAndStartSupervisor(backfillSpec, false);
     }
     catch (JsonProcessingException e) {
       throw new ISE(e, "Failed to serialize offsets for backfill supervisor[%s]", backfillSupervisorId);

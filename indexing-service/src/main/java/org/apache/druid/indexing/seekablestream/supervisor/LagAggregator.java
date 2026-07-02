@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
@@ -48,6 +49,28 @@ public interface LagAggregator
    */
   class DefaultLagAggregator implements LagAggregator
   {
+    public DefaultLagAggregator()
+    {
+    }
+
+    @JsonCreator
+    public static DefaultLagAggregator instance()
+    {
+      return (DefaultLagAggregator) DEFAULT;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      return o instanceof DefaultLagAggregator;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return DefaultLagAggregator.class.hashCode();
+    }
+
     @Override
     public <PartitionIdType> LagStats aggregate(Map<PartitionIdType, Long> partitionLags)
     {

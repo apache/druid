@@ -32,6 +32,7 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 
 import java.io.File;
+import java.util.Objects;
 
 public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningConfig
 {
@@ -236,6 +237,30 @@ public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTu
         getMaxRecordsPerPollConfigured(),
         getMaxColumnsToMerge()
         );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    RabbitStreamIndexTaskTuningConfig that = (RabbitStreamIndexTaskTuningConfig) o;
+    return recordBufferOfferTimeout == that.recordBufferOfferTimeout
+           && Objects.equals(recordBufferSize, that.recordBufferSize)
+           && Objects.equals(maxRecordsPerPoll, that.maxRecordsPerPoll);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), recordBufferSize, recordBufferOfferTimeout, maxRecordsPerPoll);
   }
 
   @Override

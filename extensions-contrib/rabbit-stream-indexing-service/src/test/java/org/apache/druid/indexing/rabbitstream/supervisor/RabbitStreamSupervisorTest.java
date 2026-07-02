@@ -196,27 +196,22 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
       DataSchema dataSchema,
       RabbitStreamSupervisorTuningConfig tuningConfig)
   {
-    RabbitStreamSupervisorIOConfig rabbitStreamSupervisorIOConfig = new RabbitStreamSupervisorIOConfig(
-        STREAM, // stream
-        URI, // uri
-        INPUT_FORMAT, // inputFormat
-        replicas, // replicas
-        taskCount, // taskCount
-        new Period(duration), // taskDuration
-        null, // consumerProperties
-        null, // autoscalerConfig
-        400L, // poll timeout
-        new Period("P1D"), // start delat
-        new Period("PT30M"), // period
-        new Period("PT30S"), // completiontimeout
-        false, // useearliest
-        lateMessageRejectionPeriod, // latemessagerejection
-        earlyMessageRejectionPeriod, // early message rejection
-        null, // latemessagerejectionstartdatetime
-        1,
-        null,
-        null
-    );
+    RabbitStreamSupervisorIOConfig rabbitStreamSupervisorIOConfig = new RabbitStreamIOConfigBuilder()
+        .withStream(STREAM)
+        .withUri(URI)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(replicas)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period(duration))
+        .withPollTimeout(400L)
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30M"))
+        .withCompletionTimeout(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withLateMessageRejectionPeriod(lateMessageRejectionPeriod)
+        .withEarlyMessageRejectionPeriod(earlyMessageRejectionPeriod)
+        .withStopTaskCount(1)
+        .build();
     RabbitStreamIndexTaskClientFactory clientFactory = new RabbitStreamIndexTaskClientFactory(null,
         OBJECT_MAPPER);
     RabbitStreamSupervisor supervisor = new RabbitStreamSupervisor(
@@ -263,27 +258,20 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
   @Test
   public void testRecordSupplier()
   {
-    RabbitStreamSupervisorIOConfig rabbitStreamSupervisorIOConfig = new RabbitStreamSupervisorIOConfig(
-        STREAM, // stream
-        URI, // uri
-        INPUT_FORMAT, // inputFormat
-        1, // replicas
-        1, // taskCount
-        new Period("PT30M"), // taskDuration
-        null, // consumerProperties
-        null, // autoscalerConfig
-        400L, // poll timeout
-        new Period("P1D"), // start delat
-        new Period("PT30M"), // period
-        new Period("PT30S"), // completiontimeout
-        false, // useearliest
-        null, // latemessagerejection
-        null, // early message rejection
-        null, // latemessagerejectionstartdatetime
-        1,
-        null,
-        null
-    );
+    RabbitStreamSupervisorIOConfig rabbitStreamSupervisorIOConfig = new RabbitStreamIOConfigBuilder()
+        .withStream(STREAM)
+        .withUri(URI)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT30M"))
+        .withPollTimeout(400L)
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30M"))
+        .withCompletionTimeout(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withStopTaskCount(1)
+        .build();
     RabbitStreamIndexTaskClientFactory clientFactory = new RabbitStreamIndexTaskClientFactory(null,
         OBJECT_MAPPER);
     RabbitStreamSupervisor supervisor = new RabbitStreamSupervisor(
@@ -407,27 +395,20 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         null,
         null,
         ImmutableSet.of(),
-        new RabbitStreamSupervisorIOConfig(
-            STREAM, // stream
-            URI, // uri
-            INPUT_FORMAT, // inputFormat
-            1, // replicas
-            1, // taskCount
-            new Period("PT30M"), // taskDuration
-            null, // consumerProperties
-            null, // autoscalerConfig
-            400L, // poll timeout
-            new Period("P1D"), // start delat
-            new Period("PT30M"), // period
-            new Period("PT30S"), // completiontimeout
-            false, // useearliest
-            null, // latemessagerejection
-            null, // early message rejection
-            null, // latemessagerejectionstartdatetime
-            1,
-            null,
-            null
-        )
+        new RabbitStreamIOConfigBuilder()
+            .withStream(STREAM)
+            .withUri(URI)
+            .withInputFormat(INPUT_FORMAT)
+            .withReplicas(1)
+            .withTaskCount(1)
+            .withTaskDuration(new Period("PT30M"))
+            .withPollTimeout(400L)
+            .withStartDelay(new Period("P1D"))
+            .withSupervisorRunPeriod(new Period("PT30M"))
+            .withCompletionTimeout(new Period("PT30S"))
+            .withUseEarliestSequenceNumber(false)
+            .withStopTaskCount(1)
+            .build()
     );
 
     Assert.assertEquals(30L, ioConfig.getRefreshRejectionPeriodsInMinutes().longValue());
@@ -479,27 +460,17 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         "queue-1", 600
     );
 
-    final RabbitStreamSupervisorIOConfig rabbitSupervisorIOConfig = new RabbitStreamSupervisorIOConfig(
-        STREAM,
-        URI,
-        INPUT_FORMAT,
-        1,
-        1,
-        new Period("PT30S"),
-        null,
-        null,
-        null,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        1000,
-        null,
-        new BoundedStreamConfig(startOffsets, endOffsets)
-    );
+    final RabbitStreamSupervisorIOConfig rabbitSupervisorIOConfig = new RabbitStreamIOConfigBuilder()
+        .withStream(STREAM)
+        .withUri(URI)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT30S"))
+        .withStartDelay(new Period("PT30M"))
+        .withStopTaskCount(1000)
+        .withBoundedStreamConfig(new BoundedStreamConfig(startOffsets, endOffsets))
+        .build();
 
     Assert.assertTrue(rabbitSupervisorIOConfig.isBounded());
 
