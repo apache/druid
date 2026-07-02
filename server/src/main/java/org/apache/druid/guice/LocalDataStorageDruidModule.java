@@ -45,7 +45,7 @@ import java.util.Properties;
 public class LocalDataStorageDruidModule implements DruidModule
 {
   public static final String SCHEME = "local";
-  public static final String STORAGE_TYPE = "druid.storage.type";
+  public static final String STORAGE_TYPE_PROPERTY = "druid.storage.type";
 
   @Override
   public void configure(Binder binder)
@@ -54,24 +54,24 @@ public class LocalDataStorageDruidModule implements DruidModule
 
     PolyBind.createChoice(
         binder,
-        STORAGE_TYPE,
+        STORAGE_TYPE_PROPERTY,
         Key.get(DataSegmentPusher.class),
         Key.get(LocalDataSegmentPusher.class)
     );
 
     PolyBind.createChoice(
         binder,
-        STORAGE_TYPE,
+        STORAGE_TYPE_PROPERTY,
         Key.get(DataSegmentKiller.class),
         Key.get(LocalDataSegmentKiller.class)
     );
   }
 
   @Provides
-  @Named(STORAGE_TYPE)
+  @Named(STORAGE_TYPE_PROPERTY)
   public String getDeepStorageType(Properties properties)
   {
-    return properties.getProperty(STORAGE_TYPE, SCHEME);
+    return properties.getProperty(STORAGE_TYPE_PROPERTY, SCHEME);
   }
 
   private static void bindDeepStorageLocal(Binder binder)

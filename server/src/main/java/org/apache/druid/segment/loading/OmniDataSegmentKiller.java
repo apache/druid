@@ -46,7 +46,7 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
 
   @Inject
   public OmniDataSegmentKiller(
-      @Named(LocalDataStorageDruidModule.STORAGE_TYPE) String deepStorageType,
+      @Named(LocalDataStorageDruidModule.STORAGE_TYPE_PROPERTY) String deepStorageType,
       Map<String, Provider<DataSegmentKiller>> killers
   )
   {
