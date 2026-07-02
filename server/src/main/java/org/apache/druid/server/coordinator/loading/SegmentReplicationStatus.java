@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,17 +43,26 @@ public class SegmentReplicationStatus
 
   public SegmentReplicationStatus(Map<SegmentId, Map<String, SegmentReplicaCount>> replicaCountsInTier)
   {
-    // replicaCountsInTier is owned by the caller's SegmentReplicaCountMap, rebuilt fresh each
-    // coordinator cycle and not mutated again once this constructor runs, so a defensive deep
-    // copy is unnecessary; hold the reference directly and compute totals in the same pass.
-    this.replicaCountsInTier = replicaCountsInTier;
-
-    final Map<SegmentId, SegmentReplicaCount> totalReplicaCounts = Maps.newHashMapWithExpectedSize(replicaCountsInTier.size());
+    // replicaCountsInTier is the caller's live SegmentReplicaCountMap and is mutated further
+    // in the same coordinator cycle (e.g. by BalanceSegments), so we must snapshot both the
+    // structure and the per-tier SegmentReplicaCount values, not just alias the outer map.
+    // Done in a single pass so the snapshot costs no more than the totals computation already did.
+    final Map<SegmentId, Map<String, SegmentReplicaCount>> replicaCountsInTierCopy
+        = Maps.newHashMapWithExpectedSize(replicaCountsInTier.size());
+    final Map<SegmentId, SegmentReplicaCount> totalReplicaCounts
+        = Maps.newHashMapWithExpectedSize(replicaCountsInTier.size());
     for (Map.Entry<SegmentId, Map<String, SegmentReplicaCount>> entry : replicaCountsInTier.entrySet()) {
+      final Map<String, SegmentReplicaCount> tierCopy = Maps.newHashMapWithExpectedSize(entry.getValue().size());
       final SegmentReplicaCount total = new SegmentReplicaCount();
-      entry.getValue().values().forEach(total::accumulate);
+      for (Map.Entry<String, SegmentReplicaCount> tierEntry : entry.getValue().entrySet()) {
+        final SegmentReplicaCount countCopy = new SegmentReplicaCount(tierEntry.getValue());
+        tierCopy.put(tierEntry.getKey(), countCopy);
+        total.accumulate(countCopy);
+      }
+      replicaCountsInTierCopy.put(entry.getKey(), Collections.unmodifiableMap(tierCopy));
       totalReplicaCounts.put(entry.getKey(), total);
     }
+    this.replicaCountsInTier = Collections.unmodifiableMap(replicaCountsInTierCopy);
     this.totalReplicaCounts = totalReplicaCounts;
   }
 
