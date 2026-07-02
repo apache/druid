@@ -74,7 +74,7 @@ public class WeightedCostFunction
    * Penalty magnitude applied when idle ratio is 1 (fully wasted capacity).
    * Controls the steepness of the U-shape on the over-provisioning side.
    */
-  static final double OVER_PROVISIONING_PENALTY = 2.5;
+  static final double OVER_PROVISIONING_PENALTY = 2.0;
 
   /**
    * Computes cost for a given task count using compute time metrics.
