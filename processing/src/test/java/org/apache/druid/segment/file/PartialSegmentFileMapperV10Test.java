@@ -22,6 +22,7 @@ package org.apache.druid.segment.file;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -145,9 +146,10 @@ class PartialSegmentFileMapperV10Test
       Set<String> filesToLoad = Set.of("2", "5", "7");
       mapper.ensureFilesAvailable(filesToLoad);
 
-      // should have downloaded exactly 3 files
-      Assertions.assertEquals(3, rangeReader.getReadCount());
-      Assertions.assertEquals(12, mapper.getDownloadedBytes());
+      // files 2,5,7 are contiguous (within maxGapBytes) in one container, so they coalesce into a single range read;
+      // the span covers files 2..7, all of which are resident and charged afterward (24 bytes)
+      Assertions.assertEquals(1, rangeReader.getReadCount());
+      Assertions.assertEquals(24, mapper.getDownloadedBytes());
 
       // accessing these files should not trigger additional downloads
       for (String name : filesToLoad) {
@@ -155,8 +157,142 @@ class PartialSegmentFileMapperV10Test
         Assertions.assertNotNull(buf);
         Assertions.assertEquals(Integer.parseInt(name), buf.getInt());
       }
-      Assertions.assertEquals(3, rangeReader.getReadCount());
+      Assertions.assertEquals(1, rangeReader.getReadCount());
     }
+  }
+
+  @Test
+  void testCoalesceConfigRejectsInvalidThresholds()
+  {
+    // negative gap and non-positive chunk are nonsensical
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> new PartialSegmentFileMapperV10.CoalesceConfig(-1, 1 << 20)
+    );
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> new PartialSegmentFileMapperV10.CoalesceConfig(0, 0)
+    );
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> new PartialSegmentFileMapperV10.CoalesceConfig(0, -5)
+    );
+    // boundary values are valid: zero gap (merge adjacent files only) and a one-byte chunk (coalescing effectively off)
+    Assertions.assertDoesNotThrow(() -> new PartialSegmentFileMapperV10.CoalesceConfig(0, 1));
+  }
+
+  @Test
+  void testPlanDownloadRunsSplitsWhenGapExceedsThreshold() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("plan_split");
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    // maxGap = 0: no unwanted bytes may be read through, so non-adjacent wanted files never merge
+    final PartialSegmentFileMapperV10.CoalesceConfig noGap = new PartialSegmentFileMapperV10.CoalesceConfig(0, 1 << 20);
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir, noGap)) {
+      final Set<String> alternating = Set.of("0", "2", "4", "6", "8");
+      final List<PartialSegmentFileMapperV10.DownloadRun> runs = mapper.planDownloadRuns(alternating);
+
+      Assertions.assertEquals(5, runs.size(), "each non-adjacent wanted file should be its own run");
+      for (PartialSegmentFileMapperV10.DownloadRun run : runs) {
+        Assertions.assertEquals(1, run.wantedFiles().size());
+      }
+
+      rangeReader.resetCount();
+      mapper.ensureFilesAvailable(alternating);
+      Assertions.assertEquals(5, rangeReader.getReadCount(), "one range read per un-coalesced run");
+    }
+  }
+
+  @Test
+  void testPlanDownloadRunsCapsRunAtMaxChunkBytes() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("plan_chunk");
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    // each test file is a 4-byte int; maxChunk = 4 means no two files can share a run even though they are contiguous
+    final PartialSegmentFileMapperV10.CoalesceConfig tinyChunk =
+        new PartialSegmentFileMapperV10.CoalesceConfig(1 << 20, Integer.BYTES);
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir, tinyChunk)) {
+      final Set<String> all = mapper.getSegmentFileMetadata().getFiles().keySet();
+      final List<PartialSegmentFileMapperV10.DownloadRun> runs = mapper.planDownloadRuns(all);
+
+      Assertions.assertEquals(all.size(), runs.size(), "maxChunkBytes should keep each file in its own run");
+    }
+  }
+
+  @Test
+  void testFetchRunMarksEveryFileTheSpanCovers() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("plan_marks");
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      rangeReader.resetCount();
+
+      // with the generous default gap, files 2,5,7 coalesce into a single run that spans the gap-fill files 3,4,6
+      final Set<String> wanted = Set.of("2", "5", "7");
+      final List<PartialSegmentFileMapperV10.DownloadRun> runs = mapper.planDownloadRuns(wanted);
+      Assertions.assertEquals(1, runs.size());
+
+      mapper.ensureFilesAvailable(wanted);
+      Assertions.assertEquals(1, rangeReader.getReadCount(), "the three wanted files coalesce into one range read");
+      // every file the span covers is resident, so the gap-fill files (3,4,6) are marked downloaded too, not just the
+      // wanted ones; all six files (2..7) are charged
+      Assertions.assertEquals(Set.of("2", "3", "4", "5", "6", "7"), mapper.getDownloadedFiles());
+      Assertions.assertEquals(24, mapper.getDownloadedBytes());
+
+      // a gap-fill file is already resident, so accessing it triggers no additional range read
+      mapper.mapFile("3");
+      Assertions.assertEquals(1, rangeReader.getReadCount());
+
+      // a file outside the span was never fetched, so it still downloads on demand
+      mapper.mapFile("9");
+      Assertions.assertEquals(2, rangeReader.getReadCount());
+    }
+  }
+
+  @Test
+  void testOnRangeReadReportsGapFillBytes() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("gapfill");
+    final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(segmentFile.getParentFile());
+
+    // capture (bytes, gapFillBytes) for each range read; onRangeRead does not fire for the header fetch
+    final List<long[]> reads = new ArrayList<>();
+    final PartialSegmentDownloadListener listener = new PartialSegmentDownloadListener()
+    {
+      @Override
+      public void onBytesDownloaded(long bytes)
+      {
+        // not under test
+      }
+
+      @Override
+      public void onRangeRead(long bytes, long gapFillBytes, long nanos)
+      {
+        reads.add(new long[]{bytes, gapFillBytes});
+      }
+    };
+
+    try (PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.createForFile(
+        rangeReader,
+        JSON_MAPPER,
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        listener
+    )) {
+      mapper.ensureFilesAvailable(Set.of("2", "5", "7"));
+    }
+
+    // one coalesced read covers files 2..7 (24 bytes); only 2,5,7 (12 bytes) were requested, so 12 bytes are over-fetch
+    Assertions.assertEquals(1, reads.size());
+    Assertions.assertEquals(24, reads.get(0)[0]);
+    Assertions.assertEquals(12, reads.get(0)[1]);
   }
 
   @Test
@@ -628,6 +764,22 @@ class PartialSegmentFileMapperV10Test
         localCacheDir,
         IndexIO.V10_FILE_NAME,
         PartialSegmentDownloadListener.NOOP
+    );
+  }
+
+  private static PartialSegmentFileMapperV10 createMapper(
+      SegmentRangeReader rangeReader,
+      File localCacheDir,
+      PartialSegmentFileMapperV10.CoalesceConfig coalesceConfig
+  ) throws IOException
+  {
+    return PartialSegmentFileMapperV10.createForFile(
+        rangeReader,
+        JSON_MAPPER,
+        localCacheDir,
+        IndexIO.V10_FILE_NAME,
+        PartialSegmentDownloadListener.NOOP,
+        coalesceConfig
     );
   }
 

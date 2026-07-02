@@ -20,20 +20,16 @@
 package org.apache.druid.testing.embedded.query;
 
 import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.data.input.impl.LocalInputSource;
-import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DefaultQueryMetrics;
-import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.server.metrics.StorageMonitor;
-import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -44,20 +40,15 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
-import org.apache.druid.testing.embedded.msq.EmbeddedDurableShuffleStorageTest;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.shaded.com.google.common.io.ByteStreams;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -387,51 +378,10 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     return "wiki-" + IdUtils.getRandomId();
   }
 
-  /**
-   * Stolen from {@link EmbeddedDurableShuffleStorageTest#loadWikipediaTable()} but with hourly granularity and no
-   * durable shuffle location
-   */
   private void loadWikiData() throws IOException
   {
-    final File tmpDir = cluster.getTestFolder().newFolder();
-    final File wikiFile = new File(tmpDir, "wiki.gz");
-
-    ByteStreams.copy(
-        DruidProcessingConfigTest.class.getResourceAsStream("/wikipedia/wikiticker-2015-09-12-sampled.json.gz"),
-        Files.newOutputStream(wikiFile.toPath())
-    );
-    final String sql = StringUtils.format(
-        "SET waitUntilSegmentsLoad = TRUE;\n"
-        + "REPLACE INTO \"%s\" OVERWRITE ALL\n"
-        + "SELECT\n"
-        + "  TIME_PARSE(\"time\") AS __time,\n"
-        + "  channel,\n"
-        + "  countryName,\n"
-        + "  page,\n"
-        + "  \"user\",\n"
-        + "  added,\n"
-        + "  deleted,\n"
-        + "  delta\n"
-        + "FROM TABLE(\n"
-        + "    EXTERN(\n"
-        + "      %s,\n"
-        + "      '{\"type\":\"json\"}',\n"
-        + "      '[{\"name\":\"isRobot\",\"type\":\"string\"},{\"name\":\"channel\",\"type\":\"string\"},{\"name\":\"time\",\"type\":\"string\"},{\"name\":\"flags\",\"type\":\"string\"},{\"name\":\"isUnpatrolled\",\"type\":\"string\"},{\"name\":\"page\",\"type\":\"string\"},{\"name\":\"diffUrl\",\"type\":\"string\"},{\"name\":\"added\",\"type\":\"long\"},{\"name\":\"comment\",\"type\":\"string\"},{\"name\":\"commentLength\",\"type\":\"long\"},{\"name\":\"isNew\",\"type\":\"string\"},{\"name\":\"isMinor\",\"type\":\"string\"},{\"name\":\"delta\",\"type\":\"long\"},{\"name\":\"isAnonymous\",\"type\":\"string\"},{\"name\":\"user\",\"type\":\"string\"},{\"name\":\"deltaBucket\",\"type\":\"long\"},{\"name\":\"deleted\",\"type\":\"long\"},{\"name\":\"namespace\",\"type\":\"string\"},{\"name\":\"cityName\",\"type\":\"string\"},{\"name\":\"countryName\",\"type\":\"string\"},{\"name\":\"regionIsoCode\",\"type\":\"string\"},{\"name\":\"metroCode\",\"type\":\"long\"},{\"name\":\"countryIsoCode\",\"type\":\"string\"},{\"name\":\"regionName\",\"type\":\"string\"}]'\n"
-        + "    )\n"
-        + "  )\n"
-        + "PARTITIONED BY HOUR\n"
-        + "CLUSTERED BY channel",
-        dataSource,
-        Calcites.escapeStringLiteral(
-            broker.bindings()
-                  .jsonMapper()
-                  .writeValueAsString(new LocalInputSource(null, null, Collections.singletonList(wikiFile), null))
-        )
-    );
-
-    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
-    Assertions.assertEquals(TaskState.SUCCESS, payload.getStatus().getStatus());
+    final MSQTaskReportPayload payload =
+        WikipediaVirtualStorageTable.ingestHourly(cluster, msqApis, broker, dataSource);
     Assertions.assertEquals(24, payload.getStatus().getSegmentLoadWaiterStatus().getTotalSegments());
-    Assertions.assertNull(payload.getStatus().getErrorReport());
   }
 }

@@ -262,8 +262,9 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
       );
 
       // Query asks for group-by dim1 + sum(metric1), but NOT count. The projection has dim1 / _metric1_sum / _count;
-      // the projection match rewrites this to physical columns {dim1, _metric1_sum}. We should see those download,
-      // but NOT the _count file; proves column-level pruning, not just projection-level.
+      // the projection match rewrites this to physical columns {dim1, _metric1_sum}. We should see those download, and
+      // unrelated base columns must stay untouched (cross-bundle pruning); _count, however, sits physically between the
+      // two requested projection columns, so the coalesced range read spans it and it is retained as collateral.
       final CursorBuildSpec aggSpec = CursorBuildSpec.builder()
                                                      .setGroupingColumns(List.of("dim1"))
                                                      .setAggregators(List.of(
@@ -286,13 +287,14 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
             downloaded.contains(projPrefix + "_metric1_sum"),
             "expected projection _metric1_sum; got: " + downloaded
         );
-        // The projection's _count file was NOT in the query; must not be downloaded
-        Assertions.assertFalse(
+        // The projection's _count file was NOT in the query, but it lies between the two requested columns, so the
+        // coalesced read spans it and marks it resident (we already paid to read those bytes).
+        Assertions.assertTrue(
             downloaded.contains(projPrefix + "_count"),
-            "expected projection _count NOT to be downloaded; got: " + downloaded
+            "expected projection _count to be retained as coalescing collateral; got: " + downloaded
         );
         // Base __time and base metric1 are NOT touched: projection dim1 may pull base dim1 as its parent column
-        // (legitimate dependency), but unrelated base columns must stay untouched.
+        // (legitimate dependency), but unrelated base columns (a different bundle, never read) must stay untouched.
         Assertions.assertFalse(
             downloaded.contains(basePrefix + ColumnHolder.TIME_COLUMN_NAME),
             "expected base __time NOT to be downloaded; got: " + downloaded
@@ -300,6 +302,37 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
         Assertions.assertFalse(
             downloaded.contains(basePrefix + "metric1"),
             "expected base metric1 NOT to be downloaded; got: " + downloaded
+        );
+      }
+    }
+  }
+
+  @Test
+  void testAdjacentColumnsCoalesceIntoFewerRangeReads() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "coalesce_columns")) {
+      final PartialQueryableIndex index = opened.index();
+      final PartialSegmentFileMapperV10 mapper = opened.mapper();
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          noOpAcquirer(directExec())
+      );
+      rangeReader.resetCount();
+
+      // A base full scan pre-fetches every base column (dim1, metric1, __time). They sit close together in the segment
+      // object, so with the default coalescing thresholds they merge into a single range read rather than one per
+      // column. directExec makes the async download complete synchronously.
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
+           CursorHolder holder = asyncHolder.release()) {
+        Assertions.assertNotNull(holder);
+        final int downloadedFiles = mapper.getDownloadedFiles().size();
+        Assertions.assertTrue(downloadedFiles >= 2, "expected several base columns; got " + downloadedFiles);
+        Assertions.assertTrue(
+            rangeReader.getReadCount() < downloadedFiles,
+            "coalescing should issue fewer range reads (" + rangeReader.getReadCount() + ") than downloaded files ("
+            + downloadedFiles + ")"
         );
       }
     }

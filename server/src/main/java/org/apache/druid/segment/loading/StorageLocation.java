@@ -795,13 +795,14 @@ public class StorageLocation
   }
 
   /**
-   * Record a single on-demand deep-storage range read: {@code bytes} pulled over the wire in {@code nanos}. One read
-   * may materialize several internal files (whole-container fetch), so this is the request-level signal that
-   * complements the per-file {@link #trackWeakLoad}.
+   * Record a single on-demand deep-storage range read: {@code bytes} pulled over the wire in {@code nanos}, of which
+   * {@code gapFillBytes} were over-fetch (data read through only to coalesce adjacent requested files). One read may
+   * materialize several internal files (whole-container fetch), so this is the request-level signal that complements
+   * the per-file {@link #trackWeakLoad}.
    */
-  public void trackWeakRangeRead(long bytes, long nanos)
+  public void trackWeakRangeRead(long bytes, long gapFillBytes, long nanos)
   {
-    weakStats.getAndUpdate(s -> s.rangeRead(bytes, nanos));
+    weakStats.getAndUpdate(s -> s.rangeRead(bytes, gapFillBytes, nanos));
   }
 
   private void trackWeakHold(WeakCacheEntry entry)
@@ -1246,6 +1247,7 @@ public class StorageLocation
     private final AtomicLong unmountCount = new AtomicLong(0);
     private final AtomicLong readCount = new AtomicLong(0);
     private final AtomicLong readBytes = new AtomicLong(0);
+    private final AtomicLong readGapFillBytes = new AtomicLong(0);
     private final AtomicLong readTimeNanos = new AtomicLong(0);
 
     public WeakStats(AtomicLong sizeUsed, AtomicLong holdCount, AtomicLong holdBytes)
@@ -1306,10 +1308,11 @@ public class StorageLocation
       return this;
     }
 
-    public WeakStats rangeRead(long bytes, long nanos)
+    public WeakStats rangeRead(long bytes, long gapFillBytes, long nanos)
     {
       readCount.getAndIncrement();
       readBytes.getAndAdd(bytes);
+      readGapFillBytes.getAndAdd(gapFillBytes);
       readTimeNanos.getAndAdd(nanos);
       return this;
     }
@@ -1396,6 +1399,12 @@ public class StorageLocation
     public long getReadBytes()
     {
       return readBytes.get();
+    }
+
+    @Override
+    public long getReadGapFillBytes()
+    {
+      return readGapFillBytes.get();
     }
 
     @Override

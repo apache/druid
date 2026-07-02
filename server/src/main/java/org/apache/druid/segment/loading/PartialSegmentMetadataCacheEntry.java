@@ -97,6 +97,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   private final SegmentRangeReader rangeReader;
   private final ObjectMapper jsonMapper;
   private final long reservationEstimate;
+  private final PartialSegmentFileMapperV10.CoalesceConfig coalesceConfig;
 
   @Nullable
   private final StorageLoadingThreadPool storagePool;
@@ -158,6 +159,31 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       long reservationEstimate
   )
   {
+    this(
+        segmentId,
+        localCacheDir,
+        targetFilename,
+        externalFilenames,
+        rangeReader,
+        jsonMapper,
+        storagePool,
+        reservationEstimate,
+        PartialSegmentFileMapperV10.CoalesceConfig.DEFAULT
+    );
+  }
+
+  public PartialSegmentMetadataCacheEntry(
+      SegmentId segmentId,
+      File localCacheDir,
+      String targetFilename,
+      List<String> externalFilenames,
+      SegmentRangeReader rangeReader,
+      ObjectMapper jsonMapper,
+      @Nullable StorageLoadingThreadPool storagePool,
+      long reservationEstimate,
+      PartialSegmentFileMapperV10.CoalesceConfig coalesceConfig
+  )
+  {
     if (reservationEstimate <= 0) {
       throw DruidException.defensive(
           "Reservation estimate for partial metadata entry[%s] must be positive, got [%d]",
@@ -175,6 +201,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     this.storagePool = storagePool;
     this.reservationEstimate = reservationEstimate;
     this.currentSize = reservationEstimate;
+    this.coalesceConfig = coalesceConfig;
     this.bundleAcquirer = createBundleAcquirer();
   }
 
@@ -337,7 +364,8 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
           localCacheDir,
           targetFilename,
           externalFilenames,
-          new WeakLoadTracker(mountLocation)
+          new WeakLoadTracker(mountLocation),
+          coalesceConfig
       );
 
       final long sizeToAdjust;
@@ -990,9 +1018,9 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     }
 
     @Override
-    public void onRangeRead(long bytes, long nanos)
+    public void onRangeRead(long bytes, long gapFillBytes, long nanos)
     {
-      mountLocation.trackWeakRangeRead(bytes, nanos);
+      mountLocation.trackWeakRangeRead(bytes, gapFillBytes, nanos);
     }
   }
 }

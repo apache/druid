@@ -34,7 +34,7 @@ public interface PartialSegmentDownloadListener
     }
 
     @Override
-    public void onRangeRead(long bytes, long nanos)
+    public void onRangeRead(long bytes, long gapFillBytes, long nanos)
     {
       // no-op
     }
@@ -52,11 +52,15 @@ public interface PartialSegmentDownloadListener
 
   /**
    * A single deep-storage range read completed: the actual request granularity (one read may cover many files when a
-   * whole container is fetched at once). Measures wire bytes and latency, so it reflects the deep-storage request count
-   * and cost rather than how many files became resident.
+   * whole container is fetched at once, or when adjacent files are coalesced into one request). Measures wire bytes and
+   * latency, so it reflects the deep-storage request count and cost rather than how many files became resident.
    *
-   * @param bytes the number of bytes read from deep storage in this request
-   * @param nanos the wall-clock time the read took, in nanoseconds
+   * @param bytes        the number of bytes read from deep storage in this request
+   * @param gapFillBytes the portion of {@code bytes} that was not part of a requested file: data read through only to
+   *                     coalesce adjacent requested files into one request (unrequested files spanned, plus inter-file
+   *                     padding). Zero for a single-file read or a whole-container fetch. Quantifies coalescing
+   *                     over-fetch.
+   * @param nanos        the wall-clock time the read took, in nanoseconds
    */
-  void onRangeRead(long bytes, long nanos);
+  void onRangeRead(long bytes, long gapFillBytes, long nanos);
 }

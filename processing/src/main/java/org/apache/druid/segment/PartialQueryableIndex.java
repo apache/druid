@@ -59,6 +59,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -270,6 +271,124 @@ public class PartialQueryableIndex implements QueryableIndex
   public boolean isFullyDownloaded()
   {
     return fileMapper.isFullyDownloaded();
+  }
+
+  /**
+   * Logical column name -> primary segment-internal (smoosh) file name for the base table namespace, including the
+   * {@code __time} rename and the same column-descriptor filtering as {@link #buildColumnSuppliers}. Columns that
+   * resolve to a constant/synthesized column with no downloadable file (e.g. a constant {@code __time}) are omitted.
+   * Used by {@link PartialQueryableIndexCursorFactory} to coalesce the on-demand pre-fetch of a query's columns.
+   */
+  public Map<String, String> getBaseColumnFileNames()
+  {
+    return columnFileNames(
+        baseProjectionMetadata.getSchema().getTimeColumnName(),
+        baseProjectionMetadata.getSchema().getColumnNames(),
+        column -> Projections.getProjectionSegmentInternalFileName(baseProjectionMetadata.getSchema(), column)
+    );
+  }
+
+  /**
+   * Logical column name -> primary smoosh file name for an aggregate projection's namespace. Empty for an unknown
+   * projection. See {@link #getBaseColumnFileNames}.
+   */
+  public Map<String, String> getProjectionColumnFileNames(String projectionName)
+  {
+    final ProjectionMetadata spec = projectionSpecs.get(projectionName);
+    if (spec == null) {
+      return Map.of();
+    }
+    return columnFileNames(
+        spec.getSchema().getTimeColumnName(),
+        spec.getSchema().getColumnNames(),
+        column -> Projections.getProjectionSegmentInternalFileName(spec.getSchema(), column)
+    );
+  }
+
+  /**
+   * Logical column name -> primary smoosh file name for a single cluster group's namespace. Empty for a non-clustered
+   * segment. See {@link #getBaseColumnFileNames}.
+   */
+  public Map<String, String> getClusterGroupColumnFileNames(TableClusterGroupSpec group)
+  {
+    if (clusteredBaseSummary == null) {
+      return Map.of();
+    }
+    return columnFileNames(
+        clusteredBaseSummary.getTimeColumnName(),
+        clusteredBaseSummary.getGroupColumnNames(),
+        column -> Projections.getClusterGroupSegmentInternalFileName(group.getClusteringValueIds(), column)
+    );
+  }
+
+  /**
+   * Registered column name -> primary smoosh file name, built from {@link #resolveColumnFiles}. The key is the name the
+   * column is exposed under (the {@code __time} rename applied), which is what query callers look it up by.
+   */
+  private Map<String, String> columnFileNames(
+      @Nullable String timeColumnName,
+      List<String> columnNames,
+      Function<String, String> fileNameFn
+  )
+  {
+    final Map<String, String> returnNames = new LinkedHashMap<>();
+    for (ColumnFile cf : resolveColumnFiles(timeColumnName, columnNames, fileNameFn)) {
+      returnNames.put(cf.registeredName(), cf.smooshName());
+    }
+    return returnNames;
+  }
+
+  /**
+   * Resolve a namespace's logical columns to their primary segment-internal (smoosh) files: skip columns with no
+   * {@link ColumnDescriptor}, and register the time column under {@code __time} when the schema names it differently.
+   * This is the single source of truth shared by {@link #buildColumnSuppliers} (which builds one lazy supplier per
+   * entry) and {@link #columnFileNames} (which the cursor factory uses to coalesce the on-demand pre-fetch), so the
+   * mapping a pre-fetch plans against cannot drift from the file a later {@code getColumnHolder} maps.
+   */
+  private List<ColumnFile> resolveColumnFiles(
+      @Nullable String timeColumnName,
+      List<String> columnNames,
+      Function<String, String> fileNameFn
+  )
+  {
+    final boolean renameTime = !ColumnHolder.TIME_COLUMN_NAME.equals(timeColumnName);
+    final List<ColumnFile> out = new ArrayList<>();
+    for (String column : columnNames) {
+      final String smooshName = fileNameFn.apply(column);
+      if (!metadata.getColumnDescriptors().containsKey(smooshName)) {
+        continue;
+      }
+      final String registeredName = (column.equals(timeColumnName) && renameTime)
+                                     ? ColumnHolder.TIME_COLUMN_NAME
+                                     : column;
+      out.add(new ColumnFile(column, registeredName, smooshName));
+    }
+    return out;
+  }
+
+  /**
+   * A resolved column: its logical {@code column} name, the {@code registeredName} it is exposed under (after the
+   * {@code __time} rename), and its primary {@code smooshName} file.
+   */
+  private record ColumnFile(String column, String registeredName, String smooshName)
+  {
+  }
+
+  /**
+   * Plan coalesced range reads for a set of segment-internal (smoosh) file names; see
+   * {@link PartialSegmentFileMapperV10#planDownloadRuns}.
+   */
+  public List<PartialSegmentFileMapperV10.DownloadRun> planDownloadRuns(Set<String> smooshNames)
+  {
+    return fileMapper.planDownloadRuns(smooshNames);
+  }
+
+  /**
+   * Fetch one coalesced range read; see {@link PartialSegmentFileMapperV10#fetchRun}.
+   */
+  public void fetchDownloadRun(PartialSegmentFileMapperV10.DownloadRun run) throws IOException
+  {
+    fileMapper.fetchRun(run);
   }
 
   @Override
@@ -555,35 +674,24 @@ public class PartialQueryableIndex implements QueryableIndex
       Map<String, Supplier<BaseColumnHolder>> parentColumns
   )
   {
-    final boolean renameTime = !ColumnHolder.TIME_COLUMN_NAME.equals(timeColumnName);
     final Map<String, Supplier<BaseColumnHolder>> columns = new LinkedHashMap<>();
 
-    for (String column : columnNames) {
-      final String smooshName = fileNameFn.apply(column);
-      final ColumnDescriptor columnDescriptor = metadata.getColumnDescriptors().get(smooshName);
-      if (columnDescriptor == null) {
-        continue;
-      }
-
-      final String internedColumnName = SmooshedFileMapper.STRING_INTERNER.intern(column);
+    for (ColumnFile cf : resolveColumnFiles(timeColumnName, columnNames, fileNameFn)) {
+      final ColumnDescriptor columnDescriptor = metadata.getColumnDescriptors().get(cf.smooshName());
       final Supplier<BaseColumnHolder> columnSupplier = Suppliers.memoize(() -> {
         try {
-          final ByteBuffer colBuffer = fileMapper.mapFile(smooshName);
+          final ByteBuffer colBuffer = fileMapper.mapFile(cf.smooshName());
           final BaseColumnHolder parentColumn =
-              parentColumns.containsKey(column) ? parentColumns.get(column).get() : null;
+              parentColumns.containsKey(cf.column()) ? parentColumns.get(cf.column()).get() : null;
           return columnDescriptor.read(colBuffer, columnConfig, fileMapper, parentColumn);
         }
         catch (IOException e) {
-          throw DruidException.defensive(e, "Failed to load column[%s]", smooshName);
+          throw DruidException.defensive(e, "Failed to load column[%s]", cf.smooshName());
         }
       });
 
-      columns.put(internedColumnName, columnSupplier);
-
-      if (column.equals(timeColumnName) && renameTime) {
-        columns.put(ColumnHolder.TIME_COLUMN_NAME, columns.get(column));
-        columns.remove(column);
-      }
+      // register under the exposed name (the __time rename already applied by resolveColumnFiles)
+      columns.put(SmooshedFileMapper.STRING_INTERNER.intern(cf.registeredName()), columnSupplier);
     }
 
     if (timeColumnName == null) {

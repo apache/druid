@@ -25,6 +25,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -46,6 +47,7 @@ import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,6 +97,44 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   public static final String METADATA_HEADER_SUFFIX = ".header";
 
   /**
+   * Coalescing thresholds for {@link #planDownloadRuns}: the largest unwanted gap that is worth fetching to merge two
+   * wanted ranges into one range read, and the largest single coalesced read. Used when no explicit
+   * {@link CoalesceConfig} is supplied — by tests, and by the restore-from-disk constructor that has no operator config
+   * to consult. Running historicals pass operator-configured thresholds via {@link CoalesceConfig}.
+   */
+  public static final long DEFAULT_COALESCE_MAX_GAP_BYTES = 1024 * 1024L;
+  public static final long DEFAULT_COALESCE_MAX_CHUNK_BYTES = 16 * 1024 * 1024L;
+
+  /**
+   * Tunables controlling how adjacent internal-file ranges are merged into a single deep-storage range read. See
+   * {@link #planDownloadRuns}. {@code maxGapBytes} bounds the unwanted bytes fetched between two wanted files;
+   * {@code maxChunkBytes} bounds the size of one coalesced read, both so a single fetch can't balloon and so a wide
+   * request stays split into several runs that can be downloaded concurrently rather than collapsing into one serial
+   * read.
+   */
+  public record CoalesceConfig(long maxGapBytes, long maxChunkBytes)
+  {
+    public static final CoalesceConfig DEFAULT =
+        new CoalesceConfig(DEFAULT_COALESCE_MAX_GAP_BYTES, DEFAULT_COALESCE_MAX_CHUNK_BYTES);
+
+    public CoalesceConfig
+    {
+      if (maxGapBytes < 0) {
+        throw InvalidInput.exception(
+            "druid.segmentCache.virtualStorageCoalesceMaxGapBytes[%d] must be non-negative",
+            maxGapBytes
+        );
+      }
+      if (maxChunkBytes <= 0) {
+        throw InvalidInput.exception(
+            "druid.segmentCache.virtualStorageCoalesceMaxChunkBytes[%d] must be greater than zero",
+            maxChunkBytes
+        );
+      }
+    }
+  }
+
+  /**
    * Create (or restore) a lazy mapper for the main segment file with attached external file mappers. If persisted state
    * exists locally from a previous session, metadata is read from disk. Otherwise, metadata is fetched from deep
    * storage via range reads and persisted locally.
@@ -108,12 +148,34 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       PartialSegmentDownloadListener downloadListener
   ) throws IOException
   {
+    return create(
+        rangeReader,
+        jsonMapper,
+        localCacheDir,
+        targetFilename,
+        externals,
+        downloadListener,
+        CoalesceConfig.DEFAULT
+    );
+  }
+
+  public static PartialSegmentFileMapperV10 create(
+      SegmentRangeReader rangeReader,
+      ObjectMapper jsonMapper,
+      File localCacheDir,
+      String targetFilename,
+      List<String> externals,
+      PartialSegmentDownloadListener downloadListener,
+      CoalesceConfig coalesceConfig
+  ) throws IOException
+  {
     final PartialSegmentFileMapperV10 entryPoint = createForFile(
         rangeReader,
         jsonMapper,
         localCacheDir,
         targetFilename,
-        downloadListener
+        downloadListener,
+        coalesceConfig
     );
 
     final Map<String, PartialSegmentFileMapperV10> externalMappers = new HashMap<>();
@@ -121,7 +183,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       for (String filename : externals) {
         externalMappers.put(
             filename,
-            createForFile(rangeReader, jsonMapper, localCacheDir, filename, downloadListener)
+            createForFile(rangeReader, jsonMapper, localCacheDir, filename, downloadListener, coalesceConfig)
         );
       }
     }
@@ -143,6 +205,19 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       File localCacheDir,
       String targetFilename,
       PartialSegmentDownloadListener downloadListener
+  ) throws IOException
+  {
+    return createForFile(rangeReader, jsonMapper, localCacheDir, targetFilename, downloadListener, CoalesceConfig.DEFAULT);
+  }
+
+  @VisibleForTesting
+  static PartialSegmentFileMapperV10 createForFile(
+      SegmentRangeReader rangeReader,
+      ObjectMapper jsonMapper,
+      File localCacheDir,
+      String targetFilename,
+      PartialSegmentDownloadListener downloadListener,
+      CoalesceConfig coalesceConfig
   ) throws IOException
   {
     FileUtils.mkdirp(localCacheDir);
@@ -185,7 +260,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
         targetFilename,
         localCacheDir,
         bitmapBuffer,
-        downloadListener
+        downloadListener,
+        coalesceConfig
     );
 
     // bitmap-vs-container repair pre-pass: if the bitmap claims a file is downloaded but its container file is
@@ -266,6 +342,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   private final AtomicLong downloadedBytes = new AtomicLong(0);
   private final AtomicBoolean closed = new AtomicBoolean(false);
   private final PartialSegmentDownloadListener downloadListener;
+  private final CoalesceConfig coalesceConfig;
 
   private PartialSegmentFileMapperV10(
       SegmentFileMetadata metadata,
@@ -274,7 +351,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       String targetFilename,
       File localCacheDir,
       MappedByteBuffer bitmapBuffer,
-      PartialSegmentDownloadListener downloadListener
+      PartialSegmentDownloadListener downloadListener,
+      CoalesceConfig coalesceConfig
   )
   {
     this.metadata = metadata;
@@ -284,6 +362,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     this.localCacheDir = localCacheDir;
     this.bitmapBuffer = bitmapBuffer;
     this.downloadListener = downloadListener;
+    this.coalesceConfig = coalesceConfig;
 
     // build stable file name ordering for bitmap indexing
     this.sortedFileNames = new ArrayList<>(new TreeSet<>(metadata.getFiles().keySet()));
@@ -489,6 +568,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
           headerSize + containerMeta.getStartOffset(),
           0,
           containerMeta.getSize(),
+          0, // whole-container fetch: every file is intended, so there is no coalescing over-fetch
           StringUtils.format("container[%d]", containerIndex)
       );
 
@@ -505,15 +585,146 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
    * Pre-download a set of internal files so that subsequent {@link #mapFile(String)} calls for these files will not
    * trigger individual downloads. Files that are already downloaded are skipped. Useful for batch-downloading all
    * files in a bundle at once (see {@link SegmentFileBuilder#startFileBundle}).
+   * <p>
+   * Files that are contiguous (or near-contiguous, within {@link CoalesceConfig#maxGapBytes}) in the same container are
+   * fetched together in a single range read via {@link #planDownloadRuns}, reducing the number of deep-storage requests
+   * versus one read per file.
    */
   public void ensureFilesAvailable(Set<String> fileNames) throws IOException
   {
+    for (DownloadRun run : planDownloadRuns(fileNames)) {
+      fetchRun(run);
+    }
+  }
+
+  /**
+   * Group the not-yet-downloaded files in {@code fileNames} into coalesced range reads. Files are bucketed by container,
+   * sorted by offset, and merged into a {@link DownloadRun} while the unwanted gap to the next wanted file is within
+   * {@link CoalesceConfig#maxGapBytes} and the run length stays within {@link CoalesceConfig#maxChunkBytes}. Names that
+   * are unknown to this mapper or already downloaded are dropped. The returned runs are independent and may be fetched
+   * in any order (and concurrently, one container lock per run), so callers can fan them out.
+   */
+  public List<DownloadRun> planDownloadRuns(Set<String> fileNames)
+  {
+    // bucket wanted, not-yet-downloaded file names by container, dropping names this mapper doesn't know
+    final Map<Integer, List<String>> namesByContainer = new HashMap<>();
     for (String name : fileNames) {
+      if (downloadedFiles.contains(name)) {
+        continue;
+      }
       final SegmentInternalFileMetadata fileMetadata = metadata.getFiles().get(name);
-      if (fileMetadata != null) {
-        ensureFileDownloaded(name, fileMetadata);
+      if (fileMetadata == null) {
+        continue;
+      }
+      namesByContainer.computeIfAbsent(fileMetadata.getContainer(), k -> new ArrayList<>()).add(name);
+    }
+
+    final List<DownloadRun> runs = new ArrayList<>();
+    for (Map.Entry<Integer, List<String>> entry : namesByContainer.entrySet()) {
+      final int containerIndex = entry.getKey();
+      final List<String> names = entry.getValue();
+      names.sort(Comparator.comparingLong(name -> metadata.getFiles().get(name).getStartOffset()));
+
+      // offsets here are relative to the container; a run grows while the next file is within maxGapBytes of the
+      // current end and the whole run stays within maxChunkBytes
+      long runStartOffset = -1;
+      long runEndOffset = 0;
+      List<String> runFiles = null;
+      for (String name : names) {
+        final SegmentInternalFileMetadata file = metadata.getFiles().get(name);
+        final long fileEnd = file.getStartOffset() + file.getSize();
+        final boolean fits = runFiles != null
+                             && file.getStartOffset() - runEndOffset <= coalesceConfig.maxGapBytes()
+                             && fileEnd - runStartOffset <= coalesceConfig.maxChunkBytes();
+        if (!fits) {
+          if (runFiles != null) {
+            runs.add(makeRun(containerIndex, runStartOffset, runEndOffset, runFiles));
+          }
+          runStartOffset = file.getStartOffset();
+          runFiles = new ArrayList<>();
+        }
+        runFiles.add(name);
+        runEndOffset = Math.max(runEndOffset, fileEnd);
+      }
+      if (runFiles != null) {
+        runs.add(makeRun(containerIndex, runStartOffset, runEndOffset, runFiles));
       }
     }
+    return runs;
+  }
+
+  private DownloadRun makeRun(int containerIndex, long runStartOffset, long runEndOffset, List<String> wantedFiles)
+  {
+    return new DownloadRun(
+        containerIndex,
+        absoluteOffset(containerIndex, runStartOffset),
+        runStartOffset,
+        runEndOffset - runStartOffset,
+        List.copyOf(wantedFiles)
+    );
+  }
+
+  /**
+   * Fetch a single {@link DownloadRun} in one range read and mark every internal file it covers as downloaded. The
+   * read spans from the first wanted file to the last, so any file whose byte range lies fully within that span is now
+   * resident on disk; marking all of them (not just the explicitly wanted files) avoids re-fetching gap-fill files that
+   * we already paid to read and keeps the local-cache byte accounting in step with what was actually written. This
+   * mirrors {@link #downloadContainer}, which likewise marks every file in the region it reads. Holds the container lock
+   * for the fetch; a concurrent {@link #ensureFileDownloaded} writing a file in the same container stays safe because
+   * the two writes carry byte-identical data and {@link #markDownloaded} is gated on an atomic add (so a file is never
+   * counted twice).
+   */
+  public void fetchRun(DownloadRun run) throws IOException
+  {
+    containerLocks[run.containerIndex()].lock();
+    try {
+      checkClosed();
+      ensureContainerInitialized(run.containerIndex());
+      // over-fetch = everything in the span that isn't a requested file (unrequested files coalesced through + padding)
+      long requestedBytes = 0;
+      for (String name : run.wantedFiles()) {
+        requestedBytes += metadata.getFiles().get(name).getSize();
+      }
+      streamRangeIntoContainer(
+          run.containerIndex(),
+          run.srcAbsoluteOffset(),
+          run.localOffset(),
+          run.size(),
+          run.size() - requestedBytes,
+          StringUtils.format("run[container=%d,files=%d]", run.containerIndex(), run.wantedFiles().size())
+      );
+      // Files are packed contiguously and the span starts/ends on wanted-file boundaries, so every file whose range
+      // falls inside [localOffset, localOffset + size) is fully resident now; mark them all, including gap-fill files.
+      final long spanStart = run.localOffset();
+      final long spanEnd = run.localOffset() + run.size();
+      for (String name : containerFileNames.get(run.containerIndex())) {
+        final SegmentInternalFileMetadata fileMetadata = metadata.getFiles().get(name);
+        final long fileStart = fileMetadata.getStartOffset();
+        if (fileStart >= spanStart && fileStart + fileMetadata.getSize() <= spanEnd) {
+          markDownloaded(name, fileMetadata.getSize());
+        }
+      }
+    }
+    finally {
+      containerLocks[run.containerIndex()].unlock();
+    }
+  }
+
+  /**
+   * One coalesced deep-storage range read covering one or more wanted internal files in a single container. The read
+   * spans {@code [srcAbsoluteOffset, srcAbsoluteOffset + size)} in the segment object and is written into the
+   * container's local file at {@code localOffset}. {@code wantedFiles} are the files the caller explicitly requested
+   * (used to drive column deserialization on the query path); {@link #fetchRun} additionally marks every other file
+   * the span fully covers as downloaded, since those bytes are resident too.
+   */
+  public record DownloadRun(
+      int containerIndex,
+      long srcAbsoluteOffset,
+      long localOffset,
+      long size,
+      List<String> wantedFiles
+  )
+  {
   }
 
   /**
@@ -605,8 +816,17 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
    */
   private long computeAbsoluteOffset(SegmentInternalFileMetadata fileMetadata)
   {
-    final SegmentFileContainerMetadata container = metadata.getContainers().get(fileMetadata.getContainer());
-    return headerSize + container.getStartOffset() + fileMetadata.getStartOffset();
+    return absoluteOffset(fileMetadata.getContainer(), fileMetadata.getStartOffset());
+  }
+
+  /**
+   * Absolute byte offset, within the segment object in deep storage, of a position {@code relativeOffset} bytes into
+   * container {@code containerIndex}: the V10 header, then the container's own start offset, then the position within
+   * the container.
+   */
+  private long absoluteOffset(int containerIndex, long relativeOffset)
+  {
+    return headerSize + metadata.getContainers().get(containerIndex).getStartOffset() + relativeOffset;
   }
 
   private void ensureFileDownloaded(String name, SegmentInternalFileMetadata fileMetadata) throws IOException
@@ -631,6 +851,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
           computeAbsoluteOffset(fileMetadata),
           fileMetadata.getStartOffset(),
           fileMetadata.getSize(),
+          0, // single-file read: the whole read is the requested file, no over-fetch
           StringUtils.format("file[%s]", name)
       );
       markDownloaded(name, fileMetadata.getSize());
@@ -792,6 +1013,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       long absoluteOffset,
       long localOffset,
       long size,
+      long gapFillBytes,
       String what
   ) throws IOException
   {
@@ -820,7 +1042,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     }
     // Report the completed deep-storage range read (reached only on success). One read may cover many files; this is
     // the actual request granularity, so it measures wire bytes + latency rather than bytes that became resident.
-    downloadListener.onRangeRead(size, System.nanoTime() - startNanos);
+    // gapFillBytes is the over-fetch within this read (data spanned only to coalesce adjacent requested files).
+    downloadListener.onRangeRead(size, gapFillBytes, System.nanoTime() - startNanos);
   }
 
   /**

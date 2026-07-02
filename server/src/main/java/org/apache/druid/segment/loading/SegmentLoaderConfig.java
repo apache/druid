@@ -22,8 +22,10 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.utils.RuntimeInfo;
 
+import javax.validation.constraints.Min;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
@@ -113,6 +115,32 @@ public class SegmentLoaderConfig
    */
   @JsonProperty("virtualStoragePartialDownloadsEnabled")
   private boolean virtualStoragePartialDownloadsEnabled = false;
+
+  /**
+   * Largest unwanted gap, in bytes, that on-demand partial downloads will read through to coalesce two wanted internal
+   * files into a single deep-storage range read. Larger values trade extra over-fetched bytes for fewer requests.
+   * See {@link org.apache.druid.segment.file.PartialSegmentFileMapperV10#planDownloadRuns}.
+   */
+  @JsonProperty("virtualStorageCoalesceMaxGapBytes")
+  @Min(
+      value = 0,
+      message = "druid.segmentCache.virtualStorageCoalesceMaxGapBytes must be at least 0 (it is the largest unwanted "
+                + "gap, in bytes, read through to merge two adjacent on-demand column reads into a single request)"
+  )
+  private long virtualStorageCoalesceMaxGapBytes = PartialSegmentFileMapperV10.DEFAULT_COALESCE_MAX_GAP_BYTES;
+
+  /**
+   * Largest size, in bytes, of a single coalesced range read for on-demand partial downloads. Bounds how big one fetch
+   * can grow and keeps a wide request split into several reads that can be downloaded concurrently rather than
+   * collapsing into one serial read. See {@link org.apache.druid.segment.file.PartialSegmentFileMapperV10#planDownloadRuns}.
+   */
+  @JsonProperty("virtualStorageCoalesceMaxChunkBytes")
+  @Min(
+      value = 1,
+      message = "druid.segmentCache.virtualStorageCoalesceMaxChunkBytes must be at least 1 (it caps the size, in "
+                + "bytes, of a single coalesced range read; a small value effectively disables coalescing)"
+  )
+  private long virtualStorageCoalesceMaxChunkBytes = PartialSegmentFileMapperV10.DEFAULT_COALESCE_MAX_CHUNK_BYTES;
 
   private long combinedMaxSize = 0;
 
@@ -209,6 +237,18 @@ public class SegmentLoaderConfig
   public boolean isVirtualStoragePartialDownloadsEnabled()
   {
     return virtualStorage && virtualStoragePartialDownloadsEnabled;
+  }
+
+  /**
+   * Range-coalescing thresholds for on-demand partial downloads, derived from
+   * {@link #virtualStorageCoalesceMaxGapBytes} and {@link #virtualStorageCoalesceMaxChunkBytes}.
+   */
+  public PartialSegmentFileMapperV10.CoalesceConfig getVirtualStorageCoalesceConfig()
+  {
+    return new PartialSegmentFileMapperV10.CoalesceConfig(
+        virtualStorageCoalesceMaxGapBytes,
+        virtualStorageCoalesceMaxChunkBytes
+    );
   }
 
   public SegmentLoaderConfig setLocations(List<StorageLocationConfig> locations)
