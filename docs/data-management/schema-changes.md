@@ -25,7 +25,7 @@ title: "Schema changes"
 
 ## For new data
 
-Apache Druid allows you to provide a new schema for new data without the need to update the schema of any existing data.
+Apache&circledR; Druid allows you to provide a new schema for new data without the need to update the schema of any existing data.
 It is sufficient to update your supervisor spec, if using [streaming ingestion](../ingestion/index.md#streaming), or to
 provide the new schema the next time you do a [batch ingestion](../ingestion/index.md#batch). This is made possible by
 the fact that each [segment](../design/segments.md), at the time it is created, stores a
