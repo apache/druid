@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.batch.parallel.DeepStoragePartitionStat;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
@@ -51,8 +52,19 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
     return SHUFFLE_DATA_DIR_PREFIX + "/" + supervisorTaskId;
   }
 
+  /**
+   * Used by Guice to create an instance of {@link DeepStorageIntermediaryDataManager}.
+   *
+   * @param dataSegmentPusher Always non-null
+   * @param dataSegmentKiller Can be null in certain cases such as on MiddleManagers
+   *                          when using druid.storage.type=s3 since the respective
+   *                          S3DataSegmentKiller uses scheme "s3_zip" instead of "s3"
+   */
   @Inject
-  public DeepStorageIntermediaryDataManager(DataSegmentPusher dataSegmentPusher, DataSegmentKiller dataSegmentKiller)
+  public DeepStorageIntermediaryDataManager(
+      DataSegmentPusher dataSegmentPusher,
+      @Nullable DataSegmentKiller dataSegmentKiller
+  )
   {
     this.dataSegmentPusher = dataSegmentPusher;
     this.dataSegmentKiller = dataSegmentKiller;
@@ -111,6 +123,10 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
   @Override
   public void deletePartitions(String supervisorTaskId) throws IOException
   {
-    dataSegmentKiller.killRecursively(retrieveShuffleDataStoragePath(supervisorTaskId));
+    if (dataSegmentKiller == null) {
+      throw new ISE("No instance was bound for the DataSegmentKiller");
+    } else {
+      dataSegmentKiller.killRecursively(retrieveShuffleDataStoragePath(supervisorTaskId));
+    }
   }
 }
