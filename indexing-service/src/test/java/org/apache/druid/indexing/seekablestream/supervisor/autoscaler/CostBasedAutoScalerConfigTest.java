@@ -54,7 +54,8 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"minScaleUpDelay\": \"PT5M\",\n"
                   + "  \"minScaleDownDelay\": \"PT10M\",\n"
                   + "  \"scaleDownDuringTaskRolloverOnly\": true,\n"
-                  + "  \"usePollIdleRatio\": false\n"
+                  + "  \"usePollIdleRatio\": false,\n"
+                  + "  \"criticalLagThreshold\": 500000\n"
                   + "}";
 
     final CostBasedAutoScalerConfig config = mapper.readValue(json, CostBasedAutoScalerConfig.class);
@@ -74,6 +75,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertFalse(config.isUsePollIdleRatio());
     Assert.assertFalse(config.isUseTaskCountBoundariesOnScaleUp());
     Assert.assertTrue(config.isUseTaskCountBoundariesOnScaleDown());
+    Assert.assertEquals(Long.valueOf(500000), config.getCriticalLagThreshold());
 
     // Test serialization back to JSON
     final String serialized = mapper.writeValueAsString(config);
@@ -112,6 +114,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertTrue(config.isUseTaskCountBoundariesOnScaleDown());
     Assert.assertNull(config.getTaskCountStart());
     Assert.assertNull(config.getStopTaskCountRatio());
+    Assert.assertNull(config.getCriticalLagThreshold());
   }
 
   @Test
@@ -221,6 +224,7 @@ public class CostBasedAutoScalerConfigTest
                                                                       .minScaleDownDelay(Duration.standardMinutes(10))
                                                                       .scaleDownDuringTaskRolloverOnly(true)
                                                                       .usePollIdleRatio(false)
+                                                                      .criticalLagThreshold(500000L)
                                                                       .build();
 
     Assert.assertTrue(config.getEnableTaskAutoScaler());
@@ -238,6 +242,18 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(Duration.standardMinutes(10), config.getMinScaleDownDelay());
     Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
     Assert.assertFalse(config.isUsePollIdleRatio());
+    Assert.assertEquals(Long.valueOf(500000), config.getCriticalLagThreshold());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testValidation_ZeroCriticalLagThreshold()
+  {
+    CostBasedAutoScalerConfig.builder()
+                             .taskCountMax(100)
+                             .taskCountMin(5)
+                             .criticalLagThreshold(0L)
+                             .enableTaskAutoScaler(true)
+                             .build();
   }
 
   @Test

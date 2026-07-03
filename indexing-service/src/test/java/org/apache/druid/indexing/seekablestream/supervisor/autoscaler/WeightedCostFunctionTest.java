@@ -358,6 +358,71 @@ public class WeightedCostFunctionTest
   }
 
   @Test
+  public void testCriticalLagThresholdMaxesOutAmplificationMultiplier()
+  {
+    int currentTaskCount = 10;
+    int proposedTaskCount = 10;
+    int partitionCount = 10;
+    double avgPartitionLag = 150.0;
+    double aggregateLag = avgPartitionLag * partitionCount;
+
+    CostMetrics metrics = createMetrics(avgPartitionLag, currentTaskCount, partitionCount, 0.1);
+
+    // aggregateLag sits at exactly tier1Fraction (75%) of this threshold.
+    long tier1Threshold = (long) (aggregateLag / WeightedCostFunction.CRITICAL_LAG_TIER1_FRACTION);
+
+    CostBasedAutoScalerConfig noThreshold = CostBasedAutoScalerConfig.builder()
+                                                                      .taskCountMax(100)
+                                                                      .taskCountMin(1)
+                                                                      .enableTaskAutoScaler(true)
+                                                                      .lagWeight(1.0)
+                                                                      .idleWeight(0.0)
+                                                                      .build();
+    CostBasedAutoScalerConfig belowTier1 = CostBasedAutoScalerConfig.builder()
+                                                                     .taskCountMax(100)
+                                                                     .taskCountMin(1)
+                                                                     .enableTaskAutoScaler(true)
+                                                                     .lagWeight(1.0)
+                                                                     .idleWeight(0.0)
+                                                                     .criticalLagThreshold(tier1Threshold + 100)
+                                                                     .build();
+    CostBasedAutoScalerConfig atTier1 = CostBasedAutoScalerConfig.builder()
+                                                                  .taskCountMax(100)
+                                                                  .taskCountMin(1)
+                                                                  .enableTaskAutoScaler(true)
+                                                                  .lagWeight(1.0)
+                                                                  .idleWeight(0.0)
+                                                                  .criticalLagThreshold(tier1Threshold)
+                                                                  .build();
+
+    double costBelowTier1 = costFunction.computeCost(metrics, proposedTaskCount, belowTier1).totalCost();
+    Assert.assertEquals(
+        "Below tier1, amplification uses the default multiplier",
+        costFunction.computeCost(metrics, proposedTaskCount, noThreshold).totalCost(),
+        costBelowTier1,
+        0.0001
+    );
+
+    double lagPerPartition = aggregateLag / partitionCount;
+    double criticalAmplification =
+        1.0 + WeightedCostFunction.CRITICAL_LAG_AMPLIFICATION_MULTIPLIER * Math.log(lagPerPartition);
+    double expectedCriticalCost =
+        aggregateLag * criticalAmplification / (proposedTaskCount * WeightedCostFunction.MIN_PROCESSING_RATE);
+
+    double costAtTier1 = costFunction.computeCost(metrics, proposedTaskCount, atTier1).totalCost();
+    Assert.assertEquals(
+        "At/above tier1, the amplification multiplier maxes out at CRITICAL_LAG_AMPLIFICATION_MULTIPLIER",
+        expectedCriticalCost,
+        costAtTier1,
+        0.0001
+    );
+    Assert.assertTrue(
+        "Critical-lag cost should exceed the default-multiplier cost for the same lag",
+        costAtTier1 > costBelowTier1
+    );
+  }
+
+  @Test
   public void testAmplificationGrowsWithLag()
   {
     // Verify that higher lag produces proportionally higher cost due to log amplification
