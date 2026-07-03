@@ -166,7 +166,21 @@ public class QueryLifecycle
       final AuthorizationResult authorizationResult
   )
   {
-    initialize(query);
+    return runSimple(query, authenticationResult, authorizationResult, null);
+  }
+
+  /**
+   * As {@link #runSimple(Query, AuthenticationResult, AuthorizationResult)}, but takes the user-provided context keys.
+   * See {@link #initialize(Query, Set)}.
+   */
+  public <T> QueryResponse<T> runSimple(
+      final Query<T> query,
+      final AuthenticationResult authenticationResult,
+      final AuthorizationResult authorizationResult,
+      @Nullable final Set<String> userProvidedContextKeys
+  )
+  {
+    initialize(query, userProvidedContextKeys);
 
     final Sequence<T> results;
 
@@ -213,18 +227,33 @@ public class QueryLifecycle
    */
   public void initialize(final Query<?> baseQuery)
   {
+    initialize(baseQuery, null);
+  }
+
+  /**
+   * As {@link #initialize(Query)}, but takes the keys the caller set in the context. Pass {@code null} to treat the
+   * whole context as caller-set (native queries). The SQL layer merges static defaults into the context, so it must
+   * pass the real user-provided keys.
+   *
+   * @throws DruidException if the current state is not NEW, which indicates a bug
+   */
+  public void initialize(final Query<?> baseQuery, @Nullable final Set<String> userProvidedContextKeys)
+  {
     transition(State.NEW, State.INITIALIZED);
 
     userContextKeys = new HashSet<>(baseQuery.getContext().keySet());
+    final Set<String> effectiveUserKeys =
+        userProvidedContextKeys != null ? userProvidedContextKeys : baseQuery.getContext().keySet();
+
     String queryId = baseQuery.getId();
     if (Strings.isNullOrEmpty(queryId)) {
       queryId = UUID.randomUUID().toString();
     }
 
-    // Start with system defaults, apply per-datasource override, then user context wins
+    // Precedence, high to low: user context > per-datasource per-segment timeout > static defaults > code default.
     Map<String, Object> contextWithDefaults = new HashMap<>(queryConfigProvider.getContext());
-    applyPerDatasourcePerSegmentTimeout(baseQuery, contextWithDefaults, queryId);
     Map<String, Object> finalContext = QueryContexts.override(contextWithDefaults, baseQuery.getContext());
+    applyPerDatasourcePerSegmentTimeout(baseQuery, finalContext, effectiveUserKeys, queryId);
     finalContext.put(BaseQuery.QUERY_ID, queryId);
 
     this.baseQuery = baseQuery.withOverriddenContext(finalContext);
@@ -232,20 +261,26 @@ public class QueryLifecycle
   }
 
   /**
-   * If a per-datasource per-segment timeout is configured, injects it into the context defaults.
-   * User context (applied later via {@link QueryContexts#override}) will override this if set explicitly.
-   * In monitorOnly mode, logs the configured timeout but does not inject it.
+   * If a per-datasource per-segment timeout is configured, injects it into {@code finalContext}, overriding a value
+   * merged in from static defaults. A perSegmentTimeout the caller set (per {@code userProvidedContextKeys}) is left
+   * untouched. In monitorOnly mode, logs the configured timeout but does not inject it.
    *
-   * For queries involving multiple datasources (e.g., joins or unions), the timeout from the first matching datasource is applied
-   * since getTableNames() returns a Set, the match order is non-deterministic.
+   * For multi-datasource queries (joins/unions), the first matching datasource wins; getTableNames() returns a Set, so
+   * the match order is non-deterministic.
    */
   private void applyPerDatasourcePerSegmentTimeout(
       final Query<?> query,
-      final Map<String, Object> contextWithDefaults,
+      final Map<String, Object> finalContext,
+      final Set<String> userProvidedContextKeys,
       final String queryId
   )
   {
     if (perSegmentTimeoutConfig.isEmpty()) {
+      return;
+    }
+
+    // Caller set perSegmentTimeout: respect it.
+    if (userProvidedContextKeys.contains(QueryContexts.PER_SEGMENT_TIMEOUT_KEY)) {
       return;
     }
 
@@ -260,7 +295,7 @@ public class QueryLifecycle
               queryId
           );
         } else {
-          contextWithDefaults.put(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, dsConfig.getPerSegmentTimeoutMs());
+          finalContext.put(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, dsConfig.getPerSegmentTimeoutMs());
         }
         return;
       }

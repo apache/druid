@@ -44,6 +44,7 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class PerSegmentTimeoutInjectionTest
 {
@@ -191,6 +192,47 @@ public class PerSegmentTimeoutInjectionTest
 
     QueryLifecycle lifecycle = createLifecycle(config);
     lifecycle.initialize(queryWithUserTimeout);
+
+    Assert.assertEquals(2000L, lifecycle.getQuery().context().getPerSegmentTimeout());
+  }
+
+  @Test
+  public void testPerDatasourceTimeout_staticDefaultInContextNotUserProvided_dynamicWins()
+  {
+    // SQL path: a static default is merged into the context but the caller did not set perSegmentTimeout, so the
+    // dynamic config overrides it.
+    Map<String, PerSegmentTimeoutConfig> config = Map.of(
+        DATASOURCE, new PerSegmentTimeoutConfig(5000, false)
+    );
+
+    expectDefaults();
+
+    TimeseriesQuery queryWithMergedDefault = baseQuery.withOverriddenContext(
+        Map.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, "0")
+    );
+
+    QueryLifecycle lifecycle = createLifecycle(config);
+    lifecycle.initialize(queryWithMergedDefault, Collections.emptySet());
+
+    Assert.assertEquals(5000L, lifecycle.getQuery().context().getPerSegmentTimeout());
+  }
+
+  @Test
+  public void testPerDatasourceTimeout_userProvidedViaProvenance_userWins()
+  {
+    // Same context value, but the caller set perSegmentTimeout, so it wins over the dynamic config.
+    Map<String, PerSegmentTimeoutConfig> config = Map.of(
+        DATASOURCE, new PerSegmentTimeoutConfig(5000, false)
+    );
+
+    expectDefaults();
+
+    TimeseriesQuery queryWithUserTimeout = baseQuery.withOverriddenContext(
+        Map.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 2000L)
+    );
+
+    QueryLifecycle lifecycle = createLifecycle(config);
+    lifecycle.initialize(queryWithUserTimeout, Set.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY));
 
     Assert.assertEquals(2000L, lifecycle.getQuery().context().getPerSegmentTimeout());
   }
