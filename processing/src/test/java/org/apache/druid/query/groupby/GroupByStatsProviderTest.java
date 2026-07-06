@@ -203,14 +203,27 @@ public class GroupByStatsProviderTest
   public void testSpillProximityPicksFullestSliceWhenSlicesDiffer()
   {
     GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
-    // Slices with differing usage AND thresholds. maxSliceUsedBytes and sliceSpillThresholdBytes are each tracked
-    // as independent maxima; in practice all slices of a query share the same threshold, so this exercises the
-    // max-of-each behaviour for the dominating slice.
+    // Slices sharing a threshold but with differing usage; proximity is the fullest slice's ratio.
     stats.sliceUsage(200, 1000);
     stats.sliceUsage(900, 1000);
     stats.sliceUsage(100, 1000);
     // Fullest slice is 900/1000 = 0.9.
     Assertions.assertEquals(0.9, stats.getSpillProximity(), DELTA);
+  }
+
+  @Test
+  public void testSpillProximityKeepsPerSliceRatioWhenThresholdsDiffer()
+  {
+    // A single query can pass one PerQueryStats through both small sliced groupers (from a ConcurrentGrouper) and a
+    // full-buffer SpillingGrouper (subtotal/nested processing). A small slice can saturate its own tiny threshold
+    // while a much larger full-buffer grouper stays lightly filled. Proximity must pair each slice's used bytes with
+    // its OWN threshold, so the saturated small slice reports 1.0 and is not diluted by the large threshold.
+    GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
+    stats.sliceUsage(1000, 1000);        // small sliced grouper at its spill point -> 1.0
+    stats.sliceUsage(5000, 1_000_000);   // large full-buffer grouper barely filled -> 0.005
+    // If used bytes and thresholds were maxed independently, this would report 5000/1_000_000 = 0.005 and hide the
+    // spill. Pairing per slice keeps the true max of 1.0.
+    Assertions.assertEquals(1.0, stats.getSpillProximity(), DELTA);
   }
 
   @Test

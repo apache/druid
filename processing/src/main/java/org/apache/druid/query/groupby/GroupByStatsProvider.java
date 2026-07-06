@@ -25,6 +25,7 @@ import org.apache.druid.query.QueryResourceId;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.DoubleAccumulator;
 
 /**
  * Collects groupBy query metrics (spilled bytes, merge buffer usage, dictionary size) per-query, then
@@ -247,17 +248,15 @@ public class GroupByStatsProvider
      */
     private final AtomicLong mergeBufferUsedBytes = new AtomicLong(0);
     /**
-     * Peak used bytes of the single fullest slice this query held, tracked as a MAX across the query's slices. A query
-     * spills as soon as one slice fills, so spill proximity is driven by the hottest slice, NOT the sum tracked by
-     * {@link #mergeBufferUsedBytes}. Compared against {@link #sliceSpillThresholdBytes}.
+     * Spill proximity of the single fullest slice this query held, in [0.0, 1.0]. Each {@link #sliceUsage} call
+     * computes one slice's {@code usedBytes / spillThresholdBytes} ratio, and this keeps the MAX across the query's
+     * slices. A query spills as soon as one slice fills, so proximity is driven by the hottest slice, NOT the byte sum
+     * tracked by {@link #mergeBufferUsedBytes}. Keeping the ratio (rather than the numerator and denominator as
+     * independent maxima) is what makes the metric correct when a single query mixes groupers with different spill
+     * thresholds — e.g. small sliced groupers from a {@code ConcurrentGrouper} alongside a full-buffer
+     * {@code SpillingGrouper} for subtotal/nested processing.
      */
-    private final AtomicLong maxSliceUsedBytes = new AtomicLong(0);
-    /**
-     * Per-slice spill threshold in bytes, i.e. {@code sliceSize * maxLoadFactor}. A slice's hash table spills once its
-     * bucket count reaches the max load factor, so this (not the raw slice size) is the denominator that makes a
-     * usage ratio of 1.0 mean "at the spill point". Tracked as a max; all slices of a query share the same value.
-     */
-    private final AtomicLong sliceSpillThresholdBytes = new AtomicLong(0);
+    private final DoubleAccumulator maxSpillProximity = new DoubleAccumulator(Math::max, 0.0);
     private final AtomicLong spilledBytes = new AtomicLong(0);
     private final AtomicLong mergeDictionarySize = new AtomicLong(0);
 
@@ -276,14 +275,18 @@ public class GroupByStatsProvider
     }
 
     /**
-     * Records one slice's peak used bytes and its spill threshold ({@code sliceSize * maxLoadFactor}). Both are tracked
-     * as maxima, so after all slices close the pair describes the single fullest slice — the one that drives spilling.
-     * Used to compute {@code mergeBuffer/maxSpillProximity}.
+     * Records one slice's peak used bytes against its spill threshold ({@code sliceSize * maxLoadFactor}). The ratio is
+     * computed and clamped per slice, then kept as a max, so after all slices close the value describes the single
+     * fullest slice — the one that drives spilling. Computing the ratio per call (rather than maxing used bytes and
+     * threshold separately) keeps each slice's numerator paired with its own denominator, so a query that mixes
+     * groupers of different sizes still reports the true max proximity. Used to compute
+     * {@code mergeBuffer/maxSpillProximity}. A non-positive threshold contributes nothing (avoids divide-by-zero).
      */
     public void sliceUsage(long usedBytes, long spillThresholdBytes)
     {
-      maxSliceUsedBytes.accumulateAndGet(usedBytes, Math::max);
-      sliceSpillThresholdBytes.accumulateAndGet(spillThresholdBytes, Math::max);
+      if (spillThresholdBytes > 0) {
+        maxSpillProximity.accumulate(Math.min(1.0, (double) usedBytes / spillThresholdBytes));
+      }
     }
 
     public void spilledBytes(long bytes)
@@ -307,17 +310,13 @@ public class GroupByStatsProvider
     }
 
     /**
-     * Spill proximity for this query in [0.0, 1.0]: the fullest slice's used bytes divided by that slice's spill
+     * Spill proximity for this query in [0.0, 1.0]: the fullest slice's used bytes divided by that slice's own spill
      * threshold. 1.0 means a slice reached the point at which it spills to disk. Returns 0.0 when no slice usage was
      * recorded (e.g. a grouper that never initialized).
      */
     public double getSpillProximity()
     {
-      long threshold = sliceSpillThresholdBytes.get();
-      if (threshold <= 0) {
-        return 0.0;
-      }
-      return Math.min(1.0, (double) maxSliceUsedBytes.get() / threshold);
+      return maxSpillProximity.get();
     }
 
     public long getSpilledBytes()
