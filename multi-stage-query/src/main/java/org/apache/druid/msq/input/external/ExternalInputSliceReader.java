@@ -157,7 +157,6 @@ public class ExternalInputSliceReader implements InputSliceReader
       throw new RuntimeException(e);
     }
 
-
     final String description = StringUtils.format("external[%s]", inputSource.toString());
     final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.ETERNITY, "0", 0);
     final List<InputFilePointer> filePointers = inputSource.asFilePointers();
