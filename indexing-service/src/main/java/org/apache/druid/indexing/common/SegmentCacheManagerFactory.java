@@ -20,9 +20,12 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import org.apache.druid.guice.annotations.EphemeralStorageLoading;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
@@ -43,26 +46,45 @@ public class SegmentCacheManagerFactory
 {
   private final IndexIO indexIO;
   private final ObjectMapper jsonMapper;
+  private final StorageLoadingThreadPool loadingThreadPool;
 
   @Inject
   public SegmentCacheManagerFactory(
       IndexIO indexIO,
-      @Json ObjectMapper mapper
+      @Json ObjectMapper mapper,
+      @EphemeralStorageLoading StorageLoadingThreadPool loadingThreadPool
   )
   {
     this.indexIO = indexIO;
     this.jsonMapper = mapper;
+    this.loadingThreadPool = loadingThreadPool;
   }
 
   /**
-   * Creates a new {@link SegmentCacheManager} backed by a new storage location in {@code storageDir}, and a new
-   * loading thread pool of default size.
+   * Convenience constructor for tests and manual construction. Builds a private, always-virtual loading pool of default
+   * size rather than sharing the process-wide {@link EphemeralStorageLoading} pool. The pool is not lifecycle-managed;
+   * this is fine for short-lived test JVMs.
+   */
+  @VisibleForTesting
+  public SegmentCacheManagerFactory(
+      IndexIO indexIO,
+      ObjectMapper mapper
+  )
+  {
+    this(indexIO, mapper, StorageLoadingThreadPool.createForEphemeral(new SegmentLoaderConfig()));
+  }
+
+  /**
+   * Creates a new {@link SegmentCacheManager} backed by a new storage location in {@code storageDir}. When
+   * {@code virtualStorage} is true, the returned manager uses this factory's process-wide
+   * {@link EphemeralStorageLoading} loading pool (shared across all per-task caches and stopped by the lifecycle)
+   * rather than creating its own.
    *
    * @param storageDir     storage location
    * @param maxSize        size limit, or null for no limit
    * @param virtualStorage whether to configure the cache manager in ephemeral virtual storage mode. In this mode,
-   *                       loading is triggered by {@link SegmentCacheManager#acquireSegment(DataSegment)}, and
-   *                       segment files are deleted as soon as all holds are closed.
+   *                       loading is triggered by {@link SegmentCacheManager#acquireSegment(DataSegment, AcquireMode)},
+   *                       and segment files are deleted as soon as all holds are closed.
    */
   public SegmentCacheManager manufacturate(File storageDir, Long maxSize, boolean virtualStorage)
   {
@@ -77,11 +99,10 @@ public class SegmentCacheManagerFactory
             .setVirtualStorage(virtualStorage)
             .setVirtualStorageIsEphemeral(virtualStorage);
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
-    final StorageLoadingThreadPool loadingThreadPool = StorageLoadingThreadPool.createFromConfig(loaderConfig);
     return new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
-        loadingThreadPool,
+        virtualStorage ? loadingThreadPool : StorageLoadingThreadPool.none(),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         indexIO,
         jsonMapper
