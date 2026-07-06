@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -59,6 +60,7 @@ import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.utils.CloseableUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -145,6 +147,16 @@ public class ExternalInputSliceReader implements InputSliceReader
         ),
         ColumnsFilter.all()
     );
+
+    // Some extern sources will need to download the source files to the specified tempoaryDirectory.
+    // The fetch runs lazily when the cursor is created, and the directory must exist to avoid task failure.
+    try {
+      FileUtils.mkdirp(temporaryDirectory);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
 
     final String description = StringUtils.format("external[%s]", inputSource.toString());
     final SegmentDescriptor descriptor = new SegmentDescriptor(Intervals.ETERNITY, "0", 0);
