@@ -346,16 +346,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
       if (query.context().isDebug()) {
-        final String dataSource = ev.getBaseTableDataSource().getName();
         log.infoSegmentIds(
-            segmentServers.stream().map(
-                s -> SegmentId.of(
-                    dataSource,
-                    s.getSegmentDescriptor().getInterval(),
-                    s.getSegmentDescriptor().getVersion(),
-                    s.getSegmentDescriptor().getPartitionNumber()
-                )
-            ),
+            segmentServers.stream()
+                          .filter(s -> s.getServer() != null)
+                          .map(s -> s.getServer().getSegment().getId()),
             StringUtils.format("Query[%s] found segments from timeline lookup", query.getId())
         );
       }
