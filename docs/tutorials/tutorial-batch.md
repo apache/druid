@@ -31,7 +31,7 @@ specs by hand or using the _data loader_ built into the web console.
 
 For production environments, it's likely that you'll want to automate data ingestion. This tutorial starts by showing
 you how to submit an ingestion spec directly in the web console, and then introduces ways to ingest batch data that
-lend themselves to automation&mdash;from the command line and from a script. 
+lend themselves to automation&mdash;from the command line. 
 
 ## Loading data with a spec (via console)
 
@@ -127,6 +127,11 @@ curl -X POST http://localhost:8081/druid/indexer/v1/task \
   -H "Content-Type: application/json" \
   -d @quickstart/tutorial/wikipedia-index.json
 ```
+Which will print the ID of the task if the submission was successful:
+
+```bash
+{"task":"index_wikipedia_2018-06-09T21:30:32.802Z"}
+```
 
 You should see output like the following:
 
@@ -143,25 +148,6 @@ wikipedia loading complete! You may now query your data
 ```
 
 Once the spec is submitted, you can follow the same instructions as above to wait for the data to load and then query it.
-
-
-## Loading data without the script
-
-Let's briefly discuss how we would've submitted the ingestion task without using the script. You do not need to run these commands.
-
-To submit the task, POST it to Druid in a new terminal window from the `apache-druid-{{DRUIDVERSION}}` directory:
-
-```bash
-curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/wikipedia-index.json http://localhost:8081/druid/indexer/v1/task
-```
-
-Which will print the ID of the task if the submission was successful:
-
-```bash
-{"task":"index_wikipedia_2018-06-09T21:30:32.802Z"}
-```
-
-You can monitor the status of this task from the console as outlined above.
 
 
 ## Querying your data
