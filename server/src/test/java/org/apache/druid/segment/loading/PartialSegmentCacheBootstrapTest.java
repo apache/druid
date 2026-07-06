@@ -701,10 +701,9 @@ class PartialSegmentCacheBootstrapTest
   @Test
   void testStaticRestoreReleasesReservationsWhenBundleMountFails() throws IOException
   {
-    // Regression guard: when a static bundle's mount() throws after its reservation was taken via location.reserve(),
+    // when a static bundle's mount() throws after its reservation was taken via location.reserve(),
     // the reservation must be released. Also — any static bundle mounted successfully earlier in the loop must be
-    // released too; the outer rollback previously only called bundle.unmount(), which doesn't remove from
-    // staticCacheEntries. Without both, mount-time failures leave orphan static reservations after bootstrap.
+    // released too;
     primeOnDiskState();
 
     // Identify the aggregate bundle's exclusive containers (those NOT shared with __base), and replace one with a
@@ -753,7 +752,6 @@ class PartialSegmentCacheBootstrapTest
     final PartialSegmentBundleCacheEntryIdentifier aggId =
         new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
 
-    // The specific finding: agg's reservation was released by the inline catch after mount threw.
     Assertions.assertFalse(location.isReserved(aggId), "failed static bundle mount must release its own reservation");
     // Broader cleanup: the previously-succeeded base bundle in mountedBundles is also released by the outer rollback,
     // not left as an orphan (bundle.unmount() alone would only clear the mount state, not staticCacheEntries).

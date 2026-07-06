@@ -62,6 +62,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -476,9 +477,9 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   @Test
   void testRangeReaderNullDropsStaleStaticEntryOnFingerprintChange() throws Exception
   {
-    // Regression guard: without range reads a partial load cannot be honored, but a stale static entry from a prior
-    // rule must still be reconciled — otherwise the historical silently keeps serving the OLD rule after the
-    // coordinator changed the rule fingerprint.
+    // without range reads a partial load cannot be honored, but a stale static entry from a prior rule must still
+    // be reconciled — otherwise the historical silently keeps serving the OLD rule after the coordinator changed the
+    // rule fingerprint.
     manager = makeManager(true, true);
     final StorageLocation location = manager.getLocations().get(0);
     // First load: normal wrapper, real range reader, static entry installed under fingerprint v1.
@@ -521,10 +522,10 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   @Test
   void testReconciliationNukesLeftoverPartialDirectoryAcrossLocations() throws Exception
   {
-    // Regression guard: reconciliation must move-and-delete stale per-segment directories at every location before
-    // the new reserve picks a location. Without this, an initial load on location A followed by a reconciliation
-    // whose new reserve lands on location B leaves A's now-empty partial dir on disk indefinitely — drop()'s cascade
-    // only deletes tracked files (header via metadata unmount, containers via bundle eviction), not the enclosing dir.
+    // reconciliation must move-and-delete stale per-segment directories at every location before the new reserve picks
+    // a location. Without this, an initial load on location A followed by a reconciliation whose new reserve lands on
+    // location B leaves A's now-empty partial dir on disk indefinitely — drop()'s cascade only deletes tracked files
+    // (header via metadata unmount, containers via bundle eviction), not the enclosing dir.
     final File locationA = new File(perTestTempDir, "loc_a_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
     final File locationB = new File(perTestTempDir, "loc_b_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
     FileUtils.mkdirp(locationA);
@@ -560,8 +561,8 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   @Test
   void testReserveMkdirpFailureFallsThroughToNextLocation() throws Exception
   {
-    // Regression guard: a per-location mkdirp failure (inode exhaustion, permission drop, transient EIO on one disk)
-    // must not abort the whole load when another location would accept the segment. Setup:
+    // a per-location mkdirp failure (inode exhaustion, permission drop, transient EIO on one disk) must not abort the
+    // whole load when another location would accept the segment. Setup:
     //  - writable first in list so info_dir defaults to writable/info_dir (write-tolerant path).
     //  - Pre-fill writable with a dummy reservation so LeastBytesUsed picks the read-only location FIRST.
     //  - Read-only location: mkdirp of the per-segment subdir throws IOException → release the reservation and
@@ -605,11 +606,11 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   @Test
   void testLoadThrowsWhenOldStaticEntryHasOutstandingReferences() throws Exception
   {
-    // Regression guard for the deferred-cleanup race: a running query holding a metadata reference on the OLD static
-    // partial would defer its doActualUnmount past drop(). Its onUnmount hook (deleteSegmentInfoFile) plus
-    // deleteHeaderFiles would fire later — after the new entry's storeInfoFile + mount have written fresh on-disk
-    // state — and corrupt the new entry (segment ID + partial dir are shared). Fail the load explicitly BEFORE drop
-    // so the old entry stays fully installed for a subsequent coordinator retry.
+    // a running query holding a metadata reference on the OLD static partial would defer its doActualUnmount past
+    // drop(). Its onUnmount hook (deleteSegmentInfoFile) plus deleteHeaderFiles would fire later — after the new
+    // entry's storeInfoFile + mount have written fresh on-disk state — and corrupt the new entry
+    // (segment ID + partial dir are shared). Fail the load explicitly BEFORE drop so the old entry stays fully
+    // installed for a subsequent coordinator retry.
     manager = makeManager(true, true);
     final StorageLocation location = manager.getLocations().get(0);
     final SegmentCacheEntryIdentifier metaId = new SegmentCacheEntryIdentifier(SEGMENT_ID);
@@ -617,7 +618,7 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     final PartialSegmentMetadataCacheEntry oldEntry = mountedMetadata(location, SEGMENT_ID);
 
     // Pin the old entry with an outstanding metadata reference (a running query would hold one of these via a Segment).
-    final java.io.Closeable heldRef = oldEntry.acquireMetadataReference();
+    final Closeable heldRef = oldEntry.acquireMetadataReference();
     try {
       final SegmentLoadingException thrown = Assertions.assertThrows(
           SegmentLoadingException.class,
@@ -654,11 +655,11 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   @Test
   void testLoadThrowsWhenOldStaticBundleHasOutstandingReferences() throws Exception
   {
-    // Regression guard: outstanding references on a LINKED BUNDLE (not just the metadata directly) also defer
-    // cleanup past drop(). This is caught transitively because PartialSegmentBundleCacheEntry.doMount holds a
+    // outstanding references on a LINKED BUNDLE (not just the metadata directly) also defer cleanup past drop(). This
+    // is caught transitively because PartialSegmentBundleCacheEntry.doMount holds a
     // metadataEntry.acquireMetadataReference for the bundle's lifetime — so while any bundle has outstanding
-    // references, metadata.isMounted() still returns true and the reconciliation guard fires. This test proves
-    // the transitive relationship survives a code change that decouples bundle-and-metadata refs.
+    // references, metadata.isMounted() still returns true and the reconciliation guard fires. This test proves the
+    // transitive relationship survives a code change that decouples bundle-and-metadata refs.
     manager = makeManager(true, true);
     final StorageLocation location = manager.getLocations().get(0);
     manager.load(partialWrapperSegment(List.of(AGG_BUNDLE), "v1:rule-original"));
@@ -668,7 +669,7 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     // Pin the BUNDLE only (not the metadata directly). A running query walking the aggregate projection would hold
     // this reference via its Segment; the mount-time metadata ref carried by the bundle keeps the metadata alive
     // transitively.
-    final java.io.Closeable heldBundleRef = oldAgg.acquireReference();
+    final Closeable heldBundleRef = oldAgg.acquireReference();
     try {
       final SegmentLoadingException thrown = Assertions.assertThrows(
           SegmentLoadingException.class,
@@ -698,10 +699,10 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   @Test
   void testLoadEvictsPreExistingUnheldWeakEntry() throws Exception
   {
-    // Regression guard for the "stale weak entry" leak: a weak reservation for this segment ID (e.g., installed by
-    // bootstrap when no rule fingerprint was persisted, or by a prior on-demand acquireSegment) must be evicted
-    // before loadPartial reserves the new static entry. drop() only clears staticCacheEntries, so without explicit
-    // weak-eviction the two would coexist on the same on-disk directory.
+    // a weak reservation for this segment ID (e.g., installed by bootstrap when no rule fingerprint was persisted,
+    // or by a prior on-demand acquireSegment) must be evicted before loadPartial reserves the new static entry.
+    // drop() only clears staticCacheEntries, so without explicit weak-eviction the two would coexist on the same
+    // on-disk directory.
     manager = makeManager(true, true);
     final StorageLocation location = manager.getLocations().get(0);
     final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(SEGMENT_ID);

@@ -223,9 +223,9 @@ class PartialSegmentMetadataCacheEntryTest
   @Test
   void testOnUnmountHookRunsOnReleaseBeforeMount()
   {
-    // Regression guard: the SegmentLocalCacheManager.loadPartial flow persists the segment info file BEFORE mounting
-    // the entry, and registers a hook that deletes the info file on unmount. If mount then fails (or is never called)
-    // and the reservation is released, unmount() must still fire the hook — otherwise the info file leaks on disk.
+    // the SegmentLocalCacheManager.loadPartial flow persists the segment info file BEFORE mounting the entry, and
+    // registers a hook that deletes the info file on unmount. If mount then fails (or is never called) and the
+    // reservation is released, unmount() must still fire the hook — otherwise the info file leaks on disk.
     final PartialSegmentMetadataCacheEntry entry = newEntry(ESTIMATE);
     final AtomicReference<Boolean> hookFired = new AtomicReference<>(false);
     entry.setOnUnmount(() -> hookFired.set(true));
