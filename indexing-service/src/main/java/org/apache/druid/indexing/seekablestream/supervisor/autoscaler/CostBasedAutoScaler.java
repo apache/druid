@@ -64,9 +64,11 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private static final EmittingLogger log = new EmittingLogger(CostBasedAutoScaler.class);
 
   public static final String LAG_WEIGHT_METRIC = "task/autoScaler/costBased/lagWeight";
-  public static final String LAG_COST_METRIC = "task/autoScaler/costBased/lagCost";
   public static final String IDLE_WEIGHT_METRIC = "task/autoScaler/costBased/idleWeight";
-  public static final String IDLE_COST_METRIC = "task/autoScaler/costBased/idleCost";
+  public static final String CURRENT_LAG_COST_METRIC = "task/autoScaler/costBased/currentLagCost";
+  public static final String CURRENT_IDLE_COST_METRIC = "task/autoScaler/costBased/currentIdleCost";
+  public static final String OPTIMAL_LAG_COST_METRIC = "task/autoScaler/costBased/optimalLagCost";
+  public static final String OPTIMAL_IDLE_COST_METRIC = "task/autoScaler/costBased/optimalIdleCost";
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
   public static final String INVALID_METRICS_COUNT = "task/autoScaler/costBased/invalidMetrics";
   public static final String AVG_PROCESSING_RATE_METRIC = "task/autoScaler/costBased/avgProcessingRate";
@@ -247,8 +249,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
 
     // Start with the current task count as optimal
+    final CostResult currentCost = costFunction.computeCost(metrics, currentTaskCount, config);
     int optimalTaskCount = currentTaskCount;
-    CostResult optimalCost = costFunction.computeCost(metrics, currentTaskCount, config);
+    CostResult optimalCost = currentCost;
     final double idleRatioEstimatedFromRate = metrics.estimateIdleRatioFromProcessingRate();
 
     log.info(
@@ -302,8 +305,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     emitter.emit(getMetricBuilder().setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
     emitter.emit(getMetricBuilder().setMetric(LAG_WEIGHT_METRIC, config.getLagWeight()));
     emitter.emit(getMetricBuilder().setMetric(IDLE_WEIGHT_METRIC, config.getIdleWeight()));
-    emitter.emit(getMetricBuilder().setMetric(LAG_COST_METRIC, optimalCost.lagCost()));
-    emitter.emit(getMetricBuilder().setMetric(IDLE_COST_METRIC, optimalCost.idleCost()));
+    emitter.emit(getMetricBuilder().setMetric(CURRENT_LAG_COST_METRIC, currentCost.lagCost()));
+    emitter.emit(getMetricBuilder().setMetric(CURRENT_IDLE_COST_METRIC, currentCost.idleCost()));
 
     // Emit avg rate and idle metrics only if they are available
     if (metrics.getAvgProcessingRate() >= 0) {
@@ -321,6 +324,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
           "Optimal taskCount[%d] for supervisor[%s] has lowest cost[%.4f] out of the following candidates: %n%s",
           optimalTaskCount, supervisorId, optimalCost.totalCost(), constructCostTable(validTaskCounts, costResults)
       );
+      emitter.emit(getMetricBuilder().setMetric(OPTIMAL_LAG_COST_METRIC, optimalCost.lagCost()));
+      emitter.emit(getMetricBuilder().setMetric(OPTIMAL_IDLE_COST_METRIC, optimalCost.idleCost()));
     }
 
     // Scale-up is applied eagerly; scale-down may be deferred by computeTaskCountForScaleAction().
@@ -381,8 +386,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
           if (autoScalerMetricsMap instanceof Map) {
             Object pollIdleRatioAvg = ((Map<?, ?>) autoScalerMetricsMap).get(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY);
             if (pollIdleRatioAvg instanceof Number) {
-              sum += ((Number) pollIdleRatioAvg).doubleValue();
-              count++;
+              double taskPollIdleRatio = ((Number) pollIdleRatioAvg).doubleValue();
+              // Do not include negative values
+              if (taskPollIdleRatio >= 0) {
+                sum += taskPollIdleRatio;
+                count++;
+              }
             }
           }
         }
@@ -427,8 +436,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
               if (movingAvgObj instanceof Map) {
                 Object processedRate = ((Map<?, ?>) movingAvgObj).get(RowIngestionMeters.PROCESSED);
                 if (processedRate instanceof Number) {
-                  sum += ((Number) processedRate).doubleValue();
-                  count++;
+                  // Do not include negative values
+                  double taskProcessedRate = ((Number) processedRate).doubleValue();
+                  if (taskProcessedRate >= 0) {
+                    sum += taskProcessedRate;
+                    count++;
+                  }
                 }
               }
             }
