@@ -148,7 +148,7 @@ public class ExternalInputSliceReader implements InputSliceReader
         ColumnsFilter.all()
     );
 
-    // Some extern sources will need to download the source files to the specified tempoaryDirectory.
+    // Some extern sources will need to download the source files to the specified temporaryDirectory.
     // The fetch runs lazily when the cursor is created, and the directory must exist to avoid task failure.
     try {
       FileUtils.mkdirp(temporaryDirectory);
