@@ -56,11 +56,12 @@ import java.util.Set;
  *   {@link #restoreBundlesFromDisk} to discover, reserve, and mount any bundles whose container files survived. The
  *   same call from the fresh acquire path is a no-op (no on-disk containers to restore).</li>
  * </ol>
- * Parent-set inference is delegated to {@link PartialSegmentMetadataCacheEntry#inferParentBundles}. A bundle whose
- * inferred parent isn't itself present on disk is treated as <i>orphaned</i>: its on-disk container files are deleted
- * (via {@link PartialSegmentFileMapperV10#evictContainer}, which also clears the relevant bitmap bits) and the bundle
- * is not restored. The next access through the cache manager acquire path then triggers a clean cold re-fetch, the
- * same fall-back as when the cache manager finds a segment listed in the info directory but missing on disk.
+ * Dependency inference is delegated to {@link PartialSegmentMetadataCacheEntry#inferBundleDependencies}. A bundle
+ * whose inferred dependency isn't itself present on disk is treated as <i>orphaned</i>: its on-disk container files
+ * are deleted (via {@link PartialSegmentFileMapperV10#evictContainer}, which also clears the relevant bitmap bits) and
+ * the bundle is not restored. The next access through the cache manager acquire path then triggers a clean cold
+ * re-fetch, the same fall-back as when the cache manager finds a segment listed in the info directory but missing on
+ * disk.
  */
 public final class PartialSegmentCacheBootstrap
 {
@@ -68,16 +69,23 @@ public final class PartialSegmentCacheBootstrap
 
   /**
    * Reserve a partial segment's metadata cache entry on the supplied location from the on-disk header. Light-weight:
-   * no range read, no file mapper, no bundle work. The entry is registered as a weak cache entry (consistent with
-   * the runtime acquire path), so it is evictable once mounted; bootstrap-restored data is treated as a cache
-   * optimization, not a permanent fixture. The caller is expected to drive the actual mount through
+   * no range read, no file mapper, no bundle work. The caller is expected to drive the actual mount through
    * {@code metadata.mount(location)} later (typically via {@code SegmentCacheManager#bootstrap}), which builds the
    * file mapper (parsing the header from local disk, no fetch) and cascades into {@link #restoreBundlesFromDisk}.
+   * <p>
+   * A non-null {@code fingerprint} means the segment was persisted via a partial-load rule and the metadata entry is
+   * installed in {@link StorageLocation}'s static map (kept sticky across the segment's lifetime on the historical);
+   * null means an ordinary on-demand partial load, which uses the weak path. {@code staticBundleNames} is the bundle-
+   * name subset that should likewise be reserved as static by {@link #restoreBundlesFromDisk} (remaining on-disk
+   * bundles restore as weak); empty for non-partial-rule loads.
    *
    * @param segmentId         the segment whose entries are being restored
    * @param localCacheDir     the per-segment directory containing the header + container files
    * @param targetFilename    the V10 entry-point filename
    * @param externalFilenames any external segment file names that were registered as children of the entry-point file
+   * @param staticBundleNames bundle names the rule has pinned as static; empty for ordinary partial loads
+   * @param fingerprint       the partial-load-rule fingerprint from the persisted load spec; null for non-rule loads.
+   *                          Non-null also selects the static reservation path for the metadata entry
    * @param rangeReader       the segment's deep-storage range reader, retained for later on-demand fetches
    * @param jsonMapper        used by the metadata entry's mount path to parse the header
    * @param storagePool       thread pool the async cursor path submits on-demand column downloads to (which bounds
@@ -91,6 +99,8 @@ public final class PartialSegmentCacheBootstrap
       File localCacheDir,
       String targetFilename,
       List<String> externalFilenames,
+      Set<String> staticBundleNames,
+      @Nullable String fingerprint,
       SegmentRangeReader rangeReader,
       ObjectMapper jsonMapper,
       @Nullable StorageLoadingThreadPool storagePool,
@@ -113,13 +123,16 @@ public final class PartialSegmentCacheBootstrap
         localCacheDir,
         targetFilename,
         externalFilenames,
+        staticBundleNames,
+        fingerprint,
         rangeReader,
         jsonMapper,
         storagePool,
         actualMetadataSize
     );
 
-    if (!location.reserveWeak(metadata)) {
+    final boolean reserved = fingerprint != null ? location.reserve(metadata) : location.reserveWeak(metadata);
+    if (!reserved) {
       throw DruidException.defensive(
           "Failed to reserve metadata entry for partial segment[%s] at location[%s]",
           segmentId,
@@ -165,16 +178,16 @@ public final class PartialSegmentCacheBootstrap
       return;
     }
 
-    // Classify each present bundle as either mountable or orphaned. A bundle is orphaned when its inferred parent
-    // set includes a bundle that isn't itself present on disk; restoring it would only produce a degenerate state
-    // where column reads that resolve into the missing parent would fail at query time. Instead, delete the
-    // orphan's on-disk containers so the next access triggers a clean cold re-fetch from deep storage.
+    // Classify each present bundle as either mountable or orphaned. A bundle is orphaned when its inferred
+    // dependency set includes a bundle that isn't itself present on disk; restoring it would only produce a
+    // degenerate state where column reads that resolve into the missing dependency would fail at query time.
+    // Instead, delete the orphan's on-disk containers so the next access triggers a clean cold re-fetch.
     final List<String> mountableBundleNames = new ArrayList<>();
     final Set<String> orphanedBundleNames = new HashSet<>();
     for (String name : presentBundleNames) {
       boolean orphaned = false;
-      for (PartialSegmentBundleCacheEntryIdentifier parent : metadata.inferParentBundles(name)) {
-        if (!presentBundleNames.contains(parent.bundleName())) {
+      for (PartialSegmentBundleCacheEntryIdentifier dep : metadata.inferBundleDependencies(name)) {
+        if (!presentBundleNames.contains(dep.bundleName())) {
           orphaned = true;
           break;
         }
@@ -192,41 +205,79 @@ public final class PartialSegmentCacheBootstrap
         fileMapper.mapperForContainer(ref.externalFilename()).evictContainer(ref.containerIndex());
       }
       LOG.debug(
-          "Deleted on-disk state of orphaned bundle[%s] for segment[%s] (parent unrestorable); next access "
+          "Deleted on-disk state of orphaned bundle[%s] for segment[%s] (dependency unrestorable); next access "
           + "will trigger cold re-fetch",
           orphanName,
           segmentId
       );
     }
 
-    // mount base bundle before any dependent bundle so its hold is available when dependents acquire parent holds
+    // Mount the base bundle before any dependent bundle so its hold is available when dependents acquire deps.
     mountableBundleNames.sort(Comparator.comparing(name -> !Projections.BASE_TABLE_PROJECTION_NAME.equals(name)));
 
+    // Expand the rule's direct selection to include transitive dependencies so a pinned child bundle's mount can
+    // take (no-op) holds against its static dependencies.
+    final Set<String> staticBundleNames = new HashSet<>(
+        metadata.bundlesInMountOrder(metadata.getStaticBundleNames())
+    );
     final List<PartialSegmentBundleCacheEntry> mountedBundles = new ArrayList<>();
     boolean success = false;
     try {
       for (String bundleName : mountableBundleNames) {
-        // Mountable bundles have all parents present by construction (orphans were filtered out above), so the
-        // inferred parent set is exactly what we want, no further filtering needed.
-        final List<PartialSegmentBundleCacheEntryIdentifier> parentIds = metadata.inferParentBundles(bundleName);
+        // Mountable bundles have all dependencies present by construction (orphans were filtered out above), so the
+        // inferred dependency set is exactly what we want, no further filtering needed.
+        final List<PartialSegmentBundleCacheEntryIdentifier> parentIds = metadata.inferBundleDependencies(bundleName);
         final PartialSegmentBundleCacheEntry bundle = PartialSegmentBundleCacheEntry.forBundle(
             metadata,
             bundleName,
             parentIds
         );
-        // weak-reserve with a temporary hold so the mount call's own parent-hold acquisition can succeed; release the
-        // bootstrap hold immediately after, if the entry should remain alive for query-side access, the runtime
-        // hold chain (transitive parents from aggregates, segment-level holds from acquire APIs) keeps it pinned.
-        try (StorageLocation.ReservationHold<?> bootstrapHold =
-                 location.addWeakReservationHold(bundle.getId(), () -> bundle)) {
-          if (bootstrapHold == null) {
+        if (staticBundleNames.contains(bundleName)) {
+          // Rule-pinned bundle: reserve static. mount() acquires parent holds via addWeakReservationHoldIfExists,
+          // which returns no-op holds for static parents, so static + weak parents compose correctly.
+          if (!location.reserve(bundle)) {
             throw DruidException.defensive(
-                "Failed to reserve bundle entry[%s] in location[%s] during bootstrap",
+                "Failed to reserve static bundle entry[%s] in location[%s] during bootstrap",
                 bundle.getId(),
                 location.getPath()
             );
           }
-          bundle.mount(location);
+          try {
+            bundle.mount(location);
+          }
+          catch (Throwable t) {
+            // Release the reservation ourselves before rethrowing: the outer rollback only walks bundles that made it
+            // into mountedBundles, so a mount-failed static bundle would otherwise leak the reservation in
+            // staticCacheEntries. (The weak branch below uses try-with-resources on the hold, which closes the hold
+            // on failure and lets StorageLocation's release runnable evict the unmounted entry.)
+            try {
+              location.release(bundle);
+            }
+            catch (Throwable releaseFailure) {
+              LOG.warn(
+                  releaseFailure,
+                  "Failed to release static bundle[%s] during bootstrap mount rollback for [%s]",
+                  bundle.getId(),
+                  segmentId
+              );
+            }
+            throw t;
+          }
+        } else {
+          // weak-reserve with a temporary hold so the mount call's own parent-hold acquisition can succeed; release the
+          // bootstrap hold immediately after, if the entry should remain alive for query-side access, the runtime
+          // hold chain (transitive parents from aggregates, segment-level holds from acquire APIs) keeps it pinned.
+          try (StorageLocation.ReservationHold<?> bootstrapHold =
+                   location.addWeakReservationHold(bundle.getId(), () -> bundle)) {
+            if (bootstrapHold == null) {
+              throw DruidException.defensive(
+                  "Failed to reserve bundle entry[%s] in location[%s] during bootstrap",
+                  bundle.getId(),
+                  location.getPath()
+              );
+            }
+            bundle.mount(location);
+          }
         }
         mountedBundles.add(bundle);
       }
@@ -243,9 +294,18 @@ public final class PartialSegmentCacheBootstrap
       if (!success) {
         // Reverse-dependency rollback for bundles only; the metadata entry's own rollback is the caller's
         // responsibility (it will fire when the propagated throw escapes doMount's try/catch).
+        //
+        // Cleanup covers both entry types:
+        //  - Static bundles: location.release() removes from staticCacheEntries AND unmounts. Without the release,
+        //    a previously-successful static bundle would leak its reservation, since the caller's metadata-side
+        //    rollback (location.release(metadata) → unmount → deleteHeaderFiles) never cascades to linked bundles.
+        //  - Weak bundles: their bootstrap hold was closed inside the loop after successful mount. release() is a
+        //    no-op for weak entries (only touches staticCacheEntries), so we also call removeUnheldWeakEntry to
+        //    evict the now-unheld weak entry from weakCacheEntries synchronously.
         for (PartialSegmentBundleCacheEntry bundle : mountedBundles) {
           try {
-            bundle.unmount();
+            location.release(bundle);
+            location.removeUnheldWeakEntry(bundle.getId());
           }
           catch (Throwable t) {
             LOG.warn(t, "Failed to roll back bundle[%s] during bootstrap failure for [%s]", bundle.getId(), segmentId);

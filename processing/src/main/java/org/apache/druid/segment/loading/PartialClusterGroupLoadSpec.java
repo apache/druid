@@ -25,7 +25,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.segment.file.SegmentFileMetadata;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
+import org.apache.druid.segment.projections.ProjectionMetadata;
+import org.apache.druid.segment.projections.Projections;
+import org.apache.druid.segment.projections.TableClusterGroupSpec;
+import org.apache.druid.timeline.ClusterGroupTuples;
+import org.apache.druid.timeline.DataSegment;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -81,6 +90,62 @@ public class PartialClusterGroupLoadSpec extends PartialLoadSpec
   public List<Integer> getClusterGroupIndices()
   {
     return clusterGroupIndices;
+  }
+
+  /**
+   * Translates each selected {@code clusterGroupIndex} to the bundle name of the corresponding on-disk cluster
+   * group, by finding the {@link TableClusterGroupSpec} at that position in the parsed base-table schema and
+   * formatting its {@link TableClusterGroupSpec#getClusteringValueIds()} via
+   * {@link Projections#getClusterGroupBundleName(List)}.
+   * <p>
+   * Positional alignment between {@link DataSegment#getClusterGroups()} tuples and the metadata's
+   * {@link ClusteredValueGroupsBaseTableSchema#getClusterGroups()} list is invariant of the writer: both are populated
+   * from the same source array at segment-build time. A size-mismatch indicates a writer/reader contract violation
+   * and trips a defensive throw.
+   */
+  @Override
+  public List<String> getSelectedBundleNames(DataSegment segment, SegmentFileMetadata metadata)
+  {
+    if (clusterGroupIndices.isEmpty()) {
+      return List.of();
+    }
+    final List<ProjectionMetadata> projections = metadata.getProjections();
+    if (projections == null || projections.isEmpty()) {
+      throw DruidException.defensive(
+          "Cannot resolve cluster-group bundle names for segment[%s]: metadata has no projections",
+          segment.getId()
+      );
+    }
+    if (!(projections.getFirst().getSchema() instanceof ClusteredValueGroupsBaseTableSchema clusteredSummary)) {
+      throw DruidException.defensive(
+          "Cannot resolve cluster-group bundle names for segment[%s]: base projection is not clustered",
+          segment.getId()
+      );
+    }
+    final List<TableClusterGroupSpec> metadataGroups = clusteredSummary.getClusterGroups();
+    final ClusterGroupTuples segmentTuples = segment.getClusterGroups();
+    final int segmentTupleCount = segmentTuples == null ? 0 : segmentTuples.tuples().size();
+    if (segmentTupleCount != metadataGroups.size()) {
+      throw DruidException.defensive(
+          "Cluster-group count mismatch for segment[%s]: DataSegment has [%s] tuples, metadata has [%s] groups",
+          segment.getId(),
+          segmentTupleCount,
+          metadataGroups.size()
+      );
+    }
+    final List<String> bundleNames = new ArrayList<>(clusterGroupIndices.size());
+    for (int idx : clusterGroupIndices) {
+      if (idx < 0 || idx >= metadataGroups.size()) {
+        throw DruidException.defensive(
+            "Cluster-group index [%s] is out of range [0, %s) for segment[%s]",
+            idx,
+            metadataGroups.size(),
+            segment.getId()
+        );
+      }
+      bundleNames.add(Projections.getClusterGroupBundleName(metadataGroups.get(idx).getClusteringValueIds()));
+    }
+    return bundleNames;
   }
 
   @Override

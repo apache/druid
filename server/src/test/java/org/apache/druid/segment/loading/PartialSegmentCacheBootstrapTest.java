@@ -334,6 +334,8 @@ class PartialSegmentCacheBootstrapTest
         cacheDir,
         IndexIO.V10_FILE_NAME,
         List.of(),
+        Set.of(),
+        null,
         failingReader,
         JSON_MAPPER,
         null,
@@ -402,6 +404,8 @@ class PartialSegmentCacheBootstrapTest
             cacheDir,
             IndexIO.V10_FILE_NAME,
             List.of(),
+            Set.of(),
+            null,
             new DirectoryBackedRangeReader(deepStorageDir),
             JSON_MAPPER,
             null,
@@ -485,6 +489,8 @@ class PartialSegmentCacheBootstrapTest
         cacheDir,
         IndexIO.V10_FILE_NAME,
         List.of(),
+        Set.of(),
+        null,
         new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
         null,
@@ -533,6 +539,8 @@ class PartialSegmentCacheBootstrapTest
         cacheDir,
         IndexIO.V10_FILE_NAME,
         List.of(),
+        Set.of(),
+        null,
         new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
         null,
@@ -540,6 +548,226 @@ class PartialSegmentCacheBootstrapTest
     );
     metadata.mount(location);
     return metadata;
+  }
+
+  /**
+   * Static-restore variant: reserve metadata + selected bundles as static entries.
+   */
+  private PartialSegmentMetadataCacheEntry restoreFromDiskAsStatic(StorageLocation location, Set<String> staticBundles)
+      throws IOException
+  {
+    final PartialSegmentMetadataCacheEntry metadata = PartialSegmentCacheBootstrap.reserveFromDisk(
+        SEGMENT_ID,
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(),
+        staticBundles,
+        "v1:test-fingerprint",
+        new DirectoryBackedRangeReader(deepStorageDir),
+        JSON_MAPPER,
+        null,
+        location
+    );
+    metadata.mount(location);
+    return metadata;
+  }
+
+  @Test
+  void testStaticReserveFromDiskRegistersMetadataInStaticMap() throws IOException
+  {
+    primeOnDiskState();
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    restoreFromDiskAsStatic(location, Set.of(AGG_BUNDLE));
+
+    final SegmentCacheEntryIdentifier metaId = new SegmentCacheEntryIdentifier(SEGMENT_ID);
+    Assertions.assertTrue(location.isReserved(metaId), "metadata entry should be static when reserveAsStatic=true");
+    Assertions.assertFalse(location.isWeakReserved(metaId), "metadata entry should NOT be weak");
+  }
+
+  @Test
+  void testStaticReserveFromDiskMakesSelectedBundleStatic() throws IOException
+  {
+    primeOnDiskState();
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    restoreFromDiskAsStatic(location, Set.of(AGG_BUNDLE));
+
+    final PartialSegmentBundleCacheEntryIdentifier aggId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
+    Assertions.assertTrue(location.isReserved(aggId), "rule-selected bundle should be in staticCacheEntries");
+    Assertions.assertFalse(location.isWeakReserved(aggId));
+  }
+
+  @Test
+  void testStaticReserveFromDiskExpandsToParentBundles() throws IOException
+  {
+    // Selecting the aggregate projection must also pin its __base parent as static: otherwise a (no-op) parent hold
+    // taken by the aggregate's mount call would resolve to a weak entry the cache could later SIEVE-evict, breaking
+    // the rule's stickiness guarantee.
+    primeOnDiskState();
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    restoreFromDiskAsStatic(location, Set.of(AGG_BUNDLE));
+
+    final PartialSegmentBundleCacheEntryIdentifier baseId = new PartialSegmentBundleCacheEntryIdentifier(
+        SEGMENT_ID,
+        Projections.BASE_TABLE_PROJECTION_NAME
+    );
+    Assertions.assertTrue(location.isReserved(baseId), "transitive parent bundle should be static");
+    Assertions.assertFalse(location.isWeakReserved(baseId));
+  }
+
+  @Test
+  void testNonStaticReserveFromDiskKeepsBundlesWeak() throws IOException
+  {
+    // Sanity: when no rule selection is passed and reserveAsStatic=false, both metadata and bundles are weak — the
+    // pre-existing behavior for ordinary on-demand partials.
+    primeOnDiskState();
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    restoreFromDisk(location);
+
+    final SegmentCacheEntryIdentifier metaId = new SegmentCacheEntryIdentifier(SEGMENT_ID);
+    final PartialSegmentBundleCacheEntryIdentifier aggId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
+    final PartialSegmentBundleCacheEntryIdentifier baseId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME);
+    Assertions.assertTrue(location.isWeakReserved(metaId));
+    Assertions.assertTrue(location.isWeakReserved(aggId));
+    Assertions.assertTrue(location.isWeakReserved(baseId));
+    Assertions.assertFalse(location.isReserved(metaId));
+    Assertions.assertFalse(location.isReserved(aggId));
+    Assertions.assertFalse(location.isReserved(baseId));
+  }
+
+  @Test
+  void testStaticRestoreSkipsRulePinnedBundleAbsentOnDisk() throws IOException
+  {
+    // JVM-crash-mid-loadPartial scenario at the reserveFromDisk + mount layer: metadata + info file are on disk, and
+    // __base is on disk, but the rule-pinned aggregate bundle's containers never finished downloading. This helper
+    // level restores metadata + __base as static and leaves the missing aggregate absent — no phantom static entry.
+    // The higher-level SegmentLocalCacheManager.bootstrap() layer then detects the missing rule-pinned bundle and
+    // drops the segment entirely so the coordinator can re-issue a clean cold-fetch.
+    primeOnDiskState();
+
+    // Delete the aggregate bundle's container file(s) but keep base's containers intact.
+    final PartialSegmentFileMapperV10 introspect = createMapper(deepStorageDir, cacheDir);
+    final Set<Integer> aggContainers = new HashSet<>();
+    final Set<Integer> baseContainers = new HashSet<>();
+    for (var entry : introspect.getSegmentFileMetadata().getFiles().entrySet()) {
+      final String name = entry.getKey();
+      final int slash = name.indexOf('/');
+      if (slash < 0) {
+        continue;
+      }
+      final String group = name.substring(0, slash);
+      if (AGG_BUNDLE.equals(group)) {
+        aggContainers.add(entry.getValue().getContainer());
+      } else if (Projections.BASE_TABLE_PROJECTION_NAME.equals(group)) {
+        baseContainers.add(entry.getValue().getContainer());
+      }
+    }
+    introspect.close();
+    final Set<Integer> aggOnly = new HashSet<>(aggContainers);
+    aggOnly.removeAll(baseContainers);
+    if (aggOnly.isEmpty()) {
+      // Tiny test segment happens to share all containers between base and agg — the scenario isn't reachable.
+      return;
+    }
+    for (Integer ci : aggOnly) {
+      final File cf = new File(cacheDir, StringUtils.format("%s.container.%05d", IndexIO.V10_FILE_NAME, ci));
+      Assertions.assertTrue(cf.exists());
+      Assertions.assertTrue(cf.delete());
+    }
+
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    restoreFromDiskAsStatic(location, Set.of(AGG_BUNDLE));
+
+    // Metadata + __base are restored as STATIC (rule intent preserved for what's available on disk).
+    final SegmentCacheEntryIdentifier metaId = new SegmentCacheEntryIdentifier(SEGMENT_ID);
+    final PartialSegmentBundleCacheEntryIdentifier baseId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME);
+    Assertions.assertTrue(location.isReserved(metaId), "metadata should be static");
+    Assertions.assertTrue(location.isReserved(baseId), "__base (present on disk) should be static");
+
+    // The missing rule-pinned bundle must NOT be pinned as static (no phantom entry) and must NOT be silently
+    // materialized as weak either — bootstrap doesn't do deep-storage fetches. The next runtime acquire will pick it
+    // up on the weak/on-demand path.
+    final PartialSegmentBundleCacheEntryIdentifier aggId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
+    Assertions.assertNull(
+        location.getCacheEntry(aggId),
+        "missing rule-pinned bundle must not be in the cache after bootstrap; runtime weak-acquire handles it"
+    );
+  }
+
+  @Test
+  void testStaticRestoreReleasesReservationsWhenBundleMountFails() throws IOException
+  {
+    // Regression guard: when a static bundle's mount() throws after its reservation was taken via location.reserve(),
+    // the reservation must be released. Also — any static bundle mounted successfully earlier in the loop must be
+    // released too; the outer rollback previously only called bundle.unmount(), which doesn't remove from
+    // staticCacheEntries. Without both, mount-time failures leave orphan static reservations after bootstrap.
+    primeOnDiskState();
+
+    // Identify the aggregate bundle's exclusive containers (those NOT shared with __base), and replace one with a
+    // directory of the same name. filterByContainerPresence uses File#exists which returns true for directories, so the
+    // agg bundle passes classification, but PartialSegmentFileMapperV10#ensureContainerInitialized opens the file with
+    // new RandomAccessFile(..., "rw") which throws when the path is a directory — forcing bundle.mount to throw AFTER
+    // location.reserve(agg) succeeded. __base's mount succeeds and lands in mountedBundles first, exercising both the
+    // inline reserve-then-mount catch (agg) and the outer mountedBundles rollback (base).
+    final PartialSegmentFileMapperV10 introspect = createMapper(deepStorageDir, cacheDir);
+    final Set<Integer> aggContainers = new HashSet<>();
+    final Set<Integer> baseContainers = new HashSet<>();
+    for (var entry : introspect.getSegmentFileMetadata().getFiles().entrySet()) {
+      final String name = entry.getKey();
+      final int slash = name.indexOf('/');
+      if (slash < 0) {
+        continue;
+      }
+      final String group = name.substring(0, slash);
+      if (AGG_BUNDLE.equals(group)) {
+        aggContainers.add(entry.getValue().getContainer());
+      } else if (Projections.BASE_TABLE_PROJECTION_NAME.equals(group)) {
+        baseContainers.add(entry.getValue().getContainer());
+      }
+    }
+    introspect.close();
+    final Set<Integer> aggOnly = new HashSet<>(aggContainers);
+    aggOnly.removeAll(baseContainers);
+    if (aggOnly.isEmpty()) {
+      // Tiny test segment happens to share all containers between base and agg — the scenario isn't reachable.
+      return;
+    }
+    final Integer aggOnlyIdx = aggOnly.iterator().next();
+    final File aggContainer = new File(
+        cacheDir,
+        StringUtils.format("%s.container.%05d", IndexIO.V10_FILE_NAME, aggOnlyIdx)
+    );
+    Assertions.assertTrue(aggContainer.delete());
+    Assertions.assertTrue(aggContainer.mkdir(), "must replace container file with a directory to force mount failure");
+
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    Assertions.assertThrows(Throwable.class, () -> restoreFromDiskAsStatic(location, Set.of(AGG_BUNDLE)));
+
+    final SegmentCacheEntryIdentifier metaId = new SegmentCacheEntryIdentifier(SEGMENT_ID);
+    final PartialSegmentBundleCacheEntryIdentifier baseId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME);
+    final PartialSegmentBundleCacheEntryIdentifier aggId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
+
+    // The specific finding: agg's reservation was released by the inline catch after mount threw.
+    Assertions.assertFalse(location.isReserved(aggId), "failed static bundle mount must release its own reservation");
+    // Broader cleanup: the previously-succeeded base bundle in mountedBundles is also released by the outer rollback,
+    // not left as an orphan (bundle.unmount() alone would only clear the mount state, not staticCacheEntries).
+    Assertions.assertFalse(
+        location.isReserved(baseId),
+        "previously-succeeded static bundle must be released on outer rollback"
+    );
+    // Metadata cleanup is the caller's responsibility, but metadata.mount()'s catch calls removeUnheldWeakEntry, which
+    // is a no-op for static entries. This test drives mount directly (no wrapping SegmentLocalCacheManager) so verify
+    // only bundle-level cleanup here; the manager-level bootstrap catch is exercised by other tests.
+    Assertions.assertTrue(
+        location.isReserved(metaId),
+        "static metadata reservation persists at this layer; the caller (manager bootstrap) is responsible for release"
+    );
   }
 
   private static PartialSegmentFileMapperV10 createMapper(File deepStorageDir, File cacheDir) throws IOException

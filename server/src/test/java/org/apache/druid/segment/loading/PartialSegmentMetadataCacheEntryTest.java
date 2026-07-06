@@ -46,6 +46,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -220,6 +221,25 @@ class PartialSegmentMetadataCacheEntryTest
   }
 
   @Test
+  void testOnUnmountHookRunsOnReleaseBeforeMount()
+  {
+    // Regression guard: the SegmentLocalCacheManager.loadPartial flow persists the segment info file BEFORE mounting
+    // the entry, and registers a hook that deletes the info file on unmount. If mount then fails (or is never called)
+    // and the reservation is released, unmount() must still fire the hook — otherwise the info file leaks on disk.
+    final PartialSegmentMetadataCacheEntry entry = newEntry(ESTIMATE);
+    final AtomicReference<Boolean> hookFired = new AtomicReference<>(false);
+    entry.setOnUnmount(() -> hookFired.set(true));
+
+    entry.unmount();
+    Assertions.assertTrue(hookFired.get(), "onUnmount hook must run even when the entry was never mounted");
+
+    // Second unmount is a no-op — the hook must not double-fire.
+    hookFired.set(false);
+    entry.unmount();
+    Assertions.assertFalse(hookFired.get(), "onUnmount hook must fire exactly once across repeated unmount() calls");
+  }
+
+  @Test
   void testConstructorRejectsNonPositiveEstimate()
   {
     Assertions.assertThrows(
@@ -229,6 +249,8 @@ class PartialSegmentMetadataCacheEntryTest
             cacheDir,
             IndexIO.V10_FILE_NAME,
             List.of(),
+            Set.of(),
+            null,
             new DirectoryBackedRangeReader(segmentFile.getParentFile()),
             JSON_MAPPER,
             null,
@@ -284,6 +306,8 @@ class PartialSegmentMetadataCacheEntryTest
         cacheDir,
         IndexIO.V10_FILE_NAME,
         List.of(),
+        Set.of(),
+        null,
         rangeReader,
         JSON_MAPPER,
         null,
@@ -385,27 +409,27 @@ class PartialSegmentMetadataCacheEntryTest
   }
 
   @Test
-  void testInferParentBundlesForBaseReturnsEmpty()
+  void testInferBundleDependenciesForBaseReturnsEmpty()
   {
     final PartialSegmentMetadataCacheEntry entry = newEntry(ESTIMATE);
     Assertions.assertEquals(
         List.of(),
-        entry.inferParentBundles(Projections.BASE_TABLE_PROJECTION_NAME)
+        entry.inferBundleDependencies(Projections.BASE_TABLE_PROJECTION_NAME)
     );
   }
 
   @Test
-  void testInferParentBundlesForRootReturnsEmpty()
+  void testInferBundleDependenciesForRootReturnsEmpty()
   {
     final PartialSegmentMetadataCacheEntry entry = newEntry(ESTIMATE);
     Assertions.assertEquals(
         List.of(),
-        entry.inferParentBundles(SegmentFileBuilder.ROOT_BUNDLE_NAME)
+        entry.inferBundleDependencies(SegmentFileBuilder.ROOT_BUNDLE_NAME)
     );
   }
 
   @Test
-  void testInferParentBundlesDependsOnBaseWhenBaseBundlePresent() throws IOException
+  void testInferBundleDependenciesIncludesBaseWhenBaseBundlePresent() throws IOException
   {
     // A segment that carries a __base bundle (the non-clustered base+projection shape): every non-base/root bundle
     // depends on it. Asserted uniformly for an aggregate-projection bundle and for a cluster-group bundle name (the
@@ -414,20 +438,20 @@ class PartialSegmentMetadataCacheEntryTest
         buildSegmentWithBundles(Projections.BASE_TABLE_PROJECTION_NAME, "some_projection")
     );
     for (String dependent : List.of("some_projection", Projections.getClusterGroupBundleName(List.of(0, 1)))) {
-      final List<PartialSegmentBundleCacheEntryIdentifier> parents = entry.inferParentBundles(dependent);
-      Assertions.assertEquals(1, parents.size(), "expected a __base parent for bundle[" + dependent + "]");
-      Assertions.assertEquals(SEGMENT_ID, parents.getFirst().segmentId());
-      Assertions.assertEquals(Projections.BASE_TABLE_PROJECTION_NAME, parents.getFirst().bundleName());
+      final List<PartialSegmentBundleCacheEntryIdentifier> deps = entry.inferBundleDependencies(dependent);
+      Assertions.assertEquals(1, deps.size(), "expected a __base dependency for bundle[" + dependent + "]");
+      Assertions.assertEquals(SEGMENT_ID, deps.getFirst().segmentId());
+      Assertions.assertEquals(Projections.BASE_TABLE_PROJECTION_NAME, deps.getFirst().bundleName());
     }
   }
 
   @Test
-  void testInferParentBundlesEmptyWhenSegmentHasNoBaseBundle() throws IOException
+  void testInferBundleDependenciesEmptyWhenSegmentHasNoBaseBundle() throws IOException
   {
     // A clustered + aggregate-projection segment with no shared columns has no __base bundle: the base data lives in
     // per-group __base$<ids> bundles and the aggregate projection is self-contained. So neither a cluster group nor
-    // the aggregate projection has a parent to depend on. (Pre-shared-columns; the old "aggregate always depends on
-    // __base" rule would have wrongly tried to mount a nonexistent __base for the projection bundle.)
+    // the aggregate projection has a dependency. (Pre-shared-columns; the old "aggregate always depends on __base"
+    // rule would have wrongly tried to mount a nonexistent __base for the projection bundle.)
     final PartialSegmentMetadataCacheEntry entry = mountedEntryOver(
         buildSegmentWithBundles(
             Projections.getClusterGroupBundleName(List.of(0)),
@@ -437,9 +461,9 @@ class PartialSegmentMetadataCacheEntryTest
     );
     Assertions.assertEquals(
         List.of(),
-        entry.inferParentBundles(Projections.getClusterGroupBundleName(List.of(0)))
+        entry.inferBundleDependencies(Projections.getClusterGroupBundleName(List.of(0)))
     );
-    Assertions.assertEquals(List.of(), entry.inferParentBundles("some_projection"));
+    Assertions.assertEquals(List.of(), entry.inferBundleDependencies("some_projection"));
   }
 
   private PartialSegmentMetadataCacheEntry newEntry(long estimate)
@@ -449,6 +473,8 @@ class PartialSegmentMetadataCacheEntryTest
         cacheDir,
         IndexIO.V10_FILE_NAME,
         List.of(),
+        Set.of(),
+        null,
         new DirectoryBackedRangeReader(segmentFile.getParentFile()),
         JSON_MAPPER,
         null,
@@ -472,8 +498,8 @@ class PartialSegmentMetadataCacheEntryTest
 
   /**
    * Build a V10 segment whose containers are tagged with exactly the given bundle names (one column file per bundle),
-   * so {@link PartialSegmentMetadataCacheEntry#inferParentBundles} can be exercised against a known bundle set without
-   * a full ingestion. Returns the deep-storage directory containing the V10 file.
+   * so {@link PartialSegmentMetadataCacheEntry#inferBundleDependencies} can be exercised against a known bundle set
+   * without a full ingestion. Returns the deep-storage directory containing the V10 file.
    */
   private File buildSegmentWithBundles(String... bundleNames) throws IOException
   {
@@ -493,7 +519,7 @@ class PartialSegmentMetadataCacheEntryTest
 
   /**
    * Reserve and mount a fresh metadata entry over the segment in {@code deepStorageDir}, into a per-call cache
-   * directory. The mounted entry's file mapper is what {@code inferParentBundles} probes for the base-bundle existence.
+   * directory. The mounted entry's file mapper is what {@code inferBundleDependencies} probes for base-bundle presence.
    */
   private PartialSegmentMetadataCacheEntry mountedEntryOver(File deepStorageDir) throws IOException
   {
@@ -505,6 +531,8 @@ class PartialSegmentMetadataCacheEntryTest
         cache,
         IndexIO.V10_FILE_NAME,
         List.of(),
+        Set.of(),
+        null,
         new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
         null,

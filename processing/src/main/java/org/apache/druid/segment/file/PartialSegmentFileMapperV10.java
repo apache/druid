@@ -919,8 +919,10 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
 
   /**
    * Parse metadata from the header file. Throws on any parse failure (corrupt JSON, truncated header, etc.).
+   * Public so external callers (e.g. the partial-load-rule bootstrap path in {@code SegmentLocalCacheManager}) can
+   * share the header-parse convention with this class rather than re-implementing FileInputStream + reader plumbing.
    */
-  private static SegmentFileMetadataReader.Result parseHeaderFile(
+  public static SegmentFileMetadataReader.Result parseHeaderFile(
       File headerFile,
       ObjectMapper jsonMapper
   ) throws IOException

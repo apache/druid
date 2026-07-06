@@ -514,6 +514,16 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
   }
 
   /**
+   * Current outstanding reference count (excluding the internal party released by {@link #unmount}). Returns 0 when
+   * the bundle has never been mounted or has already been fully cleaned up.
+   */
+  public int getNumReferences()
+  {
+    final ReferenceCountingCloseableObject<Closeable> current = references.get();
+    return (current == null || current.isClosed()) ? 0 : current.getNumReferences();
+  }
+
+  /**
    * The actual unmount work, invoked by the reference-counted gate's {@code onAdvance} once every outstanding
    * reference (plus the wrapper's own initial party) has been released. Evicts owned containers, releases parent
    * holds + dependency references, unregisters from the metadata entry, and clears the mount-dedup gate so a fresh

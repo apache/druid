@@ -59,6 +59,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -197,6 +198,8 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
         cacheDir,
         IndexIO.V10_FILE_NAME,
         List.of(),
+        Set.of(),
+        null,
         new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
         null,

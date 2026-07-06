@@ -48,7 +48,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -94,6 +97,15 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   private final File localCacheDir;
   private final String targetFilename;
   private final List<String> externalFilenames;
+  private final Set<String> staticBundleNames;
+  /**
+   * The partial-load-rule fingerprint carried by the load spec wrapper that produced this entry, or {@code null} for
+   * ordinary on-demand partial loads (no rule). {@link SegmentLocalCacheManager#loadPartial} compares this against the
+   * incoming wrapper's fingerprint to distinguish an idempotent re-load from a rule change; a mismatch triggers
+   * drop-and-reload so the new rule's bundle selection takes effect.
+   */
+  @Nullable
+  private final String fingerprint;
   private final SegmentRangeReader rangeReader;
   private final ObjectMapper jsonMapper;
   private final long reservationEstimate;
@@ -152,6 +164,8 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       File localCacheDir,
       String targetFilename,
       List<String> externalFilenames,
+      Set<String> staticBundleNames,
+      @Nullable String fingerprint,
       SegmentRangeReader rangeReader,
       ObjectMapper jsonMapper,
       @Nullable StorageLoadingThreadPool storagePool,
@@ -169,7 +183,9 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     this.id = new SegmentCacheEntryIdentifier(segmentId);
     this.localCacheDir = localCacheDir;
     this.targetFilename = targetFilename;
-    this.externalFilenames = List.copyOf(externalFilenames);
+    this.externalFilenames = externalFilenames == null ? List.of() : List.copyOf(externalFilenames);
+    this.staticBundleNames = staticBundleNames == null ? Set.of() : Set.copyOf(staticBundleNames);
+    this.fingerprint = fingerprint;
     this.rangeReader = rangeReader;
     this.jsonMapper = jsonMapper;
     this.storagePool = storagePool;
@@ -197,6 +213,25 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   File getLocalCacheDir()
   {
     return localCacheDir;
+  }
+
+  /**
+   * Bundle names pinned as static by the partial-load rule that produced this entry. Empty for ordinary on-demand
+   * partial loads (every bundle restores as weak).
+   */
+  public Set<String> getStaticBundleNames()
+  {
+    return staticBundleNames;
+  }
+
+  /**
+   * The partial-load-rule fingerprint carried by the load spec wrapper that produced this entry, or {@code null} for
+   * ordinary on-demand partial loads. Used by {@link SegmentLocalCacheManager#loadPartial} to detect rule changes.
+   */
+  @Nullable
+  public String getFingerprint()
+  {
+    return fingerprint;
   }
 
   @Override
@@ -463,6 +498,11 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
    * outstanding, the actual unmap-and-delete work is deferred until the last reference releases; in that case this
    * method returns immediately and {@link #doActualUnmount} will fire later on the thread that closes the last
    * reference. With no outstanding references, cleanup runs synchronously on the caller's thread.
+   * <p>
+   * If this entry was reserved but never mounted, there is no reference-counted gate to close; instead run the
+   * {@link #setOnUnmount onUnmount} hook directly so external cleanup (e.g. info-file deletion) still fires. Without
+   * this fall-through a caller that sets the hook before {@code mount()} and releases the reservation on a mount
+   * failure would leak whatever resource the hook was intended to clean up.
    */
   @Override
   public void unmount()
@@ -470,6 +510,28 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     final ReferenceCountingCloseableObject<Closeable> current = references.get();
     if (current != null && !current.isClosed()) {
       current.close();
+      return;
+    }
+    // Never-mounted (or already-completed-cleanup) release: doActualUnmount won't run, so fire the hook here.
+    runOnUnmountHookOnce();
+  }
+
+  /**
+   * Atomically extract and run the {@link #setOnUnmount onUnmount} hook if one is set. Idempotent across concurrent
+   * callers; the {@code getAndSet(null)} ensures exactly one caller ever observes a non-null hook. Called from both
+   * {@link #doActualUnmount} (post-cleanup on the mounted path) and {@link #unmount} (never-mounted fallback), and
+   * safe to call multiple times.
+   */
+  private void runOnUnmountHookOnce()
+  {
+    final Runnable hook = onUnmount.getAndSet(null);
+    if (hook != null) {
+      try {
+        hook.run();
+      }
+      catch (Throwable t) {
+        LOG.warn(t, "onUnmount hook failed for partial segment metadata entry[%s]", segmentId);
+      }
     }
   }
 
@@ -500,6 +562,56 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
                       "Cannot acquire reference on partial segment metadata entry[%s]; already being unmounted",
                       id
                   ));
+  }
+
+  /**
+   * Whether releasing this entry + all its linked bundles via a drop cascade would leave any cleanup deferred by an
+   * external reference (a running query holding a {@link Segment} or a raw {@link #acquireMetadataReference} /
+   * {@link PartialSegmentBundleCacheEntry#acquireReference}). Returns false when the cascade would run to completion
+   * synchronously; safe to reconcile.
+   * <p>
+   * Distinguishes external refs from internal cascade-tracked refs by subtracting the known cross-entry structure:
+   * <ul>
+   *   <li>Each linked bundle's mount holds one {@link #acquireMetadataReference} that its own {@code doActualUnmount}
+   *       will release, so those don't block cascade completion.</li>
+   *   <li>Each child bundle's mount holds one parent-bundle reference per entry in its {@code parentEntryIds}, released
+   *       by the child's {@code doActualUnmount}.</li>
+   * </ul>
+   * Any {@link ReferenceCountingCloseableObject#getNumReferences} count in excess of that structure means an outside
+   * consumer holds the entry and drop's cascade would defer to it.
+   * <p>
+   * Used by reconciliation paths to decide BEFORE drop whether it's safe to proceed. Checking post-drop is unsafe:
+   * drop already removed entries from {@code staticCacheEntries} synchronously, so a "yes it's deferred, throw"
+   * response would leave a window where the static entry is gone while a query still holds it — any subsequent
+   * loadPartial or on-demand acquire would install a fresh entry alongside the deferred one, racing on the shared
+   * per-segment on-disk directory.
+   */
+  public boolean cascadeReleaseWouldDeferCleanup()
+  {
+    final ReferenceCountingCloseableObject<Closeable> metaRefs = references.get();
+    if (metaRefs == null || metaRefs.isClosed()) {
+      return false;
+    }
+    // Snapshot linked bundles before doing any arithmetic — the ConcurrentHashMap-backed set can churn, but
+    // reconciliation paths hold the segment lock so no bundle mount/unmount runs concurrently with this call.
+    final Collection<PartialSegmentBundleCacheEntry> bundles = snapshotLinkedBundles();
+    // Metadata refs above what's accounted for by linked-bundle mount-time refs → external consumer.
+    if (metaRefs.getNumReferences() > bundles.size()) {
+      return true;
+    }
+    final Map<PartialSegmentBundleCacheEntryIdentifier, Integer> childCountByParentId = new HashMap<>();
+    for (PartialSegmentBundleCacheEntry child : bundles) {
+      for (PartialSegmentBundleCacheEntryIdentifier parentId : child.getParentEntryIds()) {
+        childCountByParentId.merge(parentId, 1, Integer::sum);
+      }
+    }
+    for (PartialSegmentBundleCacheEntry bundle : bundles) {
+      final int expectedChildHolds = childCountByParentId.getOrDefault(bundle.getId(), 0);
+      if (bundle.getNumReferences() > expectedChildHolds) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -634,7 +746,6 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
    */
   private void doActualUnmount()
   {
-    final Runnable hook;
     entryLock.lock();
     try {
       if (fileMapper == null) {
@@ -654,21 +765,13 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       // Clear the mount-dedup gate so a subsequent mount() on this same instance starts a fresh attempt.
       mountFuture.set(null);
       deleteHeaderFiles();
-      hook = onUnmount.getAndSet(null);
     }
     finally {
       entryLock.unlock();
     }
     // Run the hook outside entryLock so it can touch the file system / cache manager without contending with
     // concurrent status reads, and so a slow or buggy hook can't deadlock against acquireReference paths.
-    if (hook != null) {
-      try {
-        hook.run();
-      }
-      catch (Throwable t) {
-        LOG.warn(t, "onUnmount hook failed for partial segment metadata entry[%s]", segmentId);
-      }
-    }
+    runOnUnmountHookOnce();
   }
 
   /**
@@ -804,7 +907,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
                 () -> PartialSegmentBundleCacheEntry.forBundle(
                     PartialSegmentMetadataCacheEntry.this,
                     bundleName,
-                    inferParentBundles(bundleName)
+                    inferBundleDependencies(bundleName)
                 )
             );
         if (hold == null) {
@@ -861,13 +964,13 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
         // holds + references on each parent and fails with a defensive error if a parent isn't registered+mounted at
         // the location. The bootstrap restore path orders base-before-dependents; this is the equivalent ordering for
         // the runtime acquire path, which would otherwise reach a projection bundle directly with no __base mounted.
-        // The bundle keeps its own parent holds/refs for its lifetime, so we hold these transient ones only across the
-        // mount and release them immediately after a successful mount (acquire() is acyclic: base/root have no
-        // parents, so the recursion terminates).
+        // The bundle keeps its own dependency holds/refs for its lifetime, so we hold these transient ones only across
+        // the mount and release them immediately after a successful mount (acquire() is acyclic: base/root have no
+        // dependencies, so the recursion terminates).
         final Closer parentHolds = Closer.create();
         try {
-          for (PartialSegmentBundleCacheEntryIdentifier parentId : inferParentBundles(bundleName)) {
-            parentHolds.register(acquire(parentId.bundleName()));
+          for (PartialSegmentBundleCacheEntryIdentifier depId : inferBundleDependencies(bundleName)) {
+            parentHolds.register(acquire(depId.bundleName()));
           }
           bundle.mount(loc);
         }
@@ -885,17 +988,19 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   }
 
   /**
-   * Inference of the parent bundles that the given {@code bundleName} depends on within this segment.
+   * The bundles that {@code bundleName} depends on within this segment. Depending here means: at mount time, this
+   * bundle's file mapper must be able to acquire a hold on each dependency, and the dependency's containers must
+   * remain resident for as long as this bundle is mounted.
    * <p>
    * The rule is uniform: the base bundle and the {@link SegmentFileBuilder#ROOT_BUNDLE_NAME root bundle} have no
-   * parents (the root bundle owns everything written without an explicit {@code startFileBundle} call, for older
-   * fileGroup-less segments, or any future shared internal metadata and is structurally a peer of the base);
-   * every other bundle depends on the base bundle, but only if this segment actually carries one.
+   * dependencies (the root bundle owns everything written without an explicit {@code startFileBundle} call, for older
+   * fileGroup-less segments, or any future shared internal metadata and is structurally a peer of the base); every
+   * other bundle depends on the base bundle, but only if this segment actually carries one.
    * <p>
    * If future writers introduce richer dependency graphs, the rule will need to grow, likely by reading dependency
    * metadata the writer records explicitly.
    */
-  public List<PartialSegmentBundleCacheEntryIdentifier> inferParentBundles(String bundleName)
+  public List<PartialSegmentBundleCacheEntryIdentifier> inferBundleDependencies(String bundleName)
   {
     if (Projections.BASE_TABLE_PROJECTION_NAME.equals(bundleName)
         || SegmentFileBuilder.ROOT_BUNDLE_NAME.equals(bundleName)
@@ -908,6 +1013,36 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
             Projections.BASE_TABLE_PROJECTION_NAME
         )
     );
+  }
+
+  /**
+   * Return {@code roots} plus every transitive dependency (as inferred by {@link #inferBundleDependencies}) in
+   * dependency-first order — i.e. the order to reserve+mount them in. Used both by the fresh-load path (to reserve
+   * a rule-pinned bundle's dependencies before the bundle itself) and by the bootstrap-restore path (to expand the
+   * rule's direct selection into the full static set the restore should install).
+   * <p>
+   * No cycle guard: {@link #inferBundleDependencies} only returns {@code []} or {@code [__base]}, and {@code __base}
+   * itself has no dependencies, so the graph is at most one level deep by construction. A richer future dependency
+   * graph should revisit this.
+   */
+  public List<String> bundlesInMountOrder(Iterable<String> roots)
+  {
+    final LinkedHashSet<String> ordered = new LinkedHashSet<>();
+    for (String root : roots) {
+      visitDependenciesFirst(root, ordered);
+    }
+    return List.copyOf(ordered);
+  }
+
+  private void visitDependenciesFirst(String bundleName, LinkedHashSet<String> ordered)
+  {
+    if (ordered.contains(bundleName)) {
+      return;
+    }
+    for (PartialSegmentBundleCacheEntryIdentifier dep : inferBundleDependencies(bundleName)) {
+      visitDependenciesFirst(dep.bundleName(), ordered);
+    }
+    ordered.add(bundleName);
   }
 
   /**
