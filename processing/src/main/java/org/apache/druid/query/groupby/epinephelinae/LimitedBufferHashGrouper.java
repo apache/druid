@@ -587,5 +587,27 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       tableBuffer = newTableBuffer;
       growthCount++;
     }
+
+    /**
+     * Alternating sub-buffers can always accept another heap-trim swap; hitting {@code size == regrowthThreshold} here
+     * is not a spill trigger (the limit push-down grouper doesn't spill from this path). Return false so the base
+     * class's terminal-level 1.0 pin does not fire on ordinary swaps.
+     *
+     * <p>Note that a raw {@code tableStart == 0} check (the base implementation) would ALSO be wrong here:
+     * {@code tableStart} stays at 0 for this table's entire life (it's never set by the ctor or {@link #reset()}),
+     * so a base implementation would spuriously fire on every swap where {@code size == regrowthThreshold}. The
+     * override is what keeps limit-push-down queries from a false-positive 1.0.</p>
+     *
+     * <p>Why the Alternating table's true spill trigger is safe to rely on {@link #findBucketWithAutoGrowth}
+     * returning -1: after a swap, {@code size = numCopied} and {@code numCopied <= limit}. The grouper is
+     * validated at construction to have {@code regrowthThreshold >= limit + 1}, so
+     * {@code size < regrowthThreshold} always holds post-swap and the subsequent findBucket succeeds. Only a
+     * genuinely-full-and-cannot-swap condition would return -1 — the real spill case.</p>
+     */
+    @Override
+    protected boolean isTerminalTableLevel()
+    {
+      return false;
+    }
   }
 }

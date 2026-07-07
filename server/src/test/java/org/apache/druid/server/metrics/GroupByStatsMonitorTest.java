@@ -206,7 +206,7 @@ public class GroupByStatsMonitorTest
     GroupByStatsProvider.PerQueryStats stats1 = statsProvider.getPerQueryStatsContainer(r1);
     stats1.mergeBufferAcquisitionTime(100);
     stats1.addMergeBufferUsedBytes(50);
-    stats1.sliceUsage(50, 1000); // 0.05
+    stats1.sliceUsage(0.05);
     stats1.spilledBytes(200);
     stats1.dictionarySize(100);
 
@@ -214,7 +214,7 @@ public class GroupByStatsMonitorTest
     GroupByStatsProvider.PerQueryStats stats2 = statsProvider.getPerQueryStatsContainer(r2);
     stats2.mergeBufferAcquisitionTime(500);
     stats2.addMergeBufferUsedBytes(30);
-    stats2.sliceUsage(30, 2000); // 0.015
+    stats2.sliceUsage(0.015);
     stats2.spilledBytes(100);
     stats2.dictionarySize(300);
 
@@ -222,7 +222,7 @@ public class GroupByStatsMonitorTest
     GroupByStatsProvider.PerQueryStats stats3 = statsProvider.getPerQueryStatsContainer(r3);
     stats3.mergeBufferAcquisitionTime(200);
     stats3.addMergeBufferUsedBytes(150);
-    stats3.sliceUsage(150, 1500); // 0.1
+    stats3.sliceUsage(0.1);
     stats3.spilledBytes(800);
     stats3.dictionarySize(200);
 

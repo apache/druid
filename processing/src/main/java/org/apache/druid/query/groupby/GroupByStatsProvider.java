@@ -192,9 +192,10 @@ public class GroupByStatsProvider
      *   <li>{@code maxMergeBufferUsedBytes} (emitted as {@code mergeBuffer/maxBytesUsed}) is the max such per-query
      *       summed usage across queries.</li>
      *   <li>{@code maxSpillProximity} (emitted as {@code mergeBuffer/maxSpillProximity}) is the max per-query spill
-     *       proximity across queries, where each query's value is its fullest slice's fill fraction of the spill
-     *       threshold. Unlike the byte sums above, this is a per-slice MAX so it reflects the slice that drives a
-     *       spill; 1.0 means at least one query reached the spill point.</li>
+     *       proximity across queries, where each query's value is its fullest slice's peak
+     *       {@code size / regrowthThreshold} (bucket-count based, tracked by the underlying hash table). Unlike the
+     *       byte sums above, this is a per-slice MAX so it reflects the slice that drives a spill; 1.0 corresponds
+     *       exactly to the spill trigger (a bucket allocation was rejected).</li>
      * </ul>
      */
     public void addQueryStats(PerQueryStats perQueryStats)
@@ -249,12 +250,13 @@ public class GroupByStatsProvider
     private final AtomicLong mergeBufferUsedBytes = new AtomicLong(0);
     /**
      * Spill proximity of the single fullest slice this query held, in [0.0, 1.0]. Each {@link #sliceUsage} call
-     * computes one slice's {@code usedBytes / spillThresholdBytes} ratio, and this keeps the MAX across the query's
-     * slices. A query spills as soon as one slice fills, so proximity is driven by the hottest slice, NOT the byte sum
-     * tracked by {@link #mergeBufferUsedBytes}. Keeping the ratio (rather than the numerator and denominator as
-     * independent maxima) is what makes the metric correct when a single query mixes groupers with different spill
+     * contributes one slice's peak {@code size / regrowthThreshold} ratio (tracked bucket-by-bucket by the underlying
+     * hash table, preserved across resets), and this keeps the MAX across the query's slices. A query spills as soon
+     * as one slice fills, so proximity is driven by the hottest slice, NOT the byte sum tracked by
+     * {@link #mergeBufferUsedBytes}. Keeping the ratio per slice (rather than maxing numerator and denominator
+     * independently) is what makes the metric correct when a single query mixes groupers with different spill
      * thresholds — e.g. small sliced groupers from a {@code ConcurrentGrouper} alongside a full-buffer
-     * {@code SpillingGrouper} for subtotal/nested processing.
+     * {@code SpillingGrouper} for subtotal/nested processing. 1.0 corresponds exactly to the actual spill trigger.
      */
     private final DoubleAccumulator maxSpillProximity = new DoubleAccumulator(Math::max, 0.0);
     private final AtomicLong spilledBytes = new AtomicLong(0);
@@ -275,18 +277,22 @@ public class GroupByStatsProvider
     }
 
     /**
-     * Records one slice's peak used bytes against its spill threshold ({@code sliceSize * maxLoadFactor}). The ratio is
-     * computed and clamped per slice, then kept as a max, so after all slices close the value describes the single
-     * fullest slice — the one that drives spilling. Computing the ratio per call (rather than maxing used bytes and
-     * threshold separately) keeps each slice's numerator paired with its own denominator, so a query that mixes
+     * Records one slice's peak fill ratio in [0.0, 1.0] — the underlying hash table's peak
+     * {@code size / regrowthThreshold} over the slice's lifetime, which reaches exactly 1.0 iff the slice actually
+     * spilled. Kept as a max across the query's slices, so after all slices close the value describes the single
+     * fullest slice — the one that drives spilling. Recording the ratio per slice (rather than maxing bytes and
+     * thresholds independently) keeps each slice's numerator paired with its own denominator, so a query that mixes
      * groupers of different sizes still reports the true max proximity. Used to compute
-     * {@code mergeBuffer/maxSpillProximity}. A non-positive threshold contributes nothing (avoids divide-by-zero).
+     * {@code mergeBuffer/maxSpillProximity}. Values are clamped defensively to [0, 1]; NaN is ignored so a
+     * never-initialized grouper contributes nothing.
      */
-    public void sliceUsage(long usedBytes, long spillThresholdBytes)
+    public void sliceUsage(double proximity)
     {
-      if (spillThresholdBytes > 0) {
-        maxSpillProximity.accumulate(Math.min(1.0, (double) usedBytes / spillThresholdBytes));
+      if (Double.isNaN(proximity)) {
+        return;
       }
+      final double clamped = proximity < 0.0 ? 0.0 : (proximity > 1.0 ? 1.0 : proximity);
+      maxSpillProximity.accumulate(clamped);
     }
 
     public void spilledBytes(long bytes)
@@ -310,9 +316,9 @@ public class GroupByStatsProvider
     }
 
     /**
-     * Spill proximity for this query in [0.0, 1.0]: the fullest slice's used bytes divided by that slice's own spill
-     * threshold. 1.0 means a slice reached the point at which it spills to disk. Returns 0.0 when no slice usage was
-     * recorded (e.g. a grouper that never initialized).
+     * Spill proximity for this query in [0.0, 1.0]: the fullest slice's peak {@code size / regrowthThreshold} over
+     * that slice's lifetime. 1.0 corresponds exactly to the spill trigger (a bucket allocation was rejected). Returns
+     * 0.0 when no slice usage was recorded (e.g. a grouper that never initialized).
      */
     public double getSpillProximity()
     {
