@@ -23,15 +23,19 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.DoubleSumVectorAggregator;
 import org.apache.druid.query.aggregation.FloatSumVectorAggregator;
 import org.apache.druid.query.aggregation.LongSumVectorAggregator;
-import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.FakeVectorValueSelector;
+import org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.NullPattern;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Random;
-import java.util.function.IntPredicate;
+
+import static org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.VECTOR_SIZES;
+import static org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.padNulls;
+import static org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.randomDoubles;
+import static org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.randomFloats;
+import static org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.randomLongs;
 
 /**
  * For each (sum type, vector size, null pattern) combination, drives the SIMD and scalar sum vector aggregators
@@ -49,7 +53,6 @@ import java.util.function.IntPredicate;
  */
 public class SimdSumVectorAggregatorTest extends InitializedNullHandlingTest
 {
-  private static final int[] VECTOR_SIZES = {1, 8, 17, 64, 1023};
   private static final long POISON_LONG = Long.MAX_VALUE / 2;
   private static final double POISON_DOUBLE = 1e15;
   private static final float POISON_FLOAT = 1e10f;
@@ -254,139 +257,4 @@ public class SimdSumVectorAggregatorTest extends InitializedNullHandlingTest
     }
   }
 
-  private static boolean[] padNulls(boolean[] realNulls, int startRow)
-  {
-    final boolean[] padded = new boolean[startRow + realNulls.length];
-    System.arraycopy(realNulls, 0, padded, startRow, realNulls.length);
-    return padded;
-  }
-
-  private static long[] randomLongs(int size, int seed)
-  {
-    final Random r = new Random(0xC0FFEEL + seed);
-    final long[] out = new long[size];
-    for (int i = 0; i < size; i++) {
-      out[i] = r.nextInt() & 0xFFFFFL;
-    }
-    return out;
-  }
-
-  private static double[] randomDoubles(int size, int seed)
-  {
-    final Random r = new Random(0xC0FFEEL + seed);
-    final double[] out = new double[size];
-    for (int i = 0; i < size; i++) {
-      out[i] = (r.nextDouble() - 0.5) * 1000.0;
-    }
-    return out;
-  }
-
-  private static float[] randomFloats(int size, int seed)
-  {
-    final Random r = new Random(0xC0FFEEL + seed);
-    final float[] out = new float[size];
-    for (int i = 0; i < size; i++) {
-      out[i] = (r.nextFloat() - 0.5f) * 1000.0f;
-    }
-    return out;
-  }
-
-  private enum NullPattern
-  {
-    NONE(i -> false),
-    ALL(i -> true),
-    ALTERNATING(i -> (i & 1) == 0),
-    SPARSE(i -> i % 7 == 0),
-    FIRST_THREE(i -> i < 3),
-    CHUNK_BOUNDARY(i -> i == 7 || i == 8);
-
-    private final IntPredicate predicate;
-
-    NullPattern(IntPredicate predicate)
-    {
-      this.predicate = predicate;
-    }
-
-    @Nullable
-    boolean[] toMask(int size)
-    {
-      if (this == NONE) {
-        return null;        // models a column with no null vector at all
-      }
-      final boolean[] mask = new boolean[size];
-      for (int i = 0; i < size; i++) {
-        mask[i] = predicate.test(i);
-      }
-      return mask;
-    }
-  }
-
-  /**
-   * Minimal in-memory {@link VectorValueSelector} backed by pre-built primitive arrays for tests. Only the
-   * accessor for the type used by a given test is non-null.
-   */
-  private static final class FakeVectorValueSelector implements VectorValueSelector
-  {
-    private final int size;
-    @Nullable
-    private final long[] longs;
-    @Nullable
-    private final double[] doubles;
-    @Nullable
-    private final float[] floats;
-    @Nullable
-    private final boolean[] nulls;
-
-    FakeVectorValueSelector(
-        int size,
-        @Nullable long[] longs,
-        @Nullable double[] doubles,
-        @Nullable float[] floats,
-        @Nullable boolean[] nulls
-    )
-    {
-      this.size = size;
-      this.longs = longs;
-      this.doubles = doubles;
-      this.floats = floats;
-      this.nulls = nulls;
-    }
-
-    @Override
-    public long[] getLongVector()
-    {
-      return longs;
-    }
-
-    @Override
-    public float[] getFloatVector()
-    {
-      return floats;
-    }
-
-    @Override
-    public double[] getDoubleVector()
-    {
-      return doubles;
-    }
-
-    @Nullable
-    @Override
-    public boolean[] getNullVector()
-    {
-      return nulls;
-    }
-
-    @Override
-    public int getMaxVectorSize()
-    {
-      return size;
-    }
-
-    @Override
-    public int getCurrentVectorSize()
-    {
-      return size;
-    }
-  }
 }
