@@ -44,7 +44,6 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 class IndexMergerV10MinMaxTimeTest extends InitializedNullHandlingTest
 {
@@ -158,8 +157,11 @@ class IndexMergerV10MinMaxTimeTest extends InitializedNullHandlingTest
     );
     Assertions.assertTrue(
         scratchDirs == null || scratchDirs.length == 0,
-        () -> "Merged segment dir must be flat, but found leftover merger scratch dir(s): "
-              + Arrays.stream(scratchDirs).map(File::getName).collect(Collectors.toList())
+        () -> {
+          Assertions.assertNotNull(scratchDirs);
+          return "Merged segment dir must be flat, but found leftover merger scratch dir(s): "
+                   + Arrays.stream(scratchDirs).map(File::getName).toList();
+        }
     );
   }
 

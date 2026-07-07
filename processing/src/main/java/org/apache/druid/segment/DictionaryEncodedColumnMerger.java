@@ -154,17 +154,14 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   @Override
   public void markAsParent()
   {
-    // outputName can carry a bundle-prefixed logical name (e.g. "__base/<col>"); flatten any separators so the scratch
-    // dir stays a single flat entry under segmentBaseDir rather than creating an intermediate subdirectory that would
-    // be orphaned when the leaf is deleted (and later rejected by the v10 flat-directory no-zip segment push path).
-    final File tmpOutputFilesDir = new File(segmentBaseDir, "tmp_" + outputName.replace('/', '_') + "_merger");
+    final File tmpOutputFilesDir = new File(segmentBaseDir, "tmp_" + outputName + "_merger");
     try {
       FileUtils.mkdirp(tmpOutputFilesDir);
     }
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-    persistedIdConversions = closer.register(new PersistedIdConversions(tmpOutputFilesDir));
+    persistedIdConversions = closer.register(new PersistedIdConversions(tmpOutputFilesDir, segmentBaseDir));
   }
 
   @Override
@@ -792,11 +789,13 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   protected static class PersistedIdConversions implements Closeable
   {
     private final File tempDir;
+    private final File baseDir;
     private final Closer closer;
 
-    protected PersistedIdConversions(File tempDir)
+    protected PersistedIdConversions(File tempDir, File baseDir)
     {
       this.tempDir = tempDir;
+      this.baseDir = baseDir;
       this.closer = Closer.create();
     }
 
@@ -816,7 +815,10 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
         closer.close();
       }
       finally {
-        FileUtils.deleteDirectory(tempDir);
+        // tempDir may be nested under baseDir (its name can carry a bundle prefix such as "__base/<col>", so mkdirp
+        // created intermediate directories). Delete tempDir and any now-empty intermediate directories up to baseDir
+        // so no empty scratch directory is left behind in the finalized segment directory.
+        FileUtils.deleteDirectoryAndEmptyAncestors(tempDir, baseDir);
       }
     }
   }
