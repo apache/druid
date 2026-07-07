@@ -585,7 +585,7 @@ From the `apache-druid-{{DRUIDVERSION}}` package root, run the following command
 ```bash
 curl -X POST http://localhost:8081/druid/indexer/v1/task \
   -H "Content-Type: application/json" \
-  -d @quickstart/tutorial/ingestion-tutorial-index.json
+  -d @quickstart/ingestion-tutorial-index.json
 ```
 
 After the ingestion completes, we will query the data.
