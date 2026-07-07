@@ -1,6 +1,6 @@
 ---
 id: tutorial-kafka
-title: Load streaming data from Apache Kafka&circledR;
+title: Load streaming data from Apache Kafka
 sidebar_label: Load from Apache Kafka
 ---
 
