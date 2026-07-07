@@ -22,7 +22,10 @@ package org.apache.druid.server.broker;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.QueryBlocklistRule;
 
 import javax.annotation.Nullable;
@@ -40,6 +43,8 @@ import java.util.Objects;
  */
 public class BrokerDynamicConfig
 {
+  private static final Logger log = new Logger(BrokerDynamicConfig.class);
+
   public static final String CONFIG_KEY = "broker.config";
 
   /**
@@ -89,6 +94,33 @@ public class BrokerDynamicConfig
   public Map<String, PerSegmentTimeoutConfig> getPerSegmentTimeoutConfig()
   {
     return perSegmentTimeoutConfig;
+  }
+
+  /**
+   * Query-specific broker dynamic config query context overrides (e.g. per segment timeout).
+   */
+  public QueryContext getQuerySpecificContextOverrides(Query<?> query)
+  {
+    if (perSegmentTimeoutConfig.isEmpty()) {
+      return QueryContext.empty();
+    }
+
+    for (String tableName : query.getDataSource().getTableNames()) {
+      PerSegmentTimeoutConfig dsConfig = perSegmentTimeoutConfig.get(tableName);
+      if (dsConfig != null) {
+        if (dsConfig.isMonitorOnly()) {
+          log.debug(
+              "Per-segment timeout [%d ms] configured for datasource [%s] in monitorOnly mode (not enforced) for query [%s].",
+              dsConfig.getPerSegmentTimeoutMs(),
+              tableName,
+              query.getId()
+          );
+          return QueryContext.empty();
+        }
+        return QueryContext.of(Map.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, dsConfig.getPerSegmentTimeoutMs()));
+      }
+    }
+    return QueryContext.empty();
   }
 
   @Override
