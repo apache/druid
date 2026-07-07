@@ -154,7 +154,10 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   @Override
   public void markAsParent()
   {
-    final File tmpOutputFilesDir = new File(segmentBaseDir, "tmp_" + outputName + "_merger");
+    // outputName can carry a bundle-prefixed logical name (e.g. "__base/<col>"); flatten any separators so the scratch
+    // dir stays a single flat entry under segmentBaseDir rather than creating an intermediate subdirectory that would
+    // be orphaned when the leaf is deleted (and later rejected by the v10 flat-directory no-zip segment push path).
+    final File tmpOutputFilesDir = new File(segmentBaseDir, "tmp_" + outputName.replace('/', '_') + "_merger");
     try {
       FileUtils.mkdirp(tmpOutputFilesDir);
     }
