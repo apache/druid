@@ -116,9 +116,9 @@ This brings up the spec submission dialog where you can paste the spec above.
 Once the spec is submitted, wait a few moments for the data to load, after which you can query it.
 
 
-## Loading data with a spec (via command line)
+## Loading data from the command line
 
-To load data with a spec, you need to POST an ingestion task to the Druid Overlord and poll Druid until the data is available for querying.
+To load data from the command line, you need to POST an ingestion spec to the Druid Overlord using its task API.
 
 Run the following command from Druid package root:
 
@@ -127,27 +127,13 @@ curl -X POST http://localhost:8081/druid/indexer/v1/task \
   -H "Content-Type: application/json" \
   -d @quickstart/tutorial/wikipedia-index.json
 ```
-Which will print the ID of the task if the submission was successful:
+If the submission was successful, Druid will print a task ID similar to the following:
 
 ```bash
-{"task":"index_wikipedia_2018-06-09T21:30:32.802Z"}
+{"task":"index_parallel_wikipedia_oiemabcp_2026-07-07T16:05:33.242Z"}
 ```
 
-You should see output like the following:
-
-```bash
-Beginning indexing data for wikipedia
-Task started: index_wikipedia_2018-07-27T06:37:44.323Z
-Task log:     http://localhost:8081/druid/indexer/v1/task/index_wikipedia_2018-07-27T06:37:44.323Z/log
-Task status:  http://localhost:8081/druid/indexer/v1/task/index_wikipedia_2018-07-27T06:37:44.323Z/status
-Task index_wikipedia_2018-07-27T06:37:44.323Z still running...
-Task index_wikipedia_2018-07-27T06:37:44.323Z still running...
-Task finished with status: SUCCESS
-Completed indexing data for wikipedia. Now loading indexed data onto the cluster...
-wikipedia loading complete! You may now query your data
-```
-
-Once the spec is submitted, you can follow the same instructions as above to wait for the data to load and then query it.
+Wait a few moments for the data to load, then move on to querying it.
 
 
 ## Querying your data
