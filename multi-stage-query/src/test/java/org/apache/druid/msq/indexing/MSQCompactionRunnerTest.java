@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.guice.security.DruidAuthModule;
 import org.apache.druid.guice.security.EscalatorModule;
 import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.indexer.TaskStatus;
@@ -52,6 +53,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.GranularityType;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -83,6 +85,7 @@ import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.initialization.AuthorizerMapperModule;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -162,6 +165,8 @@ public class MSQCompactionRunnerTest
       new CoreInjectorBuilder(new StartupInjectorBuilder().forTests().build()).addModules(
           new EscalatorModule(),
           new AuthorizerMapperModule(),
+          new DruidAuthModule(),
+          binder -> binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class),
           new PolicyModule()
       ).build()
   );

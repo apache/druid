@@ -5,6 +5,7 @@
   "query/node/ttfb" : { "dimensions" : ["server"], "type" : "timer"},
   "query/node/bytes" : { "dimensions" : ["server"], "type" : "count"},
 
+  "query/segments/count" : { "dimensions" : ["dataSource", "type"], "type" : "count"},
   "query/segment/time" : { "dimensions" : [], "type" : "timer"},
   "query/wait/time" : { "dimensions" : [], "type" : "timer"},
   "segment/scan/pending" : { "dimensions" : [], "type" : "gauge"},

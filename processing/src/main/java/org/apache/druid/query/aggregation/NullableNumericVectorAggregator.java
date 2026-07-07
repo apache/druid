@@ -76,7 +76,16 @@ public class NullableNumericVectorAggregator implements VectorAggregator
   public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
   {
     final boolean[] nullVector = selector.getNullVector();
-    if (nullVector != null) {
+    if (nullVector == null) {
+      doAggregate(buf, position, startRow, endRow);
+    } else if (delegate instanceof NullAwareVectorAggregator nullAware) {
+      // Delegate handles null inputs itself (typically via SIMD masking); set the null marker only if it
+      // reports at least one non-null row contributed.
+      if (nullAware.aggregate(buf, position + Byte.BYTES, startRow, endRow, nullVector)) {
+        buf.put(position, TypeStrategies.IS_NOT_NULL_BYTE);
+      }
+    } else {
+      // Fallback: filter non-null rows and route through the scatter-gather variant with a uniform position.
       // Deferred initialization, since vAggregationPositions and vAggregationRows are only needed if nulls
       // actually occur.
       if (vAggregationPositions == null) {
@@ -94,8 +103,6 @@ public class NullableNumericVectorAggregator implements VectorAggregator
       Arrays.fill(vAggregationPositions, 0, j, position);
 
       doAggregate(buf, j, vAggregationPositions, vAggregationRows, 0);
-    } else {
-      doAggregate(buf, position, startRow, endRow);
     }
   }
 

@@ -218,7 +218,8 @@ values for the above mentioned configs among others provided by Java implementat
 |`druid.escalator.type`|String|Type of the Escalator that should be used for internal Druid communications. This Escalator must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticatorChain`.|`noop`|no|
 |`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |["allowAll"]|no|
 |`druid.auth.unsecuredPaths`| List of Strings|List of paths for which security checks will not be performed. All requests to these paths will be allowed.|[]|no|
-|`druid.auth.allowUnauthenticatedHttpOptions`|Boolean|If true, skip authentication checks for HTTP OPTIONS requests. This is needed for certain use cases, such as supporting CORS pre-flight requests. Note that disabling authentication checks for OPTIONS requests will allow unauthenticated users to determine what Druid endpoints are valid (by checking if the OPTIONS request returns a 200 instead of 404), so enabling this option may reveal information about server configuration, including information about what extensions are loaded (if those extensions add endpoints).|false|no|
+|`druid.auth.allowUnauthenticatedHttpOptions`|Boolean|If true, skip authentication checks for HTTP OPTIONS requests. This is needed for certain use cases, such as supporting CORS pre-flight requests. Note that disabling authentication checks for OPTIONS requests will allow unauthenticated users to determine what Druid endpoints are valid (by checking if the OPTIONS request returns a 200 instead of 404), so enabling this option may reveal information about server configuration, including information about what extensions are loaded (if those extensions add extensions).|false|no|
+|`druid.auth.emitAuthMetrics`|Boolean|If true, emit service metrics for authorization events. When enabled, Druid emits `auth/forbidden` when access is denied and `auth/exception` when an internal authorization error occurs. See [Security metrics](#security) for details.|false|no|
 
 For more information, please see [Authentication and Authorization](../operations/auth.md).
 
@@ -639,6 +640,18 @@ the following properties.
 :::info
  JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 :::
+
+### Expression processing
+
+The properties below tune Druid's native expression engine, which evaluates virtual columns, expression-based filters,
+the `expression` aggregator/post-aggregator, and any SQL functions that lower to native expressions.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.expressions.processArraysAsMultiValueStrings`|If true, all `ARRAY` typed values are converted to `STRING` by column selectors and treated as multi-value strings rather than native arrays. Provided for backwards compatibility with the behavior of Druid 24.0 and earlier, before array types were introduced.|false|
+|`druid.expressions.homogenizeNullMultiValueStringArrays`|If true, multi-value string expression input values of `null`, `[]`, and `[null]` are all coerced to `[null]`. Provided for backwards compatibility with Druid 0.22 and earlier. If false (the default), this coercion only happens when single-value expressions are implicitly mapped across multi-value rows, so the single-valued expression is evaluated with an input of `null`.|false|
+|`druid.expressions.allowVectorizeFallback`|If true, the vectorized query engine handles expressions without a native vectorized implementation using a fallback processor that invokes the scalar expression evaluator in a loop. If false, such expressions cannot be vectorized and the query falls back to the non-vectorized engine.|true|
+|`druid.expressions.useVectorApi`|If true, vectorized expression vector processors and numeric vector aggregators dispatch to SIMD specializations backed by the JDK incubator Vector API (`jdk.incubator.vector`) where available. Requires `--add-modules=jdk.incubator.vector` on the JVM command line (see [strong encapsulation](../operations/java.md#strong-encapsulation)). Off by default while the Vector API remains an incubator JDK feature.|false|
 
 ### Double column storage
 
@@ -1726,6 +1739,38 @@ This laning strategy is best suited for cases where one or more external applica
 |--------|-----------|-------|
 |`druid.query.scheduler.laning.lanes.{name}`|Maximum percent or exact limit of queries that can concurrently run in the defined lanes. Any number of lanes may be defined like this. The lane names 'total' and 'default' are reserved for internal use.|No default, must define at least one lane with a limit above 0. If `druid.query.scheduler.laning.isLimitPercent` is set to `true`, values must be integers in the range of 1 to 100.|
 |`druid.query.scheduler.laning.isLimitPercent`|If set to `true`, the values set for `druid.query.scheduler.laning.lanes` will be treated as a percent of the smaller number of `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`. Note that in this mode, these lane values across lanes are _not_ required to add up to, and can exceed, 100%.|`false`|
+
+###### Weighted laning strategy
+
+This laning strategy assigns a cost to each query based on how many of a configurable set of thresholds it breaches, then routes the query to the most restrictive lane whose `minCost` the query meets. It is a more granular alternative to the 'High/Low' strategy: rather than a binary split, a query that breaches one threshold can be assigned to a different lane than one that breaches several. The thresholds are the same ones used by the [threshold prioritization strategy](#threshold-prioritization-strategy) (data age, query interval duration, segment count, and total segment range). Each threshold a query breaches adds 1 to its cost. A query with cost 0 is not assigned a lane and runs in the interactive (default) pool.
+
+If a lane is specified in the [query context](../querying/query-context-reference.md) `lane` parameter, this will override the computed lane.
+
+This strategy can be enabled by setting `druid.query.scheduler.laning.strategy=weighted`.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.scheduler.laning.periodThreshold`|ISO 8601 period. A query is charged 1 if any of its intervals starts before `now - periodThreshold` (that is, it reads data older than this).|null (not evaluated)|
+|`druid.query.scheduler.laning.durationThreshold`|ISO 8601 duration (must not contain month or year components). A query is charged 1 if its total interval duration exceeds this.|null (not evaluated)|
+|`druid.query.scheduler.laning.segmentCountThreshold`|A query is charged 1 if the number of segments it involves exceeds this. Must be greater than 0.|null (not evaluated)|
+|`druid.query.scheduler.laning.segmentRangeThreshold`|ISO 8601 duration (must not contain month or year components). A query is charged 1 if the summed time range of its distinct segments exceeds this.|null (not evaluated)|
+|`druid.query.scheduler.laning.lanes`|A map of lane name to its configuration. At least one lane must be defined. Each lane's configuration has two fields: `minCost`, the minimum query cost required to be assigned to the lane (a query is assigned to the lane with the highest `minCost` it meets; must be greater than 0 and unique across lanes so lane selection is deterministic), and `maxPercent`, the maximum percent of the smaller number of `druid.server.http.numThreads` or `druid.query.scheduler.numThreads` that queries in the lane may use concurrently (an integer in the range 1 to 100). The lane names 'total' and 'default' are reserved for internal use.|No default, must define at least one lane|
+
+At least one of `periodThreshold`, `durationThreshold`, `segmentCountThreshold`, or `segmentRangeThreshold` must be set. For example, the following configuration routes queries breaching 1 or 2 thresholds to a `low` lane capped at 30% capacity, and queries breaching 3 or 4 thresholds to a `very-low` lane capped at 10%:
+
+```json
+{
+  "strategy": "weighted",
+  "periodThreshold": "P1M",
+  "durationThreshold": "P1D",
+  "segmentCountThreshold": 1000,
+  "segmentRangeThreshold": "P180D",
+  "lanes": {
+    "low": { "minCost": 1, "maxPercent": 30 },
+    "very-low": { "minCost": 3, "maxPercent": 10 }
+  }
+}
+```
 
 ##### Server configuration
 

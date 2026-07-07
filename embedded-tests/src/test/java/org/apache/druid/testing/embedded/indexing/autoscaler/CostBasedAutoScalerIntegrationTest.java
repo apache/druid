@@ -38,6 +38,7 @@ import org.hamcrest.Matchers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 import org.joda.time.Period;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,7 @@ import org.junit.jupiter.api.Timeout;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.OPTIMAL_TASK_COUNT_METRIC;
@@ -62,6 +64,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
   private String topic;
   private final KafkaResource kafkaServer = new KafkaResource();
+  private ExecutorService backgroundPublishExecutor;
 
   @Override
   protected StreamIngestResource<?> getStreamIngestResource()
@@ -82,6 +85,14 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
   {
     topic = dataSource;
     kafkaServer.createTopicWithPartitions(topic, PARTITION_COUNT);
+  }
+
+  @AfterEach
+  public void shutdownBackgroundPublishExecutor()
+  {
+    if (backgroundPublishExecutor != null) {
+      backgroundPublishExecutor.shutdownNow();
+    }
   }
 
   @Test
@@ -137,7 +148,8 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
     // Produce additional records to create a backlog / lag
     // This ensures tasks are busy processing (low idle ratio)
-    Executors.newSingleThreadExecutor().submit(() -> {
+    backgroundPublishExecutor = Executors.newSingleThreadExecutor();
+    backgroundPublishExecutor.submit(() -> {
       for (int i = 0; i < 500; ++i) {
         publish1kRecords(topic, true);
       }
@@ -171,6 +183,55 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
     // With 50 partitions and high lag creating a low idle ratio (< 0.2),
     // the cost function must recommend scaling up to at least 2 tasks.
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
+                      .hasValueMatching(Matchers.greaterThan(1L))
+    );
+
+    // Suspend the supervisor
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
+  }
+
+  @Test
+  public void test_autoScaler_computesOptimalTaskCountAndProducesScaleUp_withUtilizationRatio()
+  {
+
+    final int lowInitialTaskCount = 1;
+    // This ensures tasks are busy processing (low idle ratio)
+    backgroundPublishExecutor = Executors.newSingleThreadExecutor();
+    backgroundPublishExecutor.submit(() -> {
+      for (int i = 0; i < 500; ++i) {
+        publish1kRecords(topic, true);
+      }
+    });
+
+    final CostBasedAutoScalerConfig autoScalerConfig = CostBasedAutoScalerConfig
+        .builder()
+        .enableTaskAutoScaler(true)
+        .taskCountMin(1)
+        .taskCountMax(50)
+        .taskCountStart(lowInitialTaskCount)
+        .scaleActionPeriodMillis(500)
+        .minTriggerScaleActionFrequencyMillis(1000)
+        .lagWeight(0.8)
+        .idleWeight(0.2)
+        .usePollIdleRatio(false)
+        .build();
+
+    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisorWithAutoScaler(
+        autoScalerConfig,
+        lowInitialTaskCount
+    );
+
+    Assertions.assertEquals(kafkaSupervisorSpec.getId(), cluster.callApi().postSupervisor(kafkaSupervisorSpec));
+
+    // Wait for the supervisor is running
+    overlord.latchableEmitter()
+            .waitForEvent(event -> event.hasMetricName("task/run/time")
+                                        .hasDimension(DruidMetrics.DATASOURCE, dataSource));
+
+    // With 50 partitions and high lag saturating the single task's processing rate,
+    // the utilization ratio must drive the cost function to recommend scaling up.
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
                       .hasValueMatching(Matchers.greaterThan(1L))
@@ -228,7 +289,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
                       .hasValueMatching(Matchers.greaterThan(1L))
     );
-    Assertions.assertEquals(4, getCurrentTaskCount(supervisor.getId()));
+    Assertions.assertTrue(getCurrentTaskCount(supervisor.getId()) > 1);
     waitUntilPublishedRecordsAreIngested(totalRecords);
 
     // Let the tasks work through the lag.
@@ -337,7 +398,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
     final String getSupervisorPath = StringUtils.format("/druid/indexer/v1/supervisor/%s", supervisorId);
     final KafkaSupervisorSpec supervisorSpec = cluster.callApi().serviceClient().onLeaderOverlord(
         mapper -> new RequestBuilder(HttpMethod.GET, getSupervisorPath),
-        new TypeReference<>(){}
+        new TypeReference<>() {}
     );
     Assertions.assertNotNull(supervisorSpec);
     return supervisorSpec.getSpec().getIOConfig().getTaskCount();

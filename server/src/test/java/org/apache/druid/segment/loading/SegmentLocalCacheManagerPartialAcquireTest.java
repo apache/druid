@@ -58,6 +58,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
@@ -563,10 +564,58 @@ class SegmentLocalCacheManagerPartialAcquireTest
     // Confirm the metadata entry exists on the location and reports fully downloaded.
     final CacheEntry entry = loc.getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID));
     Assertions.assertInstanceOf(PartialSegmentMetadataCacheEntry.class, entry);
+    final PartialSegmentMetadataCacheEntry metaEntry = (PartialSegmentMetadataCacheEntry) entry;
     Assertions.assertTrue(
-        ((PartialSegmentMetadataCacheEntry) entry).isFullyDownloaded(),
+        metaEntry.isFullyDownloaded(),
         "force-download path must leave the segment fully downloaded after acquire returns"
     );
+    Assertions.assertEquals(
+        metaEntry.getFileMapper().getOnDiskHeaderSize() + metaEntry.getFileMapper().getDownloadedBytes(),
+        loc.getWeakStats().getLoadBytes(),
+        "full-download bytes (header + every column file) must each be recorded exactly once"
+    );
+  }
+
+  @Test
+  void testLazyColumnDownloadsAreRecordedInWeakLoadStats()
+      throws ExecutionException, InterruptedException, IOException
+  {
+    final StorageLocation loc = manager.getLocations().get(0);
+    try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
+      final AcquireSegmentResult result = action.getSegmentFuture().get();
+      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+        // After a lazy mount only the metadata header has been pulled; no column files yet.
+        final long headerLoadBytes = loc.getWeakStats().getLoadBytes();
+        Assertions.assertTrue(headerLoadBytes > 0, "lazy mount records the header load");
+
+        // A base-table scan downloads the base bundle's columns on demand at cursor-build time.
+        try (var asyncHolder = segment.as(CursorFactory.class).makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN)) {
+          final CountDownLatch ready = new CountDownLatch(1);
+          asyncHolder.addReadyCallback(ready::countDown);
+          Assertions.assertTrue(ready.await(15, TimeUnit.SECONDS));
+          try (CursorHolder cursorHolder = asyncHolder.release()) {
+            Assertions.assertNotNull(cursorHolder.asCursor());
+          }
+        }
+
+        // Those on-demand column downloads are now reflected in the per-location completed-load metrics (previously
+        // they were recorded nowhere): loadBytes grew past the header, and loadCount grew per downloaded file.
+        final StorageLocation.WeakStats after = loc.getWeakStats();
+        Assertions.assertTrue(
+            after.getLoadBytes() > headerLoadBytes,
+            "on-demand column downloads must add to VSF_LOAD_BYTES; header=" + headerLoadBytes
+            + " after=" + after.getLoadBytes()
+        );
+        Assertions.assertTrue(after.getLoadCount() > 1, "each downloaded column file increments the load count");
+
+        // The deep-storage range reads that pulled those columns are recorded in the request-level VSF_READ_* stats:
+        // one or more range reads, with wire bytes and nonzero latency. (The header range-read at mount time is not
+        // counted here — it predates the listener and is accounted as the load header above.)
+        Assertions.assertTrue(after.getReadCount() > 0, "on-demand range reads must increment VSF_READ_COUNT");
+        Assertions.assertTrue(after.getReadBytes() > 0, "range reads must record wire bytes in VSF_READ_BYTES");
+        Assertions.assertTrue(after.getReadTimeNanos() > 0, "range reads must record latency in VSF_READ_TIME");
+      }
+    }
   }
 
   @Test
@@ -792,6 +841,76 @@ class SegmentLocalCacheManagerPartialAcquireTest
     }
   }
 
+  @Test
+  void testGetCachedSegmentsDeletesPartialLayoutWhenRangeReaderUnavailable() throws IOException
+  {
+    // Prime a valid partial on-disk layout (header written from the real deep-storage dir) as a previous run left it.
+    final File partialDir = new File(cacheRoot, SEGMENT_ID.toString());
+    FileUtils.mkdirp(partialDir);
+    primePartialOnDiskState(partialDir);
+
+    // ...but record the segment with a loadSpec whose storage can't produce a range reader: an existing directory
+    // that holds no V10 file, so LocalLoadSpec.openRangeReader returns null. This is the "shouldn't happen" case — a
+    // partial layout on disk means range reads worked when it was written — so partial-enabled bootstrap must reclaim
+    // the layout rather than reserve an entry that could never lazily fetch.
+    final File noRangeReaderStorage = new File(perTestTempDir, "no_range_reader_storage");
+    FileUtils.mkdirp(noRangeReaderStorage);
+    final DataSegment unreadableSegment =
+        DataSegment.builder(SEGMENT_ID)
+                   .shardSpec(NoneShardSpec.instance())
+                   .loadSpec(Map.of("type", "local", "path", noRangeReaderStorage.getAbsolutePath()))
+                   .size(0)
+                   .build();
+    manager.storeInfoFile(unreadableSegment);
+    Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+
+    final List<DataSegment> cached = manager.getCachedSegments();
+    Assertions.assertFalse(
+        cached.contains(unreadableSegment),
+        "bootstrap must not return a partial segment whose deep storage can't produce a range reader"
+    );
+    Assertions.assertFalse(
+        partialDir.exists(),
+        "bootstrap must delete the unusable partial layout from disk"
+    );
+    Assertions.assertNull(
+        manager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
+        "no cache entry should be reserved for the deleted partial layout"
+    );
+  }
+
+  @Test
+  void testGetCachedSegmentsDeletesPartialLayoutWhenLoadSpecUnconvertible() throws IOException
+  {
+    // Prime a valid partial on-disk layout as a previous run left it...
+    final File partialDir = new File(cacheRoot, SEGMENT_ID.toString());
+    FileUtils.mkdirp(partialDir);
+    primePartialOnDiskState(partialDir);
+
+    // ...but record the segment with a loadSpec whose type is no longer registered, so converting it to a LoadSpec
+    // throws. Bootstrap must treat that broken segment like a null reader: delete the unusable layout and continue,
+    // rather than aborting or reserving an entry that could never fetch.
+    final DataSegment unconvertibleSegment =
+        DataSegment.builder(SEGMENT_ID)
+                   .shardSpec(NoneShardSpec.instance())
+                   .loadSpec(Map.of("type", "no-such-loadspec-type"))
+                   .size(0)
+                   .build();
+    manager.storeInfoFile(unconvertibleSegment);
+    Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+
+    final List<DataSegment> cached = manager.getCachedSegments();
+    Assertions.assertFalse(
+        cached.contains(unconvertibleSegment),
+        "bootstrap must not return a partial segment whose loadSpec can't be converted to a range reader"
+    );
+    Assertions.assertFalse(partialDir.exists(), "bootstrap must delete the unusable partial layout from disk");
+    Assertions.assertNull(
+        manager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
+        "no cache entry should be reserved for the deleted partial layout"
+    );
+  }
+
   /**
    * Lay down the on-disk artifacts a previous process run would have left behind in the given partial directory:
    * a V10 header file and sparse-allocated container files for every container the segment metadata declares. The
@@ -806,7 +925,8 @@ class SegmentLocalCacheManagerPartialAcquireTest
                  jsonMapper,
                  partialDir,
                  IndexIO.V10_FILE_NAME,
-                 List.of()
+                 List.of(),
+                 PartialSegmentDownloadListener.NOOP
              )) {
       final int numContainers = seed.getSegmentFileMetadata().getContainers().size();
       for (int i = 0; i < numContainers; i++) {
