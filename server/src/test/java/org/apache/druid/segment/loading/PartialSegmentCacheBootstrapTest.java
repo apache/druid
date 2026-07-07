@@ -477,101 +477,6 @@ class PartialSegmentCacheBootstrapTest
     }
   }
 
-  /**
-   * Populate the per-segment cache dir with the on-disk artifacts a previous historical run would have left behind:
-   * the V10 header file plus sparse-allocated container files for the base and aggregate bundles.
-   */
-  private void primeOnDiskState() throws IOException
-  {
-    final StorageLocation seedLocation = new StorageLocation(cacheDir, ESTIMATE * 8, null);
-    final PartialSegmentMetadataCacheEntry seedMeta = new PartialSegmentMetadataCacheEntry(
-        SEGMENT_ID,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of(),
-        Set.of(),
-        null,
-        new DirectoryBackedRangeReader(deepStorageDir),
-        JSON_MAPPER,
-        null,
-        ESTIMATE
-    );
-    Assertions.assertTrue(seedLocation.reserve(seedMeta));
-    seedMeta.mount(seedLocation);
-
-    final PartialSegmentBundleCacheEntry base = PartialSegmentBundleCacheEntry.forBundle(
-        seedMeta,
-        Projections.BASE_TABLE_PROJECTION_NAME,
-        List.of()
-    );
-    final var baseHold = seedLocation.addWeakReservationHold(base.getId(), () -> base);
-    Assertions.assertNotNull(baseHold);
-    base.mount(seedLocation);
-
-    final PartialSegmentBundleCacheEntry agg = PartialSegmentBundleCacheEntry.forBundle(
-        seedMeta,
-        AGG_BUNDLE,
-        List.of(base.getId())
-    );
-    final var aggHold = seedLocation.addWeakReservationHold(agg.getId(), () -> agg);
-    Assertions.assertNotNull(aggHold);
-    agg.mount(seedLocation);
-
-    // Leave on-disk state behind: unmount the bundles (which deletes container files!), that's the wrong final
-    // state. Instead, we want containers ON disk, so leave bundles mounted but close the file mapper. Since the
-    // restore path re-opens via PartialSegmentFileMapperV10.create which is idempotent w.r.t. on-disk files,
-    // un-mount on the SEED side AFTER files are sparse-allocated would also delete them. So we just leave the
-    // seed mounted: at test end @TempDir cleans up.
-    aggHold.close();
-    baseHold.close();
-  }
-
-  /**
-   * Two-step restore helper that mirrors what {@code SegmentLocalCacheManager} does in production: reserve the metadata
-   * entry via {@link PartialSegmentCacheBootstrap#reserveFromDisk}, then drive {@link PartialSegmentMetadataCacheEntry#mount}
-   * to trigger the file-mapper build + bundle restore. On a mount failure, {@code mount}'s own rollback removes the
-   * (unheld) weak entry from the location, so tests can assert on a clean location without any extra cleanup here.
-   */
-  private PartialSegmentMetadataCacheEntry restoreFromDisk(StorageLocation location) throws IOException
-  {
-    final PartialSegmentMetadataCacheEntry metadata = PartialSegmentCacheBootstrap.reserveFromDisk(
-        SEGMENT_ID,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of(),
-        Set.of(),
-        null,
-        new DirectoryBackedRangeReader(deepStorageDir),
-        JSON_MAPPER,
-        null,
-        location
-    );
-    metadata.mount(location);
-    return metadata;
-  }
-
-  /**
-   * Static-restore variant: reserve metadata + selected bundles as static entries.
-   */
-  private PartialSegmentMetadataCacheEntry restoreFromDiskAsStatic(StorageLocation location, Set<String> staticBundles)
-      throws IOException
-  {
-    final PartialSegmentMetadataCacheEntry metadata = PartialSegmentCacheBootstrap.reserveFromDisk(
-        SEGMENT_ID,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of(),
-        staticBundles,
-        "v1:test-fingerprint",
-        new DirectoryBackedRangeReader(deepStorageDir),
-        JSON_MAPPER,
-        null,
-        location
-    );
-    metadata.mount(location);
-    return metadata;
-  }
-
   @Test
   void testStaticReserveFromDiskRegistersMetadataInStaticMap() throws IOException
   {
@@ -766,6 +671,101 @@ class PartialSegmentCacheBootstrapTest
         location.isReserved(metaId),
         "static metadata reservation persists at this layer; the caller (manager bootstrap) is responsible for release"
     );
+  }
+
+  /**
+   * Populate the per-segment cache dir with the on-disk artifacts a previous historical run would have left behind:
+   * the V10 header file plus sparse-allocated container files for the base and aggregate bundles.
+   */
+  private void primeOnDiskState() throws IOException
+  {
+    final StorageLocation seedLocation = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    final PartialSegmentMetadataCacheEntry seedMeta = new PartialSegmentMetadataCacheEntry(
+        SEGMENT_ID,
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(),
+        Set.of(),
+        null,
+        new DirectoryBackedRangeReader(deepStorageDir),
+        JSON_MAPPER,
+        null,
+        ESTIMATE
+    );
+    Assertions.assertTrue(seedLocation.reserve(seedMeta));
+    seedMeta.mount(seedLocation);
+
+    final PartialSegmentBundleCacheEntry base = PartialSegmentBundleCacheEntry.forBundle(
+        seedMeta,
+        Projections.BASE_TABLE_PROJECTION_NAME,
+        List.of()
+    );
+    final var baseHold = seedLocation.addWeakReservationHold(base.getId(), () -> base);
+    Assertions.assertNotNull(baseHold);
+    base.mount(seedLocation);
+
+    final PartialSegmentBundleCacheEntry agg = PartialSegmentBundleCacheEntry.forBundle(
+        seedMeta,
+        AGG_BUNDLE,
+        List.of(base.getId())
+    );
+    final var aggHold = seedLocation.addWeakReservationHold(agg.getId(), () -> agg);
+    Assertions.assertNotNull(aggHold);
+    agg.mount(seedLocation);
+
+    // Leave on-disk state behind: unmount the bundles (which deletes container files!), that's the wrong final
+    // state. Instead, we want containers ON disk, so leave bundles mounted but close the file mapper. Since the
+    // restore path re-opens via PartialSegmentFileMapperV10.create which is idempotent w.r.t. on-disk files,
+    // un-mount on the SEED side AFTER files are sparse-allocated would also delete them. So we just leave the
+    // seed mounted: at test end @TempDir cleans up.
+    aggHold.close();
+    baseHold.close();
+  }
+
+  /**
+   * Two-step restore helper that mirrors what {@code SegmentLocalCacheManager} does in production: reserve the metadata
+   * entry via {@link PartialSegmentCacheBootstrap#reserveFromDisk}, then drive {@link PartialSegmentMetadataCacheEntry#mount}
+   * to trigger the file-mapper build + bundle restore. On a mount failure, {@code mount}'s own rollback removes the
+   * (unheld) weak entry from the location, so tests can assert on a clean location without any extra cleanup here.
+   */
+  private PartialSegmentMetadataCacheEntry restoreFromDisk(StorageLocation location) throws IOException
+  {
+    final PartialSegmentMetadataCacheEntry metadata = PartialSegmentCacheBootstrap.reserveFromDisk(
+        SEGMENT_ID,
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(),
+        Set.of(),
+        null,
+        new DirectoryBackedRangeReader(deepStorageDir),
+        JSON_MAPPER,
+        null,
+        location
+    );
+    metadata.mount(location);
+    return metadata;
+  }
+
+  /**
+   * Static-restore variant: reserve metadata + selected bundles as static entries.
+   */
+  private PartialSegmentMetadataCacheEntry restoreFromDiskAsStatic(StorageLocation location, Set<String> staticBundles)
+      throws IOException
+  {
+    final PartialSegmentMetadataCacheEntry metadata = PartialSegmentCacheBootstrap.reserveFromDisk(
+        SEGMENT_ID,
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(),
+        staticBundles,
+        "v1:test-fingerprint",
+        new DirectoryBackedRangeReader(deepStorageDir),
+        JSON_MAPPER,
+        null,
+        location
+    );
+    metadata.mount(location);
+    return metadata;
   }
 
   private static PartialSegmentFileMapperV10 createMapper(File deepStorageDir, File cacheDir) throws IOException

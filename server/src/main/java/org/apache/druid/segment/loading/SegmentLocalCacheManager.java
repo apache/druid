@@ -939,6 +939,37 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    */
   private void loadPartial(DataSegment dataSegment) throws SegmentLoadingException
   {
+    final PartialLoadSpec wrapper = materializePartialLoadSpec(dataSegment);
+    final SegmentRangeReader rangeReader = openPartialRangeReader(dataSegment, wrapper);
+    if (rangeReader == null) {
+      handleUnsupportedRangeReaderFallback(dataSegment, wrapper);
+      return;
+    }
+    final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(dataSegment.getId());
+    final ReferenceCountingLock lock = lock(dataSegment);
+    synchronized (lock) {
+      try {
+        if (reconcileExistingEntries(dataSegment, wrapper, id)) {
+          return;
+        }
+        final PartialReservation reservation =
+            reserveMetadataOnFirstAvailableLocation(dataSegment, wrapper, rangeReader);
+        persistInfoFileAndAttachCleanupHook(dataSegment, reservation);
+        mountAndAwaitPartial(dataSegment, wrapper, reservation);
+      }
+      finally {
+        unlock(dataSegment, lock);
+      }
+    }
+  }
+
+  /**
+   * Materialize the segment's wrapped load spec to a {@link PartialLoadSpec}. Fails with a diagnostic when Jackson
+   * can't convert (missing subtype registration, malformed wire form) or when the materialized type isn't a partial
+   * wrapper despite the dispatch check upstream.
+   */
+  private PartialLoadSpec materializePartialLoadSpec(DataSegment dataSegment) throws SegmentLoadingException
+  {
     final LoadSpec materializedLoadSpec;
     try {
       materializedLoadSpec = jsonMapper.convertValue(dataSegment.getLoadSpec(), LoadSpec.class);
@@ -957,318 +988,351 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           materializedLoadSpec.getClass().getSimpleName()
       );
     }
+    return wrapper;
+  }
 
-    final SegmentRangeReader rangeReader;
+  /**
+   * Open a range reader for the segment's deep storage, wrapping any {@link IOException} as a
+   * {@link SegmentLoadingException}. Returns {@code null} if the backend doesn't support range reads (e.g. zipped
+   * deep storage) so caller falls back to weak-full-load semantics.
+   */
+  @Nullable
+  private SegmentRangeReader openPartialRangeReader(DataSegment dataSegment, PartialLoadSpec wrapper)
+      throws SegmentLoadingException
+  {
     try {
-      rangeReader = wrapper.openRangeReader();
+      return wrapper.openRangeReader();
     }
     catch (IOException e) {
-      throw new SegmentLoadingException(
-          e,
-          "Failed to open range reader for segment[%s]",
-          dataSegment.getId()
-      );
+      throw new SegmentLoadingException(e, "Failed to open range reader for segment[%s]", dataSegment.getId());
     }
-    if (rangeReader == null) {
-      // Backend doesn't support range reads (e.g. zipped deep storage). The rule can't be honored as a partial load;
-      // fall through to the on-demand weak-full-load path at query time. But if a prior loadPartial installed a
-      // static entry with a different rule fingerprint, we cannot silently keep serving under the old rule so
-      // reconcile the static side so the coordinator's rule change takes effect, then return so the next query
-      // installs a weak entry via the on-demand path.
-      log.warn(
-          "Backend for segment[%s] does not support range reads; partial-load rule[fingerprint=%s] cannot be honored, "
-          + "falling back to weak full-load at query time",
-          dataSegment.getId(),
-          wrapper.getFingerprint()
-      );
-      final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(dataSegment.getId());
-      final ReferenceCountingLock lock = lock(dataSegment);
-      synchronized (lock) {
-        try {
-          // Static-side reconciliation only. Weak entries (from bootstrap without a rule, or a prior on-demand
-          // acquire) already represent the fallback behavior we're falling back to, leave them alone.
-          boolean dropStaleStatic = false;
-          for (StorageLocation location : locations) {
-            if (!location.isReserved(id)) {
-              continue;
-            }
-            final SegmentCacheEntry existing = location.getCacheEntry(id);
-            if (existing instanceof PartialSegmentMetadataCacheEntry existingPartial
-                && Objects.equals(existingPartial.getFingerprint(), wrapper.getFingerprint())) {
-              // Same-rule re-issue: preserve the existing entry's info file across its eventual drop by clearing
-              // the onUnmount hook, matching the fingerprint-match short-circuit in the main reconciliation branch.
-              existing.setOnUnmount(null);
-              return;
-            }
-            dropStaleStatic = true;
-          }
-          if (dropStaleStatic) {
-            log.info(
-                "Dropping stale static partial entry for segment[%s]: current rule cannot be applied without range reads",
-                dataSegment.getId()
-            );
-            drop(dataSegment);
-            // drop() only deleted tracked files; no reserve follows on this path, so nuke leftover per-segment dirs
-            // across every location or an empty dir would linger indefinitely.
-            removeStaleSegmentDirsOnAllLocations(dataSegment);
-          }
-        }
-        finally {
-          unlock(dataSegment, lock);
-        }
-      }
-      return;
-    }
+  }
 
+  /**
+   * Handle the rangeReader-null path: the backend can't support partial loads, so the rule can't be honored. Do
+   * static-side reconciliation only; a stale static entry from a prior rule with a different fingerprint would keep
+   * serving the old selection unless dropped.
+   */
+  private void handleUnsupportedRangeReaderFallback(DataSegment dataSegment, PartialLoadSpec wrapper)
+  {
+    log.warn(
+        "Backend for segment[%s] does not support range reads; partial-load rule[fingerprint=%s] cannot be honored, "
+        + "falling back to weak full-load at query time",
+        dataSegment.getId(),
+        wrapper.getFingerprint()
+    );
     final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(dataSegment.getId());
     final ReferenceCountingLock lock = lock(dataSegment);
     synchronized (lock) {
       try {
-        // Reconcile against any existing entry. The end-state invariant this block establishes is: on any return
-        // path below, there is exactly one static partial entry for this segment (matching the wrapper fingerprint)
-        // and no weak entry alongside it.
-        //
-        //  - Same-fingerprint static partial with no weak entry alongside: idempotent re-load. Clear onUnmount so the
-        //    info file isn't re-deleted, return.
-        //  - Any other state (different-fingerprint static partial, non-partial static entry, weak partial from
-        //    bootstrap without a persisted fingerprint, weak full entry from a prior on-demand acquireSegment): drop
-        //    the static (cascade-releases linked bundles + fires the info-file cleanup hook) AND evict the weak
-        //    entry, then fall through to a fresh reserve.
-        //
-        // The weak eviction step is critical: {@link #drop} only touches {@link StorageLocation#staticCacheEntries},
-        // so without it a lingering weak entry from bootstrap or on-demand load would coexist with the new static
-        // entry, same on-disk directory, both counted against capacity, and the eventual bundle downloads would
-        // race the weak entry's own reads. When the weak entry has active holds we cannot evict it synchronously,
-        // so throw and let the coordinator retry once the running query completes. drop() takes no per-segment lock
-        // so calling it from inside our synchronized(lock) block is safe.
-        PartialSegmentMetadataCacheEntry sameFingerprintStatic = null;
-        final List<SegmentCacheEntry> oldStaticEntries = new ArrayList<>();
+        boolean dropStaleStatic = false;
         for (StorageLocation location : locations) {
           if (!location.isReserved(id)) {
             continue;
           }
           final SegmentCacheEntry existing = location.getCacheEntry(id);
-          if (existing == null) {
-            continue;
-          }
-          oldStaticEntries.add(existing);
           if (existing instanceof PartialSegmentMetadataCacheEntry existingPartial
               && Objects.equals(existingPartial.getFingerprint(), wrapper.getFingerprint())) {
-            sameFingerprintStatic = existingPartial;
+            // Same-rule re-issue: preserve the existing entry's info file across its eventual drop by clearing
+            // the onUnmount hook, matching the fingerprint-match short-circuit in the main reconciliation branch.
+            existing.setOnUnmount(null);
+            return;
           }
+          dropStaleStatic = true;
         }
-        final boolean weakExists = locations.stream().anyMatch(loc -> loc.isWeakReserved(id));
-        if (sameFingerprintStatic != null && !weakExists && oldStaticEntries.size() == 1) {
-          sameFingerprintStatic.setOnUnmount(null);
-          return;
-        }
-        if (!oldStaticEntries.isEmpty()) {
-          // Precheck BEFORE drop: refuse the reconciliation if any old partial metadata entry (or any of its linked
-          // bundles) has an external reference. drop() would remove entries from staticCacheEntries synchronously
-          // but leave their doActualUnmount (onUnmount hook + deleteHeaderFiles + evictContainer) deferred until
-          // the pinning query releases. Between the throw and the next coordinator retry, other threads (queries,
-          // on-demand acquires) would observe the segment as absent, install a fresh partial entry via the acquire
-          // path, and race the deferred cleanup on the shared per-segment on-disk directory. Checking BEFORE drop
-          // keeps the old entry fully installed on the failure path so a subsequent retry finds it via
-          // reconciliation logic as if this load never happened.
-          for (SegmentCacheEntry old : oldStaticEntries) {
-            if (old instanceof PartialSegmentMetadataCacheEntry oldPartial
-                && oldPartial.cascadeReleaseWouldDeferCleanup()) {
-              throw new SegmentLoadingException(
-                  "Cannot reconcile partial-load entry for segment[%s]: outstanding references on the old entry "
-                  + "would defer drop's cleanup and race the new entry's on-disk state; coordinator will retry",
-                  dataSegment.getId()
-              );
-            }
-          }
+        if (dropStaleStatic) {
           log.info(
-              "Reconciling partial-load entry for segment[%s]: fingerprint or type changed, dropping and reloading",
+              "Dropping stale static partial entry for segment[%s]: current rule cannot be applied without range reads",
               dataSegment.getId()
           );
           drop(dataSegment);
-        }
-        for (StorageLocation location : locations) {
-          if (!location.isWeakReserved(id)) {
-            continue;
-          }
-          location.removeUnheldWeakEntry(id);
-          if (location.isWeakReserved(id)) {
-            throw new SegmentLoadingException(
-                "Cannot install partial-load rule for segment[%s]: an existing weak entry has active holds; "
-                + "coordinator will retry",
-                dataSegment.getId()
-            );
-          }
-        }
-
-        // After any reconciliation drop/eviction above, nuke leftover per-segment directories on every location.
-        removeStaleSegmentDirsOnAllLocations(dataSegment);
-
-        // Reserve the metadata entry as static on the first location that accepts BOTH the reservation and a
-        // per-segment mkdirp. mkdirp failures are location-local (inode exhaustion, permission mismatch, transient
-        // EIO on one disk) and a different location may accept, so release-and-continue rather than abort. Collect
-        // per-location failures to attach as suppressed exceptions on the final alert.
-        StorageLocation reservedLocation = null;
-        PartialSegmentMetadataCacheEntry metadata = null;
-        final List<Throwable> perLocationFailures = new ArrayList<>();
-        final Iterator<StorageLocation> iterator = strategy.getLocations();
-        while (iterator.hasNext()) {
-          final StorageLocation candidate = iterator.next();
-          final File partialDir = new File(candidate.getPath(), dataSegment.getId().toString());
-          final PartialSegmentMetadataCacheEntry candidateEntry = new PartialSegmentMetadataCacheEntry(
-              dataSegment.getId(),
-              partialDir,
-              IndexIO.V10_FILE_NAME,
-              List.of(),
-              // staticBundleNames left empty: the fresh-load path below resolves selected bundles AFTER metadata mount
-              // (since the bundle names depend on the parsed header) and reserves them static directly via
-              // reserveAndMountStaticBundle. The field is only consulted by bootstrap restore, which has a parsed
-              // on-disk header available before constructing the entry.
-              Set.of(),
-              wrapper.getFingerprint(),
-              rangeReader,
-              jsonMapper,
-              virtualStorageLoadingThreadPool,
-              config.getVirtualStorageMetadataReservationEstimate()
-          );
-          if (!candidate.reserve(candidateEntry)) {
-            continue;
-          }
-          try {
-            FileUtils.mkdirp(partialDir);
-          }
-          catch (IOException mkdirpFailure) {
-            candidate.release(candidateEntry);
-            log.warn(
-                mkdirpFailure,
-                "Failed to create partial cache dir on location[%s] for segment[%s]; trying next location",
-                candidate.getPath(),
-                dataSegment.getId()
-            );
-            perLocationFailures.add(mkdirpFailure);
-            continue;
-          }
-          reservedLocation = candidate;
-          metadata = candidateEntry;
-          break;
-        }
-
-        if (reservedLocation == null) {
-          final SegmentLoadingException noCapacity = new SegmentLoadingException(
-              "Unable to reserve static partial metadata entry for segment[%s] on any location; ensure enough disk "
-              + "space and that per-segment cache directories can be created",
-              dataSegment.getId()
-          );
-          perLocationFailures.forEach(noCapacity::addSuppressed);
-          log.makeAlert(
-              noCapacity,
-              "Failed to reserve partial-load metadata on any location for segment[%s]",
-              dataSegment.getId()
-          ).emit();
-          throw noCapacity;
-        }
-
-        // Persist the info file so bootstrap can rediscover this segment on restart
-        try {
-          storeInfoFile(dataSegment);
-        }
-        catch (IOException e) {
-          reservedLocation.release(metadata);
-          final SegmentLoadingException storeFailure = new SegmentLoadingException(
-              e,
-              "Failed to write info file for segment[%s]",
-              dataSegment.getId()
-          );
-          log.makeAlert(
-              storeFailure,
-              "Failed to persist partial-load info file for segment[%s]; check druid.segmentCache.infoDir",
-              dataSegment.getId()
-          ).emit();
-          throw storeFailure;
-        }
-        metadata.setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
-
-        // Mount metadata + reserve+mount+download each rule-selected bundle as static
-        final StorageLocation theLocation = reservedLocation;
-        final PartialSegmentMetadataCacheEntry theMetadata = metadata;
-        // All rollback responsibility (bundles AND metadata) lives INSIDE the callable so no state mutation of
-        // theMetadata crosses threads. With cleanup owned by the pool thread, the caller only ever observes the
-        // outcome; there is no shared state to race.
-        final Future<Void> future = virtualStorageLoadingThreadPool.getExecutorService().submit(() -> {
-          final List<PartialSegmentBundleCacheEntry> mounted = new ArrayList<>();
-          try {
-            theMetadata.mount(theLocation);
-            final PartialSegmentFileMapperV10 mapper = theMetadata.getFileMapper();
-            if (mapper == null) {
-              throw DruidException.defensive(
-                  "Partial metadata for segment[%s] mounted without a file mapper",
-                  dataSegment.getId()
-              );
-            }
-            final List<String> selectedBundleNames = wrapper.getSelectedBundleNames(
-                dataSegment,
-                mapper.getSegmentFileMetadata()
-            );
-            // A rule-pinned bundle's dependencies must also be pinned. Iterate in dependency-first order so children
-            // see their dependencies resident.
-            for (String bundleName : theMetadata.bundlesInMountOrder(selectedBundleNames)) {
-              mounted.add(reserveAndMountStaticBundle(theLocation, theMetadata, mapper, bundleName));
-            }
-            return null;
-          }
-          catch (Throwable t) {
-            // Cascade rollback on the SAME thread: bundles first in reverse mount order, then the metadata (whose
-            // release-triggered doActualUnmount hook deletes the info file).
-            for (int i = mounted.size() - 1; i >= 0; i--) {
-              try {
-                theLocation.release(mounted.get(i));
-              }
-              catch (Throwable releaseFailure) {
-                log.warn(
-                    releaseFailure,
-                    "Failed to release bundle during rollback for segment[%s]",
-                    dataSegment.getId()
-                );
-              }
-            }
-            releaseMetadataQuietly(theLocation, theMetadata, dataSegment);
-            throw t;
-          }
-        });
-
-        try {
-          future.get();
-        }
-        catch (InterruptedException e) {
-          // Caller interrupted while waiting. Restore the interrupt flag and propagate, but do NOT cancel the pool
-          // task: FutureTask.cancel(true) transitions to CANCELLED synchronously, but the callable's run() may still
-          // be executing its catch/finally on the pool thread, so a subsequent metadata release from the caller would
-          // race that cleanup. Leaving the task alone lets its own cleanup complete on the pool thread naturally; on
-          // eventual shutdown the pool's shutdownNow will interrupt the worker and drive the same
-          // rollback via the callable's catch.
-          Thread.currentThread().interrupt();
-          throw new SegmentLoadingException(e, "Interrupted while loading partial segment[%s]", dataSegment.getId());
-        }
-        catch (Throwable t) {
-          // Callable ran to a terminal state. On failure it already released metadata + bundles on the pool thread
-          // via its catch block. We only propagate the diagnostic here; no cleanup remains for the caller. Restore the
-          // interrupt flag if set so downstream shutdown handling still observes it.
-          final Throwable executionCause = (t instanceof ExecutionException) ? t.getCause() : t;
-          final Throwable cause = (executionCause != null) ? executionCause : t;
-          if (cause instanceof InterruptedException) {
-            Thread.currentThread().interrupt();
-          }
-          throw new SegmentLoadingException(
-              cause,
-              "Failed to load partial segment[%s] with rule-pinned bundles",
-              dataSegment.getId()
-          );
+          // drop() only deleted tracked files; no reserve follows on this path, so nuke leftover per-segment dirs
+          // across every location or an empty dir would linger indefinitely.
+          removeStaleSegmentDirsOnAllLocations(dataSegment);
         }
       }
       finally {
         unlock(dataSegment, lock);
       }
     }
+  }
+
+  /**
+   * Reconcile any existing cache entry for this segment against the incoming wrapper.
+   * <p>
+   * End-state invariant on any non-throw return: there is at most one static partial entry for this segment
+   * (matching the wrapper fingerprint) and no weak entry alongside it.
+   * <ul>
+   *   <li>Same-fingerprint static partial with no weak entry alongside: idempotent re-load. Clear onUnmount so the
+   *     info file isn't re-deleted, return {@code true} so the caller short-circuits.</li>
+   *   <li>Any other state (different-fingerprint static, non-partial static, weak partial from bootstrap without a
+   *     persisted fingerprint, weak full entry from a prior on-demand acquireSegment): drop the static (cascade-
+   *     releases linked bundles + fires the info-file cleanup hook) AND evict the weak entry, then nuke stale dirs
+   *     and return {@code false}.</li>
+   * </ul>
+   * The weak eviction step is critical: {@link #drop} only touches {@link StorageLocation#staticCacheEntries}, so
+   * without it a lingering weak entry would coexist with the new static entry on the same on-disk directory.
+   * <p>
+   * <b>Deferred-cleanup precheck.</b> If any old partial has external references (queries holding
+   * {@link PartialSegmentMetadataCacheEntry#acquireMetadataReference} or a linked bundle's
+   * {@link PartialSegmentBundleCacheEntry#acquireReference}), {@link #drop} would leave doActualUnmount deferred
+   * until they release. That deferred cleanup (onUnmount hook + deleteHeaderFiles + evictContainer) would race the
+   * new entry's on-disk state, so throw pre-drop and let the coordinator retry. Same for a held weak entry: no safe
+   * way to evict it synchronously without breaking the running query's reads.
+   */
+  private boolean reconcileExistingEntries(
+      DataSegment dataSegment,
+      PartialLoadSpec wrapper,
+      SegmentCacheEntryIdentifier id
+  ) throws SegmentLoadingException
+  {
+    PartialSegmentMetadataCacheEntry sameFingerprintStatic = null;
+    final List<SegmentCacheEntry> oldStaticEntries = new ArrayList<>();
+    for (StorageLocation location : locations) {
+      if (!location.isReserved(id)) {
+        continue;
+      }
+      final SegmentCacheEntry existing = location.getCacheEntry(id);
+      if (existing == null) {
+        continue;
+      }
+      oldStaticEntries.add(existing);
+      if (existing instanceof PartialSegmentMetadataCacheEntry existingPartial
+          && Objects.equals(existingPartial.getFingerprint(), wrapper.getFingerprint())) {
+        sameFingerprintStatic = existingPartial;
+      }
+    }
+    final boolean weakExists = locations.stream().anyMatch(loc -> loc.isWeakReserved(id));
+    if (sameFingerprintStatic != null && !weakExists && oldStaticEntries.size() == 1) {
+      sameFingerprintStatic.setOnUnmount(null);
+      return true;
+    }
+    if (!oldStaticEntries.isEmpty()) {
+      for (SegmentCacheEntry old : oldStaticEntries) {
+        if (old instanceof PartialSegmentMetadataCacheEntry oldPartial
+            && oldPartial.cascadeReleaseWouldDeferCleanup()) {
+          throw new SegmentLoadingException(
+              "Cannot reconcile partial-load entry for segment[%s]: outstanding references on the old entry would "
+              + "defer drop's cleanup and race the new entry's on-disk state; coordinator will retry",
+              dataSegment.getId()
+          );
+        }
+      }
+      log.info(
+          "Reconciling partial-load entry for segment[%s]: fingerprint or type changed, dropping and reloading",
+          dataSegment.getId()
+      );
+      drop(dataSegment);
+    }
+    for (StorageLocation location : locations) {
+      if (!location.isWeakReserved(id)) {
+        continue;
+      }
+      location.removeUnheldWeakEntry(id);
+      if (location.isWeakReserved(id)) {
+        throw new SegmentLoadingException(
+            "Cannot install partial-load rule for segment[%s]: an existing weak entry has active holds; coordinator "
+            + "will retry",
+            dataSegment.getId()
+        );
+      }
+    }
+    removeStaleSegmentDirsOnAllLocations(dataSegment);
+    return false;
+  }
+
+  /**
+   * Reserve the static partial metadata on the first location that accepts BOTH the reservation and a per-segment
+   * mkdirp. mkdirp failures are location-local (inode exhaustion, permission mismatch, transient EIO on one disk) so
+   * release-and-continue rather than abort. Per-location failures are gathered as suppressed exceptions on the alert
+   * emitted when no location succeeds.
+   */
+  private PartialReservation reserveMetadataOnFirstAvailableLocation(
+      DataSegment dataSegment,
+      PartialLoadSpec wrapper,
+      SegmentRangeReader rangeReader
+  ) throws SegmentLoadingException
+  {
+    final List<Throwable> perLocationFailures = new ArrayList<>();
+    final Iterator<StorageLocation> iterator = strategy.getLocations();
+    while (iterator.hasNext()) {
+      final StorageLocation candidate = iterator.next();
+      final File partialDir = new File(candidate.getPath(), dataSegment.getId().toString());
+      final PartialSegmentMetadataCacheEntry candidateEntry = new PartialSegmentMetadataCacheEntry(
+          dataSegment.getId(),
+          partialDir,
+          IndexIO.V10_FILE_NAME,
+          List.of(),
+          // staticBundleNames left empty: the fresh-load path below resolves selected bundles AFTER metadata mount
+          // (since the bundle names depend on the parsed header) and reserves them static directly via
+          // reserveAndMountStaticBundle. The field is only consulted by bootstrap restore, which has a parsed
+          // on-disk header available before constructing the entry.
+          Set.of(),
+          wrapper.getFingerprint(),
+          rangeReader,
+          jsonMapper,
+          virtualStorageLoadingThreadPool,
+          config.getVirtualStorageMetadataReservationEstimate()
+      );
+      if (!candidate.reserve(candidateEntry)) {
+        continue;
+      }
+      try {
+        FileUtils.mkdirp(partialDir);
+      }
+      catch (IOException mkdirpFailure) {
+        candidate.release(candidateEntry);
+        // Partial mkdirp may have left directory fragments behind (parent created, sub-dir failed). No-op if fully
+        // absent; otherwise moves to __drop and deletes.
+        atomicMoveAndDeleteCacheEntryDirectory(partialDir);
+        log.warn(
+            mkdirpFailure,
+            "Failed to create partial cache dir on location[%s] for segment[%s]; trying next location",
+            candidate.getPath(),
+            dataSegment.getId()
+        );
+        perLocationFailures.add(mkdirpFailure);
+        continue;
+      }
+      return new PartialReservation(candidate, candidateEntry);
+    }
+    final SegmentLoadingException noCapacity = new SegmentLoadingException(
+        "Unable to reserve static partial metadata entry for segment[%s] on any location; ensure enough disk space "
+        + "and that per-segment cache directories can be created",
+        dataSegment.getId()
+    );
+    perLocationFailures.forEach(noCapacity::addSuppressed);
+    log.makeAlert(
+        noCapacity,
+        "Failed to reserve partial-load metadata on any location for segment[%s]",
+        dataSegment.getId()
+    ).emit();
+    throw noCapacity;
+  }
+
+  /**
+   * Persist the segment's info file so bootstrap can rediscover it on restart, then attach the info-file-delete hook
+   * to the metadata entry so it fires on drop. The info dir is shared across locations (single configured path), so
+   * failure here is not a per-disk problem — no fall-through: release the reservation, alert, abort.
+   */
+  private void persistInfoFileAndAttachCleanupHook(DataSegment dataSegment, PartialReservation reservation)
+      throws SegmentLoadingException
+  {
+    try {
+      storeInfoFile(dataSegment);
+    }
+    catch (IOException e) {
+      reservation.location().release(reservation.metadata());
+      // release() went through the never-mounted branch and ran no hook (none set yet), so the mkdirp'd partial dir
+      // is still on disk with no entry backing it. Nuke it so bootstrap doesn't see a stale directory later.
+      atomicMoveAndDeleteCacheEntryDirectory(reservation.metadata().getLocalCacheDir());
+      final SegmentLoadingException storeFailure = new SegmentLoadingException(
+          e,
+          "Failed to write info file for segment[%s]",
+          dataSegment.getId()
+      );
+      log.makeAlert(
+          storeFailure,
+          "Failed to persist partial-load info file for segment[%s]; check druid.segmentCache.infoDir",
+          dataSegment.getId()
+      ).emit();
+      throw storeFailure;
+    }
+    reservation.metadata().setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
+  }
+
+  /**
+   * Submit the metadata + rule-selected-bundle mount to the loading thread pool and await its outcome. All rollback
+   * (bundles AND metadata) lives INSIDE the callable so no state mutation of {@code reservation.metadata()} crosses
+   * threads: the caller only ever observes the outcome and never touches shared state on the failure path. This
+   * avoids the FutureTask cancel-vs-cleanup race — {@code cancel(true)} transitions the future to CANCELLED
+   * synchronously while the callable's cleanup may still be executing on the pool thread.
+   */
+  private void mountAndAwaitPartial(
+      DataSegment dataSegment,
+      PartialLoadSpec wrapper,
+      PartialReservation reservation
+  ) throws SegmentLoadingException
+  {
+    final StorageLocation theLocation = reservation.location();
+    final PartialSegmentMetadataCacheEntry theMetadata = reservation.metadata();
+    final Future<Void> future = virtualStorageLoadingThreadPool.getExecutorService().submit(() -> {
+      final List<PartialSegmentBundleCacheEntry> mounted = new ArrayList<>();
+      try {
+        theMetadata.mount(theLocation);
+        final PartialSegmentFileMapperV10 mapper = theMetadata.getFileMapper();
+        if (mapper == null) {
+          throw DruidException.defensive(
+              "Partial metadata for segment[%s] mounted without a file mapper",
+              dataSegment.getId()
+          );
+        }
+        final List<String> selectedBundleNames =
+            wrapper.getSelectedBundleNames(dataSegment, mapper.getSegmentFileMetadata());
+        // A rule-pinned bundle's dependencies must also be pinned. Iterate in dependency-first order so children
+        // see their dependencies resident.
+        for (String bundleName : theMetadata.bundlesInMountOrder(selectedBundleNames)) {
+          mounted.add(reserveAndMountStaticBundle(theLocation, theMetadata, mapper, bundleName));
+        }
+        return null;
+      }
+      catch (Throwable t) {
+        // Cascade rollback on the SAME thread: bundles first in reverse mount order, then the metadata (whose
+        // release-triggered doActualUnmount hook deletes the info file + header files). Finally nuke the per-segment
+        // dir itself: doActualUnmount only deletes tracked files (headers, containers via bundle eviction), not the
+        // enclosing directory that mkdirp created up in reserveMetadataOnFirstAvailableLocation. Without this the
+        // empty dir would linger until the next reconciliation for this segment ID.
+        for (int i = mounted.size() - 1; i >= 0; i--) {
+          try {
+            theLocation.release(mounted.get(i));
+          }
+          catch (Throwable releaseFailure) {
+            log.warn(releaseFailure, "Failed to release bundle during rollback for segment[%s]", dataSegment.getId());
+          }
+        }
+        releaseMetadataQuietly(theLocation, theMetadata, dataSegment);
+        atomicMoveAndDeleteCacheEntryDirectory(theMetadata.getLocalCacheDir());
+        throw t;
+      }
+    });
+
+    try {
+      future.get();
+    }
+    catch (InterruptedException e) {
+      // Caller interrupted while waiting. Restore the interrupt flag and propagate, but do NOT cancel the pool task:
+      // FutureTask.cancel(true) transitions to CANCELLED synchronously, but the callable's run() may still be
+      // executing its catch/finally on the pool thread, so a subsequent metadata release from the caller would race
+      // that cleanup. Leaving the task alone lets its own cleanup complete on the pool thread naturally; on eventual
+      // shutdown the pool's shutdownNow will interrupt the worker and drive the same rollback via the callable's
+      // catch.
+      Thread.currentThread().interrupt();
+      throw new SegmentLoadingException(e, "Interrupted while loading partial segment[%s]", dataSegment.getId());
+    }
+    catch (Throwable t) {
+      // Callable ran to a terminal state. On failure it already released metadata + bundles on the pool thread via
+      // its catch block. We only propagate the diagnostic here; no cleanup remains for the caller. Restore the
+      // interrupt flag if set so downstream shutdown handling still observes it.
+      final Throwable executionCause = (t instanceof ExecutionException) ? t.getCause() : t;
+      final Throwable cause = (executionCause != null) ? executionCause : t;
+      if (cause instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
+      throw new SegmentLoadingException(
+          cause,
+          "Failed to load partial segment[%s] with rule-pinned bundles",
+          dataSegment.getId()
+      );
+    }
+  }
+
+  /**
+   * Pair of storage location + reserved metadata entry, returned by
+   * {@link #reserveMetadataOnFirstAvailableLocation} and threaded through the info-file persist and async mount
+   * steps.
+   */
+  private record PartialReservation(StorageLocation location, PartialSegmentMetadataCacheEntry metadata)
+  {
   }
 
   /**

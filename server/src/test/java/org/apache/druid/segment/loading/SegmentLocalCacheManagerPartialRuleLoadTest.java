@@ -186,109 +186,6 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     }
   }
 
-  private SegmentLocalCacheManager makeManager(boolean virtualStorage, boolean partialDownloadsEnabled)
-  {
-    return makeManagerAtLocations(virtualStorage, partialDownloadsEnabled, List.of(cacheRoot));
-  }
-
-  private SegmentLocalCacheManager makeManagerAtLocations(
-      boolean virtualStorage,
-      boolean partialDownloadsEnabled,
-      List<File> locationRoots
-  )
-  {
-    final List<StorageLocationConfig> locConfigs = locationRoots.stream()
-        .map(root -> new StorageLocationConfig(root, 1024L * 1024L * 1024L, null))
-        .toList();
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-        .setLocations(locConfigs)
-        .setVirtualStorage(virtualStorage)
-        .setVirtualStoragePartialDownloadsEnabled(partialDownloadsEnabled);
-    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
-    return new SegmentLocalCacheManager(
-        storageLocations,
-        loaderConfig,
-        StorageLoadingThreadPool.createFromConfig(loaderConfig),
-        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
-        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
-        jsonMapper
-    );
-  }
-
-  private DataSegment partialWrapperSegment(List<String> selectedProjections)
-  {
-    return partialWrapperSegment(selectedProjections, FINGERPRINT);
-  }
-
-  private DataSegment partialWrapperSegment(List<String> selectedProjections, String fingerprint)
-  {
-    final Map<String, Object> delegate = Map.of(
-        "type", "local",
-        "path", DEEP_STORAGE_DIR.getAbsolutePath()
-    );
-    final Map<String, Object> wrapperWire =
-        PartialProjectionLoadSpec.wireForm(delegate, selectedProjections, fingerprint);
-    return DataSegment.builder(SEGMENT_ID)
-                      .shardSpec(NoneShardSpec.instance())
-                      .loadSpec(wrapperWire)
-                      .size(0)
-                      .build();
-  }
-
-  /**
-   * A wrapper whose inner LoadSpec resolves via {@code LocalLoadSpec} against a directory that holds no V10 file, so
-   * {@code openRangeReader()} returns {@code null}. Simulates the "backend doesn't support range reads" case (e.g. a
-   * historical that received a partial-load rule pointing at zipped deep storage).
-   */
-  private DataSegment partialWrapperSegmentWithNullRangeReader(List<String> selectedProjections, String fingerprint)
-      throws IOException
-  {
-    final File noRangeReaderDir = new File(
-        perTestTempDir,
-        "no_range_reader_" + fingerprint.replace(':', '_').replace('.', '_')
-    );
-    FileUtils.mkdirp(noRangeReaderDir);
-    final Map<String, Object> delegate = Map.of(
-        "type", "local",
-        "path", noRangeReaderDir.getAbsolutePath()
-    );
-    final Map<String, Object> wrapperWire =
-        PartialProjectionLoadSpec.wireForm(delegate, selectedProjections, fingerprint);
-    return DataSegment.builder(SEGMENT_ID)
-                      .shardSpec(NoneShardSpec.instance())
-                      .loadSpec(wrapperWire)
-                      .size(0)
-                      .build();
-  }
-
-  /**
-   * Post-load lookup of the mounted partial metadata entry. loadPartial is synchronous — by the time load() returns,
-   * the entry is either fully mounted or the call threw; tests can inspect state immediately.
-   */
-  private static PartialSegmentMetadataCacheEntry mountedMetadata(StorageLocation location, SegmentId segmentId)
-  {
-    final CacheEntry entry = location.getStaticCacheEntry(new SegmentCacheEntryIdentifier(segmentId));
-    Assertions.assertInstanceOf(PartialSegmentMetadataCacheEntry.class, entry);
-    final PartialSegmentMetadataCacheEntry partial = (PartialSegmentMetadataCacheEntry) entry;
-    Assertions.assertTrue(partial.isMounted(), "metadata entry for " + segmentId + " should be mounted after load()");
-    return partial;
-  }
-
-  private static PartialSegmentBundleCacheEntry mountedBundle(
-      StorageLocation location,
-      SegmentId segmentId,
-      String bundleName
-  )
-  {
-    final CacheEntry entry = location.getStaticCacheEntry(
-        new PartialSegmentBundleCacheEntryIdentifier(segmentId, bundleName)
-    );
-    Assertions.assertInstanceOf(PartialSegmentBundleCacheEntry.class, entry);
-    final PartialSegmentBundleCacheEntry bundle = (PartialSegmentBundleCacheEntry) entry;
-    Assertions.assertTrue(bundle.isMounted(), "bundle " + bundleName + " should be mounted after load()");
-    return bundle;
-  }
-
   @Test
   void testLoadPinsMetadataAndSelectedBundleAsStatic() throws Exception
   {
@@ -754,40 +651,6 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     }
   }
 
-  private static CacheEntry stubCacheEntry(CacheEntryIdentifier id, long size)
-  {
-    return new CacheEntry()
-    {
-      @Override
-      public CacheEntryIdentifier getId()
-      {
-        return id;
-      }
-
-      @Override
-      public long getSize()
-      {
-        return size;
-      }
-
-      @Override
-      public boolean isMounted()
-      {
-        return false;
-      }
-
-      @Override
-      public void mount(StorageLocation location)
-      {
-      }
-
-      @Override
-      public void unmount()
-      {
-      }
-    };
-  }
-
   @Test
   void testLoadFailureCascadeReleasesEverything() throws Exception
   {
@@ -826,5 +689,150 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     // as part of the cascade release.
     final File infoFile = new File(new File(cacheRoot, "info_dir"), SEGMENT_ID.toString());
     Assertions.assertFalse(infoFile.exists(), "info file should be deleted by the metadata's onUnmount hook");
+    // The per-segment cache dir was created by mkdirp in reserveMetadataOnFirstAvailableLocation; the mount-failure
+    // rollback in mountAndAwaitPartial must nuke it (doActualUnmount deletes only header files, not the enclosing
+    // directory). Otherwise an empty dir would linger on disk until the next reconciliation for this segment.
+    final File partialDir = new File(cacheRoot, SEGMENT_ID.toString());
+    Assertions.assertFalse(
+        partialDir.exists(),
+        "per-segment cache dir must be nuked after mount-failure rollback"
+    );
+  }
+
+  private SegmentLocalCacheManager makeManager(boolean virtualStorage, boolean partialDownloadsEnabled)
+  {
+    return makeManagerAtLocations(virtualStorage, partialDownloadsEnabled, List.of(cacheRoot));
+  }
+
+  private SegmentLocalCacheManager makeManagerAtLocations(
+      boolean virtualStorage,
+      boolean partialDownloadsEnabled,
+      List<File> locationRoots
+  )
+  {
+    final List<StorageLocationConfig> locConfigs = locationRoots.stream()
+                                                                .map(root -> new StorageLocationConfig(root, 1024L * 1024L * 1024L, null))
+                                                                .toList();
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+        .setLocations(locConfigs)
+        .setVirtualStorage(virtualStorage)
+        .setVirtualStoragePartialDownloadsEnabled(partialDownloadsEnabled);
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
+    return new SegmentLocalCacheManager(
+        storageLocations,
+        loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
+        jsonMapper
+    );
+  }
+
+  private DataSegment partialWrapperSegment(List<String> selectedProjections)
+  {
+    return partialWrapperSegment(selectedProjections, FINGERPRINT);
+  }
+
+  private DataSegment partialWrapperSegment(List<String> selectedProjections, String fingerprint)
+  {
+    final Map<String, Object> delegate = Map.of(
+        "type", "local",
+        "path", DEEP_STORAGE_DIR.getAbsolutePath()
+    );
+    final Map<String, Object> wrapperWire =
+        PartialProjectionLoadSpec.wireForm(delegate, selectedProjections, fingerprint);
+    return DataSegment.builder(SEGMENT_ID)
+                      .shardSpec(NoneShardSpec.instance())
+                      .loadSpec(wrapperWire)
+                      .size(0)
+                      .build();
+  }
+
+  /**
+   * A wrapper whose inner LoadSpec resolves via {@code LocalLoadSpec} against a directory that holds no V10 file, so
+   * {@code openRangeReader()} returns {@code null}. Simulates the "backend doesn't support range reads" case (e.g. a
+   * historical that received a partial-load rule pointing at zipped deep storage).
+   */
+  private DataSegment partialWrapperSegmentWithNullRangeReader(List<String> selectedProjections, String fingerprint)
+      throws IOException
+  {
+    final File noRangeReaderDir = new File(
+        perTestTempDir,
+        "no_range_reader_" + fingerprint.replace(':', '_').replace('.', '_')
+    );
+    FileUtils.mkdirp(noRangeReaderDir);
+    final Map<String, Object> delegate = Map.of(
+        "type", "local",
+        "path", noRangeReaderDir.getAbsolutePath()
+    );
+    final Map<String, Object> wrapperWire =
+        PartialProjectionLoadSpec.wireForm(delegate, selectedProjections, fingerprint);
+    return DataSegment.builder(SEGMENT_ID)
+                      .shardSpec(NoneShardSpec.instance())
+                      .loadSpec(wrapperWire)
+                      .size(0)
+                      .build();
+  }
+
+  /**
+   * Post-load lookup of the mounted partial metadata entry. loadPartial is synchronous — by the time load() returns,
+   * the entry is either fully mounted or the call threw; tests can inspect state immediately.
+   */
+  private static PartialSegmentMetadataCacheEntry mountedMetadata(StorageLocation location, SegmentId segmentId)
+  {
+    final CacheEntry entry = location.getStaticCacheEntry(new SegmentCacheEntryIdentifier(segmentId));
+    Assertions.assertInstanceOf(PartialSegmentMetadataCacheEntry.class, entry);
+    final PartialSegmentMetadataCacheEntry partial = (PartialSegmentMetadataCacheEntry) entry;
+    Assertions.assertTrue(partial.isMounted(), "metadata entry for " + segmentId + " should be mounted after load()");
+    return partial;
+  }
+
+  private static PartialSegmentBundleCacheEntry mountedBundle(
+      StorageLocation location,
+      SegmentId segmentId,
+      String bundleName
+  )
+  {
+    final CacheEntry entry = location.getStaticCacheEntry(
+        new PartialSegmentBundleCacheEntryIdentifier(segmentId, bundleName)
+    );
+    Assertions.assertInstanceOf(PartialSegmentBundleCacheEntry.class, entry);
+    final PartialSegmentBundleCacheEntry bundle = (PartialSegmentBundleCacheEntry) entry;
+    Assertions.assertTrue(bundle.isMounted(), "bundle " + bundleName + " should be mounted after load()");
+    return bundle;
+  }
+
+  private static CacheEntry stubCacheEntry(CacheEntryIdentifier id, long size)
+  {
+    return new CacheEntry()
+    {
+      @Override
+      public CacheEntryIdentifier getId()
+      {
+        return id;
+      }
+
+      @Override
+      public long getSize()
+      {
+        return size;
+      }
+
+      @Override
+      public boolean isMounted()
+      {
+        return false;
+      }
+
+      @Override
+      public void mount(StorageLocation location)
+      {
+      }
+
+      @Override
+      public void unmount()
+      {
+      }
+    };
   }
 }
