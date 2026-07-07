@@ -24,7 +24,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DefaultQueryBlocklistRule;
 import org.apache.druid.server.QueryBlocklistRule;
@@ -203,5 +207,46 @@ public class BrokerDynamicConfigTest
     EqualsVerifier.forClass(BrokerDynamicConfig.class)
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testContextOverridesInjectsPerSegmentTimeoutForMatchingDatasource()
+  {
+    BrokerDynamicConfig config = perSegmentTimeout("ds", new PerSegmentTimeoutConfig(5000, false));
+    Assert.assertEquals(5000L, config.getQuerySpecificContextOverrides(query("ds")).getPerSegmentTimeout());
+  }
+
+  @Test
+  public void testContextOverridesEmptyForMonitorOnly()
+  {
+    BrokerDynamicConfig config = perSegmentTimeout("ds", new PerSegmentTimeoutConfig(5000, true));
+    Assert.assertTrue(config.getQuerySpecificContextOverrides(query("ds")).isEmpty());
+  }
+
+  @Test
+  public void testContextOverridesEmptyForNonMatchingDatasource()
+  {
+    BrokerDynamicConfig config = perSegmentTimeout("other", new PerSegmentTimeoutConfig(5000, false));
+    Assert.assertTrue(config.getQuerySpecificContextOverrides(query("ds")).isEmpty());
+  }
+
+  @Test
+  public void testContextOverridesEmptyWhenNoPerSegmentTimeoutConfigured()
+  {
+    Assert.assertTrue(BrokerDynamicConfig.builder().build().getQuerySpecificContextOverrides(query("ds")).isEmpty());
+  }
+
+  private static BrokerDynamicConfig perSegmentTimeout(String datasource, PerSegmentTimeoutConfig timeoutConfig)
+  {
+    return BrokerDynamicConfig.builder().withPerSegmentTimeoutConfig(Map.of(datasource, timeoutConfig)).build();
+  }
+
+  private static TimeseriesQuery query(String datasource)
+  {
+    return Druids.newTimeseriesQueryBuilder()
+                 .dataSource(datasource)
+                 .intervals(List.of(Intervals.ETERNITY))
+                 .aggregators(new CountAggregatorFactory("count"))
+                 .build();
   }
 }
