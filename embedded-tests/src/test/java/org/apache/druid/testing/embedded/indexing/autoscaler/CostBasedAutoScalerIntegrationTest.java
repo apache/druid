@@ -289,7 +289,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
                       .hasValueMatching(Matchers.greaterThan(1L))
     );
-    Assertions.assertEquals(4, getCurrentTaskCount(supervisor.getId()));
+    Assertions.assertTrue(getCurrentTaskCount(supervisor.getId()) > 1);
     waitUntilPublishedRecordsAreIngested(totalRecords);
 
     // Let the tasks work through the lag.

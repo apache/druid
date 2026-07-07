@@ -90,7 +90,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   }
 
   @SuppressWarnings("unchecked")
-  @Parameterized.Parameters(name = "{0}, vectorize = {1}")
+  @Parameterized.Parameters(name = "{0}, vectorize = {1}, useVectorApi = {2}")
   public static Iterable<Object[]> constructorFeeder()
   {
     setUpClass();
@@ -183,9 +183,15 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
       };
 
       for (boolean vectorize : ImmutableList.of(false, true)) {
-        // Add vectorization tests for any indexes that support it.
-        if (!vectorize || QueryRunnerTestHelper.isTestRunnerVectorizable(runner)) {
-          constructors.add(new Object[]{modifiedRunner, vectorize});
+        for (boolean useVectorApi : ImmutableList.of(false, true)) {
+          if (!vectorize && useVectorApi) {
+            // SIMD path is reachable only when vectorization is on; skip the redundant combo.
+            continue;
+          }
+          // Add vectorization tests for any indexes that support it.
+          if (!vectorize || QueryRunnerTestHelper.isTestRunnerVectorizable(runner)) {
+            constructors.add(new Object[]{modifiedRunner, vectorize, useVectorApi});
+          }
         }
       }
     }
@@ -193,9 +199,9 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     return constructors;
   }
 
-  public GroupByTimeseriesQueryRunnerTest(QueryRunner runner, boolean vectorize)
+  public GroupByTimeseriesQueryRunnerTest(QueryRunner runner, boolean vectorize, boolean useVectorApi)
   {
-    super(runner, false, vectorize, QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS);
+    super(runner, false, vectorize, QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS, useVectorApi);
   }
 
   // GroupBy handles timestamps differently when granularity is ALL
