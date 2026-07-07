@@ -31,9 +31,9 @@ Druid officially supports Java 21 and 25.
 
 The project team recommends using an OpenJDK-based Java distribution. There are many free and actively-supported
 distributions available, including
-[Amazon Corretto](https://docs.aws.amazon.com/corretto/latest/corretto-17-ug/what-is-corretto-17.html),
-[Azul Zulu](https://www.azul.com/downloads/?version=java-17-lts&package=jdk), and
-[Eclipse Temurin](https://adoptium.net/temurin/releases?version=17).
+[Amazon Corretto](https://aws.amazon.com/corretto/),
+[Azul Zulu](https://www.azul.com/downloads/), and
+[Eclipse Temurin](https://adoptium.net/temurin/releases/).
 The project team does not recommend any specific distribution over any other.
 
 Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to find Java on the machine. You can set
@@ -43,7 +43,7 @@ Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to fi
 ## Garbage collection
 
 In general, the project team recommends using the G1 collector with default settings. This is the default collector in
-Java 17.
+the supported Java versions.
 
 Garbage collector selection and tuning is a form of sport in the Java community. There may be situations where adjusting
 garbage collection configuration improves or worsens performance. The project team's guidance is that most people do
@@ -51,11 +51,11 @@ not need to stray away from G1 with default settings.
 
 ## Strong encapsulation
 
-Java 9 and beyond (including Java 17) include the capability for
+The supported Java versions include the capability for
 [strong encapsulation](https://dev.java/learn/strong-encapsulation-\(of-jdk-internals\)/) of internal JDK APIs. Druid
 uses certain internal JDK APIs, which must be added to `--add-exports` and `--add-opens` on the Java command line.
 
-On Java 17, if these parameters are not included, you will see errors on startup like the following:
+If these parameters are not included, you will see errors on startup like the following:
 
 ```
 Exception in thread "main" java.lang.ExceptionInInitializerError
