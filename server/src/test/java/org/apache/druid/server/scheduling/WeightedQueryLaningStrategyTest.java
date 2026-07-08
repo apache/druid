@@ -376,6 +376,82 @@ public class WeightedQueryLaningStrategyTest
     );
   }
 
+  @Test
+  public void testComputeLane_segmentCountWeight_bumpsCost()
+  {
+    // A single segmentCount breach normally scores 1 -> "low"; weighting it 3 makes cost=3 -> "very-low".
+    WeightedQueryLaningStrategy strategy =
+        new WeightedQueryLaningStrategy(null, null, 1, null, TWO_LANES, null, null, 3, null);
+    TimeseriesQuery query = queryBuilder.build();
+    Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), makeSegments(5));
+    Assert.assertTrue(lane.isPresent());
+    Assert.assertEquals("very-low", lane.get());
+  }
+
+  @Test
+  public void testComputeLane_defaultWeightUnchanged()
+  {
+    // Same single segmentCount breach without weights stays "low" (weight defaults to 1).
+    WeightedQueryLaningStrategy strategy = new WeightedQueryLaningStrategy(null, null, 1, null, TWO_LANES);
+    Optional<String> lane = strategy.computeLane(QueryPlus.wrap(queryBuilder.build()), makeSegments(5));
+    Assert.assertTrue(lane.isPresent());
+    Assert.assertEquals("low", lane.get());
+  }
+
+  @Test
+  public void testComputeLane_weightsSumAcrossThresholds()
+  {
+    // Breach durationThreshold (weight 2) + segmentCountThreshold (weight 2) => cost 4 => "very-low".
+    WeightedQueryLaningStrategy strategy =
+        new WeightedQueryLaningStrategy(null, "PT1S", 1, null, TWO_LANES, null, 2, 2, null);
+    Optional<String> lane = strategy.computeLane(QueryPlus.wrap(queryBuilder.build()), makeSegments(5));
+    Assert.assertTrue(lane.isPresent());
+    Assert.assertEquals("very-low", lane.get());
+  }
+
+  @Test
+  public void testSerde_withWeights() throws Exception
+  {
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    String json = "{\n"
+                  + "  \"strategy\": \"weighted\",\n"
+                  + "  \"segmentCountThreshold\": 1,\n"
+                  + "  \"segmentCountWeight\": 3,\n"
+                  + "  \"lanes\": {\n"
+                  + "    \"low\": { \"minCost\": 1, \"maxPercent\": 30 },\n"
+                  + "    \"very-low\": { \"minCost\": 3, \"maxPercent\": 10 }\n"
+                  + "  }\n"
+                  + "}";
+    QueryLaningStrategy deserialized = mapper.readValue(json, QueryLaningStrategy.class);
+    Assert.assertTrue(deserialized instanceof WeightedQueryLaningStrategy);
+    // weight 3 applied to the single segmentCount breach -> cost 3 -> "very-low"
+    Optional<String> lane = deserialized.computeLane(QueryPlus.wrap(queryBuilder.build()), makeSegments(5));
+    Assert.assertEquals("very-low", lane.orElse(null));
+  }
+
+  @Test
+  public void testValidation_weightBelowOne()
+  {
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new WeightedQueryLaningStrategy(null, null, 1, null, TWO_LANES, null, null, 0, null)
+    );
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new WeightedQueryLaningStrategy(null, null, 1, null, TWO_LANES, null, null, -1, null)
+    );
+  }
+
+  @Test
+  public void testValidation_weightForUnsetThreshold()
+  {
+    // periodWeight set but no periodThreshold configured -> reject (weight would be inert).
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new WeightedQueryLaningStrategy(null, null, 1, null, TWO_LANES, 5, null, null, null)
+    );
+  }
+
   private static Set<SegmentServerSelector> makeSegments(int count)
   {
     Set<SegmentServerSelector> segments = new HashSet<>();
