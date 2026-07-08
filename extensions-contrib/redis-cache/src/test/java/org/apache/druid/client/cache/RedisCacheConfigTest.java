@@ -250,4 +250,22 @@ public class RedisCacheConfigTest
     );
     Assert.assertTrue(tlsConfig.getEnableTls());
   }
+
+  @Test
+  public void testSkipTlsHostnameVerification() throws IOException
+  {
+    ObjectMapper mapper = new ObjectMapper();
+
+    RedisCacheConfig defaultConfig = mapper.readValue(
+        "{\"host\": \"localhost\", \"port\": 6379}",
+        RedisCacheConfig.class
+    );
+    Assert.assertFalse(defaultConfig.getSkipTlsHostnameVerification());
+
+    RedisCacheConfig skipConfig = mapper.readValue(
+        "{\"host\": \"localhost\", \"port\": 6379, \"skipTlsHostnameVerification\": true}",
+        RedisCacheConfig.class
+    );
+    Assert.assertTrue(skipConfig.getSkipTlsHostnameVerification());
+  }
 }

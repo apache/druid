@@ -28,6 +28,8 @@ import redis.clients.jedis.JedisClientConfig;
 import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.SslOptions;
+import redis.clients.jedis.SslVerifyMode;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -69,7 +71,7 @@ public class RedisCacheFactory
 
       JedisCluster cluster = new JedisCluster(
           nodes,
-          buildClientConfig(config),
+          buildClientConfig(config, 0),
           config.getCluster().getMaxRedirection(),
           poolConfig
       );
@@ -91,24 +93,29 @@ public class RedisCacheFactory
           new JedisPool(
               poolConfig,
               new HostAndPort(config.getHost(), config.getPort()),
-              buildClientConfig(config)
+              buildClientConfig(config, config.getDatabase())
           ),
           config
       );
     }
   }
 
-  private static JedisClientConfig buildClientConfig(RedisCacheConfig config)
+  private static JedisClientConfig buildClientConfig(RedisCacheConfig config, int database)
   {
-    return DefaultJedisClientConfig
+    DefaultJedisClientConfig.Builder builder = DefaultJedisClientConfig
         .builder()
         .connectionTimeoutMillis(config.getTimeout().getMillisecondsAsInt())
         .socketTimeoutMillis(config.getTimeout().getMillisecondsAsInt())
         .password(config.getPassword() == null ? null : config.getPassword().getPassword())
-        // database applies to standalone only; Redis Cluster supports database 0 only, so this
-        // is a no-op in cluster mode (the default is 0).
-        .database(config.getDatabase())
-        .ssl(config.getEnableTls())
-        .build();
+        .database(database)
+        .ssl(config.getEnableTls());
+
+    if (config.getEnableTls()) {
+      SslVerifyMode verifyMode =
+          config.getSkipTlsHostnameVerification() ? SslVerifyMode.CA : SslVerifyMode.FULL;
+      builder.sslOptions(SslOptions.builder().sslVerifyMode(verifyMode).build());
+    }
+
+    return builder.build();
   }
 }
