@@ -123,7 +123,7 @@ public class OpaAuthorizerTest
     Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
 
     Assert.assertFalse(access.isAllowed());
-    Assert.assertEquals("Unauthorized, Access denied.", access.getMessage());
+    Assert.assertEquals(Access.DENIED.getMessage(), access.getMessage());
   }
 
   @Test
