@@ -232,4 +232,22 @@ public class RedisCacheConfigTest
     ));
     RedisCacheFactory.create(fromJson);
   }
+
+  @Test
+  public void testEnableTls() throws IOException
+  {
+    ObjectMapper mapper = new ObjectMapper();
+
+    RedisCacheConfig defaultConfig = mapper.readValue(
+        "{\"host\": \"localhost\", \"port\": 6379}",
+        RedisCacheConfig.class
+    );
+    Assert.assertFalse(defaultConfig.getEnableTls());
+
+    RedisCacheConfig tlsConfig = mapper.readValue(
+        "{\"host\": \"localhost\", \"port\": 6379, \"enableTls\": true}",
+        RedisCacheConfig.class
+    );
+    Assert.assertTrue(tlsConfig.getEnableTls());
+  }
 }

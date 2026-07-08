@@ -144,6 +144,12 @@ public class RedisCacheConfig
   @Min(0)
   private int database = Protocol.DEFAULT_DATABASE;
 
+  /**
+   * whether to connect to redis server/cluster over TLS.
+   */
+  @JsonProperty
+  private boolean enableTls = false;
+
   @JsonProperty
   private RedisClusterConfig cluster;
 
@@ -195,5 +201,10 @@ public class RedisCacheConfig
   public int getDatabase()
   {
     return database;
+  }
+
+  public boolean getEnableTls()
+  {
+    return enableTls;
   }
 }
