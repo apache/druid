@@ -19,9 +19,14 @@
 
 package org.apache.druid.testing.embedded.opa;
 
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.testing.embedded.EmbeddedResource;
 import org.apache.druid.testing.embedded.auth.AbstractAuthConfigurationTest;
+import org.apache.druid.testing.embedded.auth.HttpUtil;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
 
 import java.util.Properties;
@@ -93,6 +98,19 @@ public class OpaLdapAuthConfigurationDockerTest extends AbstractAuthConfiguratio
   protected String getExpectedAvaticaAuthzError()
   {
     return EXPECTED_AVATICA_AUTHZ_ERROR;
+  }
+
+  @Override
+  protected void checkLoadStatusSingle(HttpClient httpClient, String baseUrl) throws Exception
+  {
+    StatusResponseHolder holder = HttpUtil.makeRequest(
+        httpClient,
+        HttpMethod.GET,
+        baseUrl + "/druid-ext/basic-security/authentication/loadStatus"
+    );
+    String content = holder.getContent();
+    Assertions.assertTrue(content.contains("\"" + AUTHENTICATOR_NAME + "\":true"));
+    // OPA authorizer does not register with basic-security authorization loadStatus endpoint
   }
 
   @Override
