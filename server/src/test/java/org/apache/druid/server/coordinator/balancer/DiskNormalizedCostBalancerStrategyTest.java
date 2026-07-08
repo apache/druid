@@ -243,8 +243,8 @@ public class DiskNormalizedCostBalancerStrategyTest
         newCostStrategy().findServersToLoadSegment(proposal, servers).next().getServer().getName()
     );
 
-    // DiskNormalized uses projected headroom: A ~= 10K / 0.09, B ~= 60K / 0.89.
-    // The emptier server wins despite the higher raw cost.
+    // DiskNormalized penalizes A because its projected utilization is more than
+    // the threshold above B's projected utilization.
     Assert.assertEquals(
         "DiskNormalizedCostBalancerStrategy must prefer the emptier server",
         "B",
@@ -277,10 +277,10 @@ public class DiskNormalizedCostBalancerStrategyTest
         newCostStrategy().findDestinationServerToMoveSegment(segmentToMove, heavy, servers)
     );
 
-    // DiskNormalizedCostBalancerStrategy (default 5% threshold):
-    //   A: 38K / 0.20 * 0.95 = 180.5K
-    //   B: 40K / 0.80        =  50.0K
-    // B wins decisively and the segment moves, reducing the skew.
+    // DiskNormalizedCostBalancerStrategy (default 5% utilization threshold):
+    // A's utilization is outside the threshold band, so it receives an
+    // exponential penalty. B wins decisively and the segment moves, reducing
+    // the skew.
     final ServerHolder diskNormalizedResult =
         newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, heavy, servers);
     Assert.assertNotNull(
@@ -302,20 +302,21 @@ public class DiskNormalizedCostBalancerStrategyTest
     servers.add(source);
     servers.add(dest);
 
-    // Default threshold (5%): dest is not cheap enough to justify the move.
+    // Default threshold (5%): source and dest are inside the utilization
+    // deadband, so normal cost decides and the segment stays put.
     Assert.assertNull(
         "Default threshold must block a marginal move to prevent ping-ponging",
         newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers)
     );
 
-    // Lowering the threshold to 1% reduces the discount; the same marginal
-    // difference now triggers the move. This proves the threshold is what
-    // blocks it above.
-    final BalancerStrategy onePercentThreshold = new DiskNormalizedCostBalancerStrategy(
+    // Lowering the threshold to 1% makes the same utilization difference fall
+    // outside the deadband and trigger the exponential penalty.
+    final BalancerStrategy onePercentUtilizationThreshold = new DiskNormalizedCostBalancerStrategy(
         MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d")),
         0.01
     );
-    final ServerHolder movedTo = onePercentThreshold.findDestinationServerToMoveSegment(segmentToMove, source, servers);
+    final ServerHolder movedTo =
+        onePercentUtilizationThreshold.findDestinationServerToMoveSegment(segmentToMove, source, servers);
     Assert.assertNotNull("With threshold=0.01, the marginal move should fire", movedTo);
     Assert.assertEquals("DEST", movedTo.getServer().getName());
   }
@@ -341,8 +342,8 @@ public class DiskNormalizedCostBalancerStrategyTest
         newCostStrategy().findServersToLoadSegment(newSegment, servers).next().getServer().getName()
     );
 
-    // DiskNormalized uses projected headroom: A_norm = 10K / 0.04 = 250K,
-    // B_norm = 40K / 0.29 = 138K -> B wins.
+    // A's projected utilization is more than the threshold above B's, so the
+    // exponential penalty makes B cheaper.
     Assert.assertEquals(
         "DiskNormalized must prefer the emptier server despite its higher raw cost",
         "B",
@@ -354,9 +355,9 @@ public class DiskNormalizedCostBalancerStrategyTest
   public void testProjectedSegmentSizeIsUsedForNewSegmentLoad()
   {
     final long maxSize = 1_000_000L;
-    // A has the lower raw cost, but the 250 KB proposal would leave only 5% headroom.
+    // A has the lower raw cost, but the 250 KB proposal would leave it at 95% utilization.
     final ServerHolder almostFullAfterLoad = buildServer("A", maxSize, 700_000L, 0, 5);
-    // B has more co-located segments, but keeps 25% headroom after the proposal.
+    // B has more co-located segments, but stays at 75% utilization after the proposal.
     final ServerHolder moreHeadroomAfterLoad = buildServer("B", maxSize, 500_000L, 100, 20);
 
     final DataSegment largeSegment = getSegment(1000, "DUMMY", DAY, 250_000L);
@@ -371,10 +372,9 @@ public class DiskNormalizedCostBalancerStrategyTest
         newCostStrategy().findServersToLoadSegment(largeSegment, servers).next().getServer().getName()
     );
 
-    // If diskNormalized used current headroom, A would also win:
-    //   A_current = 10K / 0.30, B_current = 40K / 0.50.
-    // With projected headroom, B wins:
-    //   A_projected = 10K / 0.05, B_projected = 40K / 0.25.
+    // If diskNormalized used current utilization, A and B would be inside the
+    // threshold band and A would win by raw cost. With projected utilization,
+    // A falls outside the band and B wins.
     Assert.assertEquals(
         "DiskNormalized must account for the proposal size before choosing a server",
         "B",
@@ -402,8 +402,8 @@ public class DiskNormalizedCostBalancerStrategyTest
     Assert.assertNotNull("CostBalancerStrategy must recommend moving to the near-full DEST", costResult);
     Assert.assertEquals("DEST", costResult.getServer().getName());
 
-    // DiskNormalized: DEST_norm = 10K / 0.05 = 200K > SOURCE_norm = 38K / 0.30 * 0.95 ≈ 120K.
-    // Near-full DEST is too expensive after normalization -> no move.
+    // DEST is outside the utilization threshold band and receives an
+    // exponential penalty, so the move is blocked.
     Assert.assertNull(
         "DiskNormalized must block the move to the near-full server",
         newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers)
@@ -423,7 +423,7 @@ public class DiskNormalizedCostBalancerStrategyTest
 
     // SOURCE is fuller before the move, but already projects the segment.
     final ServerHolder source = buildServer("SOURCE", maxSize, 8_000_000L, sourceSegments);
-    // DEST has low raw cost, but loading the 2.5 MB segment would leave only 5% headroom.
+    // DEST has low raw cost, but loading the 2.5 MB segment would leave it at 95% utilization.
     final ServerHolder dest = buildServer("DEST", maxSize, 7_000_000L, 100, 5);
 
     final List<ServerHolder> servers = new ArrayList<>();
@@ -436,8 +436,9 @@ public class DiskNormalizedCostBalancerStrategyTest
     Assert.assertNotNull("CostBalancerStrategy must recommend moving to the lower raw-cost DEST", costResult);
     Assert.assertEquals("DEST", costResult.getServer().getName());
 
-    // If diskNormalized used current headroom, DEST would win: 10K / 0.30 < 38K / 0.20 * 0.95.
-    // With projected headroom, DEST is too full after placement: 10K / 0.05 > 38K / 0.20 * 0.95.
+    // If diskNormalized used current utilization, DEST would be inside the
+    // threshold band and win by raw cost. With projected utilization, DEST is
+    // outside the band and the move is blocked.
     Assert.assertNull(
         "DiskNormalized must not move a large segment to a server that would become too full",
         newDiskNormalizedStrategy().findDestinationServerToMoveSegment(largeSegment, source, servers)
@@ -445,8 +446,38 @@ public class DiskNormalizedCostBalancerStrategyTest
   }
 
   @Test
-  public void testRejectsInvalidThreshold()
+  public void testConfigUsesUtilizationThreshold()
   {
+    Assert.assertEquals(
+        0.05,
+        new DiskNormalizedCostBalancerStrategyConfig().getUtilizationThreshold(),
+        0.0
+    );
+    Assert.assertEquals(
+        0.01,
+        new DiskNormalizedCostBalancerStrategyConfig(0.01).getUtilizationThreshold(),
+        0.0
+    );
+  }
+
+  @Test
+  public void testRejectsInvalidUtilizationThreshold()
+  {
+    assertInvalidConfigThreshold(0.0);
+    assertInvalidConfigThreshold(1.0);
+    assertInvalidConfigThreshold(-0.01);
+
+    try {
+      new DiskNormalizedCostBalancerStrategy(
+          MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d")),
+          0.0
+      );
+      Assert.fail("Expected IllegalArgumentException for threshold=0.0");
+    }
+    catch (IllegalArgumentException expected) {
+      // expected
+    }
+
     try {
       new DiskNormalizedCostBalancerStrategy(
           MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d")),
@@ -464,6 +495,17 @@ public class DiskNormalizedCostBalancerStrategyTest
           -0.01
       );
       Assert.fail("Expected IllegalArgumentException for negative threshold");
+    }
+    catch (IllegalArgumentException expected) {
+      // expected
+    }
+  }
+
+  private static void assertInvalidConfigThreshold(double threshold)
+  {
+    try {
+      new DiskNormalizedCostBalancerStrategyConfig(threshold);
+      Assert.fail("Expected IllegalArgumentException for threshold=" + threshold);
     }
     catch (IllegalArgumentException expected) {
       // expected
