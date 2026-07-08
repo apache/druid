@@ -279,7 +279,7 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
       return Optional.of(existingLane);
     }
 
-    int cost = computeCost(query.getQuery(), segments);
+    long cost = computeCost(query.getQuery(), segments);
     if (cost == 0) {
       return Optional.empty();
     }
@@ -297,9 +297,12 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
     return Optional.ofNullable(highestLane);
   }
 
-  private <T> int computeCost(Query<T> query, Set<SegmentServerSelector> segments)
+  // Accumulated as a long: with per-threshold weights up to Integer.MAX_VALUE, summing all four in an int could
+  // overflow into a negative cost, silently bypassing every lane. Callers compare this against int minCost values,
+  // so overflow of the long itself is not a concern in practice.
+  private <T> long computeCost(Query<T> query, Set<SegmentServerSelector> segments)
   {
-    int cost = 0;
+    long cost = 0;
 
     if (periodThreshold != null) {
       final DateTime now = DateTimes.nowUtc();

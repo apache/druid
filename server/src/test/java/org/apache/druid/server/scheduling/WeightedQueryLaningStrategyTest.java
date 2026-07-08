@@ -410,6 +410,28 @@ public class WeightedQueryLaningStrategyTest
   }
 
   @Test
+  public void testComputeLane_largeWeightsDoNotOverflowToNegativeCost()
+  {
+    // durationThreshold and segmentCountThreshold both breached, each weighted at Integer.MAX_VALUE. A naive
+    // int accumulation would wrap around to a negative cost and bypass every lane (Optional.empty()); the fix
+    // accumulates as a long, so the query still lands in the most restrictive lane.
+    WeightedQueryLaningStrategy strategy = new WeightedQueryLaningStrategy(
+        null,
+        "PT1S",
+        1,
+        null,
+        TWO_LANES,
+        null,
+        Integer.MAX_VALUE,
+        Integer.MAX_VALUE,
+        null
+    );
+    Optional<String> lane = strategy.computeLane(QueryPlus.wrap(queryBuilder.build()), makeSegments(5));
+    Assert.assertTrue(lane.isPresent());
+    Assert.assertEquals("very-low", lane.get());
+  }
+
+  @Test
   public void testSerde_withWeights() throws Exception
   {
     ObjectMapper mapper = TestHelper.makeJsonMapper();
