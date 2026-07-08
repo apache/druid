@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.calcite.avatica.remote.ProtobufTranslation;
@@ -387,7 +386,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     final String errorMessage = exceptionToReport.getMessage() == null
                                 ? "no error message" : exceptionToReport.getMessage();
 
-    AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(request);
+    final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(request);
 
     if (isNativeQuery) {
       requestLogger.logNativeQuery(
@@ -395,7 +394,18 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
               null,
               DateTimes.nowUtc(),
               request.getRemoteAddr(),
-              new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage, "identity", authenticationResult.getIdentity()))
+              new QueryStats(
+                  Map.of(
+                      "success",
+                      false,
+                      DruidMetrics.STATUS_CODE,
+                      httpStatusCode,
+                      "exception",
+                      errorMessage,
+                      "identity",
+                      authenticationResult.getIdentity()
+                  )
+              )
           )
       );
     } else {
@@ -405,7 +415,18 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
               null,
               DateTimes.nowUtc(),
               request.getRemoteAddr(),
-              new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage, "identity", authenticationResult.getIdentity()))
+              new QueryStats(
+                  Map.of(
+                      "success",
+                      false,
+                      DruidMetrics.STATUS_CODE,
+                      httpStatusCode,
+                      "exception",
+                      errorMessage,
+                      "identity",
+                      authenticationResult.getIdentity()
+                  )
+              )
           )
       );
     }
@@ -770,7 +791,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         failedQueryCount.incrementAndGet();
       }
 
-      AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
+      final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       // As router is simply a proxy, we don't make an effort to construct the error code from the exception ourselves.
       // We rely on broker to set this for us if the error occurs downstream.
@@ -789,11 +810,13 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                     DateTimes.nowUtc(),
                     req.getRemoteAddr(),
                     new QueryStats(
-                        ImmutableMap.of(
+                        Map.of(
                             "query/time",
                             TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                             "success",
                             success,
+                            DruidMetrics.STATUS_CODE,
+                            statusCode,
                             "identity",
                             authenticationResult.getIdentity()
                         )
@@ -816,11 +839,13 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                 DateTimes.nowUtc(),
                 req.getRemoteAddr(),
                 new QueryStats(
-                    ImmutableMap.of(
+                    Map.of(
                         "query/time",
                         TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                         "success",
                         success,
+                        DruidMetrics.STATUS_CODE,
+                        statusCode,
                         "identity",
                         authenticationResult.getIdentity()
                     )
@@ -863,7 +888,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       // We rely on broker to set this for us if the error occurs downstream. 
       // Otherwise, if there's a router/client error, we log this as an unknown error.
       final int statusCode = determineStatusCode(false, response.getStatus());
-      AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
+      final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
       emitQueryTime(requestTimeNs, false, sqlQueryId, queryId, statusCode, authenticationResult);
 
       //noinspection VariableNotUsedInsideIf
@@ -878,9 +903,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                     DateTimes.nowUtc(),
                     req.getRemoteAddr(),
                     new QueryStats(
-                        ImmutableMap.of(
+                        Map.of(
                             "success",
                             false,
+                            DruidMetrics.STATUS_CODE,
+                            statusCode,
                             "exception",
                             errorMessage == null ? "no message" : errorMessage,
                             "identity",
@@ -910,9 +937,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                 DateTimes.nowUtc(),
                 req.getRemoteAddr(),
                 new QueryStats(
-                    ImmutableMap.of(
+                    Map.of(
                         "success",
                         false,
+                        DruidMetrics.STATUS_CODE,
+                        statusCode,
                         "exception",
                         errorMessage == null ? "no message" : errorMessage,
                         "identity",
