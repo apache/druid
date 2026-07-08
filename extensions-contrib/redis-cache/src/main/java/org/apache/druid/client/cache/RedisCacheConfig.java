@@ -150,6 +150,13 @@ public class RedisCacheConfig
   @JsonProperty
   private boolean enableTls = false;
 
+  /**
+   * whether to skip verifying that the server certificate matches the redis hostname when TLS is
+   * enabled. defaults to false (the hostname is verified)
+   */
+  @JsonProperty
+  private boolean skipTlsHostnameVerification = false;
+
   @JsonProperty
   private RedisClusterConfig cluster;
 
@@ -206,5 +213,10 @@ public class RedisCacheConfig
   public boolean getEnableTls()
   {
     return enableTls;
+  }
+
+  public boolean getSkipTlsHostnameVerification()
+  {
+    return skipTlsHostnameVerification;
   }
 }
