@@ -1,7 +1,7 @@
 ---
 id: security-overview
 title: "Security overview"
-description: Overview of Apache&circledR; Druid security. Includes best practices, configuration instructions, a description of the security model and documentation on how to report security issues.
+description: Overview of Apache® Druid security. Includes best practices, configuration instructions, a description of the security model and documentation on how to report security issues.
 ---
 
 <!--
