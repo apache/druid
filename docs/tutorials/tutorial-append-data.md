@@ -2,7 +2,7 @@
 id: tutorial-append-data
 title: Append data
 sidebar_label: Append data
-description: Learn how to append data to a datasource without changing the existing data in Apache&circledR; Druid.
+description: Learn how to append data to a datasource without changing the existing data in Apache® Druid.
 ---
 
 <!--
