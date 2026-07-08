@@ -2,7 +2,7 @@
 id: tutorial-update-data
 title: Update data
 sidebar_label: Update data
-description: Learn how to update data in Apache&circledR; Druid.
+description: Learn how to update data in Apache® Druid.
 ---
 
 <!--
