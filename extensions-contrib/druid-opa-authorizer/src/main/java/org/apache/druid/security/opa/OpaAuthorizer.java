@@ -145,7 +145,7 @@ public class OpaAuthorizer implements Authorizer
       if (opaResponse.isResult()) {
         return Access.OK;
       } else {
-        return Access.deny("Access denied.");
+        return Access.DENIED;
       }
 
     }

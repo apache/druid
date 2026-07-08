@@ -33,7 +33,7 @@ import java.util.List;
 
 public class OpaBasicAuthResource implements EmbeddedResource
 {
-  private static final String OPA_IMAGE = "openpolicyagent/opa:0.68.0";
+  private static final String OPA_IMAGE = "openpolicyagent/opa:1.18.2-debug";
 
   public static final String ADMIN_PASSWORD = "priest";
   public static final String SYSTEM_PASSWORD = "warlock";
@@ -53,7 +53,7 @@ public class OpaBasicAuthResource implements EmbeddedResource
             BindMode.READ_ONLY
         )
         .withExposedPorts(8181)
-        .withCommand("run", "--server", "--log-level", "debug", "/etc/opa/druid.rego", "/etc/opa/druid.json");
+        .withCommand("run", "--server", "--addr", "0.0.0.0:8181", "--log-level", "debug", "/etc/opa/druid.rego", "/etc/opa/druid.json");
     opaContainer.setPortBindings(List.of("8181:8181"));
   }
 

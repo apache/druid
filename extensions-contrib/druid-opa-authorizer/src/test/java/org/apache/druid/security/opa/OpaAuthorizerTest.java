@@ -163,7 +163,7 @@ public class OpaAuthorizerTest
     BasicAttributes attributes = new BasicAttributes();
     attributes.put("uid", "user");
     attributes.put("memberOf", "cn=group1,ou=Groups,dc=example,dc=org");
-    attributes.add("memberOf", "cn=group2,ou=Groups,dc=example,dc=org");
+    attributes.get("memberOf").add("cn=group2,ou=Groups,dc=example,dc=org");
     byte[] photoBytes = new byte[]{1, 2, 3};
     attributes.put("jpegPhoto", photoBytes);
     SearchResult searchResult = new SearchResult("uid=user", "java.lang.Object", null, attributes, false);
