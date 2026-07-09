@@ -21,12 +21,15 @@ package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
@@ -46,10 +49,10 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       // ===========================
       // non-expression reference queries
       // ===========================
-      // 0: non-expression timeseries reference, 1 columns
+      // 0: non-expression timeseries reference, 1 column
       "SELECT SUM(long1) FROM expressions",
-      // 1: non-expression timeseries reference, 2 columns
-      "SELECT SUM(long1), SUM(long2) FROM expressions",
+      // 1: non-expression timeseries reference, 1 column with nulls
+      "SELECT SUM(long5) FROM expressions",
       // 2: non-expression timeseries reference, 3 columns
       "SELECT SUM(long1), SUM(long4), SUM(double1) FROM expressions",
       // 3: non-expression timeseries reference, 4 columns
@@ -171,6 +174,9 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
   })
   private String deferExpressionDimensions;
 
+  @Param({"false", "true"})
+  private boolean useVectorApi;
+
   @Param({
       // non-expression reference
       "0",
@@ -237,6 +243,16 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "60"
   })
   private String query;
+
+  @Setup(Level.Trial)
+  public void setupExpressionProcessing()
+  {
+    if (useVectorApi) {
+      ExpressionProcessing.initializeForVectorApiTests();
+    } else {
+      ExpressionProcessing.initializeForTests();
+    }
+  }
 
   @Override
   public String getQuery()

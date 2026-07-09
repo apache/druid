@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.druid.jackson.CommaListJoinDeserializer;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -50,6 +51,7 @@ public class LoadableDataSegment extends DataSegment
       @JsonProperty("dimensions") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable List<String> dimensions,
       @JsonProperty("metrics") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable List<String> metrics,
       @JsonProperty("projections") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable List<String> projections,
+      @JsonProperty("clusterGroups") @Nullable ClusterGroupTuples clusterGroups,
       @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
@@ -66,6 +68,7 @@ public class LoadableDataSegment extends DataSegment
         dimensions,
         metrics,
         projections,
+        clusterGroups,
         shardSpec,
         lastCompactionState,
         binaryVersion,

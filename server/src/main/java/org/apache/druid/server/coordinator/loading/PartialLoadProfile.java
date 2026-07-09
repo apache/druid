@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.coordinator.loading;
 
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import org.apache.druid.error.InvalidInput;
 
 import javax.annotation.Nullable;
@@ -46,7 +48,7 @@ import java.util.Objects;
  *       requested the load, so no reload-thrash occurs.</li>
  * </ul>
  * The fingerprint is derived from the resolved scheme-specific data (e.g., for projections, the sorted/deduped name
- * list — see {@code ProjectionPartialLoadMatcher}) so that two rule configurations that resolve to the same set on a
+ * list, see {@code ProjectionPartialLoadMatcher}) so that two rule configurations that resolve to the same set on a
  * segment produce the same fingerprint and don't churn replicas across coordinator runs.
  */
 public record PartialLoadProfile(
@@ -55,6 +57,13 @@ public record PartialLoadProfile(
     @Nullable Long loadedBytes
 )
 {
+  /**
+   * Weak interner so the same partial-load profile is shared by reference. Most of the per-profile heap is in the
+   * {@code wrappedLoadSpec} map and its contents; collapsing those across replicas is the main win at scale
+   * (large partial-load tiers with multiple replicas per segment). All factory methods route through {@link #intern}.
+   */
+  private static final Interner<PartialLoadProfile> INTERNER = Interners.newWeakInterner();
+
   public PartialLoadProfile
   {
     Objects.requireNonNull(fingerprint, "fingerprint");
@@ -73,7 +82,7 @@ public record PartialLoadProfile(
     if (wrappedLoadSpec == null || wrappedLoadSpec.isEmpty()) {
       throw InvalidInput.exception("wrappedLoadSpec must not be null or empty for an outbound load request");
     }
-    return new PartialLoadProfile(wrappedLoadSpec, fingerprint, null);
+    return intern(new PartialLoadProfile(wrappedLoadSpec, fingerprint, null));
   }
 
   /**
@@ -84,7 +93,7 @@ public record PartialLoadProfile(
     if (wrappedLoadSpec == null || wrappedLoadSpec.isEmpty()) {
       throw InvalidInput.exception("wrappedLoadSpec must not be null or empty for a loaded announcement");
     }
-    return new PartialLoadProfile(wrappedLoadSpec, fingerprint, loadedBytes);
+    return intern(new PartialLoadProfile(wrappedLoadSpec, fingerprint, loadedBytes));
   }
 
   /**
@@ -94,7 +103,12 @@ public record PartialLoadProfile(
    */
   public static PartialLoadProfile forFullFallback(String fingerprint, long fullBytes)
   {
-    return new PartialLoadProfile(null, fingerprint, fullBytes);
+    return intern(new PartialLoadProfile(null, fingerprint, fullBytes));
+  }
+
+  private static PartialLoadProfile intern(PartialLoadProfile profile)
+  {
+    return INTERNER.intern(profile);
   }
 
   /**

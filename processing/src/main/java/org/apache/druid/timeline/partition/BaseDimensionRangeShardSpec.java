@@ -19,14 +19,11 @@
 
 package org.apache.druid.timeline.partition;
 
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
 import com.google.common.collect.Ordering;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.timeline.DataSegment;
 
@@ -37,8 +34,6 @@ import java.util.List;
 
 public abstract class BaseDimensionRangeShardSpec implements ShardSpec
 {
-  private static final Interner<VirtualColumn> VIRTUAL_COLUMN_INTERNER = Interners.newWeakInterner();
-
   protected final List<String> dimensions;
   protected final VirtualColumns virtualColumns;
   @Nullable
@@ -57,7 +52,7 @@ public abstract class BaseDimensionRangeShardSpec implements ShardSpec
     this.virtualColumns = virtualColumns == null
                           ? VirtualColumns.EMPTY
                           : VirtualColumns.create(Arrays.stream(virtualColumns.getVirtualColumns())
-                                                        .map(VIRTUAL_COLUMN_INTERNER::intern)
+                                                        .map(DataSegment.virtualColumnInterner()::intern)
                                                         .toList());
     this.start = start;
     this.end = end;

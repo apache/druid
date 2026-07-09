@@ -54,7 +54,7 @@ import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.NoopDataSegmentMover;
 import org.apache.druid.segment.loading.NoopDataSegmentPusher;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
@@ -132,7 +132,7 @@ public class SingleTaskBackgroundRunnerTest
         new SingleFileTaskReportFileWriter(new File("fake")),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
+        new ChatHandlerProvider(),
         utils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
         new NoopOverlordClient(),

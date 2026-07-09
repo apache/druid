@@ -261,7 +261,7 @@ function DetailCell({ original, workerInfoLookup }: DetailCellProps) {
       const workerInfo = workerInfoLookup[service];
       if (!workerInfo) return null;
 
-      if (workerInfo.worker.version === '') return <>Disabled</>;
+      if (workerInfo.worker.disabled || workerInfo.worker.version === '') return <>Disabled</>;
 
       const details: string[] = [];
       if (workerInfo.lastCompletedTaskTime) {
@@ -397,6 +397,7 @@ interface WorkerInfo {
     readonly scheme: string;
     readonly version: string;
     readonly category: string;
+    readonly disabled?: boolean;
   };
 }
 
@@ -484,7 +485,7 @@ ORDER BY
                 max_size: s.maxSize,
                 storage_size: s.maxSize,
                 effective_size: s.maxSize,
-                start_time: '1970:01:01T00:00:00Z',
+                start_time: '1970-01-01T00:00:00Z',
                 is_leader: 0,
                 version: '',
                 build_revision: '',
@@ -1077,10 +1078,9 @@ ORDER BY
   ): BasicAction[] {
     const actions: BasicAction[] = [];
 
-    // Add worker-specific actions (enable/disable) if this is a worker
     if (workerInfo) {
       const { worker } = workerInfo;
-      const disabled = worker.version === '';
+      const disabled = worker.disabled || worker.version === '';
 
       if (disabled) {
         actions.push({

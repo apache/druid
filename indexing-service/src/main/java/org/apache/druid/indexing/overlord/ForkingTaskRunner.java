@@ -115,7 +115,8 @@ public class ForkingTaskRunner
       "--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED",
       "--add-opens=java.base/java.io=ALL-UNNAMED",
       "--add-opens=java.base/java.lang=ALL-UNNAMED",
-      "--add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED"
+      "--add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED",
+      "--add-modules=jdk.incubator.vector"
   );
 
   private final ForkingTaskRunnerConfig config;
@@ -389,7 +390,7 @@ public class ForkingTaskRunner
                         // If the task type is queryable, we need to load broadcast segments on the peon, used for
                         // join queries. This is replaced by --loadBroadcastDatasourceMode option, but is preserved here
                         // for backwards compatibility and can be removed in a future release.
-                        if (task.supportsQueries()) {
+                        if (task.getBroadcastDatasourceLoadingSpec().getMode().needsBroadcastSegments()) {
                           command.add("--loadBroadcastSegments");
                           command.add("true");
                         }

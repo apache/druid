@@ -54,6 +54,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SegmentManager;
@@ -259,6 +260,12 @@ public class MSQTestWorkerContext implements WorkerContext
     }
 
     @Override
+    public VirtualStorageManager virtualStorageManager()
+    {
+      return injector.getInstance(VirtualStorageManager.class);
+    }
+
+    @Override
     public CoordinatorClient coordinatorClient()
     {
       return coordinatorClient;
@@ -315,6 +322,12 @@ public class MSQTestWorkerContext implements WorkerContext
           OffHeapMemorySegmentWriteOutMediumFactory.instance(),
           true
       );
+    }
+
+    @Override
+    public void acquireProcessingBuffers(final int requestedSlices)
+    {
+      // No-op: this mock returns a fixed ProcessingBuffers regardless of slice count.
     }
 
     @Override

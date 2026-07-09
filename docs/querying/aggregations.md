@@ -471,7 +471,11 @@ For these reasons, we have deprecated this aggregator and recommend using the Da
 
 ### Expression aggregator
 
-Aggregator applicable only at query time. Aggregates results using [Druid expressions](./math-expr.md) functions to facilitate building custom functions.
+Aggregates results using [Druid expressions](./math-expr.md) functions to facilitate building custom functions.
+
+The expression aggregator can be used at query time with any intermediate type. It can also be used at ingest time, but
+only when the type of `initialValue` is a primitive numeric type (`LONG` or `DOUBLE`) and matches the type of
+`initialCombineValue`. Other intermediate types, such as strings, arrays, and complex types, are query-time only.
 
 | Property | Description | Required |
 | --- | --- | --- |

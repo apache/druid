@@ -156,24 +156,6 @@ Druid interacts with ZooKeeper through a set of standard path configurations. We
 |`druid.zk.paths.base`|Base ZooKeeper path.|`/druid`|
 |`druid.zk.paths.coordinatorPath`|Used by the Coordinator for leader election.|`${druid.zk.paths.base}/coordinator`|
 
-The indexing service also uses its own set of paths. These configs can be included in the common configuration.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.zk.paths.indexer.base`|Base ZooKeeper path for |`${druid.zk.paths.base}/indexer`|
-|`druid.zk.paths.indexer.announcementsPath`|Middle Managers announce themselves here.|`${druid.zk.paths.indexer.base}/announcements`|
-|`druid.zk.paths.indexer.tasksPath`|Used to assign tasks to Middle Managers.|`${druid.zk.paths.indexer.base}/tasks`|
-|`druid.zk.paths.indexer.statusPath`|Parent path for announcement of task statuses.|`${druid.zk.paths.indexer.base}/status`|
-
-If `druid.zk.paths.base` and `druid.zk.paths.indexer.base` are both set, and none of the other `druid.zk.paths.*` or `druid.zk.paths.indexer.*` values are set, then the other properties will be evaluated relative to their respective `base`.
-For example, if `druid.zk.paths.base` is set to `/druid1` and `druid.zk.paths.indexer.base` is set to `/druid2` then `druid.zk.paths.coordinatorPath` will default to `/druid1/coordinator` while `druid.zk.paths.indexer.announcementsPath` will default to `/druid2/announcements`.
-
-The following path is used for service discovery. It is **not** affected by `druid.zk.paths.base` and **must** be specified separately.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.discovery.curator.path`|Services announce themselves under this ZooKeeper path.|`/druid/discovery`|
-
 ### TLS
 
 #### General configuration
@@ -236,7 +218,8 @@ values for the above mentioned configs among others provided by Java implementat
 |`druid.escalator.type`|String|Type of the Escalator that should be used for internal Druid communications. This Escalator must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticatorChain`.|`noop`|no|
 |`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |["allowAll"]|no|
 |`druid.auth.unsecuredPaths`| List of Strings|List of paths for which security checks will not be performed. All requests to these paths will be allowed.|[]|no|
-|`druid.auth.allowUnauthenticatedHttpOptions`|Boolean|If true, skip authentication checks for HTTP OPTIONS requests. This is needed for certain use cases, such as supporting CORS pre-flight requests. Note that disabling authentication checks for OPTIONS requests will allow unauthenticated users to determine what Druid endpoints are valid (by checking if the OPTIONS request returns a 200 instead of 404), so enabling this option may reveal information about server configuration, including information about what extensions are loaded (if those extensions add endpoints).|false|no|
+|`druid.auth.allowUnauthenticatedHttpOptions`|Boolean|If true, skip authentication checks for HTTP OPTIONS requests. This is needed for certain use cases, such as supporting CORS pre-flight requests. Note that disabling authentication checks for OPTIONS requests will allow unauthenticated users to determine what Druid endpoints are valid (by checking if the OPTIONS request returns a 200 instead of 404), so enabling this option may reveal information about server configuration, including information about what extensions are loaded (if those extensions add extensions).|false|no|
+|`druid.auth.emitAuthMetrics`|Boolean|If true, emit service metrics for authorization events. When enabled, Druid emits `auth/forbidden` when access is denied and `auth/exception` when an internal authorization error occurs. See [Security metrics](#security) for details.|false|no|
 
 For more information, please see [Authentication and Authorization](../operations/auth.md).
 
@@ -658,6 +641,18 @@ the following properties.
  JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 :::
 
+### Expression processing
+
+The properties below tune Druid's native expression engine, which evaluates virtual columns, expression-based filters,
+the `expression` aggregator/post-aggregator, and any SQL functions that lower to native expressions.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.expressions.processArraysAsMultiValueStrings`|If true, all `ARRAY` typed values are converted to `STRING` by column selectors and treated as multi-value strings rather than native arrays. Provided for backwards compatibility with the behavior of Druid 24.0 and earlier, before array types were introduced.|false|
+|`druid.expressions.homogenizeNullMultiValueStringArrays`|If true, multi-value string expression input values of `null`, `[]`, and `[null]` are all coerced to `[null]`. Provided for backwards compatibility with Druid 0.22 and earlier. If false (the default), this coercion only happens when single-value expressions are implicitly mapped across multi-value rows, so the single-valued expression is evaluated with an input of `null`.|false|
+|`druid.expressions.allowVectorizeFallback`|If true, the vectorized query engine handles expressions without a native vectorized implementation using a fallback processor that invokes the scalar expression evaluator in a loop. If false, such expressions cannot be vectorized and the query falls back to the non-vectorized engine.|true|
+|`druid.expressions.useVectorApi`|If true, vectorized expression vector processors and numeric vector aggregators dispatch to SIMD specializations backed by the JDK incubator Vector API (`jdk.incubator.vector`) where available. Requires `--add-modules=jdk.incubator.vector` on the JVM command line (see [strong encapsulation](../operations/java.md#strong-encapsulation)). Off by default while the Vector API remains an incubator JDK feature.|false|
+
 ### Double column storage
 
 Prior to version 0.13.0, Druid's storage layer used a 32-bit float representation to store columns created by the
@@ -724,8 +719,8 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.period`|The run period for the Coordinator. The Coordinator operates by maintaining the current state of the world in memory and periodically looking at the set of "used" segments and segments being served to make decisions about whether any changes need to be made to the data topology. This property sets the delay between each of these runs.|`PT60S`|
 |`druid.coordinator.startDelay`|The operation of the Coordinator works on the assumption that it has an up-to-date view of the state of the world when it runs, the current ZooKeeper interaction code, however, is written in a way that doesn’t allow the Coordinator to know for a fact that it’s done loading the current state of the world. This delay is a hack to give it enough time to believe that it has all the data.|`PT300S`|
 |`druid.coordinator.load.timeout`|The timeout duration for when the Coordinator assigns a segment to a Historical service.|`PT15M`|
-|`druid.coordinator.balancer.strategy`|The [balancing strategy](../design/coordinator.md#balancing-segments-in-a-tier) used by the Coordinator to distribute segments among the Historical servers in a tier. The `cost` strategy distributes segments by minimizing a cost function, `diskNormalized` weights these costs with the disk usage ratios of the servers and `random` distributes segments randomly.|`cost`|
-|`druid.coordinator.balancer.diskNormalized.moveCostSavingsThreshold`|Only used when `druid.coordinator.balancer.strategy` is `diskNormalized`. Minimum fractional cost reduction required before a segment is moved off a server that already holds it. A value of `0.05` requires the destination to be at least 5% cheaper than the source, which prevents oscillation between servers with similar disk utilization. Must be in `[0.0, 1.0)`; `0.0` disables the anti-oscillation discount.|`0.05`|
+|`druid.coordinator.balancer.strategy`|The [balancing strategy](../design/coordinator.md#balancing-segments-in-a-tier) used by the Coordinator to distribute segments among the Historical servers in a tier. The `cost` strategy distributes segments by minimizing a cost function, `diskNormalized` uses normal cost within a projected disk utilization threshold and exponentially penalizes candidates outside that threshold, and `random` distributes segments randomly.|`cost`|
+|`druid.coordinator.balancer.diskNormalized.utilizationThreshold`|Only used when `druid.coordinator.balancer.strategy` is `diskNormalized`. Projected disk utilization difference that the strategy ignores before applying the exponential utilization penalty. A value of `0.05` means candidates within 5 percentage points of the least-used candidate are ordered by normal cost, while candidates outside that band are penalized exponentially by the excess utilization difference. Must be in `(0.0, 1.0)`.|`0.05`|
 |`druid.coordinator.loadqueuepeon.http.repeatDelay`|The start and repeat delay (in milliseconds) for the load queue peon, which manages the load/drop queue of segments for any server.|1 minute|
 |`druid.coordinator.loadqueuepeon.http.batchSize`|Number of segment load/drop requests to batch in one HTTP request. Note that it must be smaller than or equal to the `druid.segmentCache.numLoadingThreads` config on Historical service. If this value is not configured, the coordinator uses the value of the `numLoadingThreads` for the respective server. | `druid.segmentCache.numLoadingThreads` |
 |`druid.coordinator.asOverlord.enabled`|Boolean value for whether this Coordinator service should act like an Overlord as well. This configuration allows users to simplify a Druid cluster by not having to deploy any standalone Overlord services. If set to true, then Overlord console is available at `http://coordinator-host:port/console.html` and be sure to set `druid.coordinator.asOverlord.overlordService` also.|false|
@@ -811,7 +806,7 @@ The following table shows the dynamic configuration properties for the Coordinat
 |`replicateAfterLoadTimeout`|Boolean flag for whether or not additional replication is needed for segments that have failed to load due to the expiry of `druid.coordinator.load.timeout`. If this is set to true, the Coordinator will attempt to replicate the failed segment on a different historical server. This helps improve the segment availability if there are a few slow Historicals in the cluster. However, the slow Historical may still load the segment later and the Coordinator may issue drop requests if the segment is over-replicated.|false|
 |`turboLoadingNodes`| Experimental. List of Historical servers to place in turbo loading mode. These servers use a larger thread-pool to load segments faster but at the cost of query performance. For servers specified in `turboLoadingNodes`, `druid.coordinator.loadqueuepeon.http.batchSize` is ignored and the coordinator uses the value of the respective `numLoadingThreads` instead.<br/>Please use this config with caution. All servers should eventually be removed from this list once the segment loading on the respective historicals is finished. |none|
 |`cloneServers`| Experimental. Map from target Historical server to source Historical server which should be cloned by the target. The target Historical does not participate in regular segment assignment or balancing. Instead, the Coordinator mirrors any segment assignment made to the source Historical onto the target Historical, so that the target becomes an exact copy of the source. Segments on the target Historical do not count towards replica counts either. If the source disappears, the target remains in the last known state of the source server until removed from the configuration. <br/>Use this config with caution. All servers should eventually be removed from this list once the desired state on the respective Historicals is achieved. |none|
-|`historicalTierAliases`|Map from a virtual tier name to the set of real Historical tier names it expands to. When a load/drop rule references a virtual alias tier, the Coordinator replaces it with its real tiers — each receiving the full replica count independently. The alias key itself is never loaded to directly. For example, `{"hot": ["hot_1", "hot_2"]}` causes a rule of `{"hot": 2}` to load 2 replicas on each of `hot_1` and `hot_2`; `hot` receives no direct assignment. An alias value tier with no servers raises the normal invalid-tier alert. If a rule already specifies an explicit replica count for a tier that also appears as an alias value, the explicit count takes precedence. Duplicate tier names within a set are ignored. A virtual alias tier cannot also be a physical tier.|none|
+|`historicalTierAliases`|Map from a virtual tier name to the set of real Historical tier names it expands to. When a load/drop rule references a virtual alias tier, the Coordinator replaces it with its real tiers — each receiving the full replica count independently. The alias key itself is never loaded to directly. For example, `{"hot": ["hot_1", "hot_2"]}` causes a rule of `{"hot": 2}` to load 2 replicas on each of `hot_1` and `hot_2`; `hot` receives no direct assignment. An alias value tier with no servers raises the normal invalid-tier alert. If a rule already specifies an explicit replica count for a tier that also appears as an alias value, the explicit count takes precedence. Duplicate tier names within a set are ignored. A virtual alias tier cannot also be a physical tier, and a physical tier cannot belong to more than one alias.|none|
 
 ##### Smart segment loading
 
@@ -966,7 +961,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.runner.type`|Indicates whether tasks should be run locally using `local` or in a distributed environment using `remote`. The recommended option is `httpRemote`, which is similar to `remote` but uses HTTP to interact with Middle Managers instead of ZooKeeper.|`httpRemote`|
+|`druid.indexer.runner.type`|Indicates whether tasks should be run locally using `local` or in a distributed environment using `httpRemote`. `httpRemote` is recommended for distributed deployments and uses HTTP to interact with Middle Managers.|`httpRemote`|
 |`druid.indexer.server.maxConcurrentActions`|Maximum number of concurrent action requests (such as getting locks, creating segments, fetching segments etc) that the Overlord will process simultaneously. This prevents thread exhaustion while preserving access to health check endpoints. Set to `0` to disable quality of service filtering entirely. If not specified, defaults to `max(1, max(serverHttpNumThreads - 4, serverHttpNumThreads * 0.8))`.|`max(1, max(serverHttpNumThreads - 4, serverHttpNumThreads * 0.8))`|
 |`druid.indexer.storage.type`|Indicates whether incoming tasks should be stored locally (in heap) or in metadata storage. One of `local` or `metadata`. `local` is mainly for internal testing while `metadata` is recommended in production because storing incoming tasks in metadata storage allows for tasks to be resumed if the Overlord should fail.|`local`|
 |`druid.indexer.storage.recentlyFinishedThreshold`|Duration of time to store task results. Default is 24 hours. If you have hundreds of tasks running in a day, consider increasing this threshold.|`PT24H`|
@@ -981,17 +976,14 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.indexer.queue.storageSyncRate`|Sync Overlord state this often with an underlying task persistence mechanism.|`PT1M`|
 |`druid.indexer.queue.maxTaskPayloadSize`|Maximum allowed size in bytes of a single task payload accepted by the Overlord.|none (allow all task payload sizes)|
 
-The following configs only apply if the Overlord is running in remote mode. For a description of local vs. remote mode, see [Overlord service](../design/overlord.md).
+The following configs apply when the Overlord is running with the `httpRemote` runner. For a description of local vs. distributed mode, see [Overlord service](../design/overlord.md).
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.runner.taskAssignmentTimeout`|How long to wait after a task has been assigned to a Middle Manager before throwing an error.|`PT5M`|
 |`druid.indexer.runner.minWorkerVersion`|The minimum Middle Manager version to send tasks to. The version number is a string. This affects the expected behavior during certain operations like comparison against `druid.worker.version`. Specifically, the version comparison follows dictionary order. Use ISO8601 date format for the version to accommodate date comparisons. |"0"|
 |`druid.indexer.runner.parallelIndexTaskSlotRatio`| The ratio of task slots available for parallel indexing supervisor tasks per worker. The specified value must be in the range `[0, 1]`. |1|
-|`druid.indexer.runner.compressZnodes`|Indicates whether or not the Overlord should expect Middle Managers to compress Znodes.|true|
-|`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in ZooKeeper, should be in the range of `[10KiB, 2GiB)`. [Human-readable format](human-readable-byte.md) is supported.| 512 KiB |
-|`druid.indexer.runner.taskCleanupTimeout`|How long to wait before failing a task after a Middle Manager is disconnected from ZooKeeper.|`PT15M`|
-|`druid.indexer.runner.taskShutdownLinkTimeout`|How long to wait on a shutdown request to a Middle Manager before timing out|`PT1M`|
+|`druid.indexer.runner.taskCleanupTimeout`|How long to wait before failing a task after a Middle Manager is disconnected.|`PT15M`|
 |`druid.indexer.runner.pendingTasksRunnerNumThreads`|Number of threads to allocate pending-tasks to workers, must be at least 1.|1|
 |`druid.indexer.runner.maxRetriesBeforeBlacklist`|Number of consecutive times the Middle Manager can fail tasks,  before the worker is blacklisted, must be at least 1|5|
 |`druid.indexer.runner.workerBlackListBackoffTime`|How long to wait before a task is whitelisted again. This value should be greater that the value set for taskBlackListCleanupPeriod.|`PT15M`|
@@ -1322,12 +1314,10 @@ Middle Managers pass their configurations down to their child peons. The Middle 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.runner.allowedPrefixes`|Whitelist of prefixes for configs that can be passed down to child peons.|`com.metamx`, `druid`, `org.apache.druid`, `user.timezone`, `file.encoding`, `java.io.tmpdir`, `hadoop`|
-|`druid.indexer.runner.compressZnodes`|Indicates whether or not the Middle Managers should compress Znodes.|true|
 |`druid.indexer.runner.classpath`|Java classpath for the peon.|`System.getProperty("java.class.path")`|
 |`druid.indexer.runner.javaCommand`|Command required to execute java.|java|
 |`druid.indexer.runner.javaOpts`|_DEPRECATED_ A string of -X Java options to pass to the peon's JVM. Quotable parameters or parameters with spaces are encouraged to use javaOptsArray|`''`|
 |`druid.indexer.runner.javaOptsArray`|A JSON array of strings to be passed in as options to the peon's JVM. This is additive to `druid.indexer.runner.javaOpts` and is recommended for properly handling arguments which contain quotes or spaces like `["-XX:OnOutOfMemoryError=kill -9 %p"]`|`[]`|
-|`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in ZooKeeper, should be in the range of [10KiB, 2GiB). [Human-readable format](human-readable-byte.md) is supported.|512KiB|
 |`druid.indexer.runner.startPort`|Starting port used for Peon services, should be greater than 1023 and less than 65536.|8100|
 |`druid.indexer.runner.endPort`|Ending port used for Peon services, should be greater than or equal to `druid.indexer.runner.startPort` and less than 65536.|65535|
 |`druid.indexer.runner.ports`|A JSON array of integers to specify ports that used for Peon services. If provided and non-empty, ports for Peon services will be chosen from these ports. And `druid.indexer.runner.startPort/druid.indexer.runner.endPort` will be completely ignored.|`[]`|
@@ -1663,7 +1653,7 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.broker.balancer.type`|`random`, `connectionCount`|Determines how the broker balances connections to Historical processes. `random` choose randomly, `connectionCount` picks the process with the fewest number of active connections to|`random`|
+|`druid.broker.balancer.type`|`random`, `connectionCount`|Determines how the broker balances connections to Historical processes. `random` chooses randomly, `connectionCount` picks the process with the fewest number of active connections to it.|`random`|
 |`druid.broker.select.tier`|`highestPriority`, `lowestPriority`, `custom`, `preferred`|If segments are cross-replicated across tiers in a cluster, you can tell the broker to prefer to select segments in a tier with a certain priority.|`highestPriority`|
 |`druid.broker.select.tier.custom.priorities`|An array of integer priorities, such as `[-1, 0, 1, 2]`|Select servers in tiers with a custom priority list.|The config only has effect if `druid.broker.select.tier` is set to `custom`. If `druid.broker.select.tier` is set to `custom` but this config is not specified, the effect is the same as `druid.broker.select.tier` set to `highestPriority`. Any of the integers in this config can be ignored if there's no corresponding tiers with such priorities. Tiers with priorities explicitly specified in this config always have higher priority than those not and those not specified fall back to use `highestPriority` strategy among themselves.|
 |`druid.broker.select.tier.preferred.tier`| The preferred tier name. E.g., `_default_tier` | A non-empty value that specifies the preferred tier in which historical servers will be picked up for queries. If there are not enough historical servers from the preferred tier, servers from other tiers (if there are any) will be selected. This config only has effect if `druid.broker.select.tier` is set to `preferred` | null |
@@ -1749,6 +1739,38 @@ This laning strategy is best suited for cases where one or more external applica
 |--------|-----------|-------|
 |`druid.query.scheduler.laning.lanes.{name}`|Maximum percent or exact limit of queries that can concurrently run in the defined lanes. Any number of lanes may be defined like this. The lane names 'total' and 'default' are reserved for internal use.|No default, must define at least one lane with a limit above 0. If `druid.query.scheduler.laning.isLimitPercent` is set to `true`, values must be integers in the range of 1 to 100.|
 |`druid.query.scheduler.laning.isLimitPercent`|If set to `true`, the values set for `druid.query.scheduler.laning.lanes` will be treated as a percent of the smaller number of `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`. Note that in this mode, these lane values across lanes are _not_ required to add up to, and can exceed, 100%.|`false`|
+
+###### Weighted laning strategy
+
+This laning strategy assigns a cost to each query based on how many of a configurable set of thresholds it breaches, then routes the query to the most restrictive lane whose `minCost` the query meets. It is a more granular alternative to the 'High/Low' strategy: rather than a binary split, a query that breaches one threshold can be assigned to a different lane than one that breaches several. The thresholds are the same ones used by the [threshold prioritization strategy](#threshold-prioritization-strategy) (data age, query interval duration, segment count, and total segment range). Each threshold a query breaches adds 1 to its cost. A query with cost 0 is not assigned a lane and runs in the interactive (default) pool.
+
+If a lane is specified in the [query context](../querying/query-context-reference.md) `lane` parameter, this will override the computed lane.
+
+This strategy can be enabled by setting `druid.query.scheduler.laning.strategy=weighted`.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.scheduler.laning.periodThreshold`|ISO 8601 period. A query is charged 1 if any of its intervals starts before `now - periodThreshold` (that is, it reads data older than this).|null (not evaluated)|
+|`druid.query.scheduler.laning.durationThreshold`|ISO 8601 duration (must not contain month or year components). A query is charged 1 if its total interval duration exceeds this.|null (not evaluated)|
+|`druid.query.scheduler.laning.segmentCountThreshold`|A query is charged 1 if the number of segments it involves exceeds this. Must be greater than 0.|null (not evaluated)|
+|`druid.query.scheduler.laning.segmentRangeThreshold`|ISO 8601 duration (must not contain month or year components). A query is charged 1 if the summed time range of its distinct segments exceeds this.|null (not evaluated)|
+|`druid.query.scheduler.laning.lanes`|A map of lane name to its configuration. At least one lane must be defined. Each lane's configuration has two fields: `minCost`, the minimum query cost required to be assigned to the lane (a query is assigned to the lane with the highest `minCost` it meets; must be greater than 0 and unique across lanes so lane selection is deterministic), and `maxPercent`, the maximum percent of the smaller number of `druid.server.http.numThreads` or `druid.query.scheduler.numThreads` that queries in the lane may use concurrently (an integer in the range 1 to 100). The lane names 'total' and 'default' are reserved for internal use.|No default, must define at least one lane|
+
+At least one of `periodThreshold`, `durationThreshold`, `segmentCountThreshold`, or `segmentRangeThreshold` must be set. For example, the following configuration routes queries breaching 1 or 2 thresholds to a `low` lane capped at 30% capacity, and queries breaching 3 or 4 thresholds to a `very-low` lane capped at 10%:
+
+```json
+{
+  "strategy": "weighted",
+  "periodThreshold": "P1M",
+  "durationThreshold": "P1D",
+  "segmentCountThreshold": 1000,
+  "segmentRangeThreshold": "P180D",
+  "lanes": {
+    "low": { "minCost": 1, "maxPercent": 30 },
+    "very-low": { "minCost": 3, "maxPercent": 10 }
+  }
+}
+```
 
 ##### Server configuration
 

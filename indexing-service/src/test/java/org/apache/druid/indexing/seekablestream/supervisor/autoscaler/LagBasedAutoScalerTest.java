@@ -94,20 +94,28 @@ public class LagBasedAutoScalerTest
   }
 
   @Test
-  public void testReturnsTaskCountMinWhenConfiguredTaskCountIsBelowMin()
+  public void testReturnsUnclampedScaleOutStepEvenWhenCurrentIsBelowMin()
   {
+    // Scaler no longer clamps to taskCountMin; it just steps the current count up by scaleOutStep.
+    // The supervisor is responsible for clamping below-min results up to taskCountMin.
     when(mockIoConfig.getTaskCount()).thenReturn(1);
     when(mockSupervisor.getPartitionCount()).thenReturn(PARTITION_COUNT);
 
-    Assert.assertEquals(50, createAutoScaler().computeDesiredTaskCount(createLagSamples(2_000_001L)));
+    // current (1) + scaleOutStep (4) = 5 — below configured taskCountMin (50); not clamped here.
+    Assert.assertEquals(5, createAutoScaler().computeDesiredTaskCount(createLagSamples(2_000_001L)));
   }
 
   @Test
-  public void testReturnsTaskCountMaxWhenConfiguredTaskCountIsAboveMax()
+  public void testReturnsUnclampedScaleInStepEvenWhenCurrentIsAboveMax()
   {
+    // Scaler no longer clamps to taskCountMax; it just steps the current count down by scaleInStep.
+    // The supervisor is responsible for clamping above-max results down to taskCountMax.
     when(mockIoConfig.getTaskCount()).thenReturn(101);
     when(mockSupervisor.getPartitionCount()).thenReturn(PARTITION_COUNT);
 
+    // current (101) - scaleInStep (1) = 100 — above configured taskCountMax (100) is still not
+    // clamped here. (In this particular case the result happens to equal taskCountMax; we just
+    // want the scaler's raw computation.)
     Assert.assertEquals(100, createAutoScaler().computeDesiredTaskCount(createLagSamples(299_999L)));
   }
 

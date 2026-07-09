@@ -195,12 +195,70 @@ public class LatchableEmitter extends StubServiceEmitter
   }
 
   /**
+   * Like {@link #waitForNextEvent(UnaryOperator)} but treats a timeout as a valid outcome rather than throwing:
+   * returns {@code true} if a matching event was emitted within {@code timeoutMillis} (negative for no timeout),
+   * {@code false} if it timed out. Useful when the absence of an event is itself meaningful (e.g. waiting for a
+   * periodic monitor to fall quiet).
+   */
+  public boolean tryWaitForNextEvent(UnaryOperator<EventMatcher> condition, long timeoutMillis)
+  {
+    final EventMatcher matcher = condition.apply(new EventMatcher());
+    final WaitCondition waitCondition = new WaitCondition(
+        event -> event instanceof ServiceMetricEvent && matcher.test((ServiceMetricEvent) event)
+    );
+    registerWaitConditionNextEvent(waitCondition);
+
+    try {
+      final long awaitTime = timeoutMillis >= 0 ? timeoutMillis : Long.MAX_VALUE;
+      return waitCondition.countDownLatch.await(awaitTime, TimeUnit.MILLISECONDS);
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      waitConditions.remove(waitCondition);
+    }
+  }
+
+  /**
+   * Wait until the given metric has quiesced: its cumulative value (per {@link #getMetricEventLongSum}) stops growing
+   * across consecutive emissions, or no matching event is emitted within {@code timeoutMillis} (which, for a metric
+   * only emitted while there is activity, itself means idle). Unlike {@link #waitForNextEvent}, this never throws on
+   * timeout, a quiet period is the expected terminating signal. A "wait for background activity to settle" latch
+   * without a fixed sleep, e.g. to drain stragglers before taking a metric baseline. Size {@code timeoutMillis} to a
+   * few times the emitting monitor's period so a single missed tick doesn't read as idle.
+   */
+  public void awaitMetricQuiescent(String metricName, long timeoutMillis)
+  {
+    long previous = getMetricEventLongSum(metricName);
+    while (tryWaitForNextEvent(event -> event.hasMetricName(metricName), timeoutMillis)) {
+      final long current = getMetricEventLongSum(metricName);
+      if (current == previous) {
+        return;
+      }
+      previous = current;
+    }
+  }
+
+  /**
    * Waits indefinitely until the overall aggregate of matching events satisfies the given criteria.
    * Use {@link Timeout} on the overall test case to get a timeout.
    */
   public void waitForEventAggregate(
       UnaryOperator<EventMatcher> condition,
       UnaryOperator<AggregateMatcher> aggregateCondition
+  )
+  {
+    waitForEventAggregate(condition, aggregateCondition, defaultWaitTimeoutMillis);
+  }
+
+  /**
+   * Same as {@link #waitForEventAggregate(UnaryOperator, UnaryOperator)} but with an explicit timeout.
+   */
+  public void waitForEventAggregate(
+      UnaryOperator<EventMatcher> condition,
+      UnaryOperator<AggregateMatcher> aggregateCondition,
+      long timeoutMillis
   )
   {
     final EventMatcher eventMatcher = condition.apply(new EventMatcher());
@@ -210,7 +268,7 @@ public class LatchableEmitter extends StubServiceEmitter
         event -> event instanceof ServiceMetricEvent
                  && eventMatcher.test((ServiceMetricEvent) event)
                  && aggregateMatcher.test((ServiceMetricEvent) event),
-        defaultWaitTimeoutMillis
+        timeoutMillis
     );
   }
 

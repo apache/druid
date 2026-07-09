@@ -1371,6 +1371,26 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testNowIsNotConstant()
+  {
+    ExpressionPlan thePlan = plan("now()");
+    Assert.assertFalse(
+        thePlan.is(ExpressionPlan.Trait.CONSTANT)
+    );
+    Assert.assertFalse(thePlan.isConstant());
+  }
+
+  @Test
+  public void testNowWrappedInExpressionIsNotConstant()
+  {
+    ExpressionPlan thePlan = plan("now() + 1000");
+    Assert.assertFalse(
+        thePlan.is(ExpressionPlan.Trait.CONSTANT)
+    );
+    Assert.assertFalse(thePlan.isConstant());
+  }
+
   private static ExpressionPlan plan(String expression)
   {
     return ExpressionPlanner.plan(SYNTHETIC_INSPECTOR, Parser.parse(expression, MACRO_TABLE));

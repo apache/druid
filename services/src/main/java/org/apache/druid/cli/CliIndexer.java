@@ -30,7 +30,6 @@ import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.DruidServerConfig;
-import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.discovery.WorkerNodeService;
@@ -102,7 +101,6 @@ public class CliIndexer extends ServerRunnable
   private static final Logger log = new Logger(CliIndexer.class);
 
   private Properties properties;
-  private boolean isZkEnabled = true;
 
   public CliIndexer()
   {
@@ -113,7 +111,6 @@ public class CliIndexer extends ServerRunnable
   public void configure(Properties properties)
   {
     this.properties = properties;
-    isZkEnabled = ZkEnablementConfig.isEnabled(properties);
   }
 
   @Override
@@ -166,7 +163,7 @@ public class CliIndexer extends ServerRunnable
             CliPeon.bindPeonDataSegmentHandlers(binder);
             CliPeon.bindRealtimeCache(binder);
             CliPeon.bindCoordinatorHandoffNotifer(binder);
-            binder.install(CliMiddleManager.makeWorkerManagementModule(isZkEnabled));
+            binder.install(CliMiddleManager.makeWorkerManagementModule());
 
             binder.bind(AppenderatorsManager.class)
                   .to(UnifiedIndexerAppenderatorsManager.class)

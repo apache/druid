@@ -91,13 +91,31 @@ public class QueryableIndexCursorHolder implements CursorHolder
       TimeBoundaryInspector timeBoundaryInspector
   )
   {
+    this(index, cursorBuildSpec, timeBoundaryInspector, null);
+  }
+
+  /**
+   * Variant that overrides the ordering this holder reports and reasons about, instead of taking it from
+   * {@code index.getOrdering()}. Used by the clustered single-group cursor path: the group sub-index is physically
+   * sorted by the segment ordering with the clustering prefix dropped (e.g. {@code [__time]}), but at the cursor
+   * level the clustering columns are injected back as constants, so the cursor actually yields rows in the full
+   * segment ordering. Reporting that full ordering keeps a clustered segment's advertised ordering independent of how
+   * many groups survive filter pruning.
+   */
+  public QueryableIndexCursorHolder(
+      QueryableIndex index,
+      CursorBuildSpec cursorBuildSpec,
+      TimeBoundaryInspector timeBoundaryInspector,
+      @Nullable List<OrderBy> orderingOverride
+  )
+  {
     this.index = index;
     this.interval = cursorBuildSpec.getInterval();
     this.virtualColumns = cursorBuildSpec.getVirtualColumns();
     this.aggregatorFactories = cursorBuildSpec.getAggregators();
     this.filter = cursorBuildSpec.getFilter();
 
-    final List<OrderBy> indexOrdering = index.getOrdering();
+    final List<OrderBy> indexOrdering = orderingOverride != null ? orderingOverride : index.getOrdering();
     if (Cursors.preferDescendingTimeOrdering(cursorBuildSpec)
         && Cursors.getTimeOrdering(indexOrdering) == Order.ASCENDING) {
       this.ordering = Cursors.descendingTimeOrder();

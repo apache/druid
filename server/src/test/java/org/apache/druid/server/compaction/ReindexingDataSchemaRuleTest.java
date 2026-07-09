@@ -19,15 +19,23 @@
 
 package org.apache.druid.server.compaction;
 
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -50,6 +58,11 @@ public class ReindexingDataSchemaRuleTest
   };
   private final Granularity queryGranularity = Granularities.MINUTE;
   private final Boolean rollup = true;
+  private final BaseTableProjectionSpec baseTable = ClusteredValueGroupsBaseTableProjectionSpec
+      .builder()
+      .columns(new StringDimensionSchema("tenant"), new LongDimensionSchema("__time"))
+      .clusteringColumns("tenant")
+      .build();
 
   private final ReindexingDataSchemaRule rule = new ReindexingDataSchemaRule(
       "test-schema-rule",
@@ -59,6 +72,7 @@ public class ReindexingDataSchemaRuleTest
       metricsSpec,
       queryGranularity,
       rollup,
+      baseTable,
       Collections.emptyList()
   );
 
@@ -156,6 +170,13 @@ public class ReindexingDataSchemaRuleTest
   }
 
   @Test
+  public void test_getBaseTable_returnsConfiguredValue()
+  {
+    Assertions.assertNotNull(rule.getBaseTable());
+    Assertions.assertEquals(baseTable, rule.getBaseTable());
+  }
+
+  @Test
   public void test_getId_returnsConfiguredId()
   {
     Assertions.assertEquals("test-schema-rule", rule.getId());
@@ -186,6 +207,7 @@ public class ReindexingDataSchemaRuleTest
             metricsSpec,
             queryGranularity,
             rollup,
+            null,
             Collections.emptyList()
         )
     );
@@ -204,6 +226,7 @@ public class ReindexingDataSchemaRuleTest
             metricsSpec,
             queryGranularity,
             rollup,
+            null,
             Collections.emptyList()
         )
     );
@@ -222,6 +245,7 @@ public class ReindexingDataSchemaRuleTest
         metricsSpec,
         queryGranularity,
         rollup,
+        null,
         Collections.emptyList()
     );
     Assertions.assertEquals(zeroPeriod, rule.getOlderThan());
@@ -241,6 +265,7 @@ public class ReindexingDataSchemaRuleTest
             metricsSpec,
             queryGranularity,
             rollup,
+            null,
             Collections.emptyList()
         )
     );
@@ -258,6 +283,7 @@ public class ReindexingDataSchemaRuleTest
         metricsSpec,
         queryGranularity,
         rollup,
+        null,
         Collections.emptyList()
     );
     Assertions.assertNull(rule.getDimensionsSpec());
@@ -275,6 +301,7 @@ public class ReindexingDataSchemaRuleTest
         null,
         queryGranularity,
         rollup,
+        null,
         Collections.emptyList()
     );
     Assertions.assertNull(rule.getMetricsSpec());
@@ -292,6 +319,7 @@ public class ReindexingDataSchemaRuleTest
         metricsSpec,
         null,
         rollup,
+        null,
         Collections.emptyList()
     );
     Assertions.assertNull(rule.getQueryGranularity());
@@ -308,6 +336,7 @@ public class ReindexingDataSchemaRuleTest
         dimensionsSpec,
         metricsSpec,
         queryGranularity,
+        null,
         null,
         Collections.emptyList()
     );
@@ -326,9 +355,46 @@ public class ReindexingDataSchemaRuleTest
         metricsSpec,
         queryGranularity,
         rollup,
+        null,
         null
     );
     Assertions.assertNull(rule.getProjections());
+  }
+
+  @Test
+  public void test_constructor_nullBaseTable_succeeds()
+  {
+    // Null baseTable is allowed
+    ReindexingDataSchemaRule rule = new ReindexingDataSchemaRule(
+        "test-id",
+        "description",
+        PERIOD_14_DAYS,
+        dimensionsSpec,
+        metricsSpec,
+        queryGranularity,
+        rollup,
+        null,
+        Collections.emptyList()
+    );
+    Assertions.assertNull(rule.getBaseTable());
+  }
+
+  @Test
+  public void test_constructor_baseTableOnly_succeeds()
+  {
+    // A baseTable alone satisfies the at-least-one-non-null requirement
+    ReindexingDataSchemaRule rule = new ReindexingDataSchemaRule(
+        "test-id",
+        "description",
+        PERIOD_14_DAYS,
+        null,
+        null,
+        null,
+        null,
+        baseTable,
+        null
+    );
+    Assertions.assertEquals(baseTable, rule.getBaseTable());
   }
 
   @Test
@@ -344,6 +410,7 @@ public class ReindexingDataSchemaRuleTest
         emptyMetrics,
         queryGranularity,
         rollup,
+        null,
         Collections.emptyList()
     );
     Assertions.assertNotNull(rule.getMetricsSpec());
@@ -363,8 +430,23 @@ public class ReindexingDataSchemaRuleTest
             null,
             null,
             null,
+            null,
             null
         )
     );
+  }
+
+  @Test
+  public void test_serde_roundTripWithBaseTable() throws Exception
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
+    );
+    final String json = mapper.writeValueAsString(rule);
+    final ReindexingDataSchemaRule fromJson = mapper.readValue(json, ReindexingDataSchemaRule.class);
+
+    Assertions.assertEquals(baseTable, fromJson.getBaseTable());
+    Assertions.assertEquals(rule, fromJson);
   }
 }

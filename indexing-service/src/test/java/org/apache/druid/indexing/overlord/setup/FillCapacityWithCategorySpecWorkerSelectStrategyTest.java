@@ -26,7 +26,7 @@ import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
-import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTask;
@@ -214,7 +214,7 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
         new FillCapacityWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
+        new HttpRemoteTaskRunnerConfig(),
         WORKERS_FOR_TIER_TESTS,
         taskWithSupervisor
     );
@@ -245,7 +245,7 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
         new FillCapacityWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
+        new HttpRemoteTaskRunnerConfig(),
         WORKERS_FOR_TIER_TESTS,
         taskWithSupervisor
     );
@@ -276,7 +276,7 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
         new FillCapacityWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
+        new HttpRemoteTaskRunnerConfig(),
         WORKERS_FOR_TIER_TESTS,
         taskWithSupervisor
     );
@@ -291,7 +291,7 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
         new FillCapacityWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
+        new HttpRemoteTaskRunnerConfig(),
         WORKERS_FOR_TIER_TESTS,
         NoopTask.forDatasource("ds1")
     );

@@ -140,6 +140,7 @@ exports[`AboutDialog matches snapshot 1`] = `
               aria-disabled="false"
               class="bp5-button bp5-intent-primary"
               href="https://druid.apache.org"
+              rel="noopener noreferrer"
               role="button"
               target="_blank"
             >

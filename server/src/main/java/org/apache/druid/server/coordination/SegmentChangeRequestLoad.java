@@ -24,9 +24,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.loading.PartialLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -38,6 +41,45 @@ import java.util.Objects;
  */
 public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
 {
+  private static final Logger log = new Logger(SegmentChangeRequestLoad.class);
+
+  /**
+   * Builds a load announcement for a segment loaded on a historical. Any {@link PartialLoadSpec} subtype (identified
+   * by the wire-form conventions documented on that class: a {@code type} starting with
+   * {@link PartialLoadSpec#TYPE_PREFIX}, plus top-level {@code fingerprint} and {@code delegate} fields) produces a
+   * "full-fallback" announcement: the wrapper's fingerprint and {@link DataSegment#getSize()} ride along as
+   * {@code loadedBytes}, satisfying the coordinator's partial-load rule even when the historical did a regular full
+   * load via the inner delegate. Without this, the coordinator's reconciler would treat the replica as stale and
+   * re-queue the load indefinitely.
+   * <p>
+   * Detection is convention-based (no subtype allowlist) so future {@link PartialLoadSpec} subtypes work
+   * automatically without touching this code.
+   * <p>
+   * For segments loaded without a partial-load wrapper (the common case), this returns a bare load request with no
+   * fingerprint or loadedBytes, equivalent to {@link #SegmentChangeRequestLoad(DataSegment)}.
+   */
+  public static SegmentChangeRequestLoad forAnnouncement(DataSegment segment)
+  {
+    final Map<String, Object> loadSpec = segment.getLoadSpec();
+    if (PartialLoadSpec.detectPartialLoadSpec(loadSpec)) {
+      return new SegmentChangeRequestLoad(segment, (String) loadSpec.get("fingerprint"), segment.getSize());
+    }
+    if (PartialLoadSpec.hasPartialTypePrefix(loadSpec)) {
+      // Type name claims partial-load but the wire form is malformed, the PartialLoadSpec subtype's @JsonProperty
+      // contract guarantees both fields, so this is a bug. Log and fall through to a plain announcement to keep the
+      // queue moving.
+      log.warn(
+          "Partial-load wrapper for segment[%s] type[%s] is malformed (fingerprint[%s], delegate[%s]); "
+          + "announcing as a regular load.",
+          segment.getId(),
+          loadSpec.get("type"),
+          loadSpec.get("fingerprint"),
+          loadSpec.get("delegate")
+      );
+    }
+    return new SegmentChangeRequestLoad(segment);
+  }
+
   private final DataSegment segment;
   @Nullable private final String fingerprint;
   @Nullable private final Long loadedBytes;

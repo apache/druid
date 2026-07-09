@@ -62,6 +62,7 @@ CORS
 CNF
 CPUs
 CSVs
+CTEs
 CentralizedDatasourceSchema
 Ceph
 circledR
@@ -105,6 +106,7 @@ ECS
 EMR
 EMRFS
 ETL
+emits
 Elasticsearch
 Enums
 FIRST_VALUE
@@ -196,6 +198,7 @@ Lucene
 MapBD
 MapDB
 MariaDB
+Marquez
 MiddleManager
 MiddleManagers
 Montréal
@@ -211,6 +214,8 @@ OLAP
 OOMs
 OpenJDK
 OpenLDAP
+openlineage
+OpenLineage
 OpenTSDB
 OutputStream
 ParAccel
@@ -233,6 +238,7 @@ S3
 SAS
 SDK
 SIGAR
+SIMD
 SNI
 SPNEGO
 Splunk
@@ -291,6 +297,7 @@ averagers
 backend
 backfills
 backfilled
+backfilling
 backpressure
 base64
 baseTime
@@ -303,6 +310,7 @@ boolean
 breakpoint
 broadcasted
 bucketSize
+checkpointed
 checksums
 classpath
 clickstream
@@ -331,6 +339,7 @@ deepstore
 denormalization
 denormalize
 denormalized
+deduplicated
 deprioritization
 deprioritizes
 dequeued
@@ -414,6 +423,7 @@ kubexit
 k8s
 laning
 lifecycle
+lineage
 localhost
 log4j
 log4j2
@@ -508,6 +518,7 @@ prepends
 prepopulated
 preprocessing
 priori
+reprocessing
 procs
 processFromRaw
 programmatically
@@ -715,6 +726,7 @@ druid.sql.planner.useApproximateTopN
 druid.sql.planner.useLexicographicTopN
 druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useNativeQueryExplain
+error_message
 error_msg
 exprs
 group_id
@@ -895,8 +907,6 @@ c3.2xlarge
 defaultManualBrokerService
 maxPriority
 minPriority
-minScaleUpDelay
-minScaleDownDelay
 NUMBER_FEATURES
 NUMBER_OF_CONTRIBUTORS
 PreparedStatement

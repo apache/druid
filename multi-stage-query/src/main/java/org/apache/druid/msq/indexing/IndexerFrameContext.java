@@ -22,11 +22,13 @@ package org.apache.druid.msq.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
 import org.apache.druid.msq.exec.ProcessingBuffers;
+import org.apache.druid.msq.exec.ProcessingBuffersSet;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.StageId;
@@ -37,6 +39,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.SegmentManager;
 
 import javax.annotation.Nullable;
@@ -49,12 +52,24 @@ public class IndexerFrameContext implements FrameContext
   private final FrameWriterSpec frameWriterSpec;
   private final IndexIO indexIO;
   private final SegmentManager segmentManager;
+  private final VirtualStorageManager virtualStorageManager;
   @Nullable
   private final CoordinatorClient coordinatorClient;
-  private final ResourceHolder<ProcessingBuffers> processingBuffers;
+
+  /**
+   * Null if the stage does not use processing buffers.
+   */
+  @Nullable
+  private final ProcessingBuffersSet processingBuffersSet;
   private final WorkerMemoryParameters memoryParameters;
   private final WorkerStorageParameters storageParameters;
   private final IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory;
+
+  /**
+   * Acquired by {@link #acquireProcessingBuffers}.
+   */
+  @Nullable
+  private ResourceHolder<ProcessingBuffers> processingBuffers;
 
   public IndexerFrameContext(
       StageId stageId,
@@ -62,8 +77,9 @@ public class IndexerFrameContext implements FrameContext
       FrameWriterSpec frameWriterSpec,
       IndexIO indexIO,
       SegmentManager segmentManager,
+      VirtualStorageManager virtualStorageManager,
       @Nullable CoordinatorClient coordinatorClient,
-      ResourceHolder<ProcessingBuffers> processingBuffers,
+      @Nullable ProcessingBuffersSet processingBuffersSet,
       IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory,
       WorkerMemoryParameters memoryParameters,
       WorkerStorageParameters storageParameters
@@ -74,8 +90,9 @@ public class IndexerFrameContext implements FrameContext
     this.frameWriterSpec = frameWriterSpec;
     this.indexIO = indexIO;
     this.segmentManager = segmentManager;
+    this.virtualStorageManager = virtualStorageManager;
     this.coordinatorClient = coordinatorClient;
-    this.processingBuffers = processingBuffers;
+    this.processingBuffersSet = processingBuffersSet;
     this.memoryParameters = memoryParameters;
     this.storageParameters = storageParameters;
     this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
@@ -103,6 +120,12 @@ public class IndexerFrameContext implements FrameContext
   public SegmentManager segmentManager()
   {
     return segmentManager;
+  }
+
+  @Override
+  public VirtualStorageManager virtualStorageManager()
+  {
+    return virtualStorageManager;
   }
 
   @Override
@@ -163,8 +186,23 @@ public class IndexerFrameContext implements FrameContext
   }
 
   @Override
+  public void acquireProcessingBuffers(final int requestedSlices)
+  {
+    if (processingBuffersSet == null) {
+      throw DruidException.defensive("Stage[%s] does not use processing buffers", stageId);
+    }
+    if (processingBuffers != null) {
+      throw DruidException.defensive("Processing buffers already acquired");
+    }
+    processingBuffers = processingBuffersSet.acquire(requestedSlices);
+  }
+
+  @Override
   public ProcessingBuffers processingBuffers()
   {
+    if (processingBuffers == null) {
+      throw DruidException.defensive("Processing buffers not yet acquired");
+    }
     return processingBuffers.get();
   }
 
@@ -189,6 +227,8 @@ public class IndexerFrameContext implements FrameContext
   @Override
   public void close()
   {
-    processingBuffers.close();
+    if (processingBuffers != null) {
+      processingBuffers.close();
+    }
   }
 }

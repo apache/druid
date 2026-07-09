@@ -37,10 +37,25 @@ import java.util.Map;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = UnknownPartialLoadMatcher.class)
 @JsonSubTypes({
     @JsonSubTypes.Type(name = ExactProjectionPartialLoadMatcher.TYPE, value = ExactProjectionPartialLoadMatcher.class),
-    @JsonSubTypes.Type(name = WildcardProjectionPartialLoadMatcher.TYPE, value = WildcardProjectionPartialLoadMatcher.class)
+    @JsonSubTypes.Type(name = WildcardProjectionPartialLoadMatcher.TYPE, value = WildcardProjectionPartialLoadMatcher.class),
+    @JsonSubTypes.Type(name = WildcardClusterGroupPartialLoadMatcher.TYPE, value = WildcardClusterGroupPartialLoadMatcher.class)
 })
 public interface PartialLoadMatcher
 {
+  /**
+   * Universal fingerprint sentinel for an "empty match" — a matcher decision to partial-load a segment with no
+   * scheme-specific content. Used by matchers that handle asymmetric resolution across siblings of a shard group:
+   * when the matcher applies to a segment but resolves to no positive content (e.g., a cluster-group matcher on a
+   * clustered segment whose tuples don't intersect any configured pattern), it returns a {@link MatchResult} with
+   * this fingerprint so the coordinator's {@code RunRules} duty can defer the empty-load dispatch and only flush it
+   * when at least one sibling in the same shard group produced a positive match.
+   *
+   * <p>All matchers share this fingerprint for empty loads — different matchers' empty wire forms are equivalent
+   * from a "what's on the historical" perspective (no scheme-specific extras downloaded), and at most one rule
+   * applies per segment per coordinator run, so cross-matcher reconciliation isn't a concern.
+   */
+  String EMPTY_LOAD_FINGERPRINT = "v1:partial-empty";
+
   /**
    * Returns the {@link MatchResult} this matcher produces for the given segment, or null if the matcher does not apply
    * to the segment. When null, {@link PartialLoadRule} consults {@link CannotMatchBehavior} to decide whether the rule
@@ -57,5 +72,14 @@ public interface PartialLoadMatcher
    */
   record MatchResult(Map<String, Object> wrappedLoadSpec, String fingerprint)
   {
+    /**
+     * Whether this is an "empty match" — the matcher applies to the segment but resolves to no positive content.
+     * Recognized via {@link #EMPTY_LOAD_FINGERPRINT}. Empty loads are dispatched only when at least one sibling in
+     * the same shard group produced a positive match; otherwise they're discarded by {@code RunRules}.
+     */
+    public boolean isEmpty()
+    {
+      return EMPTY_LOAD_FINGERPRINT.equals(fingerprint);
+    }
   }
 }

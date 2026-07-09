@@ -59,7 +59,7 @@ public class DruidSegmentInputEntity implements InputEntity
   }
 
   @Override
-  public InputStream open()
+  public InputStream openRaw()
   {
     throw new UnsupportedOperationException("Don't call this");
   }

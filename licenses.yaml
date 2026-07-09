@@ -321,7 +321,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.20.2
+version: 2.21.4
 libraries:
   - com.fasterxml.jackson.core: jackson-core
   - com.fasterxml.jackson.core: jackson-annotations
@@ -364,7 +364,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: "2.20"
+version: "2.21"
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
 
@@ -374,7 +374,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.20.2
+version: 2.21.4
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -424,7 +424,7 @@ name: Caffeine
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.9.3
+version: 3.2.4
 libraries:
   - com.github.ben-manes.caffeine: caffeine
 
@@ -434,7 +434,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.41.0
+version: 2.49.0
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -998,6 +998,37 @@ libraries:
   - io.fabric8: kubernetes-httpclient-okhttp
 ---
 
+name: Jackson
+license_category: binary
+module: extensions-core/kubernetes-overlord-extensions
+license_name: Apache License version 2.0
+version: 2.21.4
+libraries:
+  - com.fasterxml.jackson.dataformat: jackson-dataformat-properties
+notice: |
+  # Jackson JSON processor
+
+  Jackson is a high-performance, Free/Open Source JSON processing library.
+  It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+  been in development since 2007.
+  It is currently developed by a community of developers, as well as supported
+  commercially by FasterXML.com.
+
+  ## Licensing
+
+  Jackson core and extension components may licensed under different licenses.
+  To find the details that apply to this artifact see the accompanying LICENSE file.
+  For more information, including possible other licensing options, contact
+  FasterXML.com (http://fasterxml.com).
+
+  ## Credits
+
+  A list of contributors may be found from CREDITS file, which is included
+  in some artifacts (usually source distributions); but is always available
+  from the source code management (SCM) system project uses.
+
+---
+
 name: vertx
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
@@ -1073,6 +1104,16 @@ license_name: Apache License version 2.0
 version: 1.17.2
 libraries:
   - com.squareup.okio: okio
+
+---
+
+name: org.jspecify jspecify
+license_category: binary
+module: extensions-core/kubernetes-extensions
+license_name: Apache License version 2.0
+version: 1.0.0
+libraries:
+  - org.jspecify: jspecify
 
 ---
 
@@ -1251,7 +1292,7 @@ name: org.bouncycastle bcprov-jdk18on
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: MIT License
-version: "1.82"
+version: "1.84"
 libraries:
   - org.bouncycastle: bcprov-jdk18on
   - org.bouncycastle: bcprov-ext-jdk18on
@@ -1444,7 +1485,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.12.Final
+version: 4.2.15.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1465,6 +1506,7 @@ libraries:
   - io.netty: netty-transport-native-epoll
   - io.netty: netty-transport-native-unix-common
   - io.netty: netty-codec-http2
+  - io.netty: netty-codec-classes-quic
   - io.netty: netty-resolver-dns-classes-macos
   - io.netty: netty-transport-classes-kqueue
   - io.netty: netty-resolver-dns-native-macos
@@ -1859,7 +1901,6 @@ libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
   - org.apache.curator: curator-recipes
-  - org.apache.curator: curator-x-discovery
 notices:
   - curator-client: |
       Curator Client
@@ -1870,9 +1911,6 @@ notices:
   - curator-recipes: |
       Curator Recipes
       Copyright 2011-2022 The Apache Software Foundation
-  - curator-x-discovery: |
-      Curator Service Discovery
-      Copyright 2011-2022 The Apache Software Foundation
 
 ---
 
@@ -1880,11 +1918,13 @@ name: Apache Derby
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 10.14.2.0
+version: 10.17.1.0
 libraries:
   - org.apache.derby: derby
   - org.apache.derby: derbyclient
   - org.apache.derby: derbynet
+  - org.apache.derby: derbytools
+  - org.apache.derby: derbyshared
 notice: |
   =========================================================================
   ==  NOTICE file corresponding to section 4(d) of the Apache License,
@@ -2000,13 +2040,14 @@ name: Apache Log4j
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.25.4
+version: 2.26.0
 libraries:
   - org.apache.logging.log4j: log4j-1.2-api
   - org.apache.logging.log4j: log4j-api
   - org.apache.logging.log4j: log4j-core
   - org.apache.logging.log4j: log4j-jul
   - org.apache.logging.log4j: log4j-slf4j-impl
+  - org.apache.logging.log4j: log4j-layout-template-json
 notices:
   - log4j-1.2-api: |
       Apache Log4j 1.x Compatibility API
@@ -2029,6 +2070,9 @@ notices:
   - log4j-slf4j-impl: |
       Apache Log4j SLF4J Binding
       Copyright 1999-2015 Apache Software Foundation
+  - log4j-layout-template-json: |
+      Apache Log4j JSON Template Layout
+      Copyright 1999-2026 The Apache Software Foundation
 
 ---
 
@@ -3036,7 +3080,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.20.2
+version: 2.21.4
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3414,7 +3458,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 3.9.2
+version: 4.2.0
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -3759,7 +3803,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.7.2
+version: 42.7.11
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3771,7 +3815,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.7.2
+version: 42.7.11
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3783,7 +3827,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.7.2
+version: 42.7.11
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4418,7 +4462,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 3.6.1
+version: 4.2.0
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
@@ -4446,17 +4490,6 @@ notices:
 
       This project contains the following code copied from Apache Hive:
         streams/src/main/java/org/apache/kafka/streams/state/internals/Murmur3.java
-
----
-
-name: Scala Library
-license_category: binary
-module: extensions/kafka-extraction-namespace
-license_name: Apache License version 2.0
-copyright: LAMP/EPFL and Lightbend, Inc.
-version: 2.13.16
-libraries:
-  - org.scala-lang: scala-library
 
 ---
 
@@ -4654,7 +4687,7 @@ name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.0.75.Final
+version: 2.0.77.Final
 libraries:
   - io.netty: netty-tcnative-boringssl-static
   - io.netty: netty-tcnative-classes
@@ -7104,7 +7137,15 @@ libraries:
 name: Javassist
 license_category: binary
 module: extensions-core/druid-kerberos
-license_name: Apache License version 2.0
+license_name: MPL 1.1
 version: 3.30.2-GA
 libraries:
   - org.javassist: javassist
+notice: |
+  Javassist is triple-licensed under MPL 1.1, LGPL 2.1, and Apache License 2.0.
+  Apache Druid uses Javassist under the Apache License 2.0 terms.
+
+  From the Javassist license page (https://www.javassist.org/):
+  "Javassist is distributed under the Mozilla Public License 1.1 (MPL),
+  the GNU Lesser General Public License 2.1 (LGPL), and the Apache License 2.0 (AL).
+  You can choose one of them."

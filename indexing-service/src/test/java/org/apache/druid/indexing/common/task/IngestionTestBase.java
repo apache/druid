@@ -80,7 +80,7 @@ import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -227,7 +227,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
   public SegmentCacheManager newSegmentLoader(File storageDir)
   {
-    return segmentCacheManagerFactory.manufacturate(storageDir, true);
+    return segmentCacheManagerFactory.manufacturate(storageDir, null, true);
   }
 
   public ObjectMapper getObjectMapper()
@@ -311,7 +311,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
                               .create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
         .taskReportFileWriter(new NoopTestTaskReportFileWriter())
         .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
-        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .chatHandlerProvider(new ChatHandlerProvider())
         .rowIngestionMetersFactory(testUtils.getRowIngestionMetersFactory())
         .appenderatorsManager(new TestAppenderatorsManager())
         .taskLogPusher(null)
@@ -489,7 +489,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
                                   .create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
             .taskReportFileWriter(new SingleFileTaskReportFileWriter(taskReportsFile))
             .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
-            .chatHandlerProvider(new NoopChatHandlerProvider())
+            .chatHandlerProvider(new ChatHandlerProvider())
             .rowIngestionMetersFactory(testUtils.getRowIngestionMetersFactory())
             .appenderatorsManager(new TestAppenderatorsManager())
             .taskLogPusher(null)

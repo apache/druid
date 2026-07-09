@@ -50,7 +50,6 @@ Core extensions are maintained by Druid committers.
 |druid-kerberos|Kerberos authentication for druid processes.|[link](../development/extensions-core/druid-kerberos.md)|
 |druid-lookups-cached-global|A module for [lookups](../querying/lookups.md) providing a jvm-global eager caching for lookups. It provides JDBC and URI implementations for fetching lookup data.|[link](../querying/lookups-cached-global.md)|
 |druid-lookups-cached-single| Per lookup caching module to support the use cases where a lookup need to be isolated from the global pool of lookups |[link](../development/extensions-core/druid-lookups.md)|
-|druid-multi-stage-query| Support for the multi-stage query architecture for Apache Druid and the multi-stage query task engine.|[link](../multi-stage-query/index.md)|
 |druid-orc-extensions|Support for data in Apache ORC data format.|[link](../development/extensions-core/orc.md)|
 |druid-parquet-extensions|Support for data in Apache Parquet data format. Requires druid-avro-extensions to be loaded.|[link](../development/extensions-core/parquet.md)|
 |druid-protobuf-extensions| Support for data in Protobuf data format.|[link](../development/extensions-core/protobuf.md)|
@@ -94,6 +93,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |graphite-emitter|Graphite metrics emitter|[link](../development/extensions-contrib/graphite.md)|
 |statsd-emitter|StatsD metrics emitter|[link](../development/extensions-contrib/statsd.md)|
 |kafka-emitter|Kafka metrics emitter|[link](../development/extensions-contrib/kafka-emitter.md)|
+|openlineage-emitter|OpenLineage data lineage emitter|[link](../development/extensions-contrib/openlineage-emitter.md)|
 |druid-thrift-extensions|Support thrift ingestion |[link](../development/extensions-contrib/thrift.md)|
 |druid-opentsdb-emitter|OpenTSDB metrics emitter |[link](../development/extensions-contrib/opentsdb-emitter.md)|
 |druid-moving-average-query|Support for [Moving Average](https://en.wikipedia.org/wiki/Moving_average) and other Aggregate [Window Functions](https://en.wikibooks.org/wiki/Structured_Query_Language/Window_functions) in Druid queries.|[link](../development/extensions-contrib/moving-average-query.md)|
