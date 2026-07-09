@@ -39,12 +39,14 @@ import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.SearchResult;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -82,14 +84,14 @@ public class OpaAuthorizer implements Authorizer
     this.objectMapper =
         new ObjectMapper()
             // https://github.com/stackabletech/druid-opa-authorizer/issues/72
-            // OPA server can send other fields, such as `decision_id`` when enabling decision logs
+            // OPA server can send other fields, such as `decision_id` when enabling decision logs
             // We could add all the fields we *currently* know, but it's more future-proof to ignore
             // any unknown fields.
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     this.httpClient = httpClient;
     // name is required for @JsonCreator but unused in this implementation
-    LOG.debug("OpaAuthorizer [%s] created", name);
+    LOG.debug("Created OpaAuthorizer [%s]", name);
   }
 
   @Override
@@ -100,13 +102,13 @@ public class OpaAuthorizer implements Authorizer
   )
   {
     LOG.debug(
-        "Authorizing %s for %s on %s",
+        "Authorizing [%s] for [%s] on [%s]",
         authenticationResult.getIdentity(),
         action.name(),
         resource.toString()
     );
 
-    AuthenticationResult sanitizedAuthResult = new AuthenticationResult(
+    final AuthenticationResult sanitizedAuthResult = new AuthenticationResult(
         authenticationResult.getIdentity(),
         authenticationResult.getAuthorizerName(),
         authenticationResult.getAuthenticatedBy(),
@@ -114,13 +116,13 @@ public class OpaAuthorizer implements Authorizer
     );
 
     LOG.trace("Creating OPA request JSON.");
-    OpaMessage msg = new OpaMessage(
+    final OpaMessage msg = new OpaMessage(
         sanitizedAuthResult,
         action.name(),
         resource.getName(),
         resource.getType()
     );
-    String msgJson;
+    final String msgJson;
     try {
       msgJson = objectMapper.writeValueAsString(msg);
     }
@@ -130,18 +132,26 @@ public class OpaAuthorizer implements Authorizer
 
     LOG.trace("Executing post to OPA.");
     try {
-      HttpRequest request =
+      final HttpRequest request =
           HttpRequest.newBuilder()
                      .uri(opaUri)
                      .header("Content-Type", "application/json")
                      .POST(HttpRequest.BodyPublishers.ofString(msgJson))
                      .build();
 
-      HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+      final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-      LOG.debug("OPA Response code: %s - %s", response.statusCode(), response.body());
+      LOG.debug("OPA response code [%s]", response.statusCode());
+      LOG.trace("OPA response body [%s]", response.body());
+
+      if (response.statusCode() != HttpURLConnection.HTTP_OK) {
+        return Access.deny(
+            "OPA request failed with status code [" + response.statusCode() + "]"
+        );
+      }
+
       LOG.trace("Parsing OPA response.");
-      OpaResponse opaResponse = objectMapper.readValue(response.body(), OpaResponse.class);
+      final OpaResponse opaResponse = objectMapper.readValue(response.body(), OpaResponse.class);
       if (opaResponse.isResult()) {
         return Access.OK;
       } else {
@@ -160,14 +170,15 @@ public class OpaAuthorizer implements Authorizer
       return context;
     }
 
-    Map<String, Object> sanitizedContext = new HashMap<>();
-    for (Map.Entry<String, Object> entry : context.entrySet()) {
+    final Map<String, Object> sanitizedContext = new HashMap<>();
+    for (final Map.Entry<String, Object> entry : context.entrySet()) {
       if (entry.getValue() instanceof SearchResult) {
         try {
           sanitizedContext.put(entry.getKey(), sanitizeSearchResult((SearchResult) entry.getValue()));
         }
         catch (NamingException e) {
-          LOG.warn(e, "Failed to sanitize SearchResult in context key: %s", entry.getKey());
+          LOG.warn(e, "Failed to sanitize SearchResult in context key [%s]", entry.getKey());
+          sanitizedContext.put(entry.getKey(), Collections.emptyMap());
         }
       } else {
         // Keep other types as is, assuming they are serializable or handled by other means
@@ -179,9 +190,9 @@ public class OpaAuthorizer implements Authorizer
 
   private Map<String, Object> sanitizeSearchResult(SearchResult searchResult) throws NamingException
   {
-    Map<String, Object> sanitized = new HashMap<>();
+    final Map<String, Object> sanitized = new HashMap<>();
     sanitized.put("name", searchResult.getName());
-    
+
     try {
       sanitized.put("nameInNamespace", searchResult.getNameInNamespace());
     }
@@ -190,23 +201,37 @@ public class OpaAuthorizer implements Authorizer
       // and the full name hasn't been set by the context. It's safe to ignore.
     }
 
-    Map<String, List<Object>> attributesMap = new HashMap<>();
-    Attributes attributes = searchResult.getAttributes();
+    final Map<String, List<Object>> attributesMap = new HashMap<>();
+    final Attributes attributes = searchResult.getAttributes();
     if (attributes != null) {
-      NamingEnumeration<? extends Attribute> attrEnum = attributes.getAll();
-      while (attrEnum != null && attrEnum.hasMore()) {
-        Attribute attr = attrEnum.next();
-        List<Object> values = new ArrayList<>();
-        NamingEnumeration<?> valueEnum = attr.getAll();
-        while (valueEnum != null && valueEnum.hasMore()) {
-          Object val = valueEnum.next();
-          if (val instanceof byte[]) {
-            values.add(Base64.getEncoder().encodeToString((byte[]) val));
-          } else if (val != null) {
-            values.add(val.toString());
+      final NamingEnumeration<? extends Attribute> attrEnum = attributes.getAll();
+      try {
+        while (attrEnum != null && attrEnum.hasMore()) {
+          final Attribute attr = attrEnum.next();
+          final List<Object> values = new ArrayList<>();
+          final NamingEnumeration<?> valueEnum = attr.getAll();
+          try {
+            while (valueEnum != null && valueEnum.hasMore()) {
+              final Object val = valueEnum.next();
+              if (val instanceof byte[]) {
+                values.add(Base64.getEncoder().encodeToString((byte[]) val));
+              } else if (val != null) {
+                values.add(val.toString());
+              }
+            }
           }
+          finally {
+            if (valueEnum != null) {
+              valueEnum.close();
+            }
+          }
+          attributesMap.put(attr.getID().toLowerCase(Locale.ENGLISH), values);
         }
-        attributesMap.put(attr.getID().toLowerCase(Locale.ENGLISH), values);
+      }
+      finally {
+        if (attrEnum != null) {
+          attrEnum.close();
+        }
       }
     }
     sanitized.put("attributes", attributesMap);

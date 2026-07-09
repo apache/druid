@@ -54,7 +54,7 @@ public class OpaAuthorizerTest
     if (request.bodyPublisher().isEmpty()) {
       return "";
     }
-    StringBuilder sb = new StringBuilder();
+    final StringBuilder sb = new StringBuilder();
     request.bodyPublisher().get().subscribe(new Flow.Subscriber<>()
     {
       @Override
@@ -66,7 +66,7 @@ public class OpaAuthorizerTest
       @Override
       public void onNext(ByteBuffer item)
       {
-        byte[] bytes = new byte[item.remaining()];
+        final byte[] bytes = new byte[item.remaining()];
         item.get(bytes);
         sb.append(new String(bytes, StandardCharsets.UTF_8));
       }
@@ -101,9 +101,9 @@ public class OpaAuthorizerTest
     Mockito.when(httpClient.send(ArgumentMatchers.any(HttpRequest.class), ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
            .thenReturn(response);
 
-    AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", null);
-    Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
-    Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
+    final AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", null);
+    final Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
+    final Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
 
     Assert.assertTrue(access.isAllowed());
   }
@@ -118,9 +118,9 @@ public class OpaAuthorizerTest
     Mockito.when(httpClient.send(ArgumentMatchers.any(HttpRequest.class), ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
            .thenReturn(response);
 
-    AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", null);
-    Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
-    Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
+    final AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", null);
+    final Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
+    final Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
 
     Assert.assertFalse(access.isAllowed());
     Assert.assertEquals(Access.DENIED.getMessage(), access.getMessage());
@@ -132,18 +132,36 @@ public class OpaAuthorizerTest
     Mockito.when(httpClient.send(ArgumentMatchers.any(HttpRequest.class), ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
            .thenThrow(new RuntimeException("Network error"));
 
-    AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", null);
-    Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
-    Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
+    final AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", null);
+    final Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
+    final Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
 
     Assert.assertFalse(access.isAllowed());
     Assert.assertTrue(access.getMessage().contains("Unauthorized, An error occurred: java.lang.RuntimeException: Network error"));
   }
 
+  @Test
+  public void testAuthorizeNon200Response() throws Exception
+  {
+    @SuppressWarnings("unchecked")
+    HttpResponse<String> response = Mockito.mock(HttpResponse.class);
+    Mockito.when(response.statusCode()).thenReturn(500);
+    Mockito.when(response.body()).thenReturn("Internal Server Error");
+    Mockito.when(httpClient.send(ArgumentMatchers.any(HttpRequest.class), ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
+           .thenReturn(response);
+
+    final AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", null);
+    final Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
+    final Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
+
+    Assert.assertFalse(access.isAllowed());
+    Assert.assertTrue(access.getMessage().contains("OPA request failed with status code [500]"));
+  }
+
   @Test(expected = IllegalArgumentException.class)
   public void testInvalidUri()
   {
-    OpaAuthorizer ignored = new OpaAuthorizer("opa", "invalid uri", httpClient);
+    final OpaAuthorizer ignored = new OpaAuthorizer("opa", "invalid uri", httpClient);
     Assert.assertNotNull(ignored);
   }
 
@@ -154,33 +172,33 @@ public class OpaAuthorizerTest
     HttpResponse<String> response = Mockito.mock(HttpResponse.class);
     Mockito.when(response.statusCode()).thenReturn(200);
     Mockito.when(response.body()).thenReturn("{\"result\": true}");
-    
-    ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+
+    final ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
     Mockito.when(httpClient.send(requestCaptor.capture(), ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
            .thenReturn(response);
 
     // Mimic LDAP SearchResult which has non-serializable elements
-    BasicAttributes attributes = new BasicAttributes();
+    final BasicAttributes attributes = new BasicAttributes();
     attributes.put("uid", "user");
     attributes.put("memberOf", "cn=group1,ou=Groups,dc=example,dc=org");
     attributes.get("memberOf").add("cn=group2,ou=Groups,dc=example,dc=org");
-    byte[] photoBytes = new byte[]{1, 2, 3};
+    final byte[] photoBytes = new byte[]{1, 2, 3};
     attributes.put("jpegPhoto", photoBytes);
-    SearchResult searchResult = new SearchResult("uid=user", "java.lang.Object", null, attributes, false);
+    final SearchResult searchResult = new SearchResult("uid=user", "java.lang.Object", null, attributes, false);
     searchResult.setNameInNamespace("dc=example,dc=org");
 
-    Map<String, Object> context = new HashMap<>();
+    final Map<String, Object> context = new HashMap<>();
     context.put("searchResult", searchResult);
 
-    AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", context);
-    Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
-    Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
+    final AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", context);
+    final Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
+    final Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
 
     Assert.assertTrue(access.isAllowed());
-    
-    HttpRequest capturedRequest = requestCaptor.getValue();
-    String requestBody = getBody(capturedRequest);
-    
+
+    final HttpRequest capturedRequest = requestCaptor.getValue();
+    final String requestBody = getBody(capturedRequest);
+
     Assert.assertTrue(requestBody.contains("\"name\":\"uid=user\""));
     Assert.assertTrue(requestBody.contains("\"nameInNamespace\":\"dc=example,dc=org\""));
     Assert.assertTrue(requestBody.contains("\"uid\":[\"user\"]"));

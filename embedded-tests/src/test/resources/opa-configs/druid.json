@@ -10,7 +10,8 @@
     },
     "role_grants": {
         "admin": [
-            { "action": ".*", "resource": { "type": ".*", "name": ".*" } }
+            { "action": "READ", "resource": { "type": ".*", "name": ".*" } },
+            { "action": "WRITE", "resource": { "type": ".*", "name": ".*" } }
         ],
         "datasource_only": [
             { "action": "READ", "resource": { "type": "DATASOURCE", "name": "auth_test" } }

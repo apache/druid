@@ -2647,7 +2647,6 @@ TableSpec
 
 - ../docs/development/extensions-contrib/prometheus.md
 TTL
-<<<<<<< HEAD
 
 - ../docs/development/extensions-contrib/consul.md
 minimum
@@ -2659,12 +2658,6 @@ nginx
 
 - ../docs/development/extensions-core/s3.md
 NIO
-=======
-OPA
-Rego
-opaUri
-rego
-RegoRules
 
 - ../docs/development/extensions-contrib/druid-opa-authorizer.md
 OPA
@@ -2675,4 +2668,3 @@ dylan
 eve
 opaUri
 rego
->>>>>>> a9a1e8b764 (Adjust druid-opa-authorizer files to match Apache Druid repo)

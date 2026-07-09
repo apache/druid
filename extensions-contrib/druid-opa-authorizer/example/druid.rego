@@ -34,7 +34,7 @@ allow if {
 	# Check if the grant permits the action.
 	input.action == grant.action
 	regex.match(grant.resource.name, input.resource.name)
-	input.resource.type == grant.resource.type
+	regex.match(grant.resource.type, input.resource.type)
 }
 
 # user_is_admin is true if...

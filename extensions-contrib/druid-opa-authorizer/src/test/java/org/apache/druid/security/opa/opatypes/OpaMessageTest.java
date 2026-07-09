@@ -35,23 +35,23 @@ public class OpaMessageTest
   @SuppressWarnings("unchecked")
   public void testSerialization() throws Exception
   {
-    AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", null);
-    OpaMessage message = new OpaMessage(authResult, "READ", "resource", "type");
+    final AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", null);
+    final OpaMessage message = new OpaMessage(authResult, "READ", "resource", "type");
 
-    String json = mapper.writeValueAsString(message);
+    final String json = mapper.writeValueAsString(message);
 
     // Verify the structure: {"input":{"authenticationResult":{"identity":"user",...},"action":"READ","resource":{"name":"resource","type":"type"}}}
-    Map<String, Object> map = mapper.readValue(json, new TypeReference<>() {});
+    final Map<String, Object> map = mapper.readValue(json, new TypeReference<>() {});
     Assert.assertTrue(map.containsKey("input"));
-    
-    Map<String, Object> input = (Map<String, Object>) map.get("input");
+
+    final Map<String, Object> input = (Map<String, Object>) map.get("input");
     Assert.assertEquals("READ", input.get("action"));
-    
-    Map<String, Object> resource = (Map<String, Object>) input.get("resource");
+
+    final Map<String, Object> resource = (Map<String, Object>) input.get("resource");
     Assert.assertEquals("resource", resource.get("name"));
     Assert.assertEquals("type", resource.get("type"));
-    
-    Map<String, Object> authenticationResult = (Map<String, Object>) input.get("authenticationResult");
+
+    final Map<String, Object> authenticationResult = (Map<String, Object>) input.get("authenticationResult");
     Assert.assertEquals("user", authenticationResult.get("identity"));
   }
 }
