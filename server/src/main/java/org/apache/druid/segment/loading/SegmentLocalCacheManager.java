@@ -1763,24 +1763,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    */
   private static void cleanupLegacyCacheLocation(final File baseFile, final File cacheFile)
   {
-    if (cacheFile.equals(baseFile)) {
-      return;
-    }
-
     try {
       log.info("Deleting migrated segment directory[%s]", cacheFile);
-      FileUtils.deleteDirectory(cacheFile);
+      FileUtils.deleteDirectoryAndEmptyAncestors(cacheFile, baseFile);
     }
     catch (Exception e) {
       log.warn(e, "Unable to remove directory[%s]", cacheFile);
-    }
-
-    File parent = cacheFile.getParentFile();
-    if (parent != null) {
-      File[] children = parent.listFiles();
-      if (children == null || children.length == 0) {
-        cleanupLegacyCacheLocation(baseFile, parent);
-      }
     }
   }
 

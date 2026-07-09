@@ -76,69 +76,51 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
-  public void testComputeValidTaskCounts()
+  public void test_computeValidTaskCounts_returnsSortedArray()
   {
-    // For 100 partitions at 25 tasks (4 partitions/task), valid counts include 25 and 34
-    final int[] validTaskCounts = computeValidTaskCounts(
-        100,
-        25,
-        1,
-        100
+    final int partitionCount = 100;
+    final int minTaskCount = 1;
+    final int maxTaskCount = 100;
+    Assert.assertArrayEquals(
+        new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15, 17, 20, 25, 34, 50, 100},
+        computeValidTaskCounts(partitionCount, minTaskCount, maxTaskCount)
     );
-    Assert.assertTrue("Expected current task count to be included", contains(validTaskCounts, 25));
-    Assert.assertTrue("Expected next scale-up option (34) to be included", contains(validTaskCounts, 34));
+  }
 
-    // Single partition
-    final int[] singlePartition = computeValidTaskCounts(
-        1,
-        1,
-        1,
-        100
+  @Test
+  public void test_computeValidTaskCounts_withSinglePartition()
+  {
+    final int partitionCount = 1;
+    final int minTaskCount = 1;
+    final int maxTaskCount = 100;
+    Assert.assertArrayEquals(
+        new int[]{1},
+        computeValidTaskCounts(partitionCount, minTaskCount, maxTaskCount)
     );
-    Assert.assertTrue("Single partition should yield at least one valid count", singlePartition.length > 0);
-    Assert.assertTrue("Single partition should include task count 1", contains(singlePartition, 1));
+  }
 
-    // Current exceeds partitions - should still yield valid, deduplicated options
-    final int[] exceedsPartitions = computeValidTaskCounts(
-        2,
-        5,
-        1,
-        100
+  @Test
+  public void test_computeValidTaskCounts_filtersByTaskCountMax()
+  {
+    final int partitionCount = 30;
+    final int taskCountMin = 1;
+    final int taskCountMax = 3;
+    Assert.assertArrayEquals(
+        new int[]{1, 2, 3},
+        computeValidTaskCounts(partitionCount, taskCountMin, taskCountMax)
     );
-    Assert.assertEquals(2, exceedsPartitions.length);
-    Assert.assertTrue(contains(exceedsPartitions, 1));
-    Assert.assertTrue(contains(exceedsPartitions, 2));
+  }
 
-    // Unbounded candidate generation includes both nearby and maximum task counts.
-    final int[] taskCounts = computeValidTaskCounts(30, 3, 1, 30);
-    Assert.assertTrue("Valid task counts should include max task count", contains(taskCounts, 30));
-    Assert.assertTrue("Valid task counts should include nearby scale-up task count", contains(taskCounts, 4));
-
-    // Respects taskCountMax
-    final int[] cappedCounts = computeValidTaskCounts(
-        30,
-        4,
-        1,
-        3
+  @Test
+  public void test_computeValidTaskCounts_filtersByTaskCountMaxAndTaskCountMin()
+  {
+    final int partitionCount = 100;
+    final int taskCountMin = 10;
+    final int taskCountMax = 30;
+    Assert.assertArrayEquals(
+        new int[]{10, 12, 13, 15, 17, 20, 25},
+        computeValidTaskCounts(partitionCount, taskCountMin, taskCountMax)
     );
-    Assert.assertTrue("Should include taskCountMax when within bounds", contains(cappedCounts, 3));
-    Assert.assertFalse("Should not exceed taskCountMax", contains(cappedCounts, 4));
-
-    // Respects taskCountMin - filters out values below the minimum
-    // With partitionCount=100, currentTaskCount=10, the computed range includes values like 8, 9, 10, 12, 13
-    final int[] minCappedCounts = computeValidTaskCounts(100, 10, 10, 100);
-    Assert.assertFalse("Should not include values below taskCountMin (8)", contains(minCappedCounts, 8));
-    Assert.assertFalse("Should not include values below taskCountMin (9)", contains(minCappedCounts, 9));
-    Assert.assertTrue("Should include values at taskCountMin (10)", contains(minCappedCounts, 10));
-    Assert.assertTrue("Should include values above taskCountMin (12)", contains(minCappedCounts, 12));
-
-    // Both bounds applied together
-    final int[] bothBounds = computeValidTaskCounts(100, 10, 10, 12);
-    Assert.assertFalse("Should not include values below taskCountMin (8)", contains(bothBounds, 8));
-    Assert.assertFalse("Should not include values below taskCountMin (9)", contains(bothBounds, 9));
-    Assert.assertFalse("Should not include values above taskCountMax (13)", contains(bothBounds, 13));
-    Assert.assertTrue("Should include values at taskCountMin (10)", contains(bothBounds, 10));
-    Assert.assertTrue("Should include values at taskCountMax (12)", contains(bothBounds, 12));
   }
 
   @Test
@@ -512,7 +494,7 @@ public class CostBasedAutoScalerTest
                                                                          .enableTaskAutoScaler(true)
                                                                          .build();
     Assert.assertEquals(
-        CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DELAY,
+        CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DOWN_DELAY,
         cfgWithDefaults.getMinScaleDownDelay()
     );
     Assert.assertFalse(cfgWithDefaults.isScaleDownOnTaskRolloverOnly());
