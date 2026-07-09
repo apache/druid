@@ -24,7 +24,7 @@ sidebar_label: "Load files natively"
   -->
 
 
-This tutorial demonstrates how to load data into Apache Druid from a file using Apache Druid's native batch ingestion feature.
+This tutorial demonstrates how to load data into Apache&circledR; Druid from a file using Apache Druid's native batch ingestion feature.
 
 You initiate data loading in Druid by submitting an *ingestion task* spec to the Druid Overlord. You can write ingestion 
 specs by hand or using the _data loader_ built into the web console. 
@@ -118,14 +118,14 @@ Once the spec is submitted, wait a few moments for the data to load, after which
 
 ## Loading data with a spec (via command line)
 
-For convenience, the Druid package includes a batch ingestion helper script at `bin/post-index-task`.
-
-This script will POST an ingestion task to the Druid Overlord and poll Druid until the data is available for querying.
+To load data with a spec, you need to POST an ingestion task to the Druid Overlord and poll Druid until the data is available for querying.
 
 Run the following command from Druid package root:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/wikipedia-index.json --url http://localhost:8081
+curl -X POST http://localhost:8081/druid/indexer/v1/task \
+  -H "Content-Type: application/json" \
+  -d @quickstart/tutorial/wikipedia-index.json
 ```
 
 You should see output like the following:

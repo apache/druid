@@ -27,17 +27,19 @@ sidebar_label: "Deleting data"
 This tutorial demonstrates how to delete existing data.
 
 This tutorial requires the following:
-* A running Apache Druid instance. If you don't have Druid, see the [single-machine quickstart](index.md) to get started.
+* A running Apache&circledR; Druid instance. If you don't have Druid, see the [single-machine quickstart](index.md) to get started.
 * The command-line JSON processor, [jq](https://stedolan.github.io/jq/download/).
 
 ## Load initial data
 
 In this tutorial, we will use the Wikipedia edits data, with an indexing spec that creates hourly segments. This spec is located at `quickstart/tutorial/deletion-index.json`, and it creates a datasource called `deletion-tutorial`.
 
-Let's load this initial data:
+Let's load this initial data by calling the Druid Overlord API:
 
 ```bash
-bin/post-index-task --file quickstart/tutorial/deletion-index.json --url http://localhost:8081
+curl -X POST http://localhost:8081/druid/indexer/v1/task \
+  -H "Content-Type: application/json" \
+  -d @quickstart/tutorial/deletion-index.json
 ```
 
 When the load finishes, open [http://localhost:8888/unified-console.md#datasources](http://localhost:8888/unified-console.html#datasources) in a browser.
