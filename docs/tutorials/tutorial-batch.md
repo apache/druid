@@ -24,7 +24,7 @@ sidebar_label: "Load files natively"
   -->
 
 
-This tutorial demonstrates how to load data into Apache Druid from a file using Apache Druid's native batch ingestion feature.
+This tutorial demonstrates how to load data into Apache&circledR; Druid from a file using Apache Druid's native batch ingestion feature.
 
 You initiate data loading in Druid by submitting an *ingestion task* spec to the Druid Overlord. You can write ingestion 
 specs by hand or using the _data loader_ built into the web console. 

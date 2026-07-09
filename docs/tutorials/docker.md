@@ -23,7 +23,7 @@ sidebar_label: Run with Docker
   ~ under the License.
   -->
 
-This quickstart guides you through the steps to download the Apache Druid image from [Docker Hub](https://hub.docker.com/r/apache/druid) and deploy it on a single machine using [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/).
+This quickstart guides you through the steps to download the Apache&circledR; Druid image from [Docker Hub](https://hub.docker.com/r/apache/druid) and deploy it on a single machine using [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/).
 After you finish the initial setup, the cluster will be ready to load data.
 
 Before beginning the quickstart, it is helpful to read the [general Druid overview](../design/index.md) and the [ingestion overview](../ingestion/index.md), because the tutorials refer to concepts discussed on those pages. It also helps to be familiar with [Docker](https://www.docker.com/get-started).

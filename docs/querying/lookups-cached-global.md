@@ -22,7 +22,7 @@ title: "Globally Cached Lookups"
   ~ under the License.
   -->
 
-To use this Apache Druid extension, [include](../configuration/extensions.md#loading-extensions) `druid-lookups-cached-global` in the extensions load list.
+To use this Apache&circledR; Druid extension, [include](../configuration/extensions.md#loading-extensions) `druid-lookups-cached-global` in the extensions load list.
 
 ## Configuration
 :::info
