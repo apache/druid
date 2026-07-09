@@ -36,6 +36,7 @@ import javax.naming.directory.SearchResult;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -88,7 +89,7 @@ public class OpaAuthorizerTest
   public void setUp()
   {
     httpClient = Mockito.mock(HttpClient.class);
-    opaAuthorizer = new OpaAuthorizer("opa", OPA_URI, httpClient);
+    opaAuthorizer = new OpaAuthorizer("opa", OPA_URI, null, httpClient);
   }
 
   @Test
@@ -161,7 +162,7 @@ public class OpaAuthorizerTest
   @Test(expected = IllegalArgumentException.class)
   public void testInvalidUri()
   {
-    final OpaAuthorizer ignored = new OpaAuthorizer("opa", "invalid uri", httpClient);
+    final OpaAuthorizer ignored = new OpaAuthorizer("opa", "invalid uri", null, httpClient);
     Assert.assertNotNull(ignored);
   }
 
@@ -204,5 +205,33 @@ public class OpaAuthorizerTest
     Assert.assertTrue(requestBody.contains("\"uid\":[\"user\"]"));
     Assert.assertTrue(requestBody.contains("\"memberof\":[\"cn=group1,ou=Groups,dc=example,dc=org\",\"cn=group2,ou=Groups,dc=example,dc=org\"]"));
     Assert.assertTrue(requestBody.contains("\"jpegphoto\":[\"AQID\"]")); // Base64 for [1, 2, 3]
+  }
+
+  @Test
+  public void testAuthorizeTimeout() throws Exception
+  {
+    Mockito.when(httpClient.send(ArgumentMatchers.any(HttpRequest.class), ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
+           .thenThrow(new HttpTimeoutException("request timed out"));
+
+    final AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", null);
+    final Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
+    final Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
+
+    Assert.assertFalse(access.isAllowed());
+    Assert.assertTrue(access.getMessage().contains("HttpTimeoutException"));
+  }
+
+  @Test
+  public void testCustomTimeout()
+  {
+    final OpaAuthorizer customTimeout = new OpaAuthorizer("opa", OPA_URI, 5000L, httpClient);
+    Assert.assertNotNull(customTimeout);
+  }
+
+  @Test
+  public void testDefaultTimeout()
+  {
+    final OpaAuthorizer defaultTimeout = new OpaAuthorizer("opa", OPA_URI, null, httpClient);
+    Assert.assertNotNull(defaultTimeout);
   }
 }

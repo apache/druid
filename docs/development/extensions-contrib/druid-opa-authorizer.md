@@ -34,6 +34,7 @@ The OPA authorizer needs to be referenced in your authenticator. The OPA authori
 |--------|-----------|-------|--------|
 |`druid.auth.authorizer.<authorizerName>.type`|Must be `opa`.|none|yes|
 |`druid.auth.authorizer.<authorizerName>.opaUri`|The URI for the OPA server (e.g. `http://<host>:<port>/v1/data/my/druid/allow`).|none|yes|
+|`druid.auth.authorizer.<authorizerName>.timeoutMs`|Timeout in milliseconds for OPA HTTP requests. Applies to both connection and request timeout. If OPA does not respond within this duration, authorization is denied.|5000|no|
 
 ## Write Rego rules
 
