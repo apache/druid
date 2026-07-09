@@ -56,11 +56,12 @@ import java.util.Set;
  *   {@link #restoreBundlesFromDisk} to discover, reserve, and mount any bundles whose container files survived. The
  *   same call from the fresh acquire path is a no-op (no on-disk containers to restore).</li>
  * </ol>
- * Parent-set inference is delegated to {@link PartialSegmentMetadataCacheEntry#inferParentBundles}. A bundle whose
- * inferred parent isn't itself present on disk is treated as <i>orphaned</i>: its on-disk container files are deleted
- * (via {@link PartialSegmentFileMapperV10#evictContainer}, which also clears the relevant bitmap bits) and the bundle
- * is not restored. The next access through the cache manager acquire path then triggers a clean cold re-fetch, the
- * same fall-back as when the cache manager finds a segment listed in the info directory but missing on disk.
+ * Dependency inference is delegated to {@link PartialSegmentMetadataCacheEntry#inferBundleDependencies}. A bundle
+ * whose inferred dependency isn't itself present on disk is treated as <i>orphaned</i>: its on-disk container files
+ * are deleted (via {@link PartialSegmentFileMapperV10#evictContainer}, which also clears the relevant bitmap bits) and
+ * the bundle is not restored. The next access through the cache manager acquire path then triggers a clean cold
+ * re-fetch, the same fall-back as when the cache manager finds a segment listed in the info directory but missing on
+ * disk.
  */
 public final class PartialSegmentCacheBootstrap
 {
@@ -173,8 +174,8 @@ public final class PartialSegmentCacheBootstrap
     final Set<String> orphanedBundleNames = new HashSet<>();
     for (String name : presentBundleNames) {
       boolean orphaned = false;
-      for (PartialSegmentBundleCacheEntryIdentifier parent : metadata.inferParentBundles(name)) {
-        if (!presentBundleNames.contains(parent.bundleName())) {
+      for (PartialSegmentBundleCacheEntryIdentifier dep : metadata.inferBundleDependencies(name)) {
+        if (!presentBundleNames.contains(dep.bundleName())) {
           orphaned = true;
           break;
         }
@@ -192,23 +193,23 @@ public final class PartialSegmentCacheBootstrap
         fileMapper.mapperForContainer(ref.externalFilename()).evictContainer(ref.containerIndex());
       }
       LOG.debug(
-          "Deleted on-disk state of orphaned bundle[%s] for segment[%s] (parent unrestorable); next access "
+          "Deleted on-disk state of orphaned bundle[%s] for segment[%s] (dependency unrestorable); next access "
           + "will trigger cold re-fetch",
           orphanName,
           segmentId
       );
     }
 
-    // mount base bundle before any dependent bundle so its hold is available when dependents acquire parent holds
+    // Mount the base bundle before any dependent bundle so its hold is available when dependents acquire deps.
     mountableBundleNames.sort(Comparator.comparing(name -> !Projections.BASE_TABLE_PROJECTION_NAME.equals(name)));
 
     final List<PartialSegmentBundleCacheEntry> mountedBundles = new ArrayList<>();
     boolean success = false;
     try {
       for (String bundleName : mountableBundleNames) {
-        // Mountable bundles have all parents present by construction (orphans were filtered out above), so the
-        // inferred parent set is exactly what we want, no further filtering needed.
-        final List<PartialSegmentBundleCacheEntryIdentifier> parentIds = metadata.inferParentBundles(bundleName);
+        // Mountable bundles have all dependencies present by construction (orphans were filtered out above), so the
+        // inferred dependency set is exactly what we want, no further filtering needed.
+        final List<PartialSegmentBundleCacheEntryIdentifier> parentIds = metadata.inferBundleDependencies(bundleName);
         final PartialSegmentBundleCacheEntry bundle = PartialSegmentBundleCacheEntry.forBundle(
             metadata,
             bundleName,
