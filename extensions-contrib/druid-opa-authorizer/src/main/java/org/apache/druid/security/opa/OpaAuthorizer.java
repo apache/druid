@@ -44,6 +44,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
@@ -56,22 +57,33 @@ import java.util.Map;
 public class OpaAuthorizer implements Authorizer
 {
   private static final Logger LOG = new Logger(OpaAuthorizer.class);
+  private static final long DEFAULT_TIMEOUT_MS = 5_000;
   private final URI opaUri;
+  private final Duration timeout;
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
 
   @JsonCreator
   public OpaAuthorizer(
       @JsonProperty("name") String name,
-      @JsonProperty("opaUri") String opaUri
+      @JsonProperty("opaUri") String opaUri,
+      @JsonProperty("timeoutMs") Long timeoutMs
   )
   {
-    this(name, opaUri, HttpClient.newHttpClient());
+    this(
+        name,
+        opaUri,
+        timeoutMs,
+        HttpClient.newBuilder()
+                  .connectTimeout(Duration.ofMillis(timeoutMs != null ? timeoutMs : DEFAULT_TIMEOUT_MS))
+                  .build()
+    );
   }
 
   public OpaAuthorizer(
       String name,
       String opaUri,
+      Long timeoutMs,
       HttpClient httpClient
   )
   {
@@ -89,6 +101,7 @@ public class OpaAuthorizer implements Authorizer
             // any unknown fields.
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
+    this.timeout = Duration.ofMillis(timeoutMs != null ? timeoutMs : DEFAULT_TIMEOUT_MS);
     this.httpClient = httpClient;
     // name is required for @JsonCreator but unused in this implementation
     LOG.debug("Created OpaAuthorizer [%s]", name);
@@ -136,6 +149,7 @@ public class OpaAuthorizer implements Authorizer
           HttpRequest.newBuilder()
                      .uri(opaUri)
                      .header("Content-Type", "application/json")
+                     .timeout(timeout)
                      .POST(HttpRequest.BodyPublishers.ofString(msgJson))
                      .build();
 
