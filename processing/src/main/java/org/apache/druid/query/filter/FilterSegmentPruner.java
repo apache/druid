@@ -47,7 +47,7 @@ public class FilterSegmentPruner implements SegmentPruner
   private final Set<String> filterFields;
   private final VirtualColumns virtualColumns;
   private final Map<String, Optional<RangeSet<String>>> rangeCache;
-  private final Map<ShardVirtualColumnCacheEntry, Optional<VirtualColumn>> shardEquivalenceCache;
+  private final Map<VirtualColumns.Node, Optional<VirtualColumn>> shardEquivalenceCache;
 
   public FilterSegmentPruner(
       DimFilter filter,
@@ -79,12 +79,9 @@ public class FilterSegmentPruner implements SegmentPruner
       final Map<String, RangeSet<String>> filterDomain = new HashMap<>();
       final List<String> dimensions = shard.getDomainDimensions();
       for (String dimension : dimensions) {
-        final VirtualColumn shardVirtualColumn = shard.getDomainVirtualColumns().getVirtualColumn(dimension);
-        if (shardVirtualColumn != null) {
-          final VirtualColumn queryEquivalent = getQueryEquivalent(
-              shard.getDomainVirtualColumns(),
-              shardVirtualColumn
-          );
+        final VirtualColumns.Node shardNode = shard.getDomainVirtualColumns().getNode(dimension);
+        if (shardNode != null) {
+          final VirtualColumn queryEquivalent = getQueryEquivalent(shardNode);
           if (queryEquivalent != null) {
             if (filterFields == null || filterFields.contains(queryEquivalent.getOutputName())) {
               final Optional<RangeSet<String>> optFilterRangeSet = rangeCache
@@ -93,7 +90,7 @@ public class FilterSegmentPruner implements SegmentPruner
                       d -> Optional.ofNullable(filter.getDimensionRangeSet(d))
                   );
               optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(
-                  shardVirtualColumn.getOutputName(),
+                  shardNode.getVirtualColumn().getOutputName(),
                   stringRangeSet
               ));
             }
@@ -168,51 +165,12 @@ public class FilterSegmentPruner implements SegmentPruner
   }
 
   @Nullable
-  private VirtualColumn getQueryEquivalent(VirtualColumns shardVirtualColumns, VirtualColumn shardVirtualColumn)
+  private VirtualColumn getQueryEquivalent(VirtualColumns.Node node)
   {
     final Optional<VirtualColumn> cached = shardEquivalenceCache.computeIfAbsent(
-        new ShardVirtualColumnCacheEntry(shardVirtualColumn, shardVirtualColumns),
-        virtualColumn -> Optional.ofNullable(virtualColumns.findEquivalent(shardVirtualColumns, virtualColumn.shardVirtualColumn))
+        node,
+        n -> Optional.ofNullable(virtualColumns.findEquivalent(n))
     );
     return cached.orElse(null);
-  }
-
-  /**
-   * Structure to preserve the VirtualColumn 'tree' to use as a cache key so that we can distinguish otherwise
-   * identical {@link VirtualColumn} that depend on other virtual columns that have the same name but are different
-   */
-  private static final class ShardVirtualColumnCacheEntry
-  {
-    private final VirtualColumn shardVirtualColumn;
-    private final List<ShardVirtualColumnCacheEntry> dependents;
-
-    public ShardVirtualColumnCacheEntry(VirtualColumn shardVirtualColumn, VirtualColumns shardVirtualColumns)
-    {
-      this.shardVirtualColumn = shardVirtualColumn;
-      this.dependents = new ArrayList<>();
-      for (String required : shardVirtualColumn.requiredColumns()) {
-        final VirtualColumn dependent = shardVirtualColumns.getVirtualColumn(required);
-        if (dependent != null) {
-          dependents.add(new ShardVirtualColumnCacheEntry(dependent, shardVirtualColumns));
-        }
-      }
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      ShardVirtualColumnCacheEntry that = (ShardVirtualColumnCacheEntry) o;
-      return Objects.equals(shardVirtualColumn, that.shardVirtualColumn) &&
-             Objects.equals(dependents, that.dependents);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(shardVirtualColumn, dependents);
-    }
   }
 }

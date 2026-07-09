@@ -19,12 +19,14 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
@@ -41,7 +43,14 @@ public abstract class SeekableStreamSupervisorIOConfig
   @Nullable
   private final InputFormat inputFormat; // nullable for backward compatibility
   private final Integer replicas;
-  private Integer taskCount;
+  private int taskCount;
+  /**
+   * Whether {@link #taskCount} was explicitly provided to the constructor. After a serde round-trip,
+   * this will always be false, because the constructor creates an explicit taskCount. Its purpose is
+   * to allow {@link SeekableStreamSupervisorSpec#merge(SupervisorSpec)} to tell if a user-submitted
+   * spec had an explicit taskCount or not.
+   */
+  private final boolean taskCountExplicit;
   private final Duration taskDuration;
   private final Duration startDelay;
   private final Duration period;
@@ -54,6 +63,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   @Nullable private final IdleConfig idleConfig;
   @Nullable private final Integer stopTaskCount;
   @Nullable private final Map<Integer, Integer> serverPriorityToReplicas;
+  @Nullable private final BoundedStreamConfig boundedStreamConfig;
 
   private final LagAggregator lagAggregator;
   private final boolean autoScalerEnabled;
@@ -75,7 +85,8 @@ public abstract class SeekableStreamSupervisorIOConfig
       DateTime lateMessageRejectionStartDateTime,
       @Nullable IdleConfig idleConfig,
       @Nullable Integer stopTaskCount,
-      @Nullable Map<Integer, Integer> serverPriorityToReplicas
+      @Nullable Map<Integer, Integer> serverPriorityToReplicas,
+      @Nullable BoundedStreamConfig boundedStreamConfig
   )
   {
     this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
@@ -88,15 +99,21 @@ public abstract class SeekableStreamSupervisorIOConfig
     this.lagAggregator = lagAggregator;
     // Could be null
     this.autoScalerConfig = autoScalerConfig;
-    this.autoScalerEnabled = autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler();
-    if (autoScalerEnabled) {
-      // Priority: taskCountStart > taskCount > taskCountMin
+    boolean isAutoScalerAvailable = autoScalerConfig != null;
+    this.autoScalerEnabled = isAutoScalerAvailable && autoScalerConfig.getEnableTaskAutoScaler();
+    this.taskCountExplicit = taskCount != null;
+    if (taskCount != null) {
+      // Always retain taskCount when deserializing. Note: taskCountStart takes precedence over taskCount
+      // in SeekableStreamSupervisorSpec#merge, to ensure that when a supervisor is explicitly POSTed, taskCount
+      // is reset to taskCountStart.
+      this.taskCount = taskCount;
+    } else if (autoScalerEnabled) {
       this.taskCount = Configs.valueOrDefault(
           autoScalerConfig.getTaskCountStart(),
-          Configs.valueOrDefault(taskCount, autoScalerConfig.getTaskCountMin())
+          autoScalerConfig.getTaskCountMin()
       );
     } else {
-      this.taskCount = taskCount != null ? taskCount : 1;
+      this.taskCount = 1;
     }
     Preconditions.checkArgument(stopTaskCount == null || stopTaskCount > 0,
                                 "stopTaskCount must be greater than 0");
@@ -125,6 +142,7 @@ public abstract class SeekableStreamSupervisorIOConfig
 
     this.idleConfig = idleConfig;
     this.serverPriorityToReplicas = serverPriorityToReplicas;
+    this.boundedStreamConfig = boundedStreamConfig;
 
     if (this.serverPriorityToReplicas != null) {
       int serverPriorityReplicas = 0;
@@ -201,7 +219,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   }
 
   @JsonProperty
-  public Integer getTaskCount()
+  public int getTaskCount()
   {
     return taskCount;
   }
@@ -209,6 +227,12 @@ public abstract class SeekableStreamSupervisorIOConfig
   public void setTaskCount(final int taskCount)
   {
     this.taskCount = taskCount;
+  }
+
+  @JsonIgnore
+  public boolean isTaskCountExplicit()
+  {
+    return taskCountExplicit;
   }
 
   @JsonProperty
@@ -279,5 +303,17 @@ public abstract class SeekableStreamSupervisorIOConfig
       return (int) Math.max(1, Math.floor(taskCount * autoScalerConfig.getStopTaskCountRatio()));
     }
     return stopTaskCount == null ? taskCount : stopTaskCount;
+  }
+
+  @Nullable
+  @JsonProperty
+  public BoundedStreamConfig getBoundedStreamConfig()
+  {
+    return boundedStreamConfig;
+  }
+
+  public boolean isBounded()
+  {
+    return boundedStreamConfig != null;
   }
 }

@@ -21,36 +21,11 @@ package org.apache.druid.segment.loading;
 
 import org.apache.druid.timeline.SegmentId;
 
-import java.util.Objects;
-
 /**
- * Use a {@link SegmentId} as a {@link CacheEntryIdentifier}
+ * Use a {@link SegmentId} as a {@link CacheEntryIdentifier}.
  */
-public final class SegmentCacheEntryIdentifier implements CacheEntryIdentifier
+public record SegmentCacheEntryIdentifier(SegmentId segmentId) implements CacheEntryIdentifier
 {
-  private final SegmentId segmentId;
-
-  public SegmentCacheEntryIdentifier(SegmentId segmentId)
-  {
-    this.segmentId = segmentId;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    SegmentCacheEntryIdentifier that = (SegmentCacheEntryIdentifier) o;
-    return Objects.equals(segmentId, that.segmentId);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return segmentId.hashCode();
-  }
-
   @Override
   public String toString()
   {

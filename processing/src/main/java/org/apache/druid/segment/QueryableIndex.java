@@ -25,12 +25,15 @@ import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.QueryableProjection;
+import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -64,6 +67,15 @@ public interface QueryableIndex extends Closeable, ColumnInspector
   @Nullable
   BaseColumnHolder getColumnHolder(String columnName);
 
+
+  /**
+   * Provides information about columns, most callers should prefer to call {@link #getColumnHolder(String)} and then
+   * {@link ColumnHolder#getCapabilities()} instead of this method to have fully accurate column details. The default
+   * implementation of this method does this, but callers can only count on {@link ColumnCapabilities#getType()} and
+   * {@link ColumnCapabilities#hasMultipleValues()} to be reliably set from this method; in some implementations richer
+   * fields ({@code isDictionaryEncoded}, {@code hasBitmapIndexes}, {@code hasNulls}, etc.) might keep their
+   * default/UNKNOWN values.
+   */
   @Override
   @Nullable
   default ColumnCapabilities getColumnCapabilities(String column)
@@ -96,6 +108,39 @@ public interface QueryableIndex extends Closeable, ColumnInspector
 
   @Nullable
   default QueryableIndex getProjectionQueryableIndex(String name)
+  {
+    return null;
+  }
+
+  /**
+   * Returns the {@link ClusteredValueGroupsBaseTableSchema} summary if this index represents a clustered base table, or
+   * {@code null} for a non-clustered segment. Default returns {@code null}; only V10-loaded clustered segments
+   * override.
+   */
+  @Nullable
+  default ClusteredValueGroupsBaseTableSchema getClusteredBaseSummary()
+  {
+    return null;
+  }
+
+  /**
+   * Returns the list of {@link TableClusterGroupSpec} entries on this index, one per cluster group. Empty for a
+   * non-clustered segment. For a clustered segment, this is the same list returned by
+   * {@code getClusteredBaseSummary().getClusterGroups()}, surfaced here so query-time dispatch can enumerate cluster
+   * groups (e.g. via {@code Projections.pruneClusterGroups}).
+   */
+  default List<TableClusterGroupSpec> getClusterGroupSchemas()
+  {
+    return Collections.emptyList();
+  }
+
+  /**
+   * Returns a {@link QueryableIndex} sub-view scoped to a single cluster group's column data. Mirrors
+   * {@link #getProjectionQueryableIndex(String)} but for cluster groups, addressed by reference rather than name.
+   * Default returns {@code null}; only clustered segments override.
+   */
+  @Nullable
+  default QueryableIndex getClusterGroupQueryableIndex(TableClusterGroupSpec groupSpec)
   {
     return null;
   }

@@ -19,13 +19,24 @@
 
 package org.apache.druid.common.aws;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.utils.RuntimeInfo;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class AWSClientConfigTest
 {
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final ObjectMapper MAPPER = new ObjectMapper().setInjectableValues(
+      new InjectableValues.Std().addValue(RuntimeInfo.class, new RuntimeInfo())
+  );
+
+  private static ObjectMapper mapperWithRuntimeInfo(RuntimeInfo runtimeInfo)
+  {
+    return new ObjectMapper().setInjectableValues(
+        new InjectableValues.Std().addValue(RuntimeInfo.class, runtimeInfo)
+    );
+  }
 
   @Test
   public void testDefaultCrossRegionAccessEnabled() throws Exception
@@ -82,5 +93,45 @@ public class AWSClientConfigTest
     );
     Assertions.assertNull(config.isForceGlobalBucketAccessEnabled());
     Assertions.assertTrue(config.isCrossRegionAccessEnabled());
+  }
+
+  @Test
+  public void testDefaultMaxConnectionsKeepsAwsSdkFloorOnSmallHost() throws Exception
+  {
+    AWSClientConfig config = mapperWithRuntimeInfo(new FixedProcessorsRuntimeInfo(8))
+        .readValue("{}", AWSClientConfig.class);
+    Assertions.assertEquals(50, config.getMaxConnections());
+  }
+
+  @Test
+  public void testDefaultMaxConnectionsScalesWithCoresOnLargeHost() throws Exception
+  {
+    AWSClientConfig config = mapperWithRuntimeInfo(new FixedProcessorsRuntimeInfo(32))
+        .readValue("{}", AWSClientConfig.class);
+    Assertions.assertEquals(128, config.getMaxConnections());
+  }
+
+  @Test
+  public void testExplicitMaxConnectionsOverridesDefault() throws Exception
+  {
+    AWSClientConfig config = mapperWithRuntimeInfo(new FixedProcessorsRuntimeInfo(64))
+        .readValue("{\"maxConnections\": 200}", AWSClientConfig.class);
+    Assertions.assertEquals(200, config.getMaxConnections());
+  }
+
+  private static final class FixedProcessorsRuntimeInfo extends RuntimeInfo
+  {
+    private final int availableProcessors;
+
+    private FixedProcessorsRuntimeInfo(int availableProcessors)
+    {
+      this.availableProcessors = availableProcessors;
+    }
+
+    @Override
+    public int getAvailableProcessors()
+    {
+      return availableProcessors;
+    }
   }
 }

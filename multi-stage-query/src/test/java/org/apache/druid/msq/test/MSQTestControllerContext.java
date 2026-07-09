@@ -51,7 +51,6 @@ import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
 import org.apache.druid.msq.exec.MSQMetricEventBuilder;
-import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerFailureListener;
@@ -61,12 +60,12 @@ import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.indexing.IndexerControllerContext;
-import org.apache.druid.msq.indexing.IndexerTableInputSpecSlicer;
+import org.apache.druid.msq.indexing.IndexerTableInputSpecSlicerProvider;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
-import org.apache.druid.msq.input.InputSpecSlicer;
+import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
@@ -169,6 +168,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
         serviceEmitter,
         Mockito.mock(CoordinatorClient.class)
     );
+    Mockito.when(coordinatorClient.withRetryPolicy(ArgumentMatchers.any())).thenReturn(coordinatorClient);
     Mockito.when(coordinatorClient.fetchServerViewSegments(
                      ArgumentMatchers.anyString(),
                      ArgumentMatchers.any()
@@ -416,13 +416,9 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   }
 
   @Override
-  public InputSpecSlicer newTableInputSpecSlicer(WorkerManager workerManager)
+  public List<InputSpecSlicerProvider> inputSpecSlicerProviders()
   {
-    return new IndexerTableInputSpecSlicer(
-        coordinatorClient,
-        taskActionClient,
-        MultiStageQueryContext.getSegmentSources(queryContext, SegmentSource.NONE)
-    );
+    return List.of(new IndexerTableInputSpecSlicerProvider(coordinatorClient));
   }
 
   @Override
@@ -445,6 +441,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
         workerFailureListener,
         IndexerControllerContext.makeTaskContext(querySpec, queryKernelConfig, ImmutableMap.of()),
         0,
+        querySpec.getTuningConfig().getMaxNumWorkers(),
         taskLauncherConfig
     );
   }
@@ -469,7 +466,25 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   @Override
   public WorkerClient newWorkerClient()
   {
-    return new MSQTestWorkerClient(inMemoryWorkers, mapper);
+    return new MSQTestWorkerClient(inMemoryWorkers, mapper, true);
+  }
+
+  @Override
+  public int maxNonLeafWorkerCount()
+  {
+    return NUM_WORKERS;
+  }
+
+  @Override
+  public int targetPartitionsPerWorker()
+  {
+    return 1;
+  }
+
+  @Override
+  public boolean isDebug()
+  {
+    return true;
   }
 
   @Override

@@ -27,7 +27,7 @@ a Java runtime for Druid.
 
 ## Selecting a Java runtime
 
-Druid officially supports Java 17 and 21.
+Druid officially supports Java 21 and 25.
 
 The project team recommends using an OpenJDK-based Java distribution. There are many free and actively-supported
 distributions available, including
@@ -85,5 +85,9 @@ added. There are many ways of doing this. Choose the one that works best for you
 --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED \
 --add-opens=java.base/java.io=ALL-UNNAMED \
 --add-opens=java.base/java.lang=ALL-UNNAMED \
---add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+--add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
+--add-modules=jdk.incubator.vector
 ```
+
+The `--add-modules=jdk.incubator.vector` flag is optional, but adding it makes the JDK's incubator Vector API available
+to Druid to support `druid.expressions.useVectorApi=true`.

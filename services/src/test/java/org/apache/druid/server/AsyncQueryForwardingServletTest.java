@@ -51,11 +51,14 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -467,6 +470,41 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     verifyServletCallsForQuery(query, true, false, hostFinder, properties, true);
   }
 
+  /**
+   * A {@link GenericQueryMetricsFactory} that overrides no-op dimensions (e.g. identity) so tests can assert on them.
+   */
+  private static GenericQueryMetricsFactory makeRouterTestOverrideEmittingFactory()
+  {
+    return new GenericQueryMetricsFactory()
+    {
+      private DefaultQueryMetrics makeOverridingMetrics()
+      {
+        return new DefaultQueryMetrics()
+        {
+          @Override
+          public void identity(String identity)
+          {
+            setDimension("identity", identity);
+          }
+        };
+      }
+
+      @Override
+      public QueryMetrics<Query<?>> makeMetrics(Query<?> query)
+      {
+        DefaultQueryMetrics metrics = makeOverridingMetrics();
+        metrics.query(query);
+        return metrics;
+      }
+
+      @Override
+      public QueryMetrics<Query<?>> makeMetrics()
+      {
+        return makeOverridingMetrics();
+      }
+    };
+  }
+
   @Test
   public void testMetricsEmittedWithErrorStatusCodeButNoResultException()
   {
@@ -510,7 +548,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         stubServiceEmitter,
         NoopRequestLogger.instance(),
-        new DefaultGenericQueryMetricsFactory(),
+        makeRouterTestOverrideEmittingFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
         new Properties(),
         new ServerConfig()
@@ -529,6 +567,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
     );
     Assert.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
+    Assert.assertEquals("testUser", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("identity"));
   }
 
   @Test
@@ -581,7 +620,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         stubServiceEmitter,
         NoopRequestLogger.instance(),
-        new DefaultGenericQueryMetricsFactory(),
+        makeRouterTestOverrideEmittingFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
         new Properties(),
         new ServerConfig()
@@ -600,6 +639,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
     );
     Assert.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
+    Assert.assertEquals("testUser", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("identity"));
   }
 
   @Test
@@ -634,7 +674,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         stubServiceEmitter,
         NoopRequestLogger.instance(),
-        new DefaultGenericQueryMetricsFactory(),
+        makeRouterTestOverrideEmittingFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
         new Properties(),
         new ServerConfig()
@@ -654,6 +694,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
     );
     Assert.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
+    Assert.assertEquals("testUser", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("identity"));
   }
 
 

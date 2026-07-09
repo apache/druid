@@ -29,8 +29,6 @@
 
   <properties>
     <surefire.rerunFailingTestsCount>0</surefire.rerunFailingTestsCount>
-    <!-- Must match iceberg.core.version in extensions-contrib/druid-iceberg-extensions/pom.xml -->
-    <iceberg.version>1.7.2</iceberg.version>
   </properties>
 
   <parent>
@@ -315,6 +313,19 @@
     </dependency>
     <dependency>
       <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>druid-deltalake-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+      <exclusions>
+        <!-- hadoop-common is re-exported via hadoop-client-api; declaring it pulls in banned transitive deps. -->
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
       <artifactId>kafka-emitter</artifactId>
       <version>${project.parent.version}</version>
       <scope>test</scope>
@@ -418,13 +429,13 @@
     <dependency>
       <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-api</artifactId>
-      <version>${iceberg.version}</version>
+      <version>${iceberg.core.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-core</artifactId>
-      <version>${iceberg.version}</version>
+      <version>${iceberg.core.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -436,7 +447,7 @@
     <dependency>
       <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-parquet</artifactId>
-      <version>${iceberg.version}</version>
+      <version>${iceberg.core.version}</version>
       <scope>test</scope>
       <exclusions>
         <!-- Let parquet version be driven by druid-parquet-extensions (${parquet.version}) -->

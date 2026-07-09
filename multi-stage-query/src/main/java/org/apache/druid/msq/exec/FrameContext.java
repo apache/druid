@@ -30,6 +30,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.SegmentManager;
 
 import javax.annotation.Nullable;
@@ -54,6 +55,11 @@ public interface FrameContext extends Closeable
    * Returns the segment manager for loading and caching segments.
    */
   SegmentManager segmentManager();
+
+  /**
+   * Returns the virtual storage manager for caching files.
+   */
+  VirtualStorageManager virtualStorageManager();
 
   /**
    * Returns the coordinator client for fetching DataSegment metadata when not available locally.
@@ -84,6 +90,17 @@ public interface FrameContext extends Closeable
 
   IndexMerger indexMerger();
 
+  /**
+   * Acquire processing buffers sized for {@code requestedSlices} concurrent processors. Must be called exactly
+   * once for stages that use processing buffers, before any call to {@link #processingBuffers()}. Stages that
+   * don't use processing buffers must not call this method.
+   */
+  void acquireProcessingBuffers(int requestedSlices);
+
+  /**
+   * Returns the {@link ProcessingBuffers} previously acquired via {@link #acquireProcessingBuffers}. Throws if
+   * not yet acquired.
+   */
   ProcessingBuffers processingBuffers();
 
   WorkerMemoryParameters memoryParameters();

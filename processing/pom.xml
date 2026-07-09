@@ -161,6 +161,11 @@
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-layout-template-json</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j2-impl</artifactId>
       <scope>runtime</scope>
     </dependency>
@@ -207,6 +212,10 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-codec-http</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport</artifactId>
     </dependency>
     <dependency>
       <groupId>joda-time</groupId>
@@ -537,6 +546,12 @@
     </plugins>
 
     <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>loggingEmitterAllowedMetrics.json</include>
+        </includes>
+      </resource>
       <resource>
         <directory>
           ${project.build.directory}/hyperic-sigar-${sigar.base.version}/sigar-bin/lib

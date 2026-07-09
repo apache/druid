@@ -95,6 +95,13 @@ public class DeltaInputSourceReader implements InputSourceReader
   {
     private final Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchIterators;
 
+    // Keep a reference to the current file's batch iterator so we drain ALL
+    // its batches before advancing to the next file.
+    // Bug fix for https://github.com/apache/druid/issues/18606:
+    // the original code used a local variable for filteredBatchIterator which
+    // was discarded on return, causing only the first batch (1024 rows) of each
+    // file to be read.
+    private io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> currentFileIterator = null;
     private io.delta.kernel.utils.CloseableIterator<Row> currentBatch = null;
     private final InputRowSchema inputRowSchema;
 
@@ -111,20 +118,34 @@ public class DeltaInputSourceReader implements InputSourceReader
     public boolean hasNext()
     {
       while (currentBatch == null || !currentBatch.hasNext()) {
-        if (!filteredColumnarBatchIterators.hasNext()) {
-          return false; // No more batches or records to read!
-        }
-
-        final io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredBatchIterator =
-            filteredColumnarBatchIterators.next();
-
-        while (filteredBatchIterator.hasNext()) {
-          final FilteredColumnarBatch nextBatch = filteredBatchIterator.next();
+        // Drain remaining batches from the current file before moving to the next.
+        while (currentFileIterator != null && currentFileIterator.hasNext()) {
+          final FilteredColumnarBatch nextBatch = currentFileIterator.next();
           currentBatch = nextBatch.getRows();
           if (currentBatch.hasNext()) {
             return true;
           }
         }
+
+        // Advance to the next file.
+        if (!filteredColumnarBatchIterators.hasNext()) {
+          return false;
+        }
+        // Close the drained file iterator before overwriting it. Each iterator from
+        // Scan.transformPhysicalData() owns an underlying Parquet reader/file handle;
+        // not closing it here would leak a handle per completed file on multi-file
+        // tables (only the last and the never-started iterators are closed in close()).
+        // hasNext() cannot throw checked exceptions, so wrap like the rest of this
+        // extension (see DeltaInputSource).
+        if (currentFileIterator != null) {
+          try {
+            currentFileIterator.close();
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        currentFileIterator = filteredColumnarBatchIterators.next();
       }
       return true;
     }
@@ -146,8 +167,10 @@ public class DeltaInputSourceReader implements InputSourceReader
       if (currentBatch != null) {
         currentBatch.close();
       }
-
-      if (filteredColumnarBatchIterators.hasNext()) {
+      if (currentFileIterator != null) {
+        currentFileIterator.close();
+      }
+      while (filteredColumnarBatchIterators.hasNext()) {
         filteredColumnarBatchIterators.next().close();
       }
     }

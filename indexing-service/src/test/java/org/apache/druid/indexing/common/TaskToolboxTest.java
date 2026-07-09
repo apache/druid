@@ -53,12 +53,11 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
@@ -130,7 +129,6 @@ public class TaskToolboxTest
         mockDataSegmentMover,
         mockDataSegmentArchiver,
         mockSegmentAnnouncer,
-        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         mockHandoffNotifierFactory,
         () -> mockQueryRunnerFactoryConglomerate,
         DruidProcessingConfig::new,
@@ -152,7 +150,7 @@ public class TaskToolboxTest
         new NoopTestTaskReportFileWriter(),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
+        new ChatHandlerProvider(),
         new DropwizardRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
         new NoopOverlordClient(),

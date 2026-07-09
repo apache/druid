@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.DefaultQueryBlocklistRule;
 import org.apache.druid.server.QueryBlocklistRule;
 import org.junit.Assert;
 import org.junit.Test;
@@ -60,10 +61,33 @@ public class BrokerDynamicConfigTest
     );
 
     List<QueryBlocklistRule> expectedBlocklist = ImmutableList.of(
-        new QueryBlocklistRule("block-wikipedia", ImmutableSet.of("wikipedia"), null, null)
+        new DefaultQueryBlocklistRule("block-wikipedia", ImmutableSet.of("wikipedia"), null, null)
     );
 
     Assert.assertEquals(expectedBlocklist, actual.getQueryBlocklist());
+  }
+
+  @Test
+  public void testSerdeWithExplicitDefaultType() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"queryBlocklist\": [\n"
+                     + "    {\n"
+                     + "      \"type\": \"default\",\n"
+                     + "      \"ruleName\": \"block-wikipedia\",\n"
+                     + "      \"dataSources\": [\"wikipedia\"]\n"
+                     + "    }\n"
+                     + "  ]\n"
+                     + "}\n";
+
+    BrokerDynamicConfig actual = mapper.readValue(jsonStr, BrokerDynamicConfig.class);
+
+    Assert.assertEquals(1, actual.getQueryBlocklist().size());
+    Assert.assertTrue(actual.getQueryBlocklist().get(0) instanceof DefaultQueryBlocklistRule);
+    Assert.assertEquals(
+        new DefaultQueryBlocklistRule("block-wikipedia", ImmutableSet.of("wikipedia"), null, null),
+        actual.getQueryBlocklist().get(0)
+    );
   }
 
   @Test
@@ -108,11 +132,11 @@ public class BrokerDynamicConfigTest
     Assert.assertNotNull(actual.getQueryBlocklist());
     Assert.assertEquals(2, actual.getQueryBlocklist().size());
 
-    QueryBlocklistRule rule1 = actual.getQueryBlocklist().get(0);
+    DefaultQueryBlocklistRule rule1 = (DefaultQueryBlocklistRule) actual.getQueryBlocklist().get(0);
     Assert.assertEquals("block-scan-queries", rule1.getRuleName());
     Assert.assertEquals(ImmutableSet.of("scan"), rule1.getQueryTypes());
 
-    QueryBlocklistRule rule2 = actual.getQueryBlocklist().get(1);
+    DefaultQueryBlocklistRule rule2 = (DefaultQueryBlocklistRule) actual.getQueryBlocklist().get(1);
     Assert.assertEquals("block-context", rule2.getRuleName());
     Assert.assertEquals(ImmutableMap.of("priority", "0"), rule2.getContextMatches());
   }

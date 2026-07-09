@@ -69,6 +69,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -77,7 +78,7 @@ public class SeekableStreamSupervisorIOConfigTest
     Assert.assertEquals("stream", config.getStream());
     Assert.assertEquals(inputFormat, config.getInputFormat());
     Assert.assertEquals(Integer.valueOf(1), config.getReplicas());
-    Assert.assertEquals(Integer.valueOf(1), config.getTaskCount());
+    Assert.assertEquals(1, config.getTaskCount());
     Assert.assertEquals(Duration.standardHours(1), config.getTaskDuration());
     Assert.assertEquals(Duration.standardSeconds(5), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(30), config.getPeriod());
@@ -94,21 +95,45 @@ public class SeekableStreamSupervisorIOConfigTest
   }
 
   @Test
-  public void testAutoScalerEnabledPreservesTaskCountWhenNonNull()
+  public void testTaskCountResolutionInConstructor()
   {
-    LagAggregator lagAggregator = mock(LagAggregator.class);
+    // Constructor priority is "explicit taskCount > taskCountStart > taskCountMin" so that a
+    // previously autoscaled taskCount survives a Jackson round-trip through the metadata store.
 
-    // autoScalerEnabled = true
-    AutoScalerConfig autoScalerConfig = mock(AutoScalerConfig.class);
-    when(autoScalerConfig.getEnableTaskAutoScaler()).thenReturn(true);
-    when(autoScalerConfig.getTaskCountStart()).thenReturn(5);
-    when(autoScalerConfig.getTaskCountMin()).thenReturn(3);
+    // taskCount=10 + taskCountStart=5 -> taskCount wins, isExplicit=true.
+    assertTaskCount(10, autoScaler(5, 3), 10, true);
 
-    SeekableStreamSupervisorIOConfig configAuto = new SeekableStreamSupervisorIOConfig(
+    // taskCount=null + taskCountStart=5 -> taskCountStart, isExplicit=false.
+    assertTaskCount(null, autoScaler(5, 3), 5, false);
+
+    // taskCount=null + no taskCountStart -> taskCountMin, isExplicit=false.
+    assertTaskCount(null, autoScaler(null, 3), 3, false);
+
+    // taskCount=10, no autoscaler -> taskCount, isExplicit=true.
+    assertTaskCount(10, null, 10, true);
+  }
+
+  private static AutoScalerConfig autoScaler(@Nullable Integer taskCountStart, int taskCountMin)
+  {
+    final AutoScalerConfig config = mock(AutoScalerConfig.class);
+    when(config.getEnableTaskAutoScaler()).thenReturn(true);
+    when(config.getTaskCountStart()).thenReturn(taskCountStart);
+    when(config.getTaskCountMin()).thenReturn(taskCountMin);
+    return config;
+  }
+
+  private static void assertTaskCount(
+      @Nullable Integer taskCount,
+      @Nullable AutoScalerConfig autoScalerConfig,
+      int expectedTaskCount,
+      boolean expectedExplicit
+  )
+  {
+    final SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
         "stream",
         null,
         2,
-        10, // (taskCount should be ignored)
+        taskCount,
         null,
         null,
         null,
@@ -117,7 +142,8 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         autoScalerConfig,
-        lagAggregator,
+        mock(LagAggregator.class),
+        null,
         null,
         null,
         null,
@@ -125,33 +151,8 @@ public class SeekableStreamSupervisorIOConfigTest
     )
     {
     };
-
-    Assert.assertEquals(Integer.valueOf(5), configAuto.getTaskCount()); // taskCountStart
-
-    // autoScalerEnabled = false
-    SeekableStreamSupervisorIOConfig configNoAuto = new SeekableStreamSupervisorIOConfig(
-        "stream",
-        null,
-        2,
-        10,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        lagAggregator,
-        null,
-        null,
-        null,
-        null
-    )
-    {
-    };
-
-    Assert.assertEquals(Integer.valueOf(10), configNoAuto.getTaskCount());
+    Assert.assertEquals(expectedTaskCount, config.getTaskCount());
+    Assert.assertEquals(expectedExplicit, config.isTaskCountExplicit());
   }
 
   @Test
@@ -178,6 +179,7 @@ public class SeekableStreamSupervisorIOConfigTest
             DateTimes.nowUtc(),
             null,
             null,
+            null,
             null
         )
         {
@@ -198,6 +200,7 @@ public class SeekableStreamSupervisorIOConfigTest
         DruidException.class,
         () -> new SeekableStreamSupervisorIOConfig(
             "stream",
+            null,
             null,
             null,
             null,
@@ -246,6 +249,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -270,6 +274,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         3,
+        null,
         null
     )
     {
@@ -306,6 +311,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         1,
+        null,
         null
     )
     {
@@ -339,6 +345,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         1,
+        null,
         null
     )
     {
@@ -366,6 +373,7 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         autoScalerConfig,
         lagAggregator,
+        null,
         null,
         null,
         null,
@@ -456,9 +464,111 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         null,
-        serverPriorityToReplicas
+        serverPriorityToReplicas,
+        null
     )
     {
     };
+  }
+
+  @Test
+  public void testBoundedModeWithValidConfig()
+  {
+    Map<String, Integer> startOffsets = Map.of("0", 100, "1", 200);
+    Map<String, Integer> endOffsets = Map.of("0", 500, "1", 600);
+    BoundedStreamConfig boundedConfig = new BoundedStreamConfig(startOffsets, endOffsets);
+
+    LagAggregator lagAggregator = mock(LagAggregator.class);
+
+    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        lagAggregator,
+        null,
+        null,
+        null,
+        null,
+        boundedConfig
+    )
+    {
+    };
+
+    Assert.assertTrue(config.isBounded());
+    Assert.assertNotNull(config.getBoundedStreamConfig());
+    Assert.assertEquals(boundedConfig, config.getBoundedStreamConfig());
+  }
+
+  @Test
+  public void testUnboundedModeByDefault()
+  {
+    LagAggregator lagAggregator = mock(LagAggregator.class);
+
+    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        lagAggregator,
+        null,
+        null,
+        null,
+        null,
+        null
+    )
+    {
+    };
+
+    Assert.assertFalse(config.isBounded());
+    Assert.assertNull(config.getBoundedStreamConfig());
+  }
+
+  @Test
+  public void testBoundedModeWithNullConfig()
+  {
+    LagAggregator lagAggregator = mock(LagAggregator.class);
+
+    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        lagAggregator,
+        null,
+        null,
+        null,
+        null,
+        null
+    )
+    {
+    };
+
+    Assert.assertFalse(config.isBounded());
+    Assert.assertNull(config.getBoundedStreamConfig());
   }
 }

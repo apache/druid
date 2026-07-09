@@ -32,6 +32,7 @@ import org.apache.druid.msq.input.LoadableSegment;
 import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.utils.CloseableUtils;
@@ -87,9 +88,9 @@ public class LookupInputSliceReader implements InputSliceReader
       throw new ISE("Lookup[%s] has multiple segments; cannot read", lookupName);
     }
 
-    final LoadableSegment loadableSegment = AdaptedLoadableSegment.create(
+    final LoadableSegment loadableSegment = AdaptedLoadableSegment.fromUnmanagedSegment(
         segment,
-        Intervals.ETERNITY,
+        new SegmentDescriptor(Intervals.ETERNITY, "0", 0),
         StringUtils.format("lookup[%s]", lookupName),
         counters.channel(CounterNames.inputChannel(inputNumber))
     );

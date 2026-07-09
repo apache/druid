@@ -19,55 +19,113 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.List;
+import java.util.function.ToDoubleFunction;
+
 /**
- * A {@link BalancerStrategy} which can be used when historicals in a tier have
- * varying disk capacities. This strategy normalizes the cost of placing a segment on
- * a server as calculated by {@link CostBalancerStrategy} by doing the following:
- * <ul>
- * <li>Divide the cost by the number of segments on the server. This ensures that
- * cost does not increase just because the number of segments on a server is higher.</li>
- * <li>Multiply the resulting value by disk usage ratio. This ensures that all
- * hosts have equivalent levels of percentage disk utilization.</li>
- * </ul>
- * i.e. to place a segment on a given server
+ * A {@link BalancerStrategy} which penalizes the cost of placing a segment on a
+ * server when the server's projected disk utilization is higher than the least
+ * utilized candidate by more than the configured utilization threshold.
  * <pre>
- * cost = as computed by CostBalancerStrategy
- * normalizedCost = (cost / numSegments) * usageRatio
- *                = (cost / numSegments) * (diskUsed / totalDiskSpace)
+ * adjustedCost = cost, when utilizationGap <= utilizationThreshold
+ * adjustedCost = cost * exp((utilizationGap - utilizationThreshold) / utilizationThreshold), otherwise
+ *     where utilizationGap = projectedUsageRatio - minProjectedUsageRatio
+ *     and projectedUsageRatio = (diskUsed + segmentSizeIfNotAlreadyProjected) / totalDiskSpace
  * </pre>
+ * Servers inside the threshold band use the normal cost strategy, which avoids
+ * using small utilization differences as a reason to move segments back and
+ * forth. Servers outside the band are penalized exponentially by the amount
+ * they exceed it.
  */
 public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
 {
+  private final double utilizationThreshold;
+
   public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec)
   {
+    this(exec, DiskNormalizedCostBalancerStrategyConfig.DEFAULT_UTILIZATION_THRESHOLD);
+  }
+
+  public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec, double utilizationThreshold)
+  {
     super(exec);
+    Preconditions.checkArgument(
+        utilizationThreshold > 0.0 && utilizationThreshold < 1.0,
+        "utilizationThreshold[%s] must be in (0.0, 1.0)",
+        utilizationThreshold
+    );
+    this.utilizationThreshold = utilizationThreshold;
   }
 
   @Override
-  protected double computePlacementCost(
+  protected ToDoubleFunction<ServerHolder> makePlacementCostFunction(
+      final DataSegment proposalSegment,
+      final List<ServerHolder> serverHolders,
+      final SegmentAction action
+  )
+  {
+    final double minProjectedUsageRatio = serverHolders.stream()
+                                                       .filter(server -> isCandidateForUtilizationBaseline(
+                                                           proposalSegment,
+                                                           server,
+                                                           action
+                                                       ))
+                                                       .mapToDouble(server -> computeProjectedUsageRatio(
+                                                           proposalSegment,
+                                                           server
+                                                       ))
+                                                       .filter(Double::isFinite)
+                                                       .min()
+                                                       .orElse(0.0);
+
+    return server -> {
+      final double cost = super.computePlacementCost(proposalSegment, server);
+
+      if (cost == Double.POSITIVE_INFINITY) {
+        return cost;
+      }
+
+      final double projectedUsageRatio = computeProjectedUsageRatio(proposalSegment, server);
+      if (!Double.isFinite(projectedUsageRatio)) {
+        return cost;
+      }
+
+      final double utilizationGap = projectedUsageRatio - minProjectedUsageRatio;
+      if (utilizationGap <= utilizationThreshold) {
+        return cost;
+      }
+
+      return cost * Math.exp((utilizationGap - utilizationThreshold) / utilizationThreshold);
+    };
+  }
+
+  private static boolean isCandidateForUtilizationBaseline(
+      final DataSegment proposalSegment,
+      final ServerHolder server,
+      final SegmentAction action
+  )
+  {
+    return action != SegmentAction.LOAD || server.canLoadSegment(proposalSegment);
+  }
+
+  private static double computeProjectedUsageRatio(
       final DataSegment proposalSegment,
       final ServerHolder server
   )
   {
-    double cost = super.computePlacementCost(proposalSegment, server);
-
-    if (cost == Double.POSITIVE_INFINITY) {
-      return cost;
+    final long maxSize = server.getMaxSize();
+    if (maxSize <= 0) {
+      return Double.POSITIVE_INFINITY;
     }
 
-    int nSegments = 1;
-    if (server.getServer().getNumSegments() > 0) {
-      nSegments = server.getServer().getNumSegments();
-    }
-
-    double normalizedCost = cost / nSegments;
-    double usageRatio = (double) server.getSizeUsed() / (double) server.getServer().getMaxSize();
-
-    return normalizedCost * usageRatio;
+    final boolean alreadyProjected = server.isProjectedSegment(proposalSegment);
+    final long projectedSizeUsed = server.getSizeUsed() + (alreadyProjected ? 0 : proposalSegment.getSize());
+    return (double) projectedSizeUsed / maxSize;
   }
 }
-

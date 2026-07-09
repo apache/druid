@@ -65,7 +65,6 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.timeline.DataSegment;
@@ -92,7 +91,6 @@ public class TaskToolbox
   private final DataSegmentArchiver dataSegmentArchiver;
   private final DataSegmentMover dataSegmentMover;
   private final DataSegmentAnnouncer segmentAnnouncer;
-  private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   /**
    * Using Provider, not {@link QueryRunnerFactoryConglomerate} directly, to not require {@link
@@ -153,7 +151,6 @@ public class TaskToolbox
       DataSegmentMover dataSegmentMover,
       DataSegmentArchiver dataSegmentArchiver,
       DataSegmentAnnouncer segmentAnnouncer,
-      DataSegmentServerAnnouncer serverAnnouncer,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
       Provider<DruidProcessingConfig> processingConfigProvider,
@@ -199,7 +196,6 @@ public class TaskToolbox
     this.dataSegmentMover = dataSegmentMover;
     this.dataSegmentArchiver = dataSegmentArchiver;
     this.segmentAnnouncer = segmentAnnouncer;
-    this.serverAnnouncer = serverAnnouncer;
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
     this.processingConfigProvider = processingConfigProvider;
@@ -289,11 +285,6 @@ public class TaskToolbox
   public DataSegmentAnnouncer getSegmentAnnouncer()
   {
     return segmentAnnouncer;
-  }
-
-  public DataSegmentServerAnnouncer getDataSegmentServerAnnouncer()
-  {
-    return serverAnnouncer;
   }
 
   public SegmentHandoffNotifierFactory getSegmentHandoffNotifierFactory()
@@ -565,7 +556,6 @@ public class TaskToolbox
     private DataSegmentMover dataSegmentMover;
     private DataSegmentArchiver dataSegmentArchiver;
     private DataSegmentAnnouncer segmentAnnouncer;
-    private DataSegmentServerAnnouncer serverAnnouncer;
     private SegmentHandoffNotifierFactory handoffNotifierFactory;
     private Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
     private Provider<DruidProcessingConfig> processingConfigProvider;
@@ -616,7 +606,6 @@ public class TaskToolbox
       this.dataSegmentMover = other.dataSegmentMover;
       this.dataSegmentArchiver = other.dataSegmentArchiver;
       this.segmentAnnouncer = other.segmentAnnouncer;
-      this.serverAnnouncer = other.serverAnnouncer;
       this.handoffNotifierFactory = other.handoffNotifierFactory;
       this.queryRunnerFactoryConglomerateProvider = other.queryRunnerFactoryConglomerateProvider;
       this.processingConfigProvider = other.processingConfigProvider;
@@ -713,12 +702,6 @@ public class TaskToolbox
     public Builder segmentAnnouncer(final DataSegmentAnnouncer segmentAnnouncer)
     {
       this.segmentAnnouncer = segmentAnnouncer;
-      return this;
-    }
-
-    public Builder serverAnnouncer(final DataSegmentServerAnnouncer serverAnnouncer)
-    {
-      this.serverAnnouncer = serverAnnouncer;
       return this;
     }
 
@@ -927,7 +910,6 @@ public class TaskToolbox
           dataSegmentMover,
           dataSegmentArchiver,
           segmentAnnouncer,
-          serverAnnouncer,
           handoffNotifierFactory,
           queryRunnerFactoryConglomerateProvider,
           processingConfigProvider,

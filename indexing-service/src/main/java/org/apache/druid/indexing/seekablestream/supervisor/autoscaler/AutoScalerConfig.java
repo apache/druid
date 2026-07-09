@@ -27,6 +27,7 @@ import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.joda.time.Duration;
 
 @UnstableApi
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "autoScalerStrategy", defaultImpl = LagBasedAutoScalerConfig.class)
@@ -37,7 +38,28 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 public interface AutoScalerConfig
 {
   boolean getEnableTaskAutoScaler();
+
+  /**
+   * @deprecated Use {@link #getMinScaleUpDelay()} and {@link #getMinScaleDownDelay()} instead.
+   * This field is retained for backward compatibility and will be removed in a future version.
+   */
+  @Deprecated
   long getMinTriggerScaleActionFrequencyMillis();
+
+  /**
+   * Minimum time that must elapse after any scale action before a scale-up is permitted.
+   * If not explicitly configured, implementations fall back to
+   * {@link #getMinTriggerScaleActionFrequencyMillis()} for backward compatibility.
+   */
+  Duration getMinScaleUpDelay();
+
+  /**
+   * Minimum time that must elapse after any scale action before a scale-down is permitted.
+   * If not explicitly configured, implementations fall back to
+   * {@link #getMinTriggerScaleActionFrequencyMillis()} for backward compatibility.
+   */
+  Duration getMinScaleDownDelay();
+
   int getTaskCountMax();
   int getTaskCountMin();
   Integer getTaskCountStart();

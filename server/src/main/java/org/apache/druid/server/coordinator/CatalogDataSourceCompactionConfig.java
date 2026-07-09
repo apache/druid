@@ -30,7 +30,9 @@ import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -192,6 +194,14 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
   @JsonIgnore
   @Nullable
   @Override
+  public BaseTableProjectionSpec getBaseTable()
+  {
+    return null;
+  }
+
+  @JsonIgnore
+  @Nullable
+  @Override
   public CompactionTransformSpec getTransformSpec()
   {
     return null;
@@ -211,6 +221,12 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
   public AggregatorFactory[] getMetricsSpec()
   {
     return null;
+  }
+
+  @Override
+  public CompactionConfigValidationResult validate(ClusterCompactionConfig clusterCompactionConfig)
+  {
+    return ClientCompactionRunnerInfo.validateCompactionConfig(this, clusterCompactionConfig.getEngine());
   }
 
   @Override

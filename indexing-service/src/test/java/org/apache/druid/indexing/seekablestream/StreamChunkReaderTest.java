@@ -37,6 +37,10 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
@@ -156,6 +160,127 @@ public class StreamChunkReaderTest
     Assert.assertEquals(0, parsedRows.size());
     Assert.assertEquals(0, rowIngestionMeters.getUnparseable());
     Assert.assertEquals(0, rowIngestionMeters.getThrownAway());
+  }
+
+  @Test
+  public void testTransformSpecFilterIncrementsCustomFilterReason() throws IOException
+  {
+    final JsonInputFormat inputFormat = new JsonInputFormat(
+        JSONPathSpec.DEFAULT,
+        Collections.emptyMap(),
+        null,
+        null,
+        null
+    );
+    final TransformSpec transformSpec = new TransformSpec(
+        new AndDimFilter(
+            new SelectorDimFilter("column_a", "y", null),
+            new NotDimFilter(new SelectorDimFilter("column_b", "other", null))
+        ),
+        null
+    );
+    final StreamChunkReader<ByteEntity> chunkParser = new StreamChunkReader<>(
+        inputFormat,
+        new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
+        transformSpec,
+        temporaryFolder.newFolder(),
+        InputRowFilter.allowAll(),
+        rowIngestionMeters,
+        parseExceptionHandler
+    );
+    final List<InputRow> parsedRows = chunkParser.parse(
+        Arrays.asList(
+            new ByteEntity(
+                "{\"timestamp\": \"2020-01-01\", \"column_a\": \"y\", \"column_b\": \"other\"}"
+                    .getBytes(StringUtils.UTF8_STRING)
+            ),
+            new ByteEntity(
+                "{\"timestamp\": \"2020-01-01\", \"column_a\": \"y\", \"column_b\": \"title1\"}"
+                    .getBytes(StringUtils.UTF8_STRING)
+            )
+        ),
+        false
+    );
+
+    Assert.assertEquals(1, parsedRows.size());
+    Assert.assertEquals("title1", Iterables.getOnlyElement(parsedRows.get(0).getDimension("column_b")));
+    Assert.assertEquals(1, rowIngestionMeters.getThrownAway());
+
+    final Map<String, Long> thrownAwayByReason = rowIngestionMeters.getThrownAwayByReason();
+    Assert.assertEquals(Long.valueOf(1), thrownAwayByReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason()));
+    Assert.assertFalse(thrownAwayByReason.containsKey(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason()));
+  }
+
+  @Test
+  public void testTransformSpecFilterPreservesOtherRejectionReasons() throws IOException
+  {
+    final JsonInputFormat inputFormat = new JsonInputFormat(
+        JSONPathSpec.DEFAULT,
+        Collections.emptyMap(),
+        null,
+        null,
+        null
+    );
+    final TransformSpec transformSpec = new TransformSpec(
+        new AndDimFilter(
+            new SelectorDimFilter("column_a", "y", null),
+            new NotDimFilter(new SelectorDimFilter("column_b", "other", null))
+        ),
+        null
+    );
+    final InputRowFilter rowFilter = row -> {
+      if (row == null) {
+        return InputRowFilterResult.NULL_OR_EMPTY_RECORD;
+      } else if ("late".equals(row.getRaw("column_b"))) {
+        return InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME;
+      } else if ("early".equals(row.getRaw("column_b"))) {
+        return InputRowFilterResult.AFTER_MAX_MESSAGE_TIME;
+      }
+      return InputRowFilterResult.ACCEPTED;
+    };
+    final StreamChunkReader<ByteEntity> chunkParser = new StreamChunkReader<>(
+        inputFormat,
+        new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
+        transformSpec,
+        temporaryFolder.newFolder(),
+        rowFilter,
+        rowIngestionMeters,
+        parseExceptionHandler
+    );
+
+    chunkParser.parse(ImmutableList.of(), false);
+    final List<InputRow> parsedRows = chunkParser.parse(
+        Arrays.asList(
+            new ByteEntity(
+                "{\"timestamp\": \"2020-01-01\", \"column_a\": \"y\", \"column_b\": \"other\"}"
+                    .getBytes(StringUtils.UTF8_STRING)
+            ),
+            new ByteEntity(
+                "{\"timestamp\": \"2020-01-01\", \"column_a\": \"y\", \"column_b\": \"late\"}"
+                    .getBytes(StringUtils.UTF8_STRING)
+            ),
+            new ByteEntity(
+                "{\"timestamp\": \"2020-01-01\", \"column_a\": \"y\", \"column_b\": \"early\"}"
+                    .getBytes(StringUtils.UTF8_STRING)
+            ),
+            new ByteEntity(
+                "{\"timestamp\": \"2020-01-01\", \"column_a\": \"y\", \"column_b\": \"title1\"}"
+                    .getBytes(StringUtils.UTF8_STRING)
+            )
+        ),
+        false
+    );
+
+    Assert.assertEquals(1, parsedRows.size());
+    Assert.assertEquals("title1", Iterables.getOnlyElement(parsedRows.get(0).getDimension("column_b")));
+    Assert.assertEquals(4, rowIngestionMeters.getThrownAway());
+
+    final Map<String, Long> thrownAwayByReason = rowIngestionMeters.getThrownAwayByReason();
+    Assert.assertEquals(Long.valueOf(1), thrownAwayByReason.get(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason()));
+    Assert.assertEquals(Long.valueOf(1), thrownAwayByReason.get(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason()));
+    Assert.assertEquals(Long.valueOf(1), thrownAwayByReason.get(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.getReason()));
+    Assert.assertEquals(Long.valueOf(1), thrownAwayByReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason()));
+    Assert.assertFalse(thrownAwayByReason.containsKey(InputRowFilterResult.UNKNOWN.getReason()));
   }
 
   @Test

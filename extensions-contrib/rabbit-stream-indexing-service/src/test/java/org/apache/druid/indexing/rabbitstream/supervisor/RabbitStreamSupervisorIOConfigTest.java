@@ -136,4 +136,80 @@ public class RabbitStreamSupervisorIOConfigTest
     mapper.readValue(jsonStr, RabbitStreamSupervisorIOConfig.class);
   }
 
+  @Test
+  public void testBoundedModeSerdeWithIntegerOffsets() throws Exception
+  {
+    String jsonStr = "{\n"
+        + "  \"type\": \"rabbit\",\n"
+        + "  \"stream\": \"my-stream\",\n"
+        + "  \"uri\": \"rabbitmq-stream://localhost:5552\",\n"
+        + "  \"boundedStreamConfig\": {\n"
+        + "    \"startSequenceNumbers\": {\"queue-0\": 100, \"queue-1\": 200},\n"
+        + "    \"endSequenceNumbers\": {\"queue-0\": 500, \"queue-1\": 600}\n"
+        + "  }\n"
+        + "}";
+
+    RabbitStreamSupervisorIOConfig config = mapper.readValue(jsonStr, RabbitStreamSupervisorIOConfig.class);
+
+    Assert.assertTrue(config.isBounded());
+    Assert.assertNotNull(config.getBoundedStreamConfig());
+    Assert.assertEquals(2, config.getBoundedStreamConfig().getStartSequenceNumbers().size());
+    Assert.assertEquals(2, config.getBoundedStreamConfig().getEndSequenceNumbers().size());
+  }
+
+  @Test
+  public void testBoundedModeSerdeWithStringOffsets() throws Exception
+  {
+    String jsonStr = "{\n"
+        + "  \"type\": \"rabbit\",\n"
+        + "  \"stream\": \"my-stream\",\n"
+        + "  \"uri\": \"rabbitmq-stream://localhost:5552\",\n"
+        + "  \"boundedStreamConfig\": {\n"
+        + "    \"startSequenceNumbers\": {\"queue-0\": \"100\", \"queue-1\": \"200\"},\n"
+        + "    \"endSequenceNumbers\": {\"queue-0\": \"500\", \"queue-1\": \"600\"}\n"
+        + "  }\n"
+        + "}";
+
+    RabbitStreamSupervisorIOConfig config = mapper.readValue(jsonStr, RabbitStreamSupervisorIOConfig.class);
+
+    Assert.assertTrue(config.isBounded());
+    Assert.assertNotNull(config.getBoundedStreamConfig());
+    Assert.assertEquals(2, config.getBoundedStreamConfig().getStartSequenceNumbers().size());
+    Assert.assertEquals(2, config.getBoundedStreamConfig().getEndSequenceNumbers().size());
+  }
+
+  @Test
+  public void testBoundedModeSerdeWithMixedOffsets() throws Exception
+  {
+    String jsonStr = "{\n"
+        + "  \"type\": \"rabbit\",\n"
+        + "  \"stream\": \"my-stream\",\n"
+        + "  \"uri\": \"rabbitmq-stream://localhost:5552\",\n"
+        + "  \"boundedStreamConfig\": {\n"
+        + "    \"startSequenceNumbers\": {\"queue-0\": 100, \"queue-1\": \"200\"},\n"
+        + "    \"endSequenceNumbers\": {\"queue-0\": 500, \"queue-1\": \"600\"}\n"
+        + "  }\n"
+        + "}";
+
+    RabbitStreamSupervisorIOConfig config = mapper.readValue(jsonStr, RabbitStreamSupervisorIOConfig.class);
+
+    Assert.assertTrue(config.isBounded());
+    Assert.assertNotNull(config.getBoundedStreamConfig());
+  }
+
+  @Test
+  public void testUnboundedModeByDefault() throws Exception
+  {
+    String jsonStr = "{\n"
+        + "  \"type\": \"rabbit\",\n"
+        + "  \"stream\": \"my-stream\",\n"
+        + "  \"uri\": \"rabbitmq-stream://localhost:5552\"\n"
+        + "}";
+
+    RabbitStreamSupervisorIOConfig config = mapper.readValue(jsonStr, RabbitStreamSupervisorIOConfig.class);
+
+    Assert.assertFalse(config.isBounded());
+    Assert.assertNull(config.getBoundedStreamConfig());
+  }
+
 }

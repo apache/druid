@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.tdigestsketch;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRowSchema;
@@ -65,6 +66,10 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
     TDigestSketchModule module = new TDigestSketchModule();
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
+    InjectableValues currentInjectableValues = helper.getObjectMapper().getInjectableValues();
+    InjectableValues.Std currentInjectableValuesStd = (InjectableValues.Std) currentInjectableValues;
+    currentInjectableValuesStd.addValue(TDigestConfig.class.getName(), TDigestConfig.builder().build());
+    helper.getObjectMapper().setInjectableValues(currentInjectableValuesStd);
   }
 
   @Parameterized.Parameters(name = "{0}")
@@ -82,8 +87,12 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
   public void serializeDeserializeFactoryWithFieldName() throws Exception
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();
+    objectMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(TDigestConfig.class.getName(), TDigestConfig.builder().build())
+    );
     new TDigestSketchModule().getJacksonModules().forEach(objectMapper::registerModule);
-    TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("name", "filedName", 128);
+    TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("name", "filedName", 128, TDigestConfig.builder().build());
 
     AggregatorFactory other = objectMapper.readValue(
         objectMapper.writeValueAsString(factory),
@@ -91,6 +100,44 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
     );
 
     Assert.assertEquals(factory, other);
+  }
+
+  @Test
+  public void deserializedFactoryCompressionCappedAtMaxCompression() throws Exception
+  {
+    ObjectMapper objectMapper = new DefaultObjectMapper();
+    objectMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(TDigestConfig.class.getName(), TDigestConfig.builder().maxCompression(150).build())
+    );
+    new TDigestSketchModule().getJacksonModules().forEach(objectMapper::registerModule);
+    TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("name", "fieldName", 300, TDigestConfig.builder().maxCompression(150).build());
+
+    TDigestSketchAggregatorFactory deserialized = (TDigestSketchAggregatorFactory) objectMapper.readValue(
+        objectMapper.writeValueAsString(factory),
+        AggregatorFactory.class
+    );
+
+    Assert.assertEquals(150, deserialized.getCompression());
+  }
+
+  @Test
+  public void deserializedFactoryCompressionBelowMaxCompressionUnchanged() throws Exception
+  {
+    ObjectMapper objectMapper = new DefaultObjectMapper();
+    objectMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(TDigestConfig.class.getName(), TDigestConfig.builder().maxCompression(150).build())
+    );
+    new TDigestSketchModule().getJacksonModules().forEach(objectMapper::registerModule);
+    TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("name", "fieldName", 100, TDigestConfig.builder().maxCompression(150).build());
+
+    TDigestSketchAggregatorFactory deserialized = (TDigestSketchAggregatorFactory) objectMapper.readValue(
+        objectMapper.writeValueAsString(factory),
+        AggregatorFactory.class
+    );
+
+    Assert.assertEquals(100, deserialized.getCompression());
   }
 
   @Test
@@ -109,7 +156,7 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "sequenceNumber", "product", "value")
         ),
-        List.of(new TDigestSketchAggregatorFactory("sketch", "value", 200)),
+        List.of(new TDigestSketchAggregatorFactory("sketch", "value", 200, TDigestConfig.builder().build())),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
@@ -117,7 +164,7 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
                     .setDataSource("test_datasource")
                     .setGranularity(Granularities.ALL)
                     .setDimensions(Collections.emptyList())
-                    .setAggregatorSpecs(new TDigestSketchAggregatorFactory("merged_sketch", "sketch", 200))
+                    .setAggregatorSpecs(new TDigestSketchAggregatorFactory("merged_sketch", "sketch", 200, TDigestConfig.builder().build()))
                     .setPostAggregatorSpecs(
                         new TDigestSketchToQuantilesPostAggregator(
                             "quantiles",
@@ -162,7 +209,7 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
                     .setDataSource("test_datasource")
                     .setGranularity(Granularities.ALL)
                     .setDimensions(Collections.emptyList())
-                    .setAggregatorSpecs(new TDigestSketchAggregatorFactory("sketch", "value", 200))
+                    .setAggregatorSpecs(new TDigestSketchAggregatorFactory("sketch", "value", 200, TDigestConfig.builder().build()))
                     .setPostAggregatorSpecs(
                         new TDigestSketchToQuantilesPostAggregator(
                             "quantiles",
@@ -200,7 +247,7 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
         DelimitedInputFormat.forColumns(
             List.of("timestamp", "product", "sketch")
         ),
-        List.of(new TDigestSketchAggregatorFactory("first_level_merge_sketch", "sketch", 200)),
+        List.of(new TDigestSketchAggregatorFactory("first_level_merge_sketch", "sketch", 200, TDigestConfig.builder().build())),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
@@ -209,7 +256,7 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
                     .setGranularity(Granularities.ALL)
                     .setDimensions(Collections.emptyList())
                     .setAggregatorSpecs(
-                        new TDigestSketchAggregatorFactory("second_level_merge_sketch", "first_level_merge_sketch", 200)
+                        new TDigestSketchAggregatorFactory("second_level_merge_sketch", "first_level_merge_sketch", 200, TDigestConfig.builder().build())
                     )
                     .setPostAggregatorSpecs(
                         new TDigestSketchToQuantilesPostAggregator(

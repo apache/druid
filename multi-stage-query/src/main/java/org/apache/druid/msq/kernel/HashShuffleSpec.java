@@ -20,9 +20,12 @@
 package org.apache.druid.msq.kernel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.java.util.common.IAE;
+
+import java.util.Objects;
 
 public class HashShuffleSpec implements ShuffleSpec
 {
@@ -30,15 +33,22 @@ public class HashShuffleSpec implements ShuffleSpec
 
   private final ClusterBy clusterBy;
   private final int numPartitions;
+  private final boolean adjustable;
 
   @JsonCreator
   public HashShuffleSpec(
       @JsonProperty("clusterBy") final ClusterBy clusterBy,
-      @JsonProperty("partitions") final int numPartitions
+      @JsonProperty("partitions") final int numPartitions,
+      @JsonProperty("adjustable") final boolean adjustable
   )
   {
     this.clusterBy = clusterBy;
     this.numPartitions = numPartitions;
+    this.adjustable = adjustable;
+
+    if (adjustable && numPartitions != 1) {
+      throw new IAE("Partition count must be 1 when adjustable is true, but was [%d]", numPartitions);
+    }
 
     if (clusterBy.getBucketByCount() > 0) {
       // Only GlobalSortTargetSizeShuffleSpec supports bucket-by.
@@ -64,5 +74,51 @@ public class HashShuffleSpec implements ShuffleSpec
   public int partitionCount()
   {
     return numPartitions;
+  }
+
+  @Override
+  @JsonProperty("adjustable")
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean isAdjustable()
+  {
+    return adjustable;
+  }
+
+  @Override
+  public ShuffleSpec withPartitionCount(final int partitionCount)
+  {
+    return new HashShuffleSpec(
+        clusterBy,
+        partitionCount,
+        false
+    );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    HashShuffleSpec that = (HashShuffleSpec) o;
+    return numPartitions == that.numPartitions
+           && adjustable == that.adjustable
+           && Objects.equals(clusterBy, that.clusterBy);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(clusterBy, numPartitions, adjustable);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "HashShuffleSpec{" +
+           "clusterBy=" + clusterBy +
+           ", numPartitions=" + numPartitions +
+           ", adjustable=" + adjustable +
+           '}';
   }
 }

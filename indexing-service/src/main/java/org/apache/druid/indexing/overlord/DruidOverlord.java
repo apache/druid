@@ -23,9 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
-import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.TaskContextEnricher;
@@ -42,7 +40,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
-import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -67,10 +64,9 @@ public class DruidOverlord
   private final AtomicReference<Lifecycle> leaderLifecycleRef = new AtomicReference<>(null);
 
   /**
-   * Indicates that all services have been started and the node can now announce
-   * itself with {@link ServiceAnnouncer#announce}. This must be set to false
-   * as soon as {@link DruidLeaderSelector.Listener#stopBeingLeader()} is
-   * called.
+   * Indicates that all services have been started and the node is ready to serve
+   * leader-only HTTP routes. This must be set to false as soon as
+   * {@link DruidLeaderSelector.Listener#stopBeingLeader()} is called.
    */
   private volatile boolean initialized;
 
@@ -83,9 +79,7 @@ public class DruidOverlord
       final GlobalTaskLockbox taskLockbox,
       final TaskStorage taskStorage,
       final TaskActionClientFactory taskActionClientFactory,
-      @Self final DruidNode selfNode,
       final TaskRunnerFactory runnerFactory,
-      final ServiceAnnouncer serviceAnnouncer,
       final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
       final ServiceEmitter emitter,
       final SupervisorManager supervisorManager,
@@ -102,9 +96,6 @@ public class DruidOverlord
     this.overlordLeaderSelector = overlordLeaderSelector;
     this.segmentMetadataCache = segmentMetadataCache;
     this.coordinatorOverlordServiceConfig = coordinatorOverlordServiceConfig;
-
-    final DruidNode node = coordinatorOverlordServiceConfig.getOverlordService() == null ? selfNode :
-                           selfNode.withService(coordinatorOverlordServiceConfig.getOverlordService());
 
     this.leadershipListener = new DruidLeaderSelector.Listener()
     {
@@ -173,15 +164,13 @@ public class DruidOverlord
                   compactionScheduler.becomeLeader();
                   scheduledBatchTaskManager.start();
 
-                  // Announce the node only after all the services have been initialized
+                  // Mark ready only after all the services have been initialized
                   initialized = true;
-                  serviceAnnouncer.announce(node);
                 }
 
                 @Override
                 public void stop()
                 {
-                  serviceAnnouncer.unannounce(node);
                   scheduledBatchTaskManager.stop();
                   compactionScheduler.stopBeingLeader();
                   taskMaster.downgradeToHalfLeader();

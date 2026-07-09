@@ -22,9 +22,9 @@ package org.apache.druid.math.expr.vector;
 import org.apache.druid.math.expr.SettableVectorInputBinding;
 import org.apache.druid.query.filter.vector.VectorMatch;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class FilteredVectorInputBindingTest extends InitializedNullHandlingTest
 {
@@ -74,7 +74,7 @@ public class FilteredVectorInputBindingTest extends InitializedNullHandlingTest
 
   private SettableVectorInputBinding baseBinding;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     baseBinding = new SettableVectorInputBinding(VECTOR_SIZE);
@@ -95,10 +95,10 @@ public class FilteredVectorInputBindingTest extends InitializedNullHandlingTest
     matchMaker.setSelectionSize(3);
 
     final Object[] strings = filteredVectorInputBinding.getObjectVector("string");
-    Assert.assertEquals(3, filteredVectorInputBinding.getCurrentVectorSize());
-    Assert.assertEquals("1", strings[0]);
-    Assert.assertEquals("3", strings[1]);
-    Assert.assertEquals("4", strings[2]);
+    Assertions.assertEquals(3, filteredVectorInputBinding.getCurrentVectorSize());
+    Assertions.assertEquals("1", strings[0]);
+    Assertions.assertEquals("3", strings[1]);
+    Assertions.assertEquals("4", strings[2]);
   }
 
   @Test
@@ -115,14 +115,14 @@ public class FilteredVectorInputBindingTest extends InitializedNullHandlingTest
 
     long[] longs = filteredVectorInputBinding.getLongVector("long");
     boolean[] nulls = filteredVectorInputBinding.getNullVector("long");
-    Assert.assertEquals(3, filteredVectorInputBinding.getCurrentVectorSize());
-    Assert.assertNotNull(nulls);
-    Assert.assertEquals(1L, longs[0]);
-    Assert.assertEquals(3L, longs[1]);
-    Assert.assertEquals(4L, longs[2]);
-    Assert.assertFalse(nulls[0]);
-    Assert.assertTrue(nulls[1]);
-    Assert.assertFalse(nulls[2]);
+    Assertions.assertEquals(3, filteredVectorInputBinding.getCurrentVectorSize());
+    Assertions.assertNotNull(nulls);
+    Assertions.assertEquals(1L, longs[0]);
+    Assertions.assertEquals(3L, longs[1]);
+    Assertions.assertEquals(4L, longs[2]);
+    Assertions.assertFalse(nulls[0]);
+    Assertions.assertTrue(nulls[1]);
+    Assertions.assertFalse(nulls[2]);
 
     selection[0] = 0;
     selection[1] = 2;
@@ -133,18 +133,18 @@ public class FilteredVectorInputBindingTest extends InitializedNullHandlingTest
 
     longs = filteredVectorInputBinding.getLongVector("long");
     nulls = filteredVectorInputBinding.getNullVector("long");
-    Assert.assertEquals(5, filteredVectorInputBinding.getCurrentVectorSize());
-    Assert.assertNotNull(nulls);
-    Assert.assertEquals(0L, longs[0]);
-    Assert.assertEquals(2L, longs[1]);
-    Assert.assertEquals(5L, longs[2]);
-    Assert.assertEquals(6L, longs[3]);
-    Assert.assertEquals(7L, longs[4]);
-    Assert.assertFalse(nulls[0]);
-    Assert.assertFalse(nulls[1]);
-    Assert.assertFalse(nulls[2]);
-    Assert.assertTrue(nulls[3]);
-    Assert.assertFalse(nulls[4]);
+    Assertions.assertEquals(5, filteredVectorInputBinding.getCurrentVectorSize());
+    Assertions.assertNotNull(nulls);
+    Assertions.assertEquals(0L, longs[0]);
+    Assertions.assertEquals(2L, longs[1]);
+    Assertions.assertEquals(5L, longs[2]);
+    Assertions.assertEquals(6L, longs[3]);
+    Assertions.assertEquals(7L, longs[4]);
+    Assertions.assertFalse(nulls[0]);
+    Assertions.assertFalse(nulls[1]);
+    Assertions.assertFalse(nulls[2]);
+    Assertions.assertTrue(nulls[3]);
+    Assertions.assertFalse(nulls[4]);
 
 
     selection[0] = 1;
@@ -154,14 +154,14 @@ public class FilteredVectorInputBindingTest extends InitializedNullHandlingTest
 
     longs = filteredVectorInputBinding.getLongVector("long");
     nulls = filteredVectorInputBinding.getNullVector("long");
-    Assert.assertEquals(3, filteredVectorInputBinding.getCurrentVectorSize());
-    Assert.assertNotNull(nulls);
-    Assert.assertEquals(1L, longs[0]);
-    Assert.assertEquals(3L, longs[1]);
-    Assert.assertEquals(4L, longs[2]);
-    Assert.assertFalse(nulls[0]);
-    Assert.assertTrue(nulls[1]);
-    Assert.assertFalse(nulls[2]);
+    Assertions.assertEquals(3, filteredVectorInputBinding.getCurrentVectorSize());
+    Assertions.assertNotNull(nulls);
+    Assertions.assertEquals(1L, longs[0]);
+    Assertions.assertEquals(3L, longs[1]);
+    Assertions.assertEquals(4L, longs[2]);
+    Assertions.assertFalse(nulls[0]);
+    Assertions.assertTrue(nulls[1]);
+    Assertions.assertFalse(nulls[2]);
   }
 
   @Test
@@ -178,10 +178,10 @@ public class FilteredVectorInputBindingTest extends InitializedNullHandlingTest
 
     double[] doubles = filteredVectorInputBinding.getDoubleVector("double");
     boolean[] nulls = filteredVectorInputBinding.getNullVector("double");
-    Assert.assertEquals(3, filteredVectorInputBinding.getCurrentVectorSize());
-    Assert.assertEquals(1.1, doubles[0], 0.0);
-    Assert.assertEquals(3.3, doubles[1], 0.0);
-    Assert.assertEquals(4.4, doubles[2], 0.0);
+    Assertions.assertEquals(3, filteredVectorInputBinding.getCurrentVectorSize());
+    Assertions.assertEquals(1.1, doubles[0], 0.0);
+    Assertions.assertEquals(3.3, doubles[1], 0.0);
+    Assertions.assertEquals(4.4, doubles[2], 0.0);
 
     selection[0] = 0;
     selection[1] = 2;
@@ -192,13 +192,13 @@ public class FilteredVectorInputBindingTest extends InitializedNullHandlingTest
 
     doubles = filteredVectorInputBinding.getDoubleVector("double");
     nulls = filteredVectorInputBinding.getNullVector("double");
-    Assert.assertEquals(5, filteredVectorInputBinding.getCurrentVectorSize());
+    Assertions.assertEquals(5, filteredVectorInputBinding.getCurrentVectorSize());
 
-    Assert.assertEquals(0.0, doubles[0], 0.0);
-    Assert.assertEquals(2.2, doubles[1], 0.0);
-    Assert.assertEquals(5.5, doubles[2], 0.0);
-    Assert.assertEquals(6.6, doubles[3], 0.0);
-    Assert.assertEquals(7.7, doubles[4], 0.0);
+    Assertions.assertEquals(0.0, doubles[0], 0.0);
+    Assertions.assertEquals(2.2, doubles[1], 0.0);
+    Assertions.assertEquals(5.5, doubles[2], 0.0);
+    Assertions.assertEquals(6.6, doubles[3], 0.0);
+    Assertions.assertEquals(7.7, doubles[4], 0.0);
 
     selection[0] = 1;
     selection[1] = 3;
@@ -207,10 +207,10 @@ public class FilteredVectorInputBindingTest extends InitializedNullHandlingTest
 
     doubles = filteredVectorInputBinding.getDoubleVector("double");
     nulls = filteredVectorInputBinding.getNullVector("double");
-    Assert.assertEquals(3, filteredVectorInputBinding.getCurrentVectorSize());
+    Assertions.assertEquals(3, filteredVectorInputBinding.getCurrentVectorSize());
 
-    Assert.assertEquals(1.1, doubles[0], 0.0);
-    Assert.assertEquals(3.3, doubles[1], 0.0);
-    Assert.assertEquals(4.4, doubles[2], 0.0);
+    Assertions.assertEquals(1.1, doubles[0], 0.0);
+    Assertions.assertEquals(3.3, doubles[1], 0.0);
+    Assertions.assertEquals(4.4, doubles[2], 0.0);
   }
 }

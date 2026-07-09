@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
@@ -93,8 +92,7 @@ public class FireHydrant
   {
     final Segment segment = segmentReferenceProvider.get().getBaseSegment();
     if (segment != null) {
-      final PhysicalSegmentInspector segmentInspector = segment.as(PhysicalSegmentInspector.class);
-      final Metadata metadata = segmentInspector == null ? null : segmentInspector.getMetadata();
+      final Metadata metadata = segment.as(Metadata.class);
       return metadata != null && metadata.getAggregators() != null ? metadata.getAggregators().length : 0;
     }
     return 0;

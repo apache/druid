@@ -28,6 +28,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
@@ -262,6 +263,12 @@ public class OverlordCompactionResource
 
     if (scheduler.isEnabled()) {
       final CompactionSupervisorSpec spec = new CompactionSupervisorSpec(newConfig, false, scheduler);
+      try {
+        spec.validateSpec();
+      }
+      catch (DruidException e) {
+        return invalidInputResponse(e.getMessage());
+      }
       return ServletResourceUtils.buildUpdateResponse(
           () -> supervisorManager.updateCompactionSupervisor(spec, request)
       );

@@ -195,7 +195,7 @@ public class WorkerImpl implements Worker
 
       if (maybeErrorReport.isPresent()) {
         final MSQErrorReport errorReport = maybeErrorReport.get();
-        final String logMessage = MSQTasks.errorReportToLogMessage(errorReport);
+        final String logMessage = MSQTasks.errorReportToLogMessage(errorReport, context.isDebug());
         log.warn("%s", logMessage);
 
         // Inform controller of any errors that occur, unless we were canceled. This prevents attempting to contact

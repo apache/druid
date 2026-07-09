@@ -35,10 +35,10 @@ import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ColumnCacheTest
 {
@@ -54,7 +54,7 @@ public class ColumnCacheTest
   ColumnCache columnCache;
   ColumnIndexSupplier indexSupplier;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     closer = Closer.create();
@@ -122,7 +122,7 @@ public class ColumnCacheTest
     );
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     closer.close();
@@ -135,16 +135,16 @@ public class ColumnCacheTest
     DictionaryEncodedStringValueIndex bitmapIndex = supplier.as(
         DictionaryEncodedStringValueIndex.class
     );
-    Assert.assertNotNull(bitmapIndex);
+    Assertions.assertNotNull(bitmapIndex);
 
     StringValueSetIndexes valueIndex = supplier.as(StringValueSetIndexes.class);
-    Assert.assertNotNull(valueIndex);
+    Assertions.assertNotNull(valueIndex);
     ImmutableBitmap valueBitmap = valueIndex.forValue("foo")
                                             .computeBitmapResult(
                                                 new DefaultBitmapResultFactory(columnCache.getBitmapFactory()),
                                                 false
                                             );
-    Assert.assertNotNull(valueBitmap);
+    Assertions.assertNotNull(valueBitmap);
     EasyMock.verify(bitmapFactory, index, indexSupplier);
   }
 
@@ -155,10 +155,10 @@ public class ColumnCacheTest
     DictionaryEncodedStringValueIndex bitmapIndex = supplier.as(
         DictionaryEncodedStringValueIndex.class
     );
-    Assert.assertNull(bitmapIndex);
+    Assertions.assertNull(bitmapIndex);
 
     StringValueSetIndexes valueIndex = supplier.as(StringValueSetIndexes.class);
-    Assert.assertNull(valueIndex);
+    Assertions.assertNull(valueIndex);
     EasyMock.verify(bitmapFactory, index, indexSupplier);
   }
 
@@ -166,25 +166,25 @@ public class ColumnCacheTest
   public void testStringDictionaryGetColumnCapabilities()
   {
     final ColumnCapabilities capabilities = columnCache.getColumnCapabilities(STRING_DICTIONARY_COLUMN_NAME);
-    Assert.assertEquals(ValueType.STRING, capabilities.getType());
-    Assert.assertEquals(ColumnCapabilities.Capable.FALSE, capabilities.hasMultipleValues());
-    Assert.assertEquals(ColumnCapabilities.Capable.TRUE, capabilities.isDictionaryEncoded());
+    Assertions.assertEquals(ValueType.STRING, capabilities.getType());
+    Assertions.assertEquals(ColumnCapabilities.Capable.FALSE, capabilities.hasMultipleValues());
+    Assertions.assertEquals(ColumnCapabilities.Capable.TRUE, capabilities.isDictionaryEncoded());
   }
 
   @Test
   public void testNonStringDictionaryGetColumnCapabilities()
   {
     final ColumnCapabilities capabilities = columnCache.getColumnCapabilities(NON_STRING_DICTIONARY_COLUMN_NAME);
-    Assert.assertEquals(ValueType.COMPLEX, capabilities.getType());
-    Assert.assertEquals("testBlob", capabilities.getComplexTypeName());
-    Assert.assertEquals(ColumnCapabilities.Capable.FALSE, capabilities.hasMultipleValues());
-    Assert.assertEquals(ColumnCapabilities.Capable.TRUE, capabilities.isDictionaryEncoded());
+    Assertions.assertEquals(ValueType.COMPLEX, capabilities.getType());
+    Assertions.assertEquals("testBlob", capabilities.getComplexTypeName());
+    Assertions.assertEquals(ColumnCapabilities.Capable.FALSE, capabilities.hasMultipleValues());
+    Assertions.assertEquals(ColumnCapabilities.Capable.TRUE, capabilities.isDictionaryEncoded());
   }
 
   @Test
   public void testNonexistentColumnGetColumnCapabilities()
   {
     final ColumnCapabilities capabilities = columnCache.getColumnCapabilities(NONEXISTENT_COLUMN_NAME);
-    Assert.assertNull(capabilities);
+    Assertions.assertNull(capabilities);
   }
 }

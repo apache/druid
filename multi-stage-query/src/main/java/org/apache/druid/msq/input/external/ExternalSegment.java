@@ -31,9 +31,12 @@ import org.apache.druid.msq.counters.WarningCounters;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.io.IOException;
 import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 /**
@@ -46,16 +49,14 @@ public class ExternalSegment extends RowBasedSegment<InputRow>
   /**
    * @param inputSource       {@link InputSource} that the segment is a representation of
    * @param reader            reader to read the external input source
-   * @param inputStats        input stats
    * @param warningCounters   warning counters tracking the warnings generated while reading the external source
    * @param warningPublisher  publisher to report the warnings generated
-   * @param channelCounters   channel counters to increment as we read through the files/units of the external source
+   * @param channelCounters   channel counters, will be used for {@link ChannelCounters#incrementBytes(long)}
    * @param signature         signature of the external source
    */
   public ExternalSegment(
       final InputSource inputSource,
       final InputSourceReader reader,
-      final InputStats inputStats,
       final WarningCounters warningCounters,
       final Consumer<Throwable> warningPublisher,
       final ChannelCounters channelCounters,
@@ -70,7 +71,7 @@ public class ExternalSegment extends RowBasedSegment<InputRow>
               public CloseableIterator<InputRow> make()
               {
                 try {
-                  CloseableIterator<InputRow> baseIterator = reader.read(inputStats);
+                  CloseableIterator<InputRow> baseIterator = reader.read(makeInputStats(inputSource, channelCounters));
                   return new CloseableIterator<>()
                   {
                     private InputRow next = null;
@@ -119,20 +120,7 @@ public class ExternalSegment extends RowBasedSegment<InputRow>
               @Override
               public void cleanup(CloseableIterator<InputRow> iterFromMake)
               {
-                try {
-                  iterFromMake.close();
-                  // We increment the file count whenever the caller calls clean up. So we can double count here
-                  // if the callers are not careful.
-                  // This logic only works because we are using FilePerSplitHintSpec. Each input source only
-                  // has one file.
-                  if (ExternalInputSliceReader.isFileBasedInputSource(inputSource)) {
-                    channelCounters.incrementFileCount();
-                    channelCounters.incrementBytes(inputStats.getProcessedBytes());
-                  }
-                }
-                catch (IOException e) {
-                  throw new RuntimeException(e);
-                }
+                CloseableUtils.closeAndWrapExceptions(iterFromMake);
               }
             }
         ),
@@ -148,5 +136,33 @@ public class ExternalSegment extends RowBasedSegment<InputRow>
   public RowSignature signature()
   {
     return signature;
+  }
+
+  /**
+   * Create {@link InputStats} that calls {@link ChannelCounters#incrementBytes(long)} as data is read from files.
+   */
+  private static InputStats makeInputStats(final InputSource inputSource, final ChannelCounters channelCounters)
+  {
+    if (ExternalInputSliceReader.isFileBasedInputSource(inputSource)) {
+      return new InputStats()
+      {
+        private final AtomicLong processedBytes = new AtomicLong();
+
+        @Override
+        public void incrementProcessedBytes(final long n)
+        {
+          processedBytes.addAndGet(n);
+          channelCounters.incrementBytes(n);
+        }
+
+        @Override
+        public long getProcessedBytes()
+        {
+          return processedBytes.get();
+        }
+      };
+    } else {
+      return new NoopRowIngestionMeters();
+    }
   }
 }

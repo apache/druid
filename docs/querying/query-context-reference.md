@@ -34,7 +34,7 @@ This reference contains context parameters organized by their scope:
 To learn how to set the query context, see [Set query context](./query-context.md).
 
 For reference on query context parameters specific to Druid SQL, visit [SQL query context](sql-query-context.md). 
-For context parameters related to SQL-based ingestion, see the [SQL-based ingestion reference](../multi-stage-query/reference/#context-parameters).
+For context parameters related to SQL-based ingestion, see the [SQL-based ingestion reference](../multi-stage-query/reference.md#context-parameters).
 
 
 ## General parameters
@@ -68,10 +68,11 @@ Unless otherwise noted, the following parameters apply to all query types, and t
 |`useFilterCNF`|`false`| If true, Druid will attempt to convert the query filter to Conjunctive Normal Form (CNF). During query processing, columns can be pre-filtered by intersecting the bitmap indexes of all values that match the eligible filters, often greatly reducing the raw number of rows which need to be scanned. But this effect only happens for the top level filter, or individual clauses of a top level 'and' filter. As such, filters in CNF potentially have a higher chance to utilize a large amount of bitmap indexes on string columns during pre-filtering. However, this setting should be used with great caution, as it can sometimes have a negative effect on performance, and in some cases, the act of computing CNF of a filter can be expensive. We recommend hand tuning your filters to produce an optimal form if possible, or at least verifying through experimentation that using this parameter actually improves your query performance with no ill-effects.|
 |`secondaryPartitionPruning`|`true`|Enable secondary partition pruning on the Broker. The Broker will always prune unnecessary segments from the input scan based on a filter on time intervals, but if the data is further partitioned with hash or range partitioning, this option will enable additional pruning based on a filter on secondary partition dimensions.|
 |`debug`| `false` | Flag indicating whether to enable debugging outputs for the query. When set to false, no additional logs will be produced (logs produced will be entirely dependent on your logging level). When set to true, the following addition logs will be produced:<br />- Log the stack trace of the exception (if any) produced by the query |
-|`setProcessingThreadNames`|`true`| Whether processing thread names will be set to `queryType_dataSource_intervals` while processing a query. This aids in interpreting thread dumps, and is on by default. Query overhead can be reduced slightly by setting this to `false`. This has a tiny effect in most scenarios, but can be meaningful in high-QPS, low-per-segment-processing-time scenarios. |
+|`setProcessingThreadNames`|`false`| Flag indicating whether processing thread names will be set to `processing_<queryId>` while processing a query. Thread renaming aids in interpreting thread dumps, but has measurable thread renaming overhead when segment scans are very quick. |
 |`sqlPlannerBloat`|`1000`|Calcite parameter which controls whether to merge two Project operators when inlining expressions causes complexity to increase. Implemented as a workaround to exception `There are not enough rules to produce a node with desired properties: convention=DRUID, sort=[]` thrown after rejecting the merge of two projects.|
 |`cloneQueryMode`|`excludeClones`| Indicates whether clone Historicals should be queried by brokers. Clone servers are created by the `cloneServers` Coordinator dynamic configuration. Possible values are `excludeClones`, `includeClones` and `preferClones`. `excludeClones` means that clone Historicals are not queried by the broker. `preferClones` indicates that when given a choice between the clone Historical and the original Historical which is being cloned, the broker chooses the clones. Historicals which are not involved in the cloning process will still be queried. `includeClones` means that broker queries any Historical without regarding clone status. This parameter only affects native queries. MSQ does not query Historicals directly.|
-|`realtimeSegmentsOnly` |`false`| When set to true, only query realtime segments. Historical segments are excluded. |
+|`realtimeSegmentsMode` |`include`| Controls whether realtime segments are queried. `include` queries all segments, including realtime. `exclude` skips realtime segments. `exclusive` queries only realtime segments. |
+|`realtimeSegmentsOnly` |`false`| **Deprecated.** Use `realtimeSegmentsMode=exclusive` instead. When set to `true`, this is equivalent to `realtimeSegmentsMode=exclusive`. When set to `false`, this is equivalent to `realtimeSegmentsMode=include`.|
 
 ## Parameters by query type
 
@@ -139,4 +140,3 @@ For more information, see the following topics:
 - [Set query context](./query-context.md) to learn how to configure query context parameters.
 - [SQL query context](sql-query-context.md) for query context parameters specific to Druid SQL.
 - [SQL-based ingestion reference](../multi-stage-query/reference/#context-parameters) for context parameters used in SQL-based ingestion (MSQ).
-

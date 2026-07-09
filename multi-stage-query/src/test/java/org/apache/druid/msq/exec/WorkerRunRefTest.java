@@ -112,7 +112,7 @@ public class WorkerRunRefTest
     workerFinished.await();
 
     Assert.assertTrue("Future should be done", future.isDone());
-    Assert.assertTrue("Future should be canceled", future.isCancelled());
+    Assert.assertFalse("Future should not be canceled", future.isCancelled());
     Assert.assertTrue("Worker should have been interrupted", wasInterrupted.get());
 
     // awaitStop should return immediately since the worker is done

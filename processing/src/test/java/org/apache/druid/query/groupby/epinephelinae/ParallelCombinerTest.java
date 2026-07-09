@@ -29,9 +29,9 @@ import org.apache.druid.query.groupby.epinephelinae.ConcurrentGrouperTest.TestRe
 import org.apache.druid.query.groupby.epinephelinae.Grouper.Entry;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.KeySerdeFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -82,7 +82,7 @@ public class ParallelCombinerTest extends InitializedNullHandlingTest
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown()
   {
     SERVICE.shutdownNow();
@@ -131,6 +131,6 @@ public class ParallelCombinerTest extends InitializedNullHandlingTest
       }
     }
 
-    iterators.forEach(it -> Assert.assertTrue(it.isClosed()));
+    iterators.forEach(it -> Assertions.assertTrue(it.isClosed()));
   }
 }

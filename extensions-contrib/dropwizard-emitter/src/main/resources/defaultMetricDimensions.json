@@ -21,6 +21,13 @@
     "type": "timer",
     "timeUnit": "MILLISECONDS"
   },
+  "query/segments/count": {
+    "dimensions": [
+      "dataSource",
+      "type"
+    ],
+    "type": "counter"
+  },
   "query/segment/time": {
     "dimensions": [],
     "type": "timer",

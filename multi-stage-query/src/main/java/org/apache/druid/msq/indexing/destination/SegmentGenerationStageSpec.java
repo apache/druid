@@ -138,26 +138,26 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
   {
     final Map<String, VirtualColumn> clusterByVirtualColumns = new LinkedHashMap<>();
     if (query instanceof GroupByQuery groupByQuery) {
-      final Map<String, VirtualColumn> outputToVc = new LinkedHashMap<>();
+      final Map<String, VirtualColumns.Node> outputToVc = new LinkedHashMap<>();
       for (DimensionSpec spec : groupByQuery.getDimensions()) {
-        final VirtualColumn vc = groupByQuery.getVirtualColumns().getVirtualColumn(spec.getDimension());
+        final VirtualColumns.Node vc = groupByQuery.getVirtualColumns().getNode(spec.getDimension());
         if (vc != null) {
           outputToVc.put(spec.getOutputName(), vc);
         }
       }
       for (KeyColumn column : queryClusterBy.getColumns()) {
-        final VirtualColumn vc = outputToVc.get(column.columnName());
+        final VirtualColumns.Node vc = outputToVc.get(column.columnName());
         if (vc != null) {
-          clusterByVirtualColumns.put(column.columnName(), vc);
-          addRequiredVirtualColumns(groupByQuery.getVirtualColumns(), vc, clusterByVirtualColumns);
+          clusterByVirtualColumns.put(column.columnName(), vc.getVirtualColumn());
+          addRequiredFromNode(vc, clusterByVirtualColumns);
         }
       }
     } else if (query instanceof ScanQuery scanQuery) {
       for (KeyColumn column : queryClusterBy.getColumns()) {
-        final VirtualColumn vc = scanQuery.getVirtualColumns().getVirtualColumn(column.columnName());
+        final VirtualColumns.Node vc = scanQuery.getVirtualColumns().getNode(column.columnName());
         if (vc != null) {
-          clusterByVirtualColumns.put(column.columnName(), vc);
-          addRequiredVirtualColumns(scanQuery.getVirtualColumns(), vc, clusterByVirtualColumns);
+          clusterByVirtualColumns.put(column.columnName(), vc.getVirtualColumn());
+          addRequiredFromNode(vc, clusterByVirtualColumns);
         }
       }
     }
@@ -165,24 +165,16 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
   }
 
   /**
-   * Recursively adds any {@link VirtualColumn#requiredColumns()} which are also virtual columns. This handles cases
-   * where a cluster-by virtual column depends on other virtual columns, such as when clustering by something like
+   * Adds all transitive virtual column dependencies of {@code vc} into {@code collected}. This handles cases where a
+   * cluster-by virtual column depends on other virtual columns, such as when clustering by something like
    * {@code LOWER(JSON_VALUE(obj, '$.path'))} which creates an ExpressionVirtualColumn that references a
    * NestedFieldVirtualColumn.
    */
-  private static void addRequiredVirtualColumns(
-      VirtualColumns allVirtualColumns,
-      VirtualColumn vc,
-      Map<String, VirtualColumn> collected
-  )
+  private static void addRequiredFromNode(VirtualColumns.Node node, Map<String, VirtualColumn> collected)
   {
-    for (String requiredColumn : vc.requiredColumns()) {
-      if (!collected.containsKey(requiredColumn)) {
-        final VirtualColumn requiredVc = allVirtualColumns.getVirtualColumn(requiredColumn);
-        if (requiredVc != null) {
-          collected.put(requiredColumn, requiredVc);
-          addRequiredVirtualColumns(allVirtualColumns, requiredVc, collected);
-        }
+    for (VirtualColumns.Node dep : node.getDependencies()) {
+      if (collected.putIfAbsent(dep.getVirtualColumn().getOutputName(), dep.getVirtualColumn()) == null) {
+        addRequiredFromNode(dep, collected);
       }
     }
   }
