@@ -57,7 +57,7 @@ The authorizer will send a request to the `opaUri` specified in the configuratio
 
 For the details, especially the resources types, consult the Druid documentation on the [Authentication and Authorization Model](../../operations/security-user-auth.md#authentication-and-authorization-model).
 
-Inside your Rego rules, this snippet of data will be available as `input`. 
+Inside your Rego rules, this snippet of data will be available as `input`.
 For the details on how to write Rego rules, have a look at the [OPA documentation](https://www.openpolicyagent.org/docs/latest/).
 
 ## Example: Setting up OPA locally to test
@@ -71,7 +71,7 @@ Download the [OPA binary](https://www.openpolicyagent.org/docs/latest/#running-o
 Start the server with the provided example files: `./opa run -s druid.rego druid.json`.
 By default, the server will then run on port `8181`.
 
-The example files define 6 users and 4 roles, with rules that work based on the roles. 
+The example files define 6 users and 4 roles, with rules that work based on the roles.
 There is a fifth special `admin` role that grants full access to everything.
 
 ### Configure Druid
@@ -116,8 +116,8 @@ druid.auth.authorizer.opaAuthorizer.opaUri=http://localhost:8181/v1/data/app/dru
 Run the `setup.sh` script in the `extensions-contrib/druid-opa-authorizer/example/setup/` directory to create the example users.
 Five users will be created: alice, bob, christy, dylan, and eve. The password for each user is the same as their username.
 
-When connecting to the dashboard you will now be prompted to log in. 
-- If you log in with alice (admin), you will be able to access everything. 
+When connecting to the dashboard you will now be prompted to log in.
+- If you log in with alice (admin), you will be able to access everything.
 - If you log in with eve (no access grants) you should see 403 errors inside the Druid Console.
 - If you log in with christy (Datasource and State read grants), you should be able to see the Services tab in the Druid Console, but not the cluster configs.
 

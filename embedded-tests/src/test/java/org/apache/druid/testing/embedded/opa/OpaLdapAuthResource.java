@@ -103,7 +103,7 @@ public class OpaLdapAuthResource implements EmbeddedResource
         )
         .addCommonProperty(authenticatorProp("credentialsValidator.userAttribute"), "uid")
         .addCommonProperty("druid.auth.authenticatorChain", "[\"ldap\"]")
-        
+
         .addCommonProperty("druid.auth.authorizers", StringUtils.format("[\"%s\"]", AUTHORIZER_NAME))
         .addCommonProperty(authorizerProp("type"), "opa")
         .addCommonProperty(authorizerProp("opaUri"), "http://localhost:8181/v1/data/app/druid/allow")

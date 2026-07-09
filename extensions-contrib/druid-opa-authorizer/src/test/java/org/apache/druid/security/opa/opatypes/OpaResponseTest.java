@@ -32,24 +32,24 @@ public class OpaResponseTest
   @Test
   public void testDeserializeAllowed() throws Exception
   {
-    String json = "{\"result\": true}";
-    OpaResponse response = mapper.readValue(json, OpaResponse.class);
+    final String json = "{\"result\": true}";
+    final OpaResponse response = mapper.readValue(json, OpaResponse.class);
     Assert.assertTrue(response.isResult());
   }
 
   @Test
   public void testDeserializeDenied() throws Exception
   {
-    String json = "{\"result\": false}";
-    OpaResponse response = mapper.readValue(json, OpaResponse.class);
+    final String json = "{\"result\": false}";
+    final OpaResponse response = mapper.readValue(json, OpaResponse.class);
     Assert.assertFalse(response.isResult());
   }
 
   @Test
   public void testDeserializeWithUnknownFields() throws Exception
   {
-    String json = "{\"result\": true, \"decision_id\": \"12345\", \"unknown\": { \"foo\": \"bar\" }}";
-    OpaResponse response = mapper.readValue(json, OpaResponse.class);
+    final String json = "{\"result\": true, \"decision_id\": \"12345\", \"unknown\": { \"foo\": \"bar\" }}";
+    final OpaResponse response = mapper.readValue(json, OpaResponse.class);
     Assert.assertTrue(response.isResult());
   }
 }

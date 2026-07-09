@@ -79,7 +79,7 @@ public class OpaBasicAuthResource implements EmbeddedResource
         .addCommonProperty(authenticatorProp("initialAdminPassword"), ADMIN_PASSWORD)
         .addCommonProperty(authenticatorProp("initialInternalClientPassword"), SYSTEM_PASSWORD)
         .addCommonProperty(authenticatorProp("authorizerName"), AUTHORIZER_NAME)
-        
+
         .addCommonProperty("druid.auth.authorizers", StringUtils.format("[\"%s\"]", AUTHORIZER_NAME))
         .addCommonProperty(authorizerProp("type"), "opa")
         .addCommonProperty(authorizerProp("opaUri"), "http://localhost:8181/v1/data/app/druid/allow")
