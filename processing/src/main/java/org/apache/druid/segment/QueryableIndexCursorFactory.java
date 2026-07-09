@@ -38,6 +38,8 @@ import org.apache.druid.segment.projections.ClusteringColumnSelectorFactory;
 import org.apache.druid.segment.projections.ClusteringVectorColumnSelectorFactory;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
+import org.apache.druid.segment.projections.SingleGroupClusteringColumnSelectorFactory;
+import org.apache.druid.segment.projections.SingleGroupClusteringVectorColumnSelectorFactory;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.segment.vector.ConcatenatingVectorCursor;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
@@ -56,7 +58,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-public class QueryableIndexCursorFactory implements CursorFactory
+public class QueryableIndexCursorFactory implements ResidentCursorFactory
 {
   private final QueryableIndex index;
   private final TimeBoundaryInspector timeBoundaryInspector;
@@ -213,7 +215,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
           Offset baseOffset
       )
       {
-        return new ClusteringColumnSelectorFactory(
+        return new SingleGroupClusteringColumnSelectorFactory(
             super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset),
             valueGroup.getSummary().getClusteringColumns(),
             valueGroup.lookupClusteringValues()
@@ -226,7 +228,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
           VectorOffset baseOffset
       )
       {
-        return new ClusteringVectorColumnSelectorFactory(
+        return new SingleGroupClusteringVectorColumnSelectorFactory(
             super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset),
             valueGroup.getSummary().getClusteringColumns(),
             valueGroup.lookupClusteringValues()

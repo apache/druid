@@ -327,6 +327,28 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           atomicMoveAndDeleteCacheEntryDirectory(partialDir);
           continue;
         }
+        SegmentRangeReader rangeReader;
+        try {
+          rangeReader = tryOpenRangeReader(segment);
+        }
+        catch (Exception e) {
+          log.warn(e, "Failed to open a range reader for partial segment[%s] during bootstrap", segment.getId());
+          rangeReader = null;
+        }
+        if (rangeReader == null) {
+          // Anomalous: a layout on disk means range reads worked when it was written, so this should not happen (the
+          // loadSpec is now non-range-capable, or no longer converts to a known type). Reclaim it and let the segment
+          // re-load fresh on next access rather than failing bootstrap or reserving an entry that could never fetch.
+          // Leave removeInfo true so it's treated as uncached.
+          log.warn(
+              "On-disk partial-load layout for segment[%s] in [%s] has no usable range reader (this should not "
+              + "happen); deleting it so bootstrap can continue.",
+              segment.getId(),
+              partialDir
+          );
+          atomicMoveAndDeleteCacheEntryDirectory(partialDir);
+          continue;
+        }
         removeInfo = false;
         try {
           PartialSegmentCacheBootstrap.reserveFromDisk(
@@ -334,6 +356,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               partialDir,
               IndexIO.V10_FILE_NAME,
               List.of(),
+              rangeReader,
               jsonMapper,
               virtualStorageLoadingThreadPool,
               location
@@ -655,33 +678,18 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   final PartialSegmentFileMapperV10 mapper = reserved.metadata.getFileMapper();
                   final long loadSizeBytes;
                   if (fullDownload) {
-                    // Delta of internal-file bytes downloaded by this task. The small header range-read isn't
-                    // counted in getDownloadedBytes; it's the negligible mount cost.
+                    // Delta of internal-file bytes downloaded by this task
                     final long downloadedBefore = mapper.getDownloadedBytes();
-                    // Mount every bundle so the containers it owns are reserved on the location, SIEVE-evictable, and
-                    // deleted on drop. Writing through the file mapper alone (ensureAllDownloaded) would leave those
-                    // containers unmanaged by any cache entry. Each acquire returns a hold added to loadCleanup, so
-                    // the fully-materialized segment stays resident for the eager (sync-cursor) caller until the
-                    // action closes; on later eviction acquireCachedSegment returns empty and the caller re-downloads.
-                    // acquire() mounts each bundle's parents first, so iteration order doesn't matter.
+                    // Mount every bundle so the containers it owns are reserved on the location
                     for (String bundleName : PartialSegmentBundleCacheEntry.bundleNames(mapper)) {
                       holdHolder.add(reserved.metadata.getBundleAcquirer().acquire(bundleName));
                     }
                     mapper.ensureAllDownloaded();
                     loadSizeBytes = mapper.getDownloadedBytes() - downloadedBefore;
                   } else {
-                    // Lazy mount: report the header bytes when this task caused the mount; 0 when the entry was
-                    // already mounted (a concurrent acquirer or earlier query did the load).
+                    // Lazy mount: the header bytes when this task caused the mount; 0 when the entry was already
+                    // mounted (a concurrent acquirer or earlier query did the load).
                     loadSizeBytes = wasMounted ? 0L : mapper.getOnDiskHeaderSize();
-                  }
-                  // Record the actual-load bytes on the location (VSF_LOAD_*): the header bytes for a lazy mount, or the
-                  // full downloaded delta for a full download. The partial metadata entry is always weak (reservePartial
-                  // uses addWeakReservationHold). Skip when nothing was pulled (a cache hit / already-mounted re-acquire
-                  // reports 0) so we don't log a spurious 0-byte load. On-demand per-column downloads on the lazy path
-                  // happen later at query time and are captured by the query-layer load metrics (the
-                  // AcquireSegmentResult load size), not by this per-location stat.
-                  if (loadSizeBytes > 0) {
-                    reserved.location.trackWeakLoad(loadSizeBytes);
                   }
                   final long loadNanos = System.nanoTime() - taskStartNanos;
                   return new AcquireSegmentResult(
@@ -1121,8 +1129,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   /**
    * Testing use only please, any callers that want to do stuff with segments should use
-   * {@link #acquireCachedSegment(SegmentId)} or {@link #acquireSegment(DataSegment)} instead. Does not hold locks
-   * and so is not really safe to use while the cache manager is active
+   * {@link #acquireCachedSegment(SegmentId, AcquireMode)} or {@link #acquireSegment(DataSegment, AcquireMode)} instead.
+   * Does not hold locks and so is not really safe to use while the cache manager is active
    */
   @VisibleForTesting
   @Nullable
@@ -1330,24 +1338,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    */
   private static void cleanupLegacyCacheLocation(final File baseFile, final File cacheFile)
   {
-    if (cacheFile.equals(baseFile)) {
-      return;
-    }
-
     try {
       log.info("Deleting migrated segment directory[%s]", cacheFile);
-      FileUtils.deleteDirectory(cacheFile);
+      FileUtils.deleteDirectoryAndEmptyAncestors(cacheFile, baseFile);
     }
     catch (Exception e) {
       log.warn(e, "Unable to remove directory[%s]", cacheFile);
-    }
-
-    File parent = cacheFile.getParentFile();
-    if (parent != null) {
-      File[] children = parent.listFiles();
-      if (children == null || children.length == 0) {
-        cleanupLegacyCacheLocation(baseFile, parent);
-      }
     }
   }
 

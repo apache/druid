@@ -649,6 +649,65 @@ class QueryableIndexCursorFactoryClusteredTest
     Assertions.assertEquals(3L, ((Number) results.get(0).get(1)).longValue());
   }
 
+  @Test
+  void testGroupByOnNonClusteringColumnWithinSingleGroup()
+  {
+    // Filter to a single cluster group (tenant=acme), then GROUP BY a non-clustering column. Exercises the
+    // single-group cursor-holder path + SingleGroupClusteringColumnSelectorFactory end-to-end: `region` groups
+    // correctly via the group's own (stable) dictionary, and the pruned-out globex group contributes nothing.
+    segmentIndex = buildSegment(List.of(
+        row("acme", "2025-01-01T00:00:00", "us-east-1"),
+        row("acme", "2025-01-01T00:10:00", "us-east-1"),
+        row("acme", "2025-01-01T01:00:00", "us-west-2"),
+        row("globex", "2025-01-01T00:30:00", "eu-west-1")
+    ));
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+
+    final GroupByQuery query = GroupByQuery.builder()
+                                           .setDataSource("test")
+                                           .setGranularity(Granularities.ALL)
+                                           .setInterval(Intervals.ETERNITY)
+                                           .setDimFilter(new EqualityFilter("tenant", ColumnType.STRING, "acme", null))
+                                           .addDimension("region")
+                                           .addOrderByColumn("region")
+                                           .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                           .build();
+    final List<ResultRow> results = groupingEngine.process(query, factory, null, nonBlockingPool, null).toList();
+    Assertions.assertEquals(2, results.size());
+    Assertions.assertEquals("us-east-1", results.get(0).get(0));
+    Assertions.assertEquals(2L, ((Number) results.get(0).get(1)).longValue());
+    Assertions.assertEquals("us-west-2", results.get(1).get(0));
+    Assertions.assertEquals(1L, ((Number) results.get(1).get(1)).longValue());
+  }
+
+  @Test
+  void testGroupByClusteringColumnWithinSingleGroup()
+  {
+    // Filter to a single group, then GROUP BY the clustering column itself. The single-group factory advertises the
+    // clustering column as a one-entry dictionary, so this rides the dictionary-id grouping path over the constant
+    // clustering selector: one bucket, the constant value, full count.
+    segmentIndex = standardTwoGroup();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+    final GroupByQuery query = GroupByQuery.builder()
+                                           .setDataSource("test")
+                                           .setGranularity(Granularities.ALL)
+                                           .setInterval(Intervals.ETERNITY)
+                                           .setDimFilter(new EqualityFilter("tenant", ColumnType.STRING, "acme", null))
+                                           .addDimension("tenant")
+                                           .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                           .build();
+    final List<ResultRow> results = groupingEngine.process(query, factory, null, nonBlockingPool, null).toList();
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals("acme", results.get(0).get(0));
+    Assertions.assertEquals(2L, ((Number) results.get(0).get(1)).longValue());
+  }
+
   private static Druids.TimeseriesQueryBuilder newTimeseries()
   {
     return Druids.newTimeseriesQueryBuilder()

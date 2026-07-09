@@ -306,13 +306,7 @@ class PartialSegmentFileMapperV10Test
     final File cacheDir = newCacheDir("ext");
     final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(baseDir);
 
-    try (PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
-        rangeReader,
-        JSON_MAPPER,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of(externalName)
-    )) {
+    try (PartialSegmentFileMapperV10 mapper = createMapperWithExternal(rangeReader, cacheDir, externalName)) {
       // verify main file internal files
       for (int i = 0; i < 10; ++i) {
         ByteBuffer buf = mapper.mapFile(String.valueOf(i));
@@ -355,13 +349,7 @@ class PartialSegmentFileMapperV10Test
     final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(baseDir);
 
     try (SegmentFileMapperV10 eager = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER, List.of(externalName));
-         PartialSegmentFileMapperV10 lazy = PartialSegmentFileMapperV10.create(
-             rangeReader,
-             JSON_MAPPER,
-             cacheDir,
-             IndexIO.V10_FILE_NAME,
-             List.of(externalName)
-         )
+         PartialSegmentFileMapperV10 lazy = createMapperWithExternal(rangeReader, cacheDir, externalName)
     ) {
       // verify main files match
       for (int i = 0; i < 5; ++i) {
@@ -455,26 +443,14 @@ class PartialSegmentFileMapperV10Test
     final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(baseDir);
 
     // create with externals, download some files
-    try (PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
-        rangeReader,
-        JSON_MAPPER,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of(externalName)
-    )) {
+    try (PartialSegmentFileMapperV10 mapper = createMapperWithExternal(rangeReader, cacheDir, externalName)) {
       mapper.mapFile("1");
       mapper.mapExternalFile(externalName, "7");
     }
 
     // restore, previously downloaded files should be available
     final DirectoryBackedRangeReader freshReader = new DirectoryBackedRangeReader(baseDir);
-    try (PartialSegmentFileMapperV10 restored = PartialSegmentFileMapperV10.create(
-        freshReader,
-        JSON_MAPPER,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of(externalName)
-    )) {
+    try (PartialSegmentFileMapperV10 restored = createMapperWithExternal(freshReader, cacheDir, externalName)) {
       ByteBuffer buf1 = restored.mapFile("1");
       Assertions.assertNotNull(buf1);
       Assertions.assertEquals(1, buf1.getInt());
@@ -650,7 +626,24 @@ class PartialSegmentFileMapperV10Test
         rangeReader,
         JSON_MAPPER,
         localCacheDir,
-        IndexIO.V10_FILE_NAME
+        IndexIO.V10_FILE_NAME,
+        PartialSegmentDownloadListener.NOOP
+    );
+  }
+
+  private static PartialSegmentFileMapperV10 createMapperWithExternal(
+      SegmentRangeReader rangeReader,
+      File localCacheDir,
+      String externalName
+  ) throws IOException
+  {
+    return PartialSegmentFileMapperV10.create(
+        rangeReader,
+        JSON_MAPPER,
+        localCacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(externalName),
+        PartialSegmentDownloadListener.NOOP
     );
   }
 

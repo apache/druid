@@ -64,7 +64,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`query/failed/count`|Number of failed queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
 |`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
 |`query/timeout/count`|Number of timed out queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
-|`query/segments/count`|This metric is not enabled by default. See the `QueryMetrics` Interface for reference regarding enabling this metric. Number of segments that will be touched by the query. In the broker, it makes a plan to distribute the query to realtime tasks and historicals based on a snapshot of segment distribution state. If there are some segments moved after this snapshot is created, certain historicals and realtime tasks can report those segments as missing to the broker. The broker will resend the query to the new servers that serve those segments after move. In this case, those segments can be counted more than once in this metric.||Varies|
+|`query/segments/count`|This metric is not enabled by default. Number of segments that will be touched by the query. The Broker makes a plan to distribute the query to realtime tasks and historicals based on a snapshot of segment distribution state. If there are some segments moved after this snapshot is created, certain historicals and realtime tasks can report those segments as missing to the Broker. The Broker will resend the query to the new servers that serve those segments after move. In this case, those segments can be counted more than once in this metric.||Varies|
 |`query/priority`|Assigned lane and priority, only if Laning strategy is enabled. Refer to [Laning strategies](../configuration/index.md#laning-strategies)|`lane`, `dataSource`, `type`|0|
 |`sqlQuery/time`|Milliseconds taken to complete a SQL query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`, `statusCode`|< 1s|
 |`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
@@ -74,6 +74,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`segment/metadataCache/sync/time`|Time taken to poll segment metadata from the Coordinator and update the segment metadata cache. This metric is emitted only if [metadata cache](../configuration/index.md#sql) is enabled on the Broker.||Depends on the number of segments.|
 |`segment/schemaCache/refresh/count`|Number of segments refreshed in broker segment schema cache.|`dataSource`||
 |`segment/schemaCache/refresh/time`|Time taken to refresh segments in broker segment schema cache.|`dataSource`||
+|`segment/schemaCache/refresh/failed`|Number of dataSources whose schema refresh failed in the broker segment schema cache (for example, a segment metadata query timeout). Emitted only when a refresh fails; the failed dataSource is skipped for the cycle and retried later, while other dataSources are unaffected. Recurring emission indicates a dataSource missing from the SQL schema.|`dataSource`||
 |`segment/schemaCache/poll/count`|Number of coordinator polls to fetch datasource schema.|||
 |`segment/schemaCache/poll/failed`|Number of failed coordinator polls to fetch datasource schema.|||
 |`metadatacache/schemaPoll/time`|Time taken for coordinator polls to fetch datasource schema.|||
@@ -106,6 +107,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
 |`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `statusCode`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
+|`query/segments/count`|This metric is not enabled by default. Number of segments this Historical scans for a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|Varies|
 |`query/segment/time`|Milliseconds taken to query individual segment. Includes time to page in the segment from disk.|`id`, `status`, `segment`, `vectorized`.|several hundred milliseconds|
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|`id`, `segment`|< several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
@@ -140,6 +142,7 @@ to represent the task ID are deprecated and will be removed in a future release.
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
 |`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `statusCode`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
+|`query/segments/count`|This metric is not enabled by default. Number of segments this Peon scans for a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`. </p><p>TopN: `threshold`, `dimension`.</p>|Varies|
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|`id`, `segment`|several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
 |`segment/scan/active`|Number of segments currently scanned. This metric also indicates how many threads from `druid.processing.numThreads` are currently being used.||Close to `druid.processing.numThreads`|
@@ -317,8 +320,10 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`task/autoScaler/requiredCount`|Count of required tasks based on the calculations of the auto scaler.|`supervisorId`, `dataSource`, `stream`, `scalingSkipReason`|Depends on auto scaler config.|
 |`task/autoScaler/scaleActionTime`|Time taken in milliseconds to complete the scale action.|`supervisorId`, `dataSource`, `stream`, `tags`|Depends on auto scaler config.|
 |`task/autoScaler/costBased/optimalTaskCount`|Optimal task count computed by the cost-based auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
-|`task/autoScaler/costBased/lagCost`|Lag cost component of the cost-based auto scaler's cost function.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
-|`task/autoScaler/costBased/idleCost`|Idle cost component of the cost-based auto scaler's cost function.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/lagWeight`|Lag weight used in the cost function for the auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/idleWeight`|Idle weight used in the cost function for the auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/avgProcessingRate`|Windowed average rate of processing records across all tasks in the supervisor.|`supervisorId`, `dataSource`, `stream`|Depends on rate of incoming data and processing capacity of the tasks.|
+|`task/autoScaler/costBased/avgPollIdleRatio`|Poll-to-idle-ratio as reported by the streaming consumer averaged across all tasks in the supervisor. Currently supported only with Kafka supervisors.|`supervisorId`, `dataSource`, `stream`|0 if the consumer is never idle, 1 if the consumer is always idle, -1 if ratio is not available.|
 
 If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 
@@ -475,6 +480,7 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/schemaCache/refreshSkipped/count`|Number of segments for which schema refresh was skipped due to presence of segment metadata in datasource polled from coordinator.|`dataSource`||
 |`segment/schemaCache/dataSource/removed`|Emitted when a datasource is removed from the Broker cache due to segments being marked as unused.|`dataSource`||
 |`segment/schemaCache/refresh/time`|Time taken to refresh segments in coordinator segment schema cache.|`dataSource`||
+|`segment/schemaCache/refresh/failed`|Number of dataSources whose schema refresh failed in the coordinator segment schema cache (for example, a segment metadata query timeout). Emitted only when a refresh fails; the failed dataSource is skipped for the cycle and retried later, while other dataSources are unaffected. Recurring emission indicates a dataSource missing from the SQL schema.|`dataSource`||
 |`segment/schemaCache/backfill/count`|Number of segments for which schema was back filled in the database.|`dataSource`||
 |`segment/schemaCache/rowSignature/changed`|Emitted when the cached row signature on the Broker's segment metadata cache for a datasource changes, indicating schema evolution or some form of flapping.|`dataSource`||
 |`segment/schemaCache/rowSignature/column/count`|Number of columns in the row signature on the Broker's segment metadata cache for a datasource when it's initialized or updated.|`dataSource`||
@@ -485,6 +491,15 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/used/deepStorageOnly/count`|Number of published used segments present only on deep storage.|`dataSource`||
 |`segment/schemaCache/deepStorageOnly/count`|Number of deep storage only segments with cached schema.|`dataSource`||
 |`segment/schemaCache/deepStorageOnly/refresh/time`|Time taken in milliseconds to refresh schemas of deep storage only segments.||Under a minute|
+
+## Security
+
+These metrics are emitted when `druid.auth.emitAuthMetrics` is set to `true`.
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
+|`auth/forbidden`|Emitted when a request is denied due to insufficient permissions. This includes both outright access denials and cases where basic access is granted but a row-level policy restricts full access.|`identity`, `authorizerName`, `resourceName`, `resourceType`, `action`, `errorMessage`|1|
+|`auth/exception`|Emitted when an internal authorization error occurs, such as a missing authorizer, duplicate resource policies, or a double-authorization check on the same request.|`identity`, `authorizerName`, `resourceName` (when available), `resourceType` (when available), `action` (when available), `errorMessage` (when available)|1|
 
 ## General Health
 
