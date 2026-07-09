@@ -394,18 +394,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
               null,
               DateTimes.nowUtc(),
               request.getRemoteAddr(),
-              new QueryStats(
-                  Map.of(
-                      "success",
-                      false,
-                      DruidMetrics.STATUS_CODE,
-                      httpStatusCode,
-                      "exception",
-                      errorMessage,
-                      "identity",
-                      authenticationResult.getIdentity()
-                  )
-              )
+              buildRequestLogQueryStats(false, httpStatusCode, authenticationResult.getIdentity(), null, errorMessage)
           )
       );
     } else {
@@ -415,18 +404,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
               null,
               DateTimes.nowUtc(),
               request.getRemoteAddr(),
-              new QueryStats(
-                  Map.of(
-                      "success",
-                      false,
-                      DruidMetrics.STATUS_CODE,
-                      httpStatusCode,
-                      "exception",
-                      errorMessage,
-                      "identity",
-                      authenticationResult.getIdentity()
-                  )
-              )
+              buildRequestLogQueryStats(false, httpStatusCode, authenticationResult.getIdentity(), null, errorMessage)
           )
       );
     }
@@ -437,6 +415,38 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     objectMapper.writeValue(
         response.getOutputStream(),
         serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(exceptionToReport)
+    );
+  }
+
+  /**
+   * Builds the {@link QueryStats} recorded in router request logs. Success paths pass {@code queryTimeMs};
+   * failure paths pass {@code exceptionMessage}. Exactly one of the two is non-null at every call site.
+   */
+  private static QueryStats buildRequestLogQueryStats(
+      boolean success,
+      int statusCode,
+      String identity,
+      @Nullable Long queryTimeMs,
+      @Nullable String exceptionMessage
+  )
+  {
+    if (exceptionMessage != null) {
+      return new QueryStats(
+          Map.of(
+              "success", success,
+              DruidMetrics.STATUS_CODE, statusCode,
+              "exception", exceptionMessage,
+              "identity", identity
+          )
+      );
+    }
+    return new QueryStats(
+        Map.of(
+            "query/time", queryTimeMs,
+            "success", success,
+            DruidMetrics.STATUS_CODE, statusCode,
+            "identity", identity
+        )
     );
   }
 
@@ -809,17 +819,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                     sqlQuery.getContext(),
                     DateTimes.nowUtc(),
                     req.getRemoteAddr(),
-                    new QueryStats(
-                        Map.of(
-                            "query/time",
-                            TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
-                            "success",
-                            success,
-                            DruidMetrics.STATUS_CODE,
-                            statusCode,
-                            "identity",
-                            authenticationResult.getIdentity()
-                        )
+                    buildRequestLogQueryStats(
+                        success,
+                        statusCode,
+                        authenticationResult.getIdentity(),
+                        TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
+                        null
                     )
                 )
             );
@@ -838,17 +843,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                 query,
                 DateTimes.nowUtc(),
                 req.getRemoteAddr(),
-                new QueryStats(
-                    Map.of(
-                        "query/time",
-                        TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
-                        "success",
-                        success,
-                        DruidMetrics.STATUS_CODE,
-                        statusCode,
-                        "identity",
-                        authenticationResult.getIdentity()
-                    )
+                buildRequestLogQueryStats(
+                    success,
+                    statusCode,
+                    authenticationResult.getIdentity(),
+                    TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
+                    null
                 )
             )
         );
@@ -902,17 +902,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                     sqlQuery.getContext(),
                     DateTimes.nowUtc(),
                     req.getRemoteAddr(),
-                    new QueryStats(
-                        Map.of(
-                            "success",
-                            false,
-                            DruidMetrics.STATUS_CODE,
-                            statusCode,
-                            "exception",
-                            errorMessage == null ? "no message" : errorMessage,
-                            "identity",
-                            authenticationResult.getIdentity()
-                        )
+                    buildRequestLogQueryStats(
+                        false,
+                        statusCode,
+                        authenticationResult.getIdentity(),
+                        null,
+                        errorMessage == null ? "no message" : errorMessage
                     )
                 )
             );
@@ -936,17 +931,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                 query,
                 DateTimes.nowUtc(),
                 req.getRemoteAddr(),
-                new QueryStats(
-                    Map.of(
-                        "success",
-                        false,
-                        DruidMetrics.STATUS_CODE,
-                        statusCode,
-                        "exception",
-                        errorMessage == null ? "no message" : errorMessage,
-                        "identity",
-                        authenticationResult.getIdentity()
-                    )
+                buildRequestLogQueryStats(
+                    false,
+                    statusCode,
+                    authenticationResult.getIdentity(),
+                    null,
+                    errorMessage == null ? "no message" : errorMessage
                 )
             )
         );
