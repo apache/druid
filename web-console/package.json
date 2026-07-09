@@ -150,7 +150,7 @@
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "~5.5.4",
-    "vite": "^8.0.8",
+    "vite": "^8.1.4",
     "vite-plugin-css-injected-by-js": "^5.0.0"
   },
   "overrides": {

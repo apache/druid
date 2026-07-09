@@ -31,7 +31,6 @@ This is the Druid web console that serves as a data management interface for Dru
 4. Run `npm start` to start in development mode and proxy Druid requests to `localhost:8888`
 
 **Note:** you can provide an environment variable to proxy to a different Druid host like so: `druid_host=1.2.3.4:8888 npm start`
-**Note:** you can provide an environment variable to use webpack-bundle-analyzer as a plugin in the build script like so: `BUNDLE_ANALYZER_PLUGIN='TRUE' npm start`
 
 To try the console in (say) coordinator mode you could run it as such:
 
