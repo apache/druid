@@ -19,6 +19,7 @@
 
 package org.apache.druid.client.cache;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.java.util.common.IAE;
 import redis.clients.jedis.ConnectionPoolConfig;
@@ -100,7 +101,8 @@ public class RedisCacheFactory
     }
   }
 
-  private static JedisClientConfig buildClientConfig(RedisCacheConfig config, int database)
+  @VisibleForTesting
+  static JedisClientConfig buildClientConfig(RedisCacheConfig config, int database)
   {
     DefaultJedisClientConfig.Builder builder = DefaultJedisClientConfig
         .builder()
