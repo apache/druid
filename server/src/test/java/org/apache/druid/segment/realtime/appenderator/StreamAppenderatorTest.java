@@ -1173,7 +1173,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       // Create the base sink for IDENTIFIERS.get(0) so the upgrade can be announced against it.
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
 
-      final StreamAppenderator.UpgradeAnnouncementOutcome outcome = appenderator.registerUpgradedPendingSegment(
+      final StreamAppenderator.PendingSegmentUpgradeResult outcome = appenderator.registerUpgradedPendingSegment(
           PendingSegmentRecord.create(
               si("2000/2001", "B", 1),
               si("2000/2001", "B", 1).asSegmentId().toString(),
@@ -1183,7 +1183,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           )
       );
 
-      Assert.assertEquals(StreamAppenderator.UpgradeAnnouncementOutcome.ANNOUNCED, outcome);
+      Assert.assertEquals(StreamAppenderator.PendingSegmentUpgradeResult.ANNOUNCED, outcome);
     }
   }
 
@@ -1200,7 +1200,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       // No sink has ever been created for the upgradedFromSegmentId below, so this task cannot announce it.
       // This is the case where the upgrade request reached the wrong task.
-      final StreamAppenderator.UpgradeAnnouncementOutcome outcome = appenderator.registerUpgradedPendingSegment(
+      final StreamAppenderator.PendingSegmentUpgradeResult outcome = appenderator.registerUpgradedPendingSegment(
           PendingSegmentRecord.create(
               si("2050/2051", "Z", 1),
               si("2050/2051", "Z", 1).asSegmentId().toString(),
@@ -1210,7 +1210,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           )
       );
 
-      Assert.assertEquals(StreamAppenderator.UpgradeAnnouncementOutcome.SKIPPED_UNKNOWN_BASE, outcome);
+      Assert.assertEquals(StreamAppenderator.PendingSegmentUpgradeResult.SKIPPED_UNKNOWN_BASE, outcome);
     }
   }
 

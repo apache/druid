@@ -1422,12 +1422,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   )
   {
     final String taskAllocatorId = pendingSegmentRecord.getTaskAllocatorId();
-    int matchedGroups = 0;
     int notifiedTasks = 0;
 
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
       if (taskGroup.baseSequenceName.equals(taskAllocatorId)) {
-        matchedGroups++;
         for (String taskId : taskGroup.taskIds()) {
           notifyTaskOfUpgradedPendingSegment(taskId, pendingSegmentRecord);
           notifiedTasks++;
@@ -1437,7 +1435,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     for (List<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
       for (TaskGroup taskGroup : taskGroupList) {
         if (taskGroup.baseSequenceName.equals(taskAllocatorId)) {
-          matchedGroups++;
           for (String taskId : taskGroup.taskIds()) {
             notifyTaskOfUpgradedPendingSegment(taskId, pendingSegmentRecord);
             notifiedTasks++;
@@ -1446,38 +1443,42 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
+    // Only the exceptional no-match case is logged per segment; the successful count is summarized once by the
+    // task action that registered the batch, and each notification is captured by the per-task notified metric.
     if (notifiedTasks == 0) {
       // No running task matched: the segment will not be re-announced until handoff. This is a potential silent-loss
       // window where data will not be queryable until handoff.
       log.warn(
-          "Could not find any task matching taskAllocatorId[%s] in supervisor[%s] for upgraded pending segment[%s] (upgradedFrom[%s]) "
-          + " supervisor[%s]; it will not be re-announced until handoff. Currently tracking [%d] activelyReading"
+          "Could not find any task matching taskAllocatorId[%s] in supervisor[%s] for upgraded pending segment[%s]"
+          + " (upgradedFrom[%s]); it will not be re-announced until handoff. Currently tracking [%d] activelyReading"
           + " and [%d] pendingCompletion task group(s).",
-          pendingSegmentRecord.getId(),
-          pendingSegmentRecord.getUpgradedFromSegmentId(),
           taskAllocatorId,
           supervisorId,
+          pendingSegmentRecord.getId(),
+          pendingSegmentRecord.getUpgradedFromSegmentId(),
           activelyReadingTaskGroups.size(),
           pendingCompletionTaskGroups.size()
       );
-      emitter.emit(getMetricBuilder().setMetric(SegmentUpgradeMetrics.UNMATCHED, 1));
-    } else {
-      log.info(
-          "Notified [%d] task(s) across [%d] task group(s) of upgraded pending segment[%s] (upgradedFrom[%s]).",
-          notifiedTasks,
-          matchedGroups,
-          pendingSegmentRecord.getId(),
-          pendingSegmentRecord.getUpgradedFromSegmentId()
+      emitter.emit(
+          SegmentUpgradeMetrics.setSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
+                               .setMetric(SegmentUpgradeMetrics.UNMATCHED, 1)
       );
-      emitter.emit(getMetricBuilder().setMetric(SegmentUpgradeMetrics.NOTIFIED, 1));
     }
   }
 
   /**
-   * Sends an upgraded pending segment to a single task and records a metric if the request fails to reach the task.
+   * Sends an upgraded pending segment to a single task, emitting {@link SegmentUpgradeMetrics#NOTIFIED} for the
+   * notification attempt and {@link SegmentUpgradeMetrics#SEND_FAILED} if the request fails to reach the task. Both
+   * are per-task (keyed by {@code taskId}), so {@code notified} can be reconciled against the per-task
+   * {@code announced}, {@code skipped} and {@code sendFailed} outcomes.
    */
   private void notifyTaskOfUpgradedPendingSegment(String taskId, PendingSegmentRecord pendingSegmentRecord)
   {
+    emitter.emit(
+        SegmentUpgradeMetrics.setSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
+                             .setDimension(DruidMetrics.TASK_ID, taskId)
+                             .setMetric(SegmentUpgradeMetrics.NOTIFIED, 1)
+    );
     Futures.addCallback(
         taskClient.registerNewVersionOfPendingSegmentAsync(taskId, pendingSegmentRecord),
         new FutureCallback<>()
@@ -1485,7 +1486,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           @Override
           public void onSuccess(Boolean result)
           {
-            // Successful delivery is captured by the notified metric; nothing to do here.
+            // The request reached the task; what the task does with it (announce or skip) is reported by the task's
+            // own announced/skipped metrics, so there is nothing to record here.
           }
 
           @Override
@@ -1497,8 +1499,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 pendingSegmentRecord.getId(), taskId, supervisorId
             );
             emitter.emit(
-                getMetricBuilder().setDimension(DruidMetrics.TASK_ID, taskId)
-                                  .setMetric(SegmentUpgradeMetrics.SEND_FAILED, 1)
+                SegmentUpgradeMetrics.setSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
+                                     .setDimension(DruidMetrics.TASK_ID, taskId)
+                                     .setMetric(SegmentUpgradeMetrics.SEND_FAILED, 1)
             );
           }
         },

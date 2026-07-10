@@ -1182,43 +1182,51 @@ public class StreamAppenderator implements Appenderator
   }
 
   /**
-   * Result of a {@link #registerUpgradedPendingSegment} call.
+   * Result of a {@link #registerUpgradedPendingSegment} call. Each skipped outcome carries the human-readable
+   * {@link #getReason() reason} emitted as the {@code reason} metric dimension.
    */
-  public enum UpgradeAnnouncementOutcome
+  public enum PendingSegmentUpgradeResult
   {
-    ANNOUNCED,
-    SKIPPED_UNKNOWN_BASE,
-    SKIPPED_NO_SINK,
-    SKIPPED_DROPPING
+    ANNOUNCED(null),
+    /** The task holds no pending segment matching upgradedFromSegmentId (request targeted the wrong task). */
+    SKIPPED_UNKNOWN_BASE("unknown base"),
+    /** The base sink is gone even though this task once held it. */
+    SKIPPED_NO_SINK("base sink already dropped"),
+    /** The base sink is being dropped (handoff in progress); the durable path re-announces at the new version. */
+    SKIPPED_DROPPING("dropping base sink");
+
+    @Nullable
+    private final String reason;
+
+    PendingSegmentUpgradeResult(@Nullable String reason)
+    {
+      this.reason = reason;
+    }
+
+    /**
+     * Reason a request was skipped, for the {@code reason} metric dimension; null for {@link #ANNOUNCED}.
+     */
+    @Nullable
+    public String getReason()
+    {
+      return reason;
+    }
   }
 
-  public UpgradeAnnouncementOutcome registerUpgradedPendingSegment(PendingSegmentRecord pendingSegmentRecord) throws IOException
+  public PendingSegmentUpgradeResult registerUpgradedPendingSegment(PendingSegmentRecord pendingSegmentRecord) throws IOException
   {
     SegmentIdWithShardSpec basePendingSegment = idToPendingSegment.get(pendingSegmentRecord.getUpgradedFromSegmentId());
     SegmentIdWithShardSpec upgradedPendingSegment = pendingSegmentRecord.getId();
     if (basePendingSegment == null || droppingSinks.contains(basePendingSegment) || !sinks.containsKey(basePendingSegment)) {
       if (basePendingSegment == null) {
         // This task never allocated a segment matching upgradedFromSegmentId, i.e. the request targeted the wrong task.
-        log.info(
-            "Not announcing upgraded pending segment[%s] because this task has no base sink matching"
-            + " upgradedFromSegmentId[%s]; the upgrade request likely targeted the wrong task[%s].",
-            upgradedPendingSegment, pendingSegmentRecord.getUpgradedFromSegmentId(), myId
-        );
-        return UpgradeAnnouncementOutcome.SKIPPED_UNKNOWN_BASE;
+        return PendingSegmentUpgradeResult.SKIPPED_UNKNOWN_BASE;
       } else if (droppingSinks.contains(basePendingSegment)) {
-        // Expected during handoff: the base sink is being dropped
-        log.debug(
-            "Not announcing upgraded pending segment[%s] for base segment[%s] on task[%s] because the base sink is being dropped.",
-            upgradedPendingSegment, basePendingSegment, myId
-        );
-        return UpgradeAnnouncementOutcome.SKIPPED_DROPPING;
+        // Expected during handoff: the base sink is being dropped.
+        return PendingSegmentUpgradeResult.SKIPPED_DROPPING;
       } else {
         // Unexpected: the base sink is gone even though this task once held it.
-        log.info(
-            "Not announcing upgraded pending segment[%s] for base segment[%s] on task[%s] because the base sink is no longer present.",
-            upgradedPendingSegment, basePendingSegment, myId
-        );
-        return UpgradeAnnouncementOutcome.SKIPPED_NO_SINK;
+        return PendingSegmentUpgradeResult.SKIPPED_NO_SINK;
       }
     }
 
@@ -1235,7 +1243,7 @@ public class StreamAppenderator implements Appenderator
     baseSegmentToUpgradedSegments.get(basePendingSegment).add(upgradedPendingSegment);
     upgradedSegmentToBaseSegment.put(upgradedPendingSegment, basePendingSegment);
     log.info("Announced upgraded segment[%s] for base segment[%s] on task[%s]", upgradedPendingSegment, basePendingSegment, myId);
-    return UpgradeAnnouncementOutcome.ANNOUNCED;
+    return PendingSegmentUpgradeResult.ANNOUNCED;
   }
 
   private DataSegment getUpgradedSegment(DataSegment baseSegment, SegmentIdWithShardSpec upgradedVersion)

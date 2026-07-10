@@ -2139,8 +2139,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         ImmutableMap.of("0", "5"),
         null,
         null,
-        ImmutableSet.of("task0"),
-        ImmutableSet.of(),
+        Set.of("task0"),
+        Set.of(),
         null
     );
 
@@ -2178,8 +2178,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         ImmutableMap.of("0", "5"),
         null,
         null,
-        ImmutableSet.of("task0"),
-        ImmutableSet.of(),
+        Set.of("task0"),
+        Set.of(),
         null
     );
 

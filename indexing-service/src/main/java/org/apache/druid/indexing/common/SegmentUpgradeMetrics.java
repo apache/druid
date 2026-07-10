@@ -19,6 +19,11 @@
 
 package org.apache.druid.indexing.common;
 
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+
 /**
  * Metric names and dimension values for the re-announcement of pending segments upgraded by a concurrent REPLACE.
  * <ul>
@@ -26,15 +31,20 @@ package org.apache.druid.indexing.common;
  *   <li>the supervisor emits {@link #NOTIFIED}, {@link #UNMATCHED} and {@link #SEND_FAILED} as it fans requests out,</li>
  *   <li>the streaming task emits {@link #ANNOUNCED} and {@link #SKIPPED} (with a {@code reason}) as it applies them.</li>
  * </ul>
- * Comparing {@link #COUNT} (created) against {@link #ANNOUNCED} (applied) per dataSource quantifies the visibility gap;
- * {@link #UNMATCHED}, {@link #SEND_FAILED} and {@link #SKIPPED} attribute where a lost upgrade dropped out.
+ * Two reconciliations bound the visibility gap:
+ * <ul>
+ *   <li>per segment, {@link #UNMATCHED} counts upgrades that reached no running task (delayed until handoff);</li>
+ *   <li>per task, {@link #NOTIFIED} should equal {@link #ANNOUNCED} + {@link #SKIPPED} + {@link #SEND_FAILED},
+ *       since every notified task either announces, skips, or fails to receive the request. A shortfall means a
+ *       notification was silently dropped.</li>
+ * </ul>
  */
 public class SegmentUpgradeMetrics
 {
   /** Number of upgraded pending segments a REPLACE commit created and handed to the supervisor. Task-action dims. */
   public static final String COUNT = "ingest/realtime/segmentUpgrade/count";
 
-  /** A record was delivered to at least one running task. Supervisor dims. */
+  /** A notification was sent to a running task (once per task). Supervisor dims plus {@code taskId}. */
   public static final String NOTIFIED = "ingest/realtime/segmentUpgrade/notified";
 
   /** A record matched no running task and will not be re-announced until handoff. Supervisor dims. */
@@ -46,17 +56,28 @@ public class SegmentUpgradeMetrics
   /** A task announced an upgraded segment under the new version. Task dims. */
   public static final String ANNOUNCED = "ingest/realtime/segmentUpgrade/announced";
 
-  /** A task received an upgrade request but did not announce it; see the {@code reason} dimension. Task dims. */
+  /**
+   * A task received an upgrade request but did not announce it. The {@code reason} dimension carries
+   * {@link org.apache.druid.segment.realtime.appenderator.StreamAppenderator.PendingSegmentUpgradeResult#getReason()}.
+   * Task dims.
+   */
   public static final String SKIPPED = "ingest/realtime/segmentUpgrade/skipped";
 
-  // Values for the DruidMetrics.REASON dimension on SKIPPED.
-
-  /** The task holds no pending segment matching upgradedFromSegmentId (request targeted the wrong task). */
-  public static final String REASON_UNKNOWN_BASE = "unknown base";
-  /** The base sink is gone even though this task once held it. */
-  public static final String REASON_NO_SINK = "base sink already dropped";
-  /** The base sink is being dropped (handoff in progress); the durable path re-announces at the new version. */
-  public static final String REASON_DROPPING = "dropping base sink";
+  /**
+   * Adds the upgraded pending segment's {@code interval} and {@code version} to a metric builder so that every
+   * segment-upgrade metric can be sliced by the specific segment being re-announced. Mirrors
+   * {@code IndexTaskUtils.setSegmentDimensions}, which serves the same purpose for {@code DataSegment}s.
+   */
+  public static ServiceMetricEvent.Builder setSegmentDimensions(
+      ServiceMetricEvent.Builder metricBuilder,
+      PendingSegmentRecord pendingSegmentRecord
+  )
+  {
+    final SegmentIdWithShardSpec id = pendingSegmentRecord.getId();
+    return metricBuilder
+        .setDimension(DruidMetrics.INTERVAL, id.getInterval().toString())
+        .setDimension(DruidMetrics.VERSION, id.getVersion());
+  }
 
   private SegmentUpgradeMetrics()
   {

@@ -1848,9 +1848,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req);
     try {
-      final StreamAppenderator.UpgradeAnnouncementOutcome outcome =
+      final StreamAppenderator.PendingSegmentUpgradeResult outcome =
           ((StreamAppenderator) appenderator).registerUpgradedPendingSegment(upgradedPendingSegment);
-      emitUpgradeAnnouncementMetric(outcome);
+      recordUpgradeOutcome(upgradedPendingSegment, outcome);
       return Response.ok().build();
     }
     catch (DruidException e) {
@@ -1869,30 +1869,58 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
   }
 
-  private void emitUpgradeAnnouncementMetric(StreamAppenderator.UpgradeAnnouncementOutcome outcome)
+  /**
+   * Logs and emits a metric for the outcome of a pending-segment upgrade request, keyed off the {@code outcome}
+   * returned by {@link StreamAppenderator#registerUpgradedPendingSegment}.
+   */
+  private void recordUpgradeOutcome(
+      PendingSegmentRecord upgradedPendingSegment,
+      StreamAppenderator.PendingSegmentUpgradeResult outcome
+  )
   {
-    if (outcome == StreamAppenderator.UpgradeAnnouncementOutcome.ANNOUNCED) {
-      task.emitMetric(toolbox.getEmitter(), SegmentUpgradeMetrics.ANNOUNCED, 1);
+    final SegmentIdWithShardSpec upgradedId = upgradedPendingSegment.getId();
+    final String upgradedFromSegmentId = upgradedPendingSegment.getUpgradedFromSegmentId();
+
+    if (outcome == StreamAppenderator.PendingSegmentUpgradeResult.ANNOUNCED) {
+      toolbox.getEmitter().emit(
+          SegmentUpgradeMetrics.setSegmentDimensions(task.getMetricBuilder(), upgradedPendingSegment)
+                               .setMetric(SegmentUpgradeMetrics.ANNOUNCED, 1)
+      );
       return;
     }
-    final String reason;
+    // Log at the level appropriate to the outcome; the reason string itself is carried by the enum.
     switch (outcome) {
       case SKIPPED_UNKNOWN_BASE:
-        reason = SegmentUpgradeMetrics.REASON_UNKNOWN_BASE;
+        // The request targeted the wrong task: this task never held a base sink matching upgradedFromSegmentId.
+        log.warn(
+            "Not announcing upgraded pending segment[%s] on task[%s] because it has no base sink matching"
+            + " upgradedFromSegmentId[%s]; the upgrade request likely targeted the wrong task.",
+            upgradedId, task.getId(), upgradedFromSegmentId
+        );
         break;
       case SKIPPED_NO_SINK:
-        reason = SegmentUpgradeMetrics.REASON_NO_SINK;
+        // Unexpected: the base sink is gone even though this task once held it.
+        log.info(
+            "Not announcing upgraded pending segment[%s] (upgradedFrom[%s]) on task[%s] because the base sink is no"
+            + " longer present.",
+            upgradedId, upgradedFromSegmentId, task.getId()
+        );
         break;
       case SKIPPED_DROPPING:
-        reason = SegmentUpgradeMetrics.REASON_DROPPING;
+        // Expected during handoff: the base sink is being dropped and the durable path re-announces at the new version.
+        log.debug(
+            "Not announcing upgraded pending segment[%s] (upgradedFrom[%s]) on task[%s] because the base sink is being"
+            + " dropped.",
+            upgradedId, upgradedFromSegmentId, task.getId()
+        );
         break;
       default:
         return;
     }
     toolbox.getEmitter().emit(
-        task.getMetricBuilder()
-            .setDimension(DruidMetrics.REASON, reason)
-            .setMetric(SegmentUpgradeMetrics.SKIPPED, 1)
+        SegmentUpgradeMetrics.setSegmentDimensions(task.getMetricBuilder(), upgradedPendingSegment)
+                             .setDimension(DruidMetrics.REASON, outcome.getReason())
+                             .setMetric(SegmentUpgradeMetrics.SKIPPED, 1)
     );
   }
 

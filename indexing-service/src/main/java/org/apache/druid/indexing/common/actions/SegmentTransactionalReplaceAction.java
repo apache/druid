@@ -171,12 +171,14 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       List<PendingSegmentRecord> upgradedPendingSegments
   )
   {
-    // Emit the count of upgrades successfully committed regardless of whether a supervisor exists to
-    // receive them, so it can be compared against the count actually announced by tasks.
-    if (!upgradedPendingSegments.isEmpty()) {
+    // Emit one count per upgraded segment (rather than a single aggregate) regardless of whether a supervisor exists
+    // to receive them, so the total can be compared against the count actually announced by tasks and so each event
+    // carries the segment's interval and version.
+    for (PendingSegmentRecord upgradedPendingSegment : upgradedPendingSegments) {
       final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
       IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-      toolbox.getEmitter().emit(metricBuilder.setMetric(SegmentUpgradeMetrics.COUNT, upgradedPendingSegments.size()));
+      SegmentUpgradeMetrics.setSegmentDimensions(metricBuilder, upgradedPendingSegment);
+      toolbox.getEmitter().emit(metricBuilder.setMetric(SegmentUpgradeMetrics.COUNT, 1));
     }
 
     final SupervisorManager supervisorManager = toolbox.getSupervisorManager();

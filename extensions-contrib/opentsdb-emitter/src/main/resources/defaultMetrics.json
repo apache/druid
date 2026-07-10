@@ -106,27 +106,40 @@
     "dataSource"
   ],
   "ingest/realtime/segmentUpgrade/count": [
-    "dataSource"
+    "dataSource",
+    "interval",
+    "version"
   ],
   "ingest/realtime/segmentUpgrade/notified": [
     "dataSource",
-    "stream"
+    "stream",
+    "taskId",
+    "interval",
+    "version"
   ],
   "ingest/realtime/segmentUpgrade/unmatched": [
     "dataSource",
-    "stream"
+    "stream",
+    "interval",
+    "version"
   ],
   "ingest/realtime/segmentUpgrade/sendFailed": [
     "dataSource",
     "stream",
-    "taskId"
+    "taskId",
+    "interval",
+    "version"
   ],
   "ingest/realtime/segmentUpgrade/announced": [
-    "dataSource"
+    "dataSource",
+    "interval",
+    "version"
   ],
   "ingest/realtime/segmentUpgrade/skipped": [
     "dataSource",
-    "reason"
+    "reason",
+    "interval",
+    "version"
   ],
   "ingest/kafka/lag": [
     "dataSource",
