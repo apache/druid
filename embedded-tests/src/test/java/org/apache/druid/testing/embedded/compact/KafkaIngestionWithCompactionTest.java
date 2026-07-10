@@ -98,7 +98,6 @@ import java.util.stream.Collectors;
 public class KafkaIngestionWithCompactionTest extends EmbeddedClusterTestBase
 {
   private final KafkaResource kafkaServer = new KafkaResource();
-  private final String topic = IdUtils.getRandomId();
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()
       .setServerMemory(2_000_000_000L)
@@ -158,6 +157,7 @@ public class KafkaIngestionWithCompactionTest extends EmbeddedClusterTestBase
       PartitionsSpec partitionsSpec
   )
   {
+    final String topic = IdUtils.getRandomId();
     final String slowTopic = topic + "_slow";
     configureCompaction(CompactionEngine.MSQ, policy);
 
@@ -238,6 +238,7 @@ public class KafkaIngestionWithCompactionTest extends EmbeddedClusterTestBase
     ingestRecords(slowTopic, 20); // the slowTopic is consumed by slowSupervisor, which stays as realtime segment for our testing purpose
     ingestRecords(topic, 1000);
     waitUntilPublishedRecordsAreIngested(ingestionPersistedCount);
+    // sometimes this fails when compaction task finishes too fast and we're already on V2.....
     Assertions.assertEquals(V1, logActiveSegmentsAndReturnVersion());
 
     // Step 4: wait for minor compaction to trigger and finish, third set of segments published as V2
