@@ -32,27 +32,27 @@ package org.apache.druid.indexing.common;
 public class SegmentUpgradeMetrics
 {
   /** Number of upgraded pending segments a REPLACE commit created and handed to the supervisor. Task-action dims. */
-  public static final String COUNT = "ingest/segmentUpgrade/count";
+  public static final String COUNT = "ingest/realtime/segmentUpgrade/count";
 
   /** A record was delivered to at least one running task. Supervisor dims. */
-  public static final String NOTIFIED = "ingest/segmentUpgrade/notified";
+  public static final String NOTIFIED = "ingest/realtime/segmentUpgrade/notified";
 
   /** A record matched no running task and will not be re-announced until handoff. Supervisor dims. */
-  public static final String UNMATCHED = "ingest/segmentUpgrade/unmatched";
+  public static final String UNMATCHED = "ingest/realtime/segmentUpgrade/unmatched";
 
   /** An upgrade request failed to reach a task over the wire. Supervisor dims plus {@code taskId}. */
-  public static final String SEND_FAILED = "ingest/segmentUpgrade/sendFailed";
+  public static final String SEND_FAILED = "ingest/realtime/segmentUpgrade/sendFailed";
 
   /** A task announced an upgraded segment under the new version. Task dims. */
-  public static final String ANNOUNCED = "ingest/segmentUpgrade/announced";
+  public static final String ANNOUNCED = "ingest/realtime/segmentUpgrade/announced";
 
   /** A task received an upgrade request but did not announce it; see the {@code reason} dimension. Task dims. */
-  public static final String SKIPPED = "ingest/segmentUpgrade/skipped";
+  public static final String SKIPPED = "ingest/realtime/segmentUpgrade/skipped";
 
   // Values for the DruidMetrics.REASON dimension on SKIPPED.
 
   /** The task holds no pending segment matching upgradedFromSegmentId (request targeted the wrong task). */
-  public static final String REASON_UNKNOWN_BASE = "unknownBase";
+  public static final String REASON_UNKNOWN_BASE = "unknown base";
   /** The base sink is gone even though this task once held it. */
   public static final String REASON_NO_SINK = "base sink already dropped";
   /** The base sink is being dropped (handoff in progress); the durable path re-announces at the new version. */

@@ -105,26 +105,26 @@
   "ingest/events/messageGap": [
     "dataSource"
   ],
-  "ingest/segmentUpgrade/count": [
+  "ingest/realtime/segmentUpgrade/count": [
     "dataSource"
   ],
-  "ingest/segmentUpgrade/notified": [
+  "ingest/realtime/segmentUpgrade/notified": [
     "dataSource",
     "stream"
   ],
-  "ingest/segmentUpgrade/unmatched": [
+  "ingest/realtime/segmentUpgrade/unmatched": [
     "dataSource",
     "stream"
   ],
-  "ingest/segmentUpgrade/sendFailed": [
+  "ingest/realtime/segmentUpgrade/sendFailed": [
     "dataSource",
     "stream",
     "taskId"
   ],
-  "ingest/segmentUpgrade/announced": [
+  "ingest/realtime/segmentUpgrade/announced": [
     "dataSource"
   ],
-  "ingest/segmentUpgrade/skipped": [
+  "ingest/realtime/segmentUpgrade/skipped": [
     "dataSource",
     "reason"
   ],
