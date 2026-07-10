@@ -271,6 +271,25 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   }
 
   @Test
+  void testLoadEagerlyDownloadsBaseDependencyOfSelectedProjection() throws Exception
+  {
+    // when the rule selects a projection bundle, __base is an implicit mount-time dependency (parent hold + sparse
+    // allocation) but its container bytes are NOT downloaded by ensureBundleDownloaded(projection).
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    manager.load(partialWrapperSegment(List.of(AGG_BUNDLE)));
+
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+    Assertions.assertNotNull(mapper, "metadata mount should produce a file mapper");
+    Assertions.assertTrue(
+        mapper.isBundleFullyDownloaded(Projections.BASE_TABLE_PROJECTION_NAME),
+        "base dependency of the selected projection must be fully downloaded eagerly, not just sparse-mounted"
+    );
+  }
+
+  @Test
   void testLoadWithoutVirtualStorageDoesNotInstallRuleHolds() throws Exception
   {
     // virtualStorage=false: partial-load rules aren't a concept here. load() takes the eager full-load path (via
@@ -341,6 +360,32 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
         "new rule's bundle should be reserved"
     );
     Assertions.assertFalse(metaAfter.isBundleRuleHeld(AGG_BUNDLE));
+  }
+
+  @Test
+  void testRuleSwapRewritesInfoFileOnDisk() throws Exception
+  {
+    // findOrReservePartial returns the existing entry on a rule swap, make sure we rewrite the
+    // info file.
+    manager = makeManager(true, true);
+
+    manager.load(partialWrapperSegment(List.of(AGG_BUNDLE), "v1:rule-original"));
+    manager.load(partialWrapperSegment(List.of(OTHER_AGG_BUNDLE), "v2:rule-updated"));
+
+    final File infoDir = new File(cacheRoot, "info_dir");
+    final File infoFile = new File(infoDir, SEGMENT_ID.toString());
+    Assertions.assertTrue(infoFile.exists(), "info file must exist after loadPartial");
+    final DataSegment onDisk = jsonMapper.readValue(infoFile, DataSegment.class);
+    Assertions.assertEquals(
+        "v2:rule-updated",
+        onDisk.getLoadSpec().get("fingerprint"),
+        "info file on disk must carry the latest rule's fingerprint after a swap, not the prior rule's"
+    );
+    Assertions.assertEquals(
+        List.of(OTHER_AGG_BUNDLE),
+        onDisk.getLoadSpec().get("projections"),
+        "info file on disk must carry the latest rule's projection selection"
+    );
   }
 
   @Test

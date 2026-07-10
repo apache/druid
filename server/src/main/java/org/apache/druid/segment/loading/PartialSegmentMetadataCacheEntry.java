@@ -410,6 +410,56 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       finally {
         entryLock.unlock();
       }
+
+      // Phase 3b: reconcile linkedBundles against the freshly-committed selection. A concurrent registerBundle
+      // whose linkedBundles.put landed AFTER our Phase 1 snapshot but whose Phase 1 selection-check ran BEFORE
+      // our Phase 3 commit would have observed the OLD selection and bailed without installing a hold, while
+      // Phase 1's namesToAcquire also missed it. Rescan + install to close that window. Loops in case a bundle
+      // arrives during reconciliation; termination is bounded by |newSelection| because each iteration either installs
+      // at least one hold or exits (a bundle that arrives after this loop terminates will see the committed
+      // newSelection in its own Phase 1 and install its hold via registerBundle Phase 3).
+      while (true) {
+        final List<String> reconcileNames;
+        entryLock.lock();
+        try {
+          reconcileNames = new ArrayList<>();
+          for (String name : ruleSelectedBundleNames) {
+            if (!ruleBundleHolds.containsKey(name) && findLinkedBundleByName(name) != null) {
+              reconcileNames.add(name);
+            }
+          }
+        }
+        finally {
+          entryLock.unlock();
+        }
+        if (reconcileNames.isEmpty()) {
+          break;
+        }
+
+        final Map<String, StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry>> reconcileHolds =
+            new HashMap<>();
+        for (String name : reconcileNames) {
+          final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> h =
+              loc.addWeakReservationHoldIfExists(new PartialSegmentBundleCacheEntryIdentifier(segmentId, name));
+          if (h != null) {
+            reconcileHolds.put(name, h);
+            uncommittedHolds.add(h);
+          }
+        }
+
+        entryLock.lock();
+        try {
+          for (var e : reconcileHolds.entrySet()) {
+            if (ruleSelectedBundleNames.contains(e.getKey()) && !ruleBundleHolds.containsKey(e.getKey())) {
+              ruleBundleHolds.put(e.getKey(), e.getValue());
+              uncommittedHolds.remove(e.getValue());
+            }
+          }
+        }
+        finally {
+          entryLock.unlock();
+        }
+      }
     }
     finally {
       // Phase 4: release outside entryLock. `uncommittedHolds` contains every hold this call acquired but did not

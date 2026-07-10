@@ -460,6 +460,23 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
+  /**
+   * Write the info file for a partial-load segment, overwriting any existing content atomically. Distinct from
+   * {@link #storeInfoFile} which skips the write when the file already exists, for partial segments we must
+   * unconditionally rewrite so an incoming rule swap (new {@code fingerprint}/{@code delegate} inside the
+   * wrapped load spec) reaches disk. Otherwise bootstrap after a restart would restore the segment using the
+   * prior wrapper and re-announce the old rule until the coordinator resyncs.
+   */
+  private void writePartialInfoFile(DataSegment segment) throws IOException
+  {
+    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
+    FileUtils.mkdirp(getEffectiveInfoDir());
+    FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
+      jsonMapper.writeValue(out, segment);
+      return null;
+    });
+  }
+
   @Override
   public Optional<Segment> acquireCachedSegment(final SegmentId segmentId, final AcquireMode acquireMode)
   {
@@ -873,17 +890,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               location.getPath()
           );
         }
-        // Unconditionally write the info file with the incoming DataSegment. An existing info file at this path
-        // may carry a STALE loadSpec. Skipping the write when the file exists would preserve that stale wrapper on
-        // disk, and a subsequent bootstrap would restore the segment via the wrong path (non-partial) or drift out of
-        // sync with the coordinator's applied rule. writeAtomically does the file-rename dance so a concurrent read
-        // sees either the old or new complete file, never a partial write.
-        final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), dataSegment.getId().toString());
-        FileUtils.mkdirp(getEffectiveInfoDir());
-        FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
-          jsonMapper.writeValue(out, dataSegment);
-          return null;
-        });
+        writePartialInfoFile(dataSegment);
         partial.setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
         return new ReservedPartial(partial, location, hold);
       }
@@ -1009,6 +1016,19 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         final ReservedPartial reserved = findOrReservePartial(dataSegment, rangeReader);
         try {
           final PartialSegmentMetadataCacheEntry metadata = reserved.metadata();
+          // findOrReservePartial only invokes reservePartial (which writes the info file) on the fresh-reserve
+          // branch. On the find-existing branch the info file on disk still carries the PRIOR rule's wrapped
+          // load spec, so a rule swap here would apply in memory only. Rewrite unconditionally before mount.
+          try {
+            writePartialInfoFile(dataSegment);
+          }
+          catch (IOException e) {
+            throw new SegmentLoadingException(
+                e,
+                "Failed to write partial info file for segment[%s]",
+                dataSegment.getId()
+            );
+          }
           try {
             metadata.mount(reserved.location());
           }
@@ -1077,7 +1097,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final List<Future<?>> pending = new ArrayList<>();
     Throwable firstFailure = null;
     try {
-      for (String bundleName : selected) {
+      for (String bundleName : metadata.bundlesInMountOrder(selected)) {
         // Skip only when the bundle is BOTH rule-held AND fully downloaded (every container's files present on disk).
         if (metadata.isBundleRuleHeld(bundleName) && metadata.isBundleFullyDownloaded(bundleName)) {
           continue;
