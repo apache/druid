@@ -194,7 +194,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       TableClusterGroupSpec valueGroup
   )
   {
-    final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup);
+    final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup, true);
     if (groupIndex == null) {
       throw DruidException.defensive(
           "No cluster-group sub-index resolvable for clustering values "
@@ -258,7 +258,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     final Closer closer = Closer.create();
     for (TableClusterGroupSpec valueGroup : matching) {
       clusteringValuesByGroup.add(valueGroup.lookupClusteringValues());
-      final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup);
+      final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup, true);
       if (groupIndex == null) {
         throw DruidException.defensive(
             "No cluster-group sub-index resolvable for clustering values "
