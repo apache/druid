@@ -1182,8 +1182,7 @@ public class StreamAppenderator implements Appenderator
   }
 
   /**
-   * Outcome of a {@link #registerUpgradedPendingSegment} call, returned so the caller (which owns the emitter) can
-   * emit the corresponding metric.
+   * Result of a {@link #registerUpgradedPendingSegment} call.
    */
   public enum UpgradeAnnouncementOutcome
   {

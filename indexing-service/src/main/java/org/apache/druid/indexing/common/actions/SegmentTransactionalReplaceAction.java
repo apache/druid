@@ -171,7 +171,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       List<PendingSegmentRecord> upgradedPendingSegments
   )
   {
-    // Emit the count of upgrades this commit produced regardless of whether a supervisor exists to
+    // Emit the count of upgrades successfully committed regardless of whether a supervisor exists to
     // receive them, so it can be compared against the count actually announced by tasks.
     if (!upgradedPendingSegments.isEmpty()) {
       final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
@@ -193,7 +193,8 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       return;
     }
 
-    log.info("Registering [%d] upgraded pending segments created by task[%s] on supervisor[%s]",
+    log.info(
+        "Registering [%d] upgraded pending segments created by task[%s] on supervisor[%s]",
              upgradedPendingSegments.size(),
              task.getId(),
              activeSupervisorIdWithAppendLock.get()

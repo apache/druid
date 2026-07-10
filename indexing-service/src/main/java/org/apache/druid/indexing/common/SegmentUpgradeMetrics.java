@@ -54,9 +54,9 @@ public class SegmentUpgradeMetrics
   /** The task holds no pending segment matching upgradedFromSegmentId (request targeted the wrong task). */
   public static final String REASON_UNKNOWN_BASE = "unknownBase";
   /** The base sink is gone even though this task once held it. */
-  public static final String REASON_NO_SINK = "noSink";
+  public static final String REASON_NO_SINK = "base sink already dropped";
   /** The base sink is being dropped (handoff in progress); the durable path re-announces at the new version. */
-  public static final String REASON_DROPPING = "dropping";
+  public static final String REASON_DROPPING = "dropping base sink";
 
   private SegmentUpgradeMetrics()
   {

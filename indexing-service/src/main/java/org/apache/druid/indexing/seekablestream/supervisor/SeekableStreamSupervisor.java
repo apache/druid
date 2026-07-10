@@ -1450,7 +1450,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // No running task matched: the segment will not be re-announced until handoff. This is a potential silent-loss
       // window where data will not be queryable until handoff.
       log.warn(
-          "Upgraded pending segment[%s] (upgradedFrom[%s], taskAllocatorId[%s]) matched no running task on"
+          "Could not find any task matching taskAllocatorId[%s] in supervisor[%s] for upgraded pending segment[%s] (upgradedFrom[%s]) "
           + " supervisor[%s]; it will not be re-announced until handoff. Currently tracking [%d] activelyReading"
           + " and [%d] pendingCompletion task group(s).",
           pendingSegmentRecord.getId(),
@@ -1493,7 +1493,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           {
             log.warn(
                 t,
-                "Failed to send upgraded pending segment[%s] to task[%s] on supervisor[%s].",
+                "Failed to register upgraded pending segment[%s] on task[%s] of supervisor[%s].",
                 pendingSegmentRecord.getId(), taskId, supervisorId
             );
             emitter.emit(
