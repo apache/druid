@@ -411,55 +411,8 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
         entryLock.unlock();
       }
 
-      // Phase 3b: reconcile linkedBundles against the freshly-committed selection. A concurrent registerBundle
-      // whose linkedBundles.put landed AFTER our Phase 1 snapshot but whose Phase 1 selection-check ran BEFORE
-      // our Phase 3 commit would have observed the OLD selection and bailed without installing a hold, while
-      // Phase 1's namesToAcquire also missed it. Rescan + install to close that window. Loops in case a bundle
-      // arrives during reconciliation; termination is bounded by |newSelection| because each iteration either installs
-      // at least one hold or exits (a bundle that arrives after this loop terminates will see the committed
-      // newSelection in its own Phase 1 and install its hold via registerBundle Phase 3).
-      while (true) {
-        final List<String> reconcileNames;
-        entryLock.lock();
-        try {
-          reconcileNames = new ArrayList<>();
-          for (String name : ruleSelectedBundleNames) {
-            if (!ruleBundleHolds.containsKey(name) && findLinkedBundleByName(name) != null) {
-              reconcileNames.add(name);
-            }
-          }
-        }
-        finally {
-          entryLock.unlock();
-        }
-        if (reconcileNames.isEmpty()) {
-          break;
-        }
-
-        final Map<String, StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry>> reconcileHolds =
-            new HashMap<>();
-        for (String name : reconcileNames) {
-          final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> h =
-              loc.addWeakReservationHoldIfExists(new PartialSegmentBundleCacheEntryIdentifier(segmentId, name));
-          if (h != null) {
-            reconcileHolds.put(name, h);
-            uncommittedHolds.add(h);
-          }
-        }
-
-        entryLock.lock();
-        try {
-          for (var e : reconcileHolds.entrySet()) {
-            if (ruleSelectedBundleNames.contains(e.getKey()) && !ruleBundleHolds.containsKey(e.getKey())) {
-              ruleBundleHolds.put(e.getKey(), e.getValue());
-              uncommittedHolds.remove(e.getValue());
-            }
-          }
-        }
-        finally {
-          entryLock.unlock();
-        }
-      }
+      // Phase 3b: close the narrow race with concurrent registerBundle
+      reconcileLinkedBundlesWithSelection(loc, uncommittedHolds);
     }
     finally {
       // Phase 4: release outside entryLock. `uncommittedHolds` contains every hold this call acquired but did not
@@ -467,6 +420,65 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       // contains pre-existing holds that the diff removed from ruleBundleHolds after successful commit.
       releaseHolds(uncommittedHolds);
       releaseHolds(displacedHolds);
+    }
+  }
+
+  /**
+   * Post-{@link #applyRule} reconciliation: scan {@link #linkedBundles} against the freshly-committed
+   * {@link #ruleSelectedBundleNames} and install a rule-hold for any selected bundle that's present in
+   * {@code linkedBundles} but missing from {@link #ruleBundleHolds}.
+   * <p>
+   * Closes a race that can occur when bundle mounts triggered by concurrent queries run on the storage-loading pool
+   * <em>without</em> the per-segment lock, and can call {@link #registerBundle} concurrently with
+   * {@link #applyRule}. If the bundle lands in {@link #linkedBundles} <em>after</em> {@link #applyRule}'s Phase 1
+   * snapshot but its {@code registerBundle} Phase 1 runs <em>before</em> Phase 3 has committed {@code newSelection},
+   * {@code registerBundle} observes the OLD selection and bails without installing a hold, and Phase 1's
+   * {@code namesToAcquire} also missed it (it wasn't in {@code linkedBundles} at snapshot time). Without this
+   * reconciliation, the entry would incorrectly be evictable despite the rule.
+   */
+  private void reconcileLinkedBundlesWithSelection(
+      StorageLocation loc,
+      List<StorageLocation.ReservationHold<?>> uncommittedHolds
+  )
+  {
+    final List<String> reconcileNames;
+    entryLock.lock();
+    try {
+      reconcileNames = new ArrayList<>();
+      for (String name : ruleSelectedBundleNames) {
+        if (!ruleBundleHolds.containsKey(name) && findLinkedBundleByName(name) != null) {
+          reconcileNames.add(name);
+        }
+      }
+    }
+    finally {
+      entryLock.unlock();
+    }
+    if (reconcileNames.isEmpty()) {
+      return;
+    }
+
+    final Map<String, StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry>> acquired = new HashMap<>();
+    for (String name : reconcileNames) {
+      final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> h =
+          loc.addWeakReservationHoldIfExists(new PartialSegmentBundleCacheEntryIdentifier(segmentId, name));
+      if (h != null) {
+        acquired.put(name, h);
+        uncommittedHolds.add(h);
+      }
+    }
+
+    entryLock.lock();
+    try {
+      for (var e : acquired.entrySet()) {
+        if (ruleSelectedBundleNames.contains(e.getKey()) && !ruleBundleHolds.containsKey(e.getKey())) {
+          ruleBundleHolds.put(e.getKey(), e.getValue());
+          uncommittedHolds.remove(e.getValue());
+        }
+      }
+    }
+    finally {
+      entryLock.unlock();
     }
   }
 
