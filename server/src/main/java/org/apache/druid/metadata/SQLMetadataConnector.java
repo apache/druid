@@ -404,6 +404,15 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             "start"
         )
     );
+    // Covering index for the used-segment ID scan performed on every metadata
+    // cache sync (SELECT id, dataSource, used_status_last_updated WHERE used=true).
+    // id rides along as the implicit primary key, so this makes the scan
+    // index-only and avoids reading the payload-bearing clustered index.
+    createIndex(
+        tableName,
+        "IDX_%S_USED_USLU_DATASOURCE",
+        List.of("used", "used_status_last_updated", "dataSource")
+    );
   }
 
   private void createUpgradeSegmentsTable(final String tableName)
@@ -662,6 +671,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         tableName,
         "IDX_%S_DATASOURCE_UPGRADED_FROM_SEGMENT_ID",
         List.of("dataSource", "upgraded_from_segment_id")
+    );
+    // Migration for existing tables: covering index backing the used-segment ID
+    // scan on every cache sync (see createSegmentTable).
+    createIndex(
+        tableName,
+        "IDX_%S_USED_USLU_DATASOURCE",
+        List.of("used", "used_status_last_updated", "dataSource")
     );
   }
 

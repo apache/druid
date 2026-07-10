@@ -167,6 +167,13 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private final AtomicReference<DateTime> syncFinishTime = new AtomicReference<>();
   private final AtomicReference<DataSourcesSnapshot> datasourcesSnapshot = new AtomicReference<>(null);
 
+  /**
+   * When true, each sync rebuilds only the changed datasources' portion of the
+   * {@link DataSourcesSnapshot} instead of the whole snapshot. Drift-free: the
+   * set read from the metadata store is unchanged (still the full used set).
+   */
+  private final boolean useIncrementalSync;
+
   @Inject
   public HeapMemorySegmentMetadataCache(
       ObjectMapper jsonMapper,
@@ -182,6 +189,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     this.jsonMapper = jsonMapper;
     this.cacheMode = config.get().getCacheUsageMode();
     this.pollDuration = config.get().getPollDuration().toStandardDuration();
+    this.useIncrementalSync = config.get().isUseIncrementalSync();
     this.tablesConfig = tablesConfig.get();
     this.useSchemaCache = segmentSchemaCache.isEnabled();
     this.segmentSchemaCache = segmentSchemaCache;
@@ -570,12 +578,16 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
     final Map<String, DatasourceSegmentSummary> datasourceToSummary = new HashMap<>();
 
+    // Datasources whose used-segment set changed this sync. Null forces a full
+    // snapshot rebuild (first sync, or when incremental sync is disabled).
+    Set<String> dirtyDatasources = null;
+
     // Fetch all used segments if this is the first sync
     if (syncFinishTime.get() == null) {
       retrieveAllUsedSegments(datasourceToSummary);
     } else {
       retrieveUsedSegmentIds(datasourceToSummary);
-      updateSegmentIdsInCache(datasourceToSummary, syncStartTime.minus(SYNC_BUFFER_DURATION));
+      dirtyDatasources = updateSegmentIdsInCache(datasourceToSummary, syncStartTime.minus(SYNC_BUFFER_DURATION));
       retrieveUsedSegmentPayloads(datasourceToSummary);
     }
 
@@ -591,21 +603,38 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       retrieveAndResetUsedIndexingStates();
     }
 
-    markCacheSynced(syncStartTime);
+    markCacheSynced(syncStartTime, dirtyDatasources);
 
     syncFinishTime.set(DateTimes.nowUtc());
     return totalSyncDuration.millisElapsed();
   }
 
   /**
-   * Marks the cache for all datasources as synced and emit total stats.
+   * Marks the cache for all datasources as synced and emits stats, then rebuilds
+   * the {@link DataSourcesSnapshot}.
+   * <p>
+   * When {@code dirtyDatasources} is non-null, incremental sync is enabled, and a
+   * previous snapshot exists, only the changed datasources' portion of the
+   * snapshot is rebuilt (reusing the prior snapshot's timelines/overshadow for the
+   * rest); this is identical to a full rebuild but O(changed) instead of
+   * O(all-segments). Otherwise the snapshot is fully rebuilt.
+   *
+   * @param dirtyDatasources Datasources whose used set changed this sync, or null
+   *                         to force a full rebuild (e.g. first sync).
    */
-  private void markCacheSynced(DateTime syncStartTime)
+  private void markCacheSynced(DateTime syncStartTime, @Nullable Set<String> dirtyDatasources)
   {
     final Stopwatch updateDuration = Stopwatch.createStarted();
 
+    final DataSourcesSnapshot previousSnapshot = datasourcesSnapshot.get();
+    final boolean incremental =
+        useIncrementalSync && dirtyDatasources != null && previousSnapshot != null;
+
     final Set<String> cachedDatasources = Set.copyOf(datasourceToSegmentCache.keySet());
+    // In incremental mode this holds only the changed (non-empty) datasources;
+    // in full mode it holds every non-empty datasource.
     final Map<String, Set<DataSegment>> datasourceToUsedSegments = new HashMap<>();
+    final Set<String> removedDatasources = new HashSet<>();
 
     for (String dataSource : cachedDatasources) {
       final HeapMemoryDatasourceSegmentCache cache = datasourceToSegmentCache.getOrDefault(
@@ -627,19 +656,35 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
               }
             }
         );
+        removedDatasources.add(dataSource);
       } else {
         emitMetric(dataSource, Metric.CACHED_INTERVALS, stats.getNumIntervals());
         emitMetric(dataSource, Metric.CACHED_USED_SEGMENTS, stats.getNumUsedSegments());
         emitMetric(dataSource, Metric.CACHED_UNUSED_SEGMENTS, stats.getNumUnusedSegments());
         emitMetric(dataSource, Metric.CACHED_PENDING_SEGMENTS, stats.getNumPendingSegments());
 
-        datasourceToUsedSegments.put(dataSource, cache.findUsedSegmentsOverlappingAnyOf(List.of()));
+        // Only materialize the (potentially large) used-segment set for datasources
+        // that must be rebuilt into the snapshot.
+        if (!incremental || dirtyDatasources.contains(dataSource)) {
+          datasourceToUsedSegments.put(dataSource, cache.findUsedSegmentsOverlappingAnyOf(List.of()));
+        }
       }
     }
 
-    datasourcesSnapshot.set(
-        DataSourcesSnapshot.fromUsedSegments(datasourceToUsedSegments, syncStartTime)
-    );
+    if (incremental) {
+      datasourcesSnapshot.set(
+          DataSourcesSnapshot.withUpdatedDataSources(
+              previousSnapshot,
+              datasourceToUsedSegments,
+              removedDatasources,
+              syncStartTime
+          )
+      );
+    } else {
+      datasourcesSnapshot.set(
+          DataSourcesSnapshot.fromUsedSegments(datasourceToUsedSegments, syncStartTime)
+      );
+    }
     emitMetric(Metric.UPDATE_SNAPSHOT_DURATION_MILLIS, updateDuration.millisElapsed());
   }
 
@@ -743,12 +788,16 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
    * datasource cache is atomic. Also identifies the segment IDs which have been
    * updated in the metadata store and need to be refreshed in the cache.
    */
-  private void updateSegmentIdsInCache(
+  private Set<String> updateSegmentIdsInCache(
       Map<String, DatasourceSegmentSummary> datasourceToSummary,
       DateTime syncStartTime
   )
   {
     final Stopwatch updateDuration = Stopwatch.createStarted();
+
+    // Datasources whose used-segment set actually changed this sync (used to
+    // rebuild only the affected part of the snapshot).
+    final Set<String> dirtyDatasources = new HashSet<>();
 
     // Sync segments for datasources which were retrieved in the latest poll
     datasourceToSummary.forEach((dataSource, summary) -> {
@@ -759,6 +808,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       emitNonZeroMetric(dataSource, Metric.DELETED_SEGMENTS, result.getDeleted());
 
       summary.usedSegmentIdsToRefresh.addAll(result.getExpiredIds());
+      if (result.getDeleted() > 0 || !result.getExpiredIds().isEmpty()) {
+        dirtyDatasources.add(dataSource);
+      }
     });
 
     // Update cache for datasources which returned no segments in the latest poll
@@ -766,10 +818,14 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       if (!datasourceToSummary.containsKey(dataSource)) {
         final SegmentSyncResult result = cache.syncSegmentIds(List.of(), syncStartTime);
         emitNonZeroMetric(dataSource, Metric.DELETED_SEGMENTS, result.getDeleted());
+        if (result.getDeleted() > 0) {
+          dirtyDatasources.add(dataSource);
+        }
       }
     });
 
     emitMetric(Metric.UPDATE_IDS_DURATION_MILLIS, updateDuration.millisElapsed());
+    return dirtyDatasources;
   }
 
   /**
