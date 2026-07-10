@@ -33,14 +33,11 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.LockRequestForNewSegment;
 import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
@@ -55,7 +52,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 /**
  * Allocates a pending segment for a given timestamp.
@@ -245,7 +241,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
         identifier = tryAllocateSubsequentSegment(toolbox, task, rowInterval, usedSegmentsForRow.iterator().next());
       }
       if (identifier != null) {
-        emitSuccessMetric(identifier, task, toolbox);
+        IndexTaskUtils.emitSegmentAllocateMetric(identifier, task, toolbox.getEmitter());
         return identifier;
       }
 
@@ -283,20 +279,6 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
         return null;
       }
     }
-  }
-
-  private void emitSuccessMetric(SegmentIdWithShardSpec allocatedId, Task task, TaskActionToolbox toolbox)
-  {
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-    if (task instanceof SeekableStreamIndexTask<?,?,?>) {
-      metricBuilder.setDimension(
-          DruidMetrics.SUPERVISOR_ID,
-          ((SeekableStreamIndexTask<?, ?, ?>) task).getSupervisorId()
-      );
-    }
-    metricBuilder.setDimension(DruidMetrics.ID, allocatedId.toString());
-    toolbox.getEmitter().emit(metricBuilder.setMetric("segment/allocated/count", 1));
   }
 
   private SegmentIdWithShardSpec tryAllocateFirstSegment(TaskActionToolbox toolbox, Task task, Interval rowInterval)
