@@ -8,8 +8,8 @@ allow if {
 	some grant
 	user_is_granted[grant]
 	input.action == grant.action
-	regex.match(grant.resource.name, input.resource.name)
-	regex.match(grant.resource.type, input.resource.type)
+	regex.match(sprintf("^%s$", [grant.resource.name]), input.resource.name)
+	regex.match(sprintf("^%s$", [grant.resource.type]), input.resource.type)
 }
 user_is_admin if {
 	"admin" in data.user_roles[input.authenticationResult.identity]
