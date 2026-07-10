@@ -93,67 +93,56 @@ public class DataSourcesSnapshot
   }
 
   /**
-   * Builds a new snapshot from a previous one by recomputing only the datasources
-   * that changed, reusing the previous snapshot's {@link ImmutableDruidDataSource},
-   * timeline, and overshadowed-segment computation for all unchanged datasources.
+   * Builds a new snapshot from this one by recomputing only the datasources that
+   * changed, reusing this snapshot's {@link ImmutableDruidDataSource}, timeline,
+   * and overshadowed-segment computation for every unchanged datasource.
    * <p>
-   * Overshadowing is computed per-datasource, so reusing the prior overshadowed
-   * segments for unchanged datasources is correct. This turns the O(all-segments)
-   * snapshot rebuild into an O(changed-segments) operation, while producing a
-   * snapshot identical to a full {@link #fromUsedSegments} rebuild of the same
-   * final state.
+   * Note that a changed datasource has its entire timeline rebuilt even if only a
+   * single one of its segments changed; the saving is that untouched datasources
+   * are reused as is. Overshadowing is computed per-datasource, so reusing the
+   * prior overshadowed segments for unchanged datasources is correct. The result
+   * is identical to a full {@link #fromUsedSegments} rebuild of the same final
+   * state, at a cost proportional to the changed datasources rather than all of them.
    *
-   * @param previous           Previous snapshot to build upon (null → full build).
-   * @param changedDataSources Changed datasource → its complete current set of
-   *                           used segments. An empty set removes the datasource.
-   * @param removedDataSources Datasources whose caches are now empty/gone.
-   * @param snapshotTime       Time of this snapshot (poll start time).
+   * @param datasourcesToRefresh Datasource → its complete current set of used
+   *                             segments, for each datasource that changed. Sets
+   *                             must be non-empty; removals are conveyed via
+   *                             {@code removedDataSources}.
+   * @param removedDataSources   Datasources whose caches are now empty/gone.
+   * @param snapshotTime         Time of this snapshot (poll start time).
    */
-  public static DataSourcesSnapshot withUpdatedDataSources(
-      @Nullable DataSourcesSnapshot previous,
-      Map<String, Set<DataSegment>> changedDataSources,
+  public DataSourcesSnapshot updateSnapshotForDataSources(
+      Map<String, Set<DataSegment>> datasourcesToRefresh,
       Set<String> removedDataSources,
       DateTime snapshotTime
   )
   {
-    if (previous == null) {
-      return fromUsedSegments(changedDataSources, snapshotTime);
-    }
-
     final Map<String, String> properties = Map.of("created", snapshotTime.toString());
-    final Map<String, ImmutableDruidDataSource> dataSources = new HashMap<>(previous.dataSourcesWithAllUsedSegments);
-    final Map<String, SegmentTimeline> timelines = new HashMap<>(previous.usedSegmentsTimelinesPerDataSource);
+    final Map<String, ImmutableDruidDataSource> dataSources = new HashMap<>(dataSourcesWithAllUsedSegments);
+    final Map<String, SegmentTimeline> timelines = new HashMap<>(usedSegmentsTimelinesPerDataSource);
 
-    final Set<String> dirtyDataSources = new HashSet<>(removedDataSources);
-    dirtyDataSources.addAll(changedDataSources.keySet());
+    final Set<String> changedDataSources = new HashSet<>(removedDataSources);
+    changedDataSources.addAll(datasourcesToRefresh.keySet());
 
     removedDataSources.forEach(ds -> {
       dataSources.remove(ds);
       timelines.remove(ds);
     });
-    changedDataSources.forEach((ds, segments) -> {
-      if (segments.isEmpty()) {
-        dataSources.remove(ds);
-        timelines.remove(ds);
-      } else {
-        dataSources.put(ds, new ImmutableDruidDataSource(ds, properties, segments));
-        timelines.put(ds, SegmentTimeline.forSegments(segments));
-      }
+    datasourcesToRefresh.forEach((ds, segments) -> {
+      dataSources.put(ds, new ImmutableDruidDataSource(ds, properties, segments));
+      timelines.put(ds, SegmentTimeline.forSegments(segments));
     });
 
     // Reuse prior overshadowed segments for unchanged datasources; recompute only the changed ones.
     final List<DataSegment> overshadowed = new ArrayList<>();
-    for (DataSegment segment : previous.overshadowedSegments) {
-      if (!dirtyDataSources.contains(segment.getDataSource())) {
+    for (DataSegment segment : overshadowedSegments) {
+      if (!changedDataSources.contains(segment.getDataSource())) {
         overshadowed.add(segment);
       }
     }
-    for (String ds : changedDataSources.keySet()) {
+    for (String ds : datasourcesToRefresh.keySet()) {
       final ImmutableDruidDataSource dataSource = dataSources.get(ds);
       final SegmentTimeline timeline = timelines.get(ds);
-      if (dataSource == null || timeline == null) {
-        continue;
-      }
       for (DataSegment segment : dataSource.getSegments()) {
         if (timeline.isOvershadowed(segment)) {
           overshadowed.add(segment);
@@ -184,7 +173,7 @@ public class DataSourcesSnapshot
   }
 
   /**
-   * Constructor used by {@link #withUpdatedDataSources} where timelines and
+   * Constructor used by {@link #updateSnapshotForDataSources} where timelines and
    * overshadowed segments have already been computed incrementally.
    */
   private DataSourcesSnapshot(

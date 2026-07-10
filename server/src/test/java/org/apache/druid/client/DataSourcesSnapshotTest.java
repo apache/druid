@@ -56,17 +56,21 @@ public class DataSourcesSnapshotTest
                    .collect(Collectors.toSet());
   }
 
-  @Test
-  public void testWithUpdatedDatasources_reusesUnchangedDatasourceByReference()
+  private static DataSourcesSnapshot baseSnapshot()
   {
     final Map<String, Set<DataSegment>> base = new HashMap<>();
     base.put(DS1, segmentsOf(DS1, "2024-01-01", 2));
     base.put(DS2, segmentsOf(DS2, "2024-01-01", 2));
-    final DataSourcesSnapshot previous = DataSourcesSnapshot.fromUsedSegments(base, SNAPSHOT_TIME);
+    return DataSourcesSnapshot.fromUsedSegments(base, SNAPSHOT_TIME);
+  }
+
+  @Test
+  public void testUpdateSnapshot_reusesUnchangedDatasourceByReference()
+  {
+    final DataSourcesSnapshot previous = baseSnapshot();
 
     final Set<DataSegment> newDs1 = segmentsOf(DS1, "2024-02-01", 3);
-    final DataSourcesSnapshot updated = DataSourcesSnapshot.withUpdatedDataSources(
-        previous,
+    final DataSourcesSnapshot updated = previous.updateSnapshotForDataSources(
         Map.of(DS1, newDs1),
         Set.of(),
         SNAPSHOT_TIME
@@ -81,16 +85,14 @@ public class DataSourcesSnapshotTest
   }
 
   @Test
-  public void testWithUpdatedDatasources_equalsFullRebuild()
+  public void testUpdateSnapshot_equalsFullRebuild()
   {
-    final Map<String, Set<DataSegment>> base = new HashMap<>();
-    base.put(DS1, segmentsOf(DS1, "2024-01-01", 2));
-    base.put(DS2, segmentsOf(DS2, "2024-01-01", 2));
-    final DataSourcesSnapshot previous = DataSourcesSnapshot.fromUsedSegments(base, SNAPSHOT_TIME);
+    final DataSourcesSnapshot previous = baseSnapshot();
+    final Set<DataSegment> baseDs2 = previous.getDataSource(DS2).getSegments()
+                                             .stream().collect(Collectors.toSet());
 
     final Set<DataSegment> newDs1 = segmentsOf(DS1, "2024-02-01", 3);
-    final DataSourcesSnapshot incremental = DataSourcesSnapshot.withUpdatedDataSources(
-        previous,
+    final DataSourcesSnapshot incremental = previous.updateSnapshotForDataSources(
         Map.of(DS1, newDs1),
         Set.of(),
         SNAPSHOT_TIME
@@ -98,7 +100,7 @@ public class DataSourcesSnapshotTest
 
     final Map<String, Set<DataSegment>> finalState = new HashMap<>();
     finalState.put(DS1, newDs1);
-    finalState.put(DS2, base.get(DS2));
+    finalState.put(DS2, baseDs2);
     final DataSourcesSnapshot fullRebuild = DataSourcesSnapshot.fromUsedSegments(finalState, SNAPSHOT_TIME);
 
     Assert.assertEquals(idsOf(fullRebuild, DS1), idsOf(incremental, DS1));
@@ -107,15 +109,11 @@ public class DataSourcesSnapshotTest
   }
 
   @Test
-  public void testWithUpdatedDatasources_removesDatasource()
+  public void testUpdateSnapshot_removesDatasource()
   {
-    final Map<String, Set<DataSegment>> base = new HashMap<>();
-    base.put(DS1, segmentsOf(DS1, "2024-01-01", 2));
-    base.put(DS2, segmentsOf(DS2, "2024-01-01", 2));
-    final DataSourcesSnapshot previous = DataSourcesSnapshot.fromUsedSegments(base, SNAPSHOT_TIME);
+    final DataSourcesSnapshot previous = baseSnapshot();
 
-    final DataSourcesSnapshot updated = DataSourcesSnapshot.withUpdatedDataSources(
-        previous,
+    final DataSourcesSnapshot updated = previous.updateSnapshotForDataSources(
         Map.of(),
         Set.of(DS2),
         SNAPSHOT_TIME
@@ -123,21 +121,5 @@ public class DataSourcesSnapshotTest
 
     Assert.assertNull(updated.getDataSource(DS2));
     Assert.assertNotNull(updated.getDataSource(DS1));
-  }
-
-  @Test
-  public void testWithUpdatedDatasources_nullPreviousFallsBackToFullBuild()
-  {
-    final Set<DataSegment> ds1 = segmentsOf(DS1, "2024-01-01", 2);
-    final DataSourcesSnapshot snapshot = DataSourcesSnapshot.withUpdatedDataSources(
-        null,
-        Map.of(DS1, ds1),
-        Set.of(),
-        SNAPSHOT_TIME
-    );
-    Assert.assertEquals(
-        ds1.stream().map(s -> s.getId().toString()).collect(Collectors.toSet()),
-        idsOf(snapshot, DS1)
-    );
   }
 }

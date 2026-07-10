@@ -43,38 +43,16 @@ public class SegmentsMetadataManagerConfig
   @JsonProperty
   private final UnusedSegmentKillerConfig killUnused;
 
-  /**
-   * When enabled, the incremental cache applies each drift-free full sync
-   * incrementally: it parses/allocates only the segment rows that changed since
-   * the last sync and rebuilds only the affected part of the datasource snapshot,
-   * instead of re-parsing and rebuilding everything. This does not change what is
-   * read from the metadata store (still the complete used-segment set every poll),
-   * so it introduces no staleness/drift. Opt-in; default false.
-   */
-  @JsonProperty
-  private final boolean useIncrementalSync;
-
-  public SegmentsMetadataManagerConfig(
-      Period pollDuration,
-      SegmentMetadataCache.UsageMode useIncrementalCache,
-      UnusedSegmentKillerConfig killUnused
-  )
-  {
-    this(pollDuration, useIncrementalCache, killUnused, null);
-  }
-
   @JsonCreator
   public SegmentsMetadataManagerConfig(
       @JsonProperty("pollDuration") Period pollDuration,
       @JsonProperty("useIncrementalCache") SegmentMetadataCache.UsageMode useIncrementalCache,
-      @JsonProperty("killUnused") UnusedSegmentKillerConfig killUnused,
-      @JsonProperty("useIncrementalSync") Boolean useIncrementalSync
+      @JsonProperty("killUnused") UnusedSegmentKillerConfig killUnused
   )
   {
     this.pollDuration = Configs.valueOrDefault(pollDuration, Period.minutes(1));
     this.useIncrementalCache = Configs.valueOrDefault(useIncrementalCache, SegmentMetadataCache.UsageMode.IF_SYNCED);
     this.killUnused = Configs.valueOrDefault(killUnused, new UnusedSegmentKillerConfig(null, null, null));
-    this.useIncrementalSync = Configs.valueOrDefault(useIncrementalSync, false);
     if (this.killUnused.isEnabled() && this.useIncrementalCache == SegmentMetadataCache.UsageMode.NEVER) {
       throw DruidException
           .forPersona(DruidException.Persona.OPERATOR)
@@ -103,10 +81,5 @@ public class SegmentsMetadataManagerConfig
   public UnusedSegmentKillerConfig getKillUnused()
   {
     return killUnused;
-  }
-
-  public boolean isUseIncrementalSync()
-  {
-    return useIncrementalSync;
   }
 }
