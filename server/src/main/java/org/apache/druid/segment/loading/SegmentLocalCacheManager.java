@@ -1387,6 +1387,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     private final SegmentCacheEntryIdentifier id;
     private final DataSegment dataSegment;
     private final String relativePathString;
+    @Nullable
+    private final SegmentId upgradedFromSegmentId;
     private SegmentLazyLoadFailCallback lazyLoadCallback = SegmentLazyLoadFailCallback.NOOP;
     private StorageLocation location;
     private File storageDir;
@@ -1401,6 +1403,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       this.dataSegment = dataSegment;
       this.id = new SegmentCacheEntryIdentifier(dataSegment.getId());
       this.relativePathString = dataSegment.getId().toString();
+      this.upgradedFromSegmentId = dataSegment.getUpgradedFromSegmentId();
     }
 
     @Override
@@ -1479,7 +1482,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             }
           }
           if (needsLoad) {
-            loadInLocationWithStartMarker(dataSegment, storageDir);
+            final File baseDir = findCachedBaseSegmentDir(mountLocation);
+            if (baseDir != null) {
+              copyFromBaseSegmentDir(baseDir, storageDir);
+            } else {
+              loadInLocationWithStartMarker(dataSegment, storageDir);
+            }
           }
           final SegmentizerFactory factory = getSegmentFactory(storageDir);
 
@@ -1661,6 +1669,71 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     public File toPotentialLocation(final File location)
     {
       return new File(location, relativePathString);
+    }
+
+    /**
+     * Returns the cache directory of the base segment (the segment this one was upgraded from) on the given storage
+     * location if it is present and not corrupted, or null otherwise.
+     */
+    @GuardedBy("entryLock")
+    @Nullable
+    private File findCachedBaseSegmentDir(final StorageLocation mountLocation)
+    {
+      if (upgradedFromSegmentId == null) {
+        return null;
+      }
+      final File baseDir = new File(mountLocation.getPath(), upgradedFromSegmentId.toString());
+      if (baseDir.exists() && !isPossiblyCorrupted(baseDir)) {
+        return baseDir;
+      }
+      return null;
+    }
+
+    /**
+     * Copies files from the base segment's cache directory into the upgraded segment's cache directory,
+     * avoiding a deep-storage download. Uses a start-marker for crash safety, consistent with
+     * {@link #loadInLocationWithStartMarker}.
+     */
+    @GuardedBy("entryLock")
+    private void copyFromBaseSegmentDir(final File baseDir, final File destDir)
+        throws SegmentLoadingException
+    {
+      final File downloadStartMarker = new File(destDir, DOWNLOAD_START_MARKER_FILE_NAME);
+      try {
+        FileUtils.mkdirp(destDir);
+        if (!downloadStartMarker.createNewFile()) {
+          throw new SegmentLoadingException(
+              "Was not able to create new download marker for [%s]", destDir
+          );
+        }
+        log.info(
+            "Segment[%s] was upgraded from segment[%s] which is already cached; "
+            + "copying files from [%s] instead of downloading from deep storage.",
+            dataSegment.getId(),
+            upgradedFromSegmentId,
+            baseDir
+        );
+        final File[] files = baseDir.listFiles();
+        if (files != null) {
+          for (File file : files) {
+            if (!file.getName().equals(DOWNLOAD_START_MARKER_FILE_NAME)) {
+              Files.copy(file.toPath(), new File(destDir, file.getName()).toPath());
+            }
+          }
+        }
+        if (!downloadStartMarker.delete()) {
+          throw new SegmentLoadingException("Unable to remove marker file for [%s]", destDir);
+        }
+      }
+      catch (IOException e) {
+        throw new SegmentLoadingException(
+            e,
+            "Failed to copy base segment[%s] files from [%s] to [%s]",
+            upgradedFromSegmentId,
+            baseDir,
+            destDir
+        );
+      }
     }
 
     @GuardedBy("entryLock")
