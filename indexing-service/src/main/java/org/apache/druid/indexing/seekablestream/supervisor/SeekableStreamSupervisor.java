@@ -51,6 +51,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentUpgradeMetrics;
 import org.apache.druid.indexing.common.TaskInfoProvider;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -1420,7 +1421,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   /**
    * Notifies every running task in the matching task group(s) of an upgraded pending segment.
    *
-   * @return the number of tasks notified, which the caller aggregates into a per-batch summary
+   * @return the number of tasks notified
    */
   public int registerNewVersionOfPendingSegment(
       PendingSegmentRecord pendingSegmentRecord
@@ -1448,25 +1449,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    // Only the exceptional no-match case is logged per segment; the notified count is returned to the task action,
-    // which summarizes the whole batch in one log line, and each notification is captured by the per-task metric.
     if (notifiedTasks == 0) {
       // No running task matched: the segment will not be re-announced until handoff. This is a potential silent-loss
       // window where data will not be queryable until handoff.
       log.warn(
           "Could not find any task matching taskAllocatorId[%s] in supervisor[%s] for upgraded pending segment[%s]"
-          + " (upgradedFrom[%s]); it will not be re-announced until handoff. Currently tracking [%d] activelyReading"
-          + " and [%d] pendingCompletion task group(s).",
+          + " (upgradedFrom[%s]); it will not be re-announced until handoff.",
           taskAllocatorId,
           supervisorId,
           pendingSegmentRecord.getId(),
-          pendingSegmentRecord.getUpgradedFromSegmentId(),
-          activelyReadingTaskGroups.size(),
-          pendingCompletionTaskGroups.size()
+          pendingSegmentRecord.getUpgradedFromSegmentId()
       );
       emitter.emit(
-          SegmentUpgradeMetrics.setSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
-                               .setMetric(SegmentUpgradeMetrics.UNMATCHED, 1)
+          IndexTaskUtils.setPendingSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
+                        .setMetric(SegmentUpgradeMetrics.UNMATCHED, 1)
       );
     }
     return notifiedTasks;
@@ -1481,9 +1477,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private void notifyTaskOfUpgradedPendingSegment(String taskId, PendingSegmentRecord pendingSegmentRecord)
   {
     emitter.emit(
-        SegmentUpgradeMetrics.setSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
-                             .setDimension(DruidMetrics.TASK_ID, taskId)
-                             .setMetric(SegmentUpgradeMetrics.NOTIFIED, 1)
+        IndexTaskUtils.setPendingSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
+                      .setDimension(DruidMetrics.TASK_ID, taskId)
+                      .setMetric(SegmentUpgradeMetrics.NOTIFIED, 1)
     );
     Futures.addCallback(
         taskClient.registerNewVersionOfPendingSegmentAsync(taskId, pendingSegmentRecord),
@@ -1505,9 +1501,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 pendingSegmentRecord.getId(), taskId, supervisorId
             );
             emitter.emit(
-                SegmentUpgradeMetrics.setSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
-                                     .setDimension(DruidMetrics.TASK_ID, taskId)
-                                     .setMetric(SegmentUpgradeMetrics.SEND_FAILED, 1)
+                IndexTaskUtils.setPendingSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
+                              .setDimension(DruidMetrics.TASK_ID, taskId)
+                              .setMetric(SegmentUpgradeMetrics.SEND_FAILED, 1)
             );
           }
         },

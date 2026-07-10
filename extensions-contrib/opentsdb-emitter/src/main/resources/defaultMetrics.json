@@ -105,7 +105,7 @@
   "ingest/events/messageGap": [
     "dataSource"
   ],
-  "ingest/realtime/segmentUpgrade/count": [
+  "ingest/realtime/segmentUpgrade/persisted": [
     "dataSource",
     "interval",
     "version"

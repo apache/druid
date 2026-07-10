@@ -42,6 +42,7 @@ import javax.annotation.Nullable;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -66,6 +67,13 @@ import java.util.stream.Collectors;
 public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPublishResult>
 {
   private static final Logger log = new Logger(SegmentTransactionalReplaceAction.class);
+
+  /**
+   * Upper bound on the number of per-segment entries included in the INFO summary of upgraded pending segments. A broad
+   * REPLACE (e.g. compaction over a wide interval of sparse, finely-partitioned append data) can upgrade thousands of
+   * pending segments, so the full mapping is reserved for DEBUG.
+   */
+  private static final int NOTIFIED_LOG_SAMPLE_SIZE = 10;
 
   /**
    * Set of segments to be inserted into metadata storage
@@ -173,14 +181,14 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       List<PendingSegmentRecord> upgradedPendingSegments
   )
   {
-    // Emit one count per upgraded segment (rather than a single aggregate) regardless of whether a supervisor exists
-    // to receive them, so the total can be compared against the count actually announced by tasks and so each event
-    // carries the segment's interval and version.
+    // Emit one persisted event per upgraded segment (rather than a single aggregate) regardless of whether a supervisor
+    // exists to receive them, so the total can be compared against the count actually announced by tasks and so each
+    // event carries the segment's interval and version.
     for (PendingSegmentRecord upgradedPendingSegment : upgradedPendingSegments) {
       final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
       IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-      SegmentUpgradeMetrics.setSegmentDimensions(metricBuilder, upgradedPendingSegment);
-      toolbox.getEmitter().emit(metricBuilder.setMetric(SegmentUpgradeMetrics.COUNT, 1));
+      IndexTaskUtils.setPendingSegmentDimensions(metricBuilder, upgradedPendingSegment);
+      toolbox.getEmitter().emit(metricBuilder.setMetric(SegmentUpgradeMetrics.PERSISTED, 1));
     }
 
     final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
@@ -188,31 +196,60 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
         supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(task.getDataSource());
 
     if (!activeSupervisorIdWithAppendLock.isPresent()) {
-      log.info("No active streaming supervisor for datasource[%s]; the [%d] upgraded pending segment(s) from task[%s]"
-               + " will become queryable when their tasks hand off.",
-                task.getDataSource(),
-                upgradedPendingSegments.size(),
-                task.getId()
+      log.info(
+          "Could not find any active concurrent streaming supervisor for datasource[%s]."
+          + " Ignoring registry of [%d] pending segment(s) upgraded by task[%s]. These will become queryable only"
+          + " after handoff.",
+          task.getDataSource(),
+          upgradedPendingSegments.size(),
+          task.getId()
       );
       return;
     }
 
-    // Register each upgraded pending segment on the supervisor and summarize the whole batch in one log line,
-    // mapping each segment to the number of running tasks the supervisor notified.
-    final Map<String, Integer> notifiedTasksBySegment = new LinkedHashMap<>();
+    // Register each upgraded pending segment on the supervisor and summarize the batch. The per-segment mapping is
+    // unbounded (a broad REPLACE can upgrade thousands of segments), so INFO carries aggregate counts plus a bounded
+    // sample and the full mapping is materialized only when DEBUG is enabled.
+    final boolean debugEnabled = log.isDebugEnabled();
+    final Map<String, Integer> notifiedTasksSample = new LinkedHashMap<>();
+    final Map<String, Integer> notifiedTasksBySegment = debugEnabled ? new LinkedHashMap<>() : null;
+    int registeredSegments = 0;
+    int totalNotifiedTasks = 0;
     for (PendingSegmentRecord upgradedPendingSegment : upgradedPendingSegments) {
-      supervisorManager
-          .registerUpgradedPendingSegmentOnSupervisor(activeSupervisorIdWithAppendLock.get(), upgradedPendingSegment)
-          .ifPresent(notified -> notifiedTasksBySegment.put(upgradedPendingSegment.getId().toString(), notified));
+      final OptionalInt notified = supervisorManager
+          .registerUpgradedPendingSegmentOnSupervisor(activeSupervisorIdWithAppendLock.get(), upgradedPendingSegment);
+      if (notified.isEmpty()) {
+        continue;
+      }
+      final int notifiedCount = notified.getAsInt();
+      registeredSegments++;
+      totalNotifiedTasks += notifiedCount;
+      if (notifiedTasksSample.size() < NOTIFIED_LOG_SAMPLE_SIZE) {
+        notifiedTasksSample.put(upgradedPendingSegment.getId().toString(), notifiedCount);
+      }
+      if (debugEnabled) {
+        notifiedTasksBySegment.put(upgradedPendingSegment.getId().toString(), notifiedCount);
+      }
     }
+
     log.info(
-        "Registered [%d] upgraded pending segment(s) created by task[%s] on supervisor[%s]; tasks notified per"
-        + " segment[%s].",
-        notifiedTasksBySegment.size(),
+        "Registered [%d] upgraded pending segment(s) created by task[%s] on supervisor[%s], notifying [%d] running"
+        + " task(s) in total. Tasks notified per segment%s: %s",
+        registeredSegments,
         task.getId(),
         activeSupervisorIdWithAppendLock.get(),
-        notifiedTasksBySegment
+        totalNotifiedTasks,
+        registeredSegments > NOTIFIED_LOG_SAMPLE_SIZE ? " (first " + NOTIFIED_LOG_SAMPLE_SIZE + ", enable debug for all)" : "",
+        notifiedTasksSample
     );
+    if (debugEnabled && registeredSegments > NOTIFIED_LOG_SAMPLE_SIZE) {
+      log.debug(
+          "Tasks notified per segment created by task[%s] on supervisor[%s]: %s",
+          task.getId(),
+          activeSupervisorIdWithAppendLock.get(),
+          notifiedTasksBySegment
+      );
+    }
   }
 
   @Override

@@ -214,7 +214,7 @@
     "type": "timer",
     "timeUnit": "NANOSECONDS"
   },
-  "ingest/realtime/segmentUpgrade/count": {
+  "ingest/realtime/segmentUpgrade/persisted": {
     "dimensions": [
       "dataSource",
       "interval",

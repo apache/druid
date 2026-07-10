@@ -1189,7 +1189,7 @@ public class StreamAppenderator implements Appenderator
   {
     ANNOUNCED(null),
     /** The task holds no pending segment matching upgradedFromSegmentId (request targeted the wrong task). */
-    SKIPPED_UNKNOWN_BASE("unknown base"),
+    SKIPPED_UNKNOWN_BASE("unknown base sink"),
     /** The base sink is gone even though this task once held it. */
     SKIPPED_NO_SINK("base sink already dropped"),
     /** The base sink is being dropped (handoff in progress); the durable path re-announces at the new version. */

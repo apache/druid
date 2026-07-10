@@ -19,15 +19,10 @@
 
 package org.apache.druid.indexing.common;
 
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.metadata.PendingSegmentRecord;
-import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-
 /**
  * Metric names and dimension values for the re-announcement of pending segments upgraded by a concurrent REPLACE.
  * <ul>
- *   <li>the task action emits {@link #COUNT} (how many upgrades a commit produced),</li>
+ *   <li>the task action emits {@link #PERSISTED} (how many upgrades a commit persisted),</li>
  *   <li>the supervisor emits {@link #NOTIFIED}, {@link #UNMATCHED} and {@link #SEND_FAILED} as it fans requests out,</li>
  *   <li>the streaming task emits {@link #ANNOUNCED} and {@link #SKIPPED} (with a {@code reason}) as it applies them.</li>
  * </ul>
@@ -41,8 +36,8 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
  */
 public class SegmentUpgradeMetrics
 {
-  /** Number of upgraded pending segments a REPLACE commit created and handed to the supervisor. Task-action dims. */
-  public static final String COUNT = "ingest/realtime/segmentUpgrade/count";
+  /** Number of upgraded pending segments a REPLACE commit persisted and handed to the supervisor. Task-action dims. */
+  public static final String PERSISTED = "ingest/realtime/segmentUpgrade/persisted";
 
   /** A notification was sent to a running task (once per task). Supervisor dims plus {@code taskId}. */
   public static final String NOTIFIED = "ingest/realtime/segmentUpgrade/notified";
@@ -62,22 +57,6 @@ public class SegmentUpgradeMetrics
    * Task dims.
    */
   public static final String SKIPPED = "ingest/realtime/segmentUpgrade/skipped";
-
-  /**
-   * Adds the upgraded pending segment's {@code interval} and {@code version} to a metric builder so that every
-   * segment-upgrade metric can be sliced by the specific segment being re-announced. Mirrors
-   * {@code IndexTaskUtils.setSegmentDimensions}, which serves the same purpose for {@code DataSegment}s.
-   */
-  public static ServiceMetricEvent.Builder setSegmentDimensions(
-      ServiceMetricEvent.Builder metricBuilder,
-      PendingSegmentRecord pendingSegmentRecord
-  )
-  {
-    final SegmentIdWithShardSpec id = pendingSegmentRecord.getId();
-    return metricBuilder
-        .setDimension(DruidMetrics.INTERVAL, id.getInterval().toString())
-        .setDimension(DruidMetrics.VERSION, id.getVersion());
-  }
 
   private SegmentUpgradeMetrics()
   {

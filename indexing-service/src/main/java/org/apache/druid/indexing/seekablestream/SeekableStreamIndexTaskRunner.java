@@ -1850,7 +1850,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     try {
       final StreamAppenderator.PendingSegmentUpgradeResult outcome =
           ((StreamAppenderator) appenderator).registerUpgradedPendingSegment(upgradedPendingSegment);
-      recordUpgradeOutcome(upgradedPendingSegment, outcome);
+      recordUpgradeResult(upgradedPendingSegment, outcome);
       return Response.ok().build();
     }
     catch (DruidException e) {
@@ -1870,26 +1870,26 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   }
 
   /**
-   * Logs and emits a metric for the outcome of a pending-segment upgrade request, keyed off the {@code outcome}
+   * Logs and emits a metric for the result of a pending-segment upgrade request, keyed off the {@code result}
    * returned by {@link StreamAppenderator#registerUpgradedPendingSegment}.
    */
-  private void recordUpgradeOutcome(
+  private void recordUpgradeResult(
       PendingSegmentRecord upgradedPendingSegment,
-      StreamAppenderator.PendingSegmentUpgradeResult outcome
+      StreamAppenderator.PendingSegmentUpgradeResult result
   )
   {
     final SegmentIdWithShardSpec upgradedId = upgradedPendingSegment.getId();
     final String upgradedFromSegmentId = upgradedPendingSegment.getUpgradedFromSegmentId();
 
-    if (outcome == StreamAppenderator.PendingSegmentUpgradeResult.ANNOUNCED) {
+    if (result == StreamAppenderator.PendingSegmentUpgradeResult.ANNOUNCED) {
       toolbox.getEmitter().emit(
-          SegmentUpgradeMetrics.setSegmentDimensions(task.getMetricBuilder(), upgradedPendingSegment)
-                               .setMetric(SegmentUpgradeMetrics.ANNOUNCED, 1)
+          IndexTaskUtils.setPendingSegmentDimensions(task.getMetricBuilder(), upgradedPendingSegment)
+                        .setMetric(SegmentUpgradeMetrics.ANNOUNCED, 1)
       );
       return;
     }
-    // Log at the level appropriate to the outcome; the reason string itself is carried by the enum.
-    switch (outcome) {
+    // Log at the level appropriate to the result; the reason string itself is carried by the enum.
+    switch (result) {
       case SKIPPED_UNKNOWN_BASE:
         // The request targeted the wrong task: this task never held a base sink matching upgradedFromSegmentId.
         log.warn(
@@ -1918,9 +1918,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         return;
     }
     toolbox.getEmitter().emit(
-        SegmentUpgradeMetrics.setSegmentDimensions(task.getMetricBuilder(), upgradedPendingSegment)
-                             .setDimension(DruidMetrics.REASON, outcome.getReason())
-                             .setMetric(SegmentUpgradeMetrics.SKIPPED, 1)
+        IndexTaskUtils.setPendingSegmentDimensions(task.getMetricBuilder(), upgradedPendingSegment)
+                      .setDimension(DruidMetrics.REASON, result.getReason())
+                      .setMetric(SegmentUpgradeMetrics.SKIPPED, 1)
     );
   }
 
