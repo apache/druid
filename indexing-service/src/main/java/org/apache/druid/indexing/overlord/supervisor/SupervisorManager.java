@@ -60,6 +60,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
@@ -511,8 +512,11 @@ public class SupervisorManager implements SupervisorStatsProvider
    * Registers a new version of the given pending segment on a supervisor. This
    * allows the supervisor to include the pending segment in queries fired against
    * that segment version.
+   *
+   * @return the number of tasks notified if the segment was registered on a seekable stream supervisor, or
+   * {@link OptionalInt#empty()} if no such supervisor was found or the registration failed
    */
-  public boolean registerUpgradedPendingSegmentOnSupervisor(
+  public OptionalInt registerUpgradedPendingSegmentOnSupervisor(
       String supervisorId,
       PendingSegmentRecord upgradedPendingSegment
   )
@@ -529,12 +533,11 @@ public class SupervisorManager implements SupervisorStatsProvider
       Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
       if (!(supervisor.lhs instanceof SeekableStreamSupervisor)) {
-        return false;
+        return OptionalInt.empty();
       }
 
       SeekableStreamSupervisor<?, ?, ?> seekableStreamSupervisor = (SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs;
-      seekableStreamSupervisor.registerNewVersionOfPendingSegment(upgradedPendingSegment);
-      return true;
+      return OptionalInt.of(seekableStreamSupervisor.registerNewVersionOfPendingSegment(upgradedPendingSegment));
     }
     catch (Exception e) {
       log.error(
@@ -545,7 +548,7 @@ public class SupervisorManager implements SupervisorStatsProvider
           supervisorId
       );
     }
-    return false;
+    return OptionalInt.empty();
   }
 
   /**

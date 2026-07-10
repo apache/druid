@@ -1417,7 +1417,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     addNotice(new ResetOffsetsNotice(resetDataSourceMetadata));
   }
 
-  public void registerNewVersionOfPendingSegment(
+  /**
+   * Notifies every running task in the matching task group(s) of an upgraded pending segment.
+   *
+   * @return the number of tasks notified, which the caller aggregates into a per-batch summary
+   */
+  public int registerNewVersionOfPendingSegment(
       PendingSegmentRecord pendingSegmentRecord
   )
   {
@@ -1443,8 +1448,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    // Only the exceptional no-match case is logged per segment; the successful count is summarized once by the
-    // task action that registered the batch, and each notification is captured by the per-task notified metric.
+    // Only the exceptional no-match case is logged per segment; the notified count is returned to the task action,
+    // which summarizes the whole batch in one log line, and each notification is captured by the per-task metric.
     if (notifiedTasks == 0) {
       // No running task matched: the segment will not be re-announced until handoff. This is a potential silent-loss
       // window where data will not be queryable until handoff.
@@ -1464,6 +1469,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                .setMetric(SegmentUpgradeMetrics.UNMATCHED, 1)
       );
     }
+    return notifiedTasks;
   }
 
   /**

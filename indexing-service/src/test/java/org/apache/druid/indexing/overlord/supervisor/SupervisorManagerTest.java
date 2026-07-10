@@ -75,6 +75,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.concurrent.ConcurrentHashMap;
 
 @RunWith(EasyMockRunner.class)
@@ -894,8 +895,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     SeekableStreamSupervisorSpec streamingSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
     SeekableStreamSupervisor streamSupervisor = EasyMock.createNiceMock(SeekableStreamSupervisor.class);
-    streamSupervisor.registerNewVersionOfPendingSegment(EasyMock.anyObject());
-    EasyMock.expectLastCall().once();
+    EasyMock.expect(streamSupervisor.registerNewVersionOfPendingSegment(EasyMock.anyObject())).andReturn(1).once();
     EasyMock.expect(streamingSpec.getId()).andReturn("sss").anyTimes();
     EasyMock.expect(streamingSpec.isSuspended()).andReturn(false).anyTimes();
     EasyMock.expect(streamingSpec.getDataSources()).andReturn(ImmutableList.of("DS")).anyTimes();
@@ -923,10 +923,10 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
 
     manager.createOrUpdateAndStartSupervisor(noopSpec);
-    Assert.assertFalse(manager.registerUpgradedPendingSegmentOnSupervisor("noop", pendingSegment));
+    Assert.assertFalse(manager.registerUpgradedPendingSegmentOnSupervisor("noop", pendingSegment).isPresent());
 
     manager.createOrUpdateAndStartSupervisor(streamingSpec);
-    Assert.assertTrue(manager.registerUpgradedPendingSegmentOnSupervisor("sss", pendingSegment));
+    Assert.assertEquals(OptionalInt.of(1), manager.registerUpgradedPendingSegmentOnSupervisor("sss", pendingSegment));
 
     verifyAll();
   }

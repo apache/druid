@@ -39,7 +39,9 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -195,17 +197,21 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       return;
     }
 
+    // Register each upgraded pending segment on the supervisor and summarize the whole batch in one log line,
+    // mapping each segment to the number of running tasks the supervisor notified.
+    final Map<String, Integer> notifiedTasksBySegment = new LinkedHashMap<>();
+    for (PendingSegmentRecord upgradedPendingSegment : upgradedPendingSegments) {
+      supervisorManager
+          .registerUpgradedPendingSegmentOnSupervisor(activeSupervisorIdWithAppendLock.get(), upgradedPendingSegment)
+          .ifPresent(notified -> notifiedTasksBySegment.put(upgradedPendingSegment.getId().toString(), notified));
+    }
     log.info(
-        "Registering [%d] upgraded pending segments created by task[%s] on supervisor[%s]",
-             upgradedPendingSegments.size(),
-             task.getId(),
-             activeSupervisorIdWithAppendLock.get()
-    );
-    upgradedPendingSegments.forEach(
-        upgradedPendingSegment -> supervisorManager.registerUpgradedPendingSegmentOnSupervisor(
-            activeSupervisorIdWithAppendLock.get(),
-            upgradedPendingSegment
-        )
+        "Registered [%d] upgraded pending segment(s) created by task[%s] on supervisor[%s]; tasks notified per"
+        + " segment[%s].",
+        notifiedTasksBySegment.size(),
+        task.getId(),
+        activeSupervisorIdWithAppendLock.get(),
+        notifiedTasksBySegment
     );
   }
 
