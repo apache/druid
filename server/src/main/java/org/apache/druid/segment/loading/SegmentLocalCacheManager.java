@@ -1444,18 +1444,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         for (StorageLocation location : locations) {
           final CacheEntry entry = location.getCacheEntry(id);
           if (entry instanceof PartialSegmentMetadataCacheEntry partial) {
+            final boolean partialLoaded = partial.isRuleHeld();
             partial.clearRule();
-            // Force synchronous cleanup: clearRule releases the self-hold, but the info-file-deletion hook only
-            // fires on doActualUnmount which is triggered by the phaser hitting zero. removeUnheldWeakEntry
-            // unlinks the weak entry from cache and terminates the phaser now, firing the hook (and the mapper
-            // teardown) on the caller's thread. No-op if a concurrent query still holds the entry.
-            location.removeUnheldWeakEntry(id);
-          }
-        }
-        // full-segment drop path: release any {@link CompleteSegmentCacheEntry} still reserved.
-        for (StorageLocation location : locations) {
-          final CacheEntry entry = location.getCacheEntry(id);
-          if (entry != null) {
+            if (partialLoaded) {
+              // if partially loaded, try to trigger an early eviction for the entry on the assumption it is unlikely
+              // to be used again. No-op if a concurrent query still holds the entry, leaving the entry to be lazily
+              // evicted later
+              location.removeUnheldWeakEntry(id);
+            }
+          } else if (entry != null) {
             location.release(entry);
           }
         }

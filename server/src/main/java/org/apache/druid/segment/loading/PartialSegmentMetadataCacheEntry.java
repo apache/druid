@@ -391,8 +391,6 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
             metadataSelfHold = newSelfHold;
             uncommittedHolds.remove(newSelfHold);
           }
-          // else: a concurrent applyRule installed a self-hold (shouldn't happen under segmentLock, but defensive).
-          // newSelfHold stays in uncommittedHolds, gets released in Phase 4.
         }
         for (String name : namesToRelease) {
           final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> h = ruleBundleHolds.remove(name);
@@ -405,8 +403,6 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
             ruleBundleHolds.put(e.getKey(), e.getValue());
             uncommittedHolds.remove(e.getValue());
           }
-          // else: a concurrent registerBundle raced ahead and installed a hold for this name; ours stays in
-          // uncommittedHolds, gets released in Phase 4.
         }
         ruleFingerprint = fingerprint;
         ruleSelectedBundleNames = newSelection;

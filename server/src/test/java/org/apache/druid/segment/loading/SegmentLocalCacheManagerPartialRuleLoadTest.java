@@ -340,6 +340,7 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
         location.isWeakReserved(new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, OTHER_AGG_BUNDLE)),
         "new rule's bundle should be reserved"
     );
+    Assertions.assertFalse(metaAfter.isBundleRuleHeld(AGG_BUNDLE));
   }
 
   @Test
@@ -414,10 +415,9 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   @Test
   void testBootstrapReinstallsRuleHoldsFromPersistedInfoFile() throws Exception
   {
-    // Regression guard for the "brief post-bootstrap SIEVE-eligible window" concern: on historical restart,
-    // getCachedSegments+bootstrap must reapply the rule using the persisted DataSegment's loadSpec (the wire-form
-    // PartialLoadSpec is stored in the info file), so a rule-pinned segment is protected from eviction as soon as
-    // bootstrap completes — no waiting for the coordinator's next sync.
+    // on historical restart, getCachedSegments+bootstrap must reapply the rule using the persisted DataSegment's
+    // loadSpec (the wire-form PartialLoadSpec is stored in the info file), so a rule-pinned segment is protected from
+    // eviction as soon as bootstrap completes
     manager = makeManager(true, true);
     final DataSegment segment = partialWrapperSegment(List.of(AGG_BUNDLE));
 
