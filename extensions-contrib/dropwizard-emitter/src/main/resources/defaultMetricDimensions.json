@@ -214,6 +214,60 @@
     "type": "timer",
     "timeUnit": "NANOSECONDS"
   },
+  "ingest/realtime/segmentUpgrade/count": {
+    "dimensions": [
+      "dataSource",
+      "interval",
+      "version"
+    ],
+    "type": "counter"
+  },
+  "ingest/realtime/segmentUpgrade/notified": {
+    "dimensions": [
+      "dataSource",
+      "stream",
+      "taskId",
+      "interval",
+      "version"
+    ],
+    "type": "counter"
+  },
+  "ingest/realtime/segmentUpgrade/unmatched": {
+    "dimensions": [
+      "dataSource",
+      "stream",
+      "interval",
+      "version"
+    ],
+    "type": "counter"
+  },
+  "ingest/realtime/segmentUpgrade/sendFailed": {
+    "dimensions": [
+      "dataSource",
+      "stream",
+      "taskId",
+      "interval",
+      "version"
+    ],
+    "type": "counter"
+  },
+  "ingest/realtime/segmentUpgrade/announced": {
+    "dimensions": [
+      "dataSource",
+      "interval",
+      "version"
+    ],
+    "type": "counter"
+  },
+  "ingest/realtime/segmentUpgrade/skipped": {
+    "dimensions": [
+      "dataSource",
+      "reason",
+      "interval",
+      "version"
+    ],
+    "type": "counter"
+  },
   "task/run/time": {
     "dimensions": [
       "dataSource",
