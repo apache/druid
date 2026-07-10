@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.SegmentUpgradeMetrics;
@@ -175,7 +176,8 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   /**
    * Registers upgraded pending segments on the active supervisor, if any
    */
-  private void registerUpgradedPendingSegmentsOnSupervisor(
+  @VisibleForTesting
+  void registerUpgradedPendingSegmentsOnSupervisor(
       Task task,
       TaskActionToolbox toolbox,
       List<PendingSegmentRecord> upgradedPendingSegments
