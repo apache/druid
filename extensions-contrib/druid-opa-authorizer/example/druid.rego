@@ -33,8 +33,8 @@ allow if {
 
 	# Check if the grant permits the action.
 	input.action == grant.action
-	regex.match(grant.resource.name, input.resource.name)
-	regex.match(grant.resource.type, input.resource.type)
+	regex.match(sprintf("^%s$", [grant.resource.name]), input.resource.name)
+	regex.match(sprintf("^%s$", [grant.resource.type]), input.resource.type)
 }
 
 # user_is_admin is true if...
