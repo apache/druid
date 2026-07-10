@@ -973,27 +973,18 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   @Test
   public void testSegmentIsAllocatedAtLatestVersion()
   {
-    // Allocate a segment on an empty interval
     final SegmentIdWithShardSpec pendingSegmentV01
         = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
     Assert.assertEquals(SEGMENT_V0, pendingSegmentV01.getVersion());
     Assert.assertEquals(JAN_23, pendingSegmentV01.getInterval());
 
-    // Replace the segments in the interval
     final String v1 = replaceTask.acquireReplaceLockOn(JAN_23).getVersion();
     final DataSegment segmentV10 = createSegment(JAN_23, v1);
-    SegmentPublishResult replacePublishResult = replaceTask.commitReplaceSegments(segmentV10);
+    final SegmentPublishResult replacePublishResult = replaceTask.commitReplaceSegments(segmentV10);
 
-    // Verify that pendingSegmentV01 has been upgraded to version v1
-    List<PendingSegmentRecord> upgradedPendingSegments = replacePublishResult.getUpgradedPendingSegments();
+    final List<PendingSegmentRecord> upgradedPendingSegments = replacePublishResult.getUpgradedPendingSegments();
     Assert.assertNotNull(upgradedPendingSegments);
-    Assert.assertEquals(1, upgradedPendingSegments.size());
-    PendingSegmentRecord upgradedPendingSegment = upgradedPendingSegments.getFirst();
-    Assert.assertEquals(
-        pendingSegmentV01.asSegmentId().toString(),
-        upgradedPendingSegment.getUpgradedFromSegmentId()
-    );
-    Assert.assertEquals(v1, upgradedPendingSegment.getId().getVersion());
+    final SegmentIdWithShardSpec pendingSegmentV11 = upgradedPendingSegments.getFirst().getId();
 
     verifyIntervalHasUsedSegments(JAN_23, segmentV10);
     verifyIntervalHasVisibleSegments(JAN_23, segmentV10);
@@ -1002,14 +993,14 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final SegmentIdWithShardSpec pendingSegmentV12
         = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
     Assert.assertNotEquals(pendingSegmentV01.asSegmentId(), pendingSegmentV12.asSegmentId());
-    Assert.assertNotEquals(upgradedPendingSegment.getId().asSegmentId(), pendingSegmentV12.asSegmentId());
+    Assert.assertNotEquals(pendingSegmentV11.asSegmentId(), pendingSegmentV12.asSegmentId());
     Assert.assertEquals(v1, pendingSegmentV12.getVersion());
     Assert.assertEquals(JAN_23, pendingSegmentV12.getInterval());
 
     // Verify that no new segment has been allocated at v0
     verifyIntervalHasPendingSegments(
         JAN_23,
-        pendingSegmentV01, upgradedPendingSegment.getId(), pendingSegmentV12
+        pendingSegmentV01, pendingSegmentV11, pendingSegmentV12
     );
 
     replaceTask.releaseLock(JAN_23);
@@ -1227,6 +1218,37 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
                 + " in the interval. Kill the old unused versions to proceed."
             )
         )
+    );
+  }
+
+  @Test
+  public void test_concurrentReplace_onIntervalWithPendingSegment_upgradesIt()
+  {
+    // Allocate a segment on an empty interval
+    final SegmentIdWithShardSpec pendingSegmentV01
+        = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
+    Assert.assertEquals(SEGMENT_V0, pendingSegmentV01.getVersion());
+    Assert.assertEquals(JAN_23, pendingSegmentV01.getInterval());
+
+    // Replace the segments in the interval
+    final String v1 = replaceTask.acquireReplaceLockOn(JAN_23).getVersion();
+    final DataSegment segmentV10 = createSegment(JAN_23, v1);
+    final SegmentPublishResult replacePublishResult = replaceTask.commitReplaceSegments(segmentV10);
+
+    // Verify that pendingSegmentV01 has been upgraded to version v1
+    final List<PendingSegmentRecord> upgradedPendingSegments = replacePublishResult.getUpgradedPendingSegments();
+    Assert.assertNotNull(upgradedPendingSegments);
+    Assert.assertEquals(1, upgradedPendingSegments.size());
+    PendingSegmentRecord upgradedPendingSegment = upgradedPendingSegments.getFirst();
+    Assert.assertEquals(
+        pendingSegmentV01.asSegmentId().toString(),
+        upgradedPendingSegment.getUpgradedFromSegmentId()
+    );
+    Assert.assertEquals(v1, upgradedPendingSegment.getId().getVersion());
+
+    verifyIntervalHasPendingSegments(
+        JAN_23,
+        pendingSegmentV01, upgradedPendingSegment.getId()
     );
   }
 
