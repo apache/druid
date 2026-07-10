@@ -26,17 +26,21 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.LockRequestForNewSegment;
 import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
@@ -241,6 +245,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
         identifier = tryAllocateSubsequentSegment(toolbox, task, rowInterval, usedSegmentsForRow.iterator().next());
       }
       if (identifier != null) {
+        emitSuccessMetric(identifier, task, toolbox);
         return identifier;
       }
 
@@ -280,6 +285,20 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
     }
   }
 
+  private void emitSuccessMetric(SegmentIdWithShardSpec allocatedId, Task task, TaskActionToolbox toolbox)
+  {
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    if (task instanceof SeekableStreamIndexTask<?,?,?>) {
+      metricBuilder.setDimension(
+          DruidMetrics.SUPERVISOR_ID,
+          ((SeekableStreamIndexTask<?, ?, ?>) task).getSupervisorId()
+      );
+    }
+    metricBuilder.setDimension(DruidMetrics.ID, allocatedId.toString());
+    toolbox.getEmitter().emit(metricBuilder.setMetric("segment/allocated/count", 1));
+  }
+
   private SegmentIdWithShardSpec tryAllocateFirstSegment(TaskActionToolbox toolbox, Task task, Interval rowInterval)
   {
     // No existing segments for this row, but there might still be nearby ones that conflict with our preferred
@@ -287,7 +306,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
     final List<Interval> tryIntervals = Granularity.granularitiesFinerThan(preferredSegmentGranularity)
                                                    .stream()
                                                    .map(granularity -> granularity.bucket(timestamp))
-                                                   .collect(Collectors.toList());
+                                                   .toList();
     for (Interval tryInterval : tryIntervals) {
       if (tryInterval.contains(rowInterval)) {
         final SegmentIdWithShardSpec identifier = tryAllocate(toolbox, task, tryInterval, rowInterval, false);
