@@ -72,6 +72,9 @@ else
 fi
 
 if [ "$BUILD_CONSOLE" = true ]; then
+  # Vite transpiles without type-checking, so guard the packaged bundle here.
+  echo "Type-checking..."
+  ./node_modules/.bin/tsc --noEmit
   echo "Building with Vite..."
   NODE_ENV=production ./node_modules/.bin/vite build
   echo "Web console build finished."

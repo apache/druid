@@ -37,6 +37,9 @@ export default defineConfig(({ mode }) => {
   console.log(`Vite running in ${mode} mode.`);
 
   return {
+    // Jetty serves the built assets under /public/*, so imported asset URLs
+    // (e.g. fonts referenced from the injected CSS) must resolve there too.
+    base: mode === 'production' ? '/public/' : '/',
     publicDir: false,
 
     build: {
