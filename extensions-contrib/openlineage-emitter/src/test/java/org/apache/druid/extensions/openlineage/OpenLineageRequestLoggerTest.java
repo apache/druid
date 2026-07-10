@@ -50,6 +50,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
@@ -413,6 +414,32 @@ public class OpenLineageRequestLoggerTest
     );
     TestQuery query = new TestQuery(unionDs, ImmutableMap.of("queryId", "native-multi-1"));
     logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
+
+    Assertions.assertEquals(1, capturedEvents.size());
+    Set<String> names = inputNames(capturedEvents.get(0));
+    Assertions.assertEquals(2, names.size());
+    Assertions.assertTrue(names.contains("leftTable"));
+    Assertions.assertTrue(names.contains("rightTable"));
+  }
+
+  @Test
+  public void testNativeUnionQueryExtractsBranchTables() throws IOException
+  {
+    // A top-level UnionQuery's getDataSource() throws by design; the logger must not crash on it and
+    // must still emit an event carrying each branch's tables as inputs.
+    ScanQuery branchA = Druids.newScanQueryBuilder()
+        .dataSource("leftTable")
+        .intervals(everyInterval())
+        .columns("country")
+        .context(ImmutableMap.of("queryId", "native-union-1"))
+        .build();
+    ScanQuery branchB = Druids.newScanQueryBuilder()
+        .dataSource("rightTable")
+        .intervals(everyInterval())
+        .columns("region")
+        .build();
+    UnionQuery union = new UnionQuery(List.of(branchA, branchB));
+    logger.logNativeQuery(nativeLine(union, ImmutableMap.of("success", true)));
 
     Assertions.assertEquals(1, capturedEvents.size());
     Set<String> names = inputNames(capturedEvents.get(0));

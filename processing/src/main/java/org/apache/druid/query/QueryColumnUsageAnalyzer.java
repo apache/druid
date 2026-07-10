@@ -145,11 +145,29 @@ public final class QueryColumnUsageAnalyzer
       UnnestDataSource unnest = (UnnestDataSource) dataSource;
       VirtualColumn unnestColumn = unnest.getVirtualColumn();
       Map<String, EnumSet<ColumnUsage>> baseRoles = copyRoles(roles);
-      // The unnest output column is synthetic (not a base column); drop it and instead record the
-      // underlying column(s) being unnested as projected from the base.
-      baseRoles.remove(unnestColumn.getOutputName());
+      // The unnest output column is synthetic (not a base column). Move whatever roles it was used in
+      // (GROUP_BY / FILTER / PROJECTION) onto the underlying source column(s), and fold in any predicate
+      // pushed onto the unnested value (unnestFilter) as FILTER. Never attribute to the synthetic column.
+      EnumSet<ColumnUsage> outputRoles = baseRoles.remove(unnestColumn.getOutputName());
+      EnumSet<ColumnUsage> sourceRoles =
+          outputRoles != null ? EnumSet.copyOf(outputRoles) : EnumSet.noneOf(ColumnUsage.class);
+      DimFilter unnestFilter = unnest.getUnnestFilter();
+      if (unnestFilter != null) {
+        for (String column : unnestFilter.getRequiredColumns()) {
+          if (column.equals(unnestColumn.getOutputName())) {
+            sourceRoles.add(ColumnUsage.FILTER);
+          } else {
+            // A predicate on a base pass-through column rather than the unnested value.
+            baseRoles.computeIfAbsent(column, k -> EnumSet.noneOf(ColumnUsage.class)).add(ColumnUsage.FILTER);
+          }
+        }
+      }
+      if (sourceRoles.isEmpty()) {
+        // The unnested value is not otherwise referenced, but unnest still reads the source column.
+        sourceRoles.add(ColumnUsage.PROJECTION);
+      }
       for (String required : unnestColumn.requiredColumns()) {
-        baseRoles.computeIfAbsent(required, k -> EnumSet.noneOf(ColumnUsage.class)).add(ColumnUsage.PROJECTION);
+        baseRoles.computeIfAbsent(required, k -> EnumSet.noneOf(ColumnUsage.class)).addAll(sourceRoles);
       }
       attribute(result, unnest.getBase(), baseRoles);
     } else if (dataSource instanceof UnionDataSource) {

@@ -328,6 +328,48 @@ public class QueryColumnUsageAnalyzerTest
   }
 
   @Test
+  public void testUnnestPreservesOutputRolesOntoSourceColumn()
+  {
+    // SELECT d3, COUNT(*) ... WHERE d3 = 'a' GROUP BY d3 over UNNEST: the roles on the synthetic output
+    // (GROUP_BY + FILTER) must transfer to the underlying array column, not degrade to PROJECTION.
+    UnnestDataSource unnest = UnnestDataSource.create(
+        new TableDataSource("sales"),
+        new ExpressionVirtualColumn("d3", "\"dim3\"", ColumnType.STRING, ExprMacroTable.nil()),
+        null
+    );
+    GroupByQuery query = GroupByQuery.builder()
+        .setDataSource(unnest)
+        .setQuerySegmentSpec(everyInterval())
+        .setGranularity(Granularities.ALL)
+        .setDimensions(new DefaultDimensionSpec("d3", "d3"))
+        .setDimFilter(new SelectorDimFilter("d3", "a", null))
+        .build();
+    Map<String, EnumSet<ColumnUsage>> cols = QueryColumnUsageAnalyzer.analyze(query).get("sales");
+    Assertions.assertEquals(Collections.singleton("dim3"), cols.keySet());
+    Assertions.assertEquals(EnumSet.of(ColumnUsage.GROUP_BY, ColumnUsage.FILTER), cols.get("dim3"));
+  }
+
+  @Test
+  public void testUnnestFilterAttributesToSourceColumn()
+  {
+    // A predicate pushed onto the unnested value (unnestFilter) references the synthetic output column;
+    // it must be attributed as FILTER on the underlying source column, never fabricated as the synthetic.
+    UnnestDataSource unnest = UnnestDataSource.create(
+        new TableDataSource("sales"),
+        new ExpressionVirtualColumn("d3", "\"dim3\"", ColumnType.STRING, ExprMacroTable.nil()),
+        new SelectorDimFilter("d3", "a", null)
+    );
+    ScanQuery query = Druids.newScanQueryBuilder()
+        .dataSource(unnest)
+        .intervals(everyInterval())
+        .columns("d3")
+        .build();
+    Map<String, EnumSet<ColumnUsage>> cols = QueryColumnUsageAnalyzer.analyze(query).get("sales");
+    Assertions.assertEquals(Collections.singleton("dim3"), cols.keySet());
+    Assertions.assertEquals(EnumSet.of(ColumnUsage.PROJECTION, ColumnUsage.FILTER), cols.get("dim3"));
+  }
+
+  @Test
   public void testNestedJoinAttributesSecondPrefix()
   {
     JoinDataSource inner = JoinDataSource.create(

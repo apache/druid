@@ -31,8 +31,10 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryColumnUsageAnalyzer;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.sql.calcite.parser.DruidSqlParser;
@@ -227,7 +229,7 @@ public class OpenLineageRequestLogger implements RequestLogger
       return;
     }
 
-    List<String> inputs = new ArrayList<>(new LinkedHashSet<>(requestLogLine.getQuery().getDataSource().getTableNames()));
+    List<String> inputs = new ArrayList<>(extractInputTables(requestLogLine.getQuery()));
     String queryId = requestLogLine.getQuery().getId();
     if (queryId == null) {
       log.debug("Native query reached OpenLineage logger without a query ID");
@@ -237,6 +239,24 @@ public class OpenLineageRequestLogger implements RequestLogger
     Map<String, Map<String, EnumSet<QueryColumnUsageAnalyzer.ColumnUsage>>> columnsByTable =
         columnLineageEnabled ? extractColumnsByTable(requestLogLine.getQuery()) : null;
     emit(buildRunEvent(queryId, queryType, requestLogLine, inputs, columnsByTable, null));
+  }
+
+  /**
+   * Collects the input table names of a native query. A top-level {@link UnionQuery} has no single
+   * datasource ({@link UnionQuery#getDataSource()} throws by design), so its branches are unioned;
+   * every other query exposes its tables through {@code getDataSource().getTableNames()}.
+   */
+  private static Set<String> extractInputTables(Query<?> query)
+  {
+    Set<String> tables = new LinkedHashSet<>();
+    if (query instanceof UnionQuery) {
+      for (DataSource dataSource : ((UnionQuery) query).getDataSources()) {
+        tables.addAll(dataSource.getTableNames());
+      }
+    } else {
+      tables.addAll(query.getDataSource().getTableNames());
+    }
+    return tables;
   }
 
   /**
