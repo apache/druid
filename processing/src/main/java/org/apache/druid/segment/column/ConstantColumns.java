@@ -57,6 +57,12 @@ public final class ConstantColumns
       BitmapFactory bitmapFactory
   )
   {
+    DruidException.conditionalDefensive(
+        clusteringValues.length == clusteringColumns.size(),
+        "clusteringValues length [%s] must match clusteringColumns size [%s]",
+        clusteringValues.length,
+        clusteringColumns.size()
+    );
     for (int i = 0; i < clusteringColumns.size(); i++) {
       final String columnName = clusteringColumns.getColumnName(i);
       final ColumnType columnType = clusteringColumns.getColumnType(i)

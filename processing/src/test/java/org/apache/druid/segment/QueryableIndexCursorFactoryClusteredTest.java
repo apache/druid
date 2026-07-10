@@ -709,8 +709,8 @@ class QueryableIndexCursorFactoryClusteredTest
   void testGroupByOnNonClusteringColumnWithinSingleGroup()
   {
     // Filter to a single cluster group (tenant=acme), then GROUP BY a non-clustering column. Exercises the
-    // single-group cursor-holder path + SingleGroupClusteringColumnSelectorFactory end-to-end: `region` groups
-    // correctly via the group's own (stable) dictionary, and the pruned-out globex group contributes nothing.
+    // single-group cursor-holder path end-to-end: `region` groups correctly via the group's own dictionary, and the
+    // pruned-out globex group contributes nothing.
     segmentIndex = buildSegment(List.of(
         row("acme", "2025-01-01T00:00:00", "us-east-1"),
         row("acme", "2025-01-01T00:10:00", "us-east-1"),
