@@ -207,6 +207,7 @@ export interface SupervisorsViewState {
   alertErrorMsg?: string;
 
   supervisorTableActionDialogId?: string;
+  supervisorTableActionDialogType?: string,
   supervisorTableActionDialogActions: BasicAction[];
 
   visibleColumns: LocalStorageBackedVisibility;
@@ -802,6 +803,7 @@ export class SupervisorsView extends React.PureComponent<
   private onSupervisorDetail(supervisor: SupervisorQueryResultRow) {
     this.setState({
       supervisorTableActionDialogId: supervisor.supervisor_id,
+      supervisorTableActionDialogType: supervisor.type,
       supervisorTableActionDialogActions: this.getSupervisorActions(supervisor),
     });
   }
@@ -1311,6 +1313,7 @@ export class SupervisorsView extends React.PureComponent<
       supervisorSpecDialogOpen,
       alertErrorMsg,
       supervisorTableActionDialogId,
+      supervisorTableActionDialogType,
       supervisorTableActionDialogActions,
       visibleColumns,
     } = this.state;
@@ -1378,8 +1381,14 @@ export class SupervisorsView extends React.PureComponent<
         {supervisorTableActionDialogId && (
           <SupervisorTableActionDialog
             supervisorId={supervisorTableActionDialogId}
+            supervisorType={supervisorTableActionDialogType}
             actions={supervisorTableActionDialogActions}
-            onClose={() => this.setState({ supervisorTableActionDialogId: undefined })}
+            onClose={() =>
+              this.setState({
+                supervisorTableActionDialogId: undefined,
+                supervisorTableActionDialogType: undefined
+              })
+            }
           />
         )}
       </div>

@@ -91,6 +91,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
   private final ServiceEmitter emitter;
+  private final boolean isSimulator;
   private final SupervisorSpec spec;
   private final CostBasedAutoScalerConfig config;
   private final ScheduledExecutorService autoscalerExecutor;
@@ -116,10 +117,34 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     this.costFunction = new WeightedCostFunction();
     this.autoscalerExecutor = Execs.scheduledSingleThreaded("CostBasedAutoScaler-"
                                                             + StringUtils.encodeForFormat(spec.getId()));
+    this.isSimulator = false;
+  }
+  
+  private CostBasedAutoScaler(CostBasedAutoScalerConfig config, String supervisorId)
+  {
+    this.config = config;
+    this.costFunction = new WeightedCostFunction();
+    this.isSimulator = true;
+    this.supervisorId = "simulator__" + supervisorId;
+
+    this.spec = null;
+    this.supervisor = null;
+    this.emitter = null;
+    this.processingRateSamples = null;
+    this.autoscalerExecutor = null;
+  }
+  
+  public static CostBasedAutoScaler createSimulator(CostBasedAutoScalerConfig config, String supervisorId)
+  {
+    return new CostBasedAutoScaler(config, supervisorId);
   }
 
   private ServiceMetricEvent.Builder getMetricBuilder()
   {
+    if (isSimulator) {
+      return ServiceMetricEvent.builder();
+    }
+
     return
         ServiceMetricEvent.builder()
                           .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
@@ -212,12 +237,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    * metrics are unusable. Returning the current task count means the current count is already
    * optimal (or no better candidate could be evaluated).
    */
-  int computeOptimalTaskCount(CostMetrics metrics)
+  public int computeOptimalTaskCount(CostMetrics metrics)
   {
     final Either<String, Boolean> result = validateMetricsForScaling(metrics);
     if (result.isError()) {
       log.debug("Valid metrics are not yet available for scaling supervisor[%s]", supervisorId);
-      emitter.emit(
+      emitMetric(
           getMetricBuilder()
               .setDimension(DruidMetrics.DESCRIPTION, result.error())
               .setMetric(INVALID_METRICS_COUNT, 1L)
@@ -296,11 +321,11 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
     }
 
-    emitter.emit(getMetricBuilder().setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
-    emitter.emit(getMetricBuilder().setMetric(LAG_WEIGHT_METRIC, optimalCost.lagCost()));
-    emitter.emit(getMetricBuilder().setMetric(IDLE_WEIGHT_METRIC, optimalCost.idleCost()));
-    emitter.emit(getMetricBuilder().setMetric(AVG_PROCESSING_RATE_METRIC, metrics.getAvgProcessingRate()));
-    emitter.emit(getMetricBuilder().setMetric(AVG_POLL_IDLE_RATIO, metrics.getPollIdleRatio()));
+    emitMetric(getMetricBuilder().setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
+    emitMetric(getMetricBuilder().setMetric(LAG_WEIGHT_METRIC, optimalCost.lagCost()));
+    emitMetric(getMetricBuilder().setMetric(IDLE_WEIGHT_METRIC, optimalCost.idleCost()));
+    emitMetric(getMetricBuilder().setMetric(AVG_PROCESSING_RATE_METRIC, metrics.getAvgProcessingRate()));
+    emitMetric(getMetricBuilder().setMetric(AVG_POLL_IDLE_RATIO, metrics.getPollIdleRatio()));
 
     if (optimalTaskCount != currentTaskCount) {
       log.info(
@@ -516,4 +541,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
   }
 
+  /**
+   * Emits metric for the given builder if this is not a simulator.
+   */
+  private void emitMetric(ServiceMetricEvent.Builder eventBuilder)
+  {
+    if (!isSimulator) {
+      emitter.emit(eventBuilder);
+    }
+  }
 }

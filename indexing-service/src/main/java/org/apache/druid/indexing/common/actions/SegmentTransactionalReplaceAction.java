@@ -169,6 +169,10 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       List<PendingSegmentRecord> upgradedPendingSegments
   )
   {
+    if (upgradedPendingSegments.isEmpty()) {
+      return;
+    }
+
     final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
     final Optional<String> activeSupervisorIdWithAppendLock =
         supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(task.getDataSource());

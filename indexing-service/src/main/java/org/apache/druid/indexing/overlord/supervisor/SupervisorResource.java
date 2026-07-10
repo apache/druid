@@ -39,6 +39,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -520,6 +521,50 @@ public class SupervisorResource
 
           return Response.ok(ImmutableMap.of("status", "success")).build();
         }
+    );
+  }
+
+  @GET
+  @Path("/{id}/autoscaler")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response simulateAutoscalingWithLag(
+      @PathParam("id") String supervisorId,
+      @QueryParam("taskCountMin") int taskCountMin,
+      @QueryParam("taskCountMax") int taskCountMax,
+      @QueryParam("maxProcessingRatePerTask") int maxProcessingRatePerTask,
+      @QueryParam("optimalTaskIdleRatio") double optimalTaskIdleRatio,
+      @QueryParam("criticalLag") int criticalLag,
+      @Context HttpServletRequest request
+  )
+  {
+    final CostBasedAutoScalerConfig autoScalerConfig = new CostBasedAutoScalerConfig(
+        taskCountMax,
+        taskCountMin,
+        true,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        optimalTaskIdleRatio,
+        null,
+        null,
+        null,
+        null,
+        null,
+        false
+    );
+    return asLeaderWithSupervisorManager(
+        manager -> Response.ok(
+            manager.simulateAutoscalingWithLag(
+                supervisorId,
+                autoScalerConfig,
+                criticalLag,
+                maxProcessingRatePerTask
+            )
+        ).build()
     );
   }
 

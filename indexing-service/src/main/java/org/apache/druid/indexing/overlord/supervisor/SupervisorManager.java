@@ -40,6 +40,9 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata
 import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostMetrics;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -596,6 +599,63 @@ public class SupervisorManager implements SupervisorStatsProvider
       );
       return false;
     }
+  }
+
+  /**
+   * Simulates the effects of the auto-scaler by computing the optimal task count
+   * under various values of aggregate lag.
+   */
+  public Map<String, Object> simulateAutoscalingWithLag(
+      String supervisorId,
+      CostBasedAutoScalerConfig config,
+      int criticalLag,
+      int maxProcessingRatePerTask
+  )
+  {
+    // Validate that this is a streaming supervisor
+    requireStreamSupervisor(supervisorId, "simulateAutoscalingWithLag");
+
+    // Validate the inputs
+    InvalidInput.conditionalException(
+        criticalLag >= 1000,
+        "Value of critical lag[%d] must be 1000 or more",
+        criticalLag
+    );
+    InvalidInput.conditionalException(
+        maxProcessingRatePerTask >= 100,
+        "Value of maxProcessingRatePerTask[%d] must be 100 events per second or more",
+        maxProcessingRatePerTask
+    );
+
+    // Assumptions
+    final int partitionCount = config.getTaskCountMax();
+    final int taskDurationSeconds = 3600;
+
+    // Assume that the tasks are fully used since there is some lag
+    final double avgProcessingRatePerTask = maxProcessingRatePerTask;
+    final double idleRatio = config.getOptimalTaskIdleRatio();
+
+    // Invoke the cost function for a variety of input values of lag
+    final Object[] rows = new Object[40];
+    final int lagStepSize = criticalLag / 20;
+    final CostBasedAutoScaler autoscaleSimulator = CostBasedAutoScaler.createSimulator(config, supervisorId);
+    for (int i = 0; i < 40; ++i) {
+      final double observedAggregateLag = lagStepSize * i * 1.0;
+      CostMetrics costMetrics = new CostMetrics(
+          observedAggregateLag / partitionCount,
+          1,
+          partitionCount,
+          idleRatio,
+          taskDurationSeconds,
+          avgProcessingRatePerTask,
+          maxProcessingRatePerTask * 1.0
+      );
+      int optimalTaskCount = autoscaleSimulator.computeOptimalTaskCount(costMetrics);
+      rows[i] = Map.of("lag", observedAggregateLag, "task_count", optimalTaskCount, "usage_percent", 100.0);
+    }
+
+    // Collect the results and return
+    return Map.of("data", rows);
   }
 
   /**

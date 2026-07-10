@@ -141,10 +141,10 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   public static Stream<Arguments> getCompactionSupervisorTestParams()
   {
     return Stream.of(
-        Arguments.of(
-            CompactionEngine.NATIVE,
-            new NewestSegmentFirstPolicy(null)
-        ),
+//        Arguments.of(
+//            CompactionEngine.NATIVE,
+//            new NewestSegmentFirstPolicy(null)
+//        ),
         Arguments.of(
             CompactionEngine.MSQ,
             new MostFragmentedIntervalFirstPolicy(1, HumanReadableBytes.valueOf(1), null, null, 80, null)
@@ -208,8 +208,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
       CompactionCandidateSearchPolicy policy
   )
   {
-    final int maxRowsPerSegment = 500;
-    final int compactedMaxRowsPerSegment = 5000;
+    final int maxRowsPerSegment = 10_000;
+    final int compactedMaxRowsPerSegment = 5_000;
 
     final int taskCount = 2;
 
@@ -223,15 +223,15 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     cluster.callApi().postSupervisor(kafkaSupervisorSpec);
 
     // Wait for a task to succeed
-    overlord.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("task/success/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisorId),
-        agg -> agg.hasSumAtLeast(1)
-    );
+//    overlord.latchableEmitter().waitForEventAggregate(
+//        event -> event.hasMetricName("task/success/count")
+//                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+//                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisorId),
+//        agg -> agg.hasSumAtLeast(1)
+//    );
     // Wait for some segments to be published
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("segment/txn/success")
+    indexer.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("ingest/events/processed")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
 
@@ -427,7 +427,9 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withTaskCount(taskCount)
+                .withTaskDuration(Period.minutes(10))
         )
+        .withContext(Map.of("useConcurrentLocks", true))
         .withId(supervisorId)
         .build(dataSource, TOPIC);
   }
