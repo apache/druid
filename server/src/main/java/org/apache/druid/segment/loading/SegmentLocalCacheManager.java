@@ -1438,21 +1438,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final ReferenceCountingLock lock = lock(segment);
     synchronized (lock) {
       try {
-        // partial-load-rule cleanup: if the segment's cache entry is a partial metadata entry with an applied rule,
-        // clear it
+
         final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(segment.getId());
         for (StorageLocation location : locations) {
           final CacheEntry entry = location.getCacheEntry(id);
           if (entry instanceof PartialSegmentMetadataCacheEntry partial) {
-            final boolean partialLoaded = partial.isRuleHeld();
+            // if the segment's cache entry is a partial metadata entry with an applied rule, clear it. Reclaim of
+            // on-disk state is left to eviction.
             partial.clearRule();
-            if (partialLoaded) {
-              // if partially loaded, try to trigger an early eviction for the entry on the assumption it is unlikely
-              // to be used again. No-op if a concurrent query still holds the entry, leaving the entry to be lazily
-              // evicted later
-              location.removeUnheldWeakEntry(id);
-            }
-          } else if (entry != null) {
+          }
+          if (entry != null) {
+            // static entries are removed from both cache and disk immediately (no-op for weak held entries)
             location.release(entry);
           }
         }
