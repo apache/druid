@@ -25,11 +25,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.segment.file.SegmentFileMetadata;
+import org.apache.druid.segment.projections.ProjectionMetadata;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * A {@link PartialLoadSpec} that requests partial loading of a segment's projections. The base class carries the
@@ -81,6 +87,42 @@ public class PartialProjectionLoadSpec extends PartialLoadSpec
   @JsonProperty
   public List<String> getProjections()
   {
+    return projections;
+  }
+
+  /**
+   * Projection names double as bundle names in the V10 partial-segment layout (each projection's containers are
+   * tagged with its name as the bundle prefix), so the load spec selection maps to bundle names verbatim after
+   * validating that each requested name refers to a projection actually present on the segment.
+   * <p>
+   * These are pure defensive tripwires: the coordinator-side matcher derives the wire form from the same segment
+   * metadata this method reads, so a mismatch here indicates a coding bug (matcher/reader drift, writer/reader
+   * contract violation, or serialization corruption).
+   */
+  @Override
+  public List<String> getSelectedBundleNames(DataSegment segment, SegmentFileMetadata metadata)
+  {
+    final List<ProjectionMetadata> segmentProjections = metadata.getProjections();
+    if (segmentProjections == null || segmentProjections.isEmpty()) {
+      throw DruidException.defensive(
+          "Cannot resolve projection bundles for segment[%s]: metadata has no projections",
+          segment.getId()
+      );
+    }
+    final Set<String> known = segmentProjections.stream()
+                                                .map(pm -> pm.getSchema().getName())
+                                                .collect(Collectors.toSet());
+    for (String projection : projections) {
+      if (!known.contains(projection)) {
+        throw DruidException.defensive(
+            "Segment[%s] does not contain projection[%s]; matcher/reader drift or writer/reader contract violation."
+            + " Known projections: %s",
+            segment.getId(),
+            projection,
+            known
+        );
+      }
+    }
     return projections;
   }
 
