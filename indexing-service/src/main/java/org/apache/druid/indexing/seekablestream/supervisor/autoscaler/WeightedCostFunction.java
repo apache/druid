@@ -37,10 +37,10 @@ public class WeightedCostFunction
   private static final Logger log = new Logger(WeightedCostFunction.class);
 
   /**
-   * Multiplier for a lag amplification factor; it was carefully chosen
-   * during extensive testing as the most balanced multiplier for high-lag recovery.
+   * Normal-path lag amplification multiplier. Critical-lag tiers provide the
+   * urgency amplification, so normal lag uses unamplified recovery time.
    */
-  static final double LAG_AMPLIFICATION_MULTIPLIER = 0.3;
+  static final double LAG_AMPLIFICATION_MULTIPLIER = 0.0;
 
   /**
    * Amplification multiplier used once aggregate lag crosses {@link #CRITICAL_LAG_TIER1_FRACTION} of
@@ -126,10 +126,9 @@ public class WeightedCostFunction
     }
 
     // Lag recovery time is decreasing by adding tasks and increasing by ejecting tasks.
-    // In case of increasing lag, we apply an amplification factor to reflect the urgency of addressing lag.
-    // Caution: we rely only on the metrics, the real issues may be absolutely different, up to hardware failure.
+    // Critical lag uses extra amplification; normal lag uses raw recovery time so capacity cost remains meaningful.
     // Once aggregate lag crosses CRITICAL_LAG_TIER1_FRACTION of criticalLagThreshold, the multiplier is
-    // maxed out at CRITICAL_LAG_AMPLIFICATION_MULTIPLIER (vs the default 0.3).
+    // maxed out at CRITICAL_LAG_AMPLIFICATION_MULTIPLIER (vs unamplified normal recovery).
     final double lagRecoveryTime;
     if (metrics.getAggregateLag() <= 0) {
       lagRecoveryTime = 0;

@@ -329,7 +329,7 @@ public class WeightedCostFunctionTest
   }
 
   @Test
-  public void testLagAmplificationAppliedUnconditionally()
+  public void testNormalLagCostUsesUnamplifiedRecoveryTime()
   {
     CostBasedAutoScalerConfig lagOnly = CostBasedAutoScalerConfig.builder()
                                                                  .taskCountMax(100)
@@ -344,17 +344,15 @@ public class WeightedCostFunctionTest
     int partitionCount = 10;
     double pollIdleRatio = 0.1;
 
-    // lagPerPartition = 150 * 10 / 10 = 150, amplification = 1 + 0.2 * ln(150)
+    // Normal lag uses raw recovery time; critical lag is tested separately below.
     CostMetrics metrics = createMetrics(150.0, currentTaskCount, partitionCount, pollIdleRatio);
 
     double costWithAmp = costFunction.computeCost(metrics, proposedTaskCount, lagOnly).totalCost();
 
     double aggregateLag = 150.0 * partitionCount;
-    double lagPerPartition = aggregateLag / partitionCount;
-    double amplification = 1.0 + WeightedCostFunction.LAG_AMPLIFICATION_MULTIPLIER * Math.log(lagPerPartition);
-    double expected = aggregateLag * amplification / (proposedTaskCount * WeightedCostFunction.MIN_PROCESSING_RATE);
+    double expected = aggregateLag / (proposedTaskCount * WeightedCostFunction.MIN_PROCESSING_RATE);
 
-    Assert.assertEquals("Lag amplification should increase lag recovery time", expected, costWithAmp, 0.0001);
+    Assert.assertEquals("Normal lag cost should use raw recovery time", expected, costWithAmp, 0.0001);
   }
 
   @Test
@@ -423,9 +421,9 @@ public class WeightedCostFunctionTest
   }
 
   @Test
-  public void testAmplificationGrowsWithLag()
+  public void testNormalLagCostScalesLinearlyWithLag()
   {
-    // Verify that higher lag produces proportionally higher cost due to log amplification
+    // Without normal-path amplification, cost grows linearly with lag.
     CostBasedAutoScalerConfig lagOnly = CostBasedAutoScalerConfig.builder()
                                                                  .taskCountMax(100)
                                                                  .taskCountMin(1)
@@ -447,12 +445,14 @@ public class WeightedCostFunctionTest
 
     Assert.assertTrue("Higher lag should produce higher cost", highCost > lowCost);
 
-    // The ratio of costs should be more than the ratio of raw lags (due to amplification)
+    // The ratio of costs matches the ratio of raw lags.
     double lagRatio = 10_000.0 / 100.0;
     double costRatio = highCost / lowCost;
-    Assert.assertTrue(
-        "Amplification should make cost grow faster than linear with lag",
-        costRatio > lagRatio
+    Assert.assertEquals(
+        "Normal lag cost should grow linearly with lag",
+        lagRatio,
+        costRatio,
+        0.0001
     );
   }
 

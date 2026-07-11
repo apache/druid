@@ -317,8 +317,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
    * Aggregate (sum-across-partitions) lag threshold driving a two-tier SLA-critical fast path,
    * relative to {@link CostMetrics#getAggregateLag()}:
    * <ul>
-   *   <li>At 75% of this value, the lag-amplification multiplier maxes out at 6.0 (instead of the
-   *   default 0.3), and the scale-up candidate search bypasses {@link #isUseTaskCountBoundariesOnScaleUp()}.</li>
+   *   <li>At 75% of this value, the lag-amplification multiplier maxes out at 6.0 (instead of
+   *   unamplified normal recovery), and the scale-up candidate search bypasses
+   *   {@link #isUseTaskCountBoundariesOnScaleUp()}.</li>
    *   <li>At 95% of this value, cost minimization is skipped entirely and the task count jumps
    *   straight to the maximum.</li>
    * </ul>
