@@ -25,11 +25,10 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.data.ConstantColumnarInts;
-import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.ConstantUtf8Indexed;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -89,16 +88,12 @@ public final class ConstantColumns
 
     if (type.is(ValueType.STRING)) {
       final ByteBuffer utf8 = value == null ? null : StringUtils.toUtf8ByteBuffer((String) value);
-      final GenericIndexed<ByteBuffer> dictionary = GenericIndexed.fromIterable(
-          Collections.singletonList(utf8),
-          GenericIndexed.UTF8_STRATEGY
-      );
       builder.setDictionaryEncodedColumnSupplier(
           Suppliers.ofInstance(
               new StringUtf8DictionaryEncodedColumn(
                   new ConstantColumnarInts(numRows, 0),
                   null,
-                  dictionary,
+                  new ConstantUtf8Indexed(utf8),
                   bitmapFactory
               )
           )
