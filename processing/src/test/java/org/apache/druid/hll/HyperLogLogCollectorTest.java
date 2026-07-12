@@ -610,6 +610,49 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
+  public void testSparseOverflowRegisterEstimation()
+  {
+    // Reproduces the case where a single element whose positionOf1 exceeds the 4-bit nibble range
+    // (registerOffset 0 + RANGE 15) is stored only in the overflow register, leaving the sparse buffer empty.
+    // estimateSparse() must still account for that one non-empty register instead of reporting a cardinality of 0.
+
+    // Direct form: bucket 5 with positionOf1 = 16 (> RANGE) goes straight to the overflow register.
+    HyperLogLogCollector direct = HyperLogLogCollector.makeLatestCollector();
+    direct.add((short) 5, (byte) 16);
+    Assert.assertEquals(1L, direct.estimateCardinalityRound());
+    Assert.assertEquals(1.0d, direct.estimateCardinality(), 0.05d);
+
+    // Same situation reached through the byte[] hashing path used during ingestion: leading bytes 0x00 0x80
+    // give positionOf1 = 16, and the trailing bytes select the bucket.
+    byte[] hashedValue = new byte[16];
+    hashedValue[1] = (byte) 0x80;
+    hashedValue[15] = 0x05;
+    HyperLogLogCollector hashed = HyperLogLogCollector.makeLatestCollector();
+    hashed.add(hashedValue);
+    Assert.assertEquals(1L, hashed.estimateCardinalityRound());
+  }
+
+  @Test
+  public void testSparseOverflowRegisterSharesByteWithEntry()
+  {
+    // Adding regular (in-range) registers converts the collector to dense storage, so estimateSparse's overflow
+    // handling can only be reached via a sparse-serialized buffer. Build a low-cardinality collector holding both
+    // regular registers and an overflow register, then round-trip it through toByteArray() (which serializes
+    // sparsely while numNonZeroRegisters < DENSE_THRESHOLD). The restored collector uses estimateSparse, and the
+    // overflow register coincides with a populated sparse entry, so the in-loop overflow branch runs instead of the
+    // standalone compensation added for the empty-overflow case.
+    HyperLogLogCollector source = HyperLogLogCollector.makeLatestCollector();
+    for (int bucket = 0; bucket < 60; bucket++) {
+      source.add((short) bucket, (byte) 1);
+    }
+    source.add((short) 30, (byte) 16); // overflow register lands on an already-populated byte
+
+    HyperLogLogCollector sparse = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(source.toByteArray()));
+    long estimate = sparse.estimateCardinalityRound();
+    Assert.assertTrue("expected a sane non-zero estimate near 60, got " + estimate, estimate >= 40 && estimate <= 90);
+  }
+
+  @Test
   public void testEstimationReadOnlyByteBuffers()
   {
     Random random = new Random(0L);

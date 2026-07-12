@@ -177,6 +177,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     final ByteBuffer copy = buf.asReadOnlyBuffer();
     double e = 0.0d;
     int zeroCount = NUM_BUCKETS - 2 * (buf.remaining() / 3);
+    boolean overflowRegisterApplied = false;
     while (copy.hasRemaining()) {
       short position = copy.getShort();
       final int register = (int) copy.get() & 0xff;
@@ -190,10 +191,20 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
         }
         e += 1.0d / Math.pow(2, upperNibble) + 1.0d / Math.pow(2, lowerNibble);
         zeroCount += (((upperNibble & 0xf0) == 0) ? 1 : 0) + (((lowerNibble & 0x0f) == 0) ? 1 : 0);
+        overflowRegisterApplied = true;
       } else {
         e += MIN_NUM_REGISTER_LOOKUP[minNum][register];
         zeroCount += NUM_ZERO_LOOKUP[register];
       }
+    }
+
+    // A sparse buffer only stores registers set through the regular nibble range. When the only information about
+    // a bucket lives in the overflow register (positionOf1 exceeded registerOffset + RANGE) and that bucket is not
+    // among the entries above, it was implicitly counted as an empty register. Account for it explicitly so linear
+    // counting does not treat the collector as empty and estimate a cardinality of zero.
+    if (overflowValue != 0 && !overflowRegisterApplied) {
+      zeroCount -= 1;
+      e += 1.0d / Math.pow(2, overflowValue);
     }
 
     e += zeroCount;
