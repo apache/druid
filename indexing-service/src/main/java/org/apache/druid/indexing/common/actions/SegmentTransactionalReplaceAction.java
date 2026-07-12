@@ -22,14 +22,17 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.common.SegmentUpgradeMetrics;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -37,7 +40,10 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -62,6 +68,13 @@ import java.util.stream.Collectors;
 public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPublishResult>
 {
   private static final Logger log = new Logger(SegmentTransactionalReplaceAction.class);
+
+  /**
+   * Upper bound on the number of per-segment entries included in the INFO summary of upgraded pending segments. A broad
+   * REPLACE (e.g. compaction over a wide interval of sparse, finely-partitioned append data) can upgrade thousands of
+   * pending segments, so the full mapping is reserved for DEBUG.
+   */
+  private static final int NOTIFIED_LOG_SAMPLE_SIZE = 10;
 
   /**
    * Set of segments to be inserted into metadata storage
@@ -163,26 +176,82 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   /**
    * Registers upgraded pending segments on the active supervisor, if any
    */
-  private void registerUpgradedPendingSegmentsOnSupervisor(
+  @VisibleForTesting
+  void registerUpgradedPendingSegmentsOnSupervisor(
       Task task,
       TaskActionToolbox toolbox,
       List<PendingSegmentRecord> upgradedPendingSegments
   )
   {
+    // Emit one persisted event per upgraded segment (rather than a single aggregate) regardless of whether a supervisor
+    // exists to receive them, so the total can be compared against the count actually announced by tasks and so each
+    // event carries the segment's interval and version.
+    for (PendingSegmentRecord upgradedPendingSegment : upgradedPendingSegments) {
+      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+      IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+      IndexTaskUtils.setPendingSegmentDimensions(metricBuilder, upgradedPendingSegment);
+      toolbox.getEmitter().emit(metricBuilder.setMetric(SegmentUpgradeMetrics.PERSISTED, 1));
+    }
+
     final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
     final Optional<String> activeSupervisorIdWithAppendLock =
         supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(task.getDataSource());
 
     if (!activeSupervisorIdWithAppendLock.isPresent()) {
+      log.info(
+          "Could not find any active concurrent streaming supervisor for datasource[%s]."
+          + " Ignoring registry of [%d] pending segment(s) upgraded by task[%s]. These will become queryable only"
+          + " after handoff.",
+          task.getDataSource(),
+          upgradedPendingSegments.size(),
+          task.getId()
+      );
       return;
     }
 
-    upgradedPendingSegments.forEach(
-        upgradedPendingSegment -> supervisorManager.registerUpgradedPendingSegmentOnSupervisor(
-            activeSupervisorIdWithAppendLock.get(),
-            upgradedPendingSegment
-        )
+    // Register each upgraded pending segment on the supervisor and summarize the batch. The per-segment mapping is
+    // unbounded (a broad REPLACE can upgrade thousands of segments), so INFO carries aggregate counts plus a bounded
+    // sample and the full mapping is materialized only when DEBUG is enabled.
+    final boolean debugEnabled = log.isDebugEnabled();
+    final Map<String, Integer> notifiedTasksSample = new LinkedHashMap<>();
+    final Map<String, Integer> notifiedTasksBySegment = debugEnabled ? new LinkedHashMap<>() : null;
+    int registeredSegments = 0;
+    int totalNotifiedTasks = 0;
+    for (PendingSegmentRecord upgradedPendingSegment : upgradedPendingSegments) {
+      final OptionalInt notified = supervisorManager
+          .registerUpgradedPendingSegmentOnSupervisor(activeSupervisorIdWithAppendLock.get(), upgradedPendingSegment);
+      if (notified.isEmpty()) {
+        continue;
+      }
+      final int notifiedCount = notified.getAsInt();
+      registeredSegments++;
+      totalNotifiedTasks += notifiedCount;
+      if (notifiedTasksSample.size() < NOTIFIED_LOG_SAMPLE_SIZE) {
+        notifiedTasksSample.put(upgradedPendingSegment.getId().toString(), notifiedCount);
+      }
+      if (debugEnabled) {
+        notifiedTasksBySegment.put(upgradedPendingSegment.getId().toString(), notifiedCount);
+      }
+    }
+
+    log.info(
+        "Registered [%d] upgraded pending segment(s) created by task[%s] on supervisor[%s], notifying [%d] running"
+        + " task(s) in total. Tasks notified per segment%s: %s",
+        registeredSegments,
+        task.getId(),
+        activeSupervisorIdWithAppendLock.get(),
+        totalNotifiedTasks,
+        registeredSegments > NOTIFIED_LOG_SAMPLE_SIZE ? " (first " + NOTIFIED_LOG_SAMPLE_SIZE + ", enable debug for all)" : "",
+        notifiedTasksSample
     );
+    if (debugEnabled && registeredSegments > NOTIFIED_LOG_SAMPLE_SIZE) {
+      log.debug(
+          "Tasks notified per segment created by task[%s] on supervisor[%s]: %s",
+          task.getId(),
+          activeSupervisorIdWithAppendLock.get(),
+          notifiedTasksBySegment
+      );
+    }
   }
 
   @Override
