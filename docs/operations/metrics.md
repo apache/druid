@@ -377,11 +377,19 @@ The following metrics are emitted only when [segment metadata caching](../config
 |`segment/pending/count`|Number of pending segments currently present in the metadata store.|`dataSource`|
 |`segment/metadataCache/interval/count`|Total number of intervals present in the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/used/count`|Total number of used segments present in the cache for a single datasource.|`dataSource`|
+|`segment/metadataCache/unused/count`|Total number of unused segments present in the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/pending/count`|Total number of pending segments present in the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/transactions/readOnly`|Number of read-only transactions performed on the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/transactions/readWrite`|Number of read-write transactions performed on the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/transactions/writeOnly`|Number of write-only transactions performed on the cache for a single datasource. These transactions happen only if the cache is operating in mode `ifSynced` and the first sync on the leader Overlord is not complete yet.|`dataSource`|
 |`segment/metadataCache/sync/time`|Number of milliseconds taken for the cache to sync with the metadata store.||
+|`segment/metadataCache/fetchIds/time`|Time taken in a sync to fetch the IDs of used segments from the metadata store.||
+|`segment/metadataCache/fetchPayloads/time`|Time taken in a sync to fetch the payloads of used segments that have changed since the last sync.||
+|`segment/metadataCache/fetchPending/time`|Time taken in a sync to fetch pending segments from the metadata store.||
+|`segment/metadataCache/fetchSchemas/time`|Time taken in a sync to fetch segment schemas from the metadata store. Emitted only when centralized datasource schema is enabled.||
+|`segment/metadataCache/fetchIndexingStates/time`|Time taken in a sync to fetch segment indexing states from the metadata store.||
+|`segment/metadataCache/updateIds/time`|Time taken in a sync to reconcile the cached segment IDs of each datasource with the metadata store.||
+|`segment/metadataCache/updateSnapshot/time`|Time taken in a sync to rebuild the datasource snapshot from the cache.||
 |`segment/metadataCache/dataSource/deleted`|Indicates that a datasource has no used or pending segments anymore and has been removed from the cache.|`dataSource`|
 |`segment/metadataCache/deleted`|Total number of segments deleted from the cache during the latest sync.||
 |`segment/metadataCache/skipped`|Total number of unparseable segment records that were skipped in the latest sync.||
@@ -390,6 +398,9 @@ The following metrics are emitted only when [segment metadata caching](../config
 |`segment/metadataCache/pending/deleted`|Number of pending segments deleted from the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/updated`|Number of pending segments updated in the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/skipped`|Number of unparseable pending segment records that were skipped in the latest sync.|`dataSource`|
+|`segment/metadataCache/schema/skipped`|Number of unparseable segment schema records that were skipped in the latest sync. Emitted only when centralized datasource schema is enabled.||
+|`segment/metadataCache/indexingState/added`|Number of segment indexing states added to the cache during the latest sync.||
+|`segment/metadataCache/indexingState/deleted`|Number of segment indexing states deleted from the cache during the latest sync.||
 
 ### Auto-kill unused segments
 
