@@ -480,11 +480,14 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     final LagStats lagStats = supervisor.computeLagStats();
     final double avgPartitionLag;
+    final double aggregateLag;
     if (lagStats == null) {
       log.debug("Lag stats unavailable for supervisorId [%s], skipping collection", supervisorId);
       avgPartitionLag = -1;
+      aggregateLag = -1;
     } else {
       avgPartitionLag = lagStats.getAvgLag();
+      aggregateLag = lagStats.getTotalLag();
     }
 
     final int currentTaskCount = supervisor.getIoConfig().getTaskCount();
@@ -500,6 +503,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     return new CostMetrics(
         avgPartitionLag,
+        aggregateLag,
         currentTaskCount,
         partitionCount,
         pollIdleRatio,

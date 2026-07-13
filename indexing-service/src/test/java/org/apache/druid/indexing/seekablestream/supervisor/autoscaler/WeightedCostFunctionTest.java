@@ -606,6 +606,7 @@ public class WeightedCostFunctionTest
   {
     return new CostMetrics(
         avgPartitionLag,
+        avgPartitionLag * partitionCount,
         currentTaskCount,
         partitionCount,
         pollIdleRatio,
@@ -621,7 +622,7 @@ public class WeightedCostFunctionTest
       double pollIdleRatio
   )
   {
-    return new CostMetrics(0.0, 10, 100, pollIdleRatio, 3600, avgProcessingRate, maxObservedRate);
+    return new CostMetrics(0.0, 0.0, 10, 100, pollIdleRatio, 3600, avgProcessingRate, maxObservedRate);
   }
 
   private CostMetrics createMetricsWithRate(
@@ -634,6 +635,7 @@ public class WeightedCostFunctionTest
   {
     return new CostMetrics(
         avgPartitionLag,
+        avgPartitionLag * partitionCount,
         currentTaskCount,
         partitionCount,
         pollIdleRatio,
