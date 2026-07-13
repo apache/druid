@@ -633,23 +633,35 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testSparseOverflowRegisterSharesByteWithEntry()
+  public void testSparseOverflowRegisterOnPopulatedBucket()
   {
-    // Adding regular (in-range) registers converts the collector to dense storage, so estimateSparse's overflow
-    // handling can only be reached via a sparse-serialized buffer. Build a low-cardinality collector holding both
-    // regular registers and an overflow register, then round-trip it through toByteArray() (which serializes
-    // sparsely while numNonZeroRegisters < DENSE_THRESHOLD). The restored collector uses estimateSparse, and the
-    // overflow register coincides with a populated sparse entry, so the in-loop overflow branch runs instead of the
-    // standalone compensation added for the empty-overflow case.
+    // Adding an in-range value converts the collector to dense storage, so estimateSparse's overflow handling is
+    // only reachable through a sparse-serialized buffer. A single bucket that first receives an in-range value and
+    // then an overflow value is still one populated register (the overflow value supersedes the nibble). After a
+    // sparse round-trip that register must be counted exactly once: estimateSparse has to recognize that the
+    // overflow register already has a sparse entry (comparing positions in the same coordinate system) and skip the
+    // standalone compensation, otherwise the register is counted twice and a single element estimates as 2.
     HyperLogLogCollector source = HyperLogLogCollector.makeLatestCollector();
-    for (int bucket = 0; bucket < 60; bucket++) {
-      source.add((short) bucket, (byte) 1);
-    }
-    source.add((short) 30, (byte) 16); // overflow register lands on an already-populated byte
+    source.add((short) 4, (byte) 3);   // in-range value -> nibble for bucket 4
+    source.add((short) 4, (byte) 16);  // overflow on the same bucket -> overflow register
 
     HyperLogLogCollector sparse = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(source.toByteArray()));
-    long estimate = sparse.estimateCardinalityRound();
-    Assert.assertTrue("expected a sane non-zero estimate near 60, got " + estimate, estimate >= 40 && estimate <= 90);
+    Assert.assertEquals(1L, sparse.estimateCardinalityRound());
+  }
+
+  @Test
+  public void testSparseOverflowRegisterAmongOtherEntries()
+  {
+    // A sparse buffer holding an overflow register plus other populated registers: estimateSparse must fold the
+    // overflow into the overflow bucket's own entry and leave the other entries untouched, which exercises both
+    // sides of the normalized position comparison. Two distinct populated registers should estimate as 2.
+    HyperLogLogCollector source = HyperLogLogCollector.makeLatestCollector();
+    source.add((short) 4, (byte) 3);   // bucket 4 in-range value
+    source.add((short) 4, (byte) 16);  // overflow on bucket 4 -> overflow register
+    source.add((short) 20, (byte) 5);  // an unrelated populated register in a different byte
+
+    HyperLogLogCollector sparse = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(source.toByteArray()));
+    Assert.assertEquals(2L, sparse.estimateCardinalityRound());
   }
 
   @Test

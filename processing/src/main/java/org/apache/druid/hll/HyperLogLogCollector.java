@@ -171,7 +171,8 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       final byte minNum,
       final byte overflowValue,
       final short overflowPosition,
-      final boolean isUpperNibble
+      final boolean isUpperNibble,
+      final int numHeaderBytes
   )
   {
     final ByteBuffer copy = buf.asReadOnlyBuffer();
@@ -181,7 +182,10 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     while (copy.hasRemaining()) {
       short position = copy.getShort();
       final int register = (int) copy.get() & 0xff;
-      if (overflowValue != 0 && position == overflowPosition) {
+      // `position` is the serialized offset: the payload byte index plus the header size. Normalize it back to the
+      // payload byte index before comparing with overflowPosition (overflowRegister >>> 1); otherwise the overflow
+      // bucket's own entry is never matched here and the fallback below double-counts that register.
+      if (overflowValue != 0 && (position - numHeaderBytes) == overflowPosition) {
         int upperNibble = ((register & 0xf0) >>> BITS_PER_BUCKET) + minNum;
         int lowerNibble = (register & 0x0f) + minNum;
         if (isUpperNibble) {
@@ -546,7 +550,8 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
             registerOffset,
             overflowValue,
             overflowPosition,
-            isUpperNibble
+            isUpperNibble,
+            getNumHeaderBytes()
         );
       } else {
         estimatedCardinality = estimateDense(
