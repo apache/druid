@@ -1450,9 +1450,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     if (notifiedTasks == 0) {
-      // No running task matched: the segment will not be re-announced until handoff. This is a potential silent-loss
-      // window where data will not be queryable until handoff.
-      log.warn(
+      // No running task matched: the segment will not be re-announced until handoff.
+      // This may happen if there are multiple supervisors for the same datasource
+      // or due to race conditions while events such as changing the state of a TaskGroup
+      // from actively reading to pending completion, etc.
+      // This is a potential silent-loss window where data will not be queryable until handoff.
+      log.info(
           "Could not find any task matching taskAllocatorId[%s] in supervisor[%s] for upgraded pending segment[%s]"
           + " (upgradedFrom[%s]); it will not be re-announced until handoff.",
           taskAllocatorId,

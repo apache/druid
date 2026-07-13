@@ -780,7 +780,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetActiveSupervisorIdForDatasourceWithAppendLock()
+  public void testGetActiveSupervisorIdsForDatasourceWithAppendLock()
   {
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(Collections.emptyMap());
 
@@ -860,26 +860,26 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
     manager.start();
 
-    Assert.assertFalse(manager.getActiveSupervisorIdForDatasourceWithAppendLock("nonExistent").isPresent());
+    Assert.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("nonExistent").isEmpty());
 
     manager.createOrUpdateAndStartSupervisor(noopSupervisorSpec);
-    Assert.assertFalse(manager.getActiveSupervisorIdForDatasourceWithAppendLock("noopDS").isPresent());
+    Assert.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("noopDS").isEmpty());
 
     manager.createOrUpdateAndStartSupervisor(suspendedSpec);
-    Assert.assertFalse(manager.getActiveSupervisorIdForDatasourceWithAppendLock("suspendedDS").isPresent());
+    Assert.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("suspendedDS").isEmpty());
 
     manager.createOrUpdateAndStartSupervisor(activeSpec);
-    Assert.assertFalse(manager.getActiveSupervisorIdForDatasourceWithAppendLock("activeDS").isPresent());
+    Assert.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeDS").isEmpty());
 
     manager.createOrUpdateAndStartSupervisor(activeAppendSpec);
-    Assert.assertTrue(manager.getActiveSupervisorIdForDatasourceWithAppendLock("activeAppendDS").isPresent());
+    Assert.assertFalse(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeAppendDS").isEmpty());
 
     manager.createOrUpdateAndStartSupervisor(activeSpecWithConcurrentLocks);
-    Assert.assertTrue(manager.getActiveSupervisorIdForDatasourceWithAppendLock("activeConcurrentLocksDS").isPresent());
+    Assert.assertFalse(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeConcurrentLocksDS").isEmpty());
 
     manager.createOrUpdateAndStartSupervisor(specWithUseConcurrentLocksFalse);
-    Assert.assertFalse(
-        manager.getActiveSupervisorIdForDatasourceWithAppendLock("dsWithUseConcurrentLocksFalse").isPresent()
+    Assert.assertTrue(
+        manager.getActiveSupervisorIdsForDatasourceWithAppendLock("dsWithUseConcurrentLocksFalse").isEmpty()
     );
 
     verifyAll();
