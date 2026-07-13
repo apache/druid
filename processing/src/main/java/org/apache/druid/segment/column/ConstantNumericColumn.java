@@ -19,11 +19,8 @@
 
 package org.apache.druid.segment.column;
 
-import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.ConstantExprEvalSelector;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.ConstantVectorSelectors;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
@@ -33,8 +30,8 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import javax.annotation.Nullable;
 
 /**
- * A numeric {@link NumericColumn} of a fixed length whose value is the same for every row. Selectors are backed by the
- * shared constant-selector helpers ({@link ConstantExprEvalSelector} / {@link ConstantVectorSelectors}). Used to
+ * A numeric {@link NumericColumn} of a fixed length whose value is the same for every row. Vector selectors are backed
+ * by the shared {@link ConstantVectorSelectors} helpers; the scalar selector returns the boxed value directly. Used to
  * fabricate a per-group clustering column for a clustered base table (constant within the group), but is not otherwise
  * specific to clustered segments.
  */
@@ -67,7 +64,7 @@ public final class ConstantNumericColumn implements NumericColumn
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
-    return new ConstantExprEvalSelector(ExprEval.ofType(ExpressionType.fromColumnTypeStrict(type), value));
+    return new ConstantNumericValueSelector(value);
   }
 
   @Override
@@ -93,5 +90,62 @@ public final class ConstantNumericColumn implements NumericColumn
   public void close()
   {
     // nothing to close
+  }
+
+  /**
+   * Constant numeric {@link ColumnValueSelector}. {@link #getObject()} returns the boxed value (or null)
+   */
+  private static final class ConstantNumericValueSelector implements ColumnValueSelector<Object>
+  {
+    @Nullable
+    private final Number value;
+
+    private ConstantNumericValueSelector(@Nullable Number value)
+    {
+      this.value = value;
+    }
+
+    @Override
+    public double getDouble()
+    {
+      return value == null ? 0d : value.doubleValue();
+    }
+
+    @Override
+    public float getFloat()
+    {
+      return value == null ? 0f : value.floatValue();
+    }
+
+    @Override
+    public long getLong()
+    {
+      return value == null ? 0L : value.longValue();
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      return value == null;
+    }
+
+    @Nullable
+    @Override
+    public Object getObject()
+    {
+      return value;
+    }
+
+    @Override
+    public Class<Object> classOfObject()
+    {
+      return Object.class;
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("value", String.valueOf(value));
+    }
   }
 }
