@@ -224,6 +224,13 @@ public class SQLServerConnector extends SQLMetadataConnector
     return String.format(Locale.ENGLISH, "FETCH NEXT %d ROWS ONLY", limit);
   }
 
+  @Override
+  protected String getDropIndexStatement(String indexName, String tableName)
+  {
+    // SQL Server requires the target table in a DROP INDEX statement.
+    return StringUtils.format("DROP INDEX %s ON %s", indexName, tableName);
+  }
+
   /**
    *
    * {@inheritDoc}

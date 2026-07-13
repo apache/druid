@@ -336,13 +336,12 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     try (final HeapMemoryDatasourceSegmentCache datasourceCache = getCacheWithReference(dataSource)) {
       return datasourceCache.withWriteLock(
           () -> {
+            // Flag the write-through before performing it, so that even a write
+            // which throws after partially mutating the cache still causes the next sync
+            // to refresh this datasource's snapshot.
+            datasourceCache.markHasNewWrites();
             try {
-              final T result = writeAction.perform(datasourceCache);
-              // A write-through transaction may have mutated the cache directly.
-              // Flag it so the next sync refreshes this datasource's snapshot even
-              // if the metadata-store diff shows no change.
-              datasourceCache.markHasNewWrites();
-              return result;
+              return writeAction.perform(datasourceCache);
             }
             catch (Exception e) {
               Throwables.throwIfUnchecked(e);
@@ -626,7 +625,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     final Stopwatch updateDuration = Stopwatch.createStarted();
 
     final DataSourcesSnapshot previousSnapshot = datasourcesSnapshot.get();
-    final boolean incremental = datasourcesToRefresh != null && previousSnapshot != null;
+    // updateSegmentIdsInCache never returns null, so datasourcesToRefresh is null
+    // only on the first sync which also has no previous snapshot to build on.
+    final boolean incremental = previousSnapshot != null;
 
     final Set<String> cachedDatasources = Set.copyOf(datasourceToSegmentCache.keySet());
     // In incremental mode this holds only the datasources being rebuilt; in full
