@@ -271,22 +271,30 @@ public class SegmentManager
    * @param loadFailed callback to execute when segment lazy load fails. This applies only
    *                   when lazy loading is enabled.
    *
+   * @return the input {@code dataSegment}, or a
+   *         {@link org.apache.druid.client.DataSegmentAndLoadProfile} wrapping it when the historical actually
+   *         materialized a partial-load footprint. Callers pass the returned value to the announcement layer so
+   *         partial-load announcements carry accurate {@code loadedBytes}.
    * @throws SegmentLoadingException if the segment cannot be loaded
    * @throws IOException if the segment info cannot be cached on disk
    */
-  public void loadSegmentOnBootstrap(
+  public DataSegment loadSegmentOnBootstrap(
       final DataSegment dataSegment,
       final SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException, IOException
   {
+    final DataSegment loaded;
     try {
-      cacheManager.bootstrap(dataSegment, loadFailed);
+      loaded = cacheManager.bootstrap(dataSegment, loadFailed);
     }
     catch (SegmentLoadingException e) {
       cacheManager.drop(dataSegment);
       throw e;
     }
+    // Pass the plain dataSegment (not the potentially-wrapped `loaded`) to loadSegmentInternal: the wrapper is a
+    // load-time announcement-path artifact only
     loadSegmentInternal(dataSegment);
+    return loaded;
   }
 
 
@@ -298,19 +306,27 @@ public class SegmentManager
    *
    * @param dataSegment segment to load
    *
+   * @return the input {@code dataSegment}, or a
+   *         {@link org.apache.druid.client.DataSegmentAndLoadProfile} wrapping it when the historical actually
+   *         materialized a partial-load footprint. Callers pass the returned value to the announcement layer so
+   *         partial-load announcements carry accurate {@code loadedBytes}.
    * @throws SegmentLoadingException if the segment cannot be loaded
    * @throws IOException if the segment info cannot be cached on disk
    */
-  public void loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
+  public DataSegment loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
   {
+    final DataSegment loaded;
     try {
-      cacheManager.load(dataSegment);
+      loaded = cacheManager.load(dataSegment);
     }
     catch (SegmentLoadingException e) {
       cacheManager.drop(dataSegment);
       throw e;
     }
+    // Pass the plain dataSegment (not the potentially-wrapped `loaded`) to loadSegmentInternal: the wrapper is a
+    // load-time announcement-path artifact only
     loadSegmentInternal(dataSegment);
+    return loaded;
   }
 
   private void loadSegmentInternal(

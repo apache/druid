@@ -620,6 +620,31 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     }
   }
 
+  /**
+   * The rule-declared on-disk footprint for this segment: this metadata entry's own reservation (V10 header plus
+   * post-mount adjustment) plus the sum of every rule-held bundle's reservation. Deliberately excludes bundles that
+   * happen to be linked for other reasons (e.g. load on demand). Used by the historical to stamp accurate
+   * {@code loadedBytes} on partial-load announcements, so inventory-view accounting reflects what the rule was
+   * configured to pin rather than incidental cache residency.
+   */
+  public long getRealizedBytes()
+  {
+    // Read sizes straight from ruleBundleHolds under entryLock: each hold owns a final reference to its bundle entry
+    // and PartialSegmentBundleCacheEntry.getSize() reads a final long, no lock nesting, no null case, no reliance
+    // on external segment-lock ordering.
+    entryLock.lock();
+    try {
+      long total = currentSize;
+      for (StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> hold : ruleBundleHolds.values()) {
+        total += hold.getEntry().getSize();
+      }
+      return total;
+    }
+    finally {
+      entryLock.unlock();
+    }
+  }
+
   @Override
   public boolean isMounted()
   {

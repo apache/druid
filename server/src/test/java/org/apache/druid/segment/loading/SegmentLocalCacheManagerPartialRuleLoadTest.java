@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import org.apache.druid.client.DataSegmentAndLoadProfile;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
@@ -51,6 +52,7 @@ import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -286,6 +288,37 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     Assertions.assertTrue(
         mapper.isBundleFullyDownloaded(Projections.BASE_TABLE_PROJECTION_NAME),
         "base dependency of the selected projection must be fully downloaded eagerly, not just sparse-mounted"
+    );
+  }
+
+  @Test
+  void testLoadPartialReturnsDataSegmentAndLoadProfileWithRealizedBytes() throws Exception
+  {
+    // load() on the partial-load path returns a DataSegmentAndLoadProfile carrying a PartialLoadProfile.forLoaded with
+    // the actual on-disk footprint (metadata + rule-selected bundles + deps). SegmentLoadDropHandler +
+    // SegmentCacheBootstrapper pass this wrapper to the announcer so partial-load announcements stamp accurate
+    // loadedBytes, not segment.getSize().
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    final DataSegment loaded = manager.load(partialWrapperSegment(List.of(AGG_BUNDLE)));
+
+    Assertions.assertInstanceOf(
+        DataSegmentAndLoadProfile.class,
+        loaded,
+        "load on the partial-rule path must return a DataSegmentAndLoadProfile so the announcer can report actual footprint"
+    );
+    final PartialLoadProfile profile = ((DataSegmentAndLoadProfile) loaded).profile();
+    Assertions.assertEquals(FINGERPRINT, profile.fingerprint(), "profile's fingerprint must match the applied rule");
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    Assertions.assertEquals(
+        Long.valueOf(metadata.getRealizedBytes()),
+        profile.loadedBytes(),
+        "profile's loadedBytes must match the entry's current realizedBytes"
+    );
+    Assertions.assertTrue(
+        profile.loadedBytes() > 0,
+        "loadedBytes must be positive after a successful partial load (metadata header + selected bundle sizes)"
     );
   }
 
