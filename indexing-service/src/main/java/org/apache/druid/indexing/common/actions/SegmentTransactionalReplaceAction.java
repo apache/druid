@@ -231,7 +231,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   )
   {
     final Map<String, Integer> notifiedTasksBySegment = new LinkedHashMap<>();
-    int registeredSegments = 0;
     for (PendingSegmentRecord upgradedPendingSegment : upgradedPendingSegments) {
       final OptionalInt notified = toolbox.getSupervisorManager()
           .registerUpgradedPendingSegmentOnSupervisor(supervisorId, upgradedPendingSegment);
@@ -239,18 +238,20 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
         continue;
       }
       final int notifiedCount = notified.getAsInt();
-      registeredSegments++;
       notifiedTasksBySegment.put(upgradedPendingSegment.getId().toString(), notifiedCount);
     }
 
+    final boolean truncateSummary = notifiedTasksBySegment.size() > NOTIFIED_LOG_SAMPLE_SIZE && !log.isDebugEnabled();
     log.info(
         "Registered [%d] upgraded pending segment(s) created by task[%s] on supervisor[%s]."
         + " Tasks notified per segment %s: %s",
-        registeredSegments,
+        notifiedTasksBySegment.size(),
         task.getId(),
         supervisorId,
-        registeredSegments > NOTIFIED_LOG_SAMPLE_SIZE ? " (first " + NOTIFIED_LOG_SAMPLE_SIZE + ", enable debug for all)" : "",
-        notifiedTasksBySegment.entrySet().stream().limit(NOTIFIED_LOG_SAMPLE_SIZE)
+        truncateSummary ? " (first " + NOTIFIED_LOG_SAMPLE_SIZE + ", enable debug for all)" : "",
+        truncateSummary
+        ? notifiedTasksBySegment.entrySet().stream().limit(NOTIFIED_LOG_SAMPLE_SIZE)
+        : notifiedTasksBySegment
     );
   }
 
