@@ -556,18 +556,64 @@ public class PartialQueryableIndex implements QueryableIndex
       return new CursorPrefetchPlan(null, clusterGroupPlan, bundles);
     }
 
-    // Aggregate-projection match, or the plain base table: a single bundle (the projection's, or __base) with the
-    // query's required columns.
+    // Aggregate-projection match, or the plain base table: the selector's bundle with the query's required columns,
+    // plus (for a matched projection) the base-table bundle when required projection columns read through base
+    // parents.
     final QueryableIndex rowSelector = matched != null ? matched.getRowSelector() : this;
     final String bundleName = matched != null ? matched.getName() : Projections.BASE_TABLE_PROJECTION_NAME;
     final Set<String> required = requiredColumns(rowSelector, matched, spec);
     final List<PartialSegmentFileMapperV10.PlannedFetch> fetches =
         matched != null ? planProjectionPrefetch(matched.getName(), required) : planBaseTablePrefetch(required);
-    return new CursorPrefetchPlan(
-        matched,
-        null,
-        List.of(new PrefetchBundle(bundleName, rowSelector, required, fetches))
-    );
+    final List<PrefetchBundle> bundles = new ArrayList<>(2);
+    bundles.add(new PrefetchBundle(bundleName, rowSelector, required, fetches));
+    if (matched != null) {
+      final Set<String> parents = projectionParentColumns(matched.getName(), required);
+      if (!parents.isEmpty()) {
+        // Materializing a projection column also materializes its same-named base column when one exists
+        // (buildColumnSuppliers reads through the parent, e.g. for dictionary reuse), so those parents are part of
+        // this query's working set: plan their files and hold the base bundle so the parent mmaps are
+        // eviction-excluded for the holder's whole lifetime. When the metadata predates recorded column file lists
+        // the parent files can't be enumerated; the bundle is then hold-only (no planned fetches) and the parents
+        // download lazily during materialization, under the hold, on the download executor.
+        bundles.add(
+            new PrefetchBundle(
+                Projections.BASE_TABLE_PROJECTION_NAME,
+                this,
+                parents,
+                metadata.getColumnFiles() == null ? List.of() : planBaseTablePrefetch(parents)
+            )
+        );
+      }
+    }
+    return new CursorPrefetchPlan(matched, null, bundles);
+  }
+
+  /**
+   * The base-table parent columns that materializing {@code requiredProjectionColumns} on {@code projectionName}
+   * pulls in: {@link #buildColumnSuppliers} materializes a projection column's same-named base column whenever the
+   * base table has one (the descriptor's serde decides whether it actually reads through the parent, but the parent
+   * holder is materialized regardless), so this mirrors that same-name rule instead of inspecting serdes, applied to
+   * each required column's {@link #resolvePhysicalColumn physical resolution}. Always empty for clustered base
+   * tables, whose base column map is empty.
+   */
+  private Set<String> projectionParentColumns(String projectionName, Set<String> requiredProjectionColumns)
+  {
+    if (baseColumns.isEmpty()) {
+      return Set.of();
+    }
+    final ProjectionSchema schema = projectionSpecs.get(projectionName).getSchema();
+    final Function<String, String> fileNameFn =
+        column -> Projections.getProjectionSegmentInternalFileName(schema, column);
+    final Set<String> parents = new LinkedHashSet<>();
+    for (String column : requiredProjectionColumns) {
+      // the parent pull only happens through an existing projection column's supplier, so a column that resolves to
+      // no descriptor-backed physical column (constant time, virtual, unknown) has no parent either
+      final String physical = resolvePhysicalColumn(schema.getTimeColumnName(), fileNameFn, column);
+      if (physical != null && baseColumns.containsKey(physical)) {
+        parents.add(physical);
+      }
+    }
+    return parents;
   }
 
   @Override
@@ -734,10 +780,8 @@ public class PartialQueryableIndex implements QueryableIndex
   }
 
   /**
-   * File-name resolution for {@link #planPrefetch}: map each logical column to its bundle-namespaced smoosh name
-   * (with the same {@code __time}-rename and constant-time handling as {@link #buildColumnSuppliers}), keeping only
-   * names with a registered descriptor; columns with no descriptor (virtual, clustering constants, unknown) resolve
-   * to nothing.
+   * File-name resolution for {@link #planPrefetch}: map each logical column to its bundle-namespaced smoosh name via
+   * {@link #resolvePhysicalColumn}, dropping columns that resolve to nothing.
    */
   private Set<String> resolveSmooshNames(
       @Nullable String timeColumnName,
@@ -747,20 +791,37 @@ public class PartialQueryableIndex implements QueryableIndex
   {
     final Set<String> smooshNames = new LinkedHashSet<>();
     for (String column : columns) {
-      String physical = column;
-      if (ColumnHolder.TIME_COLUMN_NAME.equals(column)) {
-        if (timeColumnName == null) {
-          // constant time column, no files to fetch
-          continue;
-        }
-        physical = timeColumnName;
-      }
-      final String smooshName = fileNameFn.apply(physical);
-      if (metadata.getColumnDescriptors().containsKey(smooshName)) {
-        smooshNames.add(smooshName);
+      final String physical = resolvePhysicalColumn(timeColumnName, fileNameFn, column);
+      if (physical != null) {
+        smooshNames.add(fileNameFn.apply(physical));
       }
     }
     return smooshNames;
+  }
+
+  /**
+   * The single definition of logical-to-physical column resolution for plan-time helpers, mirroring
+   * {@link #buildColumnSuppliers}: {@code __time} maps back to the bundle's raw time column name (the pre-rename
+   * name the column supplier captured; {@code null} for a constant-time bundle means no physical column at all),
+   * and only names with a registered descriptor count; columns with no descriptor (virtual, clustering constants,
+   * unknown) resolve to {@code null}.
+   */
+  @Nullable
+  private String resolvePhysicalColumn(
+      @Nullable String timeColumnName,
+      Function<String, String> fileNameFn,
+      String column
+  )
+  {
+    String physical = column;
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(column)) {
+      if (timeColumnName == null) {
+        // constant time column, no physical files
+        return null;
+      }
+      physical = timeColumnName;
+    }
+    return metadata.getColumnDescriptors().containsKey(fileNameFn.apply(physical)) ? physical : null;
   }
 
   /**

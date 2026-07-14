@@ -72,6 +72,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -79,6 +80,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursorFactoryTestBase
@@ -255,10 +257,10 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
   @Test
   void testAlreadyResidentSegmentStillBuildsHolderOnDownloadExecutor() throws Exception
   {
-    // Everything is already resident, so no download tasks get planned — but the ready callback still deserializes
-    // columns (and can even hit deep storage for lazily-loaded projection parent columns), so it must not fire inline
-    // on the thread calling makeCursorHolderAsync; the factory submits a token task so it hops to the download
-    // executor like every other build.
+    // Everything is already resident, so no download tasks get planned, the empty collect completes in its
+    // constructor, and its ready callback fires inline on the thread calling makeCursorHolderAsync. The callback must
+    // therefore do no real work itself: the materialization + holder build runs as its own continuation task on the
+    // download executor (it deserializes columns and can even hit deep storage), never on the calling thread.
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
     final CountDownLatch gate = new CountDownLatch(1);
     final ExecutorService rawExec = Execs.singleThreaded("partial-cursor-resident-%d");
@@ -272,7 +274,7 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
           noOpAcquirer(gatedExec)
       );
 
-      // Hold the executor with a pre-queued blocker so the token task can't run yet.
+      // Hold the executor with a pre-queued blocker so the continuation task can't run yet.
       @SuppressWarnings("unused")
       ListenableFuture<?> unused = gatedExec.submit(() -> {
         try {
@@ -290,9 +292,17 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
       );
 
       final CountDownLatch ready = new CountDownLatch(1);
-      asyncHolder.addReadyCallback(ready::countDown);
+      final AtomicReference<String> readyThread = new AtomicReference<>();
+      asyncHolder.addReadyCallback(() -> {
+        readyThread.set(Thread.currentThread().getName());
+        ready.countDown();
+      });
       gate.countDown();
       Assertions.assertTrue(ready.await(5, TimeUnit.SECONDS), "ready callback must fire once the executor drains");
+      Assertions.assertTrue(
+          readyThread.get().startsWith("partial-cursor-resident"),
+          "holder must be produced on the download executor, not thread[" + readyThread.get() + "]"
+      );
       try (CursorHolder holder = asyncHolder.release()) {
         Assertions.assertNotNull(holder);
       }
@@ -300,6 +310,68 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
     finally {
       gatedExec.shutdownNow();
       rawExec.shutdownNow();
+    }
+  }
+
+  @Test
+  void testMatchedProjectionAcquiresAndPrefetchesParentBundle() throws IOException
+  {
+    // Materializing a projection column also materializes its same-named base parent column when one exists, so the
+    // plan must include a __base bundle: its hold keeps the parent mmaps eviction-excluded for the holder's lifetime
+    // (they were previously only covered by the projection bundle's hold) and its planned fetches cover the parent
+    // files up front.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "proj_parent")) {
+      final PartialQueryableIndex index = opened.index();
+      final ListeningExecutorService exec = directExec();
+      final Set<String> acquired = new TreeSet<>();
+      final PartialBundleAcquirer acquirer = new PartialBundleAcquirer()
+      {
+        @Override
+        public Closeable acquire(String bundleName)
+        {
+          acquired.add(bundleName);
+          return () -> {};
+        }
+
+        @Override
+        public <T> AsyncResource<T> submitDownload(Callable<T> task)
+        {
+          return AsyncResources.fromFutureUnmanaged(exec.submit(task));
+        }
+      };
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          acquirer
+      );
+
+      final CursorBuildSpec aggSpec = CursorBuildSpec.builder()
+                                                     .setGroupingColumns(List.of("dim1"))
+                                                     .setAggregators(List.of(
+                                                         new LongSumAggregatorFactory("_metric1_sum", "metric1")
+                                                     ))
+                                                     .setPhysicalColumns(Set.of("dim1", "metric1"))
+                                                     .build();
+
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(aggSpec);
+           CursorHolder holder = asyncHolder.release()) {
+        Assertions.assertNotNull(holder);
+        Assertions.assertEquals(
+            new TreeSet<>(Set.of(PROJECTION_NAME, Projections.BASE_TABLE_PROJECTION_NAME)),
+            acquired,
+            "both the projection bundle and the parent __base bundle must be held"
+        );
+        final Set<String> downloaded = opened.mapper().getDownloadedFiles();
+        final String basePrefix = Projections.BASE_TABLE_PROJECTION_NAME + "/";
+        Assertions.assertTrue(
+            downloaded.contains(basePrefix + "dim1"),
+            "the parent base column's file must be prefetched; got: " + downloaded
+        );
+        // only dim1 reads through a parent: the aggregate columns have no same-named base column
+        Assertions.assertFalse(downloaded.contains(basePrefix + "metric1"), "got: " + downloaded);
+        Assertions.assertFalse(downloaded.contains(basePrefix + ColumnHolder.TIME_COLUMN_NAME), "got: " + downloaded);
+      }
     }
   }
 

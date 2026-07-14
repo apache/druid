@@ -73,6 +73,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
 
 class PartialQueryableIndexTest extends InitializedNullHandlingTest
@@ -260,23 +261,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
           COLUMN_CONFIG
       );
 
-      // build a CursorBuildSpec that should match the projection
-      final CursorBuildSpec matchingSpec = CursorBuildSpec.builder()
-          .setInterval(index.getDataInterval())
-          .setPhysicalColumns(Set.of("dim1", "metric1"))
-          .setGroupingColumns(Collections.singletonList("dim1"))
-          .setVirtualColumns(
-              VirtualColumns.create(
-                  Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
-              )
-          )
-          .setAggregators(
-              List.of(
-                  new LongSumAggregatorFactory("_metric1_sum", "metric1"),
-                  new CountAggregatorFactory("_count")
-              )
-          )
-          .build();
+      final CursorBuildSpec matchingSpec = matchingProjectionSpec(index);
 
       rangeReader.resetCount();
 
@@ -535,6 +520,45 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
+  void testPlanCursorPrefetchIncludesProjectionParentBundle() throws IOException
+  {
+    // A matched projection whose required columns read through same-named base parents plans TWO bundles: the
+    // projection's own files, plus a __base bundle holding + fetching exactly the parent columns' files. Of the
+    // rewritten spec's columns, only dim1 has a base parent: the aggregate column and the projection's granularity
+    // time column don't exist in the base table.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    final File cacheDir = newCacheDir("parent_plan");
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      final PartialQueryableIndex index = new PartialQueryableIndex(
+          mapper.getSegmentFileMetadata(),
+          mapper,
+          COLUMN_CONFIG
+      );
+      final PartialQueryableIndex.CursorPrefetchPlan plan = index.planCursorPrefetch(matchingProjectionSpec(index));
+      Assertions.assertNotNull(plan.matchedProjection());
+      Assertions.assertEquals(2, plan.bundles().size());
+      Assertions.assertEquals("dim1_hourly_metric1_sum", plan.bundles().get(0).bundleName());
+
+      final PartialQueryableIndex.PrefetchBundle parentBundle = plan.bundles().get(1);
+      Assertions.assertEquals(Projections.BASE_TABLE_PROJECTION_NAME, parentBundle.bundleName());
+      Assertions.assertEquals(Set.of("dim1"), parentBundle.requiredColumns());
+
+      final Set<String> parentFiles = new TreeSet<>();
+      for (PartialSegmentFileMapperV10.PlannedFetch fetch : parentBundle.fetches()) {
+        parentFiles.addAll(fetch.run().files());
+      }
+      Assertions.assertEquals(Set.of("__base/dim1"), parentFiles);
+
+      // executing the parent fetches makes exactly the parent's file resident, nothing else from the base bundle
+      for (PartialSegmentFileMapperV10.PlannedFetch fetch : parentBundle.fetches()) {
+        fetch.fetch();
+      }
+      Assertions.assertEquals(Set.of("__base/dim1"), mapper.getDownloadedFiles());
+    }
+  }
+
+  @Test
   @SuppressWarnings("unchecked")
   void testCursorPrefetchPlanRejectsBothProjectionAndClusterPlan()
   {
@@ -548,6 +572,30 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
             List.of()
         )
     );
+  }
+
+  /**
+   * A spec that matches the fixture's {@code dim1_hourly_metric1_sum} projection: group by dim1 at HOUR granularity,
+   * summing metric1 and counting.
+   */
+  private static CursorBuildSpec matchingProjectionSpec(PartialQueryableIndex index)
+  {
+    return CursorBuildSpec.builder()
+        .setInterval(index.getDataInterval())
+        .setPhysicalColumns(Set.of("dim1", "metric1"))
+        .setGroupingColumns(Collections.singletonList("dim1"))
+        .setVirtualColumns(
+            VirtualColumns.create(
+                Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+            )
+        )
+        .setAggregators(
+            List.of(
+                new LongSumAggregatorFactory("_metric1_sum", "metric1"),
+                new CountAggregatorFactory("_count")
+            )
+        )
+        .build();
   }
 
   /**

@@ -127,10 +127,10 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
   /**
    * Generalized async-holder build over one or more bundles. Each {@link PartialQueryableIndex.PrefetchBundle}
    * mounts its cache-layer bundle (its own {@link BundleHoldRelease}, since eviction is per-bundle) and submits one
-   * download task per planned range read. Once every run of every bundle is resident, the ready callback materializes
-   * each bundle's required columns and builds the cursor holder, all inside every bundle's hold handshake
-   * (deserialization and holder construction both touch the container mmaps, see {@link #buildHolderUnderHolds}); the
-   * produced holder takes ownership of {@code inner} plus every bundle hold.
+   * download task per planned range read. Once every run of every bundle is resident, {@link #produceHolder} runs as
+   * its own download-executor task and materializes each bundle's required columns and builds the cursor holder, all
+   * inside every bundle's hold handshake (deserialization and holder construction both touch the container mmaps, see
+   * {@link #buildHolderUnderHolds}); the produced holder takes ownership of {@code inner} plus every bundle hold.
    */
   private AsyncCursorHolder buildAsyncCursorHolder(
       List<PartialQueryableIndex.PrefetchBundle> bundles,
@@ -147,13 +147,6 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
           runDownloads.add(submitRunFetch(bundle.bundleName(), fetch, holdRelease));
         }
       }
-      if (runDownloads.isEmpty()) {
-        // Everything is already resident, so an empty collect would complete in its constructor and fire the ready
-        // callback inline on THIS thread — but the callback deserializes columns and can even hit deep storage
-        // (projection parent columns load lazily), which must not run on a processing thread. Submit one token task
-        // so the callback hops to the download executor like every other build.
-        runDownloads.add(bundleAcquirer.submitDownload(() -> "resident"));
-      }
       final AsyncResource<List<String>> downloaded = AsyncResources.collect(runDownloads);
 
       // Canceler runs if the awaiter closes this holder before it's ready (e.g. query cancel/timeout). Close the
@@ -166,32 +159,31 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
         CloseableUtils.closeAndSuppressExceptions(downloaded, ignored -> {});
         holdReleases.forEach(BundleHoldRelease::requestRelease);
       });
+      // This callback can run on ANY thread: the download-executor thread that completed the last run, or, whenever
+      // every run finished before registration (always true when there was nothing to download, since an empty
+      // collect completes in its constructor), synchronously on THIS thread, because addReadyCallback on an
+      // already-ready resource fires inline. So do no real work here: propagate failure/cancellation inline, and hop
+      // the success path to the download executor, where the body deserializes columns and may even hit deep storage,
+      // neither of which may run on a processing thread.
       downloaded.addReadyCallback(() -> {
-        final CursorHolder holder;
         try {
-          downloaded.get(); // surfaces any run-download failure (or cancellation) as the cause
-          holder = buildHolderUnderHolds(holdReleases, 0, bundles, innerBuilder);
-          if (holder == null) {
-            // A concurrent cancel requested a hold release before we could open the handshake on every bundle. The
-            // awaiter is gone; release the rest of the holds and surface the cancellation
-            holdReleases.forEach(BundleHoldRelease::requestRelease);
-            asyncHolder.setException(
-                DruidException.defensive("Async cursor holder was closed before the cursor holder could be built")
-            );
-            return;
-          }
+          // ready, so never blocks; throws the run-download failure (or cancellation) if any. Failing here rather
+          // than in the continuation keeps a canceled build from queueing a pointless continuation task.
+          downloaded.get();
         }
         catch (Throwable t) {
-          // A run download failed or was canceled, this branch can fire while a sibling download is still
-          // mid-mapFile(), so each hold release must go through the handshake rather than being dropped here directly.
-          holdReleases.forEach(BundleHoldRelease::requestRelease);
-          asyncHolder.setException(t);
+          failHolder(holdReleases, asyncHolder, t);
           return;
         }
-        if (!asyncHolder.set(holder)) {
-          // wrapper was closed (awaiter canceled) while we were producing the holder; close it ourselves so the
-          // holder, its inner, and the bundle holds don't leak.
-          holder.close();
+        try {
+          bundleAcquirer.submitDownload(() -> {
+            produceHolder(downloaded, holdReleases, bundles, innerBuilder, asyncHolder);
+            return "produce";
+          });
+        }
+        catch (Throwable t) {
+          // the continuation couldn't even be submitted (e.g. executor shutdown rejection)
+          failHolder(holdReleases, asyncHolder, t);
         }
       });
       return asyncHolder;
@@ -202,6 +194,59 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
       // handshake (requestRelease defers to the last in-flight body) rather than dropping it directly mid-mapFile().
       throw CloseableUtils.closeAndWrapInCatch(t, () -> holdReleases.forEach(BundleHoldRelease::requestRelease));
     }
+  }
+
+  /**
+   * Continuation of {@link #buildAsyncCursorHolder} once every run download is ready, always running as its own task
+   * on the download executor (never on the thread that observed readiness): surface any download failure, materialize
+   * columns and build the cursor holder under every hold, and hand the result to the async holder.
+   */
+  private void produceHolder(
+      AsyncResource<List<String>> downloaded,
+      List<BundleHoldRelease> holdReleases,
+      List<PartialQueryableIndex.PrefetchBundle> bundles,
+      Supplier<CursorHolder> innerBuilder,
+      AsyncCursorHolder asyncHolder
+  )
+  {
+    final CursorHolder holder;
+    try {
+      // the ready callback only submits this continuation on success, but the awaiter may close the resource in the
+      // window before this task runs; re-checking surfaces that cancellation instead of building a doomed holder
+      downloaded.get();
+      holder = buildHolderUnderHolds(holdReleases, 0, bundles, innerBuilder);
+      if (holder == null) {
+        // a concurrent cancel requested a hold release before we could open the handshake on every bundle; the
+        // awaiter is gone, so release the rest of the holds and surface the cancellation
+        failHolder(
+            holdReleases,
+            asyncHolder,
+            DruidException.defensive("Async cursor holder was closed before the cursor holder could be built")
+        );
+        return;
+      }
+    }
+    catch (Throwable t) {
+      failHolder(holdReleases, asyncHolder, t);
+      return;
+    }
+    if (!asyncHolder.set(holder)) {
+      // wrapper was closed (awaiter canceled) while we were producing the holder; close it ourselves so the
+      // holder, its inner, and the bundle holds don't leak.
+      holder.close();
+    }
+  }
+
+  /**
+   * Shared failure path: request every bundle hold's release and fail the async holder. Releases go through the
+   * {@link BundleHoldRelease} handshake (never dropped directly) because failure can be observed while a sibling
+   * download is still mid-{@code mapFile()}; setException on an already-closed async holder is a silent no-op, which
+   * is the desired behavior when the awaiter canceled.
+   */
+  private static void failHolder(List<BundleHoldRelease> holdReleases, AsyncCursorHolder asyncHolder, Throwable t)
+  {
+    holdReleases.forEach(BundleHoldRelease::requestRelease);
+    asyncHolder.setException(t);
   }
 
   @Override
