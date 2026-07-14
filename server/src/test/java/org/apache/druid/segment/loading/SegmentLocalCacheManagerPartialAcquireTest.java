@@ -24,15 +24,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -54,6 +58,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
@@ -75,6 +80,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -113,10 +119,17 @@ class SegmentLocalCacheManagerPartialAcquireTest
       new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(3), ROW_SIGNATURE.getColumnNames(), Arrays.asList("b", 4L))
   );
 
+  // A second segment that is both clustered and carries an aggregate projection: no shared columns, so it has
+  // per-group __base$<ids> bundles + a self-contained "proj" bundle, but no __base bundle.
+  private static final SegmentId CLUSTERED_SEGMENT_ID =
+      SegmentId.of("test_clustered", Intervals.of("2025/2026"), "v1", 0);
+  private static final String CLUSTERED_PROJECTION_BUNDLE = "proj";
+
   @TempDir
   static File SHARED_TEMP_DIR;
 
   private static File DEEP_STORAGE_DIR;
+  private static File CLUSTERED_DEEP_STORAGE_DIR;
 
   @TempDir
   File perTestTempDir;
@@ -156,7 +169,68 @@ class SegmentLocalCacheManagerPartialAcquireTest
                                                        .build())
                                    .rows(ROWS)
                                    .buildMMappedIndexFile();
+    CLUSTERED_DEEP_STORAGE_DIR = buildClusteredProjectionSegment();
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
+  }
+
+  /**
+   * Build a clustered base-table segment that also carries an aggregate projection (group-by {@code tenant} with
+   * {@code sum(x)}). With no shared columns the layout is per-group {@code __base$<ids>} bundles + a self-contained
+   * {@code proj} bundle and no {@code __base} bundle.
+   */
+  private static File buildClusteredProjectionSegment()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .columns(
+                new StringDimensionSchema("tenant"),
+                new StringDimensionSchema("region"),
+                new LongDimensionSchema("x"),
+                new LongDimensionSchema("__time")
+            )
+            .clusteringColumns("tenant")
+            .build();
+    final AggregateProjectionSpec projectionSpec =
+        AggregateProjectionSpec.builder(CLUSTERED_PROJECTION_BUNDLE)
+                               .groupingColumns(new StringDimensionSchema("tenant"))
+                               .aggregators(
+                                   new CountAggregatorFactory("cnt"),
+                                   new LongSumAggregatorFactory("sum_x", "x")
+                               )
+                               .build();
+    final File tmp = new File(SHARED_TEMP_DIR, "build_clustered_" + ThreadLocalRandom.current().nextInt());
+    return IndexBuilder.create()
+                       .useV10()
+                       .tmpDir(tmp)
+                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                       .schema(
+                           IncrementalIndexSchema.builder()
+                                                 .withMinTimestamp(TIME.getMillis())
+                                                 .withTimestampSpec(new TimestampSpec("ts", "millis", null))
+                                                 .withQueryGranularity(Granularities.NONE)
+                                                 .withDimensionsSpec(clusterSpec.getDimensionsSpec())
+                                                 .withRollup(false)
+                                                 .withClusterSpec(clusterSpec)
+                                                 .withProjections(List.of(projectionSpec))
+                                                 .build()
+                       )
+                       .indexSpec(IndexSpec.builder().withMetadataCompression(CompressionStrategy.NONE).build())
+                       .rows(List.of(
+                           clusteredRow(TIME.getMillis() + 2, "globex", "eu-west-1", 5),
+                           clusteredRow(TIME.getMillis(), "acme", "us-east-1", 10),
+                           clusteredRow(TIME.getMillis() + 1, "acme", "us-west-2", 20)
+                       ))
+                       .buildMMappedIndexFile();
+  }
+
+  private static InputRow clusteredRow(long ts, String tenant, String region, long x)
+  {
+    final Map<String, Object> event = new HashMap<>();
+    event.put("ts", ts);
+    event.put("tenant", tenant);
+    event.put("region", region);
+    event.put("x", x);
+    return new MapBasedInputRow(ts, List.of("tenant", "region", "x"), event);
   }
 
   @BeforeEach
@@ -206,10 +280,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
     };
 
     // DataSegment with a LocalLoadSpec pointing at the deep storage directory (unzipped V10 layout).
-    partialSegment = DataSegment.builder()
-                                .dataSource(SEGMENT_ID.getDataSource())
-                                .interval(SEGMENT_ID.getInterval())
-                                .version(SEGMENT_ID.getVersion())
+    partialSegment = DataSegment.builder(SEGMENT_ID)
                                 .shardSpec(NoneShardSpec.instance())
                                 .loadSpec(Map.of("type", "local", "path", DEEP_STORAGE_DIR.getAbsolutePath()))
                                 .size(0)
@@ -406,6 +477,59 @@ class SegmentLocalCacheManagerPartialAcquireTest
   }
 
   @Test
+  void testPartialAcquireClusteredWithProjectionMountsProjectionBundleWithoutBase()
+      throws ExecutionException, InterruptedException, IOException
+  {
+    final DataSegment clusteredSegment =
+        DataSegment.builder(CLUSTERED_SEGMENT_ID)
+                   .shardSpec(NoneShardSpec.instance())
+                   .loadSpec(Map.of("type", "local", "path", CLUSTERED_DEEP_STORAGE_DIR.getAbsolutePath()))
+                   .size(0)
+                   .build();
+    try (AcquireSegmentAction action = manager.acquireSegment(clusteredSegment, AcquireMode.PARTIAL)) {
+      final AcquireSegmentResult result = action.getSegmentFuture().get();
+      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+        Assertions.assertEquals(CLUSTERED_SEGMENT_ID, segment.getId());
+
+        // group-by tenant + sum(x) matches the aggregate projection. Building this cursor drives the 'proj' bundle to
+        // mount through the real acquire path. inferBundleDependencies must return no dep for it (the clustered
+        // segment has no __base bundle); the old "aggregate always depends on __base" rule would have tried to mount
+        // a nonexistent __base here and failed.
+        final CursorBuildSpec aggSpec = CursorBuildSpec.builder()
+                                                       .setGroupingColumns(List.of("tenant"))
+                                                       .setAggregators(List.of(new LongSumAggregatorFactory("sum_x", "x")))
+                                                       .setPhysicalColumns(Set.of("tenant", "x"))
+                                                       .build();
+        try (var asyncHolder = segment.as(CursorFactory.class).makeCursorHolderAsync(aggSpec)) {
+          final CountDownLatch ready = new CountDownLatch(1);
+          asyncHolder.addReadyCallback(ready::countDown);
+          Assertions.assertTrue(ready.await(15, TimeUnit.SECONDS));
+          try (CursorHolder cursorHolder = asyncHolder.release()) {
+            Assertions.assertNotNull(cursorHolder.asCursor(), "projection-matched cursor must build over the combo segment");
+          }
+        }
+      }
+
+      final StorageLocation loc = manager.getLocations().get(0);
+      // the projection bundle mounted through the real acquire path...
+      Assertions.assertTrue(
+          loc.isWeakReserved(new PartialSegmentBundleCacheEntryIdentifier(CLUSTERED_SEGMENT_ID, CLUSTERED_PROJECTION_BUNDLE)),
+          "projection bundle must be registered after the projection-matched cursor build"
+      );
+      // ...and NO phantom __base bundle was created: a clustered segment with no shared columns has no base bundle.
+      Assertions.assertFalse(
+          loc.isWeakReserved(
+              new PartialSegmentBundleCacheEntryIdentifier(CLUSTERED_SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME)
+          ),
+          "no __base bundle should be mounted for a clustered segment with no shared columns"
+      );
+    }
+    finally {
+      manager.drop(clusteredSegment);
+    }
+  }
+
+  @Test
   void testAcquireSegmentForcesFullDownloadOnPartialEligible()
       throws ExecutionException, InterruptedException, IOException
   {
@@ -440,10 +564,58 @@ class SegmentLocalCacheManagerPartialAcquireTest
     // Confirm the metadata entry exists on the location and reports fully downloaded.
     final CacheEntry entry = loc.getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID));
     Assertions.assertInstanceOf(PartialSegmentMetadataCacheEntry.class, entry);
+    final PartialSegmentMetadataCacheEntry metaEntry = (PartialSegmentMetadataCacheEntry) entry;
     Assertions.assertTrue(
-        ((PartialSegmentMetadataCacheEntry) entry).isFullyDownloaded(),
+        metaEntry.isFullyDownloaded(),
         "force-download path must leave the segment fully downloaded after acquire returns"
     );
+    Assertions.assertEquals(
+        metaEntry.getFileMapper().getOnDiskHeaderSize() + metaEntry.getFileMapper().getDownloadedBytes(),
+        loc.getWeakStats().getLoadBytes(),
+        "full-download bytes (header + every column file) must each be recorded exactly once"
+    );
+  }
+
+  @Test
+  void testLazyColumnDownloadsAreRecordedInWeakLoadStats()
+      throws ExecutionException, InterruptedException, IOException
+  {
+    final StorageLocation loc = manager.getLocations().get(0);
+    try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
+      final AcquireSegmentResult result = action.getSegmentFuture().get();
+      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+        // After a lazy mount only the metadata header has been pulled; no column files yet.
+        final long headerLoadBytes = loc.getWeakStats().getLoadBytes();
+        Assertions.assertTrue(headerLoadBytes > 0, "lazy mount records the header load");
+
+        // A base-table scan downloads the base bundle's columns on demand at cursor-build time.
+        try (var asyncHolder = segment.as(CursorFactory.class).makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN)) {
+          final CountDownLatch ready = new CountDownLatch(1);
+          asyncHolder.addReadyCallback(ready::countDown);
+          Assertions.assertTrue(ready.await(15, TimeUnit.SECONDS));
+          try (CursorHolder cursorHolder = asyncHolder.release()) {
+            Assertions.assertNotNull(cursorHolder.asCursor());
+          }
+        }
+
+        // Those on-demand column downloads are now reflected in the per-location completed-load metrics (previously
+        // they were recorded nowhere): loadBytes grew past the header, and loadCount grew per downloaded file.
+        final StorageLocation.WeakStats after = loc.getWeakStats();
+        Assertions.assertTrue(
+            after.getLoadBytes() > headerLoadBytes,
+            "on-demand column downloads must add to VSF_LOAD_BYTES; header=" + headerLoadBytes
+            + " after=" + after.getLoadBytes()
+        );
+        Assertions.assertTrue(after.getLoadCount() > 1, "each downloaded column file increments the load count");
+
+        // The deep-storage range reads that pulled those columns are recorded in the request-level VSF_READ_* stats:
+        // one or more range reads, with wire bytes and nonzero latency. (The header range-read at mount time is not
+        // counted here — it predates the listener and is accounted as the load header above.)
+        Assertions.assertTrue(after.getReadCount() > 0, "on-demand range reads must increment VSF_READ_COUNT");
+        Assertions.assertTrue(after.getReadBytes() > 0, "range reads must record wire bytes in VSF_READ_BYTES");
+        Assertions.assertTrue(after.getReadTimeNanos() > 0, "range reads must record latency in VSF_READ_TIME");
+      }
+    }
   }
 
   @Test
@@ -669,6 +841,76 @@ class SegmentLocalCacheManagerPartialAcquireTest
     }
   }
 
+  @Test
+  void testGetCachedSegmentsDeletesPartialLayoutWhenRangeReaderUnavailable() throws IOException
+  {
+    // Prime a valid partial on-disk layout (header written from the real deep-storage dir) as a previous run left it.
+    final File partialDir = new File(cacheRoot, SEGMENT_ID.toString());
+    FileUtils.mkdirp(partialDir);
+    primePartialOnDiskState(partialDir);
+
+    // ...but record the segment with a loadSpec whose storage can't produce a range reader: an existing directory
+    // that holds no V10 file, so LocalLoadSpec.openRangeReader returns null. This is the "shouldn't happen" case — a
+    // partial layout on disk means range reads worked when it was written — so partial-enabled bootstrap must reclaim
+    // the layout rather than reserve an entry that could never lazily fetch.
+    final File noRangeReaderStorage = new File(perTestTempDir, "no_range_reader_storage");
+    FileUtils.mkdirp(noRangeReaderStorage);
+    final DataSegment unreadableSegment =
+        DataSegment.builder(SEGMENT_ID)
+                   .shardSpec(NoneShardSpec.instance())
+                   .loadSpec(Map.of("type", "local", "path", noRangeReaderStorage.getAbsolutePath()))
+                   .size(0)
+                   .build();
+    manager.storeInfoFile(unreadableSegment);
+    Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+
+    final List<DataSegment> cached = manager.getCachedSegments();
+    Assertions.assertFalse(
+        cached.contains(unreadableSegment),
+        "bootstrap must not return a partial segment whose deep storage can't produce a range reader"
+    );
+    Assertions.assertFalse(
+        partialDir.exists(),
+        "bootstrap must delete the unusable partial layout from disk"
+    );
+    Assertions.assertNull(
+        manager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
+        "no cache entry should be reserved for the deleted partial layout"
+    );
+  }
+
+  @Test
+  void testGetCachedSegmentsDeletesPartialLayoutWhenLoadSpecUnconvertible() throws IOException
+  {
+    // Prime a valid partial on-disk layout as a previous run left it...
+    final File partialDir = new File(cacheRoot, SEGMENT_ID.toString());
+    FileUtils.mkdirp(partialDir);
+    primePartialOnDiskState(partialDir);
+
+    // ...but record the segment with a loadSpec whose type is no longer registered, so converting it to a LoadSpec
+    // throws. Bootstrap must treat that broken segment like a null reader: delete the unusable layout and continue,
+    // rather than aborting or reserving an entry that could never fetch.
+    final DataSegment unconvertibleSegment =
+        DataSegment.builder(SEGMENT_ID)
+                   .shardSpec(NoneShardSpec.instance())
+                   .loadSpec(Map.of("type", "no-such-loadspec-type"))
+                   .size(0)
+                   .build();
+    manager.storeInfoFile(unconvertibleSegment);
+    Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+
+    final List<DataSegment> cached = manager.getCachedSegments();
+    Assertions.assertFalse(
+        cached.contains(unconvertibleSegment),
+        "bootstrap must not return a partial segment whose loadSpec can't be converted to a range reader"
+    );
+    Assertions.assertFalse(partialDir.exists(), "bootstrap must delete the unusable partial layout from disk");
+    Assertions.assertNull(
+        manager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
+        "no cache entry should be reserved for the deleted partial layout"
+    );
+  }
+
   /**
    * Lay down the on-disk artifacts a previous process run would have left behind in the given partial directory:
    * a V10 header file and sparse-allocated container files for every container the segment metadata declares. The
@@ -683,7 +925,8 @@ class SegmentLocalCacheManagerPartialAcquireTest
                  jsonMapper,
                  partialDir,
                  IndexIO.V10_FILE_NAME,
-                 List.of()
+                 List.of(),
+                 PartialSegmentDownloadListener.NOOP
              )) {
       final int numContainers = seed.getSegmentFileMetadata().getContainers().size();
       for (int i = 0; i < numContainers; i++) {

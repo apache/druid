@@ -95,29 +95,28 @@ public class DataSegmentPlusTest
                    .dimensions(Arrays.asList("dim1", "dim2"))
                    .metrics(Arrays.asList("met1", "met2"))
                    .projections(Arrays.asList("proj1", "proj2"))
-                   .lastCompactionState(new CompactionState(
-                       new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
-                       new DimensionsSpec(
-                           DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
-                       ),
-                       ImmutableList.of(new CountAggregatorFactory("cnt")),
-                       new CompactionTransformSpec(
-                           new SelectorDimFilter("dim1", "foo", null),
-                           VirtualColumns.create(
-                               new ExpressionVirtualColumn(
-                                   "isRobotFiltered",
-                                   "concat(isRobot, '_filtered')",
-                                   ColumnType.STRING,
-                                   ExprMacroTable.nil()
-                               )
-                           )
-                       ),
-                       MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-                       MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
-                       null,
-                       null,
-                       null
-                   ))
+                   .lastCompactionState(
+                       CompactionState.builder()
+                                      .partitionsSpec(new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")))
+                                      .dimensionsSpec(new DimensionsSpec(
+                                          DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
+                                      ))
+                                      .metricsSpec(ImmutableList.of(new CountAggregatorFactory("cnt")))
+                                      .transformSpec(new CompactionTransformSpec(
+                                          new SelectorDimFilter("dim1", "foo", null),
+                                          VirtualColumns.create(
+                                              new ExpressionVirtualColumn(
+                                                  "isRobotFiltered",
+                                                  "concat(isRobot, '_filtered')",
+                                                  ColumnType.STRING,
+                                                  ExprMacroTable.nil()
+                                              )
+                                          )
+                                      ))
+                                      .indexSpec(MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class))
+                                      .granularitySpec(MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class))
+                                      .build()
+                   )
                    .indexingStateFingerprint(indexingStateFingerprint)
                    .binaryVersion(TEST_VERSION)
                    .size(123L)

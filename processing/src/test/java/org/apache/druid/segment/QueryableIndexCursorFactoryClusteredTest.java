@@ -42,6 +42,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -298,6 +299,61 @@ class QueryableIndexCursorFactoryClusteredTest
     // tenant=acme — only the acme group survives the pruner. Its filter is rewritten to TRUE and dropped, so the
     // per-group QueryableIndex never sees a leaf referencing "tenant" (which it doesn't physically carry).
     final Filter filter = new EqualityFilter("tenant", ColumnType.STRING, "acme", null);
+    try (CursorHolder holder = factory.makeCursorHolder(specWith(filter))) {
+      final List<List<String>> rows = collectTenantRegionRows(holder.asCursor());
+      Assertions.assertEquals(
+          List.of(
+              List.of("acme", "us-east-1"),
+              List.of("acme", "us-west-2")
+          ),
+          rows
+      );
+    }
+  }
+
+  @Test
+  void testRangeFilterOnClusteringColumnMatchesViaFabricatedColumn()
+  {
+    segmentIndex = standardTwoGroup();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+
+    // A RangeFilter on the clustering column is NOT folded by the pruner (only Equality/In/Null fold), so it survives
+    // to the per-group cursor. Clustering columns are constant-per-group and not stored on disk, so before the
+    // per-group index fabricated them as constant columns this returned nothing; now the range resolves against the
+    // fabricated column's value matcher and both groups (tenant in [a, z]) match all rows.
+    final Filter filter = new RangeFilter("tenant", ColumnType.STRING, "a", "z", false, false, null);
+    try (CursorHolder holder = factory.makeCursorHolder(specWith(filter))) {
+      final List<List<String>> rows = collectTenantRegionRows(holder.asCursor());
+      Assertions.assertEquals(
+          List.of(
+              List.of("acme", "us-east-1"),
+              List.of("acme", "us-west-2"),
+              List.of("globex", "eu-west-1")
+          ),
+          rows
+      );
+    }
+  }
+
+  @Test
+  void testResidualRangeFilterOnClusteringColumnSingleGroup()
+  {
+    segmentIndex = standardTwoGroup();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+
+    // tenant = 'acme' folds and prunes to the single acme group; the RangeFilter on the clustering column survives as
+    // a residual leaf on the single-group cursor. It must match against the fabricated constant column ('acme' is in
+    // [a, m]) rather than an absent physical column.
+    final Filter filter = new AndFilter(List.of(
+        new EqualityFilter("tenant", ColumnType.STRING, "acme", null),
+        new RangeFilter("tenant", ColumnType.STRING, "a", "m", false, false, null)
+    ));
     try (CursorHolder holder = factory.makeCursorHolder(specWith(filter))) {
       final List<List<String>> rows = collectTenantRegionRows(holder.asCursor());
       Assertions.assertEquals(
@@ -647,6 +703,65 @@ class QueryableIndexCursorFactoryClusteredTest
     Assertions.assertEquals(1, results.size());
     Assertions.assertEquals("us-east-1", results.get(0).get(0));
     Assertions.assertEquals(3L, ((Number) results.get(0).get(1)).longValue());
+  }
+
+  @Test
+  void testGroupByOnNonClusteringColumnWithinSingleGroup()
+  {
+    // Filter to a single cluster group (tenant=acme), then GROUP BY a non-clustering column. Exercises the
+    // single-group cursor-holder path end-to-end: `region` groups correctly via the group's own dictionary, and the
+    // pruned-out globex group contributes nothing.
+    segmentIndex = buildSegment(List.of(
+        row("acme", "2025-01-01T00:00:00", "us-east-1"),
+        row("acme", "2025-01-01T00:10:00", "us-east-1"),
+        row("acme", "2025-01-01T01:00:00", "us-west-2"),
+        row("globex", "2025-01-01T00:30:00", "eu-west-1")
+    ));
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+
+    final GroupByQuery query = GroupByQuery.builder()
+                                           .setDataSource("test")
+                                           .setGranularity(Granularities.ALL)
+                                           .setInterval(Intervals.ETERNITY)
+                                           .setDimFilter(new EqualityFilter("tenant", ColumnType.STRING, "acme", null))
+                                           .addDimension("region")
+                                           .addOrderByColumn("region")
+                                           .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                           .build();
+    final List<ResultRow> results = groupingEngine.process(query, factory, null, nonBlockingPool, null).toList();
+    Assertions.assertEquals(2, results.size());
+    Assertions.assertEquals("us-east-1", results.get(0).get(0));
+    Assertions.assertEquals(2L, ((Number) results.get(0).get(1)).longValue());
+    Assertions.assertEquals("us-west-2", results.get(1).get(0));
+    Assertions.assertEquals(1L, ((Number) results.get(1).get(1)).longValue());
+  }
+
+  @Test
+  void testGroupByClusteringColumnWithinSingleGroup()
+  {
+    // Filter to a single group, then GROUP BY the clustering column itself. The single-group factory advertises the
+    // clustering column as a one-entry dictionary, so this rides the dictionary-id grouping path over the constant
+    // clustering selector: one bucket, the constant value, full count.
+    segmentIndex = standardTwoGroup();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+    final GroupByQuery query = GroupByQuery.builder()
+                                           .setDataSource("test")
+                                           .setGranularity(Granularities.ALL)
+                                           .setInterval(Intervals.ETERNITY)
+                                           .setDimFilter(new EqualityFilter("tenant", ColumnType.STRING, "acme", null))
+                                           .addDimension("tenant")
+                                           .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                           .build();
+    final List<ResultRow> results = groupingEngine.process(query, factory, null, nonBlockingPool, null).toList();
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals("acme", results.get(0).get(0));
+    Assertions.assertEquals(2L, ((Number) results.get(0).get(1)).longValue());
   }
 
   private static Druids.TimeseriesQueryBuilder newTimeseries()

@@ -40,11 +40,12 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -56,11 +57,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * This is mostly a test of the validator
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructionFeeder")
 public class IndexIOTest extends InitializedNullHandlingTest
 {
   private static Interval DEFAULT_INTERVAL = Intervals.of("1970-01-01/2000-01-01");
@@ -82,8 +86,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
     return outList;
   }
 
-  @Parameterized.Parameters(name = "{0}, {1}")
-  public static Iterable<Object[]> constructionFeeder()
+  public static Stream<Object[]> constructionFeeder()
   {
     final Map<String, Object> map = ImmutableMap.of();
 
@@ -106,7 +109,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
 
     final List<Map<String, Object>> maps = ImmutableList.of(map, map00, map10, map0null, map1null, mapAll);
 
-    return Iterables.concat(
+    final Iterable<Object[]> allParams = Iterables.concat(
         // First iterable tests permutations of the maps which are expected to be equal
         Iterables.concat(
             new Iterable<Iterable<Object[]>>()
@@ -225,6 +228,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
             }
         )
     );
+    return StreamSupport.stream(allParams.spliterator(), false);
   }
 
   public static List<Map> filterNullValues(List<Map<String, Object>> mapList)
@@ -232,20 +236,15 @@ public class IndexIOTest extends InitializedNullHandlingTest
     return Lists.transform(mapList, (Function<Map, Map>) input -> Maps.filterValues(input, Objects::nonNull));
   }
 
-  private final Collection<Map<String, Object>> events1;
-  private final Collection<Map<String, Object>> events2;
-  private final Class<? extends Exception> exception;
+  @Parameter(0)
+  public Collection<Map<String, Object>> events1;
 
-  public IndexIOTest(
-      Collection<Map<String, Object>> events1,
-      Collection<Map<String, Object>> events2,
-      Class<? extends Exception> exception
-  )
-  {
-    this.events1 = events1;
-    this.events2 = events2;
-    this.exception = exception;
-  }
+  @Parameter(1)
+  public Collection<Map<String, Object>> events2;
+
+  @Parameter(2)
+  public Class<? extends Exception> exception;
+
 
   final IncrementalIndex incrementalIndex1 = new OnheapIncrementalIndex.Builder()
       .setIndexSchema(
@@ -276,7 +275,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
   IndexableAdapter adapter1;
   IndexableAdapter adapter2;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     long timestamp = 0L;
@@ -313,7 +312,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
       ex = e;
     }
     if (exception != null) {
-      Assert.assertNotNull("Exception was not thrown", ex);
+      Assertions.assertNotNull(ex, "Exception was not thrown");
       if (!exception.isAssignableFrom(ex.getClass())) {
         throw ex;
       }

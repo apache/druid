@@ -23,7 +23,7 @@ sidebar_label: "Hadoop-based"
   ~ under the License.
   -->
 
-Support for Apache Hadoop-based ingestion was removed from Apache Druid 37.0.0. Please use
+Support for Apache Hadoop-based ingestion was removed from Apache&circledR; Druid 37.0.0. Please use
 [SQL-based ingestion](../multi-stage-query/index.md) or [native batch](../ingestion/native-batch.md) instead.
 
 The associated `materialized-view-selection` and `materialized-view-maintenance` contrib extensions were also removed

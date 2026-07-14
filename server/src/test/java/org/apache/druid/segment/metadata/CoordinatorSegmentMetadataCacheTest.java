@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -47,6 +48,8 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -112,6 +115,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetadataCacheTestBase
@@ -2454,5 +2458,122 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     Assert.assertEquals("m1", columnNames.get(2));
     Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(2)).get());
+  }
+
+  /**
+   * A failure refreshing one dataSource (e.g. a SegmentMetadataQuery timeout) must not abort the whole
+   * refresh cycle: other dataSources are still refreshed, and a {@code segment/schemaCache/refresh/failed}
+   * metric is emitted for the failing dataSource.
+   */
+  @Test
+  public void testRefreshFailureForOneDatasourceIsIsolated() throws InterruptedException, IOException
+  {
+    final StubServiceEmitter emitter = new StubServiceEmitter("test", "test");
+    final CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
+        getQueryLifecycleFactory(walker),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        emitter,
+        segmentSchemaCache,
+        backFillQueue,
+        segmentsMetadataManager,
+        segmentsMetadataManagerConfigSupplier
+    )
+    {
+      @Override
+      public Sequence<SegmentAnalysis> runSegmentMetadataQuery(Iterable<SegmentId> segments)
+      {
+        // Simulate a metadata query that times out for DATASOURCE1 but succeeds for everything else.
+        final SegmentId first = segments.iterator().next();
+        if (DATASOURCE1.equals(first.getDataSource())) {
+          throw new QueryTimeoutException("test-induced timeout for " + DATASOURCE1);
+        }
+        return super.runSegmentMetadataQuery(segments);
+      }
+    };
+
+    schema.onLeaderStart();
+    schema.awaitInitialization();
+
+    final Set<SegmentId> allSegmentIds = schema.getSegmentMetadataSnapshot().keySet();
+    emitter.flush();
+
+    // Must not propagate the DATASOURCE1 failure.
+    final Set<SegmentId> refreshed = schema.refreshSegments(allSegmentIds);
+
+    // The healthy dataSources were still refreshed despite DATASOURCE1 failing.
+    Assert.assertTrue(
+        "expected a refreshed segment from " + DATASOURCE2,
+        refreshed.stream().anyMatch(id -> DATASOURCE2.equals(id.getDataSource()))
+    );
+    Assert.assertTrue(
+        "expected a refreshed segment from " + SOME_DATASOURCE,
+        refreshed.stream().anyMatch(id -> SOME_DATASOURCE.equals(id.getDataSource()))
+    );
+    // The failing dataSource produced no refreshed segments.
+    Assert.assertTrue(
+        "expected no refreshed segments from the failing " + DATASOURCE1,
+        refreshed.stream().noneMatch(id -> DATASOURCE1.equals(id.getDataSource()))
+    );
+
+    // A failure metric was emitted, dimensioned by the failing dataSource.
+    final List<Number> failures = emitter.getMetricValues(
+        Metric.REFRESH_FAILED,
+        ImmutableMap.of(DruidMetrics.DATASOURCE, DATASOURCE1)
+    );
+    Assert.assertFalse("expected a refresh/failed metric for " + DATASOURCE1, failures.isEmpty());
+    Assert.assertEquals(1, failures.get(0).intValue());
+  }
+
+  @Test
+  public void testLocalInterruptionPropagatesButWrappedQueryFailureIsIsolated() throws IOException
+  {
+    final StubServiceEmitter emitter = new StubServiceEmitter("test", "test");
+    final AtomicReference<Throwable> causeRef = new AtomicReference<>();
+    final CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
+        getQueryLifecycleFactory(walker),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        emitter,
+        segmentSchemaCache,
+        backFillQueue,
+        segmentsMetadataManager,
+        segmentsMetadataManagerConfigSupplier
+    )
+    {
+      @Override
+      public Sequence<SegmentAnalysis> runSegmentMetadataQuery(Iterable<SegmentId> segments)
+      {
+        throw new QueryInterruptedException(causeRef.get());
+      }
+    };
+
+    final Set<SegmentId> segments = ImmutableSet.of(
+        SegmentId.of(DATASOURCE1, Intervals.of("2000/2001"), "v1", 0)
+    );
+
+    // Genuine local interruption: propagate, restore the interrupt flag, record no failure.
+    causeRef.set(new InterruptedException("test interrupt"));
+    Assert.assertThrows(QueryInterruptedException.class, () -> schema.refreshSegments(segments));
+    Assert.assertTrue("interrupt flag should be restored", Thread.interrupted()); // also clears it for the next case
+    Assert.assertTrue(
+        "local interruption must not emit a refresh/failed metric",
+        emitter.getMetricEvents(Metric.REFRESH_FAILED).isEmpty()
+    );
+
+    // Wrapped ordinary failure (no InterruptedException cause): isolate it - no propagation, failure recorded.
+    causeRef.set(new RuntimeException("wrapped query failure"));
+    schema.refreshSegments(segments); // must not throw
+    Assert.assertFalse("interrupt flag must not be set for a wrapped failure", Thread.currentThread().isInterrupted());
+    final List<Number> failures = emitter.getMetricValues(
+        Metric.REFRESH_FAILED,
+        ImmutableMap.of(DruidMetrics.DATASOURCE, DATASOURCE1)
+    );
+    Assert.assertFalse("a wrapped query failure should emit refresh/failed", failures.isEmpty());
+    Assert.assertEquals(1, failures.get(0).intValue());
   }
 }

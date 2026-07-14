@@ -27,13 +27,26 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.file.SegmentFileMetadata;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
+import org.apache.druid.segment.projections.ProjectionMetadata;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -164,6 +177,92 @@ public class PartialProjectionLoadSpecTest
     Assertions.assertThrows(
         NullPointerException.class,
         () -> new PartialProjectionLoadSpec(DELEGATE, List.of("a"), null, jsonMapper)
+    );
+  }
+
+  @Test
+  void testGetSelectedBundleNamesReturnsProjections()
+  {
+    // Projection names double as bundle names; each requested name must appear in the segment's projections.
+    PartialProjectionLoadSpec spec = new PartialProjectionLoadSpec(
+        DELEGATE,
+        List.of("user_daily", "user_hourly"),
+        FINGERPRINT,
+        jsonMapper
+    );
+    final SegmentFileMetadata metadata = metadataWithProjections("user_daily", "user_hourly", "some_other");
+    Assertions.assertEquals(List.of("user_daily", "user_hourly"), spec.getSelectedBundleNames(anySegment(), metadata));
+  }
+
+  @Test
+  void testGetSelectedBundleNamesThrowsWhenProjectionMissing()
+  {
+    // Defensive: a wire form referring to a projection this segment doesn't have. Should only happen on
+    // matcher/reader drift or a coding bug.
+    PartialProjectionLoadSpec spec = new PartialProjectionLoadSpec(
+        DELEGATE,
+        List.of("user_daily", "vanished"),
+        FINGERPRINT,
+        jsonMapper
+    );
+    final SegmentFileMetadata metadata = metadataWithProjections("user_daily");
+    final DruidException thrown = Assertions.assertThrows(
+        DruidException.class,
+        () -> spec.getSelectedBundleNames(anySegment(), metadata)
+    );
+    Assertions.assertTrue(
+        thrown.getMessage().contains("does not contain projection[vanished]"),
+        "unexpected message: " + thrown.getMessage()
+    );
+  }
+
+  @Test
+  void testGetSelectedBundleNamesThrowsWhenMetadataHasNoProjections()
+  {
+    // Defensive: a segment with no projections in metadata can't satisfy any projection rule.
+    PartialProjectionLoadSpec spec = new PartialProjectionLoadSpec(
+        DELEGATE,
+        List.of("user_daily"),
+        FINGERPRINT,
+        jsonMapper
+    );
+    final SegmentFileMetadata metadata = new SegmentFileMetadata(List.of(), Map.of(), null, null, null, null);
+    final DruidException thrown = Assertions.assertThrows(
+        DruidException.class,
+        () -> spec.getSelectedBundleNames(anySegment(), metadata)
+    );
+    Assertions.assertTrue(
+        thrown.getMessage().contains("metadata has no projections"),
+        "unexpected message: " + thrown.getMessage()
+    );
+  }
+
+  private static DataSegment anySegment()
+  {
+    return DataSegment.builder(SegmentId.of("ds", Intervals.ETERNITY, "v1", new NumberedShardSpec(0, 1)))
+                      .size(0)
+                      .build();
+  }
+
+  private static SegmentFileMetadata metadataWithProjections(String... names)
+  {
+    final List<ProjectionMetadata> projections = new ArrayList<>(names.length);
+    for (String name : names) {
+      projections.add(new ProjectionMetadata(1, projectionSchemaNamed(name)));
+    }
+    return new SegmentFileMetadata(List.of(), Map.of(), null, null, projections, null);
+  }
+
+  private static AggregateProjectionSchema projectionSchemaNamed(String name)
+  {
+    return new AggregateProjectionSchema(
+        name,
+        null,
+        null,
+        VirtualColumns.EMPTY,
+        List.of("dim1"),
+        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
+        List.of(OrderBy.ascending("dim1"))
     );
   }
 

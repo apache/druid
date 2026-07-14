@@ -27,6 +27,7 @@ import org.junit.Test;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class AuthConfigTest
@@ -35,6 +36,19 @@ public class AuthConfigTest
   public void testEquals()
   {
     EqualsVerifier.configure().usingGetClass().forClass(AuthConfig.class).verify();
+  }
+
+  @Test
+  public void testEmitAuthMetricsDefaultsFalse()
+  {
+    assertFalse(new AuthConfig().isEmitAuthMetrics());
+    assertFalse(AuthConfig.newBuilder().build().isEmitAuthMetrics());
+  }
+
+  @Test
+  public void testEmitAuthMetricsCanBeEnabled()
+  {
+    assertTrue(AuthConfig.newBuilder().setEmitAuthMetrics(true).build().isEmitAuthMetrics());
   }
 
   @Test

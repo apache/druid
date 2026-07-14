@@ -22,6 +22,7 @@ package org.apache.druid.segment.projections;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.RowIdSupplier;
@@ -319,6 +320,42 @@ class ClusteringColumnSelectorFactoryTest
     // calling matches() now invokes the second delegate's selector (verified by lastDimSelectorName getting set).
     Assertions.assertTrue(matcher.matches(false));
     Assertions.assertEquals("region", second.lastDimSelectorName);
+  }
+
+  @Test
+  void testClusteringColumnDimensionSelectorForcesValueBasedGrouping()
+  {
+    // Across a concatenating multi-group cursor the clustering column's per-group constant id (always 0) is not
+    // stable: id 0 means a different clustering value in each group. The selector must therefore NOT advertise
+    // dictionary-encoded grouping, otherwise the group-by engine keys on the per-group id and silently collapses
+    // every group into one bucket.
+    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+        new RecordingDelegate(),
+        SIGNATURE,
+        new Object[]{"acme"}
+    );
+    DimensionSelector sel = f.makeDimensionSelector(DefaultDimensionSpec.of("tenant"));
+    Assertions.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, sel.getValueCardinality());
+    Assertions.assertFalse(sel.nameLookupPossibleInAdvance());
+    Assertions.assertNull(sel.idLookup());
+    // Value resolution still works per row against the current group's constant.
+    Assertions.assertEquals("acme", sel.lookupName(sel.getRow().get(0)));
+  }
+
+  @Test
+  void testNonClusteringDelegatingDimensionSelectorForcesValueBasedGrouping()
+  {
+    // The non-clustering (delegating) path has the same cross-group id-instability and must also force value-based
+    // grouping, even though its delegate here (a constant selector) would otherwise report a stable dictionary.
+    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+        new RecordingDelegate(),
+        SIGNATURE,
+        new Object[]{"acme"}
+    );
+    DimensionSelector sel = f.makeDimensionSelector(DefaultDimensionSpec.of("region"));
+    Assertions.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, sel.getValueCardinality());
+    Assertions.assertFalse(sel.nameLookupPossibleInAdvance());
+    Assertions.assertNull(sel.idLookup());
   }
 
   @Test

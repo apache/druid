@@ -1161,6 +1161,60 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testRegisterUpgradedPendingSegmentReturnsAnnouncedWhenBaseSinkExists() throws Exception
+  {
+    try (
+        final StreamAppenderatorTester tester =
+            new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
+                                                  .basePersistDirectory(temporaryFolder.newFolder())
+                                                  .build()) {
+      final StreamAppenderator appenderator = (StreamAppenderator) tester.getAppenderator();
+      appenderator.startJob();
+      // Create the base sink for IDENTIFIERS.get(0) so the upgrade can be announced against it.
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
+
+      final StreamAppenderator.PendingSegmentUpgradeResult outcome = appenderator.registerUpgradedPendingSegment(
+          PendingSegmentRecord.create(
+              si("2000/2001", "B", 1),
+              si("2000/2001", "B", 1).asSegmentId().toString(),
+              IDENTIFIERS.get(0).asSegmentId().toString(),
+              IDENTIFIERS.get(0).asSegmentId().toString(),
+              StreamAppenderatorTester.DATASOURCE
+          )
+      );
+
+      Assert.assertEquals(StreamAppenderator.PendingSegmentUpgradeResult.ANNOUNCED, outcome);
+    }
+  }
+
+  @Test
+  public void testRegisterUpgradedPendingSegmentReturnsSkippedUnknownBaseWhenBaseNotHeld() throws Exception
+  {
+    try (
+        final StreamAppenderatorTester tester =
+            new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
+                                                  .basePersistDirectory(temporaryFolder.newFolder())
+                                                  .build()) {
+      final StreamAppenderator appenderator = (StreamAppenderator) tester.getAppenderator();
+      appenderator.startJob();
+
+      // No sink has ever been created for the upgradedFromSegmentId below, so this task cannot announce it.
+      // This is the case where the upgrade request reached the wrong task.
+      final StreamAppenderator.PendingSegmentUpgradeResult outcome = appenderator.registerUpgradedPendingSegment(
+          PendingSegmentRecord.create(
+              si("2050/2051", "Z", 1),
+              si("2050/2051", "Z", 1).asSegmentId().toString(),
+              si("2050/2051", "Y", 0).asSegmentId().toString(),
+              si("2050/2051", "Y", 0).asSegmentId().toString(),
+              StreamAppenderatorTester.DATASOURCE
+          )
+      );
+
+      Assert.assertEquals(StreamAppenderator.PendingSegmentUpgradeResult.SKIPPED_UNKNOWN_BASE, outcome);
+    }
+  }
+
+  @Test
   public void testQueryBySegments_withSegmentVersionUpgrades() throws Exception
   {
     try (
@@ -2294,10 +2348,84 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  public void testQueryByIntervalsEmitsQueriedSegmentCountMetric() throws Exception
+  {
+    try (
+        StubServiceEmitter serviceEmitter = new StubServiceEmitter();
+        final StreamAppenderatorTester tester =
+            new StreamAppenderatorTester.Builder().maxRowsInMemory(100)
+                                                  .basePersistDirectory(temporaryFolder.newFolder())
+                                                  .withServiceEmitter(serviceEmitter)
+                                                  .build()) {
+      final Appenderator appenderator = tester.getAppenderator();
+
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "foo", 4), Suppliers.ofInstance(Committers.nil()));
+
+      final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                          .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                          .intervals(ImmutableList.of(Intervals.of("2000/2001")))
+                                          .aggregators(
+                                              Collections.singletonList(
+                                                  new LongSumAggregatorFactory("count", "count")
+                                              )
+                                          )
+                                          .granularity(Granularities.DAY)
+                                          .build();
+
+      QueryPlus.wrap(query).run(appenderator, ResponseContext.createEmpty()).toList();
+
+      serviceEmitter.verifyEmitted(DefaultQueryMetrics.QUERY_SEGMENTS_COUNT, 1);
+      serviceEmitter.verifyValue(DefaultQueryMetrics.QUERY_SEGMENTS_COUNT, 2L);
+    }
+  }
+
+  @Test
+  public void testQueryEmitsQueriedSegmentCountCountsSinksNotHydrants() throws Exception
+  {
+    try (
+        StubServiceEmitter serviceEmitter = new StubServiceEmitter();
+        final StreamAppenderatorTester tester =
+            new StreamAppenderatorTester.Builder().maxRowsInMemory(100)
+                                                  .basePersistDirectory(temporaryFolder.newFolder())
+                                                  .withServiceEmitter(serviceEmitter)
+                                                  .build()) {
+      final Appenderator appenderator = tester.getAppenderator();
+
+      appenderator.startJob();
+      // Persisting between adds to the same identifier swaps the current FireHydrant for a new one, so this single
+      // Sink ends up with multiple hydrants. query/segments/count must report 1 (the Sink/segment), not the hydrant count.
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
+      appenderator.persistAll(Committers.nil()).get();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar", 2), Suppliers.ofInstance(Committers.nil()));
+      appenderator.persistAll(Committers.nil()).get();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "baz", 3), Suppliers.ofInstance(Committers.nil()));
+
+      final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                          .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                          .intervals(ImmutableList.of(Intervals.of("2000/2001")))
+                                          .aggregators(
+                                              Collections.singletonList(
+                                                  new LongSumAggregatorFactory("count", "count")
+                                              )
+                                          )
+                                          .granularity(Granularities.DAY)
+                                          .build();
+
+      QueryPlus.wrap(query).run(appenderator, ResponseContext.createEmpty()).toList();
+
+      serviceEmitter.verifyEmitted(DefaultQueryMetrics.QUERY_SEGMENTS_COUNT, 1);
+      serviceEmitter.verifyValue(DefaultQueryMetrics.QUERY_SEGMENTS_COUNT, 1L);
+    }
+  }
+
   private void verifySinkMetrics(StubServiceEmitter emitter, Set<String> segmentIds)
   {
-    int segments = segmentIds.size();
+    final int segments = segmentIds.size();
     emitter.verifyEmitted(DefaultQueryMetrics.QUERY_CPU_TIME, 1);
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_SEGMENTS_COUNT, 1);
     Assert.assertEquals(segments, emitter.getMetricEvents(DefaultQueryMetrics.QUERY_SEGMENT_TIME).size());
     Assert.assertEquals(segments, emitter.getMetricEvents(DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME).size());
     Assert.assertEquals(segments, emitter.getMetricEvents(DefaultQueryMetrics.QUERY_WAIT_TIME).size());

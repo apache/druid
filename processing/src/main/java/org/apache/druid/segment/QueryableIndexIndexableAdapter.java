@@ -287,7 +287,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public IndexableAdapter getClusterGroupAdapter(TableClusterGroupSpec spec)
   {
-    final QueryableIndex groupIndex = input.getClusterGroupQueryableIndex(spec);
+    // Merge/persist must not write clustering columns into the per-group files, so omit them here.
+    final QueryableIndex groupIndex = input.getClusterGroupQueryableIndex(spec, false);
     DruidException.conditionalDefensive(groupIndex != null, "Cluster group spec [%s] was not found", spec);
     return new QueryableIndexIndexableAdapter(groupIndex);
   }

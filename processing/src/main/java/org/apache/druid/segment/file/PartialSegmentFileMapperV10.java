@@ -104,14 +104,16 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       ObjectMapper jsonMapper,
       File localCacheDir,
       String targetFilename,
-      List<String> externals
+      List<String> externals,
+      PartialSegmentDownloadListener downloadListener
   ) throws IOException
   {
     final PartialSegmentFileMapperV10 entryPoint = createForFile(
         rangeReader,
         jsonMapper,
         localCacheDir,
-        targetFilename
+        targetFilename,
+        downloadListener
     );
 
     final Map<String, PartialSegmentFileMapperV10> externalMappers = new HashMap<>();
@@ -119,7 +121,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       for (String filename : externals) {
         externalMappers.put(
             filename,
-            createForFile(rangeReader, jsonMapper, localCacheDir, filename)
+            createForFile(rangeReader, jsonMapper, localCacheDir, filename, downloadListener)
         );
       }
     }
@@ -139,7 +141,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       SegmentRangeReader rangeReader,
       ObjectMapper jsonMapper,
       File localCacheDir,
-      String targetFilename
+      String targetFilename,
+      PartialSegmentDownloadListener downloadListener
   ) throws IOException
   {
     FileUtils.mkdirp(localCacheDir);
@@ -172,6 +175,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       fetchAndPersistHeader(rangeReader, targetFilename, headerFile);
       result = parseHeaderFile(headerFile, jsonMapper);
       bitmapBuffer = mmapBitmap(headerFile, result);
+      downloadListener.onBytesDownloaded(headerFile.length());
     }
 
     final PartialSegmentFileMapperV10 mapper = new PartialSegmentFileMapperV10(
@@ -180,7 +184,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
         rangeReader,
         targetFilename,
         localCacheDir,
-        bitmapBuffer
+        bitmapBuffer,
+        downloadListener
     );
 
     // bitmap-vs-container repair pre-pass: if the bitmap claims a file is downloaded but its container file is
@@ -260,6 +265,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   private final MappedByteBuffer bitmapBuffer;
   private final AtomicLong downloadedBytes = new AtomicLong(0);
   private final AtomicBoolean closed = new AtomicBoolean(false);
+  private final PartialSegmentDownloadListener downloadListener;
 
   private PartialSegmentFileMapperV10(
       SegmentFileMetadata metadata,
@@ -267,7 +273,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       SegmentRangeReader rangeReader,
       String targetFilename,
       File localCacheDir,
-      MappedByteBuffer bitmapBuffer
+      MappedByteBuffer bitmapBuffer,
+      PartialSegmentDownloadListener downloadListener
   )
   {
     this.metadata = metadata;
@@ -276,6 +283,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     this.targetFilename = targetFilename;
     this.localCacheDir = localCacheDir;
     this.bitmapBuffer = bitmapBuffer;
+    this.downloadListener = downloadListener;
 
     // build stable file name ordering for bitmap indexing
     this.sortedFileNames = new ArrayList<>(new TreeSet<>(metadata.getFiles().keySet()));
@@ -440,7 +448,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   }
 
   /**
-   * Download every container belonging to {@code bundleName} in this mapper, each in a single range read (see
+   * Download every container belonging to {@code bundleName}, recursing into external mappers to cover bundles that
+   * span the main file plus one or more externals. Each container is downloaded in a single range read (see
    * {@link #downloadContainer}). No-op for an unknown bundle.
    */
   public void ensureBundleDownloaded(String bundleName) throws IOException
@@ -449,6 +458,32 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     for (int containerIndex : getContainerIndicesForBundle(bundleName)) {
       downloadContainer(containerIndex);
     }
+    for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
+      external.ensureBundleDownloaded(bundleName);
+    }
+  }
+
+  /**
+   * Whether every container belonging to {@code bundleName} has all its files present in {@link #downloadedFiles},
+   * across the main mapper AND every attached external mapper.
+   * <p>
+   * Returns {@code true} for a bundle name unknown to any mapper (no containers to check).
+   */
+  public boolean isBundleFullyDownloaded(String bundleName)
+  {
+    checkClosed();
+    for (int containerIndex : getContainerIndicesForBundle(bundleName)) {
+      final List<String> fileNames = containerFileNames.get(containerIndex);
+      if (!downloadedFiles.containsAll(fileNames)) {
+        return false;
+      }
+    }
+    for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
+      if (!external.isBundleFullyDownloaded(bundleName)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -788,6 +823,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   ) throws IOException
   {
     // stream straight from deep storage to the local container file to avoid heap-buffering the whole range
+    final long startNanos = System.nanoTime();
     try (ResourceHolder<byte[]> bufHolder = CompressedPools.getOutputBytes();
          InputStream is = rangeReader.readRange(targetFilename, absoluteOffset, size);
          RandomAccessFile raf = new RandomAccessFile(containerFiles[containerIndex], "rw")) {
@@ -809,6 +845,9 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
         remaining -= read;
       }
     }
+    // Report the completed deep-storage range read (reached only on success). One read may cover many files; this is
+    // the actual request granularity, so it measures wire bytes + latency rather than bytes that became resident.
+    downloadListener.onRangeRead(size, System.nanoTime() - startNanos);
   }
 
   /**
@@ -821,6 +860,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   {
     if (downloadedFiles.add(name)) {
       downloadedBytes.addAndGet(size);
+      downloadListener.onBytesDownloaded(size);
       markDownloadedInBitmap(name);
     }
   }

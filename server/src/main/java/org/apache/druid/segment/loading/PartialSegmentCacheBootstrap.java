@@ -30,12 +30,10 @@ import org.apache.druid.timeline.SegmentId;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -58,11 +56,12 @@ import java.util.Set;
  *   {@link #restoreBundlesFromDisk} to discover, reserve, and mount any bundles whose container files survived. The
  *   same call from the fresh acquire path is a no-op (no on-disk containers to restore).</li>
  * </ol>
- * Parent-set inference is delegated to {@link PartialSegmentMetadataCacheEntry#inferParentBundles}. A bundle whose
- * inferred parent isn't itself present on disk is treated as <i>orphaned</i>: its on-disk container files are deleted
- * (via {@link PartialSegmentFileMapperV10#evictContainer}, which also clears the relevant bitmap bits) and the bundle
- * is not restored. The next access through the cache manager acquire path then triggers a clean cold re-fetch, the
- * same fall-back as when the cache manager finds a segment listed in the info directory but missing on disk.
+ * Dependency inference is delegated to {@link PartialSegmentMetadataCacheEntry#inferBundleDependencies}. A bundle
+ * whose inferred dependency isn't itself present on disk is treated as <i>orphaned</i>: its on-disk container files
+ * are deleted (via {@link PartialSegmentFileMapperV10#evictContainer}, which also clears the relevant bitmap bits) and
+ * the bundle is not restored. The next access through the cache manager acquire path then triggers a clean cold
+ * re-fetch, the same fall-back as when the cache manager finds a segment listed in the info directory but missing on
+ * disk.
  */
 public final class PartialSegmentCacheBootstrap
 {
@@ -74,12 +73,13 @@ public final class PartialSegmentCacheBootstrap
    * the runtime acquire path), so it is evictable once mounted; bootstrap-restored data is treated as a cache
    * optimization, not a permanent fixture. The caller is expected to drive the actual mount through
    * {@code metadata.mount(location)} later (typically via {@code SegmentCacheManager#bootstrap}), which builds the
-   * file mapper and cascades into {@link #restoreBundlesFromDisk}.
+   * file mapper (parsing the header from local disk, no fetch) and cascades into {@link #restoreBundlesFromDisk}.
    *
    * @param segmentId         the segment whose entries are being restored
    * @param localCacheDir     the per-segment directory containing the header + container files
    * @param targetFilename    the V10 entry-point filename
    * @param externalFilenames any external segment file names that were registered as children of the entry-point file
+   * @param rangeReader       the segment's deep-storage range reader, retained for later on-demand fetches
    * @param jsonMapper        used by the metadata entry's mount path to parse the header
    * @param storagePool       thread pool the async cursor path submits on-demand column downloads to (which bounds
    *                          load concurrency itself); may be null in tests that never invoke the cursor factory
@@ -92,6 +92,7 @@ public final class PartialSegmentCacheBootstrap
       File localCacheDir,
       String targetFilename,
       List<String> externalFilenames,
+      SegmentRangeReader rangeReader,
       ObjectMapper jsonMapper,
       @Nullable StorageLoadingThreadPool storagePool,
       StorageLocation location
@@ -113,7 +114,7 @@ public final class PartialSegmentCacheBootstrap
         localCacheDir,
         targetFilename,
         externalFilenames,
-        BootstrapRangeReader.INSTANCE,
+        rangeReader,
         jsonMapper,
         storagePool,
         actualMetadataSize
@@ -173,8 +174,8 @@ public final class PartialSegmentCacheBootstrap
     final Set<String> orphanedBundleNames = new HashSet<>();
     for (String name : presentBundleNames) {
       boolean orphaned = false;
-      for (PartialSegmentBundleCacheEntryIdentifier parent : metadata.inferParentBundles(name)) {
-        if (!presentBundleNames.contains(parent.bundleName())) {
+      for (PartialSegmentBundleCacheEntryIdentifier dep : metadata.inferBundleDependencies(name)) {
+        if (!presentBundleNames.contains(dep.bundleName())) {
           orphaned = true;
           break;
         }
@@ -192,23 +193,23 @@ public final class PartialSegmentCacheBootstrap
         fileMapper.mapperForContainer(ref.externalFilename()).evictContainer(ref.containerIndex());
       }
       LOG.debug(
-          "Deleted on-disk state of orphaned bundle[%s] for segment[%s] (parent unrestorable); next access "
+          "Deleted on-disk state of orphaned bundle[%s] for segment[%s] (dependency unrestorable); next access "
           + "will trigger cold re-fetch",
           orphanName,
           segmentId
       );
     }
 
-    // mount base bundle before any dependent bundle so its hold is available when dependents acquire parent holds
+    // Mount the base bundle before any dependent bundle so its hold is available when dependents acquire deps.
     mountableBundleNames.sort(Comparator.comparing(name -> !Projections.BASE_TABLE_PROJECTION_NAME.equals(name)));
 
     final List<PartialSegmentBundleCacheEntry> mountedBundles = new ArrayList<>();
     boolean success = false;
     try {
       for (String bundleName : mountableBundleNames) {
-        // Mountable bundles have all parents present by construction (orphans were filtered out above), so the
-        // inferred parent set is exactly what we want, no further filtering needed.
-        final List<PartialSegmentBundleCacheEntryIdentifier> parentIds = metadata.inferParentBundles(bundleName);
+        // Mountable bundles have all dependencies present by construction (orphans were filtered out above), so the
+        // inferred dependency set is exactly what we want, no further filtering needed.
+        final List<PartialSegmentBundleCacheEntryIdentifier> parentIds = metadata.inferBundleDependencies(bundleName);
         final PartialSegmentBundleCacheEntry bundle = PartialSegmentBundleCacheEntry.forBundle(
             metadata,
             bundleName,
@@ -338,27 +339,6 @@ public final class PartialSegmentCacheBootstrap
   private PartialSegmentCacheBootstrap()
   {
     // utility class
-  }
-
-  /**
-   * Stub range reader used during bootstrap: the on-disk header is expected to exist and parse, so no fetch is needed.
-   * If for any reason {@link PartialSegmentFileMapperV10#create} decides to re-fetch (e.g. header corruption), this
-   * reader throws so we fail loudly rather than silently re-downloading without the operator's knowledge.
-   */
-  private static final class BootstrapRangeReader implements SegmentRangeReader
-  {
-    static final BootstrapRangeReader INSTANCE = new BootstrapRangeReader();
-
-    @Override
-    public InputStream readRange(String filename, long offset, long length)
-    {
-      throw DruidException.defensive(
-          "BootstrapRangeReader was asked to fetch [%s] @[%d:%d]; bootstrap should only read from local disk",
-          Objects.toString(filename),
-          offset,
-          length
-      );
-    }
   }
 
 }

@@ -56,7 +56,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-public class QueryableIndexCursorFactory implements CursorFactory
+public class QueryableIndexCursorFactory implements ResidentCursorFactory
 {
   private final QueryableIndex index;
   private final TimeBoundaryInspector timeBoundaryInspector;
@@ -163,11 +163,19 @@ public class QueryableIndexCursorFactory implements CursorFactory
 
   private CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec)
   {
-    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
-        new ArrayList<>(index.getClusterGroupSchemas()),
-        spec
+    return makeClusteredCursorHolder(
+        spec,
+        Projections.planClusterGroupQuery(new ArrayList<>(index.getClusterGroupSchemas()), spec)
     );
+  }
 
+  /**
+   * Build a clustered-base-table cursor holder from an already-computed {@link ClusterGroupQueryPlan}. Exposed so the
+   * partial (on-demand) cursor factory can plan the cluster groups once — to decide which group bundles to download —
+   * and reuse the same plan to build the holder, rather than re-running {@link Projections#planClusterGroupQuery}.
+   */
+  public CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec, ClusterGroupQueryPlan plan)
+  {
     if (plan.survivingGroups().isEmpty()) {
       return EmptyCursorHolder.INSTANCE;
     }
@@ -184,7 +192,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
       TableClusterGroupSpec valueGroup
   )
   {
-    final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup);
+    final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup, true);
     if (groupIndex == null) {
       throw DruidException.defensive(
           "No cluster-group sub-index resolvable for clustering values "
@@ -192,39 +200,13 @@ public class QueryableIndexCursorFactory implements CursorFactory
       );
     }
 
+    // groupIndex exposes the group's clustering columns as constant columns, no selector wrapper is needed
     return new QueryableIndexCursorHolder(
         groupIndex,
         plan.rebuildCursorBuildSpec(spec, valueGroup),
         QueryableIndexTimeBoundaryInspector.create(groupIndex),
         valueGroup.getSummary().getOrdering()
-    )
-    {
-      @Override
-      protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
-          ColumnCache columnCache,
-          Offset baseOffset
-      )
-      {
-        return new ClusteringColumnSelectorFactory(
-            super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset),
-            valueGroup.getSummary().getClusteringColumns(),
-            valueGroup.lookupClusteringValues()
-        );
-      }
-
-      @Override
-      protected VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
-          ColumnCache columnCache,
-          VectorOffset baseOffset
-      )
-      {
-        return new ClusteringVectorColumnSelectorFactory(
-            super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset),
-            valueGroup.getSummary().getClusteringColumns(),
-            valueGroup.lookupClusteringValues()
-        );
-      }
-    };
+    );
   }
 
   /**
@@ -248,7 +230,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
     final Closer closer = Closer.create();
     for (TableClusterGroupSpec valueGroup : matching) {
       clusteringValuesByGroup.add(valueGroup.lookupClusteringValues());
-      final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup);
+      final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup, true);
       if (groupIndex == null) {
         throw DruidException.defensive(
             "No cluster-group sub-index resolvable for clustering values "

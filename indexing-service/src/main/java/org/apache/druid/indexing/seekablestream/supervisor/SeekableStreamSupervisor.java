@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -48,7 +49,9 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.SegmentUpgradeMetrics;
 import org.apache.druid.indexing.common.TaskInfoProvider;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -1415,26 +1418,100 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     addNotice(new ResetOffsetsNotice(resetDataSourceMetadata));
   }
 
-  public void registerNewVersionOfPendingSegment(
+  /**
+   * Notifies every running task in the matching task group(s) of an upgraded pending segment.
+   *
+   * @return the number of tasks notified
+   */
+  public int registerNewVersionOfPendingSegment(
       PendingSegmentRecord pendingSegmentRecord
   )
   {
+    final String taskAllocatorId = pendingSegmentRecord.getTaskAllocatorId();
+    int notifiedTasks = 0;
+
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
-      if (taskGroup.baseSequenceName.equals(pendingSegmentRecord.getTaskAllocatorId())) {
+      if (taskGroup.baseSequenceName.equals(taskAllocatorId)) {
         for (String taskId : taskGroup.taskIds()) {
-          taskClient.registerNewVersionOfPendingSegmentAsync(taskId, pendingSegmentRecord);
+          notifyTaskOfUpgradedPendingSegment(taskId, pendingSegmentRecord);
+          notifiedTasks++;
         }
       }
     }
     for (List<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
       for (TaskGroup taskGroup : taskGroupList) {
-        if (taskGroup.baseSequenceName.equals(pendingSegmentRecord.getTaskAllocatorId())) {
+        if (taskGroup.baseSequenceName.equals(taskAllocatorId)) {
           for (String taskId : taskGroup.taskIds()) {
-            taskClient.registerNewVersionOfPendingSegmentAsync(taskId, pendingSegmentRecord);
+            notifyTaskOfUpgradedPendingSegment(taskId, pendingSegmentRecord);
+            notifiedTasks++;
           }
         }
       }
     }
+
+    if (notifiedTasks == 0) {
+      // No running task matched: the segment will not be re-announced until handoff.
+      // This may happen if there are multiple supervisors for the same datasource
+      // or due to race conditions while events such as changing the state of a TaskGroup
+      // from actively reading to pending completion, etc.
+      // This is a potential silent-loss window where data will not be queryable until handoff.
+      log.info(
+          "Could not find any task matching taskAllocatorId[%s] in supervisor[%s] for upgraded pending segment[%s]"
+          + " (upgradedFrom[%s]); it will not be re-announced until handoff.",
+          taskAllocatorId,
+          supervisorId,
+          pendingSegmentRecord.getId(),
+          pendingSegmentRecord.getUpgradedFromSegmentId()
+      );
+      emitter.emit(
+          IndexTaskUtils.setPendingSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
+                        .setMetric(SegmentUpgradeMetrics.UNMATCHED, 1)
+      );
+    }
+    return notifiedTasks;
+  }
+
+  /**
+   * Sends an upgraded pending segment to a single task, emitting {@link SegmentUpgradeMetrics#NOTIFIED} for the
+   * notification attempt and {@link SegmentUpgradeMetrics#SEND_FAILED} if the request fails to reach the task. Both
+   * are per-task (keyed by {@code taskId}), so {@code notified} can be reconciled against the per-task
+   * {@code announced}, {@code skipped} and {@code sendFailed} outcomes.
+   */
+  private void notifyTaskOfUpgradedPendingSegment(String taskId, PendingSegmentRecord pendingSegmentRecord)
+  {
+    emitter.emit(
+        IndexTaskUtils.setPendingSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
+                      .setDimension(DruidMetrics.TASK_ID, taskId)
+                      .setMetric(SegmentUpgradeMetrics.NOTIFIED, 1)
+    );
+    Futures.addCallback(
+        taskClient.registerNewVersionOfPendingSegmentAsync(taskId, pendingSegmentRecord),
+        new FutureCallback<>()
+        {
+          @Override
+          public void onSuccess(Boolean result)
+          {
+            // The request reached the task; what the task does with it (announce or skip) is reported by the task's
+            // own announced/skipped metrics, so there is nothing to record here.
+          }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            log.warn(
+                t,
+                "Failed to register upgraded pending segment[%s] on task[%s] of supervisor[%s].",
+                pendingSegmentRecord.getId(), taskId, supervisorId
+            );
+            emitter.emit(
+                IndexTaskUtils.setPendingSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
+                              .setDimension(DruidMetrics.TASK_ID, taskId)
+                              .setMetric(SegmentUpgradeMetrics.SEND_FAILED, 1)
+            );
+          }
+        },
+        MoreExecutors.directExecutor()
+    );
   }
 
   public ReentrantLock getRecordSupplierLock()

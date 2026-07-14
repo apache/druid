@@ -42,17 +42,16 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.EqualityFilter;
-import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.file.CountingRangeReader;
+import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
@@ -78,9 +77,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
-class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
+class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursorFactoryTestBase
 {
-  private static final ColumnConfig COLUMN_CONFIG = ColumnConfig.DEFAULT;
   private static final DateTime TIME = DateTimes.of("2025-01-01");
   private static final String PROJECTION_NAME = "dim1_metric1_sum";
 
@@ -111,9 +109,6 @@ class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
 
   private static File segmentDir;
   private static ListeningExecutorService realExec;
-
-  @TempDir
-  File perTestTempDir;
 
   @BeforeAll
   static void buildSegment()
@@ -329,7 +324,8 @@ class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
         TestHelper.makeJsonMapper(),
         cacheDir,
         IndexIO.V10_FILE_NAME,
-        Collections.emptyList()
+        Collections.emptyList(),
+        PartialSegmentDownloadListener.NOOP
     );
     try {
       final PartialQueryableIndex index =
@@ -703,55 +699,5 @@ class PartialQueryableIndexCursorFactoryTest extends InitializedNullHandlingTest
                        .indexSpec(IndexSpec.builder().withMetadataCompression(CompressionStrategy.NONE).build())
                        .rows(ROWS)
                        .buildMMappedIndexFile();
-  }
-
-  private IndexAndMapper openIndex(CountingRangeReader rangeReader, String cacheName) throws IOException
-  {
-    final File cacheDir = new File(perTestTempDir, cacheName);
-    FileUtils.mkdirp(cacheDir);
-    final PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
-        rangeReader,
-        TestHelper.makeJsonMapper(),
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        Collections.emptyList()
-    );
-    return new IndexAndMapper(
-        new PartialQueryableIndex(mapper.getSegmentFileMetadata(), mapper, COLUMN_CONFIG),
-        mapper
-    );
-  }
-
-  private static ListeningExecutorService directExec()
-  {
-    return MoreExecutors.listeningDecorator(MoreExecutors.newDirectExecutorService());
-  }
-
-  private static PartialBundleAcquirer noOpAcquirer(ListeningExecutorService downloadExec)
-  {
-    return new PartialBundleAcquirer()
-    {
-      @Override
-      public Closeable acquire(String bundleName)
-      {
-        return () -> {};
-      }
-
-      @Override
-      public <T> AsyncResource<T> submitDownload(Callable<T> task)
-      {
-        return AsyncResources.fromFutureUnmanaged(downloadExec.submit(task));
-      }
-    };
-  }
-
-  private record IndexAndMapper(PartialQueryableIndex index, PartialSegmentFileMapperV10 mapper)
-      implements AutoCloseable
-  {
-    @Override
-    public void close()
-    {
-      mapper.close();
-    }
   }
 }

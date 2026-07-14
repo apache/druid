@@ -23,7 +23,7 @@ title: "ZooKeeper"
   -->
 
 
-Apache Druid uses [Apache ZooKeeper](http://zookeeper.apache.org/) (ZK) for management of current cluster state.
+Apache&circledR; Druid uses [Apache ZooKeeper](http://zookeeper.apache.org/) (ZK) for management of current cluster state.
 
 ## Minimum ZooKeeper versions
 

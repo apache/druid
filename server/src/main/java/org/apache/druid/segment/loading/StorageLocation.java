@@ -540,12 +540,11 @@ public class StorageLocation
           id,
           (cacheEntryIdentifier, weakCacheEntry) -> {
             if (weakCacheEntry.isHeld()) {
-              // a holder is responsible for cleanup when it releases; leave the entry in place
               return weakCacheEntry;
             }
             final boolean isMounted = weakCacheEntry.cacheEntry.isMounted();
             unlinkWeakEntry(weakCacheEntry);
-            weakCacheEntry.unmount(); // terminate the phaser; fires cacheEntry.unmount() (idempotent)
+            weakCacheEntry.unmount();
             if (isMounted) {
               weakStats.getAndUpdate(s -> s.evict(weakCacheEntry.cacheEntry.getSize()));
             }
@@ -792,6 +791,16 @@ public class StorageLocation
   public void trackWeakLoad(long size)
   {
     weakStats.getAndUpdate(s -> s.load(size));
+  }
+
+  /**
+   * Record a single on-demand deep-storage range read: {@code bytes} pulled over the wire in {@code nanos}. One read
+   * may materialize several internal files (whole-container fetch), so this is the request-level signal that
+   * complements the per-file {@link #trackWeakLoad}.
+   */
+  public void trackWeakRangeRead(long bytes, long nanos)
+  {
+    weakStats.getAndUpdate(s -> s.rangeRead(bytes, nanos));
   }
 
   private void trackWeakHold(WeakCacheEntry entry)
@@ -1234,6 +1243,9 @@ public class StorageLocation
     private final AtomicLong evictionCount = new AtomicLong(0);
     private final AtomicLong evictionBytes = new AtomicLong(0);
     private final AtomicLong unmountCount = new AtomicLong(0);
+    private final AtomicLong readCount = new AtomicLong(0);
+    private final AtomicLong readBytes = new AtomicLong(0);
+    private final AtomicLong readTimeNanos = new AtomicLong(0);
 
     public WeakStats(AtomicLong sizeUsed, AtomicLong holdCount, AtomicLong holdBytes)
     {
@@ -1290,6 +1302,14 @@ public class StorageLocation
     public WeakStats reject()
     {
       rejectionCount.getAndIncrement();
+      return this;
+    }
+
+    public WeakStats rangeRead(long bytes, long nanos)
+    {
+      readCount.getAndIncrement();
+      readBytes.getAndAdd(bytes);
+      readTimeNanos.getAndAdd(nanos);
       return this;
     }
 
@@ -1363,6 +1383,24 @@ public class StorageLocation
     public long getRejectCount()
     {
       return rejectionCount.get();
+    }
+
+    @Override
+    public long getReadCount()
+    {
+      return readCount.get();
+    }
+
+    @Override
+    public long getReadBytes()
+    {
+      return readBytes.get();
+    }
+
+    @Override
+    public long getReadTimeNanos()
+    {
+      return readTimeNanos.get();
     }
 
     @VisibleForTesting

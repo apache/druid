@@ -33,7 +33,7 @@ import { SqlExpression } from 'druid-query-toolkit';
 import React from 'react';
 
 import { MenuCheckbox, SplitterLayout } from '../../components';
-import { SpecDialog, StringInputDialog } from '../../dialogs';
+import { SpecDialog, StringInputDialog, SupervisorToSqlDialog } from '../../dialogs';
 import type {
   CapacityInfo,
   ConsoleViewId,
@@ -114,6 +114,7 @@ type MoreMenuItem =
   | 'history'
   | 'prettify'
   | 'convert-ingestion-to-sql'
+  | 'convert-supervisor-to-sql'
   | 'attach-tab-from-task-id'
   | 'open-query-detail-archive'
   | 'druid-sql-documentation'
@@ -161,6 +162,7 @@ export interface WorkbenchViewState {
   explainDialogOpen: boolean;
   historyDialogOpen: boolean;
   specDialogOpen: boolean;
+  supervisorToSqlDialogOpen: boolean;
   executionSubmitDialogOpen: boolean;
   taskIdSubmitDialogOpen: boolean;
   renamingTab?: TabEntry;
@@ -218,6 +220,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       explainDialogOpen: false,
       historyDialogOpen: false,
       specDialogOpen: false,
+      supervisorToSqlDialogOpen: false,
       executionSubmitDialogOpen: false,
       taskIdSubmitDialogOpen: false,
 
@@ -278,6 +281,10 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
 
   private readonly openSpecDialog = () => {
     this.setState({ specDialogOpen: true });
+  };
+
+  private readonly openSupervisorToSqlDialog = () => {
+    this.setState({ supervisorToSqlDialogOpen: true });
   };
 
   private readonly openExecutionSubmitDialog = () => {
@@ -492,6 +499,26 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
         }}
         onClose={() => this.setState({ specDialogOpen: false })}
         title="Ingestion spec to convert"
+      />
+    );
+  }
+
+  private renderSupervisorToSqlDialog() {
+    const { supervisorToSqlDialogOpen } = this.state;
+    if (!supervisorToSqlDialogOpen) return;
+
+    return (
+      <SupervisorToSqlDialog
+        onConvert={(converted, datasource) => {
+          this.handleNewTab(
+            WorkbenchQuery.blank()
+              .changeQueryString(converted.queryString)
+              .changeQueryContext(converted.queryContext || {}),
+            `Convert ${datasource || 'supervisor'}`,
+          );
+          this.setState({ supervisorToSqlDialogOpen: false });
+        }}
+        onClose={() => this.setState({ supervisorToSqlDialogOpen: false })}
       />
     );
   }
@@ -844,6 +871,13 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                       onClick={this.openSpecDialog}
                     />
                   )}
+                  {!hiddenMoreMenuItems.includes('convert-supervisor-to-sql') && (
+                    <MenuItem
+                      icon={IconNames.EXCHANGE}
+                      text="Convert supervisor to SQL"
+                      onClick={this.openSupervisorToSqlDialog}
+                    />
+                  )}
                   {!hiddenMoreMenuItems.includes('attach-tab-from-task-id') && (
                     <MenuItem
                       icon={IconNames.DOCUMENT_OPEN}
@@ -1008,6 +1042,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
         {this.renderConnectExternalDataDialog()}
         {this.renderTabRenameDialog()}
         {this.renderSpecDialog()}
+        {this.renderSupervisorToSqlDialog()}
         {this.renderExecutionSubmit()}
         {this.renderTaskIdSubmit()}
         <MetadataChangeDetector onChange={() => this.metadataQueryManager?.runQuery(null)} />
