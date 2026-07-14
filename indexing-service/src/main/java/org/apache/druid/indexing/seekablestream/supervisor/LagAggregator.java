@@ -49,7 +49,7 @@ public interface LagAggregator
    */
   class DefaultLagAggregator implements LagAggregator
   {
-    public DefaultLagAggregator()
+    private DefaultLagAggregator()
     {
     }
 

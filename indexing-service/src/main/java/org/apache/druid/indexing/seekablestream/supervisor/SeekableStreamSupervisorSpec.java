@@ -304,14 +304,11 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       return true;
     }
 
-    final Builder<?> proposedCopy;
-    try {
-      proposedCopy = proposed.toBuilder();
-    }
-    catch (UnsupportedOperationException e) {
-      return true;
-    }
+    final Builder<?> proposedCopy = proposed.toBuilder();
 
+    // When autoscaling is enabled on either side, taskCount is owned by the autoscaler at runtime, so a differing
+    // taskCount does not by itself warrant a stop/recreate. Normalize the proposed copy to the running taskCount so
+    // that only non-taskCount changes can force a restart; the persisted spec still carries the submitted value.
     if (isAutoScalerEnabled() || proposed.isAutoScalerEnabled()) {
       proposedCopy.taskCount(getIoConfig().getTaskCount());
     }
@@ -356,12 +353,10 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   );
 
   /**
-   * Copy builder for restart comparison. Subclasses override; default requires restart on any change.
+   * Returns a copy builder seeded from this spec, used by {@link #requireRestart} for structured comparison.
+   * Abstract so that every stream supervisor spec participates in the restart decision.
    */
-  public Builder<?> toBuilder()
-  {
-    throw new UnsupportedOperationException("toBuilder() not implemented");
-  }
+  public abstract Builder<?> toBuilder();
 
   @SuppressFBWarnings(
       value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",

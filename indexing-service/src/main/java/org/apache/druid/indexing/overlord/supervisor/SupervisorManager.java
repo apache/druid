@@ -196,7 +196,7 @@ public class SupervisorManager implements SupervisorStatsProvider
 
       if (!skipRestartIfUnmodified) {
         // Always stop/recreate, persisting whenever the spec actually changed (or is new).
-        final boolean specChanged = isSpecChangedAndValidate(spec);
+        final boolean specChanged = isSpecChangedAndValidated(spec);
         final SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
         spec.merge(existingSpec);
         createAndStartSupervisorInternal(spec, specChanged);
@@ -207,25 +207,27 @@ public class SupervisorManager implements SupervisorStatsProvider
       final boolean isNew = current == null || current.rhs == null;
 
       if (isNew) {
+        // merge() self-initializes taskCount from taskCountStart for a new autoscaling supervisor (no existing spec).
         spec.merge(null);
         createAndStartSupervisorInternal(spec, true);
         return SupervisorSpecUpdateResult.of(true, true);
       }
 
-      if (!isSpecChanged(spec, current.rhs)) {
+      final SupervisorSpec currentSpec = current.rhs;
+      if (!areSpecBytesChanged(spec, currentSpec)) {
         return SupervisorSpecUpdateResult.of(false, false);
       }
 
       // merge() may carry forward omitted fields (e.g. taskCount); compare the effective spec.
-      spec.merge(current.rhs);
-      if (!isSpecChanged(spec, current.rhs)) {
+      spec.merge(currentSpec);
+      if (!areSpecBytesChanged(spec, currentSpec)) {
         return SupervisorSpecUpdateResult.of(false, false);
       }
 
       // The effective (merged) spec is what will be persisted, so validate that transition exactly once.
-      current.rhs.validateSpecUpdateTo(spec);
+      currentSpec.validateSpecUpdateTo(spec);
 
-      if (!current.rhs.requireRestart(spec)) {
+      if (!currentSpec.requireRestart(spec)) {
         metadataSupervisorManager.insert(spec.getId(), spec);
         supervisors.put(spec.getId(), Pair.of(current.lhs, spec));
         return SupervisorSpecUpdateResult.of(true, false);
@@ -239,33 +241,31 @@ public class SupervisorManager implements SupervisorStatsProvider
   }
 
   /** Byte-level diff against the running spec; validates allowed updates when bytes differ. */
-  private boolean isSpecChangedAndValidate(SupervisorSpec spec)
+  private boolean isSpecChangedAndValidated(SupervisorSpec spec)
   {
     final Pair<Supervisor, SupervisorSpec> current = supervisors.get(spec.getId());
     final SupervisorSpec currentSpec = current == null ? null : current.rhs;
-    if (!isSpecChanged(spec, currentSpec)) {
+    if (currentSpec == null) {
+      return true;
+    } else if (!areSpecBytesChanged(spec, currentSpec)) {
       return false;
-    }
-    if (currentSpec != null) {
+    } else {
       currentSpec.validateSpecUpdateTo(spec);
-    }
-    return true;
-  }
-
-  /**
-   * Byte-level diff of {@code spec} against {@code against}. A missing {@code against} (new supervisor)
-   * counts as changed. Does not validate the transition.
-   */
-  private boolean isSpecChanged(SupervisorSpec spec, @Nullable SupervisorSpec against)
-  {
-    if (against == null) {
       return true;
     }
+  }
+
+  /** Byte-level diff of {@code proposedSpec} against {@code currentSpec}. Does not validate the transition. */
+  private boolean areSpecBytesChanged(SupervisorSpec proposedSpec, SupervisorSpec currentSpec)
+  {
     try {
-      return !Arrays.equals(jsonMapper.writeValueAsBytes(spec), jsonMapper.writeValueAsBytes(against));
+      return !Arrays.equals(
+          jsonMapper.writeValueAsBytes(proposedSpec),
+          jsonMapper.writeValueAsBytes(currentSpec)
+      );
     }
     catch (JsonProcessingException ex) {
-      log.warn(ex, "Failed to write spec as bytes for spec_id[%s]", spec.getId());
+      log.warn(ex, "Failed to write spec as bytes for spec_id[%s]", proposedSpec.getId());
       return true;
     }
   }
