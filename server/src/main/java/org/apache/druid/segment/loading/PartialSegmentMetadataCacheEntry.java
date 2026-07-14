@@ -622,21 +622,33 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
 
   /**
    * The rule-declared on-disk footprint for this segment: this metadata entry's own reservation (V10 header plus
-   * post-mount adjustment) plus the sum of every rule-held bundle's reservation. Deliberately excludes bundles that
-   * happen to be linked for other reasons (e.g. load on demand). Used by the historical to stamp accurate
-   * {@code loadedBytes} on partial-load announcements, so inventory-view accounting reflects what the rule was
-   * configured to pin rather than incidental cache residency.
+   * post-mount adjustment) plus the sum of every rule-held bundle's reservation, plus every transitive dependency
+   * indirectly pinned by those rule-holds. A projection rule pins the projection bundle in {@link #ruleBundleHolds}
+   * and indirectly pins {@code __base} too. Both contribute to what the rule caused to be on disk, so both are
+   * included here. Deliberately excludes bundles linked for reasons unrelated to the rule (e.g. on-demand-loaded by
+   * queries), which are evictable and would inflate the report with transient state. Used by the historical to stamp
+   * accurate {@code loadedBytes} on partial-load announcements.
    */
   public long getRealizedBytes()
   {
-    // Read sizes straight from ruleBundleHolds under entryLock: each hold owns a final reference to its bundle entry
-    // and PartialSegmentBundleCacheEntry.getSize() reads a final long, no lock nesting, no null case, no reliance
-    // on external segment-lock ordering.
     entryLock.lock();
     try {
       long total = currentSize;
-      for (StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> hold : ruleBundleHolds.values()) {
-        total += hold.getEntry().getSize();
+      // Rule-selected bundles PLUS their transitive dependency closure. Each bundle's getSize() covers only that
+      // bundle's own containers, deps like __base are separate entries whose sizes need to be added explicitly.
+      for (String name : bundlesInMountOrder(ruleBundleHolds.keySet())) {
+        final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> hold = ruleBundleHolds.get(name);
+        if (hold != null) {
+          // Rule-selected: size from the hold's entry (guaranteed non-null; final long field, no lock nesting).
+          total += hold.getEntry().getSize();
+        } else {
+          // Transitive dependency of a rule-selected bundle: pinned via parent-hold on the dependent, not present
+          // in ruleBundleHolds. Look up in linkedBundles.
+          final PartialSegmentBundleCacheEntry dep = linkedBundles.get(name);
+          if (dep != null) {
+            total += dep.getSize();
+          }
+        }
       }
       return total;
     }
