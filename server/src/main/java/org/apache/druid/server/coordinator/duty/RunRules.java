@@ -77,8 +77,6 @@ public class RunRules implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    final Stopwatch totalTime = Stopwatch.createStarted();
-
     final DruidCluster cluster = params.getDruidCluster();
     if (cluster.isEmpty()) {
       log.warn("Cluster has no servers. Not running any rules.");
@@ -109,15 +107,10 @@ public class RunRules implements CoordinatorDuty
     Interval currentInterval = null;
     String currentVersion = null;
 
-    final Stopwatch ruleEvalTime = Stopwatch.createStarted();
-    long overshadowedSkipped = 0;
-    long evaluated = 0;
-    long noRuleMatch = 0;
     for (final DataSegment segment : usedSegments) {
       // Do not apply rules on overshadowed segments as they will be
       // marked unused and eventually unloaded from all historicals
       if (overshadowed.contains(segment)) {
-        overshadowedSkipped++;
         continue;
       }
 
@@ -136,7 +129,6 @@ public class RunRules implements CoordinatorDuty
           segment.getDataSource(),
           ruleHandler::getRulesWithDefault
       );
-      evaluated++;
       boolean foundMatchingRule = false;
       for (final Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {
@@ -148,38 +140,19 @@ public class RunRules implements CoordinatorDuty
 
       if (!foundMatchingRule) {
         datasourceToSegmentsWithNoRule.addTo(segment.getDataSource(), 1);
-        noRuleMatch++;
       }
     }
-    ruleEvalTime.stop();
 
     // Tail flush for the last shard group.
     segmentHandler.flushAndReset();
 
-    final Stopwatch deleteTime = Stopwatch.createStarted();
-    final int deleteDatasources = segmentAssigner.getSegmentsToDelete().size();
     processSegmentDeletes(segmentAssigner, params.getCoordinatorStats());
-    deleteTime.stop();
 
     alertForSegmentsWithNoRules(datasourceToSegmentsWithNoRule);
     alertForInvalidRules(segmentAssigner);
 
-    final Stopwatch broadcastTime = Stopwatch.createStarted();
-    final Set<String> broadcastDatasources = getBroadcastDatasources(params, datasourceToRules);
-    broadcastTime.stop();
-
-    log.info(
-        "RunRules summary: usedSegments[%,d], overshadowedSkipped[%,d], evaluated[%,d], noRuleMatch[%,d],"
-        + " ruleLookupCalls[%,d], deleteDatasources[%d], broadcastDatasources[%d];"
-        + " ruleEvalMs[%,d], deleteMs[%,d], broadcastScanMs[%,d], totalMs[%,d].",
-        usedSegments.size(), overshadowedSkipped, evaluated, noRuleMatch, datasourceToRules.size(),
-        deleteDatasources, broadcastDatasources.size(),
-        ruleEvalTime.millisElapsed(), deleteTime.millisElapsed(),
-        broadcastTime.millisElapsed(), totalTime.millisElapsed()
-    );
-
     return params.buildFromExisting()
-                 .withBroadcastDatasources(broadcastDatasources)
+                 .withBroadcastDatasources(getBroadcastDatasources(params, datasourceToRules))
                  .build();
   }
 

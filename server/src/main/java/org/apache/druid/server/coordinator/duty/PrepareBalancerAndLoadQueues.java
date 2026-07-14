@@ -23,7 +23,6 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ServerInventoryView;
-import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
@@ -83,34 +82,19 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    final Stopwatch totalTime = Stopwatch.createStarted();
-
-    final Stopwatch prepareServersTime = Stopwatch.createStarted();
     List<ImmutableDruidServer> currentServers = prepareCurrentServers();
-    prepareServersTime.stop();
     taskMaster.resetPeonsForNewServers(currentServers);
 
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     final SegmentLoadingConfig segmentLoadingConfig
         = SegmentLoadingConfig.create(dynamicConfig, params.getUsedSegmentCount());
 
-    final Stopwatch prepareClusterTime = Stopwatch.createStarted();
     final DruidCluster cluster = prepareCluster(dynamicConfig, segmentLoadingConfig, currentServers);
-    prepareClusterTime.stop();
-
-    final Stopwatch cancelDecommTime = Stopwatch.createStarted();
-    final int cancelledLoads = cancelLoadsOnDecommissioningServers(cluster);
-    cancelDecommTime.stop();
+    cancelLoadsOnDecommissioningServers(cluster);
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    final Stopwatch histStatsTime = Stopwatch.createStarted();
     collectHistoricalStats(cluster, stats, dynamicConfig.getTierToAliasName());
-    histStatsTime.stop();
-
-    final Stopwatch usedSegStatsTime = Stopwatch.createStarted();
-    final long[] usedSegStatsCounts = collectUsedSegmentStats(params, stats);
-    usedSegStatsTime.stop();
-
+    collectUsedSegmentStats(params, stats);
     collectDebugStats(segmentLoadingConfig, stats);
 
     final int numBalancerThreads = segmentLoadingConfig.getBalancerComputeThreads();
@@ -118,18 +102,6 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     log.debug(
         "Using balancer strategy[%s] with [%d] threads.",
         balancerStrategy.getClass().getSimpleName(), numBalancerThreads
-    );
-
-    log.info(
-        "PrepareBalancerAndLoadQueues summary: servers[%d], usedSegmentCount[%,d], dsScanned[%,d],"
-        + " totalSegmentsInTimelines[%,d], totalUsedBytes[%,d], cancelledLoadsOnDecomm[%d];"
-        + " prepareServersMs[%,d], prepareClusterMs[%,d], cancelDecommMs[%,d], histStatsMs[%,d],"
-        + " usedSegStatsMs[%,d], totalMs[%,d].",
-        currentServers.size(), params.getUsedSegmentCount(), usedSegStatsCounts[0],
-        usedSegStatsCounts[1], usedSegStatsCounts[2], cancelledLoads,
-        prepareServersTime.millisElapsed(), prepareClusterTime.millisElapsed(),
-        cancelDecommTime.millisElapsed(), histStatsTime.millisElapsed(),
-        usedSegStatsTime.millisElapsed(), totalTime.millisElapsed()
     );
 
     return params.buildFromExisting()
@@ -145,7 +117,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
    * be done before initializing the SegmentReplicantLookup so that
    * under-replicated segments can be assigned in the current run itself.
    */
-  private int cancelLoadsOnDecommissioningServers(DruidCluster cluster)
+  private void cancelLoadsOnDecommissioningServers(DruidCluster cluster)
   {
     final AtomicInteger cancelledCount = new AtomicInteger(0);
     final List<ServerHolder> decommissioningServers
@@ -163,7 +135,6 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
           }
       );
     }
-    return cancelledCount.get();
   }
 
   private List<ImmutableDruidServer> prepareCurrentServers()
@@ -230,12 +201,8 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     });
   }
 
-  /**
-   * @return {dsCount, totalSegments, totalBytes}
-   */
-  private long[] collectUsedSegmentStats(DruidCoordinatorRuntimeParams params, CoordinatorRunStats stats)
+  private void collectUsedSegmentStats(DruidCoordinatorRuntimeParams params, CoordinatorRunStats stats)
   {
-    final long[] counts = new long[3];
     for (final ImmutableDruidDataSource dataSource : params.getDataSourcesSnapshot().getDataSourcesWithAllUsedSegments()) {
       final long totalSizeOfUsedSegments = dataSource.getTotalSizeOfSegments();
       final int numUsedSegments = dataSource.getSegments().size();
@@ -243,12 +210,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
       final RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, dataSource.getName());
       stats.add(Stats.Segments.USED_BYTES, datasourceKey, totalSizeOfUsedSegments);
       stats.add(Stats.Segments.USED, datasourceKey, numUsedSegments);
-
-      counts[0] += 1;
-      counts[1] += numUsedSegments;
-      counts[2] += totalSizeOfUsedSegments;
     }
-    return counts;
   }
 
   private void collectDebugStats(SegmentLoadingConfig config, CoordinatorRunStats stats)

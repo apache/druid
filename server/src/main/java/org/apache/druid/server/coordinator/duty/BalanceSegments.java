@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
@@ -51,48 +50,24 @@ public class BalanceSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    final Stopwatch totalTime = Stopwatch.createStarted();
-
     if (params.getUsedSegmentCount() <= 0) {
-      log.info("BalanceSegments skipped: usedSegmentCount[%,d].", params.getUsedSegmentCount());
       return params;
     }
 
-    final Pair<Integer, Integer> clusterShape = getNumHistoricalsAndSegments(params.getDruidCluster());
-
-    final int maxSegmentsToMove = getMaxSegmentsToMove(params, clusterShape);
+    final int maxSegmentsToMove = getMaxSegmentsToMove(params);
     params.getCoordinatorStats().add(Stats.Balancer.MAX_TO_MOVE, maxSegmentsToMove);
     if (maxSegmentsToMove <= 0) {
-      log.info("BalanceSegments skipped: maxSegmentsToMove[%d].", maxSegmentsToMove);
       return params;
     }
 
-    final Stopwatch tierBalanceTime = Stopwatch.createStarted();
-    final int[] tierCount = {0};
     params.getDruidCluster().getManagedHistoricals().forEach(
-        (tier, servers) -> {
-          tierCount[0]++;
-          final Stopwatch tierTime = Stopwatch.createStarted();
-          new TierSegmentBalancer(tier, servers, maxSegmentsToMove, params).run();
-          log.info(
-              "BalanceSegments tier[%s]: servers[%d], elapsedMs[%,d].",
-              tier, servers.size(), tierTime.millisElapsed()
-          );
-        }
+        (tier, servers) -> new TierSegmentBalancer(tier, servers, maxSegmentsToMove, params).run()
     );
-    tierBalanceTime.stop();
 
     CoordinatorRunStats runStats = params.getCoordinatorStats();
     params.getBalancerStrategy()
           .getStats()
           .forEachStat(runStats::add);
-
-    log.info(
-        "BalanceSegments summary: maxSegmentsToMove[%,d], tiers[%d], historicals[%d], totalSegmentsInCluster[%,d];"
-        + " tierBalanceMs[%,d], totalMs[%,d].",
-        maxSegmentsToMove, tierCount[0], clusterShape.lhs, clusterShape.rhs,
-        tierBalanceTime.millisElapsed(), totalTime.millisElapsed()
-    );
 
     return params;
   }
@@ -103,18 +78,19 @@ public class BalanceSegments implements CoordinatorDuty
    * number of segments picked for moving is determined by the {@link TierSegmentBalancer}
    * based on the level of skew in the tier.
    */
-  private int getMaxSegmentsToMove(DruidCoordinatorRuntimeParams params, Pair<Integer, Integer> clusterShape)
+  private int getMaxSegmentsToMove(DruidCoordinatorRuntimeParams params)
   {
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     if (dynamicConfig.isSmartSegmentLoading()) {
-      final int totalSegmentsInCluster = clusterShape.rhs;
+      final Pair<Integer, Integer> numHistoricalsAndSegments = getNumHistoricalsAndSegments(params.getDruidCluster());
+      final int totalSegmentsInCluster = numHistoricalsAndSegments.rhs;
 
       final int numBalancerThreads = params.getSegmentLoadingConfig().getBalancerComputeThreads();
       final int maxSegmentsToMove = SegmentToMoveCalculator
           .computeMaxSegmentsToMovePerTier(totalSegmentsInCluster, numBalancerThreads, coordinatorPeriod);
       log.debug(
           "Computed maxSegmentsToMove[%,d] for total [%,d] segments on [%d] historicals.",
-          maxSegmentsToMove, totalSegmentsInCluster, clusterShape.lhs
+          maxSegmentsToMove, totalSegmentsInCluster, numHistoricalsAndSegments.lhs
       );
 
       return maxSegmentsToMove;

@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.duty;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -81,24 +80,15 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(final DruidCoordinatorRuntimeParams params)
   {
-    final Stopwatch totalTime = Stopwatch.createStarted();
     final DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
 
-    final Stopwatch determineTime = Stopwatch.createStarted();
     final Map<String, Set<SegmentId>> datasourceToNonOvershadowedEternityTombstones =
         determineNonOvershadowedEternityTombstones(
         dataSourcesSnapshot
     );
-    determineTime.stop();
 
     if (datasourceToNonOvershadowedEternityTombstones.isEmpty()) {
-      log.info(
-          "MarkEternityTombstonesAsUnused: no non-overshadowed eternity tombstones found."
-          + " datasources[%d], overshadowedSegments[%,d], determineMs[%,d], totalMs[%,d].",
-          dataSourcesSnapshot.getDataSourcesMap().size(),
-          dataSourcesSnapshot.getOvershadowedSegments().size(),
-          determineTime.millisElapsed(), totalTime.millisElapsed()
-      );
+      log.debug("No non-overshadowed eternity tombstones found.");
       return params;
     }
 
@@ -106,16 +96,11 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
               datasourceToNonOvershadowedEternityTombstones.size(), datasourceToNonOvershadowedEternityTombstones
     );
 
-    final Stopwatch dbUpdateTime = Stopwatch.createStarted();
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    final int[] totalMarked = {0};
-    final int[] candidates = {0};
     datasourceToNonOvershadowedEternityTombstones.forEach((datasource, nonOvershadowedEternityTombstones) -> {
-      candidates[0] += nonOvershadowedEternityTombstones.size();
       final RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, datasource);
       stats.add(Stats.Segments.UNNEEDED_ETERNITY_TOMBSTONE, datasourceKey, nonOvershadowedEternityTombstones.size());
       final int unusedCount = deleteHandler.markSegmentsAsUnused(datasource, nonOvershadowedEternityTombstones);
-      totalMarked[0] += unusedCount;
       log.info(
           "Successfully marked [%d] non-overshadowed eternity tombstones[%s] of datasource[%s] as unused.",
           unusedCount,
@@ -123,16 +108,6 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
           datasource
       );
     });
-    dbUpdateTime.stop();
-
-    log.info(
-        "MarkEternityTombstonesAsUnused summary: datasources[%d], overshadowedSegments[%,d],"
-        + " candidates[%d], marked[%d]; determineMs[%,d], dbUpdateMs[%,d], totalMs[%,d].",
-        dataSourcesSnapshot.getDataSourcesMap().size(),
-        dataSourcesSnapshot.getOvershadowedSegments().size(),
-        candidates[0], totalMarked[0],
-        determineTime.millisElapsed(), dbUpdateTime.millisElapsed(), totalTime.millisElapsed()
-    );
 
     return params;
   }
