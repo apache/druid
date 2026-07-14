@@ -27,7 +27,26 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.OrderBy;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.file.SegmentFileMetadata;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
+import org.apache.druid.segment.projections.ClusteringDictionaries;
+import org.apache.druid.segment.projections.ProjectionMetadata;
+import org.apache.druid.segment.projections.ProjectionSchema;
+import org.apache.druid.segment.projections.Projections;
+import org.apache.druid.segment.projections.TableClusterGroupSpec;
+import org.apache.druid.segment.projections.TableProjectionSchema;
+import org.apache.druid.timeline.ClusterGroupTuples;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -161,6 +180,194 @@ class PartialClusterGroupLoadSpecTest
         NullPointerException.class,
         () -> new PartialClusterGroupLoadSpec(DELEGATE, List.of(0), null, jsonMapper)
     );
+  }
+
+  @Test
+  void testGetSelectedBundleNamesResolvesIndicesToBundleNames()
+  {
+    // Three cluster groups in the metadata; pick groups 0 and 2. Each index maps to the group's
+    // clusteringValueIds → bundle name.
+    final SegmentFileMetadata metadata = clusteredMetadata(
+        List.of(
+            new TableClusterGroupSpec(List.of(0), 10),
+            new TableClusterGroupSpec(List.of(1), 20),
+            new TableClusterGroupSpec(List.of(2), 30)
+        )
+    );
+    final DataSegment segment = clusteredSegment(
+        List.of(List.of("acme"), List.of("globex"), List.of("initech"))
+    );
+    final PartialClusterGroupLoadSpec spec = new PartialClusterGroupLoadSpec(
+        DELEGATE,
+        List.of(0, 2),
+        FINGERPRINT,
+        jsonMapper
+    );
+    Assertions.assertEquals(
+        List.of(
+            Projections.getClusterGroupBundleName(List.of(0)),
+            Projections.getClusterGroupBundleName(List.of(2))
+        ),
+        spec.getSelectedBundleNames(segment, metadata)
+    );
+  }
+
+  @Test
+  void testGetSelectedBundleNamesEmptyIndicesReturnsEmpty()
+  {
+    // Sibling-empty: matcher applied but no positive selection. Caller pins only the metadata.
+    final SegmentFileMetadata metadata = clusteredMetadata(
+        List.of(new TableClusterGroupSpec(List.of(0), 1))
+    );
+    final DataSegment segment = clusteredSegment(List.of(List.of("acme")));
+    final PartialClusterGroupLoadSpec spec = new PartialClusterGroupLoadSpec(
+        DELEGATE,
+        List.of(),
+        FINGERPRINT,
+        jsonMapper
+    );
+    Assertions.assertEquals(List.of(), spec.getSelectedBundleNames(segment, metadata));
+  }
+
+  @Test
+  void testGetSelectedBundleNamesOutOfRangeIndexThrows()
+  {
+    final SegmentFileMetadata metadata = clusteredMetadata(
+        List.of(new TableClusterGroupSpec(List.of(0), 1))
+    );
+    final DataSegment segment = clusteredSegment(List.of(List.of("acme")));
+    final PartialClusterGroupLoadSpec spec = new PartialClusterGroupLoadSpec(
+        DELEGATE,
+        List.of(5),
+        FINGERPRINT,
+        jsonMapper
+    );
+    final DruidException thrown = Assertions.assertThrows(
+        DruidException.class,
+        () -> spec.getSelectedBundleNames(segment, metadata)
+    );
+    Assertions.assertTrue(
+        thrown.getMessage().contains("Cluster-group index [5] is out of range"),
+        "unexpected message: " + thrown.getMessage()
+    );
+  }
+
+  @Test
+  void testGetSelectedBundleNamesSizeMismatchThrows()
+  {
+    // Metadata has 2 groups, segment has 1 tuple — writer/reader contract violation; tripwire fires.
+    final SegmentFileMetadata metadata = clusteredMetadata(
+        List.of(
+            new TableClusterGroupSpec(List.of(0), 1),
+            new TableClusterGroupSpec(List.of(1), 1)
+        )
+    );
+    final DataSegment segment = clusteredSegment(List.of(List.of("acme")));
+    final PartialClusterGroupLoadSpec spec = new PartialClusterGroupLoadSpec(
+        DELEGATE,
+        List.of(0),
+        FINGERPRINT,
+        jsonMapper
+    );
+    final DruidException thrown = Assertions.assertThrows(
+        DruidException.class,
+        () -> spec.getSelectedBundleNames(segment, metadata)
+    );
+    Assertions.assertTrue(
+        thrown.getMessage().contains("Cluster-group count mismatch"),
+        "unexpected message: " + thrown.getMessage()
+    );
+  }
+
+  @Test
+  void testGetSelectedBundleNamesNonClusteredBaseThrows()
+  {
+    // Base projection is a regular (non-clustered) table — partial cluster-group load is nonsensical.
+    final ProjectionSchema baseSchema = new TableProjectionSchema(
+        VirtualColumns.EMPTY,
+        List.of(ColumnHolder.TIME_COLUMN_NAME, "tenant"),
+        null,
+        List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME))
+    );
+    final SegmentFileMetadata metadata = new SegmentFileMetadata(
+        List.of(),
+        Map.of(),
+        null,
+        null,
+        List.of(new ProjectionMetadata(1, baseSchema)),
+        null
+    );
+    final DataSegment segment = clusteredSegment(List.of(List.of("acme")));
+    final PartialClusterGroupLoadSpec spec = new PartialClusterGroupLoadSpec(
+        DELEGATE,
+        List.of(0),
+        FINGERPRINT,
+        jsonMapper
+    );
+    final DruidException thrown = Assertions.assertThrows(
+        DruidException.class,
+        () -> spec.getSelectedBundleNames(segment, metadata)
+    );
+    Assertions.assertTrue(
+        thrown.getMessage().contains("base projection is not clustered"),
+        "unexpected message: " + thrown.getMessage()
+    );
+  }
+
+  @Test
+  void testGetSelectedBundleNamesNoProjectionsThrows()
+  {
+    final SegmentFileMetadata metadata = new SegmentFileMetadata(List.of(), Map.of(), null, null, null, null);
+    final DataSegment segment = clusteredSegment(List.of(List.of("acme")));
+    final PartialClusterGroupLoadSpec spec = new PartialClusterGroupLoadSpec(
+        DELEGATE,
+        List.of(0),
+        FINGERPRINT,
+        jsonMapper
+    );
+    final DruidException thrown = Assertions.assertThrows(
+        DruidException.class,
+        () -> spec.getSelectedBundleNames(segment, metadata)
+    );
+    Assertions.assertTrue(
+        thrown.getMessage().contains("metadata has no projections"),
+        "unexpected message: " + thrown.getMessage()
+    );
+  }
+
+  private static final RowSignature CLUSTERING_TENANT = RowSignature.builder()
+                                                                    .add("tenant", ColumnType.STRING)
+                                                                    .build();
+
+  private static SegmentFileMetadata clusteredMetadata(List<TableClusterGroupSpec> groups)
+  {
+    final ClusteredValueGroupsBaseTableSchema baseSchema = new ClusteredValueGroupsBaseTableSchema(
+        VirtualColumns.EMPTY,
+        List.of(ColumnHolder.TIME_COLUMN_NAME, "tenant", "metric"),
+        List.of(OrderBy.ascending("tenant"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
+        CLUSTERING_TENANT,
+        null,
+        new ClusteringDictionaries(List.of("acme", "globex", "initech"), null, null, null),
+        groups
+    );
+    return new SegmentFileMetadata(
+        List.of(),
+        Map.of(),
+        null,
+        null,
+        List.of(new ProjectionMetadata(groups.stream().mapToInt(TableClusterGroupSpec::getNumRows).sum(), baseSchema)),
+        null
+    );
+  }
+
+  private static DataSegment clusteredSegment(List<List<Object>> tuples)
+  {
+    return DataSegment.builder(
+                          SegmentId.of("ds", Intervals.ETERNITY, "v1", new NumberedShardSpec(0, 1))
+                      )
+                      .size(0)
+                      .clusterGroups(new ClusterGroupTuples(CLUSTERING_TENANT, tuples))
+                      .build();
   }
 
   /**

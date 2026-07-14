@@ -173,7 +173,7 @@ The Druid distribution includes a compaction task spec to create `DAY` granulari
 
 Note that `segmentGranularity` is set to `DAY` in this compaction task spec.
 
-Submit this task now:
+Now, submit this task:
 
 ```bash
 curl -X POST http://localhost:8081/druid/indexer/v1/task \

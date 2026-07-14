@@ -137,7 +137,7 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
 
     final List<DownloadBundle> bundles = new ArrayList<>(surviving.size());
     for (TableClusterGroupSpec group : surviving) {
-      final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(group);
+      final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(group, true);
       final CursorBuildSpec groupSpec = plan.rebuildCursorBuildSpec(spec, group);
       bundles.add(
           new DownloadBundle(

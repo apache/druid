@@ -580,15 +580,15 @@ We've finished defining the ingestion spec, it should now look like the followin
 
 ## Submit the task and query the data
 
-From the `apache-druid-{{DRUIDVERSION}}` package root, run the following command:
+From the `apache-druid-{{DRUIDVERSION}}` package root, run the following command to create a datasource called `ingestion tutorial`:
 
 ```bash
 curl -X POST http://localhost:8081/druid/indexer/v1/task \
   -H "Content-Type: application/json" \
-  -d @quickstart/tutorial/ingestion-tutorial-index.json
+  -d @quickstart/ingestion-tutorial-index.json
 ```
 
-After the script completes, we will query the data.
+After the ingestion completes, we will query the data.
 
 In the web console, open a new tab in the **Query** view. Run the following query to view the ingested data:
 

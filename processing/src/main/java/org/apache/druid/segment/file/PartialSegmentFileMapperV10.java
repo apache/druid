@@ -448,7 +448,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   }
 
   /**
-   * Download every container belonging to {@code bundleName} in this mapper, each in a single range read (see
+   * Download every container belonging to {@code bundleName}, recursing into external mappers to cover bundles that
+   * span the main file plus one or more externals. Each container is downloaded in a single range read (see
    * {@link #downloadContainer}). No-op for an unknown bundle.
    */
   public void ensureBundleDownloaded(String bundleName) throws IOException
@@ -457,6 +458,32 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     for (int containerIndex : getContainerIndicesForBundle(bundleName)) {
       downloadContainer(containerIndex);
     }
+    for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
+      external.ensureBundleDownloaded(bundleName);
+    }
+  }
+
+  /**
+   * Whether every container belonging to {@code bundleName} has all its files present in {@link #downloadedFiles},
+   * across the main mapper AND every attached external mapper.
+   * <p>
+   * Returns {@code true} for a bundle name unknown to any mapper (no containers to check).
+   */
+  public boolean isBundleFullyDownloaded(String bundleName)
+  {
+    checkClosed();
+    for (int containerIndex : getContainerIndicesForBundle(bundleName)) {
+      final List<String> fileNames = containerFileNames.get(containerIndex);
+      if (!downloadedFiles.containsAll(fileNames)) {
+        return false;
+      }
+    }
+    for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
+      if (!external.isBundleFullyDownloaded(bundleName)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**

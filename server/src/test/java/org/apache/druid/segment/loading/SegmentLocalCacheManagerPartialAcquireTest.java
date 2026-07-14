@@ -492,9 +492,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
         Assertions.assertEquals(CLUSTERED_SEGMENT_ID, segment.getId());
 
         // group-by tenant + sum(x) matches the aggregate projection. Building this cursor drives the 'proj' bundle to
-        // mount through the real acquire path. inferParentBundles must return no parent for it (the clustered segment
-        // has no __base bundle); the old "aggregate always depends on __base" rule would have tried to mount a
-        // nonexistent __base here and failed.
+        // mount through the real acquire path. inferBundleDependencies must return no dep for it (the clustered
+        // segment has no __base bundle); the old "aggregate always depends on __base" rule would have tried to mount
+        // a nonexistent __base here and failed.
         final CursorBuildSpec aggSpec = CursorBuildSpec.builder()
                                                        .setGroupingColumns(List.of("tenant"))
                                                        .setAggregators(List.of(new LongSumAggregatorFactory("sum_x", "x")))

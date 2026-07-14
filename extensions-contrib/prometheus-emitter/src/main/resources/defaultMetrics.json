@@ -134,6 +134,12 @@
   "ingest/notices/time" : { "dimensions" : ["dataSource"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to process a notice by the supervisor." },
   "ingest/pause/time" : { "dimensions" : ["dataSource"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds spent by a task in a paused state without ingesting." },
   "ingest/handoff/time" : { "dimensions" : ["dataSource"], "type" : "timer", "conversionFactor": 1000.0, "help": "Total number of seconds taken to handoff a set of segments." },
+  "ingest/realtime/segmentUpgrade/persisted" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of pending segments upgraded by a concurrent replace." },
+  "ingest/realtime/segmentUpgrade/notified" : { "dimensions" : ["dataSource", "stream"], "type" : "count", "help": "Number of notifications the supervisor sent to running tasks, one per task." },
+  "ingest/realtime/segmentUpgrade/unmatched" : { "dimensions" : ["dataSource", "stream"], "type" : "count", "help": "Number of upgraded pending segments that matched no running task." },
+  "ingest/realtime/segmentUpgrade/sendFailed" : { "dimensions" : ["dataSource", "stream"], "type" : "count", "help": "Number of upgrade requests that failed to reach a task." },
+  "ingest/realtime/segmentUpgrade/announced" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of upgraded segments a task announced under the new version." },
+  "ingest/realtime/segmentUpgrade/skipped" : { "dimensions" : ["dataSource", "reason"], "type" : "count", "help": "Number of upgrade requests a task received but did not announce." },
   "task/autoScaler/requiredCount" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Count of required tasks based on the calculations of lagBased auto scaler." },
 
   "task/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to run a task."},
