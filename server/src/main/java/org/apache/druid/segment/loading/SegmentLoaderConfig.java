@@ -129,9 +129,8 @@ public class SegmentLoaderConfig
   /**
    * Maximum size of a single range read in a query-driven partial download. Larger fetches split at internal-file
    * boundaries into multiple reads of at most this size that proceed concurrently, so throughput isn't bounded by a
-   * single deep-storage connection (the same reason multipart download clients chunk large objects). Only applies to
-   * the concurrent on-demand path; full-download paths stream containers sequentially and are unaffected.
-   * {@code <= 0} disables splitting. Defaults to 64 MiB.
+   * single deep-storage connection. Only applies to the concurrent on-demand path; full-download paths stream
+   * containers sequentially and are unaffected. {@code <= 0} disables splitting. Defaults to 64 MiB.
    */
   @JsonProperty("virtualStorageMaxFetchRunBytes")
   private long virtualStorageMaxFetchRunBytes = PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES;
