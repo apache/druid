@@ -36,7 +36,7 @@ Core extensions are maintained by Druid committers.
 |Name|Description|Docs|
 |----|-----------|----|
 |druid-avro-extensions|Support for data in Apache Avro data format.|[link](../development/extensions-core/avro.md)|
-|druid-azure-extensions|Microsoft Azure deep storage.|[link](../development/extensions-core/azure.md)|
+|druid-azure-extensions|Microsoft&circledR; Azure deep storage.|[link](../development/extensions-core/azure.md)|
 |druid-basic-security|Support for Basic HTTP authentication and role-based access control.|[link](../development/extensions-core/druid-basic-security.md)|
 |druid-bloom-filter|Support for providing Bloom filters in druid queries.|[link](../development/extensions-core/bloom-filter.md)|
 |druid-catalog|This extension allows users to configure, update, retrieve, and manage metadata stored in Druid's catalog. |[link](../development/extensions-core/catalog.md)|
