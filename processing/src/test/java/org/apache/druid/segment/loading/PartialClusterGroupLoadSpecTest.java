@@ -294,6 +294,7 @@ class PartialClusterGroupLoadSpecTest
         Map.of(),
         null,
         null,
+        null,
         List.of(new ProjectionMetadata(1, baseSchema)),
         null
     );
@@ -317,7 +318,7 @@ class PartialClusterGroupLoadSpecTest
   @Test
   void testGetSelectedBundleNamesNoProjectionsThrows()
   {
-    final SegmentFileMetadata metadata = new SegmentFileMetadata(List.of(), Map.of(), null, null, null, null);
+    final SegmentFileMetadata metadata = new SegmentFileMetadata(List.of(), Map.of(), null, null, null, null, null);
     final DataSegment segment = clusteredSegment(List.of(List.of("acme")));
     final PartialClusterGroupLoadSpec spec = new PartialClusterGroupLoadSpec(
         DELEGATE,
@@ -353,6 +354,7 @@ class PartialClusterGroupLoadSpecTest
     return new SegmentFileMetadata(
         List.of(),
         Map.of(),
+        null,
         null,
         null,
         List.of(new ProjectionMetadata(groups.stream().mapToInt(TableClusterGroupSpec::getNumRows).sum(), baseSchema)),

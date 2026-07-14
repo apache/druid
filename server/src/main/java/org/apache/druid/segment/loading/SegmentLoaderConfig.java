@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.utils.RuntimeInfo;
 
 import java.io.File;
@@ -113,6 +114,27 @@ public class SegmentLoaderConfig
    */
   @JsonProperty("virtualStoragePartialDownloadsEnabled")
   private boolean virtualStoragePartialDownloadsEnabled = false;
+
+  /**
+   * Maximum number of unrequested bytes a partial-download range read will fetch in order to bridge two requested
+   * internal files into a single deep-storage request. Bridged bytes are whole valid internal files that are kept in
+   * the local cache (they aren't waste), so this trades at most this many extra bytes per bridged gap (one read can
+   * bridge several gaps) for one fewer deep-storage round trip each. {@code <= 0} disables bridging (adjacent files
+   * still coalesce into single reads). Defaults to 1 MiB, which is conservative relative to typical deep-storage
+   * request latency vs streaming throughput.
+   */
+  @JsonProperty("virtualStorageCoalesceGapBytes")
+  private long virtualStorageCoalesceGapBytes = PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES;
+
+  /**
+   * Maximum size of a single range read in a query-driven partial download. Larger fetches split at internal-file
+   * boundaries into multiple reads of at most this size that proceed concurrently, so throughput isn't bounded by a
+   * single deep-storage connection (the same reason multipart download clients chunk large objects). Only applies to
+   * the concurrent on-demand path; full-download paths stream containers sequentially and are unaffected.
+   * {@code <= 0} disables splitting. Defaults to 64 MiB.
+   */
+  @JsonProperty("virtualStorageMaxFetchRunBytes")
+  private long virtualStorageMaxFetchRunBytes = PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES;
 
   private long combinedMaxSize = 0;
 
@@ -211,6 +233,16 @@ public class SegmentLoaderConfig
     return virtualStorage && virtualStoragePartialDownloadsEnabled;
   }
 
+  public long getVirtualStorageCoalesceGapBytes()
+  {
+    return virtualStorageCoalesceGapBytes;
+  }
+
+  public long getVirtualStorageMaxFetchRunBytes()
+  {
+    return virtualStorageMaxFetchRunBytes;
+  }
+
   public SegmentLoaderConfig setLocations(List<StorageLocationConfig> locations)
   {
     this.locations = Lists.newArrayList(locations);
@@ -287,6 +319,8 @@ public class SegmentLoaderConfig
            ", virtualStorageIsEphemeral=" + virtualStorageIsEphemeral +
            ", virtualStorageMetadataReservationEstimate=" + virtualStorageMetadataReservationEstimate +
            ", virtualStoragePartialDownloadsEnabled=" + virtualStoragePartialDownloadsEnabled +
+           ", virtualStorageCoalesceGapBytes=" + virtualStorageCoalesceGapBytes +
+           ", virtualStorageMaxFetchRunBytes=" + virtualStorageMaxFetchRunBytes +
            ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }

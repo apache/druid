@@ -926,7 +926,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
                  partialDir,
                  IndexIO.V10_FILE_NAME,
                  List.of(),
-                 PartialSegmentDownloadListener.NOOP
+                 PartialSegmentDownloadListener.NOOP,
+                 PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+                 PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
              )) {
       final int numContainers = seed.getSegmentFileMetadata().getContainers().size();
       for (int i = 0; i < numContainers; i++) {

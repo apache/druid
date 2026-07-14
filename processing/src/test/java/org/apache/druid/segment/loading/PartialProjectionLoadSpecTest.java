@@ -226,7 +226,7 @@ public class PartialProjectionLoadSpecTest
         FINGERPRINT,
         jsonMapper
     );
-    final SegmentFileMetadata metadata = new SegmentFileMetadata(List.of(), Map.of(), null, null, null, null);
+    final SegmentFileMetadata metadata = new SegmentFileMetadata(List.of(), Map.of(), null, null, null, null, null);
     final DruidException thrown = Assertions.assertThrows(
         DruidException.class,
         () -> spec.getSelectedBundleNames(anySegment(), metadata)
@@ -250,7 +250,7 @@ public class PartialProjectionLoadSpecTest
     for (String name : names) {
       projections.add(new ProjectionMetadata(1, projectionSchemaNamed(name)));
     }
-    return new SegmentFileMetadata(List.of(), Map.of(), null, null, projections, null);
+    return new SegmentFileMetadata(List.of(), Map.of(), null, null, null, projections, null);
   }
 
   private static AggregateProjectionSchema projectionSchemaNamed(String name)

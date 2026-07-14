@@ -369,7 +369,9 @@ class PartialSegmentMetadataCacheEntryTest
             new DirectoryBackedRangeReader(segmentFile.getParentFile()),
             JSON_MAPPER,
             null,
-            0
+            0,
+            PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+            PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
         )
     );
   }
@@ -424,7 +426,9 @@ class PartialSegmentMetadataCacheEntryTest
         rangeReader,
         JSON_MAPPER,
         null,
-        ESTIMATE
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     Assertions.assertTrue(location.reserve(entry));
 
@@ -589,7 +593,9 @@ class PartialSegmentMetadataCacheEntryTest
         new DirectoryBackedRangeReader(segmentFile.getParentFile()),
         JSON_MAPPER,
         null,
-        estimate
+        estimate,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
   }
 
@@ -645,7 +651,9 @@ class PartialSegmentMetadataCacheEntryTest
         new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
         null,
-        ESTIMATE
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     Assertions.assertTrue(location.reserve(entry));
     entry.mount(location);
@@ -670,7 +678,9 @@ class PartialSegmentMetadataCacheEntryTest
         new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
         null,
-        ESTIMATE
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     Assertions.assertTrue(location.reserveWeak(entry));
     entry.mount(location);
