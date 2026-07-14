@@ -22,7 +22,7 @@ title: "Java runtime"
   ~ under the License.
   -->
 
-Apache Druid is written in Java and requires a Java runtime. This page provides details about obtaining and configuring
+Apache&circledR; Druid is written in Java and requires a Java runtime. This page provides details about obtaining and configuring
 a Java runtime for Druid.
 
 ## Selecting a Java runtime

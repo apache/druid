@@ -105,6 +105,42 @@
   "ingest/events/messageGap": [
     "dataSource"
   ],
+  "ingest/realtime/segmentUpgrade/persisted": [
+    "dataSource",
+    "interval",
+    "version"
+  ],
+  "ingest/realtime/segmentUpgrade/notified": [
+    "dataSource",
+    "stream",
+    "taskId",
+    "interval",
+    "version"
+  ],
+  "ingest/realtime/segmentUpgrade/unmatched": [
+    "dataSource",
+    "stream",
+    "interval",
+    "version"
+  ],
+  "ingest/realtime/segmentUpgrade/sendFailed": [
+    "dataSource",
+    "stream",
+    "taskId",
+    "interval",
+    "version"
+  ],
+  "ingest/realtime/segmentUpgrade/announced": [
+    "dataSource",
+    "interval",
+    "version"
+  ],
+  "ingest/realtime/segmentUpgrade/skipped": [
+    "dataSource",
+    "reason",
+    "interval",
+    "version"
+  ],
   "ingest/kafka/lag": [
     "dataSource",
     "stream"

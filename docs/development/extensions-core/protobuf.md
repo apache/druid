@@ -23,7 +23,7 @@ title: "Protobuf"
   -->
 
 
-This Apache Druid extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../configuration/extensions.md#loading-extensions) `druid-protobuf-extensions` in the extensions load list.
+This Apache&circledR; Druid extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../configuration/extensions.md#loading-extensions) `druid-protobuf-extensions` in the extensions load list.
 
 The `druid-protobuf-extensions` provides the [Protobuf InputFormat](../../ingestion/data-formats.md#protobuf)
 for [stream ingestion](../../ingestion/index.md#streaming). See corresponding docs for details.

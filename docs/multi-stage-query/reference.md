@@ -25,7 +25,7 @@ sidebar_label: Reference
 
 ## SQL reference
 
-This topic is a reference guide for the multi-stage query architecture in Apache Druid. For examples of real-world
+This topic is a reference guide for the multi-stage query architecture in Apache&circledR; Druid. For examples of real-world
 usage, refer to the [Examples](examples.md) page.
 
 `INSERT` and `REPLACE` load data into a Druid datasource from either an external input source, or from another

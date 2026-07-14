@@ -40,6 +40,7 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -54,6 +55,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -83,6 +85,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * Contains tests to verify behaviour of concurrently running REPLACE and APPEND
@@ -977,15 +980,28 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     final String v1 = replaceTask.acquireReplaceLockOn(JAN_23).getVersion();
     final DataSegment segmentV10 = createSegment(JAN_23, v1);
-    replaceTask.commitReplaceSegments(segmentV10);
+    final SegmentPublishResult replacePublishResult = replaceTask.commitReplaceSegments(segmentV10);
+
+    final List<PendingSegmentRecord> upgradedPendingSegments = replacePublishResult.getUpgradedPendingSegments();
+    Assert.assertNotNull(upgradedPendingSegments);
+    final SegmentIdWithShardSpec pendingSegmentV11 = upgradedPendingSegments.getFirst().getId();
+
     verifyIntervalHasUsedSegments(JAN_23, segmentV10);
     verifyIntervalHasVisibleSegments(JAN_23, segmentV10);
 
+    // New pending segment is allocated at v1
     final SegmentIdWithShardSpec pendingSegmentV12
         = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
     Assert.assertNotEquals(pendingSegmentV01.asSegmentId(), pendingSegmentV12.asSegmentId());
+    Assert.assertNotEquals(pendingSegmentV11.asSegmentId(), pendingSegmentV12.asSegmentId());
     Assert.assertEquals(v1, pendingSegmentV12.getVersion());
     Assert.assertEquals(JAN_23, pendingSegmentV12.getInterval());
+
+    // Verify that no new segment has been allocated at v0
+    verifyIntervalHasPendingSegments(
+        JAN_23,
+        pendingSegmentV01, pendingSegmentV11, pendingSegmentV12
+    );
 
     replaceTask.releaseLock(JAN_23);
     final ActionsTestTask replaceTask2 = createAndStartTask();
@@ -1205,6 +1221,37 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     );
   }
 
+  @Test
+  public void test_concurrentReplace_onIntervalWithPendingSegment_upgradesIt()
+  {
+    // Allocate a segment on an empty interval
+    final SegmentIdWithShardSpec pendingSegmentV01
+        = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
+    Assert.assertEquals(SEGMENT_V0, pendingSegmentV01.getVersion());
+    Assert.assertEquals(JAN_23, pendingSegmentV01.getInterval());
+
+    // Replace the segments in the interval
+    final String v1 = replaceTask.acquireReplaceLockOn(JAN_23).getVersion();
+    final DataSegment segmentV10 = createSegment(JAN_23, v1);
+    final SegmentPublishResult replacePublishResult = replaceTask.commitReplaceSegments(segmentV10);
+
+    // Verify that pendingSegmentV01 has been upgraded to version v1
+    final List<PendingSegmentRecord> upgradedPendingSegments = replacePublishResult.getUpgradedPendingSegments();
+    Assert.assertNotNull(upgradedPendingSegments);
+    Assert.assertEquals(1, upgradedPendingSegments.size());
+    PendingSegmentRecord upgradedPendingSegment = upgradedPendingSegments.getFirst();
+    Assert.assertEquals(
+        pendingSegmentV01.asSegmentId().toString(),
+        upgradedPendingSegment.getUpgradedFromSegmentId()
+    );
+    Assert.assertEquals(v1, upgradedPendingSegment.getId().getVersion());
+
+    verifyIntervalHasPendingSegments(
+        JAN_23,
+        pendingSegmentV01, upgradedPendingSegment.getId()
+    );
+  }
+
   @Nullable
   private DataSegment findSegmentWith(String version, Map<String, Object> loadSpec, Set<DataSegment> segments)
   {
@@ -1227,6 +1274,17 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
                       .build();
   }
 
+  private void verifyIntervalHasPendingSegments(Interval interval, SegmentIdWithShardSpec... expectedPendingSegments)
+  {
+    final Set<SegmentIdWithShardSpec> expected = Set.of(expectedPendingSegments);
+    final Set<SegmentIdWithShardSpec> observed = getStorageCoordinator()
+        .getPendingSegments(TestDataSource.WIKI, interval)
+        .stream()
+        .map(PendingSegmentRecord::getId)
+        .collect(Collectors.toSet());
+    Assert.assertEquals(expected, observed);
+  }
+
   private void verifyIntervalHasUsedSegments(Interval interval, DataSegment... expectedSegments)
   {
     verifySegments(interval, Segments.INCLUDING_OVERSHADOWED, expectedSegments);
@@ -1240,7 +1298,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   private void verifySegments(Interval interval, Segments visibility, DataSegment... expectedSegments)
   {
     try {
-
       Collection<DataSegment> allUsedSegments = dummyTaskActionClient.submit(
           new RetrieveUsedSegmentsAction(
               TestDataSource.WIKI,

@@ -23,7 +23,7 @@ sidebar_label: Theta sketches tutorial
   ~ under the License.
   -->
 
-Apache Druid can power real-time collection, streaming, and interactive visualization of clickstreams.
+Apache&circledR; Druid can power real-time collection, streaming, and interactive visualization of clickstreams.
 A common problem in clickstream analytics is counting unique things, like visitors or sessions.
 Generally this involves scanning through all detail data, because unique counts do not add up as you aggregate the numbers.
 

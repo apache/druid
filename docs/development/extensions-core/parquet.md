@@ -23,5 +23,5 @@ title: "Apache Parquet Extension"
   -->
 
 
-This Apache Druid module extends [Druid native batch](../../ingestion/native-batch.md) to ingest data directly from offline
+This Apache&circledR; Druid module extends [Druid native batch](../../ingestion/native-batch.md) to ingest data directly from offline
 Apache Parquet files.
