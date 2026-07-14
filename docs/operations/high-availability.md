@@ -23,7 +23,7 @@ title: "High availability"
   -->
 
 
-Apache ZooKeeper, metadata store, the coordinator, the overlord, and brokers are recommended to set up a high availability environment.
+Apache&circledR; ZooKeeper, metadata store, the coordinator, the overlord, and brokers are recommended to set up a high availability environment.
 
 - For highly-available ZooKeeper, you will need a cluster of 3 or 5 ZooKeeper nodes.
 We recommend either installing ZooKeeper on its own hardware, or running 3 or 5 Master servers (where overlords or coordinators are running)

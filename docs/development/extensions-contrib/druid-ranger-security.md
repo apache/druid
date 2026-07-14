@@ -22,7 +22,7 @@ title: "Apache Ranger Security"
   ~ under the License.
   -->
 
-This Apache Druid extension adds an Authorizer which implements access control for Druid, backed by [Apache Ranger](https://ranger.apache.org/). Please see [Authentication and Authorization](../../operations/auth.md) for more information on the basic facilities this extension provides.
+This Apache Druid extension adds an Authorizer which implements access control for Druid, backed by [Apache&circledR; Ranger](https://ranger.apache.org/). Please see [Authentication and Authorization](../../operations/auth.md) for more information on the basic facilities this extension provides.
 
 Make sure to [include](../../configuration/extensions.md#loading-extensions) `druid-ranger-security` in the extensions load list.
 
