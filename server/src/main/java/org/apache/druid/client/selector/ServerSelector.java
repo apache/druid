@@ -21,6 +21,7 @@ package org.apache.druid.client.selector;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.DataSegmentInterner;
 import org.apache.druid.client.QueryableDruidServer;
@@ -267,15 +268,15 @@ public class ServerSelector implements Overshadowable<ServerSelector>
 
     final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> filteredServers =
         new Int2ObjectRBTreeMap<>(historicalTierStrategy.getComparator());
-    for (final int priority : queryableServers.keySet()) {
+    for (final Int2ObjectMap.Entry<Set<QueryableDruidServer>> entry : queryableServers.int2ObjectEntrySet()) {
       final Set<QueryableDruidServer> priorityServers = new HashSet<>();
-      for (final QueryableDruidServer server : queryableServers.get(priority)) {
+      for (final QueryableDruidServer server : entry.getValue()) {
         if (queryableHistoricalTiers.contains(server.getServer().getTier())) {
           priorityServers.add(server);
         }
       }
       if (!priorityServers.isEmpty()) {
-        filteredServers.put(priority, priorityServers);
+        filteredServers.put(entry.getIntKey(), priorityServers);
       }
     }
 

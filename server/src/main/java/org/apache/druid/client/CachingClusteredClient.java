@@ -346,13 +346,19 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
       final CloneQueryMode cloneQueryMode = query.context().getCloneQueryMode();
+      final Set<String> queryableHistoricalTiers = query.context().getQueryableHistoricalTiers();
       @Nullable
       final byte[] queryCacheKey = cacheKeyManager.computeSegmentLevelQueryCacheKey();
       @Nullable
       final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
       if (prevEtag != null) {
         @Nullable
-        final String currentEtag = cacheKeyManager.computeResultLevelCachingEtag(segmentServers, cloneQueryMode, queryCacheKey);
+        final String currentEtag = cacheKeyManager.computeResultLevelCachingEtag(
+            segmentServers,
+            cloneQueryMode,
+            queryableHistoricalTiers,
+            queryCacheKey
+        );
         if (null != currentEtag) {
           responseContext.putEntityTag(currentEtag);
         }
@@ -371,7 +377,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(
           segmentServers,
-          cloneQueryMode
+          cloneQueryMode,
+          queryableHistoricalTiers
       );
       LazySequence<T> mergedResultSequence = new LazySequence<>(() -> {
         List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
@@ -608,10 +615,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     private SortedMap<DruidServer, List<SegmentDescriptor>> groupSegmentsByServer(
         Set<SegmentServerSelector> segments,
-        CloneQueryMode cloneQueryMode
+        CloneQueryMode cloneQueryMode,
+        @Nullable Set<String> queryableHistoricalTiers
     )
     {
-      final Set<String> queryableHistoricalTiers = query.context().getQueryableHistoricalTiers();
       final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = new TreeMap<>();
       for (SegmentServerSelector segmentServer : segments) {
         final QueryableDruidServer queryableDruidServer = segmentServer.getServer()
@@ -832,11 +839,11 @@ public class CachingClusteredClient implements QuerySegmentWalker
     String computeResultLevelCachingEtag(
         final Set<SegmentServerSelector> segments,
         final CloneQueryMode cloneQueryMode,
+        @Nullable final Set<String> queryableHistoricalTiers,
         @Nullable byte[] queryCacheKey
     )
     {
       final Hasher hasher = Hashing.sha1().newHasher();
-      final Set<String> queryableHistoricalTiers = query.context().getQueryableHistoricalTiers();
       boolean hasOnlyHistoricalSegments = true;
       for (SegmentServerSelector p : segments) {
         final QueryableDruidServer queryableServer = p.getServer().pick(
