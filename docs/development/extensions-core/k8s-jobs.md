@@ -25,7 +25,7 @@ title: "MM-less Druid in K8s"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Apache&circledR; Druid Extension to enable using Kubernetes for launching and managing tasks instead of the Middle Managers.  This extension allows you to launch tasks as kubernetes jobs removing the need for your middle manager.  
+Apache&circledR; Druid Extension to enable using Kubernetes&circledR; for launching and managing tasks instead of the Middle Managers.  This extension allows you to launch tasks as kubernetes jobs removing the need for your middle manager.  
 
 ## How it works
 
