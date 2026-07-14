@@ -665,6 +665,52 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
+  public void testSparseOverflowRegisterOnOddBucket()
+  {
+    // Odd bucket: the overflow value is folded into the decoded lowerNibble (16), which is a scalar and no longer
+    // fits the 4-bit nibble mask. zeroCount must treat it as populated, otherwise the single register is counted
+    // as empty and the estimate collapses to 0.
+    HyperLogLogCollector source = HyperLogLogCollector.makeLatestCollector();
+    source.add((short) 5, (byte) 3);   // in-range value -> lower nibble of byte 2
+    source.add((short) 5, (byte) 16);  // overflow on the same odd bucket
+
+    HyperLogLogCollector sparse = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(source.toByteArray()));
+    Assert.assertEquals(1L, sparse.estimateCardinalityRound());
+  }
+
+  @Test
+  public void testSparseOverflowRegisterOnOddBucketWithPopulatedNeighbor()
+  {
+    // The overflow byte also holds an in-range value for the neighboring even bucket. Both decoded nibbles are
+    // non-zero scalars (2 and 16), so neither register may be counted as empty: two populated registers should
+    // estimate as 2.
+    HyperLogLogCollector source = HyperLogLogCollector.makeLatestCollector();
+    source.add((short) 4, (byte) 2);   // neighbor bucket in the same byte, upper nibble
+    source.add((short) 5, (byte) 3);   // odd bucket in-range value, lower nibble
+    source.add((short) 5, (byte) 16);  // overflow on the odd bucket
+
+    HyperLogLogCollector sparse = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(source.toByteArray()));
+    Assert.assertEquals(2L, sparse.estimateCardinalityRound());
+  }
+
+  @Test
+  public void testDenseOverflowRegisterEstimation()
+  {
+    // Adding an in-range value converts the collector to dense storage, so estimating without a sparse round-trip
+    // exercises estimateDense's overflow handling. The same decoded-scalar zero check applies there: one populated
+    // register must estimate as 1 for both nibble parities.
+    HyperLogLogCollector even = HyperLogLogCollector.makeLatestCollector();
+    even.add((short) 4, (byte) 3);
+    even.add((short) 4, (byte) 16);
+    Assert.assertEquals(1L, even.estimateCardinalityRound());
+
+    HyperLogLogCollector odd = HyperLogLogCollector.makeLatestCollector();
+    odd.add((short) 5, (byte) 3);
+    odd.add((short) 5, (byte) 16);
+    Assert.assertEquals(1L, odd.estimateCardinalityRound());
+  }
+
+  @Test
   public void testEstimationReadOnlyByteBuffers()
   {
     Random random = new Random(0L);

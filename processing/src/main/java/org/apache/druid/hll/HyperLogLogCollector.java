@@ -194,7 +194,9 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
           lowerNibble = Math.max(lowerNibble, overflowValue);
         }
         e += 1.0d / Math.pow(2, upperNibble) + 1.0d / Math.pow(2, lowerNibble);
-        zeroCount += (((upperNibble & 0xf0) == 0) ? 1 : 0) + (((lowerNibble & 0x0f) == 0) ? 1 : 0);
+        // upperNibble/lowerNibble hold decoded scalar values here (nibble + minNum, possibly the overflow value),
+        // so test them against zero directly: nibble masks would wrongly flag decoded values like 16 as empty.
+        zeroCount += ((upperNibble == 0) ? 1 : 0) + ((lowerNibble == 0) ? 1 : 0);
         overflowRegisterApplied = true;
       } else {
         e += MIN_NUM_REGISTER_LOOKUP[minNum][register];
@@ -238,7 +240,9 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
           lowerNibble = Math.max(lowerNibble, overflowValue);
         }
         e += 1.0d / Math.pow(2, upperNibble) + 1.0d / Math.pow(2, lowerNibble);
-        zeroCount += (((upperNibble & 0xf0) == 0) ? 1 : 0) + (((lowerNibble & 0x0f) == 0) ? 1 : 0);
+        // upperNibble/lowerNibble hold decoded scalar values here (nibble + minNum, possibly the overflow value),
+        // so test them against zero directly: nibble masks would wrongly flag decoded values like 16 as empty.
+        zeroCount += ((upperNibble == 0) ? 1 : 0) + ((lowerNibble == 0) ? 1 : 0);
       } else {
         e += MIN_NUM_REGISTER_LOOKUP[minNum][register];
         zeroCount += NUM_ZERO_LOOKUP[register];
