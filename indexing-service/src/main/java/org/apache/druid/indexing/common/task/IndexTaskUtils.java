@@ -22,8 +22,10 @@ package org.apache.druid.indexing.common.task;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.SegmentMetadataEvent;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.query.DruidMetrics;
@@ -105,6 +107,23 @@ public class IndexTaskUtils
     } else {
       toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/failure", 1));
     }
+  }
+
+  /**
+   * Emits the metric {@code segment/allocated/count}.
+   */
+  public static void emitSegmentAllocateMetric(SegmentIdWithShardSpec allocatedId, Task task, ServiceEmitter emitter)
+  {
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    if (task instanceof SeekableStreamIndexTask<?, ?, ?>) {
+      metricBuilder.setDimension(
+          DruidMetrics.SUPERVISOR_ID,
+          ((SeekableStreamIndexTask<?, ?, ?>) task).getSupervisorId()
+      );
+    }
+    metricBuilder.setDimension(DruidMetrics.ID, allocatedId.toString());
+    emitter.emit(metricBuilder.setMetric("segment/allocated/count", 1));
   }
 
   /**

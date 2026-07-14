@@ -351,6 +351,7 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |`segment/added/bytes`|Size in bytes of new segments created.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`segment/moved/bytes`|Size in bytes of segments moved/archived via the Move Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`segment/nuked/bytes`|Size in bytes of segments deleted via the Kill Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
+|`segment/allocated/count`|Number of segments successfully allocated by the Overlord to an append (realtime or batch) task. May be emitted multiple times for a single allocated segment ID if multiple tasks request an allocation with the same parameters.|`id`, `dataSource`, `taskId`, `taskType`, `groupId`, `tags`, `supervisorId`|Always 1|
 |`task/success/count`|Number of successful tasks per emission period. This metric is available only if the `TaskCountStatsMonitor` module is included.| `dataSource`,`taskType`, `supervisorId`|Varies|
 |`task/failed/count`|Number of failed tasks per emission period. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`, `supervisorId`|Varies|
 |`task/running/count`|Number of current running tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`, `supervisorId`|Varies|
