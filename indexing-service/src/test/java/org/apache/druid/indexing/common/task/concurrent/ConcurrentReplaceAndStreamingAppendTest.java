@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.concurrent;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -130,8 +129,8 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
   public void setUpIngestionTestBase() throws IOException
   {
     EasyMock.reset(supervisorManager);
-    EasyMock.expect(supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(TestDataSource.WIKI))
-            .andReturn(Optional.of(TestDataSource.WIKI)).anyTimes();
+    EasyMock.expect(supervisorManager.getActiveSupervisorIdsForDatasourceWithAppendLock(TestDataSource.WIKI))
+            .andReturn(List.of(TestDataSource.WIKI)).anyTimes();
     super.setUpIngestionTestBase();
     final TaskConfig taskConfig = new TaskConfigBuilder().build();
     taskActionClientFactory = createActionClientFactory();

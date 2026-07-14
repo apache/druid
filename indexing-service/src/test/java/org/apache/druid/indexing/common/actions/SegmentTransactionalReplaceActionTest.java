@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.actions;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.SegmentUpgradeMetrics;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -73,8 +72,8 @@ public class SegmentTransactionalReplaceActionTest
   @Test
   public void testNoActiveSupervisorStillEmitsPersistedPerSegment()
   {
-    EasyMock.expect(supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(DATA_SOURCE))
-            .andReturn(Optional.absent());
+    EasyMock.expect(supervisorManager.getActiveSupervisorIdsForDatasourceWithAppendLock(DATA_SOURCE))
+            .andReturn(List.of());
     // registerUpgradedPendingSegmentOnSupervisor must not be called when there is no active supervisor.
     EasyMock.replay(toolbox, supervisorManager);
 
@@ -87,8 +86,8 @@ public class SegmentTransactionalReplaceActionTest
   @Test
   public void testActiveSupervisorRegistersEachSegment()
   {
-    EasyMock.expect(supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(DATA_SOURCE))
-            .andReturn(Optional.of(SUPERVISOR_ID));
+    EasyMock.expect(supervisorManager.getActiveSupervisorIdsForDatasourceWithAppendLock(DATA_SOURCE))
+            .andReturn(List.of(SUPERVISOR_ID));
     EasyMock.expect(
         supervisorManager.registerUpgradedPendingSegmentOnSupervisor(EasyMock.eq(SUPERVISOR_ID), EasyMock.anyObject())
     ).andReturn(OptionalInt.of(2)).times(3);
@@ -103,8 +102,8 @@ public class SegmentTransactionalReplaceActionTest
   @Test
   public void testBatchLargerThanSampleSizeRegistersEverySegment()
   {
-    EasyMock.expect(supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(DATA_SOURCE))
-            .andReturn(Optional.of(SUPERVISOR_ID));
+    EasyMock.expect(supervisorManager.getActiveSupervisorIdsForDatasourceWithAppendLock(DATA_SOURCE))
+            .andReturn(List.of(SUPERVISOR_ID));
     EasyMock.expect(
         supervisorManager.registerUpgradedPendingSegmentOnSupervisor(EasyMock.eq(SUPERVISOR_ID), EasyMock.anyObject())
     ).andReturn(OptionalInt.of(1)).times(MORE_THAN_SAMPLE_SIZE);
@@ -121,8 +120,8 @@ public class SegmentTransactionalReplaceActionTest
   {
     // An empty result models a non-seekable-stream supervisor or a registration failure; the segment is still counted
     // as persisted but contributes no notified-task summary.
-    EasyMock.expect(supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(DATA_SOURCE))
-            .andReturn(Optional.of(SUPERVISOR_ID));
+    EasyMock.expect(supervisorManager.getActiveSupervisorIdsForDatasourceWithAppendLock(DATA_SOURCE))
+            .andReturn(List.of(SUPERVISOR_ID));
     EasyMock.expect(
         supervisorManager.registerUpgradedPendingSegmentOnSupervisor(EasyMock.eq(SUPERVISOR_ID), EasyMock.anyObject())
     ).andReturn(OptionalInt.empty()).times(2);
@@ -140,8 +139,8 @@ public class SegmentTransactionalReplaceActionTest
     final Level originalLevel = LogManager.getLogger(SegmentTransactionalReplaceAction.class).getLevel();
     Configurator.setLevel(SegmentTransactionalReplaceAction.class.getName(), Level.DEBUG);
     try {
-      EasyMock.expect(supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(DATA_SOURCE))
-              .andReturn(Optional.of(SUPERVISOR_ID));
+      EasyMock.expect(supervisorManager.getActiveSupervisorIdsForDatasourceWithAppendLock(DATA_SOURCE))
+              .andReturn(List.of(SUPERVISOR_ID));
       EasyMock.expect(
           supervisorManager.registerUpgradedPendingSegmentOnSupervisor(EasyMock.eq(SUPERVISOR_ID), EasyMock.anyObject())
       ).andReturn(OptionalInt.of(1)).times(MORE_THAN_SAMPLE_SIZE);

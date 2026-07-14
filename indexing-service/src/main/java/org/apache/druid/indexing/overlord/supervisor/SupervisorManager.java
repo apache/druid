@@ -125,11 +125,15 @@ public class SupervisorManager implements SupervisorStatsProvider
   }
 
   /**
+   * Finds the list of active streaming supervisors ingest into the given datasource
+   * using an APPEND lock.
+   *
    * @param datasource Datasource to find active supervisor id with append lock for.
-   * @return An optional with the active appending supervisor id if it exists.
+   * @return List of active appending supervisor IDs, if any.
    */
-  public Optional<String> getActiveSupervisorIdForDatasourceWithAppendLock(String datasource)
+  public List<String> getActiveSupervisorIdsForDatasourceWithAppendLock(String datasource)
   {
+    final List<String> matchingSupervisorIds = new ArrayList<>();
     for (Map.Entry<String, Pair<Supervisor, SupervisorSpec>> entry : supervisors.entrySet()) {
       final String supervisorId = entry.getKey();
       final Supervisor supervisor = entry.getValue().lhs;
@@ -142,11 +146,11 @@ public class SupervisorManager implements SupervisorStatsProvider
           && !supervisorSpec.isSuspended()
           && supervisorSpec.getDataSources().contains(datasource)
           && (hasAppendLock)) {
-        return Optional.of(supervisorId);
+        matchingSupervisorIds.add(supervisorId);
       }
     }
 
-    return Optional.absent();
+    return matchingSupervisorIds;
   }
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)
