@@ -179,6 +179,12 @@ public class QueryScheduler implements QueryWatcher
                                                                     .setDimension("lane", lane.orElse(DEFAULT))
                                                                     .setDimension("dataSource", query.getDataSource().getTableNames())
                                                                     .setDimension("type", query.getType());
+    // "id" (the query id) lets query/priority be attributed to an individual query rather than only aggregated at
+    // datasource/type granularity. High cardinality, so downstream pipelines must not forward it to low-cardinality
+    // stores (e.g. Atlas). Guarded because some (typically internal) queries carry no id and setDimension rejects null.
+    if (query.getId() != null) {
+      builderUsr.setDimension("id", query.getId());
+    }
     emitter.emit(builderUsr.setMetric("query/priority", priority.orElse(Integer.valueOf(0))));
     return lane.map(query::withLane).orElse(query);
   }
