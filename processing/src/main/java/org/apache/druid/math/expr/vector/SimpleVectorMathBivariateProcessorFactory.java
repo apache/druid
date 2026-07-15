@@ -78,7 +78,7 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
   @Override
   public final ExprVectorProcessor<long[]> longsProcessor(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
   {
-    if (simdOp != null && ExpressionProcessing.useVectorApi()) {
+    if (simdOp != null && simdOp.supportsLongLong() && ExpressionProcessing.useVectorApi()) {
       return SimdProcessors.makeLongLong(
           left.asVectorProcessor(inspector),
           right.asVectorProcessor(inspector),
