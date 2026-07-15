@@ -62,6 +62,7 @@ public final class SimdProcessors
       case ADD -> new SimdDoubleDoubleAddProcessor(left, right, scalarFallback);
       case SUB -> new SimdDoubleDoubleSubProcessor(left, right, scalarFallback);
       case MUL -> new SimdDoubleDoubleMulProcessor(left, right, scalarFallback);
+      case DIV -> new SimdDoubleDoubleDivProcessor(left, right, scalarFallback);
       default -> throw DruidException.defensive("Unsupported SIMD binary op[%s]", op);
     };
   }
@@ -77,6 +78,7 @@ public final class SimdProcessors
       case ADD -> new SimdLongDoubleAddProcessor(left, right, scalarFallback);
       case SUB -> new SimdLongDoubleSubProcessor(left, right, scalarFallback);
       case MUL -> new SimdLongDoubleMulProcessor(left, right, scalarFallback);
+      case DIV -> new SimdLongDoubleDivProcessor(left, right, scalarFallback);
       default -> throw DruidException.defensive("Unsupported SIMD binary op[%s]", op);
     };
   }
@@ -92,6 +94,7 @@ public final class SimdProcessors
       case ADD -> new SimdDoubleLongAddProcessor(left, right, scalarFallback);
       case SUB -> new SimdDoubleLongSubProcessor(left, right, scalarFallback);
       case MUL -> new SimdDoubleLongMulProcessor(left, right, scalarFallback);
+      case DIV -> new SimdDoubleLongDivProcessor(left, right, scalarFallback);
       default -> throw DruidException.defensive("Unsupported SIMD binary op[%s]", op);
     };
   }
