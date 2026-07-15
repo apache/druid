@@ -23,7 +23,6 @@ import jdk.incubator.vector.DoubleVector;
 import jdk.incubator.vector.VectorMask;
 import jdk.incubator.vector.VectorOperators;
 import jdk.incubator.vector.VectorSpecies;
-import org.apache.druid.query.aggregation.NullAwareVectorAggregator;
 import org.apache.druid.query.aggregation.mean.DoubleMeanHolder;
 import org.apache.druid.query.aggregation.mean.DoubleMeanVectorAggregator;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -34,8 +33,13 @@ import java.nio.ByteBuffer;
  * SIMD specialization of {@link DoubleMeanVectorAggregator}'s ungrouped contiguous-range aggregation. The hot loop
  * reduces input values into one local sum and count, then updates the mean holder once. The grouped scatter-gather
  * variant is inherited from the parent scalar class.
+ *
+ * Null handling is done internally: {@code DoubleMeanAggregatorFactory} is not a {@code NullableNumericAggregatorFactory},
+ * so this aggregator is never wrapped by {@code NullableNumericVectorAggregator} and does not implement
+ * {@code NullAwareVectorAggregator}. The contiguous-range {@link #aggregate(ByteBuffer, int, int, int)} entry point
+ * inspects the selector's null vector itself and dispatches to a masked or unmasked SIMD loop.
  */
-public final class SimdDoubleMeanVectorAggregator extends DoubleMeanVectorAggregator implements NullAwareVectorAggregator
+public final class SimdDoubleMeanVectorAggregator extends DoubleMeanVectorAggregator
 {
   private static final VectorSpecies<Double> SPECIES = DoubleVector.SPECIES_PREFERRED;
 
@@ -54,12 +58,11 @@ public final class SimdDoubleMeanVectorAggregator extends DoubleMeanVectorAggreg
     if (nullVector == null) {
       aggregateNoNulls(buf, position, startRow, endRow);
     } else {
-      aggregate(buf, position, startRow, endRow, nullVector);
+      aggregateNulls(buf, position, startRow, endRow, nullVector);
     }
   }
 
-  @Override
-  public boolean aggregate(
+  private void aggregateNulls(
       final ByteBuffer buf,
       final int position,
       final int startRow,
@@ -88,9 +91,7 @@ public final class SimdDoubleMeanVectorAggregator extends DoubleMeanVectorAggreg
     }
     if (count > 0) {
       DoubleMeanHolder.update(buf, position, sum, count);
-      return true;
     }
-    return false;
   }
 
   private void aggregateNoNulls(final ByteBuffer buf, final int position, final int startRow, final int endRow)

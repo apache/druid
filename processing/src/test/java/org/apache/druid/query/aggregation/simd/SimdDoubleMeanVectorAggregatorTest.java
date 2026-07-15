@@ -22,19 +22,31 @@ package org.apache.druid.query.aggregation.simd;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.mean.DoubleMeanHolder;
 import org.apache.druid.query.aggregation.mean.DoubleMeanVectorAggregator;
-import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.FakeVectorValueSelector;
+import org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.NullPattern;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Random;
-import java.util.function.IntPredicate;
 
+import static org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.VECTOR_SIZES;
+import static org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.padNulls;
+import static org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.randomDoubles;
+
+/**
+ * Equivalence test for the SIMD doubleMean vector aggregator. For each (vector size, null pattern) tuple it drives
+ * both the SIMD aggregator and the scalar parent over the same input and asserts the resulting mean holders match.
+ * The SIMD aggregator handles nulls internally (it is not a {@code NullAwareVectorAggregator}), so the contiguous
+ * {@code aggregate} entry point covers both the masked and unmasked loops.
+ *
+ * Each scenario is exercised twice: once with {@code (position=0, startRow=0)} and once with
+ * {@code (position=1, startRow=1)} where the rows before {@code startRow} hold a large "poison" value that would
+ * visibly skew the mean if the aggregator incorrectly read past {@code startRow}, and the buffer slot starts at byte
+ * offset 1 so any indexing off the position parameter shows up.
+ */
 public class SimdDoubleMeanVectorAggregatorTest extends InitializedNullHandlingTest
 {
-  private static final int[] VECTOR_SIZES = {1, 8, 17, 64, 1023};
   private static final double POISON_DOUBLE = 1e15;
   private static final double DELTA = 1e-9;
 
@@ -61,12 +73,12 @@ public class SimdDoubleMeanVectorAggregatorTest extends InitializedNullHandlingT
     for (int i = 0; i < startRow; i++) {
       values[i] = POISON_DOUBLE;
     }
-    System.arraycopy(randomDoubles(size), 0, values, startRow, size);
+    System.arraycopy(randomDoubles(size, 0), 0, values, startRow, size);
 
     final boolean[] realNulls = pattern.toMask(size);
     final boolean[] nulls = realNulls == null ? null : padNulls(realNulls, startRow);
 
-    final FakeVectorValueSelector selector = new FakeVectorValueSelector(arrLen, values, nulls);
+    final FakeVectorValueSelector selector = new FakeVectorValueSelector(arrLen, null, values, null, nulls);
     final int endRow = startRow + size;
     final String msg = StringUtils.format(
         "size[%s] nulls[%s] pos[%s] start[%s]",
@@ -86,14 +98,6 @@ public class SimdDoubleMeanVectorAggregatorTest extends InitializedNullHandlingT
     scalar.aggregate(scalarBuf, position, startRow, endRow);
     simd.aggregate(simdBuf, position, startRow, endRow);
     assertMeanHolderEquals(msg, scalarBuf, simdBuf, position);
-
-    if (nulls != null) {
-      final ByteBuffer directBuf = ByteBuffer.allocate(position + DoubleMeanHolder.MAX_INTERMEDIATE_SIZE);
-      simd.init(directBuf, position);
-      final boolean reported = simd.aggregate(directBuf, position, startRow, endRow, nulls);
-      Assert.assertEquals(msg + " (anyNonNull)", anyNonNull(nulls, startRow, endRow), reported);
-      assertMeanHolderEquals(msg + " (direct null-aware)", scalarBuf, directBuf, position);
-    }
   }
 
   private static void assertMeanHolderEquals(
@@ -128,114 +132,5 @@ public class SimdDoubleMeanVectorAggregatorTest extends InitializedNullHandlingT
   private static long count(final DoubleMeanHolder holder)
   {
     return ByteBuffer.wrap(holder.toBytes()).getLong(Double.BYTES);
-  }
-
-  private static boolean anyNonNull(final boolean[] nulls, final int startRow, final int endRow)
-  {
-    for (int i = startRow; i < endRow; i++) {
-      if (!nulls[i]) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private static boolean[] padNulls(final boolean[] realNulls, final int startRow)
-  {
-    final boolean[] padded = new boolean[startRow + realNulls.length];
-    System.arraycopy(realNulls, 0, padded, startRow, realNulls.length);
-    return padded;
-  }
-
-  private static double[] randomDoubles(final int size)
-  {
-    final Random r = new Random(0xC0FFEEL);
-    final double[] out = new double[size];
-    for (int i = 0; i < size; i++) {
-      out[i] = (r.nextDouble() - 0.5) * 1000.0;
-    }
-    return out;
-  }
-
-  private enum NullPattern
-  {
-    NONE(i -> false),
-    ALL(i -> true),
-    ALTERNATING(i -> (i & 1) == 0),
-    SPARSE(i -> i % 7 == 0),
-    FIRST_THREE(i -> i < 3),
-    CHUNK_BOUNDARY(i -> i == 7 || i == 8);
-
-    private final IntPredicate predicate;
-
-    NullPattern(final IntPredicate predicate)
-    {
-      this.predicate = predicate;
-    }
-
-    @Nullable
-    boolean[] toMask(final int size)
-    {
-      if (this == NONE) {
-        return null;
-      }
-      final boolean[] mask = new boolean[size];
-      for (int i = 0; i < size; i++) {
-        mask[i] = predicate.test(i);
-      }
-      return mask;
-    }
-  }
-
-  private static final class FakeVectorValueSelector implements VectorValueSelector
-  {
-    private final int size;
-    private final double[] doubles;
-    @Nullable
-    private final boolean[] nulls;
-
-    FakeVectorValueSelector(final int size, final double[] doubles, @Nullable final boolean[] nulls)
-    {
-      this.size = size;
-      this.doubles = doubles;
-      this.nulls = nulls;
-    }
-
-    @Override
-    public long[] getLongVector()
-    {
-      return null;
-    }
-
-    @Override
-    public float[] getFloatVector()
-    {
-      return null;
-    }
-
-    @Override
-    public double[] getDoubleVector()
-    {
-      return doubles;
-    }
-
-    @Nullable
-    @Override
-    public boolean[] getNullVector()
-    {
-      return nulls;
-    }
-
-    @Override
-    public int getMaxVectorSize()
-    {
-      return size;
-    }
-
-    @Override
-    public int getCurrentVectorSize()
-    {
-      return size;
-    }
   }
 }
