@@ -350,7 +350,7 @@ The logic defining how the pod template is built for your Kubernetes Job depends
 ### Overlord Single Container Pod Adapter/Overlord Multi Container Pod Adapter
 The overlord single container pod adapter takes the podSpec of your `Overlord` pod and creates a kubernetes job from this podSpec.  This is the default pod adapter implementation, to explicitly enable it you can specify the runtime property `druid.indexer.runner.k8s.adapter.type: overlordSingleContainer`
 
-The overlord multi container pod adapter takes the podSpec of your `Overlord` pod and creates a kubernetes job from this podSpec.  It uses kubexit to manage dependency ordering between the main container that runs your druid peon and other sidecars defined in the `Overlord` pod spec. Thus if you have sidecars such as Splunk&circledR; or Istio it will be able to handle them. To enable this pod adapter you can specify the runtime property `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer` 
+The Overlord multi-container pod adapter uses the pod specification of your Overlord pod to create a Kubernetes job. It uses kubexit to manage dependency ordering between the main container that runs your Druid peon and other sidecars defined in the Overlord pod specification. This allows the adapter to handle sidecars such Splunk&circledR; or Istio. To enable this pod adapter, set the runtime property `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer`.
 
 For the sidecar support to work for the multi container pod adapter, your entry point / command in docker must be explicitly defined your spec.
 
