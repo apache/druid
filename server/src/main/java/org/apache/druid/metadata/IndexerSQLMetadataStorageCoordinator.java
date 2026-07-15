@@ -164,7 +164,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<Interval> retrieveUnusedSegmentIntervals(String dataSource, int limit)
+  public List<Interval> retrieveSomeUnusedSegmentIntervals(String dataSource, int limit)
   {
     return inReadOnlyTransaction(
         sql -> sql.retrieveSomeUnusedSegmentIntervals(dataSource, limit)

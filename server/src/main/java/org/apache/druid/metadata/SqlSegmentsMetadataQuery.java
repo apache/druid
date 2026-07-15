@@ -1065,9 +1065,9 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Gets some unused segment intervals for the specified datasource.
+   * Retrieves intervals containing unused segments for the specified datasource.
    * <p>
-   * This method ensures that if there are any unused segments for the datasource,
+   * This method ensures that if there is any unused segment for the datasource,
    * the returned list is not empty. However, it does NOT guarantee that:
    * <ul>
    * <li>the intervals in the result would be ordered</li>
