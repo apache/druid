@@ -38,8 +38,6 @@ import org.apache.druid.segment.projections.ClusteringColumnSelectorFactory;
 import org.apache.druid.segment.projections.ClusteringVectorColumnSelectorFactory;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
-import org.apache.druid.segment.projections.SingleGroupClusteringColumnSelectorFactory;
-import org.apache.druid.segment.projections.SingleGroupClusteringVectorColumnSelectorFactory;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.segment.vector.ConcatenatingVectorCursor;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
@@ -195,7 +193,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       TableClusterGroupSpec valueGroup
   )
   {
-    final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup);
+    final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup, true);
     if (groupIndex == null) {
       throw DruidException.defensive(
           "No cluster-group sub-index resolvable for clustering values "
@@ -203,12 +201,18 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       );
     }
 
-    return new QueryableIndexCursorHolder(
-        groupIndex,
-        plan.rebuildCursorBuildSpec(spec, valueGroup),
-        QueryableIndexTimeBoundaryInspector.create(groupIndex),
-        valueGroup.getSummary().getOrdering()
-    )
+    // groupIndex exposes the group's clustering columns as constant columns, so no clustering-specific selector
+    // wrapper is needed. When the query has virtual columns equivalent to a materialized column, wrap the selector
+    // factories with Remap*ColumnSelectorFactory so those query VCs resolve to the materialized column instead of
+    // recomputing (the matched VCs were already dropped from the per-group build spec by rebuildCursorBuildSpec).
+    final CursorBuildSpec groupSpec = plan.rebuildCursorBuildSpec(spec, valueGroup);
+    final QueryableIndexTimeBoundaryInspector groupTimeBoundary =
+        QueryableIndexTimeBoundaryInspector.create(groupIndex);
+    final List<OrderBy> ordering = valueGroup.getSummary().getOrdering();
+    if (plan.virtualColumnRemap().isEmpty()) {
+      return new QueryableIndexCursorHolder(groupIndex, groupSpec, groupTimeBoundary, ordering);
+    }
+    return new QueryableIndexCursorHolder(groupIndex, groupSpec, groupTimeBoundary, ordering)
     {
       @Override
       protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
@@ -216,15 +220,10 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
           Offset baseOffset
       )
       {
-        final ColumnSelectorFactory clusteringFactory = new SingleGroupClusteringColumnSelectorFactory(
+        return new RemapColumnSelectorFactory(
             super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset),
-            valueGroup.getSummary().getClusteringColumns(),
-            valueGroup.lookupClusteringValues()
+            plan.virtualColumnRemap()
         );
-        if (plan.virtualColumnRemap().isEmpty()) {
-          return clusteringFactory;
-        }
-        return new RemapColumnSelectorFactory(clusteringFactory, plan.virtualColumnRemap());
       }
 
       @Override
@@ -233,15 +232,10 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
           VectorOffset baseOffset
       )
       {
-        final VectorColumnSelectorFactory clusteringVectorFactory = new SingleGroupClusteringVectorColumnSelectorFactory(
+        return new RemapVectorColumnSelectorFactory(
             super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset),
-            valueGroup.getSummary().getClusteringColumns(),
-            valueGroup.lookupClusteringValues()
+            plan.virtualColumnRemap()
         );
-        if (plan.virtualColumnRemap().isEmpty()) {
-          return clusteringVectorFactory;
-        }
-        return new RemapVectorColumnSelectorFactory(clusteringVectorFactory, plan.virtualColumnRemap());
       }
     };
   }
@@ -267,7 +261,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     final Closer closer = Closer.create();
     for (TableClusterGroupSpec valueGroup : matching) {
       clusteringValuesByGroup.add(valueGroup.lookupClusteringValues());
-      final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup);
+      final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup, true);
       if (groupIndex == null) {
         throw DruidException.defensive(
             "No cluster-group sub-index resolvable for clustering values "

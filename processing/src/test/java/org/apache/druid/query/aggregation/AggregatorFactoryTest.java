@@ -46,8 +46,8 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,24 +61,24 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
   @Test
   public void testMergeAggregators()
   {
-    Assert.assertNull(AggregatorFactory.mergeAggregators(null));
-    Assert.assertNull(AggregatorFactory.mergeAggregators(ImmutableList.of()));
+    Assertions.assertNull(AggregatorFactory.mergeAggregators(null));
+    Assertions.assertNull(AggregatorFactory.mergeAggregators(ImmutableList.of()));
 
     List<AggregatorFactory[]> aggregatorsToBeMerged = new ArrayList<>();
 
     aggregatorsToBeMerged.add(null);
-    Assert.assertNull(AggregatorFactory.mergeAggregators(aggregatorsToBeMerged));
+    Assertions.assertNull(AggregatorFactory.mergeAggregators(aggregatorsToBeMerged));
 
     AggregatorFactory[] emptyAggFactory = new AggregatorFactory[0];
 
     aggregatorsToBeMerged.clear();
     aggregatorsToBeMerged.add(emptyAggFactory);
-    Assert.assertArrayEquals(emptyAggFactory, AggregatorFactory.mergeAggregators(aggregatorsToBeMerged));
+    Assertions.assertArrayEquals(emptyAggFactory, AggregatorFactory.mergeAggregators(aggregatorsToBeMerged));
 
     aggregatorsToBeMerged.clear();
     aggregatorsToBeMerged.add(emptyAggFactory);
     aggregatorsToBeMerged.add(null);
-    Assert.assertNull(AggregatorFactory.mergeAggregators(aggregatorsToBeMerged));
+    Assertions.assertNull(AggregatorFactory.mergeAggregators(aggregatorsToBeMerged));
 
     aggregatorsToBeMerged.clear();
     AggregatorFactory[] af1 = new AggregatorFactory[]{
@@ -87,7 +87,7 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
     AggregatorFactory[] af2 = new AggregatorFactory[]{
         new LongMaxAggregatorFactory("name", "fieldName2")
     };
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new AggregatorFactory[]{
             new LongMaxAggregatorFactory("name", "name")
         },
@@ -101,7 +101,7 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
     af2 = new AggregatorFactory[]{
         new DoubleMaxAggregatorFactory("name", "fieldName2")
     };
-    Assert.assertNull(AggregatorFactory.mergeAggregators(ImmutableList.of(af1, af2))
+    Assertions.assertNull(AggregatorFactory.mergeAggregators(ImmutableList.of(af1, af2))
     );
   }
 
@@ -201,7 +201,7 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     // aggs
@@ -325,8 +325,8 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
     );
 
     for (AggregatorFactory aggregatorFactory : aggregatorFactories) {
-      Assert.assertEquals(aggregatorFactory, aggregatorFactory.withName("col"));
-      Assert.assertEquals("newTest", aggregatorFactory.withName("newTest").getName());
+      Assertions.assertEquals(aggregatorFactory, aggregatorFactory.withName("col"));
+      Assertions.assertEquals("newTest", aggregatorFactory.withName("newTest").getName());
     }
   }
 }

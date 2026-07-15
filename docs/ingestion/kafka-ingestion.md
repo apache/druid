@@ -25,7 +25,7 @@ description: "Overview of the Kafka indexing service for Druid. Includes example
   -->
 
 :::info
-To use the Kafka indexing service, you must be on Apache Kafka version 0.11.x or higher.
+To use the Kafka indexing service, you must be on Apache Kafka&circledR; version 0.11.x or higher.
 If you are using an older version, refer to the [Apache Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade).
 :::
 

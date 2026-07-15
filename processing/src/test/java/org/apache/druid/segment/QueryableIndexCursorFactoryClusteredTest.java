@@ -44,6 +44,7 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -580,6 +581,61 @@ class QueryableIndexCursorFactoryClusteredTest
   }
 
   @Test
+  void testRangeFilterOnClusteringColumnMatchesViaFabricatedColumn()
+  {
+    segmentIndex = standardTwoGroup();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+
+    // A RangeFilter on the clustering column is NOT folded by the pruner (only Equality/In/Null fold), so it survives
+    // to the per-group cursor. Clustering columns are constant-per-group and not stored on disk, so before the
+    // per-group index fabricated them as constant columns this returned nothing; now the range resolves against the
+    // fabricated column's value matcher and both groups (tenant in [a, z]) match all rows.
+    final Filter filter = new RangeFilter("tenant", ColumnType.STRING, "a", "z", false, false, null);
+    try (CursorHolder holder = factory.makeCursorHolder(specWith(filter))) {
+      final List<List<String>> rows = collectTenantRegionRows(holder.asCursor());
+      Assertions.assertEquals(
+          List.of(
+              List.of("acme", "us-east-1"),
+              List.of("acme", "us-west-2"),
+              List.of("globex", "eu-west-1")
+          ),
+          rows
+      );
+    }
+  }
+
+  @Test
+  void testResidualRangeFilterOnClusteringColumnSingleGroup()
+  {
+    segmentIndex = standardTwoGroup();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+
+    // tenant = 'acme' folds and prunes to the single acme group; the RangeFilter on the clustering column survives as
+    // a residual leaf on the single-group cursor. It must match against the fabricated constant column ('acme' is in
+    // [a, m]) rather than an absent physical column.
+    final Filter filter = new AndFilter(List.of(
+        new EqualityFilter("tenant", ColumnType.STRING, "acme", null),
+        new RangeFilter("tenant", ColumnType.STRING, "a", "m", false, false, null)
+    ));
+    try (CursorHolder holder = factory.makeCursorHolder(specWith(filter))) {
+      final List<List<String>> rows = collectTenantRegionRows(holder.asCursor());
+      Assertions.assertEquals(
+          List.of(
+              List.of("acme", "us-east-1"),
+              List.of("acme", "us-west-2")
+          ),
+          rows
+      );
+    }
+  }
+
+  @Test
   void testReportedOrderingIsTheFullSegmentOrderingRegardlessOfGroupPruning()
   {
     // A clustered segment must advertise the SAME ordering whether a filter prunes to one group or many — otherwise
@@ -922,8 +978,8 @@ class QueryableIndexCursorFactoryClusteredTest
   void testGroupByOnNonClusteringColumnWithinSingleGroup()
   {
     // Filter to a single cluster group (tenant=acme), then GROUP BY a non-clustering column. Exercises the
-    // single-group cursor-holder path + SingleGroupClusteringColumnSelectorFactory end-to-end: `region` groups
-    // correctly via the group's own (stable) dictionary, and the pruned-out globex group contributes nothing.
+    // single-group cursor-holder path end-to-end: `region` groups correctly via the group's own dictionary, and the
+    // pruned-out globex group contributes nothing.
     segmentIndex = buildSegment(List.of(
         row("acme", "2025-01-01T00:00:00", "us-east-1"),
         row("acme", "2025-01-01T00:10:00", "us-east-1"),
