@@ -446,7 +446,7 @@ public class VectorMathProcessors
 
     public Max()
     {
-      super(Math::max, Math::max, Math::max, Math::max);
+      super(Math::max, Math::max, Math::max, Math::max, SimdSupportedBinaryOp.MAX);
     }
   }
 
@@ -456,7 +456,7 @@ public class VectorMathProcessors
 
     public Min()
     {
-      super(Math::min, Math::min, Math::min, Math::min);
+      super(Math::min, Math::min, Math::min, Math::min, SimdSupportedBinaryOp.MIN);
     }
   }
 
