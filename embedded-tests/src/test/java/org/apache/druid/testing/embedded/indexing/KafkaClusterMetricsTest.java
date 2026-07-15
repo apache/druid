@@ -141,10 +141,10 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   public static Stream<Arguments> getCompactionSupervisorTestParams()
   {
     return Stream.of(
-//        Arguments.of(
-//            CompactionEngine.NATIVE,
-//            new NewestSegmentFirstPolicy(null)
-//        ),
+        Arguments.of(
+            CompactionEngine.NATIVE,
+            new NewestSegmentFirstPolicy(null)
+        ),
         Arguments.of(
             CompactionEngine.MSQ,
             new MostFragmentedIntervalFirstPolicy(1, HumanReadableBytes.valueOf(1), null, null, 80, null)
@@ -223,12 +223,12 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     cluster.callApi().postSupervisor(kafkaSupervisorSpec);
 
     // Wait for a task to succeed
-//    overlord.latchableEmitter().waitForEventAggregate(
-//        event -> event.hasMetricName("task/success/count")
-//                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-//                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisorId),
-//        agg -> agg.hasSumAtLeast(1)
-//    );
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/success/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisorId),
+        agg -> agg.hasSumAtLeast(1)
+    );
     // Wait for some segments to be published
     indexer.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("ingest/events/processed")
