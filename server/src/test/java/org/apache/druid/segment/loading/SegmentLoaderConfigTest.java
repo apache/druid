@@ -40,4 +40,22 @@ public class SegmentLoaderConfigTest
     Assert.assertTrue(config.isVirtualStorage());
     Assert.assertTrue(config.isVirtualStorageEphemeral());
   }
+
+  @Test
+  public void testWithVirtualStorageReturnsCopyAndDoesNotMutateOriginal()
+  {
+    final SegmentLoaderConfig original = new SegmentLoaderConfig();
+    Assert.assertFalse(original.isVirtualStorage());
+
+    final SegmentLoaderConfig copy = original.withVirtualStorage(true);
+
+    // The copy has the flag flipped, while other settings are preserved.
+    Assert.assertTrue(copy.isVirtualStorage());
+    Assert.assertEquals(original.getVirtualStorageLoadThreads(), copy.getVirtualStorageLoadThreads());
+    Assert.assertEquals(original.isVirtualStorageUseVirtualThreads(), copy.isVirtualStorageUseVirtualThreads());
+
+    // The original is untouched and the copy is a distinct instance.
+    Assert.assertNotSame(original, copy);
+    Assert.assertFalse(original.isVirtualStorage());
+  }
 }

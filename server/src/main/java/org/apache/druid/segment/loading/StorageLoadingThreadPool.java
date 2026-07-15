@@ -27,7 +27,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.asyncresource.AsyncResource;
 import org.apache.druid.common.asyncresource.AsyncResources;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -50,7 +49,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class StorageLoadingThreadPool
 {
-  private static final Logger log = new Logger(StorageNodeModule.class);
+  private static final Logger log = new Logger(StorageLoadingThreadPool.class);
 
   private final ListeningExecutorService exec;
 
@@ -63,59 +62,49 @@ public class StorageLoadingThreadPool
 
   public static StorageLoadingThreadPool createFromConfig(final SegmentLoaderConfig config)
   {
-    return new StorageLoadingThreadPool(config.isVirtualStorage() ? createOnDemandLoadingExecutor(config) : null);
-  }
+    final ListeningExecutorService exec;
 
-  /**
-   * Build a pool configured for virtual-storage on-demand loading <b>regardless of</b>
-   * {@link SegmentLoaderConfig#isVirtualStorage()}. Used for the process-wide loading pool shared by ephemeral,
-   * per-task segment caches, whose host process may not itself run in virtual-storage mode. The executor is created
-   * eagerly but spawns no threads until work is submitted, so an unused pool is cheap.
-   *
-   * @see org.apache.druid.guice.annotations.EphemeralStorageLoading
-   */
-  public static StorageLoadingThreadPool createForEphemeral(final SegmentLoaderConfig config)
-  {
-    return new StorageLoadingThreadPool(createOnDemandLoadingExecutor(config));
-  }
-
-  private static ListeningExecutorService createOnDemandLoadingExecutor(final SegmentLoaderConfig config)
-  {
-    if (config.getVirtualStorageLoadThreads() <= 0) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "virtualStorageLoadThreads must be greater than 0, got [%d]",
-                              config.getVirtualStorageLoadThreads()
-                          );
-    }
-    if (config.isVirtualStorageUseVirtualThreads()) {
-      log.info(
-          "Using virtual storage mode with virtual threads - max concurrent on demand loads: [%d].",
-          config.getVirtualStorageLoadThreads()
-      );
-      return new PermitBoundedListeningExecutorService(
-          MoreExecutors.listeningDecorator(
-              Executors.newThreadPerTaskExecutor(
-                  Thread.ofVirtual()
-                        .name("VirtualStorageOnDemandLoadingThread-", 0)
-                        .factory()
-              )
-          ),
-          new Semaphore(config.getVirtualStorageLoadThreads())
-      );
+    if (config.isVirtualStorage()) {
+      if (config.getVirtualStorageLoadThreads() <= 0) {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                "virtualStorageLoadThreads must be greater than 0, got [%d]",
+                                config.getVirtualStorageLoadThreads()
+                            );
+      }
+      if (config.isVirtualStorageUseVirtualThreads()) {
+        log.info(
+            "Using virtual storage mode with virtual threads - max concurrent on demand loads: [%d].",
+            config.getVirtualStorageLoadThreads()
+        );
+        exec = new PermitBoundedListeningExecutorService(
+            MoreExecutors.listeningDecorator(
+                Executors.newThreadPerTaskExecutor(
+                    Thread.ofVirtual()
+                          .name("VirtualStorageOnDemandLoadingThread-", 0)
+                          .factory()
+                )
+            ),
+            new Semaphore(config.getVirtualStorageLoadThreads())
+        );
+      } else {
+        log.info(
+            "Using virtual storage mode with fixed platform thread pool - on demand load threads: [%d].",
+            config.getVirtualStorageLoadThreads()
+        );
+        exec = MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(
+                config.getVirtualStorageLoadThreads(),
+                Execs.makeThreadFactory("VirtualStorageOnDemandLoadingThread-%s")
+            )
+        );
+      }
     } else {
-      log.info(
-          "Using virtual storage mode with fixed platform thread pool - on demand load threads: [%d].",
-          config.getVirtualStorageLoadThreads()
-      );
-      return MoreExecutors.listeningDecorator(
-          Executors.newFixedThreadPool(
-              config.getVirtualStorageLoadThreads(),
-              Execs.makeThreadFactory("VirtualStorageOnDemandLoadingThread-%s")
-          )
-      );
+      exec = null;
     }
+
+    return new StorageLoadingThreadPool(exec);
   }
 
   /**

@@ -116,6 +116,32 @@ public class SegmentLoaderConfig
 
   private long combinedMaxSize = 0;
 
+  public SegmentLoaderConfig()
+  {
+  }
+
+  private SegmentLoaderConfig(SegmentLoaderConfig other)
+  {
+    this.locations = other.locations;
+    this.lazyLoadOnStart = other.lazyLoadOnStart;
+    this.deleteOnRemove = other.deleteOnRemove;
+    this.dropSegmentDelayMillis = other.dropSegmentDelayMillis;
+    this.announceIntervalMillis = other.announceIntervalMillis;
+    this.numLoadingThreads = other.numLoadingThreads;
+    this.numBootstrapThreads = other.numBootstrapThreads;
+    this.numThreadsToLoadSegmentsIntoPageCacheOnDownload = other.numThreadsToLoadSegmentsIntoPageCacheOnDownload;
+    this.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap = other.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap;
+    this.infoDir = other.infoDir;
+    this.statusQueueMaxSize = other.statusQueueMaxSize;
+    this.virtualStorage = other.virtualStorage;
+    this.virtualStorageLoadThreads = other.virtualStorageLoadThreads;
+    this.virtualStorageUseVirtualThreads = other.virtualStorageUseVirtualThreads;
+    this.virtualStorageIsEphemeral = other.virtualStorageIsEphemeral;
+    this.virtualStorageMetadataReservationEstimate = other.virtualStorageMetadataReservationEstimate;
+    this.virtualStoragePartialDownloadsEnabled = other.virtualStoragePartialDownloadsEnabled;
+    this.combinedMaxSize = other.combinedMaxSize;
+  }
+
   public List<StorageLocationConfig> getLocations()
   {
     return locations;
@@ -230,6 +256,19 @@ public class SegmentLoaderConfig
   {
     this.virtualStorage = virtualStorage;
     return this;
+  }
+
+  /**
+   * Returns a copy of this config with {@link #virtualStorage} set to {@code virtualStorage}. All other settings
+   * (notably {@link #getVirtualStorageLoadThreads()} and {@link #isVirtualStorageUseVirtualThreads()}) are preserved.
+   * Used to derive an always-virtual config for the shared ephemeral on-demand loading pool from a node config that
+   * may not itself run in virtual-storage mode.
+   */
+  public SegmentLoaderConfig withVirtualStorage(boolean virtualStorage)
+  {
+    final SegmentLoaderConfig copy = new SegmentLoaderConfig(this);
+    copy.virtualStorage = virtualStorage;
+    return copy;
   }
 
   /**

@@ -145,7 +145,9 @@ public class StorageNodeModule implements Module
   @EphemeralStorageLoading
   public StorageLoadingThreadPool getEphemeralStorageLoadingThreadPool(SegmentLoaderConfig config)
   {
-    return StorageLoadingThreadPool.createForEphemeral(config);
+    // Force virtual-storage mode: this pool serves per-task caches even when the node itself is not in virtual-storage
+    // mode. Threads are created lazily, so an unused pool on a non-task process is cheap.
+    return StorageLoadingThreadPool.createFromConfig(config.withVirtualStorage(true));
   }
 
   @Provides

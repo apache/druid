@@ -233,7 +233,7 @@ public abstract class CompactionTaskRunBase
     temporaryFolder.create();
     reportsFile = temporaryFolder.newFile();
     testUtils = new TestUtils();
-    segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testUtils.getTestObjectMapper());
+    segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, testUtils.getTestObjectMapper());
 
     objectMapper = testUtils.getTestObjectMapper();
     objectMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));

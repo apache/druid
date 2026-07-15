@@ -174,8 +174,9 @@ public class StorageNodeModuleTest
   {
     // The qualified ephemeral loading pool must resolve from the core injector (StorageNodeModule is universal via
     // CoreInjectorBuilder), so SegmentCacheManagerFactory's @Inject constructor can be satisfied on every process.
-    // It is always-virtual regardless of the node's virtualStorage flag.
-    Mockito.when(segmentLoaderConfig.getVirtualStorageLoadThreads()).thenReturn(4);
+    // The provider forces virtual storage via config.withVirtualStorage(true) regardless of the node's flag.
+    Mockito.when(segmentLoaderConfig.withVirtualStorage(true))
+           .thenReturn(new SegmentLoaderConfig().setVirtualStorage(true));
 
     final StorageLoadingThreadPool pool = injector().getInstance(
         Key.get(StorageLoadingThreadPool.class, EphemeralStorageLoading.class)

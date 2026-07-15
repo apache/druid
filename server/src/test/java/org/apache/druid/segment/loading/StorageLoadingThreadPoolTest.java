@@ -26,14 +26,17 @@ import org.junit.jupiter.api.Test;
 class StorageLoadingThreadPoolTest
 {
   @Test
-  void testCreateForEphemeralIsAvailableEvenWhenConfigIsNotVirtualStorage()
+  void testCreateFromConfigIsUnavailableWhenNotVirtualStorage()
   {
-    // The node config is not in virtual-storage mode, but the ephemeral (per-task) pool must still build a usable
-    // on-demand loading executor so it can serve virtual-storage task caches.
-    final SegmentLoaderConfig config = new SegmentLoaderConfig();
-    Assertions.assertFalse(config.isVirtualStorage());
+    Assertions.assertFalse(StorageLoadingThreadPool.createFromConfig(new SegmentLoaderConfig()).isAvailable());
+  }
 
-    final StorageLoadingThreadPool pool = StorageLoadingThreadPool.createForEphemeral(config);
+  @Test
+  void testCreateFromConfigIsAvailableWhenVirtualStorage()
+  {
+    // The shared ephemeral pool is built this way: createFromConfig(config.withVirtualStorage(true)).
+    final StorageLoadingThreadPool pool =
+        StorageLoadingThreadPool.createFromConfig(new SegmentLoaderConfig().withVirtualStorage(true));
     try {
       Assertions.assertTrue(pool.isAvailable());
       Assertions.assertNotNull(pool.getExecutorService());
@@ -44,27 +47,7 @@ class StorageLoadingThreadPoolTest
   }
 
   @Test
-  void testCreateFromConfigIsUnavailableWhenNotVirtualStorage()
-  {
-    // Unchanged behavior: the default (unqualified) pool has no executor outside virtual-storage mode.
-    Assertions.assertFalse(StorageLoadingThreadPool.createFromConfig(new SegmentLoaderConfig()).isAvailable());
-  }
-
-  @Test
-  void testCreateFromConfigIsAvailableWhenVirtualStorage()
-  {
-    final StorageLoadingThreadPool pool =
-        StorageLoadingThreadPool.createFromConfig(new SegmentLoaderConfig().setVirtualStorage(true));
-    try {
-      Assertions.assertTrue(pool.isAvailable());
-    }
-    finally {
-      pool.stop();
-    }
-  }
-
-  @Test
-  void testCreateForEphemeralRejectsNonPositiveThreadCount()
+  void testCreateFromConfigRejectsNonPositiveThreadCountInVirtualStorage()
   {
     final SegmentLoaderConfig config = new SegmentLoaderConfig()
     {
@@ -73,7 +56,7 @@ class StorageLoadingThreadPoolTest
       {
         return 0;
       }
-    };
-    Assertions.assertThrows(DruidException.class, () -> StorageLoadingThreadPool.createForEphemeral(config));
+    }.setVirtualStorage(true);
+    Assertions.assertThrows(DruidException.class, () -> StorageLoadingThreadPool.createFromConfig(config));
   }
 }

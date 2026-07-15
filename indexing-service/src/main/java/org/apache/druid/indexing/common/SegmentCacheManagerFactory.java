@@ -20,8 +20,9 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
+import com.google.inject.util.Providers;
 import org.apache.druid.guice.annotations.EphemeralStorageLoading;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.segment.IndexIO;
@@ -46,32 +47,39 @@ public class SegmentCacheManagerFactory
 {
   private final IndexIO indexIO;
   private final ObjectMapper jsonMapper;
-  private final StorageLoadingThreadPool loadingThreadPool;
+  /**
+   * Resolved lazily (only on the {@code virtualStorage=true} path of {@link #manufacturate}) so that injecting this
+   * factory into a component that only builds non-virtual caches (e.g. {@code DruidInputSource}) does not force the
+   * process-wide {@link EphemeralStorageLoading} pool to be created on processes that never do on-demand loading
+   * (Overlord, MiddleManager).
+   */
+  private final Provider<StorageLoadingThreadPool> loadingThreadPoolProvider;
 
   @Inject
   public SegmentCacheManagerFactory(
       IndexIO indexIO,
       @Json ObjectMapper mapper,
-      @EphemeralStorageLoading StorageLoadingThreadPool loadingThreadPool
+      @EphemeralStorageLoading Provider<StorageLoadingThreadPool> loadingThreadPoolProvider
   )
   {
     this.indexIO = indexIO;
     this.jsonMapper = mapper;
-    this.loadingThreadPool = loadingThreadPool;
+    this.loadingThreadPoolProvider = loadingThreadPoolProvider;
   }
 
   /**
-   * Convenience constructor for tests and manual construction. Builds a private, always-virtual loading pool of default
-   * size rather than sharing the process-wide {@link EphemeralStorageLoading} pool. The pool is not lifecycle-managed;
-   * this is fine for short-lived test JVMs.
+   * Creates a factory whose {@code virtualStorage=true} managers get their own private loading pool of default size,
+   * instead of the process-wide, lifecycle-managed {@link EphemeralStorageLoading} pool that Guice injects. Intended
+   * for tests and manual construction where that shared pool is not available via injection; the created pool is not
+   * lifecycle-managed, which is fine for short-lived JVMs.
    */
-  @VisibleForTesting
-  public SegmentCacheManagerFactory(
-      IndexIO indexIO,
-      ObjectMapper mapper
-  )
+  public static SegmentCacheManagerFactory createWithOwnedPool(IndexIO indexIO, ObjectMapper mapper)
   {
-    this(indexIO, mapper, StorageLoadingThreadPool.createForEphemeral(new SegmentLoaderConfig()));
+    return new SegmentCacheManagerFactory(
+        indexIO,
+        mapper,
+        Providers.of(StorageLoadingThreadPool.createFromConfig(new SegmentLoaderConfig().setVirtualStorage(true)))
+    );
   }
 
   /**
@@ -102,7 +110,7 @@ public class SegmentCacheManagerFactory
     return new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
-        virtualStorage ? loadingThreadPool : StorageLoadingThreadPool.none(),
+        virtualStorage ? loadingThreadPoolProvider.get() : StorageLoadingThreadPool.none(),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         indexIO,
         jsonMapper
