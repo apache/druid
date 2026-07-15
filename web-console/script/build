@@ -53,7 +53,7 @@ if [ "$FORCE_BUILD" = true ] || [ ! -f "$CONSOLE_OUTPUT" ]; then
   BUILD_CONSOLE=true
 else
   # Check if any config file is newer than output
-  CONFIG_FILES=("package.json" "package-lock.json" "webpack.config.mjs" "tsconfig.json")
+  CONFIG_FILES=("package.json" "package-lock.json" "vite.config.mts" "tsconfig.json")
   for config_file in "${CONFIG_FILES[@]}"; do
     if is_newer_than "$config_file" "$CONSOLE_OUTPUT"; then
       BUILD_CONSOLE=true
@@ -72,9 +72,12 @@ else
 fi
 
 if [ "$BUILD_CONSOLE" = true ]; then
-  echo "Webpacking everything..."
-  NODE_ENV=production ./node_modules/.bin/webpack -c webpack.config.mjs --mode=production
+  # Vite transpiles without type-checking, so guard the packaged bundle here.
+  echo "Type-checking..."
+  ./node_modules/.bin/tsc --noEmit
+  echo "Building with Vite..."
+  NODE_ENV=production ./node_modules/.bin/vite build
   echo "Web console build finished."
 else
-  echo "Web console is up to date, skipping webpack..."
+  echo "Web console is up to date, skipping build..."
 fi

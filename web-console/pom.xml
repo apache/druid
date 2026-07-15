@@ -40,7 +40,7 @@
     <maven.build.cache.input.6>typings</maven.build.cache.input.6>
     <resources.directory>${project.build.directory}/resources</resources.directory>
     <web.console.skip>false</web.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
-    <node.version>v20.9.0</node.version>
+    <node.version>v20.19.0</node.version>
     <npm.version>10.9.0</npm.version>
   </properties>
 

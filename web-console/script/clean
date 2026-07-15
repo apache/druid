@@ -21,5 +21,4 @@ rm -rf \
   lib/react-table.css \
   lib/sql-docs.* \
   node_modules \
-  public \
-  index.html
+  public
