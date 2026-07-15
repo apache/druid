@@ -32,5 +32,7 @@ public enum SimdSupportedBinaryOp
 {
   ADD,
   SUB,
-  MUL
+  MUL,
+  MIN,
+  MAX
 }

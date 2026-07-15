@@ -379,6 +379,56 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testBivariateMinMaxFloatingPointEdges()
+  {
+    final Map<String, ExpressionType> edgeTypes =
+        ImmutableMap.<String, ExpressionType>builder()
+                    .put("d1", ExpressionType.DOUBLE)
+                    .put("d2", ExpressionType.DOUBLE)
+                    .put("l1", ExpressionType.LONG)
+                    .put("l2", ExpressionType.LONG)
+                    .build();
+    final double[] d1 = {-0.0, 0.0, Double.NaN, 1.0, -2.5, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, 7.0};
+    final double[] d2 = {0.0, -0.0, 1.0, Double.NaN, -3.5, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 7.0};
+    final long[] l1 = {0L, 0L, 1L, Long.MAX_VALUE, Long.MIN_VALUE, -3L, 5L, 7L};
+    final long[] l2 = {1L, -1L, 1L, Long.MIN_VALUE, Long.MAX_VALUE, -4L, 4L, 7L};
+    final int vectorSize = d1.length;
+    final boolean[] noNulls = new boolean[vectorSize];
+    final SettableVectorInputBinding vectorBinding =
+        new SettableVectorInputBinding(vectorSize)
+            .addDouble("d1", d1, noNulls)
+            .addDouble("d2", d2, noNulls)
+            .addLong("l1", l1, noNulls)
+            .addLong("l2", l2, noNulls);
+    final SettableObjectBinding[] objectBindings = new SettableObjectBinding[vectorSize];
+    final Expr.InputBindingInspector inspector = InputBindings.inspectorFromTypeMap(edgeTypes);
+
+    for (int i = 0; i < vectorSize; i++) {
+      objectBindings[i] = new SettableObjectBinding()
+          .withInspector(inspector)
+          .withBinding("d1", d1[i])
+          .withBinding("d2", d2[i])
+          .withBinding("l1", l1[i])
+          .withBinding("l2", l2[i]);
+    }
+
+    final NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> bindings =
+        new NonnullPair<>(objectBindings, vectorBinding);
+    for (final String expression : List.of(
+        "min(d1, d2)",
+        "max(d1, d2)",
+        "min(l1, d2)",
+        "max(l1, d2)",
+        "min(d1, l1)",
+        "max(d1, l1)",
+        "min(l1, l2)",
+        "max(l1, l2)"
+    )) {
+      assertEvalsMatch(expression, Parser.parse(expression, MACRO_TABLE), bindings);
+    }
+  }
+
+  @Test
   public void testSymmetricalBivariateFunctions()
   {
     final List<String> functions = List.of(

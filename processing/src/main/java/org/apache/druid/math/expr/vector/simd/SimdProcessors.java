@@ -47,6 +47,8 @@ public final class SimdProcessors
       case ADD -> new SimdLongLongAddProcessor(left, right, scalarFallback);
       case SUB -> new SimdLongLongSubProcessor(left, right, scalarFallback);
       case MUL -> new SimdLongLongMulProcessor(left, right, scalarFallback);
+      case MIN -> new SimdLongLongMinProcessor(left, right, scalarFallback);
+      case MAX -> new SimdLongLongMaxProcessor(left, right, scalarFallback);
       default -> throw DruidException.defensive("Unsupported SIMD binary op[%s]", op);
     };
   }
@@ -62,6 +64,8 @@ public final class SimdProcessors
       case ADD -> new SimdDoubleDoubleAddProcessor(left, right, scalarFallback);
       case SUB -> new SimdDoubleDoubleSubProcessor(left, right, scalarFallback);
       case MUL -> new SimdDoubleDoubleMulProcessor(left, right, scalarFallback);
+      case MIN -> new SimdDoubleDoubleMinProcessor(left, right, scalarFallback);
+      case MAX -> new SimdDoubleDoubleMaxProcessor(left, right, scalarFallback);
       default -> throw DruidException.defensive("Unsupported SIMD binary op[%s]", op);
     };
   }
@@ -77,6 +81,8 @@ public final class SimdProcessors
       case ADD -> new SimdLongDoubleAddProcessor(left, right, scalarFallback);
       case SUB -> new SimdLongDoubleSubProcessor(left, right, scalarFallback);
       case MUL -> new SimdLongDoubleMulProcessor(left, right, scalarFallback);
+      case MIN -> new SimdLongDoubleMinProcessor(left, right, scalarFallback);
+      case MAX -> new SimdLongDoubleMaxProcessor(left, right, scalarFallback);
       default -> throw DruidException.defensive("Unsupported SIMD binary op[%s]", op);
     };
   }
@@ -92,6 +98,8 @@ public final class SimdProcessors
       case ADD -> new SimdDoubleLongAddProcessor(left, right, scalarFallback);
       case SUB -> new SimdDoubleLongSubProcessor(left, right, scalarFallback);
       case MUL -> new SimdDoubleLongMulProcessor(left, right, scalarFallback);
+      case MIN -> new SimdDoubleLongMinProcessor(left, right, scalarFallback);
+      case MAX -> new SimdDoubleLongMaxProcessor(left, right, scalarFallback);
       default -> throw DruidException.defensive("Unsupported SIMD binary op[%s]", op);
     };
   }
