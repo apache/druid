@@ -84,6 +84,10 @@ public final class PartialSegmentCacheBootstrap
    * @param storagePool       thread pool the async cursor path submits on-demand column downloads to (which bounds
    *                          load concurrency itself); may be null in tests that never invoke the cursor factory
    * @param location          the storage location to reserve the metadata entry on
+   * @param coalesceGapBytes  gap tolerance for coalesced range downloads, see
+   *                          {@link PartialSegmentFileMapperV10#fetchFiles}
+   * @param maxFetchRunBytes  size cap for parallel-fetch range reads, see
+   *                          {@link PartialSegmentFileMapperV10#planParallelFetch}
    * @return the reserved {@link PartialSegmentMetadataCacheEntry}; the caller is responsible for mounting it
    * @throws DruidException if the expected header file is missing or the location cannot accept the reservation
    */
@@ -95,7 +99,9 @@ public final class PartialSegmentCacheBootstrap
       SegmentRangeReader rangeReader,
       ObjectMapper jsonMapper,
       @Nullable StorageLoadingThreadPool storagePool,
-      StorageLocation location
+      StorageLocation location,
+      long coalesceGapBytes,
+      long maxFetchRunBytes
   )
   {
     final File headerFile = new File(localCacheDir, targetFilename + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX);
@@ -117,7 +123,9 @@ public final class PartialSegmentCacheBootstrap
         rangeReader,
         jsonMapper,
         storagePool,
-        actualMetadataSize
+        actualMetadataSize,
+        coalesceGapBytes,
+        maxFetchRunBytes
     );
 
     if (!location.reserveWeak(metadata)) {

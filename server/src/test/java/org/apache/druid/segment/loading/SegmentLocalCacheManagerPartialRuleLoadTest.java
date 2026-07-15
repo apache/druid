@@ -564,7 +564,9 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
         new DirectoryBackedRangeReader(DEEP_STORAGE_DIR),
         jsonMapper,
         null,
-        16L * 1024L * 1024L
+        16L * 1024L * 1024L,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     final StorageLocation.ReservationHold<PartialSegmentMetadataCacheEntry> queryHold =
         location.addWeakReservationHold(id, () -> preExisting);

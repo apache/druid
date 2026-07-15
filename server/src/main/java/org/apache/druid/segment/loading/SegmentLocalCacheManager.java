@@ -365,7 +365,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               rangeReader,
               jsonMapper,
               virtualStorageLoadingThreadPool,
-              location
+              location,
+              config.getVirtualStorageCoalesceGapBytes(),
+              config.getVirtualStorageMaxFetchRunBytes()
           );
           cachedSegments.add(segment);
         }
@@ -874,7 +876,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               rangeReader,
               jsonMapper,
               virtualStorageLoadingThreadPool,
-              config.getVirtualStorageMetadataReservationEstimate()
+              config.getVirtualStorageMetadataReservationEstimate(),
+              config.getVirtualStorageCoalesceGapBytes(),
+              config.getVirtualStorageMaxFetchRunBytes()
           )
       );
       if (hold == null) {

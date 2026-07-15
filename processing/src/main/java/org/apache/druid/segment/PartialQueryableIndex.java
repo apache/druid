@@ -44,9 +44,11 @@ import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.projections.BaseTableProjectionSchema;
+import org.apache.druid.segment.projections.ClusterGroupQueryPlan;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.ConstantTimeColumn;
 import org.apache.druid.segment.projections.ProjectionMetadata;
+import org.apache.druid.segment.projections.ProjectionSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
@@ -61,6 +63,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -520,6 +523,99 @@ public class PartialQueryableIndex implements QueryableIndex
     };
   }
 
+  /**
+   * Plan the downloads a {@link CursorBuildSpec} needs: resolve which row selector serves the spec (matched
+   * aggregate projection, surviving cluster groups, or the base table), compute each selector's required columns,
+   * and plan the coalesced range reads that make them resident. The returned plan carries the dispatch result so the
+   * caller can build the eventual cursor holder against the same match without re-running it.
+   */
+  CursorPrefetchPlan planCursorPrefetch(CursorBuildSpec spec)
+  {
+    final QueryableProjection<QueryableIndex> matched = getProjection(spec);
+    if (matched == null && clusteredBaseSummary != null) {
+      // Clustered base table: metadata-only group resolution; only the groups whose clustering tuples survive the
+      // query's filters plan any downloads, one bundle per surviving group.
+      final ClusterGroupQueryPlan clusterGroupPlan = Projections.planClusterGroupQuery(
+          new ArrayList<>(getClusterGroupSchemas()),
+          spec
+      );
+      final List<PrefetchBundle> bundles = new ArrayList<>(clusterGroupPlan.survivingGroups().size());
+      for (TableClusterGroupSpec group : clusterGroupPlan.survivingGroups()) {
+        final QueryableIndex groupIndex = getClusterGroupQueryableIndex(group, true);
+        final CursorBuildSpec groupSpec = clusterGroupPlan.rebuildCursorBuildSpec(spec, group);
+        final Set<String> required = requiredColumns(groupIndex, null, groupSpec);
+        bundles.add(
+            new PrefetchBundle(
+                Projections.getClusterGroupBundleName(group.getClusteringValueIds()),
+                groupIndex,
+                required,
+                planClusterGroupPrefetch(group, required)
+            )
+        );
+      }
+      return new CursorPrefetchPlan(null, clusterGroupPlan, bundles);
+    }
+
+    // Aggregate-projection match, or the plain base table: the selector's bundle with the query's required columns,
+    // plus (for a matched projection) the base-table bundle when required projection columns read through base
+    // parents.
+    final QueryableIndex rowSelector = matched != null ? matched.getRowSelector() : this;
+    final String bundleName = matched != null ? matched.getName() : Projections.BASE_TABLE_PROJECTION_NAME;
+    final Set<String> required = requiredColumns(rowSelector, matched, spec);
+    final List<PartialSegmentFileMapperV10.PlannedFetch> fetches =
+        matched != null ? planProjectionPrefetch(matched.getName(), required) : planBaseTablePrefetch(required);
+    final List<PrefetchBundle> bundles = new ArrayList<>(2);
+    bundles.add(new PrefetchBundle(bundleName, rowSelector, required, fetches));
+    if (matched != null) {
+      final Set<String> parents = projectionParentColumns(matched.getName(), required);
+      if (!parents.isEmpty()) {
+        // Materializing a projection column also materializes its same-named base column when one exists
+        // (buildColumnSuppliers reads through the parent, e.g. for dictionary reuse), so those parents are part of
+        // this query's working set: plan their files and hold the base bundle so the parent mmaps are
+        // eviction-excluded for the holder's whole lifetime. When the metadata predates recorded column file lists
+        // the parent files can't be enumerated; the bundle is then hold-only (no planned fetches) and the parents
+        // download lazily during materialization, under the hold, on the download executor.
+        bundles.add(
+            new PrefetchBundle(
+                Projections.BASE_TABLE_PROJECTION_NAME,
+                this,
+                parents,
+                metadata.getColumnFiles() == null ? List.of() : planBaseTablePrefetch(parents)
+            )
+        );
+      }
+    }
+    return new CursorPrefetchPlan(matched, null, bundles);
+  }
+
+  /**
+   * The base-table parent columns that materializing {@code requiredProjectionColumns} on {@code projectionName}
+   * pulls in: {@link #buildColumnSuppliers} materializes a projection column's same-named base column whenever the
+   * base table has one (the descriptor's serde decides whether it actually reads through the parent, but the parent
+   * holder is materialized regardless), so this mirrors that same-name rule instead of inspecting serdes, applied to
+   * each required column's {@link #resolvePhysicalColumn physical resolution}. Always empty for clustered base
+   * tables, whose base column map is empty.
+   */
+  private Set<String> projectionParentColumns(String projectionName, Set<String> requiredProjectionColumns)
+  {
+    if (baseColumns.isEmpty()) {
+      return Set.of();
+    }
+    final ProjectionSchema schema = projectionSpecs.get(projectionName).getSchema();
+    final Function<String, String> fileNameFn =
+        column -> Projections.getProjectionSegmentInternalFileName(schema, column);
+    final Set<String> parents = new LinkedHashSet<>();
+    for (String column : requiredProjectionColumns) {
+      // the parent pull only happens through an existing projection column's supplier, so a column that resolves to
+      // no descriptor-backed physical column (constant time, virtual, unknown) has no parent either
+      final String physical = resolvePhysicalColumn(schema.getTimeColumnName(), fileNameFn, column);
+      if (physical != null && baseColumns.containsKey(physical)) {
+        parents.add(physical);
+      }
+    }
+    return parents;
+  }
+
   @Override
   public void close()
   {
@@ -610,5 +706,241 @@ public class PartialQueryableIndex implements QueryableIndex
     }
 
     return columns;
+  }
+
+  /**
+   * Shared planning for the {@code plan*Prefetch} methods: resolve the columns to their recorded internal-file sets
+   * and plan coalesced range reads for them ({@link PartialSegmentFileMapperV10#planParallelFetch}, since the cursor
+   * factory executes the runs concurrently). A column's serde may have written some of its files into external
+   * segment files; each external is its own {@link PartialSegmentFileMapperV10} recording those files in its own
+   * metadata under the same column key, so every mapper plans (and later executes) its own runs, paired via
+   * {@link PartialSegmentFileMapperV10.PlannedFetch}. When this segment's metadata predates per-column file lists
+   * (see {@link SegmentFileMetadata#getColumnFiles()}), falls back to planning the whole bundle across the main
+   * mapper and every external, coarser (no column-level pruning within the bundle) but still one range read per
+   * planned span (contiguous, capped at the parallel run-size limit) rather than one per internal file, and it
+   * covers serde sub-files that can't be enumerated without the recorded lists.
+   */
+  private List<PartialSegmentFileMapperV10.PlannedFetch> planPrefetch(
+      String bundleName,
+      @Nullable String timeColumnName,
+      Function<String, String> fileNameFn,
+      Set<String> columns
+  )
+  {
+    final Map<String, List<String>> columnFiles = metadata.getColumnFiles();
+    if (columnFiles == null) {
+      // whole-bundle fallback; the mapper spans its externals itself
+      return fileMapper.planParallelFetchBundle(bundleName);
+    }
+
+    final Set<String> smooshNames = resolveSmooshNames(timeColumnName, fileNameFn, columns);
+
+    final List<PartialSegmentFileMapperV10.PlannedFetch> fetches = new ArrayList<>();
+    addPlannedFetches(fetches, fileMapper, fileMapper.planParallelFetch(recordedFiles(columnFiles, smooshNames)));
+
+    for (String externalName : fileMapper.getExternalFilenames()) {
+      final PartialSegmentFileMapperV10 external = fileMapper.getExternalMapper(externalName);
+      final Map<String, List<String>> externalColumnFiles = external.getSegmentFileMetadata().getColumnFiles();
+      if (externalColumnFiles == null) {
+        // this external holds no column-attributed files and there is nothing to plan from it.
+        continue;
+      }
+      final Set<String> externalFiles = recordedFiles(externalColumnFiles, smooshNames);
+      if (!externalFiles.isEmpty()) {
+        addPlannedFetches(fetches, external, external.planParallelFetch(externalFiles));
+      }
+    }
+    return fetches;
+  }
+
+  /**
+   * Union of the recorded file lists of every smoosh name that has an entry in {@code columnFiles}.
+   */
+  private static Set<String> recordedFiles(Map<String, List<String>> columnFiles, Set<String> smooshNames)
+  {
+    final Set<String> files = new LinkedHashSet<>();
+    for (String smooshName : smooshNames) {
+      final List<String> recorded = columnFiles.get(smooshName);
+      if (recorded != null) {
+        files.addAll(recorded);
+      }
+    }
+    return files;
+  }
+
+  private static void addPlannedFetches(
+      List<PartialSegmentFileMapperV10.PlannedFetch> out,
+      PartialSegmentFileMapperV10 mapper,
+      List<PartialSegmentFileMapperV10.FetchRun> runs
+  )
+  {
+    for (PartialSegmentFileMapperV10.FetchRun run : runs) {
+      out.add(new PartialSegmentFileMapperV10.PlannedFetch(mapper, run));
+    }
+  }
+
+  /**
+   * File-name resolution for {@link #planPrefetch}: map each logical column to its bundle-namespaced smoosh name via
+   * {@link #resolvePhysicalColumn}, dropping columns that resolve to nothing.
+   */
+  private Set<String> resolveSmooshNames(
+      @Nullable String timeColumnName,
+      Function<String, String> fileNameFn,
+      Set<String> columns
+  )
+  {
+    final Set<String> smooshNames = new LinkedHashSet<>();
+    for (String column : columns) {
+      final String physical = resolvePhysicalColumn(timeColumnName, fileNameFn, column);
+      if (physical != null) {
+        smooshNames.add(fileNameFn.apply(physical));
+      }
+    }
+    return smooshNames;
+  }
+
+  /**
+   * The single definition of logical-to-physical column resolution for plan-time helpers, mirroring
+   * {@link #buildColumnSuppliers}: {@code __time} maps back to the bundle's raw time column name (the pre-rename
+   * name the column supplier captured; {@code null} for a constant-time bundle means no physical column at all),
+   * and only names with a registered descriptor count; columns with no descriptor (virtual, clustering constants,
+   * unknown) resolve to {@code null}.
+   */
+  @Nullable
+  private String resolvePhysicalColumn(
+      @Nullable String timeColumnName,
+      Function<String, String> fileNameFn,
+      String column
+  )
+  {
+    String physical = column;
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(column)) {
+      if (timeColumnName == null) {
+        // constant time column, no physical files
+        return null;
+      }
+      physical = timeColumnName;
+    }
+    return metadata.getColumnDescriptors().containsKey(fileNameFn.apply(physical)) ? physical : null;
+  }
+
+  /**
+   * Plan the coalesced range reads needed to materialize {@code columns} on the base table row selector. See
+   * {@link #planPrefetch} for the plan semantics and fallback behavior.
+   */
+  private List<PartialSegmentFileMapperV10.PlannedFetch> planBaseTablePrefetch(Set<String> columns)
+  {
+    final ProjectionSchema schema = baseProjectionMetadata.getSchema();
+    return planPrefetch(
+        Projections.BASE_TABLE_PROJECTION_NAME,
+        schema.getTimeColumnName(),
+        column -> Projections.getProjectionSegmentInternalFileName(schema, column),
+        columns
+    );
+  }
+
+  /**
+   * Plan the coalesced range reads needed to materialize {@code columns} on the named aggregate projection's row
+   * selector. See {@link #planPrefetch} for the plan semantics and fallback behavior.
+   */
+  private List<PartialSegmentFileMapperV10.PlannedFetch> planProjectionPrefetch(String projectionName, Set<String> columns)
+  {
+    final ProjectionMetadata projectionSpec = projectionSpecs.get(projectionName);
+    if (projectionSpec == null) {
+      throw DruidException.defensive("Unknown projection[%s]", projectionName);
+    }
+    final ProjectionSchema schema = projectionSpec.getSchema();
+    return planPrefetch(
+        projectionName,
+        schema.getTimeColumnName(),
+        column -> Projections.getProjectionSegmentInternalFileName(schema, column),
+        columns
+    );
+  }
+
+  /**
+   * Plan the coalesced range reads needed to materialize {@code columns} on a cluster group's row selector. See
+   * {@link #planPrefetch} for the plan semantics and fallback behavior.
+   */
+  private List<PartialSegmentFileMapperV10.PlannedFetch> planClusterGroupPrefetch(
+      TableClusterGroupSpec groupSpec,
+      Set<String> columns
+  )
+  {
+    if (clusteredBaseSummary == null) {
+      throw DruidException.defensive("planClusterGroupPrefetch called on a non-clustered segment");
+    }
+    return planPrefetch(
+        Projections.getClusterGroupBundleName(groupSpec.getClusteringValueIds()),
+        clusteredBaseSummary.getTimeColumnName(),
+        column -> Projections.getClusterGroupSegmentInternalFileName(groupSpec.getClusteringValueIds(), column),
+        columns
+    );
+  }
+
+  /**
+   * Determine the set of physical column names required from the chosen row selector given a {@link CursorBuildSpec}.
+   */
+  private static Set<String> requiredColumns(
+      QueryableIndex rowSelector,
+      @Nullable QueryableProjection<QueryableIndex> matched,
+      CursorBuildSpec originalSpec
+  )
+  {
+    final CursorBuildSpec effective = matched != null ? matched.getCursorBuildSpec() : originalSpec;
+    if (effective.getPhysicalColumns() != null) {
+      final Set<String> required = new LinkedHashSet<>(effective.getPhysicalColumns());
+      // physicalColumns enumerates the selected columns, but QueryableIndexCursorHolder also reads __time while
+      // building the cursor, independent of physicalColumns: unconditionally for a time-ordered index (its
+      // interval-checking offset reads timestamps), and via a synthesized __time range filter for a non-time-ordered
+      // index whose data extends past the query interval. That read happens after the cursor holder is handed back,
+      // so __time must be pre-fetched on the async path or it becomes a lazy deep-storage download on a processing
+      // thread. Predicting exactly when the holder reads __time would mean replicating its internals (fragile, and it
+      // reads __time in the common cases anyway), so always include it: __time is cheap, and it resolves to a
+      // no-download constant column for projections that don't carry a real time column.
+      required.add(ColumnHolder.TIME_COLUMN_NAME);
+      return required;
+    }
+    // Conservative fallback when physicalColumns isn't declared, fetch every column on the chosen row selector
+    // plus __time (which is special-cased and not enumerated by getColumnNames()).
+    final Set<String> all = new LinkedHashSet<>(rowSelector.getColumnNames());
+    all.add(ColumnHolder.TIME_COLUMN_NAME);
+    return all;
+  }
+
+  /**
+   * The result of {@link #planCursorPrefetch}: the dispatch outcome (at most one of {@code matchedProjection} /
+   * {@code clusterGroupPlan} is non-null; both null means the plain base table) plus one {@link PrefetchBundle} per
+   * cache-layer bundle the cursor needs. A clustered plan whose filters rule out every group has no bundles.
+   */
+  record CursorPrefetchPlan(
+      @Nullable QueryableProjection<QueryableIndex> matchedProjection,
+      @Nullable ClusterGroupQueryPlan clusterGroupPlan,
+      List<PrefetchBundle> bundles
+  )
+  {
+    CursorPrefetchPlan
+    {
+      // enforce the at-most-one invariant: the factory dispatches on clusterGroupPlan first, so a plan carrying both
+      // would silently drop the matched projection rather than failing
+      if (matchedProjection != null && clusterGroupPlan != null) {
+        throw DruidException.defensive("Cursor prefetch plan cannot match both a projection and a cluster-group plan");
+      }
+    }
+  }
+
+  /**
+   * One bundle's worth of planned download work: the cache-layer {@code bundleName} to mount, the row selector whose
+   * {@code getColumnHolder} materializes the columns, the columns to materialize once resident, and the planned
+   * coalesced range reads that make them resident, each paired with the (main or external) mapper that executes it
+   * and each executable concurrently via {@link PartialSegmentFileMapperV10.PlannedFetch#fetch()}.
+   */
+  record PrefetchBundle(
+      String bundleName,
+      QueryableIndex rowSelector,
+      Set<String> requiredColumns,
+      List<PartialSegmentFileMapperV10.PlannedFetch> fetches
+  )
+  {
   }
 }

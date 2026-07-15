@@ -101,6 +101,8 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   private final SegmentRangeReader rangeReader;
   private final ObjectMapper jsonMapper;
   private final long reservationEstimate;
+  private final long coalesceGapBytes;
+  private final long maxFetchRunBytes;
 
   @Nullable
   private final StorageLoadingThreadPool storagePool;
@@ -186,7 +188,9 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       SegmentRangeReader rangeReader,
       ObjectMapper jsonMapper,
       @Nullable StorageLoadingThreadPool storagePool,
-      long reservationEstimate
+      long reservationEstimate,
+      long coalesceGapBytes,
+      long maxFetchRunBytes
   )
   {
     if (reservationEstimate <= 0) {
@@ -206,6 +210,8 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     this.storagePool = storagePool;
     this.reservationEstimate = reservationEstimate;
     this.currentSize = reservationEstimate;
+    this.coalesceGapBytes = coalesceGapBytes;
+    this.maxFetchRunBytes = maxFetchRunBytes;
     this.bundleAcquirer = createBundleAcquirer();
   }
 
@@ -749,7 +755,9 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
           localCacheDir,
           targetFilename,
           externalFilenames,
-          new WeakLoadTracker(mountLocation)
+          new WeakLoadTracker(mountLocation),
+          coalesceGapBytes,
+          maxFetchRunBytes
       );
 
       final long sizeToAdjust;
