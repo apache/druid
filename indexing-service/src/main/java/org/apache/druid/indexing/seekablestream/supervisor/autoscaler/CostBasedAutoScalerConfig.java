@@ -47,10 +47,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
 {
   private static final EmittingLogger LOG = new EmittingLogger(CostBasedAutoScalerConfig.class);
 
-  static final long DEFAULT_SCALE_ACTION_PERIOD_MILLIS = 10 * 60 * 1000; // 10 minutes
+  static final long DEFAULT_SCALE_ACTION_PERIOD_MILLIS = 2 * 60 * 1000; // 2 minutes
+  static final Duration DEFAULT_MIN_SCALE_UP_DELAY = Duration.millis(15 * 60 * 1000); // 15 minutes
+  static final Duration DEFAULT_MIN_SCALE_DOWN_DELAY = Duration.millis(20 * 60 * 1000); // 20 minutes
+
   static final double DEFAULT_LAG_WEIGHT = 0.4;
   static final double DEFAULT_IDLE_WEIGHT = 0.6;
-  static final Duration DEFAULT_MIN_SCALE_DELAY = Duration.millis(DEFAULT_SCALE_ACTION_PERIOD_MILLIS * 3);
 
   private final boolean enableTaskAutoScaler;
   private final int taskCountMax;
@@ -118,11 +120,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     );
     this.useTaskCountBoundariesOnScaleUp = Configs.valueOrDefault(useTaskCountBoundariesOnScaleUp, false);
     this.useTaskCountBoundariesOnScaleDown = Configs.valueOrDefault(useTaskCountBoundariesOnScaleDown, true);
-    this.minScaleUpDelay = Configs.valueOrDefault(
-        minScaleUpDelay,
-        Duration.millis(this.minTriggerScaleActionFrequencyMillis)
-    );
-    this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, DEFAULT_MIN_SCALE_DELAY);
+    this.minScaleUpDelay = Configs.valueOrDefault(minScaleUpDelay, DEFAULT_MIN_SCALE_UP_DELAY);
+    this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, DEFAULT_MIN_SCALE_DOWN_DELAY);
     this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, false);
     this.usePollIdleRatio = Configs.valueOrDefault(usePollIdleRatio, true);
     this.criticalLagThreshold = criticalLagThreshold;
