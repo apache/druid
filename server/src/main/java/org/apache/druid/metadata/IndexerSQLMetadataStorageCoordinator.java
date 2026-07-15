@@ -167,7 +167,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public List<Interval> retrieveUnusedSegmentIntervals(String dataSource, int limit)
   {
     return inReadOnlyTransaction(
-        sql -> sql.retrieveUnusedSegmentIntervals(dataSource, limit)
+        sql -> sql.retrieveSomeUnusedSegmentIntervals(dataSource, limit)
     );
   }
 
