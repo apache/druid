@@ -23,10 +23,10 @@ sidebar_label: Supervisor
   ~ under the License.
   -->
 
-Apache Druid uses supervisors to manage streaming ingestion from external streaming sources into Druid.
+Apache&circledR; Druid uses supervisors to manage streaming ingestion from external streaming sources into Druid.
 Supervisors oversee the state of indexing tasks to coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained. They can also be used to perform [automatic compaction](../data-management/automatic-compaction.md) after data has been ingested.
 
-This topic uses the Apache Kafka term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
+This topic uses the Apache Kafka&circledR; term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
 
 ## Supervisor spec
 
@@ -203,8 +203,6 @@ The cost-based autoscaler picks the number of ingestion tasks that minimizes a c
 The sweet spot is roughly 25% idle, giving headroom to absorb traffic spikes without wasting resources.
 
 At every evaluation interval, Druid computes the score for each candidate task count and picks the one with the lowest total cost.
-
-Note: Kinesis is not supported yet, support is in progress.
 
 The following table outlines the configuration properties related to the `costBased` autoscaler strategy:
 

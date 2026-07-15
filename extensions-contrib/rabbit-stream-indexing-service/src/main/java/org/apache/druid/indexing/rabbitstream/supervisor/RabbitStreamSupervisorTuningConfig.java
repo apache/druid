@@ -29,6 +29,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTuningConfig
     implements SeekableStreamSupervisorTuningConfig
@@ -183,6 +184,29 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
   public Duration getOffsetFetchPeriod()
   {
     return offsetFetchPeriod;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    RabbitStreamSupervisorTuningConfig that = (RabbitStreamSupervisorTuningConfig) o;
+    return Objects.equals(workerThreads, that.workerThreads)
+           && Objects.equals(chatRetries, that.chatRetries)
+           && Objects.equals(httpTimeout, that.httpTimeout)
+           && Objects.equals(shutdownTimeout, that.shutdownTimeout)
+           && Objects.equals(offsetFetchPeriod, that.offsetFetchPeriod);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), workerThreads, chatRetries, httpTimeout, shutdownTimeout, offsetFetchPeriod);
   }
 
   @Override

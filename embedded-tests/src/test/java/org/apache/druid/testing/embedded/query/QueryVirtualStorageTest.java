@@ -24,7 +24,6 @@ import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DefaultQueryMetrics;
@@ -74,6 +73,9 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   private static final long CACHE_SIZE = HumanReadableBytes.parse("1MiB");
   private static final long MAX_SIZE = HumanReadableBytes.parse("100MiB");
   private static final long ESTIMATE_SIZE = HumanReadableBytes.parse("2KiB");
+  // Quiescence wait for the storage monitor: a few times its PT1s emission period, so a single missed tick doesn't
+  // falsely read as "idle" while still bounding how long we wait once activity has actually stopped.
+  private static final long MONITOR_QUIESCE_TIMEOUT_MILLIS = 3_000L;
 
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
@@ -191,18 +193,9 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     LatchableEmitter emitter = historical.latchableEmitter();
     LatchableEmitter coordinatorEmitter = coordinator.latchableEmitter();
 
-    // clear out the pipe to get zerod out storage monitor metrics
-    ServiceMetricEvent monitorEvent = emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_BEGIN_COUNT));
-    while (monitorEvent != null && monitorEvent.getValue().longValue() > 0) {
-      monitorEvent = emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_BEGIN_COUNT));
-    }
-    // then flush (which clears out the internal events stores in test emitter) so we can do clean sums across them
+    // Wait for any in-flight storage activity to settle before taking our baseline.
+    emitter.awaitMetricQuiescent(StorageMonitor.VSF_LOAD_BEGIN_COUNT, MONITOR_QUIESCE_TIMEOUT_MILLIS);
     emitter.flush();
-
-    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_BEGIN_COUNT));
-    long beforeLoads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BEGIN_COUNT);
-    // confirm flushed
-    Assertions.assertEquals(0, beforeLoads);
 
     // run the queries in order
     Assertions.assertEquals(expectedResults[0], Long.parseLong(cluster.runSql(queries[0], dataSource)));
@@ -234,7 +227,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(hits >= expectedTotalHits, "expected " + expectedTotalHits + " but only got " + hits);
     if (expectedTotalHits > 0) {
       emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_HIT_BYTES));
-      Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_HIT_BYTES) >= 0);
+      Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_HIT_BYTES) > 0);
     }
     emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_BEGIN_COUNT));
     long loads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BEGIN_COUNT);
@@ -242,8 +235,12 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BEGIN_BYTES) > 0);
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT) > 0);
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BYTES) > 0);
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_READ_COUNT));
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_READ_COUNT) > 0);
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_READ_BYTES) > 0);
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_READ_TIME) >= 0);
     emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_EVICT_COUNT));
-    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_COUNT) >= 0);
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_COUNT) > 0);
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_BYTES) > 0);
     Assertions.assertEquals(0, emitter.getMetricEventLongSum(StorageMonitor.VSF_REJECT_COUNT));
     Assertions.assertTrue(emitter.getLatestMetricEventValue(StorageMonitor.VSF_USED_BYTES, 0).longValue() > 0);

@@ -38,8 +38,6 @@ import org.apache.druid.segment.projections.ClusteringColumnSelectorFactory;
 import org.apache.druid.segment.projections.ClusteringVectorColumnSelectorFactory;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
-import org.apache.druid.segment.projections.SingleGroupClusteringColumnSelectorFactory;
-import org.apache.druid.segment.projections.SingleGroupClusteringVectorColumnSelectorFactory;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.segment.vector.ConcatenatingVectorCursor;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
@@ -194,7 +192,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       TableClusterGroupSpec valueGroup
   )
   {
-    final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup);
+    final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup, true);
     if (groupIndex == null) {
       throw DruidException.defensive(
           "No cluster-group sub-index resolvable for clustering values "
@@ -202,39 +200,13 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       );
     }
 
+    // groupIndex exposes the group's clustering columns as constant columns, no selector wrapper is needed
     return new QueryableIndexCursorHolder(
         groupIndex,
         plan.rebuildCursorBuildSpec(spec, valueGroup),
         QueryableIndexTimeBoundaryInspector.create(groupIndex),
         valueGroup.getSummary().getOrdering()
-    )
-    {
-      @Override
-      protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
-          ColumnCache columnCache,
-          Offset baseOffset
-      )
-      {
-        return new SingleGroupClusteringColumnSelectorFactory(
-            super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset),
-            valueGroup.getSummary().getClusteringColumns(),
-            valueGroup.lookupClusteringValues()
-        );
-      }
-
-      @Override
-      protected VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
-          ColumnCache columnCache,
-          VectorOffset baseOffset
-      )
-      {
-        return new SingleGroupClusteringVectorColumnSelectorFactory(
-            super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset),
-            valueGroup.getSummary().getClusteringColumns(),
-            valueGroup.lookupClusteringValues()
-        );
-      }
-    };
+    );
   }
 
   /**
@@ -258,7 +230,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     final Closer closer = Closer.create();
     for (TableClusterGroupSpec valueGroup : matching) {
       clusteringValuesByGroup.add(valueGroup.lookupClusteringValues());
-      final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup);
+      final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(valueGroup, true);
       if (groupIndex == null) {
         throw DruidException.defensive(
             "No cluster-group sub-index resolvable for clustering values "

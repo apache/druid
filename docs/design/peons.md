@@ -27,7 +27,7 @@ The Peon service is a task execution engine spawned by the Middle Manager. Each 
 
 ## Configuration
 
-For Apache Druid Peon configuration, see [Peon Query Configuration](../configuration/index.md#peon-query-configuration) and [Additional Peon Configuration](../configuration/index.md#additional-peon-configuration).
+For Apache&circledR; Druid Peon configuration, see [Peon Query Configuration](../configuration/index.md#peon-query-configuration) and [Additional Peon Configuration](../configuration/index.md#additional-peon-configuration).
 
 For basic tuning guidance for Middle Manager tasks, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#task-configurations).
 

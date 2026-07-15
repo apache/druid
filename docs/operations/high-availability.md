@@ -30,7 +30,7 @@ We recommend either installing ZooKeeper on its own hardware, or running 3 or 5 
 and configuring ZooKeeper on them appropriately. See the [ZooKeeper admin guide](https://zookeeper.apache.org/doc/current/zookeeperAdmin) for more details.
 - For highly-available metadata storage, we recommend MySQL or PostgreSQL with replication and failover enabled.
 See [MySQL Enterprise High Availability](https://www.mysql.com/products/enterprise/high_availability.html) and [PostgreSQL's High Availability, Load Balancing, and Replication](https://www.postgresql.org/docs/current/high-availability.html) for more information.
-- For highly-available Apache Druid Coordinators and Overlords, we recommend to run multiple servers.
+- For highly-available Apache&circledR; Druid Coordinators and Overlords, we recommend to run multiple servers.
 If they are all configured to use the same ZooKeeper cluster and metadata storage,
 then they will automatically failover between each other as necessary.
 Only one will be active at a time, but inactive servers will redirect to the currently active server.

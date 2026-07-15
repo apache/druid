@@ -27,21 +27,16 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.projections.ClusterGroupQueryPlan;
-import org.apache.druid.segment.projections.Projections;
-import org.apache.druid.segment.projections.QueryableProjection;
-import org.apache.druid.segment.projections.TableClusterGroupSpec;
+import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -56,20 +51,25 @@ import java.util.function.Supplier;
  * not block on deep-storage I/O. {@link #makeCursorHolderAsync} is the only path that performs downloads on demand;
  * callers acknowledge that by opting into the async variant when they acquire a partial segment.
  * <p>
- * <b>Async download granularity.</b> Pre-fetch is column-level. {@link #makeCursorHolderAsync} calls
- * {@link QueryableIndex#getColumnHolder} on each required column; the memoized supplier on the underlying
- * {@link PartialQueryableIndex} eagerly invokes
- * {@link org.apache.druid.segment.file.PartialSegmentFileMapperV10#mapFile} inside that call, which is what triggers
- * the deep-storage range read. The cursor holder constructed afterward sees the already-materialized holders via the
- * same memoized suppliers, so no further downloads happen at cursor-read time.
+ * <b>Async download granularity.</b> {@link PartialQueryableIndex#planCursorPrefetch} resolves what the spec needs.
+ * When the segment's metadata records per-column file lists
+ * ({@link org.apache.druid.segment.file.SegmentFileMetadata#getColumnFiles()}), the plan covers the required columns'
+ * complete internal-file sets up front (including serde sub-files such as nested-column field files) as coalesced
+ * range reads; for older segments without file lists it degrades to whole-bundle granularity, losing column-level
+ * pruning within the bundle but keeping the matched-bundle pruning and covering serde sub-files that can't be
+ * enumerated without the lists. Either way the plan's runs are coalesced up to the configured gap tolerance and split
+ * at the configured run-size cap (see {@link PartialSegmentFileMapperV10#planParallelFetch}), and the cursor holder
+ * constructed afterward sees the already-materialized holders via the same memoized suppliers, so no further
+ * downloads happen at cursor-read time.
  * <p>
  * If a projection matches, the required columns are looked up against the projection's row selector and its rewritten
  * {@link CursorBuildSpec} (which carries physical columns in the projection's namespace). When
  * {@link CursorBuildSpec#getPhysicalColumns()} is {@code null}, every column on the chosen row selector is pre-fetched
  * as required by the contract of {@link CursorBuildSpec}.
  * <p>
- * <b>Parallelism.</b> Each column's materialization is submitted as a separate task to the supplied download executor.
- * The cursor holder is constructed once every column task has completed.
+ * <b>Parallelism.</b> Every planned range read is its own task on the download executor, so a bundle's independent
+ * deep-storage requests proceed concurrently rather than paying their round trips sequentially. Once every run is
+ * resident, the ready callback materializes each bundle's required columns and the cursor holder is constructed.
  */
 public class PartialQueryableIndexCursorFactory implements CursorFactory
 {
@@ -104,77 +104,53 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
   @Override
   public AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
   {
-    final QueryableProjection<QueryableIndex> matched = index.getProjection(spec);
-    if (matched == null && index.getClusteredBaseSummary() != null) {
-      return makeClusteredCursorHolderAsync(spec);
-    }
-
-    // Aggregate-projection match, or the plain base table: a single bundle (the projection's, or __base) with the
-    // query's required columns.
-    final QueryableIndex rowSelector = matched != null ? matched.getRowSelector() : index;
-    final String bundleName = matched != null ? matched.getName() : Projections.BASE_TABLE_PROJECTION_NAME;
-    final DownloadBundle bundle = new DownloadBundle(bundleName, rowSelector, requiredColumns(rowSelector, matched, spec));
-    return buildAsyncCursorHolder(List.of(bundle), () -> delegate.makeCursorHolderForProjection(spec, matched));
-  }
-
-  /**
-   * Async cursor holder for a clustered base table. Cluster-group resolution is metadata-only
-   * ({@link Projections#planClusterGroupQuery}): only the groups whose clustering tuples survive the query's filters
-   * are downloaded, one bundle (and its required columns) per surviving group. Once every group is resident, the
-   * holder is built via the delegate's clustered path.
-   */
-  private AsyncCursorHolder makeClusteredCursorHolderAsync(CursorBuildSpec spec)
-  {
-    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
-        new ArrayList<>(index.getClusterGroupSchemas()),
-        spec
-    );
-    final List<TableClusterGroupSpec> surviving = plan.survivingGroups();
-    if (surviving.isEmpty()) {
-      // Filter rules out every group: no bundle to acquire, nothing to download.
-      return AsyncCursorHolder.completed(EmptyCursorHolder.INSTANCE);
-    }
-
-    final List<DownloadBundle> bundles = new ArrayList<>(surviving.size());
-    for (TableClusterGroupSpec group : surviving) {
-      final QueryableIndex groupIndex = index.getClusterGroupQueryableIndex(group);
-      final CursorBuildSpec groupSpec = plan.rebuildCursorBuildSpec(spec, group);
-      bundles.add(
-          new DownloadBundle(
-              Projections.getClusterGroupBundleName(group.getClusteringValueIds()),
-              groupIndex,
-              requiredColumns(groupIndex, null, groupSpec)
-          )
+    // The index resolves what the spec needs (projection match / surviving cluster groups / base table, required
+    // columns, planned range reads); this factory purely orchestrates the downloads and cursor wiring.
+    final PartialQueryableIndex.CursorPrefetchPlan plan = index.planCursorPrefetch(spec);
+    if (plan.clusterGroupPlan() != null) {
+      if (plan.bundles().isEmpty()) {
+        // Filter rules out every cluster group: no bundle to acquire, nothing to download.
+        return AsyncCursorHolder.completed(EmptyCursorHolder.INSTANCE);
+      }
+      // reuse the plan's cluster resolution
+      return buildAsyncCursorHolder(
+          plan.bundles(),
+          () -> delegate.makeClusteredCursorHolder(spec, plan.clusterGroupPlan())
       );
     }
-    // Reuse the plan we already computed: delegate.makeClusteredCursorHolder skips a second planClusterGroupQuery and
-    // builds over the now-resident surviving groups (their columns memoized via getClusterGroupQueryableIndex).
-    return buildAsyncCursorHolder(bundles, () -> delegate.makeClusteredCursorHolder(spec, plan));
+    return buildAsyncCursorHolder(
+        plan.bundles(),
+        () -> delegate.makeCursorHolderForProjection(spec, plan.matchedProjection())
+    );
   }
 
   /**
-   * Generalized async-holder build over one or more bundles. Each {@link DownloadBundle} mounts its cache-layer bundle
-   * (its own {@link BundleHoldRelease}, since eviction is per-bundle) and submits a download per required column; the
-   * holder becomes ready once every column of every bundle is downloaded, at which point {@code innerBuilder} builds the
-   * (now fully-resident) cursor holder and the produced holder takes ownership of {@code inner} plus every bundle hold.
+   * Generalized async-holder build over one or more bundles. Each {@link PartialQueryableIndex.PrefetchBundle}
+   * mounts its cache-layer bundle (its own {@link BundleHoldRelease}, since eviction is per-bundle) and submits one
+   * download task per planned range read. Once every run of every bundle is resident, {@link #produceHolder} runs as
+   * its own download-executor task and materializes each bundle's required columns and builds the cursor holder, all
+   * inside every bundle's hold handshake (deserialization and holder construction both touch the container mmaps, see
+   * {@link #buildHolderUnderHolds}); the produced holder takes ownership of {@code inner} plus every bundle hold.
    */
-  private AsyncCursorHolder buildAsyncCursorHolder(List<DownloadBundle> bundles, Supplier<CursorHolder> innerBuilder)
+  private AsyncCursorHolder buildAsyncCursorHolder(
+      List<PartialQueryableIndex.PrefetchBundle> bundles,
+      Supplier<CursorHolder> innerBuilder
+  )
   {
     final List<BundleHoldRelease> holdReleases = new ArrayList<>(bundles.size());
     try {
-      final List<AsyncResource<String>> columnDownloads = new ArrayList<>();
-      for (DownloadBundle bundle : bundles) {
+      final List<AsyncResource<String>> runDownloads = new ArrayList<>();
+      for (PartialQueryableIndex.PrefetchBundle bundle : bundles) {
         final BundleHoldRelease holdRelease = new BundleHoldRelease(bundleAcquirer.acquire(bundle.bundleName()));
         holdReleases.add(holdRelease);
-        // submit one materialization task per column so a multi-threaded download executor can fan them out
-        for (String column : bundle.requiredColumns()) {
-          columnDownloads.add(submitColumnDownload(bundle.rowSelector(), column, holdRelease));
+        for (PartialSegmentFileMapperV10.PlannedFetch fetch : bundle.fetches()) {
+          runDownloads.add(submitRunFetch(bundle.bundleName(), fetch, holdRelease));
         }
       }
-      final AsyncResource<List<String>> downloaded = AsyncResources.collect(columnDownloads);
+      final AsyncResource<List<String>> downloaded = AsyncResources.collect(runDownloads);
 
       // Canceler runs if the awaiter closes this holder before it's ready (e.g. query cancel/timeout). Close the
-      // collected resource to cancel every column download that hasn't begun its deep-storage read yet (queued tasks
+      // collected resource to cancel every run download that hasn't begun its deep-storage read yet (queued tasks
       // are skipped; tasks parked on the download executor's permit are interrupted out of the interruptible wait
       // before doing any I/O), then request the hold release on every bundle through the handshake. Once the holder is
       // produced and handed to set(), ownership transfers to the awaiter, which drains it via close() (cancel) or
@@ -183,35 +159,94 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
         CloseableUtils.closeAndSuppressExceptions(downloaded, ignored -> {});
         holdReleases.forEach(BundleHoldRelease::requestRelease);
       });
+      // This callback can run on ANY thread: the download-executor thread that completed the last run, or, whenever
+      // every run finished before registration (always true when there was nothing to download, since an empty
+      // collect completes in its constructor), synchronously on THIS thread, because addReadyCallback on an
+      // already-ready resource fires inline. So do no real work here: propagate failure/cancellation inline, and hop
+      // the success path to the download executor, where the body deserializes columns and may even hit deep storage,
+      // neither of which may run on a processing thread.
       downloaded.addReadyCallback(() -> {
-        final CursorHolder holder;
         try {
-          downloaded.get(); // surfaces any column-download failure (or cancellation) as the cause
-          final CursorHolder inner = innerBuilder.get();
-          // The produced holder takes ownership of inner and every bundle hold; closing it releases all of them.
-          holder = wrapWithBundleRelease(inner, releasers(holdReleases));
+          // ready, so never blocks; throws the run-download failure (or cancellation) if any. Failing here rather
+          // than in the continuation keeps a canceled build from queueing a pointless continuation task.
+          downloaded.get();
         }
         catch (Throwable t) {
-          // A column download failed or was canceled, this branch can fire while a sibling download is still
-          // mid-mapFile(), so each hold release must go through the handshake rather than being dropped here directly.
-          holdReleases.forEach(BundleHoldRelease::requestRelease);
-          asyncHolder.setException(t);
+          failHolder(holdReleases, asyncHolder, t);
           return;
         }
-        if (!asyncHolder.set(holder)) {
-          // wrapper was closed (awaiter canceled) while we were producing the holder; close it ourselves so the
-          // holder, its inner, and the bundle holds don't leak.
-          holder.close();
+        try {
+          bundleAcquirer.submitDownload(() -> {
+            produceHolder(downloaded, holdReleases, bundles, innerBuilder, asyncHolder);
+            return "produce";
+          });
+        }
+        catch (Throwable t) {
+          // the continuation couldn't even be submitted (e.g. executor shutdown rejection)
+          failHolder(holdReleases, asyncHolder, t);
         }
       });
       return asyncHolder;
     }
     catch (Throwable t) {
-      // Failure while submitting downloads / wiring up the holder (e.g. submitDownload shutdown rejection). A column
+      // Failure while submitting downloads / wiring up the holder (e.g. submitDownload shutdown rejection). A run
       // download submitted before the failure may already be in flight, so release every bundle hold through the
       // handshake (requestRelease defers to the last in-flight body) rather than dropping it directly mid-mapFile().
       throw CloseableUtils.closeAndWrapInCatch(t, () -> holdReleases.forEach(BundleHoldRelease::requestRelease));
     }
+  }
+
+  /**
+   * Continuation of {@link #buildAsyncCursorHolder} once every run download is ready, always running as its own task
+   * on the download executor (never on the thread that observed readiness): surface any download failure, materialize
+   * columns and build the cursor holder under every hold, and hand the result to the async holder.
+   */
+  private void produceHolder(
+      AsyncResource<List<String>> downloaded,
+      List<BundleHoldRelease> holdReleases,
+      List<PartialQueryableIndex.PrefetchBundle> bundles,
+      Supplier<CursorHolder> innerBuilder,
+      AsyncCursorHolder asyncHolder
+  )
+  {
+    final CursorHolder holder;
+    try {
+      // the ready callback only submits this continuation on success, but the awaiter may close the resource in the
+      // window before this task runs; re-checking surfaces that cancellation instead of building a doomed holder
+      downloaded.get();
+      holder = buildHolderUnderHolds(holdReleases, 0, bundles, innerBuilder);
+      if (holder == null) {
+        // a concurrent cancel requested a hold release before we could open the handshake on every bundle; the
+        // awaiter is gone, so release the rest of the holds and surface the cancellation
+        failHolder(
+            holdReleases,
+            asyncHolder,
+            DruidException.defensive("Async cursor holder was closed before the cursor holder could be built")
+        );
+        return;
+      }
+    }
+    catch (Throwable t) {
+      failHolder(holdReleases, asyncHolder, t);
+      return;
+    }
+    if (!asyncHolder.set(holder)) {
+      // wrapper was closed (awaiter canceled) while we were producing the holder; close it ourselves so the
+      // holder, its inner, and the bundle holds don't leak.
+      holder.close();
+    }
+  }
+
+  /**
+   * Shared failure path: request every bundle hold's release and fail the async holder. Releases go through the
+   * {@link BundleHoldRelease} handshake (never dropped directly) because failure can be observed while a sibling
+   * download is still mid-{@code mapFile()}; setException on an already-closed async holder is a silent no-op, which
+   * is the desired behavior when the awaiter canceled.
+   */
+  private static void failHolder(List<BundleHoldRelease> holdReleases, AsyncCursorHolder asyncHolder, Throwable t)
+  {
+    holdReleases.forEach(BundleHoldRelease::requestRelease);
+    asyncHolder.setException(t);
   }
 
   @Override
@@ -228,53 +263,29 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
   }
 
   /**
-   * Submit one column's materialization as a download task, running its body under the bundle-hold handshake (see
-   * {@link BundleHoldRelease#runDownloadBody}) so the hold stays alive until this body's
-   * {@link QueryableIndex#getColumnHolder} (and the
-   * {@link org.apache.druid.segment.file.PartialSegmentFileMapperV10#mapFile} it triggers) has finished. The returned
-   * token (the column name) is unused, the task's effect is the side effect of materializing the column into the file
-   * mapper.
+   * Submit one planned range read as its own download task, running under the bundle-hold handshake (see
+   * {@link BundleHoldRelease#runDownloadBody}) so the bundle can't be evicted while the run is streaming into its
+   * container (bundle cache entries own their external-resident containers too, so the hold covers runs on external
+   * mappers just the same). The returned token (the bundle name) is unused; the task's effect is making the run's
+   * files resident in the mapper that planned it.
    */
-  private AsyncResource<String> submitColumnDownload(
-      QueryableIndex rowSelector,
-      String column,
+  private AsyncResource<String> submitRunFetch(
+      String bundleName,
+      PartialSegmentFileMapperV10.PlannedFetch fetch,
       BundleHoldRelease holdRelease
   )
   {
     return bundleAcquirer.submitDownload(() -> {
-      holdRelease.runDownloadBody(() -> rowSelector.getColumnHolder(column));
-      return column;
+      holdRelease.runDownloadBody(() -> {
+        try {
+          fetch.fetch();
+        }
+        catch (IOException e) {
+          throw DruidException.defensive(e, "Failed to fetch files for bundle[%s]", bundleName);
+        }
+      });
+      return bundleName;
     });
-  }
-
-  /**
-   * Determine the set of physical column names to required from the chosen row selector given a {@link CursorBuildSpec}
-   */
-  private static Set<String> requiredColumns(
-      QueryableIndex rowSelector,
-      @Nullable QueryableProjection<QueryableIndex> matched,
-      CursorBuildSpec originalSpec
-  )
-  {
-    final CursorBuildSpec effective = matched != null ? matched.getCursorBuildSpec() : originalSpec;
-    if (effective.getPhysicalColumns() != null) {
-      final Set<String> required = new LinkedHashSet<>(effective.getPhysicalColumns());
-      // physicalColumns enumerates the selected columns, but QueryableIndexCursorHolder also reads __time while
-      // building the cursor, independent of physicalColumns: unconditionally for a time-ordered index (its
-      // interval-checking offset reads timestamps), and via a synthesized __time range filter for a non-time-ordered
-      // index whose data extends past the query interval. That read happens after the cursor holder is handed back,
-      // so __time must be pre-fetched on the async path or it becomes a lazy deep-storage download on a processing
-      // thread. Predicting exactly when the holder reads __time would mean replicating its internals (fragile, and it
-      // reads __time in the common cases anyway), so always include it: __time is cheap, and it resolves to a
-      // no-download constant column for projections that don't carry a real time column.
-      required.add(ColumnHolder.TIME_COLUMN_NAME);
-      return required;
-    }
-    // Conservative fallback when physicalColumns isn't declared, fetch every column on the chosen row selector
-    // plus __time (which is special-cased and not enumerated by getColumnNames()).
-    final Set<String> all = new LinkedHashSet<>(rowSelector.getColumnNames());
-    all.add(ColumnHolder.TIME_COLUMN_NAME);
-    return all;
   }
 
   /**
@@ -351,11 +362,31 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
   }
 
   /**
-   * One bundle's worth of async download work: the cache-layer {@code bundleName} to mount, the {@link QueryableIndex}
-   * row selector whose {@code getColumnHolder} triggers the per-column downloads, and the columns to pre-fetch.
+   * Recursively nest {@link BundleHoldRelease#runDownloadBody(Supplier)} across every hold, then (with all handshakes
+   * open) materialize each bundle's required columns, build the inner cursor holder, and wrap it with ownership of
+   * every hold. Returns {@code null} if any hold had already been requested released (concurrent cancel), the mmaps
+   * it guards may be about to unmap, so nothing may be read and no holder can be built.
    */
-  private record DownloadBundle(String bundleName, QueryableIndex rowSelector, Set<String> requiredColumns)
+  @Nullable
+  private static CursorHolder buildHolderUnderHolds(
+      List<BundleHoldRelease> holdReleases,
+      int nextHold,
+      List<PartialQueryableIndex.PrefetchBundle> bundles,
+      Supplier<CursorHolder> innerBuilder
+  )
   {
+    if (nextHold < holdReleases.size()) {
+      return holdReleases.get(nextHold)
+                         .runDownloadBody(() -> buildHolderUnderHolds(holdReleases, nextHold + 1, bundles, innerBuilder));
+    }
+    for (PartialQueryableIndex.PrefetchBundle bundle : bundles) {
+      for (String column : bundle.requiredColumns()) {
+        bundle.rowSelector().getColumnHolder(column);
+      }
+    }
+    final CursorHolder inner = innerBuilder.get();
+    // The produced holder takes ownership of inner and every bundle hold; closing it releases all of them.
+    return wrapWithBundleRelease(inner, releasers(holdReleases));
   }
 
   /**
@@ -387,26 +418,39 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     }
 
     /**
-     * Run one column-materialization body under the in-flight count. {@code incrementAndGet}-before-read pairs with
+     * Run one mmap-touching body under the in-flight count. {@code incrementAndGet}-before-read pairs with
      * {@code releaseRequested.set(true)}-before-read in {@link #requestRelease()}: whichever thread observes the
      * other's write takes responsibility for the hold release, so it happens exactly once and never while a
-     * {@code mapFile()} is in flight. A body that observes a release request before starting skips the read entirely
-     * (its containers are about to be released and may be evicted); the last body to finish after a release request
-     * releases the hold.
+     * {@code mapFile()} is in flight. A body that observes a release request before starting is skipped entirely,
+     * returning {@code null} (its containers are about to be released and may be evicted), so the body itself must
+     * never return {@code null}; the last body to finish after a release request releases the hold.
      */
-    void runDownloadBody(Runnable read)
+    @Nullable
+    <T> T runDownloadBody(Supplier<T> read)
     {
       bodiesInFlight.incrementAndGet();
       try {
         if (!releaseRequested.get()) {
-          read.run();
+          return read.get();
         }
+        return null;
       }
       finally {
         if (bodiesInFlight.decrementAndGet() == 0 && releaseRequested.get()) {
           CloseableUtils.closeAndSuppressExceptions(releaseHoldOnce, ignored -> {});
         }
       }
+    }
+
+    /**
+     * {@link #runDownloadBody(Supplier)} for bodies with no result; the caller can't distinguish ran-from-skipped.
+     */
+    void runDownloadBody(Runnable read)
+    {
+      runDownloadBody(() -> {
+        read.run();
+        return Boolean.TRUE;
+      });
     }
 
     /**

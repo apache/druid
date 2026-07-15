@@ -783,12 +783,18 @@ public class IndexMergerV10 extends IndexMergerBase
       final ColumnDescriptor serdeficator
   ) throws IOException
   {
-    segmentFileBuilder.addColumn(columnName, serdeficator);
-    try (SegmentFileChannel channel = segmentFileBuilder.addWithChannel(
+    // this merger only ever drives the builders it creates in makeIndexFiles, so this is safe
+    final SegmentFileBuilderV10 v10Builder = (SegmentFileBuilderV10) segmentFileBuilder;
+    v10Builder.addColumn(columnName, serdeficator);
+    try (SegmentFileChannel channel = v10Builder.addWithChannel(
         columnName,
         serdeficator.getSerializedSize()
     )) {
-      serdeficator.writeTo(channel, segmentFileBuilder);
+      serdeficator.writeTo(channel, v10Builder);
+    }
+    finally {
+      // close the column attribution scope so anything written after this column is not misattributed to it
+      v10Builder.finishColumn();
     }
   }
 }

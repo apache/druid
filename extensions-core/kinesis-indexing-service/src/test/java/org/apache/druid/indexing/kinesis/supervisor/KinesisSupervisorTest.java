@@ -448,30 +448,20 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testRecordSupplier()
   {
-    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
-        STREAM,
-        INPUT_FORMAT,
-        "awsEndpoint",
-        null,
-        1,
-        1,
-        new Period("PT30M"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        100,
-        1000,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null
-    );
+    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisIOConfigBuilder()
+        .withStream(STREAM)
+        .withInputFormat(INPUT_FORMAT)
+        .withEndpoint("awsEndpoint")
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT30M"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withRecordsPerFetch(100)
+        .withFetchDelayMillis(1000)
+        .build();
     KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, OBJECT_MAPPER);
     KinesisSupervisor supervisor = new KinesisSupervisor(
         taskStorage,
@@ -515,59 +505,40 @@ public class KinesisSupervisorTest extends EasyMockSupport
   public void testKinesisIOConfigInitAndAutoscalerConfigCreation()
   {
     // create KinesisSupervisorIOConfig with autoScalerConfig null
-    KinesisSupervisorIOConfig kinesisSupervisorIOConfigWithNullAutoScalerConfig = new KinesisSupervisorIOConfig(
-        STREAM,
-        INPUT_FORMAT,
-        "awsEndpoint",
-        null,
-        1,
-        1,
-        new Period("PT30M"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        100,
-        1000,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null
-    );
+    KinesisSupervisorIOConfig kinesisSupervisorIOConfigWithNullAutoScalerConfig = new KinesisIOConfigBuilder()
+        .withStream(STREAM)
+        .withInputFormat(INPUT_FORMAT)
+        .withEndpoint("awsEndpoint")
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT30M"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withRecordsPerFetch(100)
+        .withFetchDelayMillis(1000)
+        .build();
 
     AutoScalerConfig autoscalerConfigNull = kinesisSupervisorIOConfigWithNullAutoScalerConfig.getAutoScalerConfig();
     Assert.assertNull(autoscalerConfigNull);
 
     // create KinesisSupervisorIOConfig with autoScalerConfig Empty
-    KinesisSupervisorIOConfig kinesisSupervisorIOConfigWithEmptyAutoScalerConfig = new KinesisSupervisorIOConfig(
-        STREAM,
-        INPUT_FORMAT,
-        "awsEndpoint",
-        null,
-        1,
-        1,
-        new Period("PT30M"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        100,
-        1000,
-        null,
-        null,
-        OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
-        false,
-        null,
-        null
-    );
+    KinesisSupervisorIOConfig kinesisSupervisorIOConfigWithEmptyAutoScalerConfig = new KinesisIOConfigBuilder()
+        .withStream(STREAM)
+        .withInputFormat(INPUT_FORMAT)
+        .withEndpoint("awsEndpoint")
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT30M"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withRecordsPerFetch(100)
+        .withFetchDelayMillis(1000)
+        .withAutoScalerConfig(OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class))
+        .build();
 
     AutoScalerConfig autoscalerConfig = kinesisSupervisorIOConfigWithEmptyAutoScalerConfig.getAutoScalerConfig();
     Assert.assertNotNull(autoscalerConfig);
@@ -4199,30 +4170,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         dataSchema,
         null,
-        new KinesisSupervisorIOConfig(
-            STREAM,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null
-        ),
+        new KinesisIOConfigBuilder()
+            .withStream(STREAM)
+            .withUseEarliestSequenceNumber(true)
+            .build(),
         null,
         null,
         null,
@@ -4741,30 +4692,18 @@ public class KinesisSupervisorTest extends EasyMockSupport
         "shardId-000000000000", "49590338271534258098958632799622211348320767794297876514",
         "shardId-000000000001", "49590338271556258844158102930252531974520363696878520322"
     );
-    final KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
-        STREAM,
-        INPUT_FORMAT,
-        "awsEndpoint",
-        null,
-        1,
-        1,
-        new Period("PT30S"),
-        null,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        0,
-        null,
-        null,
-        null,
-        true,
-        null,
-        new BoundedStreamConfig(startOffsets, endOffsets)
-    );
+    final KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisIOConfigBuilder()
+        .withStream(STREAM)
+        .withInputFormat(INPUT_FORMAT)
+        .withEndpoint("awsEndpoint")
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT30S"))
+        .withSupervisorRunPeriod(new Period("PT30M"))
+        .withFetchDelayMillis(0)
+        .withDeaggregate(true)
+        .withBoundedStreamConfig(new BoundedStreamConfig(startOffsets, endOffsets))
+        .build();
 
     Assert.assertTrue(kinesisSupervisorIOConfig.isBounded());
 
@@ -4841,30 +4780,18 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Map<String, Object> startOffsets = ImmutableMap.of(SHARD_ID0, singleOffset);
     Map<String, Object> endOffsets = ImmutableMap.of(SHARD_ID0, singleOffset);
 
-    final KinesisSupervisorIOConfig ioConfig = new KinesisSupervisorIOConfig(
-        STREAM,
-        INPUT_FORMAT,
-        "awsEndpoint",
-        null,
-        1,
-        1,
-        new Period("PT1H"),
-        null,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        0,
-        null,
-        null,
-        null,
-        true,
-        null,
-        new BoundedStreamConfig(startOffsets, endOffsets)
-    );
+    final KinesisSupervisorIOConfig ioConfig = new KinesisIOConfigBuilder()
+        .withStream(STREAM)
+        .withInputFormat(INPUT_FORMAT)
+        .withEndpoint("awsEndpoint")
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withSupervisorRunPeriod(new Period("PT30M"))
+        .withFetchDelayMillis(0)
+        .withDeaggregate(true)
+        .withBoundedStreamConfig(new BoundedStreamConfig(startOffsets, endOffsets))
+        .build();
 
     final KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(null, null);
     final KinesisSupervisorSpec spec = new KinesisSupervisorSpec(
@@ -5357,30 +5284,20 @@ public class KinesisSupervisorTest extends EasyMockSupport
       boolean suspended
   )
   {
-    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
-        STREAM,
-        INPUT_FORMAT,
-        "awsEndpoint",
-        null,
-        replicas,
-        taskCount,
-        new Period(duration),
-        new Period("P1D"),
-        new Period("PT30S"),
-        useEarliestOffset,
-        new Period("PT30M"),
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null
-    );
+    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisIOConfigBuilder()
+        .withStream(STREAM)
+        .withInputFormat(INPUT_FORMAT)
+        .withEndpoint("awsEndpoint")
+        .withReplicas(replicas)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period(duration))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(useEarliestOffset)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLateMessageRejectionPeriod(lateMessageRejectionPeriod)
+        .withEarlyMessageRejectionPeriod(earlyMessageRejectionPeriod)
+        .build();
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
         null,
@@ -5501,30 +5418,22 @@ public class KinesisSupervisorTest extends EasyMockSupport
       AutoScalerConfig autoScalerConfig
   )
   {
-    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
-        STREAM,
-        INPUT_FORMAT,
-        "awsEndpoint",
-        null,
-        replicas,
-        taskCount,
-        new Period(duration),
-        new Period("P1D"),
-        new Period("PT30S"),
-        useEarliestOffset,
-        new Period("PT30M"),
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        null,
-        null,
-        fetchDelayMillis,
-        null,
-        null,
-         autoScalerConfig,
-        false,
-        null,
-        null
-    );
+    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisIOConfigBuilder()
+        .withStream(STREAM)
+        .withInputFormat(INPUT_FORMAT)
+        .withEndpoint("awsEndpoint")
+        .withReplicas(replicas)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period(duration))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(useEarliestOffset)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLateMessageRejectionPeriod(lateMessageRejectionPeriod)
+        .withEarlyMessageRejectionPeriod(earlyMessageRejectionPeriod)
+        .withFetchDelayMillis(fetchDelayMillis)
+        .withAutoScalerConfig(autoScalerConfig)
+        .build();
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
         null,
@@ -5589,30 +5498,21 @@ public class KinesisSupervisorTest extends EasyMockSupport
       boolean isTaskCurrentReturn
   )
   {
-    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
-        STREAM,
-        INPUT_FORMAT,
-        "awsEndpoint",
-        null,
-        replicas,
-        taskCount,
-        new Period(duration),
-        new Period("P1D"),
-        new Period("PT30S"),
-        useEarliestOffset,
-        new Period("PT30M"),
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        null,
-        null,
-        fetchDelayMillis,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null
-    );
+    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisIOConfigBuilder()
+        .withStream(STREAM)
+        .withInputFormat(INPUT_FORMAT)
+        .withEndpoint("awsEndpoint")
+        .withReplicas(replicas)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period(duration))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(useEarliestOffset)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLateMessageRejectionPeriod(lateMessageRejectionPeriod)
+        .withEarlyMessageRejectionPeriod(earlyMessageRejectionPeriod)
+        .withFetchDelayMillis(fetchDelayMillis)
+        .build();
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
         null,
@@ -5679,30 +5579,21 @@ public class KinesisSupervisorTest extends EasyMockSupport
       KinesisSupervisorTuningConfig tuningConfig
   )
   {
-    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
-        STREAM,
-        INPUT_FORMAT,
-        "awsEndpoint",
-        null,
-        replicas,
-        taskCount,
-        new Period(duration),
-        new Period("P1D"),
-        new Period("PT30S"),
-        useEarliestOffset,
-        new Period("PT30M"),
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        null,
-        null,
-        fetchDelayMillis,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null
-    );
+    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisIOConfigBuilder()
+        .withStream(STREAM)
+        .withInputFormat(INPUT_FORMAT)
+        .withEndpoint("awsEndpoint")
+        .withReplicas(replicas)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period(duration))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(useEarliestOffset)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLateMessageRejectionPeriod(lateMessageRejectionPeriod)
+        .withEarlyMessageRejectionPeriod(earlyMessageRejectionPeriod)
+        .withFetchDelayMillis(fetchDelayMillis)
+        .build();
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
         null,
