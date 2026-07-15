@@ -35,6 +35,14 @@ public class SegmentTimelineConfig
   @JsonProperty
   private final boolean fastIntervalSearch;
 
+  // Default constructor in cases where the class is not being constructed from JSON properties (such as direct
+  // injection from Guice without the JsonConfigProvider)
+  @SuppressWarnings("unused")
+  public SegmentTimelineConfig()
+  {
+    this(Boolean.FALSE);
+  }
+
   @JsonCreator
   public SegmentTimelineConfig(@JsonProperty("fastIntervalSearch") @Nullable Boolean fastIntervalSearch)
   {
