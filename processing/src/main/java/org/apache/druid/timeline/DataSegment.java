@@ -153,6 +153,14 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private final String indexingStateFingerprint;
 
   /**
+   * ID of the segment that this segment was upgraded from during a concurrent APPEND + REPLACE operation.
+   * When non-null, the Historical can reuse the base segment's cached files instead of downloading from deep storage,
+   * since an upgraded segment shares the same underlying data files as its base segment.
+   */
+  @Nullable
+  private final SegmentId upgradedFromSegmentId;
+
+  /**
    * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
    */
   @Deprecated
@@ -181,6 +189,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         null,
         binaryVersion,
         size,
+        null,
         null,
         null,
         PruneSpecsHolder.DEFAULT
@@ -217,6 +226,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         lastCompactionState,
         binaryVersion,
         size,
+        null,
         null,
         null,
         PruneSpecsHolder.DEFAULT
@@ -259,6 +269,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         size,
         totalRows,
         indexingStateFingerprint,
+        null,
         pruneSpecsHolder
     );
   }
@@ -283,6 +294,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       @JsonProperty("size") long size,
       @JsonProperty("totalRows") Integer totalRows,
       @JsonProperty("indexingStateFingerprint") @Nullable String indexingStateFingerprint,
+      @JsonProperty("upgradedFromSegmentId") @Nullable SegmentId upgradedFromSegmentId,
       @JacksonInject PruneSpecsHolder pruneSpecsHolder
   )
   {
@@ -301,6 +313,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         size,
         totalRows,
         indexingStateFingerprint,
+        upgradedFromSegmentId,
         pruneSpecsHolder
     );
   }
@@ -320,6 +333,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       long size,
       Integer totalRows,
       String indexingStateFingerprint,
+      @Nullable SegmentId upgradedFromSegmentId,
       PruneSpecsHolder pruneSpecsHolder
   )
   {
@@ -343,6 +357,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     this.indexingStateFingerprint = indexingStateFingerprint == null ?
                                     null :
                                     STRING_INTERNER.intern(indexingStateFingerprint);
+    this.upgradedFromSegmentId = upgradedFromSegmentId;
   }
 
   /**
@@ -466,6 +481,19 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   public String getIndexingStateFingerprint()
   {
     return indexingStateFingerprint;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public SegmentId getUpgradedFromSegmentId()
+  {
+    return upgradedFromSegmentId;
+  }
+
+  public DataSegment withUpgradedFromSegmentId(@Nullable SegmentId upgradedFromSegmentId)
+  {
+    return builder(this).upgradedFromSegmentId(upgradedFromSegmentId).build();
   }
 
   @Override
@@ -705,6 +733,8 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     private long size;
     private Integer totalRows;
     private String indexingStateFingerprint;
+    @Nullable
+    private SegmentId upgradedFromSegmentId;
 
     /**
      * @deprecated use {@link #Builder(SegmentId)} or {@link #Builder(DataSegment)} instead.
@@ -751,6 +781,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.size = segment.getSize();
       this.totalRows = segment.getTotalRows();
       this.indexingStateFingerprint = segment.getIndexingStateFingerprint();
+      this.upgradedFromSegmentId = segment.getUpgradedFromSegmentId();
     }
 
     private Builder(DataSegment.Builder segmentBuilder)
@@ -769,6 +800,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.size = segmentBuilder.size;
       this.totalRows = segmentBuilder.totalRows;
       this.indexingStateFingerprint = segmentBuilder.indexingStateFingerprint;
+      this.upgradedFromSegmentId = segmentBuilder.upgradedFromSegmentId;
     }
 
     public Builder dataSource(String dataSource)
@@ -855,6 +887,12 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       return this;
     }
 
+    public Builder upgradedFromSegmentId(@Nullable SegmentId upgradedFromSegmentId)
+    {
+      this.upgradedFromSegmentId = upgradedFromSegmentId;
+      return this;
+    }
+
     public DataSegment build()
     {
       // Check stuff that goes into the id, at least.
@@ -878,6 +916,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
           size,
           totalRows,
           indexingStateFingerprint,
+          upgradedFromSegmentId,
           PruneSpecsHolder.DEFAULT
       );
     }
