@@ -36,7 +36,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.indexing.TimelineConfig;
+import org.apache.druid.segment.indexing.SegmentTimelineConfig;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
 import org.apache.druid.segment.loading.AcquireMode;
@@ -72,21 +72,21 @@ public class SegmentManager
 
   private final SegmentCacheManager cacheManager;
 
-  private final TimelineConfig timelineConfig;
+  private final SegmentTimelineConfig segmentTimelineConfig;
 
   private final ConcurrentHashMap<String, DataSourceState> dataSources = new ConcurrentHashMap<>();
 
   public SegmentManager(SegmentCacheManager cacheManager)
   {
-    this(cacheManager, new TimelineConfig(false));
+    this(cacheManager, new SegmentTimelineConfig(false));
   }
 
 
   @Inject
-  public SegmentManager(SegmentCacheManager cacheManager, TimelineConfig timelineConfig)
+  public SegmentManager(SegmentCacheManager cacheManager, SegmentTimelineConfig segmentTimelineConfig)
   {
     this.cacheManager = cacheManager;
-    this.timelineConfig = timelineConfig;
+    this.segmentTimelineConfig = segmentTimelineConfig;
   }
 
   @VisibleForTesting
@@ -333,7 +333,7 @@ public class SegmentManager
     dataSources.compute(
         dataSegment.getDataSource(),
         (k, v) -> {
-          final DataSourceState dataSourceState = v == null ? new DataSourceState(timelineConfig) : v;
+          final DataSourceState dataSourceState = v == null ? new DataSourceState(segmentTimelineConfig) : v;
           final VersionedIntervalTimeline<String, DataSegment> loadedIntervals =
               dataSourceState.getTimeline();
           final PartitionChunk<DataSegment> entry = loadedIntervals.findChunk(
@@ -518,9 +518,9 @@ public class SegmentManager
     private long rowCount;
     private final SegmentRowCountDistribution segmentRowCountDistribution = new SegmentRowCountDistribution();
 
-    public DataSourceState(TimelineConfig timelineConfig)
+    public DataSourceState(SegmentTimelineConfig segmentTimelineConfig)
     {
-      timeline = new VersionedIntervalTimeline<>(Ordering.natural(), false, timelineConfig.isFastIntervalSearch());
+      timeline = new VersionedIntervalTimeline<>(Ordering.natural(), false, segmentTimelineConfig.isFastIntervalSearch());
     }
 
     private void addSegment(DataSegment segment, long numOfRows)

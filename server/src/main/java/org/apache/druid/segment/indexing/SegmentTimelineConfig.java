@@ -24,13 +24,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
 
-public class TimelineConfig
+/**
+ * Configuration settings related to segment timeline management
+ */
+public class SegmentTimelineConfig
 {
+  /**
+   * Use an indexing mechanism based on an interval tree for organizing segments in memory that leads to faster search
+   */
   @JsonProperty
   private final boolean fastIntervalSearch;
 
   @JsonCreator
-  public TimelineConfig(@JsonProperty("fastIntervalSearch") @Nullable Boolean fastIntervalSearch)
+  public SegmentTimelineConfig(@JsonProperty("fastIntervalSearch") @Nullable Boolean fastIntervalSearch)
   {
     this.fastIntervalSearch = fastIntervalSearch != null && fastIntervalSearch;
   }
