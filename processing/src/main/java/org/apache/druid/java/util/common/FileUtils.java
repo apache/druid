@@ -500,6 +500,39 @@ public class FileUtils
   }
 
   /**
+   * Deletes {@code directory} (recursively, like {@link #deleteDirectory(File)}), then walks up deleting each
+   * now-empty ancestor directory, stopping at the first non-empty ancestor or when {@code stopAt} is reached,
+   * whichever comes first. {@code stopAt} itself is never deleted, so callers can pass a base directory that must
+   * survive.
+   * <p>
+   * Because an ancestor is removed only once it is empty, this is safe when intermediate directories are shared by
+   * several sibling leaves: the shared ancestor is deleted only after its last child is gone. It is not safe for
+   * concurrent deletion of overlapping paths under the same {@code stopAt}.
+   */
+  public static void deleteDirectoryAndEmptyAncestors(final File directory, final File stopAt) throws IOException
+  {
+    if (directory == null || directory.equals(stopAt)) {
+      return;
+    }
+    deleteDirectory(directory);
+    // Walk up removing now-empty ancestors.
+    File parent = directory.getParentFile();
+    while (parent != null && !parent.equals(stopAt)) {
+      final String[] children = parent.list();
+      if (children == null || children.length > 0) {
+        // Non-empty, or contents could not be listed: leave it in place and stop climbing.
+        break;
+      }
+      // delete() removes only an empty directory. If a concurrent write landed a child between the list() above and
+      // here, the delete fails, and we stop rather than removing a directory that just gained content.
+      if (!parent.delete()) {
+        break;
+      }
+      parent = parent.getParentFile();
+    }
+  }
+
+  /**
    * Hard-link "src" as "dest", if possible. If not possible -- perhaps they are on separate filesystems -- then
    * copy "src" to "dest".
    *

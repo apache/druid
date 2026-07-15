@@ -24,7 +24,7 @@ title: "Data deletion"
 
 ## Delete data for a time range manually
 
-Apache Druid stores data [partitioned by time chunk](../design/storage.md) and supports
+Apache&circledR; Druid stores data [partitioned by time chunk](../design/storage.md) and supports
 deleting data for time chunks by dropping segments. This is a fast, metadata-only operation.
 
 Deletion by time range happens in two steps:

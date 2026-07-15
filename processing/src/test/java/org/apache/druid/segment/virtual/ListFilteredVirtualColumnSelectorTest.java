@@ -47,8 +47,8 @@ import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -76,7 +76,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
     VirtualizedColumnSelectorFactory selectorFactory = makeSelectorFactory(virtualColumn);
     DimensionSelector selector = selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(ALLOW_VIRTUAL_NAME));
-    Assert.assertNull(selector.getObject());
+    Assertions.assertNull(selector.getObject());
   }
 
   @Test
@@ -91,7 +91,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
     VirtualizedColumnSelectorFactory selectorFactory = makeSelectorFactory(virtualColumn);
     ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(ALLOW_VIRTUAL_NAME);
-    Assert.assertNull(selector.getObject());
+    Assertions.assertNull(selector.getObject());
   }
 
 
@@ -107,7 +107,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
     VirtualizedColumnSelectorFactory selectorFactory = makeSelectorFactory(virtualColumn);
     DimensionSelector selector = selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(ALLOW_VIRTUAL_NAME));
-    Assert.assertEquals(ImmutableList.of("a", "b"), selector.getObject());
+    Assertions.assertEquals(ImmutableList.of("a", "b"), selector.getObject());
     assertCapabilities(selectorFactory, ALLOW_VIRTUAL_NAME);
   }
 
@@ -123,7 +123,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
     VirtualizedColumnSelectorFactory selectorFactory = makeSelectorFactory(virtualColumn);
     ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(ALLOW_VIRTUAL_NAME);
-    Assert.assertEquals(ImmutableList.of("a", "b"), selector.getObject());
+    Assertions.assertEquals(ImmutableList.of("a", "b"), selector.getObject());
     assertCapabilities(selectorFactory, ALLOW_VIRTUAL_NAME);
   }
 
@@ -139,7 +139,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
     VirtualizedColumnSelectorFactory selectorFactory = makeSelectorFactory(virtualColumn);
     DimensionSelector selector = selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(DENY_VIRTUAL_NAME));
-    Assert.assertEquals(ImmutableList.of("c", "d"), selector.getObject());
+    Assertions.assertEquals(ImmutableList.of("c", "d"), selector.getObject());
     assertCapabilities(selectorFactory, DENY_VIRTUAL_NAME);
   }
 
@@ -155,7 +155,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
     VirtualizedColumnSelectorFactory selectorFactory = makeSelectorFactory(virtualColumn);
     ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(DENY_VIRTUAL_NAME);
-    Assert.assertEquals(ImmutableList.of("c", "d"), selector.getObject());
+    Assertions.assertEquals(ImmutableList.of("c", "d"), selector.getObject());
     assertCapabilities(selectorFactory, DENY_VIRTUAL_NAME);
   }
 
@@ -209,14 +209,14 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
       );
 
       SelectorFilter filter = new SelectorFilter(ALLOW_VIRTUAL_NAME, "a");
-      Assert.assertNotNull(filter.getBitmapColumnIndex(bitmapIndexSelector));
+      Assertions.assertNotNull(filter.getBitmapColumnIndex(bitmapIndexSelector));
 
       DictionaryEncodedStringValueIndex listFilteredIndex =
           bitmapIndexSelector.getIndexSupplier(ALLOW_VIRTUAL_NAME).as(DictionaryEncodedStringValueIndex.class);
-      Assert.assertEquals(2, listFilteredIndex.getCardinality());
-      Assert.assertEquals("b", listFilteredIndex.getValue(0));
-      Assert.assertEquals("c", listFilteredIndex.getValue(1));
-      Assert.assertEquals(bitmap, listFilteredIndex.getBitmap(1));
+      Assertions.assertEquals(2, listFilteredIndex.getCardinality());
+      Assertions.assertEquals("b", listFilteredIndex.getValue(0));
+      Assertions.assertEquals("c", listFilteredIndex.getValue(1));
+      Assertions.assertEquals(bitmap, listFilteredIndex.getBitmap(1));
 
       EasyMock.verify(queryableIndex, holder, timeHolder, indexSupplier, index, bitmap, bitmapFactory);
     }
@@ -270,12 +270,12 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
       );
 
       SelectorFilter filter = new SelectorFilter(DENY_VIRTUAL_NAME, "c");
-      Assert.assertNotNull(filter.getBitmapColumnIndex(bitmapIndexSelector));
+      Assertions.assertNotNull(filter.getBitmapColumnIndex(bitmapIndexSelector));
 
       DictionaryEncodedStringValueIndex listFilteredIndex =
           bitmapIndexSelector.getIndexSupplier(DENY_VIRTUAL_NAME).as(DictionaryEncodedStringValueIndex.class);
-      Assert.assertEquals(1, listFilteredIndex.getCardinality());
-      Assert.assertEquals(bitmap, listFilteredIndex.getBitmap(1));
+      Assertions.assertEquals(1, listFilteredIndex.getCardinality());
+      Assertions.assertEquals(bitmap, listFilteredIndex.getBitmap(1));
 
       EasyMock.verify(queryableIndex, holder, timeHolder, indexSupplier, index, bitmap, bitmapFactory);
     }
@@ -287,9 +287,9 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
   private void assertCapabilities(VirtualizedColumnSelectorFactory selectorFactory, String columnName)
   {
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(columnName);
-    Assert.assertNotNull(capabilities);
-    Assert.assertEquals(ValueType.STRING, capabilities.getType());
-    Assert.assertTrue(capabilities.hasMultipleValues().isMaybeTrue());
+    Assertions.assertNotNull(capabilities);
+    Assertions.assertEquals(ValueType.STRING, capabilities.getType());
+    Assertions.assertTrue(capabilities.hasMultipleValues().isMaybeTrue());
   }
 
   private VirtualizedColumnSelectorFactory makeSelectorFactory(ListFilteredVirtualColumn virtualColumn)

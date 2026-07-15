@@ -28,6 +28,7 @@ import org.apache.druid.common.asyncresource.AsyncResource;
 import org.apache.druid.common.asyncresource.AsyncResources;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -49,8 +50,10 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.file.CountingRangeReader;
 import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
+import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
+import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.AfterAll;
@@ -67,7 +70,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -75,6 +80,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursorFactoryTestBase
@@ -185,7 +191,7 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
       );
 
       // Eagerly materialize the entire segment via the file mapper to simulate the eager-acquire path.
-      mapper.ensureFilesAvailable(mapper.getSegmentFileMetadata().getFiles().keySet());
+      mapper.fetchFiles(mapper.getSegmentFileMetadata().getFiles().keySet());
       Assertions.assertTrue(mapper.isFullyDownloaded(), "test precondition: every internal file should be on disk");
 
       try (CursorHolder holder = factory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
@@ -245,6 +251,151 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
     finally {
       gatedExec.shutdownNow();
       rawExec.shutdownNow();
+    }
+  }
+
+  @Test
+  void testAlreadyResidentSegmentStillBuildsHolderOnDownloadExecutor() throws Exception
+  {
+    // Everything is already resident, so no download tasks get planned, the empty collect completes in its
+    // constructor, and its ready callback fires inline on the thread calling makeCursorHolderAsync. The callback must
+    // therefore do no real work itself: the materialization + holder build runs as its own continuation task on the
+    // download executor (it deserializes columns and can even hit deep storage), never on the calling thread.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    final CountDownLatch gate = new CountDownLatch(1);
+    final ExecutorService rawExec = Execs.singleThreaded("partial-cursor-resident-%d");
+    final ListeningExecutorService gatedExec = MoreExecutors.listeningDecorator(rawExec);
+    try (IndexAndMapper opened = openIndex(rangeReader, "resident_hop")) {
+      opened.mapper().ensureAllDownloaded();
+      final PartialQueryableIndex index = opened.index();
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          noOpAcquirer(gatedExec)
+      );
+
+      // Hold the executor with a pre-queued blocker so the continuation task can't run yet.
+      @SuppressWarnings("unused")
+      ListenableFuture<?> unused = gatedExec.submit(() -> {
+        try {
+          gate.await();
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      });
+
+      final AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
+      Assertions.assertFalse(
+          asyncHolder.isReady(),
+          "holder must not become ready inline on the calling thread even with nothing to download"
+      );
+
+      final CountDownLatch ready = new CountDownLatch(1);
+      final AtomicReference<String> readyThread = new AtomicReference<>();
+      asyncHolder.addReadyCallback(() -> {
+        readyThread.set(Thread.currentThread().getName());
+        ready.countDown();
+      });
+      gate.countDown();
+      Assertions.assertTrue(ready.await(5, TimeUnit.SECONDS), "ready callback must fire once the executor drains");
+      Assertions.assertTrue(
+          readyThread.get().startsWith("partial-cursor-resident"),
+          "holder must be produced on the download executor, not thread[" + readyThread.get() + "]"
+      );
+      try (CursorHolder holder = asyncHolder.release()) {
+        Assertions.assertNotNull(holder);
+      }
+    }
+    finally {
+      gatedExec.shutdownNow();
+      rawExec.shutdownNow();
+    }
+  }
+
+  @Test
+  void testMatchedProjectionAcquiresAndPrefetchesParentBundle() throws IOException
+  {
+    // Materializing a projection column also materializes its same-named base parent column when one exists, so the
+    // plan must include a __base bundle: its hold keeps the parent mmaps eviction-excluded for the holder's lifetime
+    // (they were previously only covered by the projection bundle's hold) and its planned fetches cover the parent
+    // files up front.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "proj_parent")) {
+      final PartialQueryableIndex index = opened.index();
+      final ListeningExecutorService exec = directExec();
+      final Set<String> acquired = new TreeSet<>();
+      final PartialBundleAcquirer acquirer = new PartialBundleAcquirer()
+      {
+        @Override
+        public Closeable acquire(String bundleName)
+        {
+          acquired.add(bundleName);
+          return () -> {};
+        }
+
+        @Override
+        public <T> AsyncResource<T> submitDownload(Callable<T> task)
+        {
+          return AsyncResources.fromFutureUnmanaged(exec.submit(task));
+        }
+      };
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          acquirer
+      );
+
+      final CursorBuildSpec aggSpec = CursorBuildSpec.builder()
+                                                     .setGroupingColumns(List.of("dim1"))
+                                                     .setAggregators(List.of(
+                                                         new LongSumAggregatorFactory("_metric1_sum", "metric1")
+                                                     ))
+                                                     .setPhysicalColumns(Set.of("dim1", "metric1"))
+                                                     .build();
+
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(aggSpec);
+           CursorHolder holder = asyncHolder.release()) {
+        Assertions.assertNotNull(holder);
+        Assertions.assertEquals(
+            new TreeSet<>(Set.of(PROJECTION_NAME, Projections.BASE_TABLE_PROJECTION_NAME)),
+            acquired,
+            "both the projection bundle and the parent __base bundle must be held"
+        );
+        final Set<String> downloaded = opened.mapper().getDownloadedFiles();
+        final String basePrefix = Projections.BASE_TABLE_PROJECTION_NAME + "/";
+        Assertions.assertTrue(
+            downloaded.contains(basePrefix + "dim1"),
+            "the parent base column's file must be prefetched; got: " + downloaded
+        );
+        // only dim1 reads through a parent: the aggregate columns have no same-named base column
+        Assertions.assertFalse(downloaded.contains(basePrefix + "metric1"), "got: " + downloaded);
+        Assertions.assertFalse(downloaded.contains(basePrefix + ColumnHolder.TIME_COLUMN_NAME), "got: " + downloaded);
+      }
+    }
+  }
+
+  @Test
+  void testUnusedCursorHolderClosesWithoutTouchingColumns() throws IOException
+  {
+    // QueryableIndexCursorHolder builds its cursor resources lazily, and building them reads column data (the
+    // FilterBundle computes filter bitmaps, the interval fold reads __time). Closing a holder that was never used
+    // must not force that construction: over a partial segment it would mean deep-storage downloads on the closing
+    // thread (after the async factory path has already released its bundle holds) just to throw the result away.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "close_unused")) {
+      final PartialQueryableIndex index = opened.index();
+      final CursorBuildSpec spec = CursorBuildSpec.builder()
+                                                  .setFilter(new EqualityFilter("dim1", ColumnType.STRING, "a", null))
+                                                  .setPhysicalColumns(Set.of("dim1"))
+                                                  .build();
+      rangeReader.resetCount();
+      new QueryableIndexCursorHolder(index, spec, QueryableIndexTimeBoundaryInspector.create(index)).close();
+      Assertions.assertEquals(0, rangeReader.getReadCount(), "closing an unused cursor holder must not read columns");
+      Assertions.assertTrue(
+          opened.mapper().getDownloadedFiles().isEmpty(),
+          "closing an unused cursor holder must not download anything"
+      );
     }
   }
 
@@ -325,7 +476,9 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
         cacheDir,
         IndexIO.V10_FILE_NAME,
         Collections.emptyList(),
-        PartialSegmentDownloadListener.NOOP
+        PartialSegmentDownloadListener.NOOP,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     try {
       final PartialQueryableIndex index =
@@ -657,6 +810,201 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
       blockingExec.shutdownNow();
       rawExec.shutdownNow();
     }
+  }
+
+  @Test
+  void testPrefetchUsesCoalescedRangeReads() throws IOException
+  {
+    // With per-column file lists in the metadata, the async pre-fetch resolves every required file up front and
+    // fetches the base bundle with coalesced range reads: a full scan needs every file in the single base container,
+    // and this tiny fixture stays far below the parallel-fetch run-size cap (virtualStorageMaxFetchRunBytes), so the
+    // whole span plans as exactly ONE deep-storage request instead of one per file.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "coalesced_prefetch")) {
+      final PartialQueryableIndex index = opened.index();
+      Assertions.assertNotNull(
+          opened.mapper().getSegmentFileMetadata().getColumnFiles(),
+          "fixture must record column file lists"
+      );
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          V10TimeBoundaryInspector.forBaseProjection(index.getBaseProjectionMetadata(), index.getDataInterval()),
+          noOpAcquirer(directExec())
+      );
+      rangeReader.resetCount();
+
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
+           CursorHolder holder = asyncHolder.release()) {
+        Assertions.assertEquals(
+            1,
+            rangeReader.getReadCount(),
+            "full scan of the single-container base bundle must coalesce into one range read"
+        );
+
+        // and the coalesced bytes are the right bytes
+        final Cursor cursor = holder.asCursor();
+        final ColumnValueSelector<?> dim1 = cursor.getColumnSelectorFactory().makeColumnValueSelector("dim1");
+        final List<Object> values = new ArrayList<>();
+        while (!cursor.isDone()) {
+          values.add(dim1.getObject());
+          cursor.advance();
+        }
+        Assertions.assertEquals(List.of("a", "a", "b", "b"), values);
+      }
+    }
+  }
+
+  @Test
+  void testNestedColumnPrefetchCoversFieldFiles() throws IOException
+  {
+    // Nested-format columns store per-field data in `<column>.__field_N` files that the serde reads lazily at
+    // cursor-read time. Without file lists those were synchronous deep-storage reads on the cursor's thread; the
+    // recorded lists let the pre-fetch cover them, so cursor iteration triggers ZERO further range reads.
+    final File nestedSegmentDir = buildNestedSegment();
+    final CountingRangeReader rangeReader = new CountingRangeReader(nestedSegmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "nested_prefetch")) {
+      final PartialQueryableIndex index = opened.index();
+      final PartialSegmentFileMapperV10 mapper = opened.mapper();
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          V10TimeBoundaryInspector.forBaseProjection(index.getBaseProjectionMetadata(), index.getDataInterval()),
+          noOpAcquirer(directExec())
+      );
+
+      final CursorBuildSpec spec = CursorBuildSpec.builder()
+                                                  .setInterval(Intervals.ETERNITY)
+                                                  .setVirtualColumns(
+                                                      VirtualColumns.create(
+                                                          new NestedFieldVirtualColumn("nest", "$.x", "v0")
+                                                      )
+                                                  )
+                                                  .setPhysicalColumns(Set.of("nest"))
+                                                  .build();
+
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(spec);
+           CursorHolder holder = asyncHolder.release()) {
+        Assertions.assertTrue(
+            mapper.getDownloadedFiles().stream().anyMatch(f -> f.contains(".__field_")),
+            "pre-fetch must cover the nested column's field files; got: " + mapper.getDownloadedFiles()
+        );
+        rangeReader.resetCount();
+
+        final Cursor cursor = holder.asCursor();
+        final ColumnValueSelector<?> v0 = cursor.getColumnSelectorFactory().makeColumnValueSelector("v0");
+        final List<Object> values = new ArrayList<>();
+        while (!cursor.isDone()) {
+          values.add(v0.getObject());
+          cursor.advance();
+        }
+        Assertions.assertEquals(List.of(1L, 2L, 3L, 4L), values);
+        Assertions.assertEquals(
+            0,
+            rangeReader.getReadCount(),
+            "reading nested fields must not trigger lazy downloads on the cursor's thread"
+        );
+      }
+    }
+  }
+
+  @Test
+  void testOldMetadataWithoutColumnFilesFallsBackToWholeBundleDownload() throws IOException
+  {
+    // Segments written before columnFiles existed have no per-column lists to resolve a precise fetch set from; the
+    // async path degrades to downloading the matched bundle's containers whole, losing only column-level pruning
+    // within the bundle, and produces correct results. Request-count-wise that plans as one range read per container
+    // span up to the run-size cap (virtualStorageMaxFetchRunBytes), which for this tiny fixture means exactly one.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "old_metadata_fallback")) {
+      final SegmentFileMetadata withLists = opened.mapper().getSegmentFileMetadata();
+      final SegmentFileMetadata stripped = new SegmentFileMetadata(
+          withLists.getContainers(),
+          withLists.getFiles(),
+          withLists.getInterval(),
+          withLists.getColumnDescriptors(),
+          null,
+          withLists.getProjections(),
+          withLists.getBitmapEncoding()
+      );
+      final PartialQueryableIndex index = new PartialQueryableIndex(stripped, opened.mapper(), COLUMN_CONFIG);
+      Assertions.assertNull(stripped.getColumnFiles(), "test setup: stripped metadata must have no file lists");
+
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          V10TimeBoundaryInspector.forBaseProjection(index.getBaseProjectionMetadata(), index.getDataInterval()),
+          noOpAcquirer(directExec())
+      );
+      rangeReader.resetCount();
+
+      // narrow spec (dim1 only) to prove the fallback fetches the whole base bundle, not just the listed column
+      final CursorBuildSpec scanSpec = CursorBuildSpec.builder()
+                                                      .setInterval(Intervals.ETERNITY)
+                                                      .setPhysicalColumns(Set.of("dim1"))
+                                                      .build();
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(scanSpec);
+           CursorHolder holder = asyncHolder.release()) {
+        // one read for the base bundle's single (sub-cap) container, covering every base file
+        Assertions.assertEquals(1, rangeReader.getReadCount(), "fallback downloads the bundle's container whole");
+        final String basePrefix = Projections.BASE_TABLE_PROJECTION_NAME + "/";
+        for (String file : List.of("dim1", "metric1", ColumnHolder.TIME_COLUMN_NAME)) {
+          Assertions.assertTrue(
+              opened.mapper().getDownloadedFiles().contains(basePrefix + file),
+              "whole-bundle fallback must cover " + file
+          );
+        }
+        // the projection's bundle was not matched, so it must stay untouched
+        Assertions.assertFalse(
+            opened.mapper().getDownloadedFiles().contains(PROJECTION_NAME + "/dim1"),
+            "unmatched projection bundle must not download"
+        );
+
+        final Cursor cursor = holder.asCursor();
+        final ColumnValueSelector<?> dim1 = cursor.getColumnSelectorFactory().makeColumnValueSelector("dim1");
+        final List<Object> values = new ArrayList<>();
+        while (!cursor.isDone()) {
+          values.add(dim1.getObject());
+          cursor.advance();
+        }
+        Assertions.assertEquals(List.of("a", "a", "b", "b"), values);
+      }
+    }
+  }
+
+  private File buildNestedSegment()
+  {
+    final File tmpDir = new File(perTestTempDir, "build_nested_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
+    final List<InputRow> rows = new ArrayList<>();
+    for (int i = 1; i <= 4; i++) {
+      rows.add(
+          new MapBasedInputRow(
+              TIME.plusMinutes(i),
+              List.of("dim1", "nest"),
+              Map.of("dim1", i <= 2 ? "a" : "b", "nest", Map.of("x", (long) i, "y", "s" + i))
+          )
+      );
+    }
+    return IndexBuilder.create()
+                       .useV10()
+                       .tmpDir(tmpDir)
+                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                       .schema(
+                           IncrementalIndexSchema.builder()
+                                                 .withDimensionsSpec(
+                                                     DimensionsSpec.builder()
+                                                                   .setDimensions(
+                                                                       List.of(
+                                                                           new StringDimensionSchema("dim1"),
+                                                                           new AutoTypeColumnSchema("nest", null, null)
+                                                                       )
+                                                                   )
+                                                                   .build()
+                                                 )
+                                                 .withRollup(false)
+                                                 .withMinTimestamp(TIME.getMillis())
+                                                 .build()
+                       )
+                       .indexSpec(IndexSpec.builder().withMetadataCompression(CompressionStrategy.NONE).build())
+                       .rows(rows)
+                       .buildMMappedIndexFile();
   }
 
   private File buildTimeOrderedProjectionSegment(String projectionName)

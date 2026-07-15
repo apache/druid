@@ -23,7 +23,7 @@ title: "Expressions"
   -->
 
 :::info
- Apache Druid supports two query languages: [native queries](../querying/querying.md) and [Druid SQL](../querying/sql.md).
+ Apache&circledR; Druid supports two query languages: [native queries](../querying/querying.md) and [Druid SQL](../querying/sql.md).
  This document describes the native language. For information about functions available in SQL, refer to the
  [SQL documentation](../querying/sql-scalar.md).
 :::

@@ -317,6 +317,12 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.|`supervisorId`, `dataSource`, `tags`| < 1s |
 |`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|`dataSource`, `taskId`, `tags`| < 10 seconds|
 |`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the coordinator cycle time.|
+|`ingest/realtime/segmentUpgrade/persisted`|Number of pending segments that were upgraded in the metadata store while publishing segments to an interval. Emitted by the Overlord only when a REPLACE task (e.g., compaction task with `useConcurrentLocks` set to `true`) commits segments to an interval already containing pending segments allocated to an APPEND task (e.g. streaming task with `useConcurrentLocks` set to `true`).|`dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `version`, `tags`|0 unless [concurrent append and replace](../ingestion/concurrent-append-replace.md) is in use.|
+|`ingest/realtime/segmentUpgrade/notified`|Number of notifications the supervisor sent to running tasks, emitted once per task so it scales with the replica count. Reconcile against the per-task outcomes: `notified` should equal `announced` + `skipped` + `sendFailed` over the same period and `dataSource`, since every notified task either announces, skips, or fails to receive the request. A shortfall indicates a notification was silently dropped.|`supervisorId`, `dataSource`, `stream`, `taskId`, `interval`, `version`, `tags`|Equal to `announced` + `skipped` + `sendFailed`.|
+|`ingest/realtime/segmentUpgrade/unmatched`|Number of upgraded pending segments the supervisor could not route to any running task. These are not announced under the new version until handoff, so the corresponding data may be briefly missing from queries.|`supervisorId`, `dataSource`, `stream`, `interval`, `version`, `tags`|0. A non-zero value indicates a lost upgrade announcement.|
+|`ingest/realtime/segmentUpgrade/sendFailed`|Number of upgrade requests that matched a running task but failed to reach it over the wire after retries.|`supervisorId`, `dataSource`, `stream`, `taskId`, `interval`, `version`, `tags`|0|
+|`ingest/realtime/segmentUpgrade/announced`|Number of upgraded segments a task announced under the new version. Emitted once per task, so it scales with the replica count. Reconcile against `notified` (also per task), not `ingest/realtime/segmentUpgrade/persisted`, which is per segment rather than per replica.|`dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `version`, `tags`|Greater than 0 while concurrent replace occurs.|
+|`ingest/realtime/segmentUpgrade/skipped`|Number of upgrade requests a task received but did not announce. The `reason` dimension is one of `unknown base` (the request reached the wrong task), `base sink already dropped` (the base sink is no longer present), or `dropping base sink` (the base sink is handing off, which is benign and covered by the durable publish path).|`dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `version`, `tags`, `reason`|0, excluding `reason=dropping base sink`.|
 |`task/autoScaler/requiredCount`|Count of required tasks based on the calculations of the auto scaler.|`supervisorId`, `dataSource`, `stream`, `scalingSkipReason`|Depends on auto scaler config.|
 |`task/autoScaler/scaleActionTime`|Time taken in milliseconds to complete the scale action.|`supervisorId`, `dataSource`, `stream`, `tags`|Depends on auto scaler config.|
 |`task/autoScaler/costBased/optimalTaskCount`|Optimal task count computed by the cost-based auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
@@ -345,6 +351,7 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |`segment/added/bytes`|Size in bytes of new segments created.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`segment/moved/bytes`|Size in bytes of segments moved/archived via the Move Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`segment/nuked/bytes`|Size in bytes of segments deleted via the Kill Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
+|`segment/allocated/count`|Number of segments successfully allocated by the Overlord to an append (realtime or batch) task. May be emitted multiple times for a single allocated segment ID if multiple tasks request an allocation with the same parameters.|`id`, `dataSource`, `taskId`, `taskType`, `groupId`, `tags`, `supervisorId`|Always 1|
 |`task/success/count`|Number of successful tasks per emission period. This metric is available only if the `TaskCountStatsMonitor` module is included.| `dataSource`,`taskType`, `supervisorId`|Varies|
 |`task/failed/count`|Number of failed tasks per emission period. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`, `supervisorId`|Varies|
 |`task/running/count`|Number of current running tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`, `supervisorId`|Varies|
@@ -377,11 +384,19 @@ The following metrics are emitted only when [segment metadata caching](../config
 |`segment/pending/count`|Number of pending segments currently present in the metadata store.|`dataSource`|
 |`segment/metadataCache/interval/count`|Total number of intervals present in the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/used/count`|Total number of used segments present in the cache for a single datasource.|`dataSource`|
+|`segment/metadataCache/unused/count`|Total number of unused segments present in the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/pending/count`|Total number of pending segments present in the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/transactions/readOnly`|Number of read-only transactions performed on the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/transactions/readWrite`|Number of read-write transactions performed on the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/transactions/writeOnly`|Number of write-only transactions performed on the cache for a single datasource. These transactions happen only if the cache is operating in mode `ifSynced` and the first sync on the leader Overlord is not complete yet.|`dataSource`|
 |`segment/metadataCache/sync/time`|Number of milliseconds taken for the cache to sync with the metadata store.||
+|`segment/metadataCache/fetchIds/time`|Time taken in a sync to fetch the IDs of used segments from the metadata store.||
+|`segment/metadataCache/fetchPayloads/time`|Time taken in a sync to fetch the payloads of used segments that have changed since the last sync.||
+|`segment/metadataCache/fetchPending/time`|Time taken in a sync to fetch pending segments from the metadata store.||
+|`segment/metadataCache/fetchSchemas/time`|Time taken in a sync to fetch segment schemas from the metadata store. Emitted only when centralized datasource schema is enabled.||
+|`segment/metadataCache/fetchIndexingStates/time`|Time taken in a sync to fetch segment indexing states from the metadata store.||
+|`segment/metadataCache/updateIds/time`|Time taken in a sync to reconcile the cached segment IDs of each datasource with the metadata store.||
+|`segment/metadataCache/updateSnapshot/time`|Time taken in a sync to rebuild the datasource snapshot from the cache.||
 |`segment/metadataCache/dataSource/deleted`|Indicates that a datasource has no used or pending segments anymore and has been removed from the cache.|`dataSource`|
 |`segment/metadataCache/deleted`|Total number of segments deleted from the cache during the latest sync.||
 |`segment/metadataCache/skipped`|Total number of unparseable segment records that were skipped in the latest sync.||
@@ -390,6 +405,9 @@ The following metrics are emitted only when [segment metadata caching](../config
 |`segment/metadataCache/pending/deleted`|Number of pending segments deleted from the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/updated`|Number of pending segments updated in the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/skipped`|Number of unparseable pending segment records that were skipped in the latest sync.|`dataSource`|
+|`segment/metadataCache/schema/skipped`|Number of unparseable segment schema records that were skipped in the latest sync. Emitted only when centralized datasource schema is enabled.||
+|`segment/metadataCache/indexingState/added`|Number of segment indexing states added to the cache during the latest sync.||
+|`segment/metadataCache/indexingState/deleted`|Number of segment indexing states deleted from the cache during the latest sync.||
 
 ### Auto-kill unused segments
 

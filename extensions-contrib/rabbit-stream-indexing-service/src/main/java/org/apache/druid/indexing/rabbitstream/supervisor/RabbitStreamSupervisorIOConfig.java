@@ -33,6 +33,7 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
@@ -143,6 +144,33 @@ public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOCo
         ", lateMessageRejectionStartDateTime=" + getLateMessageRejectionStartDateTime() +
         ", idleConfig=" + getIdleConfig() +
         '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    RabbitStreamSupervisorIOConfig that = (RabbitStreamSupervisorIOConfig) o;
+    return pollTimeout == that.pollTimeout
+           && Objects.equals(uri, that.uri)
+           && Objects.equals(consumerProperties, that.consumerProperties);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), uri, consumerProperties, pollTimeout);
+  }
+
+  @Override
+  public RabbitStreamIOConfigBuilder toBuilder()
+  {
+    return new RabbitStreamIOConfigBuilder().copyFrom(this);
   }
 
 }

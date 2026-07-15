@@ -65,10 +65,15 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
   public static final String LAG_WEIGHT_METRIC = "task/autoScaler/costBased/lagWeight";
   public static final String IDLE_WEIGHT_METRIC = "task/autoScaler/costBased/idleWeight";
+  public static final String CURRENT_LAG_COST_METRIC = "task/autoScaler/costBased/currentLagCost";
+  public static final String CURRENT_IDLE_COST_METRIC = "task/autoScaler/costBased/currentIdleCost";
+  public static final String OPTIMAL_LAG_COST_METRIC = "task/autoScaler/costBased/optimalLagCost";
+  public static final String OPTIMAL_IDLE_COST_METRIC = "task/autoScaler/costBased/optimalIdleCost";
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
   public static final String INVALID_METRICS_COUNT = "task/autoScaler/costBased/invalidMetrics";
   public static final String AVG_PROCESSING_RATE_METRIC = "task/autoScaler/costBased/avgProcessingRate";
   public static final String AVG_POLL_IDLE_RATIO = "task/autoScaler/costBased/avgPollIdleRatio";
+  public static final String IDLE_RATIO_ESTIMATED_FROM_RATE = "task/autoScaler/costBased/idleRatioFromRate";
 
   /**
    * Maximum number of candidate task counts to evaluate above or below the current task count
@@ -258,7 +263,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     final int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(
         partitionCount,
-        currentTaskCount,
         config.getTaskCountMin(),
         config.getTaskCountMax()
     );
@@ -270,8 +274,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
 
     // Start with the current task count as optimal
+    final CostResult currentCost = costFunction.computeCost(metrics, currentTaskCount, config);
     int optimalTaskCount = currentTaskCount;
-    CostResult optimalCost = costFunction.computeCost(metrics, currentTaskCount, config);
+    CostResult optimalCost = currentCost;
+    final double idleRatioEstimatedFromRate = metrics.estimateIdleRatioFromProcessingRate();
 
     log.info(
         "Computing optimal taskCount for supervisor[%s] with metrics:"
@@ -282,7 +288,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         metrics.getAvgPartitionLag(),
         metrics.getAvgProcessingRate(),
         metrics.getMaxObservedRate(),
-        metrics.estimateIdleRatioFromProcessingRate(),
+        idleRatioEstimatedFromRate,
         metrics.getPollIdleRatio(),
         config.getLagWeight(),
         config.getIdleWeight()
@@ -322,16 +328,29 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
 
     emitMetric(getMetricBuilder().setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
-    emitMetric(getMetricBuilder().setMetric(LAG_WEIGHT_METRIC, optimalCost.lagCost()));
-    emitMetric(getMetricBuilder().setMetric(IDLE_WEIGHT_METRIC, optimalCost.idleCost()));
-    emitMetric(getMetricBuilder().setMetric(AVG_PROCESSING_RATE_METRIC, metrics.getAvgProcessingRate()));
-    emitMetric(getMetricBuilder().setMetric(AVG_POLL_IDLE_RATIO, metrics.getPollIdleRatio()));
+    emitMetric(getMetricBuilder().setMetric(LAG_WEIGHT_METRIC, config.getLagWeight()));
+    emitMetric(getMetricBuilder().setMetric(IDLE_WEIGHT_METRIC, config.getIdleWeight()));
+    emitMetric(getMetricBuilder().setMetric(CURRENT_LAG_COST_METRIC, currentCost.lagCost()));
+    emitMetric(getMetricBuilder().setMetric(CURRENT_IDLE_COST_METRIC, currentCost.idleCost()));
+
+    // Emit avg rate and idle metrics only if they are available
+    if (metrics.getAvgProcessingRate() >= 0) {
+      emitMetric(getMetricBuilder().setMetric(AVG_PROCESSING_RATE_METRIC, metrics.getAvgProcessingRate()));
+    }
+    if (metrics.getPollIdleRatio() >= 0) {
+      emitMetric(getMetricBuilder().setMetric(AVG_POLL_IDLE_RATIO, metrics.getPollIdleRatio()));
+    }
+    if (idleRatioEstimatedFromRate >= 0) {
+      emitMetric(getMetricBuilder().setMetric(IDLE_RATIO_ESTIMATED_FROM_RATE, idleRatioEstimatedFromRate));
+    }
 
     if (optimalTaskCount != currentTaskCount) {
       log.info(
           "Optimal taskCount[%d] for supervisor[%s] has lowest cost[%.4f] out of the following candidates: %n%s",
           optimalTaskCount, supervisorId, optimalCost.totalCost(), constructCostTable(validTaskCounts, costResults)
       );
+      emitMetric(getMetricBuilder().setMetric(OPTIMAL_LAG_COST_METRIC, optimalCost.lagCost()));
+      emitMetric(getMetricBuilder().setMetric(OPTIMAL_IDLE_COST_METRIC, optimalCost.idleCost()));
     }
 
     // Scale-up is applied eagerly; scale-down may be deferred by computeTaskCountForScaleAction().
@@ -342,17 +361,16 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    * Generates valid task counts by converting every possible partitions-per-task ratio
    * into a task count and filtering by configured min/max task count bounds.
    *
-   * @return list of valid task counts within bounds
+   * @return array of valid task counts within bounds
    */
   @SuppressWarnings({"ReassignedVariable"})
   static int[] computeValidTaskCounts(
       int partitionCount,
-      int currentTaskCount,
       int taskCountMin,
       int taskCountMax
   )
   {
-    if (partitionCount <= 0 || currentTaskCount <= 0) {
+    if (partitionCount <= 0) {
       return new int[]{};
     }
 
@@ -393,8 +411,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
           if (autoScalerMetricsMap instanceof Map) {
             Object pollIdleRatioAvg = ((Map<?, ?>) autoScalerMetricsMap).get(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY);
             if (pollIdleRatioAvg instanceof Number) {
-              sum += ((Number) pollIdleRatioAvg).doubleValue();
-              count++;
+              double taskPollIdleRatio = ((Number) pollIdleRatioAvg).doubleValue();
+              // Do not include negative values
+              if (taskPollIdleRatio >= 0) {
+                sum += taskPollIdleRatio;
+                count++;
+              }
             }
           }
         }
@@ -439,8 +461,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
               if (movingAvgObj instanceof Map) {
                 Object processedRate = ((Map<?, ?>) movingAvgObj).get(RowIngestionMeters.PROCESSED);
                 if (processedRate instanceof Number) {
-                  sum += ((Number) processedRate).doubleValue();
-                  count++;
+                  // Do not include negative values
+                  double taskProcessedRate = ((Number) processedRate).doubleValue();
+                  if (taskProcessedRate >= 0) {
+                    sum += taskProcessedRate;
+                    count++;
+                  }
                 }
               }
             }
