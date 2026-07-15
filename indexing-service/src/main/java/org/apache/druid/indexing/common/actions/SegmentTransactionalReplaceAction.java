@@ -24,12 +24,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.common.SegmentUpgradeMetrics;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -180,8 +182,18 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       List<PendingSegmentRecord> upgradedPendingSegments
   )
   {
-    if (upgradedPendingSegments.isEmpty()) {
+    if (upgradedPendingSegments == null || upgradedPendingSegments.isEmpty()) {
       return;
+    }
+
+    // Emit one persisted event per upgraded segment (rather than a single aggregate) regardless of whether a supervisor
+    // exists to receive them, so the total can be compared against the count actually announced by tasks and so each
+    // event carries the segment's interval and version.
+    for (PendingSegmentRecord upgradedPendingSegment : upgradedPendingSegments) {
+      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+      IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+      IndexTaskUtils.setPendingSegmentDimensions(metricBuilder, upgradedPendingSegment);
+      toolbox.getEmitter().emit(metricBuilder.setMetric(SegmentUpgradeMetrics.PERSISTED, 1));
     }
 
     final SupervisorManager supervisorManager = toolbox.getSupervisorManager();

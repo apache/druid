@@ -208,8 +208,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
       CompactionCandidateSearchPolicy policy
   )
   {
-    final int maxRowsPerSegment = 10_000;
-    final int compactedMaxRowsPerSegment = 5_000;
+    final int maxRowsPerSegment = 500;
+    final int compactedMaxRowsPerSegment = 5000;
 
     final int taskCount = 2;
 
@@ -230,8 +230,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         agg -> agg.hasSumAtLeast(1)
     );
     // Wait for some segments to be published
-    indexer.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("ingest/events/processed")
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("segment/txn/success")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
 
@@ -427,7 +427,6 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withTaskCount(taskCount)
-                .withTaskDuration(Period.minutes(10))
         )
         .withContext(Map.of("useConcurrentLocks", true))
         .withId(supervisorId)
