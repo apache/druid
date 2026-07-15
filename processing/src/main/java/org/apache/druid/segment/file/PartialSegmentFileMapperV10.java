@@ -61,9 +61,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * A {@link SegmentFileMapper} that downloads internal files on demand from deep storage via a
- * {@link SegmentRangeReader}. This enables partial segment downloads where only the files needed for a query are
- * fetched, rather than downloading the entire segment.
+ * A {@link SegmentFileMapper} that fetches internal files from deep storage via a {@link SegmentRangeReader},
+ * enabling partial segment downloads where only the files needed for a query are fetched rather than the entire
+ * segment.
+ * <p>
+ * <b>Downloads are always explicit.</b> Callers decide what to load and when: plan coalesced range reads with
+ * {@link #planFetch}/{@link #planParallelFetch}/{@link #planParallelFetchBundle} and execute them via
+ * {@link #fetchFiles}/{@link FetchRun}/{@link PlannedFetch}, or force whole units resident with
+ * {@link #ensureBundleDownloaded}/{@link #ensureAllDownloaded}. {@link #mapFile} never downloads: it only slices
+ * already-resident files and throws for a file that hasn't been fetched, so a caller that forgot to plan fails
+ * loudly instead of triggering a synchronous deep-storage read from whatever thread touched the column.
  * <p>
  * Locally, this mapper mirrors the original V10 container structure: each container from the segment file is
  * represented as a local sparse file at its original size, and only the byte ranges for downloaded internal files are
@@ -83,7 +90,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * different file in the segment's storage location.
  * <p>
  * Thread-safe for concurrent access from multiple queries. Per-file locks prevent duplicate downloads of the same
- * internal file.
+ * internal file across concurrently executing runs.
  *
  * @see SegmentFileMapperV10
  * @see SegmentRangeReader
@@ -458,7 +465,16 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       return null;
     }
 
-    ensureFileDownloaded(name, fileMetadata);
+    // Mapping never downloads, every caller is expected to have made the file resident through an explicit plan before
+    // reading it
+    if (!downloadedFiles.contains(name)) {
+      throw DruidException.defensive(
+          "Internal file[%s] of segment file[%s] is not resident; downloads must be planned and fetched explicitly "
+          + "before the file can be mapped",
+          name,
+          targetFilename
+      );
+    }
 
     // slice from the container mmap
     final MappedByteBuffer container = containers[fileMetadata.getContainer()];
@@ -755,12 +771,11 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
 
   /**
    * Execute one planned run: take every member's per-file lock in offset order (the canonical acquisition order
-   * shared by all {@link #fetchFiles} callers, so overlapping concurrent runs can't deadlock, and
-   * {@link #ensureFileDownloaded} holds at most one of these locks so it can't participate in a cycle either), trim
-   * files that became resident since planning off the run's edges, then stream the remaining span in a single range
-   * read and mark each covered file downloaded after the bytes are on disk (bytes-before-bits, preserving the bitmap
-   * corruption invariant). Interior files that became resident mid-plan are re-fetched with byte-identical data;
-   * {@link #markDownloaded}'s add-gate keeps the accounting straight.
+   * shared by all {@link #fetchFiles} callers; this is the only code path that takes file locks, so overlapping
+   * concurrent runs can't deadlock), trim files that became resident since planning off the run's edges, then stream
+   * the remaining span in a single range read and mark each covered file downloaded after the bytes are on disk
+   * (bytes-before-bits, preserving the bitmap corruption invariant). Interior files that became resident mid-plan are
+   * re-fetched with byte-identical data; {@link #markDownloaded}'s add-gate keeps the accounting straight.
    * <p>
    * Runs from one {@link #planFetch} cover disjoint files, so callers may execute them concurrently (each is one
    * deep-storage request); the caller must hold the same eviction-exclusion {@link #mapFile} requires for the
@@ -918,43 +933,11 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     return headerSize + container.getStartOffset() + fileMetadata.getStartOffset();
   }
 
-  private void ensureFileDownloaded(String name, SegmentInternalFileMetadata fileMetadata) throws IOException
-  {
-    // already downloaded, nothing to do
-    if (downloadedFiles.contains(name)) {
-      return;
-    }
-
-    final ReentrantLock lock = fileLocks.computeIfAbsent(name, k -> new ReentrantLock());
-    lock.lock();
-    try {
-      checkClosed();
-
-      if (downloadedFiles.contains(name)) {
-        return;
-      }
-
-      ensureContainerInitialized(fileMetadata.getContainer());
-      streamRangeIntoContainer(
-          fileMetadata.getContainer(),
-          computeAbsoluteOffset(fileMetadata),
-          fileMetadata.getStartOffset(),
-          fileMetadata.getSize(),
-          StringUtils.format("file[%s]", name)
-      );
-      markDownloaded(name, fileMetadata.getSize());
-    }
-    finally {
-      lock.unlock();
-      fileLocks.remove(name, lock);
-    }
-  }
-
   /**
    * Public entry point for cache-layer code that wants to ensure a container is materialized before any data is
    * downloaded into it (e.g. when a per-bundle cache entry is mounted, the entry pre-allocates its container files
-   * so that subsequent {@link #mapFile} calls have somewhere to write into and the cache layer can charge the
-   * reservation up front).
+   * so that subsequent fetches have somewhere to write into and the cache layer can charge the reservation up
+   * front).
    */
   public void initializeContainer(int containerIndex) throws IOException
   {
@@ -968,9 +951,9 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
    * in this container.
    * <p>
    * Used by per-bundle cache entries on unmount/eviction to release the disk and memory footprint of one bundle
-   * without affecting other bundles sharing the same {@link PartialSegmentFileMapperV10}. After eviction, subsequent
-   * {@link #mapFile} calls for files in this container will re-trigger downloads via {@link #initializeContainer}
-   * and the bitmap will be repopulated incrementally.
+   * without affecting other bundles sharing the same {@link PartialSegmentFileMapperV10}. After eviction, the
+   * container's files are non-resident again: {@link #mapFile} throws for them until a subsequent fetch re-downloads
+   * them (re-initializing the container and repopulating the bitmap incrementally).
    * <p>
    * <b>Concurrency contract.</b> The caller is responsible for ensuring no concurrent {@link #mapFile} (or
    * {@link #fetchFiles}/{@link #fetchRun}) call is in flight for any file in this container. This is enforced one layer up

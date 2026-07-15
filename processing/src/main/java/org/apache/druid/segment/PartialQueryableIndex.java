@@ -70,10 +70,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * A {@link QueryableIndex} that loads projection and base table columns on demand from a
- * {@link PartialSegmentFileMapperV10}. Schema queries (column names, types, intervals, metadata) are answered from
- * the {@link SegmentFileMetadata} alone without triggering any downloads. Column data is only downloaded when a column
- * is accessed via {@link #getColumnHolder(String)} or {@link #getProjection(CursorBuildSpec)}.
+ * A {@link QueryableIndex} over a {@link PartialSegmentFileMapperV10} whose columns are made resident by explicit,
+ * planned downloads. Schema queries (column names, types, intervals, metadata) are answered from the
+ * {@link SegmentFileMetadata} alone without touching column data. {@link #planCursorPrefetch} resolves what a
+ * {@link CursorBuildSpec} needs and plans the coalesced range reads that make it resident; only after those fetches
+ * execute may columns be read. Column deserialization stays lazy (memoized per-column suppliers), but the underlying
+ * files must already be resident: mapping a non-resident file throws rather than downloading, so a read outside a
+ * plan fails loudly instead of blocking a processing thread on deep-storage I/O.
  * <p>
  * Projection matching uses only metadata ({@link SegmentFileMetadata#getColumnDescriptors()} keys) to determine if
  * a projection can satisfy a query, avoiding downloads of projection data that won't be used.
@@ -102,9 +105,9 @@ public class PartialQueryableIndex implements QueryableIndex
   // segment-internal file prefix for the base table projection, used to translate column names to descriptor keys
   private final String baseProjectionPrefix;
 
-  // base table columns, built at construction time. each entry's supplier defers both mapFile() and column
-  // deserialization until the column is actually accessed, so queries only trigger downloads for the specific
-  // columns they use.
+  // base table columns, built at construction time. each entry's supplier defers mapFile() and column
+  // deserialization until the column is actually accessed; the files must already be resident by then (made so by a
+  // planned fetch), since mapFile() throws rather than downloads.
   private final Map<String, Supplier<BaseColumnHolder>> baseColumns;
 
   // projection columns, keyed by projection name. built on demand (per-projection) when the projection is matched.
@@ -304,8 +307,9 @@ public class PartialQueryableIndex implements QueryableIndex
   }
 
   /**
-   * Answers from metadata without triggering column downloads. The default implementation in {@link QueryableIndex}
-   * calls {@link #getColumnHolder(String)}, which would force a base table load.
+   * Answers from metadata without touching column data. The default implementation in {@link QueryableIndex}
+   * calls {@link #getColumnHolder(String)}, which would force base table column deserialization (and throw if the
+   * column isn't resident).
    */
   @Nullable
   @Override
@@ -324,7 +328,7 @@ public class PartialQueryableIndex implements QueryableIndex
    * resolve from the summary's typed clustering signature; data columns (and {@code __time}) resolve from the first
    * cluster group's {@link ColumnDescriptor} (all groups share the same per-group shape). Mirrors the eager
    * {@link SimpleQueryableIndex} clustered branch, but reads the descriptor directly rather than routing through a
-   * group sub-index's {@code getColumnHolder} (which would trigger a download).
+   * group sub-index's {@code getColumnHolder} (which would deserialize the column, throwing if it isn't resident).
    */
   @Nullable
   private ColumnCapabilities getClusteredColumnCapabilities(String column)
@@ -572,15 +576,15 @@ public class PartialQueryableIndex implements QueryableIndex
         // Materializing a projection column also materializes its same-named base column when one exists
         // (buildColumnSuppliers reads through the parent, e.g. for dictionary reuse), so those parents are part of
         // this query's working set: plan their files and hold the base bundle so the parent mmaps are
-        // eviction-excluded for the holder's whole lifetime. When the metadata predates recorded column file lists
-        // the parent files can't be enumerated; the bundle is then hold-only (no planned fetches) and the parents
-        // download lazily during materialization, under the hold, on the download executor.
+        // eviction-excluded for the holder's whole lifetime. Nothing downloads lazily (mapFile throws on
+        // non-resident files), so when the metadata predates recorded column file lists and the parent files can't
+        // be enumerated, planBaseTablePrefetch's fallback covers the whole base bundle.
         bundles.add(
             new PrefetchBundle(
                 Projections.BASE_TABLE_PROJECTION_NAME,
                 this,
                 parents,
-                metadata.getColumnFiles() == null ? List.of() : planBaseTablePrefetch(parents)
+                planBaseTablePrefetch(parents)
             )
         );
       }
@@ -636,8 +640,8 @@ public class PartialQueryableIndex implements QueryableIndex
 
   /**
    * Build a map of column name to per-column supplier for the given projection. Each supplier defers both
-   * {@link SegmentFileMapper#mapFile} and {@link ColumnDescriptor#read} until the column is actually accessed, so
-   * queries only trigger downloads for the specific columns they use.
+   * {@link SegmentFileMapper#mapFile} and {@link ColumnDescriptor#read} until the column is actually accessed, by
+   * which point the column's files must be resident (made so by a planned fetch).
    */
   private Map<String, Supplier<BaseColumnHolder>> buildProjectionColumnSuppliers(
       ProjectionMetadata projectionSpec,
@@ -655,9 +659,10 @@ public class PartialQueryableIndex implements QueryableIndex
 
   /**
    * Shared builder for lazy per-column suppliers. Each supplier is memoized and defers both
-   * {@link SegmentFileMapper#mapFile} and {@link ColumnDescriptor#read} until the column is actually accessed, so
-   * queries only trigger downloads for the specific columns they use. {@code fileNameFn} maps a logical column name to
-   * its segment-internal (smoosh) file name in the right bundle namespace.
+   * {@link SegmentFileMapper#mapFile} and {@link ColumnDescriptor#read} until the column is actually accessed, by
+   * which point the column's files must be resident (made so by a planned fetch, mapFile throws otherwise).
+   * {@code fileNameFn} maps a logical column name to its segment-internal (smoosh) file name in the right bundle
+   * namespace.
    */
   private Map<String, Supplier<BaseColumnHolder>> buildColumnSuppliers(
       @Nullable String timeColumnName,
