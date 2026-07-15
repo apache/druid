@@ -161,16 +161,20 @@ public class SegmentLoadDropHandler
         currentDropLatch.cancelOrAwait();
       }
 
+      final DataSegment loaded;
       try {
-        segmentManager.loadSegment(segment);
+        loaded = segmentManager.loadSegment(segment);
       }
       catch (Exception e) {
         removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
         throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
       }
       try {
-        // Announce segment even if the segment file already exists.
-        announcer.announceSegment(segment);
+        // Announce segment even if the segment file already exists. loadSegment returns a
+        // PartialLoadedDataSegment wrapper when the historical actually materialized a partial-load footprint;
+        // announcing that wrapper lets SegmentChangeRequestLoad.forAnnouncement stamp accurate loadedBytes on
+        // the wire form, so the coordinator's inventory sees the partial footprint rather than segment.getSize().
+        announcer.announceSegment(loaded);
       }
       catch (IOException e) {
         throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getId());

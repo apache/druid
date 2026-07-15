@@ -105,17 +105,20 @@ public class DruidServerPartialLoadTest
   }
 
   @Test
-  void testFullFallbackProfileUsesFullSegmentSize()
+  void testFullFallbackLoadedBytesUsesFullSegmentSize()
   {
     // Historical was asked to partial-load but fell back to full download; profile.loadedBytes equals
     // segment.getSize, so currSize accounting reflects the full footprint.
     DruidServer server = newServer();
     DataSegment segment = buildSegment("ds", "v1", 1000L);
-    PartialLoadProfile profile = PartialLoadProfile.forFullFallback(FINGERPRINT, segment.getSize());
+    PartialLoadProfile profile = PartialLoadProfile.forLoaded(
+        Map.of("type", "partialProjection", "fingerprint", FINGERPRINT),
+        FINGERPRINT,
+        segment.getSize()
+    );
     server.addDataSegment(segment, profile);
     Assertions.assertEquals(1000L, server.getCurrSize());
     Assertions.assertEquals(profile, server.getPartialLoadProfile(segment.getId()));
-    Assertions.assertTrue(profile.isFullFallback());
   }
 
   @Test

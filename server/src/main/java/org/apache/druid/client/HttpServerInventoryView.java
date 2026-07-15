@@ -674,19 +674,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     /**
      * Builds a {@link PartialLoadProfile} from a load announcement when the historical populated the partial-load
      * wire fields ({@code fingerprint} + {@code loadedBytes}). Returns {@code null} for plain full-load
-     * announcements.
-     * <p>
-     * Picks between {@link PartialLoadProfile#forLoaded forLoaded} and
-     * {@link PartialLoadProfile#forFullFallback forFullFallback} based on what the historical actually realized:
-     * <ul>
-     *   <li>If {@code loadedBytes} is strictly less than the segment's full size <em>and</em> the announced segment
-     *       carries a {@link PartialLoadSpec} wrapper on its load spec, the historical honored the partial request —
-     *       preserve the wrapped load spec on the profile so per-replica observability (e.g.
-     *       {@link PartialLoadProfile#isFullFallback}) reports correctly.</li>
-     *   <li>Otherwise the historical either fell back to full or doesn't yet implement scheme-specific partial
-     *       loading; build a full-fallback profile (the wire fingerprint still satisfies the rule, so the
-     *       coordinator's reconciler counts it as matching without reload thrash).</li>
-     * </ul>
+     * announcements, or defensively when a fingerprint/loadedBytes pair arrives without a partial-load wrapper on
+     * the segment's load spec (a wire-form contract violation from the historical).
      */
     @Nullable
     private static PartialLoadProfile partialLoadProfileFor(SegmentChangeRequestLoad loadRequest)
@@ -698,10 +687,14 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       }
       final DataSegment segment = loadRequest.getSegment();
       final Map<String, Object> loadSpec = segment.getLoadSpec();
-      if (loadedBytes < segment.getSize() && PartialLoadSpec.detectPartialLoadSpec(loadSpec)) {
-        return PartialLoadProfile.forLoaded(loadSpec, fingerprint, loadedBytes);
+      if (!PartialLoadSpec.detectPartialLoadSpec(loadSpec)) {
+        // fingerprint/loadedBytes on the wire without a partial-load wrapper on the segment; shouldn't happen
+        // (SegmentChangeRequestLoad.forAnnouncement only stamps them when the loadSpec is partial or a
+        // DataSegmentAndLoadProfile carries the profile). Fall back to null so the inventory treats this as a
+        // plain load rather than materializing a nonsense profile.
+        return null;
       }
-      return PartialLoadProfile.forFullFallback(fingerprint, loadedBytes);
+      return PartialLoadProfile.forLoaded(loadSpec, fingerprint, loadedBytes);
     }
 
     private void removeSegment(final DataSegment segment, boolean fullSync)

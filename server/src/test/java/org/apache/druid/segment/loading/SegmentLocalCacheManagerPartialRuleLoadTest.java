@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import org.apache.druid.client.DataSegmentAndLoadProfile;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
@@ -33,6 +34,7 @@ import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -51,6 +53,7 @@ import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -286,6 +289,101 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     Assertions.assertTrue(
         mapper.isBundleFullyDownloaded(Projections.BASE_TABLE_PROJECTION_NAME),
         "base dependency of the selected projection must be fully downloaded eagerly, not just sparse-mounted"
+    );
+  }
+
+  @Test
+  void testLoadPartialReturnsDataSegmentAndLoadProfileWithRealizedBytes() throws Exception
+  {
+    // load() on the partial-load path returns a DataSegmentAndLoadProfile carrying a PartialLoadProfile.forLoaded with
+    // the actual on-disk footprint. Under a projection rule, that footprint is metadata header + rule-selected
+    // projection bundle + __base (transitive dependency pinned via the projection's parent-hold). Anything less
+    // would under-report to the coordinator: the historical downloads __base as part of the rule (see
+    // awaitEagerDownloadsOrClearRule's dep expansion), so its bytes belong in the announcement's loadedBytes.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    final DataSegment loaded = manager.load(partialWrapperSegment(List.of(AGG_BUNDLE)));
+
+    Assertions.assertInstanceOf(
+        DataSegmentAndLoadProfile.class,
+        loaded,
+        "load on the partial-rule path must return a DataSegmentAndLoadProfile so the announcer can report actual footprint"
+    );
+    final PartialLoadProfile profile = ((DataSegmentAndLoadProfile) loaded).profile();
+    Assertions.assertEquals(FINGERPRINT, profile.fingerprint(), "profile's fingerprint must match the applied rule");
+
+    // Sum the parts we expect: metadata + AGG_BUNDLE (rule-selected) + __base (transitive dep).
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    final PartialSegmentBundleCacheEntry aggEntry = location.getCacheEntry(
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE)
+    );
+    final PartialSegmentBundleCacheEntry baseEntry = location.getCacheEntry(
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME)
+    );
+    Assertions.assertNotNull(aggEntry, "rule-selected projection bundle should be present");
+    Assertions.assertNotNull(baseEntry, "transitive __base dependency should be present");
+    final long expectedRealizedBytes = metadata.getSize() + aggEntry.getSize() + baseEntry.getSize();
+
+    Assertions.assertEquals(
+        Long.valueOf(expectedRealizedBytes),
+        profile.loadedBytes(),
+        "profile's loadedBytes must include metadata + rule-selected projection + __base dependency; missing any of "
+        + "these would under-report the on-disk footprint to the coordinator"
+    );
+    Assertions.assertTrue(
+        baseEntry.getSize() > 0,
+        "sanity check: __base's size should be non-zero (so the dep-inclusion assertion is meaningful)"
+    );
+  }
+  @Test
+  void testRealizedBytesIncludesPinnedBaseDependency() throws Exception
+  {
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    manager.load(partialWrapperSegment(List.of(AGG_BUNDLE)));
+
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    final long metadataBytes = metadata.getSize();
+    final long aggBytes = bundleEntry(location, AGG_BUNDLE).getSize();
+    final long baseBytes = bundleEntry(location, Projections.BASE_TABLE_PROJECTION_NAME).getSize();
+
+    Assertions.assertTrue(baseBytes > 0, "base dependency must occupy real on-disk bytes");
+
+    final long realized = metadata.getRealizedBytes();
+
+    Assertions.assertEquals(
+        metadataBytes + aggBytes + baseBytes,
+        realized,
+        StringUtils.format(
+            "realizedBytes must include the pinned __base dependency: metadata=%d + selected=%d + base=%d = %d, "
+            + "but got %d (short by %d, exactly the base footprint)",
+            metadataBytes, aggBytes, baseBytes, metadataBytes + aggBytes + baseBytes,
+            realized, (metadataBytes + aggBytes + baseBytes) - realized
+        )
+    );
+  }
+
+  @Test
+  void testRealizedBytesCountsSharedBaseDependencyOnce() throws Exception
+  {
+    // Two projections in a single rule both pin the same __base. The base bytes must be counted exactly once.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    manager.load(partialWrapperSegment(List.of(AGG_BUNDLE, OTHER_AGG_BUNDLE)));
+
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    final long metadataBytes = metadata.getSize();
+    final long aggBytes = bundleEntry(location, AGG_BUNDLE).getSize();
+    final long otherBytes = bundleEntry(location, OTHER_AGG_BUNDLE).getSize();
+    final long baseBytes = bundleEntry(location, Projections.BASE_TABLE_PROJECTION_NAME).getSize();
+
+    Assertions.assertEquals(
+        metadataBytes + aggBytes + otherBytes + baseBytes,
+        metadata.getRealizedBytes(),
+        "realizedBytes must include the shared __base exactly once across both dependent projections"
     );
   }
 
@@ -588,6 +686,14 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     finally {
       queryHold.close();
     }
+  }
+
+  private static CacheEntry bundleEntry(StorageLocation location, String bundleName)
+  {
+    final CacheEntry entry =
+        location.getCacheEntry(new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, bundleName));
+    Assertions.assertNotNull(entry, "bundle[" + bundleName + "] must be resident after load");
+    return entry;
   }
 
   private SegmentLocalCacheManager makeManager(boolean virtualStorage, boolean partialDownloadsEnabled)

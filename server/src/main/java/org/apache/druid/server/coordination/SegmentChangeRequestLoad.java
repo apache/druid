@@ -23,9 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import org.apache.druid.client.DataSegmentAndLoadProfile;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.PartialLoadSpec;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -44,15 +46,20 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
   private static final Logger log = new Logger(SegmentChangeRequestLoad.class);
 
   /**
-   * Builds a load announcement for a segment loaded on a historical. Any {@link PartialLoadSpec} subtype (identified
-   * by the wire-form conventions documented on that class: a {@code type} starting with
-   * {@link PartialLoadSpec#TYPE_PREFIX}, plus top-level {@code fingerprint} and {@code delegate} fields) produces a
-   * "full-fallback" announcement: the wrapper's fingerprint and {@link DataSegment#getSize()} ride along as
-   * {@code loadedBytes}, satisfying the coordinator's partial-load rule even when the historical did a regular full
-   * load via the inner delegate. Without this, the coordinator's reconciler would treat the replica as stale and
-   * re-queue the load indefinitely.
-   * <p>
-   * Detection is convention-based (no subtype allowlist) so future {@link PartialLoadSpec} subtypes work
+   * Builds a load announcement for a segment loaded on a historical. Two ways the announcement carries partial-load
+   * metadata:
+   * <ul>
+   *   <li>If {@code segment} is a {@link DataSegmentAndLoadProfile}, the historical materialized a real partial
+   *       footprint and attached a {@link PartialLoadProfile}. The profile's {@code fingerprint} and
+   *       {@code loadedBytes} ride directly onto the wire form. This is the accurate on-disk-footprint path.
+   *   <li>Otherwise, if the segment's {@code loadSpec} is a {@link PartialLoadSpec} wrapper (identified by wire-form
+   *       conventions: a {@code type} starting with {@link PartialLoadSpec#TYPE_PREFIX}, plus top-level
+   *       {@code fingerprint} and {@code delegate} fields), the historical was asked to partial-load but fell back
+   *       to a full download via the inner delegate (zipped storage, capability mismatch, etc.). {@code loadedBytes}
+   *       is {@link DataSegment#getSize()} so the fingerprint still satisfies the coordinator's partial-load rule and
+   *       no reload-thrash occurs.
+   * </ul>
+   * Fallback detection is convention-based (no subtype allowlist) so future {@link PartialLoadSpec} subtypes work
    * automatically without touching this code.
    * <p>
    * For segments loaded without a partial-load wrapper (the common case), this returns a bare load request with no
@@ -60,8 +67,13 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
    */
   public static SegmentChangeRequestLoad forAnnouncement(DataSegment segment)
   {
+    final PartialLoadProfile profile = DataSegmentAndLoadProfile.profileOf(segment);
+    if (profile != null) {
+      return new SegmentChangeRequestLoad(segment, profile.fingerprint(), profile.loadedBytes());
+    }
     final Map<String, Object> loadSpec = segment.getLoadSpec();
     if (PartialLoadSpec.detectPartialLoadSpec(loadSpec)) {
+      // Historical didn't wrap, treat as full-fallback: fingerprint from the loadSpec, loadedBytes = full size.
       return new SegmentChangeRequestLoad(segment, (String) loadSpec.get("fingerprint"), segment.getSize());
     }
     if (PartialLoadSpec.hasPartialTypePrefix(loadSpec)) {
