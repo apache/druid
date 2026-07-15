@@ -34,6 +34,7 @@ import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -355,7 +356,7 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     Assertions.assertEquals(
         metadataBytes + aggBytes + baseBytes,
         realized,
-        String.format(
+        StringUtils.format(
             "realizedBytes must include the pinned __base dependency: metadata=%d + selected=%d + base=%d = %d, "
             + "but got %d (short by %d, exactly the base footprint)",
             metadataBytes, aggBytes, baseBytes, metadataBytes + aggBytes + baseBytes,
