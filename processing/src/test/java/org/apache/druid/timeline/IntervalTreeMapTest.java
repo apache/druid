@@ -41,27 +41,27 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class IntervalTreeTest
+public class IntervalTreeMapTest
 {
 
   @Test
   public void testSize()
   {
-    IntervalTree<String> tree = setupTree(baseData);
+    IntervalTreeMap<String> tree = setupTree(baseData);
     Assert.assertEquals("Size", 6, tree.size());
   }
 
   @Test
   public void testPut()
   {
-    IntervalTree<String> tree = setupTree(baseData);
+    IntervalTreeMap<String> tree = setupTree(baseData);
     compareData(baseData, tree);
   }
 
   @Test
   public void testReplace()
   {
-    IntervalTree<String> tree = setupTree(baseData);
+    IntervalTreeMap<String> tree = setupTree(baseData);
     Pair<Interval, String> entry = baseData.get(2);
     Interval interval = entry.lhs;
     String value = entry.rhs;
@@ -73,7 +73,7 @@ public class IntervalTreeTest
   @Test
   public void testGet()
   {
-    IntervalTree<String> tree = setupTree(baseData);
+    IntervalTreeMap<String> tree = setupTree(baseData);
     baseData.forEach(
         (Pair<Interval, String> item) -> {
           Interval interval = item.lhs;
@@ -87,7 +87,7 @@ public class IntervalTreeTest
   @Test
   public void testValues()
   {
-    IntervalTree<String> tree = setupTree(baseData);
+    IntervalTreeMap<String> tree = setupTree(baseData);
     Collection<String> values = tree.values();
     Collection<String> bvalues = baseData.stream().map(entry -> entry.rhs).collect(Collectors.toList());
     Assert.assertTrue("values", CollectionUtils.isEqualCollection(bvalues, values));
@@ -96,7 +96,7 @@ public class IntervalTreeTest
   @Test
   public void testMatch()
   {
-    IntervalTree<String> tree = setupTree(baseData);
+    IntervalTreeMap<String> tree = setupTree(baseData);
     Map<Interval, String> entries = tree.findEncompassing(Intervals.of("2025-01-04T00:00:00/P1D"));
 
     Assert.assertEquals(1, entries.size());
@@ -106,7 +106,7 @@ public class IntervalTreeTest
   @Test
   public void testNoMatch()
   {
-    IntervalTree<String> tree = setupTree(baseData);
+    IntervalTreeMap<String> tree = setupTree(baseData);
     Map<Interval, String> entries = tree.findEncompassing(Intervals.of("2025-01-07T00:00:00/P1D"));
 
     Assert.assertEquals(0, entries.size());
@@ -115,7 +115,7 @@ public class IntervalTreeTest
   @Test
   public void testOverlap()
   {
-    IntervalTree<String> tree = setupTree(overlapData);
+    IntervalTreeMap<String> tree = setupTree(overlapData);
     Map<Interval, String> entries = tree.findEncompassing(Intervals.of("2025-01-02T09:00:00/PT1H"));
 
     Assert.assertEquals(2, entries.size());
@@ -126,7 +126,7 @@ public class IntervalTreeTest
   @Test
   public void testSparseOverlap()
   {
-    IntervalTree<String> tree = setupTree(sparseOverlapData);
+    IntervalTreeMap<String> tree = setupTree(sparseOverlapData);
     Map<Interval, String> entries = tree.findEncompassing(Intervals.of("2025-06-03T00:00:00/P1D"));
 
     Assert.assertEquals(4, entries.size());
@@ -139,7 +139,7 @@ public class IntervalTreeTest
   @Test
   public void testRemove()
   {
-    IntervalTree<String> tree = setupTree(sparseOverlapData);
+    IntervalTreeMap<String> tree = setupTree(sparseOverlapData);
     int size = tree.size();
 
     // Remove node that does not exist
@@ -193,7 +193,7 @@ public class IntervalTreeTest
   @Test
   public void testRemoveRootAndMatch()
   {
-    IntervalTree<String> tree = setupTree(baseData);
+    IntervalTreeMap<String> tree = setupTree(baseData);
     tree.remove(Intervals.of("2025-01-03T00:00:00/P1D"));
     Assert.assertEquals("Size", 5, tree.size());
     Map<Interval, String> entries = tree.findEncompassing(Intervals.of("2025-01-04T00:00:00/P1D"));
@@ -204,7 +204,7 @@ public class IntervalTreeTest
   @Test
   public void testRemoveMultiple()
   {
-    IntervalTree<String> tree = setupTree(sparseOverlapData);
+    IntervalTreeMap<String> tree = setupTree(sparseOverlapData);
     int isize = tree.size();
     tree.remove(Intervals.of("2025-01-12T00:00:00/P1D"));
     tree.remove(Intervals.of("2025-06-03T00:00:00/P1D"));
@@ -216,7 +216,7 @@ public class IntervalTreeTest
   @Test
   public void testClear()
   {
-    IntervalTree<String> tree = setupTree(baseData);
+    IntervalTreeMap<String> tree = setupTree(baseData);
     tree.clear();
     Assert.assertEquals("Size", 0, tree.size());
   }
@@ -224,7 +224,7 @@ public class IntervalTreeTest
   @Test
   public void testLargeLoadTree()
   {
-    IntervalTree<String> tree = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
+    IntervalTreeMap<String> tree = new IntervalTreeMap<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
     List<Pair<Interval, String>> expectedData = new ArrayList<>();
     Set<String> existingIntervals = new HashSet<>();
     Random random = ThreadLocalRandom.current();
@@ -253,7 +253,7 @@ public class IntervalTreeTest
   @Test
   public void testPerf()
   {
-    IntervalTree<String> tree = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
+    IntervalTreeMap<String> tree = new IntervalTreeMap<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
     List<Pair<Interval, String>> expectedData = new ArrayList<>();
     Map<Interval, String> mappedData = new HashMap<>();
     Set<String> existingIntervals = new HashSet<>();
@@ -299,7 +299,7 @@ public class IntervalTreeTest
   @Test
   public void testAutoRebalance()
   {
-    IntervalTree<String> tree = setupTree(sparseOverlapData);
+    IntervalTreeMap<String> tree = setupTree(sparseOverlapData);
     Assert.assertEquals("Height", 4, tree.height());
     compareData(sparseOverlapData, tree);
   }
@@ -308,7 +308,7 @@ public class IntervalTreeTest
   public void testManualRebalance()
   {
     // Set a high threshold so auto-rebalance does not happen
-    IntervalTree<String> tree = setupTree(sparseOverlapData, t -> t.setImbalanceTolerance(100));
+    IntervalTreeMap<String> tree = setupTree(sparseOverlapData, t -> t.setImbalanceTolerance(100));
     Assert.assertEquals("Height", 4, tree.height());
     compareData(sparseOverlapData, tree);
     tree.rebalance();
@@ -319,7 +319,7 @@ public class IntervalTreeTest
   @Test
   public void testIsEmpty()
   {
-    IntervalTree<String> tree = setupTree(sparseOverlapData);
+    IntervalTreeMap<String> tree = setupTree(sparseOverlapData);
     Assert.assertFalse("Not Empty", tree.isEmpty());
     sparseOverlapData.forEach(t -> tree.remove(t.lhs));
     Assert.assertTrue("Empty", tree.isEmpty());
@@ -328,7 +328,7 @@ public class IntervalTreeTest
   @Test
   public void testFirstEntryAndKey()
   {
-    IntervalTree<String> tree = setupTree(sparseOverlapData);
+    IntervalTreeMap<String> tree = setupTree(sparseOverlapData);
     Map.Entry<Interval, String> entry = tree.firstEntry();
     Interval matchInterval = Intervals.of("2025-01-01T00:00:00/P1D");
     Assert.assertEquals("Entry interval", matchInterval, entry.getKey());
@@ -341,7 +341,7 @@ public class IntervalTreeTest
   @Test
   public void testLastEntryAndKey()
   {
-    IntervalTree<String> tree = setupTree(sparseOverlapData);
+    IntervalTreeMap<String> tree = setupTree(sparseOverlapData);
     Map.Entry<Interval, String> entry = tree.lastEntry();
     Interval matchInterval = Intervals.of("2025-10-06T00:00:00/P1M");
     Assert.assertEquals("Entry interval", matchInterval, entry.getKey());
@@ -354,7 +354,7 @@ public class IntervalTreeTest
   @Test
   public void testFloorKey()
   {
-    IntervalTree<String> tree = setupTree(sparseOverlapData);
+    IntervalTreeMap<String> tree = setupTree(sparseOverlapData);
 
     // Only one smaller entry
     Interval floor = tree.floorKey(Intervals.of("2025-01-11T00:00:00/P1D"));
@@ -384,7 +384,7 @@ public class IntervalTreeTest
   @Test
   public void testLowerKey()
   {
-    IntervalTree<String> tree = setupTree(sparseOverlapData);
+    IntervalTreeMap<String> tree = setupTree(sparseOverlapData);
 
     // Only one smaller entry
     Interval lower = tree.lowerKey(Intervals.of("2025-01-11T00:00:00/P1D"));
@@ -414,7 +414,7 @@ public class IntervalTreeTest
   @Test
   public void testCeiinglKey()
   {
-    IntervalTree<String> tree = setupTree(sparseOverlapData);
+    IntervalTreeMap<String> tree = setupTree(sparseOverlapData);
 
     // First entry
     Interval ceiling = tree.ceilingKey(Intervals.of("2024-12-31T00:00:00/P1D"));
@@ -444,7 +444,7 @@ public class IntervalTreeTest
   @Test
   public void testHigherKey()
   {
-    IntervalTree<String> tree = setupTree(sparseOverlapData);
+    IntervalTreeMap<String> tree = setupTree(sparseOverlapData);
 
     // First entry
     Interval higher = tree.higherKey(Intervals.of("2024-12-31T00:00:00/P1D"));
@@ -471,7 +471,7 @@ public class IntervalTreeTest
     Assert.assertNull("Higher key 6", higher);
   }
 
-  private void compareData(List<Pair<Interval, String>> inputData, IntervalTree<String> tree)
+  private void compareData(List<Pair<Interval, String>> inputData, IntervalTreeMap<String> tree)
   {
     //Iterator<Map.Entry<Interval, String>> iterator = tree.inOrderTraverse();
     Iterator<Map.Entry<Interval, String>> iterator = tree.entrySet().iterator();
@@ -528,14 +528,14 @@ public class IntervalTreeTest
 
   }
 
-  private IntervalTree<String> setupTree(List<Pair<Interval, String>> inputData)
+  private IntervalTreeMap<String> setupTree(List<Pair<Interval, String>> inputData)
   {
     return setupTree(inputData, null);
   }
 
-  private IntervalTree<String> setupTree(List<Pair<Interval, String>> inputData, Consumer<IntervalTree<String>> setupFunc)
+  private IntervalTreeMap<String> setupTree(List<Pair<Interval, String>> inputData, Consumer<IntervalTreeMap<String>> setupFunc)
   {
-    IntervalTree<String> tree = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
+    IntervalTreeMap<String> tree = new IntervalTreeMap<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
     if (setupFunc != null) {
       setupFunc.accept(tree);
     }

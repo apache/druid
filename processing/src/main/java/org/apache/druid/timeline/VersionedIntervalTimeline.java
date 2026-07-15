@@ -88,7 +88,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   // true interval -> version -> timelineEntry
   private final Map<Interval, TreeMap<VersionType, TimelineEntry>> allTimelineEntries = new HashMap<>();
   // Only instantiated and used when fastIntervalSearch is enabled
-  private IntervalTree<TreeMap<VersionType, TimelineEntry>> allTimeIntervals;
+  private IntervalTreeMap<TreeMap<VersionType, TimelineEntry>> allTimeIntervals;
   private final AtomicInteger numObjects = new AtomicInteger();
 
   private final Comparator<? super VersionType> versionComparator;
@@ -121,9 +121,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     this.skipObjectsWithNoData = skipObjectsWithNoData;
     this.fastIntervalSearch = fastIntervalSearch;
     if (fastIntervalSearch) {
-      allTimeIntervals = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
-      this.completePartitionsTimeline = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
-      this.incompletePartitionsTimeline = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
+      allTimeIntervals = new IntervalTreeMap<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
+      this.completePartitionsTimeline = new IntervalTreeMap<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
+      this.incompletePartitionsTimeline = new IntervalTreeMap<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
     } else {
       this.completePartitionsTimeline = new TreeMap<>(Comparators.intervalsByStartThenEnd());
       this.incompletePartitionsTimeline = new TreeMap<>(Comparators.intervalsByStartThenEnd());
@@ -804,7 +804,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     }
 
     if (fastIntervalSearch) {
-      IntervalTree<TimelineEntry> tree = (IntervalTree<TimelineEntry>) timeline;
+      IntervalTreeMap<TimelineEntry> tree = (IntervalTreeMap<TimelineEntry>) timeline;
       tree.forEachMatching(timelineInterval -> timelineInterval.overlaps(interval),
           (timelineInterval, val) -> {
             if (!skipObjectsWithNoData || val.partitionHolder.hasData()) {

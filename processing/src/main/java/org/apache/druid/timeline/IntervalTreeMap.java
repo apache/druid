@@ -42,7 +42,8 @@ import java.util.function.BiConsumer;
 /**
  * A variation of Interval Trees (https://en.wikipedia.org/wiki/Interval_tree)
  * Custom optimizations for faster interval search and additional support for specific joda Interval comparator
- * arithmetic used in the project
+ * arithmetic used in the project. Additionally, it implements NavigableMap interface with relevant methods for
+ * traversal of the entries.
  * <p>
  * <p>
  * Multiple different intervals can be added to the tree. It can then be searched to find all intervals matching a given
@@ -65,7 +66,7 @@ import java.util.function.BiConsumer;
  * Not thread safe.
  * <p>
  */
-public class IntervalTree<T> extends AbstractMap<Interval, T> implements NavigableMap<Interval, T>
+public class IntervalTreeMap<T> extends AbstractMap<Interval, T> implements NavigableMap<Interval, T>
 {
   // The compartor for comparing the interval start timnes
   private final Comparator<Interval> startComparator;
@@ -82,7 +83,7 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
 
   private final EntrySet entrySet = new EntrySet();
 
-  public IntervalTree(Comparator<Interval> startComparator, Comparator<Interval> endComparator)
+  public IntervalTreeMap(Comparator<Interval> startComparator, Comparator<Interval> endComparator)
   {
     this.startComparator = startComparator;
     this.endComparator = endComparator;
@@ -734,13 +735,13 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     @Override
     public int size()
     {
-      return IntervalTree.this.size;
+      return IntervalTreeMap.this.size;
     }
 
     class EntrySetIterator implements Iterator<Map.Entry<Interval, T>>
     {
 
-      Node<T> current = firstEntry(IntervalTree.this.root);
+      Node<T> current = firstEntry(IntervalTreeMap.this.root);
 
       @Override
       public boolean hasNext()
