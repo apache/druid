@@ -125,6 +125,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     EasyMock.expect(tuningConfig.isLogParseExceptions()).andReturn(false).anyTimes();
     EasyMock.expect(tuningConfig.getMaxParseExceptions()).andReturn(10).anyTimes();
     EasyMock.expect(tuningConfig.getMaxSavedParseExceptions()).andReturn(10).anyTimes();
+    EasyMock.expect(tuningConfig.getStreamingPartitionsSpec()).andReturn(null).anyTimes();
     replay(tuningConfig);
 
     SeekableStreamIndexTaskIOConfig<String, String> ioConfig = new TestSeekableStreamIndexTaskIOConfig();
