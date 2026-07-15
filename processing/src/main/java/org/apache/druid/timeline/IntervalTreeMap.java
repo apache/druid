@@ -21,6 +21,7 @@ package org.apache.druid.timeline;
 
 import com.google.common.base.Predicate;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.joda.time.Interval;
 
@@ -827,8 +828,11 @@ public class IntervalTreeMap<T> extends AbstractMap<Interval, T> implements Navi
     }
   }
 
-  @VisibleForTesting
-  public String print()
+  /**
+   * @return The contents of the tree as a string
+   */
+  @Override
+  public @Nullable String toString()
   {
     return (root != null) ? root.print(1) : null;
   }
