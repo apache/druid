@@ -154,43 +154,6 @@ class QueryableIndexCursorFactoryClusteredTest
     }
   }
 
-  private static InputRow row(String tenant, String ts, String region)
-  {
-    return new MapBasedInputRow(
-        DateTimes.of(ts),
-        List.of("tenant", "region"),
-        Map.of("tenant", tenant, "region", region)
-    );
-  }
-
-  private QueryableIndex buildSegment(List<InputRow> rows)
-  {
-    final IncrementalIndexSchema schema =
-        IncrementalIndexSchema.builder()
-                              .withMinTimestamp(INTERVAL.getStartMillis())
-                              .withTimestampSpec(new TimestampSpec("__time", "auto", null))
-                              .withQueryGranularity(Granularities.NONE)
-                              .withDimensionsSpec(CLUSTER_SPEC.getDimensionsSpec())
-                              .withRollup(false)
-                              .withClusterSpec(CLUSTER_SPEC)
-                              .build();
-    return IndexBuilder.create()
-                       .useV10()
-                       .tmpDir(tmpDir)
-                       .schema(schema)
-                       .rows(rows)
-                       .buildMMappedIndex(INTERVAL);
-  }
-
-  private QueryableIndex standardTwoGroup()
-  {
-    return buildSegment(List.of(
-        row("acme", "2025-01-01T00:00:00", "us-east-1"),
-        row("acme", "2025-01-01T01:00:00", "us-west-2"),
-        row("globex", "2025-01-01T00:30:00", "eu-west-1")
-    ));
-  }
-
   /**
    * Cluster spec for a segment clustered on {@code tenant_lower := lower(tenant)} (a clustering column produced by a
    * group VC; raw {@code tenant} is NOT a stored column) plus a non-clustering materialized
@@ -211,29 +174,6 @@ class QueryableIndexCursorFactoryClusteredTest
           )
           .clusteringColumns("tenant_lower")
           .build();
-
-  private QueryableIndex buildVirtualClusteringSegment()
-  {
-    final IncrementalIndexSchema schema =
-        IncrementalIndexSchema.builder()
-                              .withMinTimestamp(INTERVAL.getStartMillis())
-                              .withTimestampSpec(new TimestampSpec("__time", "auto", null))
-                              .withQueryGranularity(Granularities.NONE)
-                              .withDimensionsSpec(VIRTUAL_CLUSTER_SPEC.getDimensionsSpec())
-                              .withRollup(false)
-                              .withClusterSpec(VIRTUAL_CLUSTER_SPEC)
-                              .build();
-    return IndexBuilder.create()
-                       .useV10()
-                       .tmpDir(tmpDir)
-                       .schema(schema)
-                       .rows(List.of(
-                           row("Acme", "2025-01-01T00:00:00", "us-east-1"),
-                           row("Acme", "2025-01-01T01:00:00", "us-west-2"),
-                           row("Globex", "2025-01-01T00:30:00", "eu-west-1")
-                       ))
-                       .buildMMappedIndex(INTERVAL);
-  }
 
   @Test
   void testQueryVcEquivalentToClusteringColumnReadsMaterializedColumnViaAsCursor()
@@ -359,6 +299,62 @@ class QueryableIndexCursorFactoryClusteredTest
   }
 
   @Test
+  void testResidualPhysicalFilterPreservedAlongsideRemappedClusteringVc()
+  {
+    // A remapped clustering-VC leaf (v0 := lower(tenant) folds against the group tuple) combined with a residual
+    // predicate on a non-remapped physical column (region). Once the clustering leaf folds to TRUE, the per-group
+    // filter is region = 'us-east-1', which references no remap key -- the remap rewrite must preserve it (identity
+    // fallback) rather than throw for a column missing from {v0 -> tenant_lower}.
+    segmentIndex = buildVirtualClusteringSegment();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+        .setVirtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .setFilter(new AndFilter(List.of(
+            new EqualityFilter("v0", ColumnType.STRING, "acme", null),
+            new EqualityFilter("region", ColumnType.STRING, "us-east-1", null)
+        )))
+        .build();
+    try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+      // Only the Acme / us-east-1 row survives; v0 still resolves to the materialized tenant_lower clustering constant.
+      Assertions.assertEquals(List.of("acme"), collectDimension(holder.asCursor(), "v0"));
+    }
+    try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+      Assertions.assertEquals(List.of("us-east-1"), collectDimension(holder.asCursor(), "region"));
+    }
+  }
+
+  @Test
+  void testResidualPhysicalFilterPreservedAlongsideRemappedNonClusteringVc()
+  {
+    // Reviewer's case: a matched non-clustering VC filter (v1 := upper(region), equivalent to region_upper) AND a
+    // residual physical predicate (region = 'us-east-1'). No clustering leaf folds, so the per-group filter stays an
+    // AndFilter whose recursion hits the residual region leaf; the identity fallback must keep region as-is while
+    // remapping v1 -> region_upper.
+    segmentIndex = buildVirtualClusteringSegment();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+        .setVirtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .setFilter(new AndFilter(List.of(
+            new EqualityFilter("v1", ColumnType.STRING, "US-EAST-1", null),
+            new EqualityFilter("region", ColumnType.STRING, "us-east-1", null)
+        )))
+        .build();
+    try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+      Assertions.assertEquals(List.of("us-east-1"), collectDimension(holder.asCursor(), "region"));
+    }
+  }
+
+  @Test
   void testQueryVcEquivalentToClusteringColumnReadsMaterializedColumnViaVectorCursor()
   {
     // the query-VC -> materialized-column remap is applied on the vector factory too, so a
@@ -425,33 +421,6 @@ class QueryableIndexCursorFactoryClusteredTest
     }
   }
 
-  private static List<String> collectDimension(Cursor cursor, String column)
-  {
-    final DimensionSelector sel =
-        cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of(column));
-    final List<String> out = new ArrayList<>();
-    while (!cursor.isDone()) {
-      out.add(sel.getRow().size() == 0 ? null : sel.lookupName(sel.getRow().get(0)));
-      cursor.advance();
-    }
-    return out;
-  }
-
-  private static List<String> collectObjectVector(VectorCursor cursor, String column)
-  {
-    final VectorObjectSelector sel = cursor.getColumnSelectorFactory().makeObjectSelector(column);
-    final List<String> out = new ArrayList<>();
-    while (!cursor.isDone()) {
-      final Object[] vector = sel.getObjectVector();
-      final int size = cursor.getCurrentVectorSize();
-      for (int i = 0; i < size; i++) {
-        out.add((String) vector[i]);
-      }
-      cursor.advance();
-    }
-    return out;
-  }
-
   @Test
   void testGetRowSignatureCombinesClusteringFromSummaryAndDataFromGroup()
   {
@@ -505,32 +474,6 @@ class QueryableIndexCursorFactoryClusteredTest
     );
 
     Assertions.assertNull(factory.getColumnCapabilities("nope"));
-  }
-
-  /**
-   * Iterate the (tenant, region) pairs out of {@code cursor} until done. Verifies that the clustering-column
-   * selector returns the right per-group constant and that the rewritten filter / bitmap-index path on the
-   * per-group QueryableIndex produces the rows it should.
-   */
-  private static List<List<String>> collectTenantRegionRows(Cursor cursor)
-  {
-    final DimensionSelector tenantSel =
-        cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("tenant"));
-    final DimensionSelector regionSel =
-        cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("region"));
-    final List<List<String>> out = new ArrayList<>();
-    while (!cursor.isDone()) {
-      final String tenant = tenantSel.getRow().size() == 0 ? null : tenantSel.lookupName(tenantSel.getRow().get(0));
-      final String region = regionSel.getRow().size() == 0 ? null : regionSel.lookupName(regionSel.getRow().get(0));
-      out.add(Arrays.asList(tenant, region));
-      cursor.advance();
-    }
-    return out;
-  }
-
-  private static CursorBuildSpec specWith(Filter filter)
-  {
-    return CursorBuildSpec.builder().setFilter(filter).build();
   }
 
   @Test
@@ -763,38 +706,6 @@ class QueryableIndexCursorFactoryClusteredTest
     vectorizableChildren.add(new EqualityFilter("region", ColumnType.STRING, "us-east-1", null));
     try (CursorHolder holder = factory.makeCursorHolder(specWith(new OrFilter(vectorizableChildren)))) {
       Assertions.assertTrue(holder.canVectorize());
-    }
-  }
-
-  /**
-   * Filter wrapper whose value matcher cannot vectorize and which exposes no bitmap index, forcing the matcher
-   * path. The cluster-group filter walker doesn't recognize the wrapper, so it passes through rewrites unchanged.
-   */
-  private static final class NonVectorizableFilter implements Filter
-  {
-    private final Filter delegate;
-
-    private NonVectorizableFilter(Filter delegate)
-    {
-      this.delegate = delegate;
-    }
-
-    @Override
-    public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
-    {
-      return null;
-    }
-
-    @Override
-    public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
-    {
-      return delegate.makeMatcher(factory);
-    }
-
-    @Override
-    public Set<String> getRequiredColumns()
-    {
-      return delegate.getRequiredColumns();
     }
   }
 
@@ -1033,6 +944,66 @@ class QueryableIndexCursorFactoryClusteredTest
     Assertions.assertEquals(2L, ((Number) results.get(0).get(1)).longValue());
   }
 
+  private static InputRow row(String tenant, String ts, String region)
+  {
+    return new MapBasedInputRow(
+        DateTimes.of(ts),
+        List.of("tenant", "region"),
+        Map.of("tenant", tenant, "region", region)
+    );
+  }
+
+  private QueryableIndex buildSegment(List<InputRow> rows)
+  {
+    final IncrementalIndexSchema schema =
+        IncrementalIndexSchema.builder()
+                              .withMinTimestamp(INTERVAL.getStartMillis())
+                              .withTimestampSpec(new TimestampSpec("__time", "auto", null))
+                              .withQueryGranularity(Granularities.NONE)
+                              .withDimensionsSpec(CLUSTER_SPEC.getDimensionsSpec())
+                              .withRollup(false)
+                              .withClusterSpec(CLUSTER_SPEC)
+                              .build();
+    return IndexBuilder.create()
+                       .useV10()
+                       .tmpDir(tmpDir)
+                       .schema(schema)
+                       .rows(rows)
+                       .buildMMappedIndex(INTERVAL);
+  }
+
+  private QueryableIndex buildVirtualClusteringSegment()
+  {
+    final IncrementalIndexSchema schema =
+        IncrementalIndexSchema.builder()
+                              .withMinTimestamp(INTERVAL.getStartMillis())
+                              .withTimestampSpec(new TimestampSpec("__time", "auto", null))
+                              .withQueryGranularity(Granularities.NONE)
+                              .withDimensionsSpec(VIRTUAL_CLUSTER_SPEC.getDimensionsSpec())
+                              .withRollup(false)
+                              .withClusterSpec(VIRTUAL_CLUSTER_SPEC)
+                              .build();
+    return IndexBuilder.create()
+                       .useV10()
+                       .tmpDir(tmpDir)
+                       .schema(schema)
+                       .rows(List.of(
+                           row("Acme", "2025-01-01T00:00:00", "us-east-1"),
+                           row("Acme", "2025-01-01T01:00:00", "us-west-2"),
+                           row("Globex", "2025-01-01T00:30:00", "eu-west-1")
+                       ))
+                       .buildMMappedIndex(INTERVAL);
+  }
+
+  private QueryableIndex standardTwoGroup()
+  {
+    return buildSegment(List.of(
+        row("acme", "2025-01-01T00:00:00", "us-east-1"),
+        row("acme", "2025-01-01T01:00:00", "us-west-2"),
+        row("globex", "2025-01-01T00:30:00", "eu-west-1")
+    ));
+  }
+
   private static Druids.TimeseriesQueryBuilder newTimeseries()
   {
     return Druids.newTimeseriesQueryBuilder()
@@ -1040,5 +1011,90 @@ class QueryableIndexCursorFactoryClusteredTest
                  .granularity(Granularities.ALL)
                  .intervals(List.of(Intervals.ETERNITY))
                  .aggregators(new CountAggregatorFactory("count"));
+  }
+
+  private static List<String> collectDimension(Cursor cursor, String column)
+  {
+    final DimensionSelector sel =
+        cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of(column));
+    final List<String> out = new ArrayList<>();
+    while (!cursor.isDone()) {
+      out.add(sel.getRow().size() == 0 ? null : sel.lookupName(sel.getRow().get(0)));
+      cursor.advance();
+    }
+    return out;
+  }
+
+  private static List<String> collectObjectVector(VectorCursor cursor, String column)
+  {
+    final VectorObjectSelector sel = cursor.getColumnSelectorFactory().makeObjectSelector(column);
+    final List<String> out = new ArrayList<>();
+    while (!cursor.isDone()) {
+      final Object[] vector = sel.getObjectVector();
+      final int size = cursor.getCurrentVectorSize();
+      for (int i = 0; i < size; i++) {
+        out.add((String) vector[i]);
+      }
+      cursor.advance();
+    }
+    return out;
+  }
+
+  /**
+   * Iterate the (tenant, region) pairs out of {@code cursor} until done. Verifies that the clustering-column
+   * selector returns the right per-group constant and that the rewritten filter / bitmap-index path on the
+   * per-group QueryableIndex produces the rows it should.
+   */
+  private static List<List<String>> collectTenantRegionRows(Cursor cursor)
+  {
+    final DimensionSelector tenantSel =
+        cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("tenant"));
+    final DimensionSelector regionSel =
+        cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("region"));
+    final List<List<String>> out = new ArrayList<>();
+    while (!cursor.isDone()) {
+      final String tenant = tenantSel.getRow().size() == 0 ? null : tenantSel.lookupName(tenantSel.getRow().get(0));
+      final String region = regionSel.getRow().size() == 0 ? null : regionSel.lookupName(regionSel.getRow().get(0));
+      out.add(Arrays.asList(tenant, region));
+      cursor.advance();
+    }
+    return out;
+  }
+
+  private static CursorBuildSpec specWith(Filter filter)
+  {
+    return CursorBuildSpec.builder().setFilter(filter).build();
+  }
+
+  /**
+   * Filter wrapper whose value matcher cannot vectorize and which exposes no bitmap index, forcing the matcher
+   * path. The cluster-group filter walker doesn't recognize the wrapper, so it passes through rewrites unchanged.
+   */
+  private static final class NonVectorizableFilter implements Filter
+  {
+    private final Filter delegate;
+
+    private NonVectorizableFilter(Filter delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
+    {
+      return null;
+    }
+
+    @Override
+    public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+    {
+      return delegate.makeMatcher(factory);
+    }
+
+    @Override
+    public Set<String> getRequiredColumns()
+    {
+      return delegate.getRequiredColumns();
+    }
   }
 }

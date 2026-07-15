@@ -131,7 +131,7 @@ public final class ClusterGroupQueryPlan
     // the materialized physical column.
     Filter rewritten = spec.getFilter() == null ? null : rewriteFor(group);
     if (rewritten != null) {
-      rewritten = rewritten.rewriteRequiredColumns(virtualColumnRemap);
+      rewritten = Projections.rewriteFilterRequiredColumns(rewritten, virtualColumnRemap);
     }
 
     return CursorBuildSpec.builder(spec)

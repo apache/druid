@@ -20,6 +20,7 @@
 package org.apache.druid.segment.projections;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -240,6 +241,35 @@ class ProjectionsPlanClusterGroupQueryTest
             new ExpressionVirtualColumn("tenant_upper_lower", "upper(tenant_lower)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
         ),
         List.of("tenant_lower", "tenant_upper_lower", ColumnHolder.TIME_COLUMN_NAME, "metric"),
+        List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
+        clustering,
+        null,
+        built.dictionaries(),
+        built.specs()
+    );
+    return built.specs().get(0);
+  }
+
+  /**
+   * Like {@link #materializedVcGroup} but the summary also carries the metadata-only {@code __virtualGranularity}
+   * query-granularity carrier virtual column (HOUR). The carrier is deliberately NOT listed in the stored columns, so
+   * it must never be a remap target even though {@link VirtualColumns#findEquivalent} can match a query VC against its
+   * floor expression.
+   */
+  private static TableClusterGroupSpec granularityCarrierVcGroup(String loweredTenant)
+  {
+    final RowSignature clustering = RowSignature.builder().add("tenant_lower", ColumnType.STRING).build();
+    final ClusterGroupSchemaTestHelpers.Built built = ClusterGroupSchemaTestHelpers.buildClusterGroups(
+        clustering,
+        List.of(Arrays.asList(loweredTenant))
+    );
+    new ClusteredValueGroupsBaseTableSchema(
+        VirtualColumns.create(
+            new ExpressionVirtualColumn("tenant_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+            Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+        ),
+        // __virtualGranularity is intentionally absent from the stored columns; it is a metadata carrier only.
+        List.of("tenant_lower", ColumnHolder.TIME_COLUMN_NAME, "metric"),
         List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         clustering,
         null,
@@ -983,6 +1013,24 @@ class ProjectionsPlanClusterGroupQueryTest
         buildSpec(null, queryVcs)
     );
     Assertions.assertEquals(Map.of("v1", "region_upper"), plan.virtualColumnRemap());
+  }
+
+  @Test
+  void testVirtualColumnRemapExcludesMetadataOnlyGranularityCarrier()
+  {
+    // The summary carries a metadata-only __virtualGranularity VC (records the query granularity; not a stored
+    // column). A query VC equivalent to the carrier's floor expression must NOT be remapped to __virtualGranularity --
+    // the per-group / clustering selector can't serve it -- so it stays in place to recompute from __time. A sibling
+    // query VC equivalent to the (stored) clustering column is still remapped, proving only the carrier is excluded.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        Granularities.toVirtualColumn(Granularities.HOUR, "q_floor"),
+        new ExpressionVirtualColumn("q_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(granularityCarrierVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertEquals(Map.of("q_lower", "tenant_lower"), plan.virtualColumnRemap());
   }
 
   @Test
