@@ -1081,16 +1081,20 @@ public class SqlSegmentsMetadataQuery
   public List<Interval> retrieveUnusedSegmentIntervals(String dataSource, int limit)
   {
     final String sql = StringUtils.format(
+        // Text blocks are not supported in the current checkstyle version
+        //CHECKSTYLE.OFF: Regexp
         """
-            SELECT start, %2$send%2$s FROM
-            (
-              SELECT start, %2$send%2$s FROM %1$s
+            SELECT start, %2$send%2$s
+            FROM (
+              SELECT start, %2$send%2$s
+              FROM %1$s
               WHERE dataSource = :dataSource AND used = false
               %3$s
             ) AS unused
             GROUP BY %2$send%2$s, start
             %4$s
             """,
+        //CHECKSTYLE.ON: Regexp
         dbTables.getSegmentsTable(),
         connector.getQuoteString(),
         connector.limitClause(1_000_000), // limit unused segment rows scanned to 1M
