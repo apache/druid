@@ -37,6 +37,7 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
@@ -210,6 +211,44 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       );
     }
     return topic != null ? topic : topicPattern;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    KafkaSupervisorIOConfig that = (KafkaSupervisorIOConfig) o;
+    return pollTimeout == that.pollTimeout
+           && emitTimeLagMetrics == that.emitTimeLagMetrics
+           && Objects.equals(consumerProperties, that.consumerProperties)
+           && Objects.equals(configOverrides, that.configOverrides)
+           && Objects.equals(topic, that.topic)
+           && Objects.equals(topicPattern, that.topicPattern);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        super.hashCode(),
+        consumerProperties,
+        pollTimeout,
+        configOverrides,
+        topic,
+        topicPattern,
+        emitTimeLagMetrics
+    );
+  }
+
+  @Override
+  public KafkaIOConfigBuilder toBuilder()
+  {
+    return new KafkaIOConfigBuilder().copyFrom(this);
   }
 
 }

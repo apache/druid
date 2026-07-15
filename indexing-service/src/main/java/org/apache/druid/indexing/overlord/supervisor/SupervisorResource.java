@@ -165,26 +165,37 @@ public class SupervisorResource
                            .build();
           }
 
-          if (Boolean.TRUE.equals(skipRestartIfUnmodified) && !manager.shouldUpdateSupervisor(spec)) {
-            return Response.ok(ImmutableMap.of("id", spec.getId(), "restarted", false)).build();
+          final SupervisorSpecUpdateResult updateResult =
+              manager.createOrUpdateAndStartSupervisor(spec, Boolean.TRUE.equals(skipRestartIfUnmodified));
+
+          if (updateResult.isModified() || updateResult.isRestarted()) {
+            auditSupervisorUpdate(spec, req);
           }
 
-          manager.createOrUpdateAndStartSupervisor(spec);
-
-          final String auditPayload
-              = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
-          auditManager.doAudit(
-              AuditEntry.builder()
-                        .key(spec.getId())
-                        .type("supervisor")
-                        .auditInfo(AuthorizationUtils.buildAuditInfo(req))
-                        .request(AuthorizationUtils.buildRequestInfo("overlord", req))
-                        .payload(auditPayload)
-                        .build()
-          );
-
-          return Response.ok(ImmutableMap.of("id", spec.getId(), "restarted", true)).build();
+          return Response.ok(
+              Map.of(
+                  "id", spec.getId(),
+                  "modified", updateResult.isModified(),
+                  "restarted", updateResult.isRestarted()
+              )
+          ).build();
         }
+    );
+  }
+
+  /** Audits supervisor spec submissions that changed or restarted the supervisor. */
+  private void auditSupervisorUpdate(final SupervisorSpec spec, final HttpServletRequest req)
+  {
+    final String auditPayload
+        = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
+    auditManager.doAudit(
+        AuditEntry.builder()
+                  .key(spec.getId())
+                  .type("supervisor")
+                  .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                  .request(AuthorizationUtils.buildRequestInfo("overlord", req))
+                  .payload(auditPayload)
+                  .build()
     );
   }
 

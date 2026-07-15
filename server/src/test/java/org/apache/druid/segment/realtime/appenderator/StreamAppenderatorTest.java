@@ -1161,6 +1161,60 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testRegisterUpgradedPendingSegmentReturnsAnnouncedWhenBaseSinkExists() throws Exception
+  {
+    try (
+        final StreamAppenderatorTester tester =
+            new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
+                                                  .basePersistDirectory(temporaryFolder.newFolder())
+                                                  .build()) {
+      final StreamAppenderator appenderator = (StreamAppenderator) tester.getAppenderator();
+      appenderator.startJob();
+      // Create the base sink for IDENTIFIERS.get(0) so the upgrade can be announced against it.
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
+
+      final StreamAppenderator.PendingSegmentUpgradeResult outcome = appenderator.registerUpgradedPendingSegment(
+          PendingSegmentRecord.create(
+              si("2000/2001", "B", 1),
+              si("2000/2001", "B", 1).asSegmentId().toString(),
+              IDENTIFIERS.get(0).asSegmentId().toString(),
+              IDENTIFIERS.get(0).asSegmentId().toString(),
+              StreamAppenderatorTester.DATASOURCE
+          )
+      );
+
+      Assert.assertEquals(StreamAppenderator.PendingSegmentUpgradeResult.ANNOUNCED, outcome);
+    }
+  }
+
+  @Test
+  public void testRegisterUpgradedPendingSegmentReturnsSkippedUnknownBaseWhenBaseNotHeld() throws Exception
+  {
+    try (
+        final StreamAppenderatorTester tester =
+            new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
+                                                  .basePersistDirectory(temporaryFolder.newFolder())
+                                                  .build()) {
+      final StreamAppenderator appenderator = (StreamAppenderator) tester.getAppenderator();
+      appenderator.startJob();
+
+      // No sink has ever been created for the upgradedFromSegmentId below, so this task cannot announce it.
+      // This is the case where the upgrade request reached the wrong task.
+      final StreamAppenderator.PendingSegmentUpgradeResult outcome = appenderator.registerUpgradedPendingSegment(
+          PendingSegmentRecord.create(
+              si("2050/2051", "Z", 1),
+              si("2050/2051", "Z", 1).asSegmentId().toString(),
+              si("2050/2051", "Y", 0).asSegmentId().toString(),
+              si("2050/2051", "Y", 0).asSegmentId().toString(),
+              StreamAppenderatorTester.DATASOURCE
+          )
+      );
+
+      Assert.assertEquals(StreamAppenderator.PendingSegmentUpgradeResult.SKIPPED_UNKNOWN_BASE, outcome);
+    }
+  }
+
+  @Test
   public void testQueryBySegments_withSegmentVersionUpgrades() throws Exception
   {
     try (

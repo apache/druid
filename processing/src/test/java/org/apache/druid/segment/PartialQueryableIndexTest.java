@@ -25,25 +25,37 @@ import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.file.CountingRangeReader;
 import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileBuilderV10;
+import org.apache.druid.segment.file.SegmentFileChannel;
+import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DirectoryBackedRangeReader;
 import org.apache.druid.segment.loading.SegmentRangeReader;
+import org.apache.druid.segment.projections.ClusterGroupQueryPlan;
+import org.apache.druid.segment.projections.ProjectionMetadata;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
+import org.apache.druid.segment.projections.TableProjectionSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
@@ -51,14 +63,17 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
 
 class PartialQueryableIndexTest extends InitializedNullHandlingTest
@@ -246,23 +261,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
           COLUMN_CONFIG
       );
 
-      // build a CursorBuildSpec that should match the projection
-      final CursorBuildSpec matchingSpec = CursorBuildSpec.builder()
-          .setInterval(index.getDataInterval())
-          .setPhysicalColumns(Set.of("dim1", "metric1"))
-          .setGroupingColumns(Collections.singletonList("dim1"))
-          .setVirtualColumns(
-              VirtualColumns.create(
-                  Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
-              )
-          )
-          .setAggregators(
-              List.of(
-                  new LongSumAggregatorFactory("_metric1_sum", "metric1"),
-                  new CountAggregatorFactory("_count")
-              )
-          )
-          .build();
+      final CursorBuildSpec matchingSpec = matchingProjectionSpec(index);
 
       rangeReader.resetCount();
 
@@ -420,6 +419,234 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  void testPlanCursorPrefetchCoversExternalResidentColumnFiles() throws IOException
+  {
+    // A serde can write part of a column's data into an external segment file; the external is its own file mapper
+    // with its own metadata recording those files under the same column key. planCursorPrefetch must plan runs for
+    // both mappers, paired so each run executes against its owner.
+    final String externalName = "ext.segment";
+    final File baseDir = buildExternalColumnSegment(externalName);
+    final CountingRangeReader rangeReader = new CountingRangeReader(baseDir);
+    final File cacheDir = newCacheDir("external_plan");
+
+    try (PartialSegmentFileMapperV10 mapper = createMapperWithExternal(rangeReader, cacheDir, externalName)) {
+      final PartialQueryableIndex index =
+          new PartialQueryableIndex(mapper.getSegmentFileMetadata(), mapper, COLUMN_CONFIG);
+      final PartialSegmentFileMapperV10 externalMapper = mapper.getExternalMapper(externalName);
+      Assertions.assertNotNull(externalMapper);
+      rangeReader.resetCount();
+
+      final PartialQueryableIndex.CursorPrefetchPlan plan = index.planCursorPrefetch(
+          CursorBuildSpec.builder().setPhysicalColumns(Set.of("dimA")).build()
+      );
+      Assertions.assertEquals(0, rangeReader.getReadCount(), "planning must not download");
+      Assertions.assertEquals(1, plan.bundles().size());
+      final PartialQueryableIndex.PrefetchBundle bundle = plan.bundles().get(0);
+      Assertions.assertEquals(2, bundle.fetches().size(), "one run per mapper: " + bundle.fetches());
+
+      boolean sawMain = false;
+      boolean sawExternal = false;
+      for (PartialSegmentFileMapperV10.PlannedFetch fetch : bundle.fetches()) {
+        if (fetch.mapper() == mapper) {
+          sawMain = true;
+          // __time and dimA are adjacent in the main container; dimB is an unrequested trailing file, never fetched
+          Assertions.assertEquals(List.of("__base/__time", "__base/dimA"), fetch.run().files());
+        } else {
+          sawExternal = true;
+          Assertions.assertSame(externalMapper, fetch.mapper());
+          Assertions.assertEquals(List.of("__base/dimA.ext"), fetch.run().files());
+        }
+        fetch.fetch();
+      }
+      Assertions.assertTrue(sawMain, "expected a main-mapper run");
+      Assertions.assertTrue(sawExternal, "expected an external-mapper run");
+
+      Assertions.assertEquals(Set.of("__base/__time", "__base/dimA"), mapper.getDownloadedFiles());
+      Assertions.assertEquals(Set.of("__base/dimA.ext"), externalMapper.getDownloadedFiles());
+      Assertions.assertEquals(2, rangeReader.getReadCount(), "one coalesced read per mapper");
+
+      // the external-resident file is readable with no further deep-storage reads
+      Assertions.assertNotNull(mapper.mapExternalFile(externalName, "__base/dimA.ext"));
+      Assertions.assertEquals(2, rangeReader.getReadCount());
+    }
+  }
+
+  @Test
+  void testPlanCursorPrefetchWholeBundleFallbackCoversExternals() throws IOException
+  {
+    // Without recorded column file lists, the whole-bundle fallback must still span the external mappers, matching
+    // ensureBundleDownloaded's recursion.
+    final String externalName = "ext.segment";
+    final File baseDir = buildExternalColumnSegment(externalName);
+    final CountingRangeReader rangeReader = new CountingRangeReader(baseDir);
+    final File cacheDir = newCacheDir("external_fallback");
+
+    try (PartialSegmentFileMapperV10 mapper = createMapperWithExternal(rangeReader, cacheDir, externalName)) {
+      final SegmentFileMetadata withLists = mapper.getSegmentFileMetadata();
+      final SegmentFileMetadata stripped = new SegmentFileMetadata(
+          withLists.getContainers(),
+          withLists.getFiles(),
+          withLists.getInterval(),
+          withLists.getColumnDescriptors(),
+          null,
+          withLists.getProjections(),
+          withLists.getBitmapEncoding()
+      );
+      final PartialQueryableIndex index = new PartialQueryableIndex(stripped, mapper, COLUMN_CONFIG);
+      final PartialSegmentFileMapperV10 externalMapper = mapper.getExternalMapper(externalName);
+      Assertions.assertNotNull(externalMapper);
+      rangeReader.resetCount();
+
+      final PartialQueryableIndex.CursorPrefetchPlan plan = index.planCursorPrefetch(
+          CursorBuildSpec.builder().setPhysicalColumns(Set.of("dimA")).build()
+      );
+      for (PartialSegmentFileMapperV10.PlannedFetch fetch : plan.bundles().get(0).fetches()) {
+        fetch.fetch();
+      }
+
+      Assertions.assertEquals(
+          Set.of("__base/__time", "__base/dimA", "__base/dimB"),
+          mapper.getDownloadedFiles(),
+          "fallback downloads the whole main bundle"
+      );
+      Assertions.assertEquals(
+          Set.of("__base/dimA.ext"),
+          externalMapper.getDownloadedFiles(),
+          "fallback must cover the external's part of the bundle"
+      );
+      Assertions.assertEquals(2, rangeReader.getReadCount(), "one whole-bundle read per mapper");
+    }
+  }
+
+  @Test
+  void testPlanCursorPrefetchIncludesProjectionParentBundle() throws IOException
+  {
+    // A matched projection whose required columns read through same-named base parents plans TWO bundles: the
+    // projection's own files, plus a __base bundle holding + fetching exactly the parent columns' files. Of the
+    // rewritten spec's columns, only dim1 has a base parent: the aggregate column and the projection's granularity
+    // time column don't exist in the base table.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    final File cacheDir = newCacheDir("parent_plan");
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      final PartialQueryableIndex index = new PartialQueryableIndex(
+          mapper.getSegmentFileMetadata(),
+          mapper,
+          COLUMN_CONFIG
+      );
+      final PartialQueryableIndex.CursorPrefetchPlan plan = index.planCursorPrefetch(matchingProjectionSpec(index));
+      Assertions.assertNotNull(plan.matchedProjection());
+      Assertions.assertEquals(2, plan.bundles().size());
+      Assertions.assertEquals("dim1_hourly_metric1_sum", plan.bundles().get(0).bundleName());
+
+      final PartialQueryableIndex.PrefetchBundle parentBundle = plan.bundles().get(1);
+      Assertions.assertEquals(Projections.BASE_TABLE_PROJECTION_NAME, parentBundle.bundleName());
+      Assertions.assertEquals(Set.of("dim1"), parentBundle.requiredColumns());
+
+      final Set<String> parentFiles = new TreeSet<>();
+      for (PartialSegmentFileMapperV10.PlannedFetch fetch : parentBundle.fetches()) {
+        parentFiles.addAll(fetch.run().files());
+      }
+      Assertions.assertEquals(Set.of("__base/dim1"), parentFiles);
+
+      // executing the parent fetches makes exactly the parent's file resident, nothing else from the base bundle
+      for (PartialSegmentFileMapperV10.PlannedFetch fetch : parentBundle.fetches()) {
+        fetch.fetch();
+      }
+      Assertions.assertEquals(Set.of("__base/dim1"), mapper.getDownloadedFiles());
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void testCursorPrefetchPlanRejectsBothProjectionAndClusterPlan()
+  {
+    // the factory dispatches on clusterGroupPlan first, so a plan carrying both would silently drop the matched
+    // projection; the compact constructor fails fast instead
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> new PartialQueryableIndex.CursorPrefetchPlan(
+            Mockito.mock(QueryableProjection.class),
+            Mockito.mock(ClusterGroupQueryPlan.class),
+            List.of()
+        )
+    );
+  }
+
+  /**
+   * A spec that matches the fixture's {@code dim1_hourly_metric1_sum} projection: group by dim1 at HOUR granularity,
+   * summing metric1 and counting.
+   */
+  private static CursorBuildSpec matchingProjectionSpec(PartialQueryableIndex index)
+  {
+    return CursorBuildSpec.builder()
+        .setInterval(index.getDataInterval())
+        .setPhysicalColumns(Set.of("dim1", "metric1"))
+        .setGroupingColumns(Collections.singletonList("dim1"))
+        .setVirtualColumns(
+            VirtualColumns.create(
+                Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+            )
+        )
+        .setAggregators(
+            List.of(
+                new LongSumAggregatorFactory("_metric1_sum", "metric1"),
+                new CountAggregatorFactory("_count")
+            )
+        )
+        .build();
+  }
+
+  /**
+   * Synthetic V10 segment (raw builder, dummy 4-byte column payloads that are never deserialized) whose column
+   * {@code dimA} has a file in the main segment file plus a file written into an external segment file during its
+   * attribution scope, mimicking a serde that spreads a column across the main and external files.
+   */
+  private File buildExternalColumnSegment(String externalName) throws IOException
+  {
+    final File baseDir = new File(sharedTempDir, "ext_seg_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
+    FileUtils.mkdirp(baseDir);
+
+    final byte[] bytes = new byte[]{1, 2, 3, 4};
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(TestHelper.makeJsonMapper(), baseDir)) {
+      builder.addInterval("2025-01-01T00:00:00.000Z/2025-01-02T00:00:00.000Z");
+      builder.addBitmapEncoding(new BitmapSerde.DefaultBitmapSerdeFactory());
+      builder.addProjections(
+          List.of(
+              new ProjectionMetadata(
+                  1,
+                  new TableProjectionSchema(
+                      VirtualColumns.EMPTY,
+                      List.of(ColumnHolder.TIME_COLUMN_NAME, "dimA", "dimB"),
+                      null,
+                      List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME))
+                  )
+              )
+          )
+      );
+      builder.startFileBundle(Projections.BASE_TABLE_PROJECTION_NAME);
+      final SegmentFileBuilder external = builder.getExternalBuilder(externalName);
+
+      final ColumnDescriptor descriptor = new ColumnDescriptor.Builder().setValueType(ValueType.LONG).build();
+      builder.addColumn("__base/__time", descriptor);
+      writeFile(builder, "__base/__time", bytes);
+      builder.addColumn("__base/dimA", descriptor);
+      writeFile(builder, "__base/dimA", bytes);
+      writeFile(external, "__base/dimA.ext", bytes);
+      builder.addColumn("__base/dimB", descriptor);
+      writeFile(builder, "__base/dimB", bytes);
+    }
+    return baseDir;
+  }
+
+  private static void writeFile(SegmentFileBuilder builder, String name, byte[] bytes) throws IOException
+  {
+    try (SegmentFileChannel channel = builder.addWithChannel(name, bytes.length)) {
+      channel.write(ByteBuffer.wrap(bytes));
+    }
+  }
+
   private File newCacheDir(String name) throws IOException
   {
     final File dir = new File(sharedTempDir, name + "_" + ThreadLocalRandom.current().nextInt());
@@ -435,7 +662,27 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
         cacheDir,
         IndexIO.V10_FILE_NAME,
         Collections.emptyList(),
-        PartialSegmentDownloadListener.NOOP
+        PartialSegmentDownloadListener.NOOP,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
+    );
+  }
+
+  private static PartialSegmentFileMapperV10 createMapperWithExternal(
+      SegmentRangeReader rangeReader,
+      File cacheDir,
+      String externalName
+  ) throws IOException
+  {
+    return PartialSegmentFileMapperV10.create(
+        rangeReader,
+        TestHelper.makeJsonMapper(),
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(externalName),
+        PartialSegmentDownloadListener.NOOP,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
   }
 }
