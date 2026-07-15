@@ -23,6 +23,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -249,6 +250,8 @@ public class IntervalTreeMapTest
     compareData(expectedData, tree);
   }
 
+  private static final Logger log = new Logger(IntervalTreeMapTest.class);
+
   @Ignore
   @Test
   public void testPerf()
@@ -286,14 +289,14 @@ public class IntervalTreeMapTest
         }
       }
     }
-    System.out.println("Seq find time " + (System.currentTimeMillis() - start));
+    log.info("Seq find time %d", (System.currentTimeMillis() - start));
     start = System.currentTimeMillis();
     for (int i = 0; i < total; i++) {
       Pair<Interval, String> pair = expectedData.get(i);
       Interval interval = pair.lhs;
       tree.findEncompassing(interval);
     }
-    System.out.println("Tree find time " + (System.currentTimeMillis() - start));
+    log.info("Tree find time %d", (System.currentTimeMillis() - start));
   }
 
   @Test

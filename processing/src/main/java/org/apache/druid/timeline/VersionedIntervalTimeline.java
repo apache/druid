@@ -334,8 +334,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       if (fastIntervalSearch) {
         Map<Interval, TreeMap<VersionType, TimelineEntry>> possibleMatches = allTimeIntervals.findEncompassing(interval);
         for (Entry<Interval, TreeMap<VersionType, TimelineEntry>> entry : possibleMatches.entrySet()) {
-          Interval enInterval = entry.getKey();
-          if (enInterval.contains(interval)) {
+          Interval possibleInterval = entry.getKey();
+          if (possibleInterval.contains(interval)) {
             TimelineEntry foundEntry = entry.getValue().get(version);
             if (foundEntry != null) {
               return foundEntry.getPartitionHolder().getChunk(partitionNum);
