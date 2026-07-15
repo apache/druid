@@ -1069,14 +1069,14 @@ public class SqlSegmentsMetadataQuery
    * guarantee on the order of intervals in the list or on whether the limited
    * list contains the earliest or latest intervals present in the datasource.
    *
-   * @return List of unused segment intervals containing upto {@code limit} entries.
+   * @return List of unused segment intervals containing upto {@code limit} interval entries.
    */
   public List<Interval> retrieveUnusedSegmentIntervals(String dataSource, int limit)
   {
     final String sql = StringUtils.format(
         "SELECT start, %2$send%2$s FROM %1$s"
         + " WHERE dataSource = :dataSource AND used = false"
-        + " GROUP BY start, %2$send%2$s"
+        + " GROUP BY %2$send%2$s, start"
         + "  %3$s",
         dbTables.getSegmentsTable(), connector.getQuoteString(), connector.limitClause(limit)
     );
