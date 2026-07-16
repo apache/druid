@@ -54,7 +54,8 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"minScaleUpDelay\": \"PT5M\",\n"
                   + "  \"minScaleDownDelay\": \"PT10M\",\n"
                   + "  \"scaleDownDuringTaskRolloverOnly\": true,\n"
-                  + "  \"usePollIdleRatio\": false\n"
+                  + "  \"usePollIdleRatio\": false,\n"
+                  + "  \"minCostDropPercentForScaling\": 10\n"
                   + "}";
 
     final CostBasedAutoScalerConfig config = mapper.readValue(json, CostBasedAutoScalerConfig.class);
@@ -74,6 +75,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertFalse(config.isUsePollIdleRatio());
     Assert.assertFalse(config.isUseTaskCountBoundariesOnScaleUp());
     Assert.assertTrue(config.isUseTaskCountBoundariesOnScaleDown());
+    Assert.assertEquals(10, config.getMinCostDropPercentForScaling());
 
     // Test serialization back to JSON
     final String serialized = mapper.writeValueAsString(config);
@@ -112,6 +114,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertTrue(config.isUseTaskCountBoundariesOnScaleDown());
     Assert.assertNull(config.getTaskCountStart());
     Assert.assertNull(config.getStopTaskCountRatio());
+    Assert.assertEquals(0, config.getMinCostDropPercentForScaling());
   }
 
   @Test
