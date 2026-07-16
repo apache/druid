@@ -24,7 +24,7 @@ title: "Kubernetes"
 
 Consider this an [EXPERIMENTAL](../experimental.md) feature mostly because it has not been tested yet on a wide variety of long running Druid clusters.
 
-Apache&circledR; Druid Extension to enable using Kubernetes API Server for node discovery and leader election. This extension allows Druid cluster deployment on Kubernetes without Zookeeper. It allows running multiple Druid clusters within same Kubernetes Cluster, See `clusterIdentifier` config below.
+Apache&circledR; Druid extension to enable using the Kubernetes&circledR; API Server for node discovery and leader election. This extension allows you to deploy a Druid cluster on Kubernetes without Zookeeper and run multiple Druid clusters within the same Kubernetes cluster. For more information, see the `clusterIdentifier` configuration below.
 
 
 ## Configuration
