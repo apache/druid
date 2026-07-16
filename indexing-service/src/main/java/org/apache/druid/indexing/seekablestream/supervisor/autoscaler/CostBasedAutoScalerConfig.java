@@ -67,6 +67,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final boolean scaleDownDuringTaskRolloverOnly;
   private final boolean usePollIdleRatio;
   private final Long criticalLagThreshold;
+  private final int minCostDropPercentForScaling;
 
   /**
    * Creates a new CostBasedAutoScalerConfig instance.
@@ -89,6 +90,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("scaleDownDuringTaskRolloverOnly") Boolean scaleDownDuringTaskRolloverOnly,
       @Nullable @JsonProperty("usePollIdleRatio") Boolean usePollIdleRatio,
       @Nullable @JsonProperty("criticalLagThreshold") Long criticalLagThreshold
+      @Nullable @JsonProperty("minCostDropPercentForScaling") Integer minCostDropPercentForScaling
   )
   {
     this.enableTaskAutoScaler = Configs.valueOrDefault(enableTaskAutoScaler, false);
@@ -112,6 +114,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         criticalLagThreshold == null || criticalLagThreshold > 0,
         "criticalLagThreshold must be > 0"
     );
+    this.minCostDropPercentForScaling = Configs.valueOrDefault(minCostDropPercentForScaling, 0);
 
     if (this.enableTaskAutoScaler) {
       Preconditions.checkNotNull(taskCountMax, "taskCountMax is required when enableTaskAutoScaler is true");
@@ -313,6 +316,15 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     return criticalLagThreshold;
   }
 
+  /* Minimum percentage drop from current cost that is required by the auto-scaler
+   * to choose a new task count.
+   */
+  @JsonProperty
+  public int getMinCostDropPercentForScaling()
+  {
+    return minCostDropPercentForScaling;
+  }
+
   @Override
   public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter)
   {
@@ -344,6 +356,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && Objects.equals(minScaleDownDelay, that.minScaleDownDelay)
            && scaleDownDuringTaskRolloverOnly == that.scaleDownDuringTaskRolloverOnly
            && usePollIdleRatio == that.usePollIdleRatio
+           && minCostDropPercentForScaling == that.minCostDropPercentForScaling
            && Objects.equals(taskCountStart, that.taskCountStart)
            && Objects.equals(stopTaskCountRatio, that.stopTaskCountRatio)
            && Objects.equals(criticalLagThreshold, that.criticalLagThreshold);
@@ -368,7 +381,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         minScaleDownDelay,
         scaleDownDuringTaskRolloverOnly,
         usePollIdleRatio,
-        criticalLagThreshold
+        criticalLagThreshold,
+        minCostDropPercentForScaling
     );
   }
 
@@ -392,6 +406,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", scaleDownDuringTaskRolloverOnly=" + scaleDownDuringTaskRolloverOnly +
            ", usePollIdleRatio=" + usePollIdleRatio +
            ", criticalLagThreshold=" + criticalLagThreshold +
+           ", minCostDropPercentForScaling=" + minCostDropPercentForScaling +
            '}';
   }
 
@@ -417,6 +432,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Boolean scaleDownDuringTaskRolloverOnly;
     private Boolean usePollIdleRatio;
     private Long criticalLagThreshold;
+    private Integer minCostDropPercentForScaling;
 
     private Builder()
     {
@@ -518,6 +534,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
+    public Builder minCostDropPercentForScaling(int minCostDropPercentForScaling)
+    {
+      this.minCostDropPercentForScaling = minCostDropPercentForScaling;
+      return this;
+    }
+
     public CostBasedAutoScalerConfig build()
     {
       return new CostBasedAutoScalerConfig(
@@ -537,6 +559,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           scaleDownDuringTaskRolloverOnly,
           usePollIdleRatio,
           criticalLagThreshold
+          minCostDropPercentForScaling
       );
     }
   }

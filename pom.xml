@@ -1117,7 +1117,7 @@
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
                 <artifactId>RoaringBitmap</artifactId>
-                <version>1.6.13</version>
+                <version>1.6.14</version>
             </dependency>
             <dependency>
                 <groupId>org.yaml</groupId>

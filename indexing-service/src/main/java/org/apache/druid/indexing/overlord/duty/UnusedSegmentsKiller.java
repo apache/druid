@@ -249,7 +249,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
 
       final Map<String, Integer> dataSourceToIntervalCounts = new HashMap<>();
       for (String dataSource : dataSources) {
-        storageCoordinator.retrieveUnusedSegmentIntervals(dataSource, MAX_INTERVALS_TO_KILL_IN_DATASOURCE).forEach(
+        storageCoordinator.retrieveSomeUnusedSegmentIntervals(dataSource, MAX_INTERVALS_TO_KILL_IN_DATASOURCE).forEach(
             interval -> {
               dataSourceToIntervalCounts.merge(dataSource, 1, Integer::sum);
               killQueue.offer(new KillCandidate(dataSource, interval));

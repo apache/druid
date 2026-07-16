@@ -164,6 +164,16 @@ public class SegmentReplicaCount
   }
 
   /**
+   * Returns a new, independent instance with the same counts as this one.
+   */
+  SegmentReplicaCount copy()
+  {
+    final SegmentReplicaCount copy = new SegmentReplicaCount();
+    copy.accumulate(this);
+    return copy;
+  }
+
+  /**
    * Accumulates counts from the given {@code SegmentReplicaCount} into this instance.
    */
   void accumulate(SegmentReplicaCount other)

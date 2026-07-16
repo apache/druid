@@ -57,6 +57,7 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"scaleDownDuringTaskRolloverOnly\": true,\n"
                   + "  \"usePollIdleRatio\": false,\n"
                   + "  \"criticalLagThreshold\": 500000\n"
+                  + "  \"minCostDropPercentForScaling\": 10\n"
                   + "}";
 
     final CostBasedAutoScalerConfig config = mapper.readValue(json, CostBasedAutoScalerConfig.class);
@@ -77,6 +78,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertFalse(config.isUseTaskCountBoundariesOnScaleUp());
     Assert.assertTrue(config.isUseTaskCountBoundariesOnScaleDown());
     Assert.assertEquals(Long.valueOf(500000), config.getCriticalLagThreshold());
+    Assert.assertEquals(10, config.getMinCostDropPercentForScaling());
 
     // Test serialization back to JSON
     final String serialized = mapper.writeValueAsString(config);
@@ -116,6 +118,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertNull(config.getTaskCountStart());
     Assert.assertNull(config.getStopTaskCountRatio());
     Assert.assertNull(config.getCriticalLagThreshold());
+    Assert.assertEquals(0, config.getMinCostDropPercentForScaling());
   }
 
   @Test
