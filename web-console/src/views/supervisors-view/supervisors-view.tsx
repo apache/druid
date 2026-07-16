@@ -362,7 +362,10 @@ export class SupervisorsView extends React.PureComponent<
               return {
                 supervisor_id: deepGet(sup, 'id'),
                 datasource: deepGet(sup, 'dataSource'),
-                type: deepGet(sup, 'spec.tuningConfig.type'),
+                type:
+                  deepGet(sup, 'spec.type') ||
+                  deepGet(sup, 'spec.ioConfig.type') ||
+                  deepGet(sup, 'spec.tuningConfig.type'),
                 source:
                   deepGet(sup, 'spec.ioConfig.topic') ||
                   deepGet(sup, 'spec.ioConfig.stream') ||
@@ -1066,10 +1069,11 @@ export class SupervisorsView extends React.PureComponent<
                 )}`}</span>
               ) : null;
             } else if (original.type === 'autocompact') {
-              if (!supervisorStatusPayload || !original.spec) return null;
+              const compactionConfig: CompactionConfig | undefined = original.spec?.spec;
+              if (!supervisorStatusPayload || !compactionConfig) return null;
               return formatCompactionInfo({
                 status: supervisorStatusPayload,
-                config: original.spec as CompactionConfig,
+                config: compactionConfig,
               });
             } else {
               return null;
