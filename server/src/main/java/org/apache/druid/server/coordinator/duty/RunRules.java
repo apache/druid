@@ -41,7 +41,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -99,7 +98,6 @@ public class RunRules implements CoordinatorDuty
 
     final DateTime now = DateTimes.nowUtc();
     final Object2IntOpenHashMap<String> datasourceToSegmentsWithNoRule = new Object2IntOpenHashMap<>();
-    final Map<String, List<Rule>> datasourceToRules = new HashMap<>();
 
     // Streaming shard-group boundary state. SegmentHolder.NEWEST_SEGMENT_FIRST groups segments contiguously by
     // (dataSource, interval, version), so on any change in that triple we flush the buffer for the previous group.
@@ -107,7 +105,7 @@ public class RunRules implements CoordinatorDuty
     Interval currentInterval = null;
     String currentVersion = null;
 
-    for (final DataSegment segment : usedSegments) {
+    for (DataSegment segment : usedSegments) {
       // Do not apply rules on overshadowed segments as they will be
       // marked unused and eventually unloaded from all historicals
       if (overshadowed.contains(segment)) {
@@ -125,12 +123,9 @@ public class RunRules implements CoordinatorDuty
       }
 
       // Find and apply matching rule
-      final List<Rule> rules = datasourceToRules.computeIfAbsent(
-          segment.getDataSource(),
-          ruleHandler::getRulesWithDefault
-      );
+      List<Rule> rules = ruleHandler.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
-      for (final Rule rule : rules) {
+      for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {
           rule.run(segment, segmentHandler);
           foundMatchingRule = true;
@@ -147,12 +142,11 @@ public class RunRules implements CoordinatorDuty
     segmentHandler.flushAndReset();
 
     processSegmentDeletes(segmentAssigner, params.getCoordinatorStats());
-
     alertForSegmentsWithNoRules(datasourceToSegmentsWithNoRule);
     alertForInvalidRules(segmentAssigner);
 
     return params.buildFromExisting()
-                 .withBroadcastDatasources(getBroadcastDatasources(params, datasourceToRules))
+                 .withBroadcastDatasources(getBroadcastDatasources(params))
                  .build();
   }
 
@@ -196,14 +190,11 @@ public class RunRules implements CoordinatorDuty
     );
   }
 
-  private Set<String> getBroadcastDatasources(
-      DruidCoordinatorRuntimeParams params,
-      Map<String, List<Rule>> datasourceToRules
-  )
+  private Set<String> getBroadcastDatasources(DruidCoordinatorRuntimeParams params)
   {
     return params.getDataSourcesSnapshot().getDataSourcesMap().values().stream()
                  .map(ImmutableDruidDataSource::getName)
-                 .filter(datasource -> isBroadcastDatasource(datasource, datasourceToRules))
+                 .filter(this::isBroadcastDatasource)
                  .collect(Collectors.toSet());
   }
 
@@ -215,9 +206,9 @@ public class RunRules implements CoordinatorDuty
    *   <li>Are unloaded if unused, even from realtime servers</li>
    * </ul>
    */
-  private boolean isBroadcastDatasource(String datasource, Map<String, List<Rule>> datasourceToRules)
+  private boolean isBroadcastDatasource(String datasource)
   {
-    return datasourceToRules.computeIfAbsent(datasource, ruleHandler::getRulesWithDefault)
+    return ruleHandler.getRulesWithDefault(datasource)
                       .stream()
                       .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
   }

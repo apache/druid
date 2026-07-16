@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.loading;
 
 import com.google.common.collect.Maps;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
@@ -43,10 +42,8 @@ public class SegmentReplicationStatus
 
   public SegmentReplicationStatus(Map<SegmentId, Map<String, SegmentReplicaCount>> replicaCountsInTier)
   {
-    // replicaCountsInTier is the caller's live SegmentReplicaCountMap and is mutated further
-    // in the same coordinator cycle (e.g. by BalanceSegments), so we must snapshot both the
-    // structure and the per-tier SegmentReplicaCount values, not just alias the outer map.
-    // Done in a single pass so the snapshot costs no more than the totals computation already did.
+    // Make a deep copy of replicaCountsInTier as it may be mutated further
+    // in the same coordinator cycle (e.g. by BalanceSegments)
     final Map<SegmentId, Map<String, SegmentReplicaCount>> replicaCountsInTierCopy
         = Maps.newHashMapWithExpectedSize(replicaCountsInTier.size());
     final Map<SegmentId, SegmentReplicaCount> totalReplicaCounts
@@ -55,7 +52,7 @@ public class SegmentReplicationStatus
       final Map<String, SegmentReplicaCount> tierCopy = Maps.newHashMapWithExpectedSize(entry.getValue().size());
       final SegmentReplicaCount total = new SegmentReplicaCount();
       for (Map.Entry<String, SegmentReplicaCount> tierEntry : entry.getValue().entrySet()) {
-        final SegmentReplicaCount countCopy = new SegmentReplicaCount(tierEntry.getValue());
+        final SegmentReplicaCount countCopy = tierEntry.getValue().copy();
         tierCopy.put(tierEntry.getKey(), countCopy);
         total.accumulate(countCopy);
       }
@@ -69,6 +66,25 @@ public class SegmentReplicationStatus
   public SegmentReplicaCount getReplicaCountsInCluster(SegmentId segmentId)
   {
     return totalReplicaCounts.get(segmentId);
+  }
+
+  /**
+   * A segment is unavailable if it has no loaded replicas while still requiring at least one.
+   */
+  public boolean isUnavailable(SegmentId segmentId)
+  {
+    final SegmentReplicaCount totalCount = totalReplicaCounts.get(segmentId);
+    return totalCount == null || (totalCount.totalLoaded() <= 0 && totalCount.required() != 0);
+  }
+
+  /**
+   * A segment is deep-storage only if it is not loaded anywhere and requires zero replicas,
+   * so it is served exclusively from deep storage.
+   */
+  public boolean isDeepStorageOnly(SegmentId segmentId)
+  {
+    final SegmentReplicaCount totalCount = totalReplicaCounts.get(segmentId);
+    return totalCount != null && totalCount.totalLoaded() == 0 && totalCount.required() == 0;
   }
 
   public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicated(
@@ -115,13 +131,9 @@ public class SegmentReplicationStatus
       final SegmentId segmentId = segment.getId();
       final String datasource = segment.getDataSource();
 
-      final SegmentReplicaCount totalCount = totalReplicaCounts.get(segmentId);
-      if (totalCount != null && (totalCount.totalLoaded() > 0 || totalCount.required() == 0)) {
-        datasourceToUnavailable.addTo(datasource, 0);
-      } else {
-        datasourceToUnavailable.addTo(datasource, 1);
-      }
-      if (totalCount != null && totalCount.totalLoaded() == 0 && totalCount.required() == 0) {
+      // addTo with 0 ensures the datasource is present in the map even when it has no unavailable segments.
+      datasourceToUnavailable.addTo(datasource, isUnavailable(segmentId) ? 1 : 0);
+      if (isDeepStorageOnly(segmentId)) {
         datasourceToDeepStorageOnly.addTo(datasource, 1);
       }
 
@@ -139,41 +151,5 @@ public class SegmentReplicationStatus
     }
 
     return new SegmentStatsSnapshot(datasourceToUnavailable, tierToUnderReplicated, datasourceToDeepStorageOnly);
-  }
-
-  /**
-   * Holder for the three segment-stat views computed together by {@link #computeSegmentStats}.
-   */
-  public static class SegmentStatsSnapshot
-  {
-    private final Object2IntMap<String> datasourceToUnavailableCount;
-    private final Map<String, Object2LongMap<String>> tierToDatasourceToUnderReplicatedCount;
-    private final Object2IntMap<String> datasourceToDeepStorageOnlyCount;
-
-    SegmentStatsSnapshot(
-        Object2IntMap<String> datasourceToUnavailableCount,
-        Map<String, Object2LongMap<String>> tierToDatasourceToUnderReplicatedCount,
-        Object2IntMap<String> datasourceToDeepStorageOnlyCount
-    )
-    {
-      this.datasourceToUnavailableCount = datasourceToUnavailableCount;
-      this.tierToDatasourceToUnderReplicatedCount = tierToDatasourceToUnderReplicatedCount;
-      this.datasourceToDeepStorageOnlyCount = datasourceToDeepStorageOnlyCount;
-    }
-
-    public Object2IntMap<String> getDatasourceToUnavailableCount()
-    {
-      return datasourceToUnavailableCount;
-    }
-
-    public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicatedCount()
-    {
-      return tierToDatasourceToUnderReplicatedCount;
-    }
-
-    public Object2IntMap<String> getDatasourceToDeepStorageOnlyCount()
-    {
-      return datasourceToDeepStorageOnlyCount;
-    }
   }
 }

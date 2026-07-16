@@ -31,6 +31,7 @@ import org.apache.druid.server.coordinator.duty.MarkOvershadowedSegmentsAsUnused
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -134,10 +135,7 @@ public class MarkOvershadowedSegmentsAsUnusedBenchmark
 
   private static DataSegment segment(String datasource, Interval interval, String version)
   {
-    return DataSegment.builder()
-                      .dataSource(datasource)
-                      .interval(interval)
-                      .version(version)
+    return DataSegment.builder(SegmentId.of(datasource, interval, version, 0))
                       .size(1)
                       .build();
   }

@@ -63,8 +63,6 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private final RoundRobinServerSelector serverSelector;
   private final BalancerStrategy strategy;
 
-  // Fixed for the lifetime of this assigner (a new instance is created each coordinator run),
-  // so it is computed once here rather than on every replicateSegment/replicateSegmentPartially call.
   private final Set<String> allTiersInCluster;
 
   private final boolean useRoundRobinAssignment;
@@ -89,9 +87,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     this.cluster = cluster;
     this.strategy = strategy;
     this.loadQueueManager = loadQueueManager;
-    final Set<String> allTiersInCluster = new HashSet<>();
-    cluster.getTierNames().forEach(allTiersInCluster::add);
-    this.allTiersInCluster = allTiersInCluster;
+    this.allTiersInCluster = Set.copyOf(cluster.getTierNames());
     this.replicaCountMap = SegmentReplicaCountMap.create(cluster);
     this.replicationThrottler = createReplicationThrottler(cluster, loadingConfig);
     this.useRoundRobinAssignment = loadingConfig.isUseRoundRobinSegmentAssignment();

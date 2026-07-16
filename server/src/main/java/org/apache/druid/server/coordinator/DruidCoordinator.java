@@ -86,6 +86,7 @@ import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
+import org.apache.druid.server.coordinator.loading.SegmentStatsSnapshot;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -247,12 +248,10 @@ public class DruidCoordinator
 
     final Iterable<DataSegment> dataSegments = metadataManager.iterateAllUsedSegments();
     for (DataSegment segment : dataSegments) {
-      SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
-      if (replicaCount != null && (replicaCount.totalLoaded() > 0 || replicaCount.required() == 0)) {
-        datasourceToUnavailableSegments.addTo(segment.getDataSource(), 0);
-      } else {
-        datasourceToUnavailableSegments.addTo(segment.getDataSource(), 1);
-      }
+      datasourceToUnavailableSegments.addTo(
+          segment.getDataSource(),
+          segmentReplicationStatus.isUnavailable(segment.getId()) ? 1 : 0
+      );
     }
 
     return datasourceToUnavailableSegments;
@@ -268,8 +267,7 @@ public class DruidCoordinator
 
     final Iterable<DataSegment> dataSegments = metadataManager.iterateAllUsedSegments();
     for (DataSegment segment : dataSegments) {
-      SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
-      if (replicaCount != null && replicaCount.totalLoaded() == 0 && replicaCount.required() == 0) {
+      if (segmentReplicationStatus.isDeepStorageOnly(segment.getId())) {
         datasourceToDeepStorageOnlySegments.addTo(segment.getDataSource(), 1);
       }
     }
@@ -804,45 +802,28 @@ public class DruidCoordinator
       // Collect stats for unavailable and under-replicated segments
       final CoordinatorRunStats stats = params.getCoordinatorStats();
 
-      final Object2IntMap<String> dsToUnavailable;
-      final Map<String, Object2LongMap<String>> tierToDsToUnderRepl;
-      final Object2IntMap<String> dsToDeepStorageOnly;
+      // Compute unavailable, under-replicated, deep-storage only counts in a single pass
+      final SegmentStatsSnapshot snapshot =
+          segmentReplicationStatus == null
+          ? SegmentStatsSnapshot.empty()
+          : segmentReplicationStatus.computeSegmentStats(metadataManager.iterateAllUsedSegments(), true);
 
-      if (segmentReplicationStatus == null) {
-        dsToUnavailable = Object2IntMaps.emptyMap();
-        tierToDsToUnderRepl = Collections.emptyMap();
-        dsToDeepStorageOnly = Object2IntMaps.emptyMap();
-      } else {
-        // Single fused pass replaces three independent full iterations over
-        // metadataManager.iterateAllUsedSegments(). ignoreMissingServers=true replicates
-        // the !false inversion inside computeUnderReplicated(segments, false).
-        final SegmentReplicationStatus.SegmentStatsSnapshot snapshot = segmentReplicationStatus.computeSegmentStats(
-            metadataManager.iterateAllUsedSegments(),
-            true
-        );
-        dsToUnavailable = snapshot.getDatasourceToUnavailableCount();
-        tierToDsToUnderRepl = snapshot.getTierToDatasourceToUnderReplicatedCount();
-        dsToDeepStorageOnly = snapshot.getDatasourceToDeepStorageOnlyCount();
-      }
+      snapshot.getDatasourceToUnavailableCount().forEach(
+          (datasource, count) ->
+              stats.add(Stats.Segments.UNAVAILABLE, RowKey.of(Dimension.DATASOURCE, datasource), count)
+      );
 
-      for (final Object2IntMap.Entry<String> e : dsToUnavailable.object2IntEntrySet()) {
-        stats.add(Stats.Segments.UNAVAILABLE, RowKey.of(Dimension.DATASOURCE, e.getKey()), e.getIntValue());
-      }
+      snapshot.getTierToDatasourceToUnderReplicatedCount().forEach(
+          (tier, datasourceToCount) -> datasourceToCount.forEach(
+              (datasource, count) ->
+                  stats.addToSegmentStat(Stats.Segments.UNDER_REPLICATED, tier, datasource, count)
+          )
+      );
 
-      for (final Map.Entry<String, Object2LongMap<String>> tierEntry : tierToDsToUnderRepl.entrySet()) {
-        for (final Object2LongMap.Entry<String> dsEntry : tierEntry.getValue().object2LongEntrySet()) {
-          stats.addToSegmentStat(
-              Stats.Segments.UNDER_REPLICATED,
-              tierEntry.getKey(),
-              dsEntry.getKey(),
-              dsEntry.getLongValue()
-          );
-        }
-      }
-
-      for (final Object2IntMap.Entry<String> e : dsToDeepStorageOnly.object2IntEntrySet()) {
-        stats.add(Stats.Segments.DEEP_STORAGE_ONLY, RowKey.of(Dimension.DATASOURCE, e.getKey()), e.getIntValue());
-      }
+      snapshot.getDatasourceToDeepStorageOnlyCount().forEach(
+          (datasource, count) ->
+              stats.add(Stats.Segments.DEEP_STORAGE_ONLY, RowKey.of(Dimension.DATASOURCE, datasource), count)
+      );
 
       return params;
     }

@@ -75,7 +75,7 @@ public class SegmentReplicationStatusTest
     final SegmentReplicationStatus status = new SegmentReplicationStatus(replicaCountsInTier);
 
     for (boolean ignoreMissingServers : new boolean[]{true, false}) {
-      final SegmentReplicationStatus.SegmentStatsSnapshot snapshot =
+      final SegmentStatsSnapshot snapshot =
           status.computeSegmentStats(segments, ignoreMissingServers);
 
       final Object2IntMap<String> expectedUnavailable = computeExpectedUnavailable(status, segments);
@@ -103,14 +103,14 @@ public class SegmentReplicationStatusTest
     final SegmentReplicationStatus status = new SegmentReplicationStatus(replicaCountsInTier);
     final List<DataSegment> singleSegment = List.of(segments.get(0));
 
-    final SegmentReplicationStatus.SegmentStatsSnapshot ignoreMissing =
+    final SegmentStatsSnapshot ignoreMissing =
         status.computeSegmentStats(singleSegment, true);
     Assert.assertEquals(
         3L,
         ignoreMissing.getTierToDatasourceToUnderReplicatedCount().get(TIER_1).getLong("wiki")
     );
 
-    final SegmentReplicationStatus.SegmentStatsSnapshot respectMissing =
+    final SegmentStatsSnapshot respectMissing =
         status.computeSegmentStats(singleSegment, false);
     Assert.assertEquals(
         1L,

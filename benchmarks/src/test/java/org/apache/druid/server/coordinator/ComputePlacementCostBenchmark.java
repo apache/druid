@@ -31,6 +31,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -115,17 +116,9 @@ public class ComputePlacementCostBenchmark
 
   private static DataSegment createSegment(Interval interval)
   {
-    return new DataSegment(
-        DATASOURCE,
-        interval,
-        "v1",
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        null,
-        0,
-        1
-    );
+    return DataSegment.builder(SegmentId.of(DATASOURCE, interval, "v1", 0))
+                      .size(1)
+                      .build();
   }
 
   /**

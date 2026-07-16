@@ -36,25 +36,6 @@ public class SegmentReplicaCount
   private int movingTo;
   private int movingFrom;
 
-  SegmentReplicaCount()
-  {
-  }
-
-  /**
-   * Copies the counts out of {@code other} into a new, independent instance.
-   */
-  SegmentReplicaCount(SegmentReplicaCount other)
-  {
-    this.required = other.required;
-    this.requiredAndLoadable = other.requiredAndLoadable;
-    this.loaded = other.loaded;
-    this.loadedNonHistorical = other.loadedNonHistorical;
-    this.loading = other.loading;
-    this.dropping = other.dropping;
-    this.movingTo = other.movingTo;
-    this.movingFrom = other.movingFrom;
-  }
-
   /**
    * Increments number of replicas loaded on historical servers.
    */
@@ -180,6 +161,16 @@ public class SegmentReplicaCount
   int missingAndLoadable()
   {
     return Math.max(requiredAndLoadable() - totalLoaded(), 0);
+  }
+
+  /**
+   * Returns a new, independent instance with the same counts as this one.
+   */
+  SegmentReplicaCount copy()
+  {
+    final SegmentReplicaCount copy = new SegmentReplicaCount();
+    copy.accumulate(this);
+    return copy;
   }
 
   /**

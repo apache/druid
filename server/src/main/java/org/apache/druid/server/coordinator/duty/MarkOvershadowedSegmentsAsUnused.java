@@ -39,6 +39,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Marks a segment as unused if it is overshadowed by:
@@ -82,27 +83,27 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
 
     // Identify the datasources that actually have overshadowed segments to check.
     // Timelines only need to be built for these datasources.
-    final Set<String> relevantDatasources = new HashSet<>();
-    for (DataSegment s : allOvershadowedSegments) {
-      relevantDatasources.add(s.getDataSource());
-    }
+    final Set<String> eligibleDatasources = allOvershadowedSegments
+        .stream()
+        .map(DataSegment::getDataSource)
+        .collect(Collectors.toSet());
 
     final DruidCluster cluster = params.getDruidCluster();
     final Map<String, SegmentTimeline> timelines = new HashMap<>();
 
     cluster.getManagedHistoricals().values().forEach(
         historicals -> historicals.forEach(
-            historical -> addSegmentsFromServer(historical, timelines, relevantDatasources)
+            historical -> addSegmentsFromServer(historical, timelines, eligibleDatasources)
         )
     );
     cluster.getBrokers().forEach(
-        broker -> addSegmentsFromServer(broker, timelines, relevantDatasources)
+        broker -> addSegmentsFromServer(broker, timelines, eligibleDatasources)
     );
 
     // Include all segments that require zero replicas to be loaded
     params.getSegmentAssigner().getSegmentsWithZeroRequiredReplicas().forEach(
         (datasource, segments) -> {
-          if (relevantDatasources.contains(datasource)) {
+          if (eligibleDatasources.contains(datasource)) {
             timelines.computeIfAbsent(datasource, ds -> new SegmentTimeline())
                      .addSegments(segments.iterator());
           }
@@ -143,13 +144,13 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
   private void addSegmentsFromServer(
       ServerHolder serverHolder,
       Map<String, SegmentTimeline> timelines,
-      Set<String> relevantDatasources
+      Set<String> eligibleDatasources
   )
   {
     final ImmutableDruidServer server = serverHolder.getServer();
 
     for (final ImmutableDruidDataSource dataSource : server.getDataSources()) {
-      if (!relevantDatasources.contains(dataSource.getName())) {
+      if (!eligibleDatasources.contains(dataSource.getName())) {
         continue;
       }
 

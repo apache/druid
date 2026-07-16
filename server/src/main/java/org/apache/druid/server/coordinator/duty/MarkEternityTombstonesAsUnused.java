@@ -139,28 +139,40 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
     }
 
     for (final ImmutableDruidDataSource dataSource : dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()) {
-      final String datasource = dataSource.getName();
+      final String datasourceName = dataSource.getName();
+      // The timeline is guaranteed to be present since it is derived from the same set of
+      // datasources that we are iterating over.
       final SegmentTimeline usedSegmentsTimeline
-          = dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource().get(datasource);
-      if (usedSegmentsTimeline == null) {
-        continue;
-      }
+          = dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource().get(datasourceName);
 
       for (final DataSegment candidateSegment : dataSource.getSegments()) {
-        if (isNewGenerationEternityTombstone(candidateSegment)
-            && !usedSegmentsTimeline.isOvershadowed(candidateSegment)
-            && !overlapsAnyOvershadowedSegment(
-                candidateSegment,
-                overshadowedSegmentsByDatasource.get(candidateSegment.getDataSource())
-            )) {
+        if (shouldMarkAsUnused(candidateSegment, overshadowedSegmentsByDatasource, usedSegmentsTimeline)) {
           datasourceToNonOvershadowedEternityTombstones
-              .computeIfAbsent(datasource, ds -> new HashSet<>())
+              .computeIfAbsent(datasourceName, ds -> new HashSet<>())
               .add(candidateSegment.getId());
         }
       }
     }
 
     return datasourceToNonOvershadowedEternityTombstones;
+  }
+
+  /**
+   * A candidate segment should be marked as unused if it is a new-generation eternity tombstone that is neither
+   * overshadowed in the used-segments timeline nor overlapping any overshadowed segment in its datasource.
+   */
+  private boolean shouldMarkAsUnused(
+      final DataSegment candidateSegment,
+      final Map<String, Set<DataSegment>> overshadowedSegmentsByDatasource,
+      final SegmentTimeline usedSegmentsTimeline
+  )
+  {
+    return isNewGenerationEternityTombstone(candidateSegment)
+           && !usedSegmentsTimeline.isOvershadowed(candidateSegment)
+           && !overlapsAnyOvershadowedSegment(
+               candidateSegment,
+               overshadowedSegmentsByDatasource.get(candidateSegment.getDataSource())
+           );
   }
 
   private boolean overlapsAnyOvershadowedSegment(

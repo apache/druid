@@ -205,7 +205,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
   {
     for (final ImmutableDruidDataSource dataSource : params.getDataSourcesSnapshot().getDataSourcesWithAllUsedSegments()) {
       final long totalSizeOfUsedSegments = dataSource.getTotalSizeOfSegments();
-      final int numUsedSegments = dataSource.getSegments().size();
+      final int numUsedSegments = dataSource.getNumSegments();
 
       final RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, dataSource.getName());
       stats.add(Stats.Segments.USED_BYTES, datasourceKey, totalSizeOfUsedSegments);
