@@ -125,6 +125,16 @@ public class TestDerbyConnector extends DerbyConnector
     }
   }
 
+  /**
+   * Calls the generic JDBC exportTable implementation from {@link SQLMetadataConnector},
+   * bypassing Derby's native SYSCS_EXPORT_TABLE override.
+   * This exercises the same code path used by PostgreSQL and other connectors.
+   */
+  public void exportTableGeneric(final String tableName, final String outputPath)
+  {
+    exportTableWithJdbc(tableName, outputPath);
+  }
+
   public static String dbSafeUUID()
   {
     return StringUtils.removeChar(UUID.randomUUID().toString(), '-');

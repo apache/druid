@@ -25,6 +25,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.io.BaseEncoding;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
@@ -50,12 +51,18 @@ import org.skife.jdbi.v2.util.IntegerMapper;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientException;
+import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -1036,6 +1043,73 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     if (config.get().isCreateTables()) {
       createAuditTable(tablesConfigSupplier.get().getAuditTable());
     }
+  }
+
+  @Override
+  public void exportTable(
+      final String tableName,
+      final String outputPath
+  )
+  {
+    exportTableWithJdbc(tableName, outputPath);
+  }
+
+  /**
+   * Exports a table to a CSV file using generic JDBC.
+   * Binary columns are hex-encoded and booleans are written as true/false strings.
+   * Subclasses may override {@link #exportTable} with a database-specific implementation
+   * while this method remains available for testing or fallback.
+   */
+  protected void exportTableWithJdbc(
+      final String tableName,
+      final String outputPath
+  )
+  {
+    retryWithHandle(
+            (HandleCallback<Void>) handle -> {
+              try (Statement stmt = handle.getConnection().createStatement();
+                   ResultSet rs = stmt.executeQuery(StringUtils.format("SELECT * FROM %s", tableName));
+                   FileOutputStream fos = new FileOutputStream(outputPath);
+                   OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
+                final ResultSetMetaData meta = rs.getMetaData();
+                final int columnCount = meta.getColumnCount();
+                while (rs.next()) {
+                  for (int i = 1; i <= columnCount; i++) {
+                    if (i > 1) {
+                      writer.write(',');
+                    }
+                    final int colType = meta.getColumnType(i);
+                    if (colType == Types.BINARY || colType == Types.VARBINARY
+                        || colType == Types.LONGVARBINARY || colType == Types.BLOB
+                        || (colType == Types.OTHER && "bytea".equalsIgnoreCase(meta.getColumnTypeName(i)))) {
+                      final byte[] bytes = rs.getBytes(i);
+                      if (bytes != null) {
+                        writer.write(BaseEncoding.base16().encode(bytes));
+                      }
+                    } else if (colType == Types.BOOLEAN || colType == Types.BIT) {
+                      final boolean val = rs.getBoolean(i);
+                      if (!rs.wasNull()) {
+                        writer.write(String.valueOf(val));
+                      }
+                    } else {
+                      final String val = rs.getString(i);
+                      if (val != null) {
+                        if (val.contains(",") || val.contains("\"") || val.contains("\n") || val.contains("\r")) {
+                          writer.write('"');
+                          writer.write(StringUtils.replace(val, "\"", "\"\""));
+                          writer.write('"');
+                        } else {
+                          writer.write(val);
+                        }
+                      }
+                    }
+                  }
+                  writer.write('\n');
+                }
+              }
+              return null;
+            }
+    );
   }
 
   @Override
