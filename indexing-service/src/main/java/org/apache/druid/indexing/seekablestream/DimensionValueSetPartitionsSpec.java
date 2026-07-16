@@ -22,6 +22,7 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
@@ -55,7 +56,7 @@ public class DimensionValueSetPartitionsSpec implements StreamingPartitionsSpec
       @JsonProperty("maxValuesPerDimension") @Nullable Integer maxValuesPerDimension
   )
   {
-    this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
+    this.partitionDimensions = Configs.valueOrDefault(partitionDimensions, Collections.emptyList());
     if (maxValuesPerDimension != null && maxValuesPerDimension <= 0) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
