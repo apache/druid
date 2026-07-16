@@ -63,6 +63,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 {
   private static final EmittingLogger log = new EmittingLogger(CostBasedAutoScaler.class);
 
+  public static final String AUTOSCALER_TYPE_NAME = "costBased";
   public static final String LAG_WEIGHT_METRIC = "task/autoScaler/costBased/lagWeight";
   public static final String IDLE_WEIGHT_METRIC = "task/autoScaler/costBased/idleWeight";
   public static final String CURRENT_LAG_COST_METRIC = "task/autoScaler/costBased/currentLagCost";
@@ -124,7 +125,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
                                                             + StringUtils.encodeForFormat(spec.getId()));
     this.isSimulator = false;
   }
-  
+
   private CostBasedAutoScaler(CostBasedAutoScalerConfig config, String supervisorId)
   {
     this.config = config;
@@ -138,7 +139,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     this.processingRateSamples = null;
     this.autoscalerExecutor = null;
   }
-  
+
   public static CostBasedAutoScaler createSimulator(CostBasedAutoScalerConfig config, String supervisorId)
   {
     return new CostBasedAutoScaler(config, supervisorId);

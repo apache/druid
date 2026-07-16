@@ -29,8 +29,7 @@ import './auto-scaler-panel.scss';
 
 interface AutoScalerRow {
   lag: number;
-  task_count: number;
-  usage_percent: number;
+  taskCount: number;
 }
 
 interface AutoScalerPanelProps {
@@ -44,14 +43,38 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
   const [taskCountMax, setTaskCountMax] = useState<number>(10);
   const [maxProcessingRatePerTask, setMaxProcessingRatePerTask] = useState<number>(10000);
   const [optimalTaskIdleRatio, setOptimalTaskIdleRatio] = useState<number>(0.2);
+  const [lagWeight, setLagWeight] = useState<number>(0.4);
+  const [idleWeight, setIdleWeight] = useState<number>(0.6);
   const [criticalLag, setCriticalLag] = useState<number>(100000);
+  // Undefined means "let the server use the supervisor's live task count".
+  const [currentTaskCount, setCurrentTaskCount] = useState<number | undefined>(undefined);
 
   const chartContainerRef = useRef<HTMLDivElement | undefined>(undefined);
   const chartRef = useRef<ECharts | undefined>(undefined);
   const query = useMemo(
-    () => ({supervisorId, taskCountMin, taskCountMax, maxProcessingRatePerTask, optimalTaskIdleRatio, criticalLag}),
-    [supervisorId, taskCountMin, taskCountMax, maxProcessingRatePerTask, optimalTaskIdleRatio, criticalLag]
-  )
+    () => ({
+      supervisorId,
+      taskCountMin,
+      taskCountMax,
+      maxProcessingRatePerTask,
+      optimalTaskIdleRatio,
+      lagWeight,
+      idleWeight,
+      criticalLag,
+      currentTaskCount,
+    }),
+    [
+      supervisorId,
+      taskCountMin,
+      taskCountMax,
+      maxProcessingRatePerTask,
+      optimalTaskIdleRatio,
+      lagWeight,
+      idleWeight,
+      criticalLag,
+      currentTaskCount,
+    ],
+  );
 
   const [dataState] = useQueryManager<
     {
@@ -60,11 +83,16 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
       taskCountMax: number;
       maxProcessingRatePerTask: number;
       optimalTaskIdleRatio: number;
+      lagWeight: number;
+      idleWeight: number;
       criticalLag: number;
+      currentTaskCount: number | undefined;
     },
     AutoScalerRow[]
   >({
     query,
+    debounceIdle: 300,
+    debounceLoading: 500,
     processQuery: async (params, signal) => {
       const resp = await Api.instance.get<{ data: AutoScalerRow[] }>(
         `/druid/indexer/v1/supervisor/${Api.encodePath(params.supervisorId)}/autoscaler`,
@@ -74,7 +102,10 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
             taskCountMax: params.taskCountMax,
             maxProcessingRatePerTask: params.maxProcessingRatePerTask,
             optimalTaskIdleRatio: params.optimalTaskIdleRatio,
+            lagWeight: params.lagWeight,
+            idleWeight: params.idleWeight,
             criticalLag: params.criticalLag,
+            currentTaskCount: params.currentTaskCount,
           },
           signal,
         },
@@ -133,7 +164,7 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
     myChart.setOption({
       series: [
         {
-          data: data.map(row => [row.lag, row.task_count]),
+          data: data.map(row => [row.lag, row.taskCount]),
         },
       ],
     });
@@ -182,9 +213,39 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
             value={optimalTaskIdleRatio}
             min={0}
             max={1}
-            stepSize={0.05}
+            stepSize={0.1}
+            minorStepSize={0.01}
             onValueChange={v => setOptimalTaskIdleRatio(v)}
+            fill
+          />
+        </FormGroup>
+        <FormGroup label="Current task count" inline>
+          <NumericInput
+            value={currentTaskCount ?? ''}
+            min={1}
+            placeholder="Supervisor's current"
+            onValueChange={v => setCurrentTaskCount(isNaN(v) ? undefined : v)}
             buttonPosition="none"
+            fill
+          />
+        </FormGroup>
+        <FormGroup label="Lag weight" inline>
+          <NumericInput
+            value={lagWeight}
+            min={0}
+            stepSize={0.1}
+            minorStepSize={0.01}
+            onValueChange={v => setLagWeight(v)}
+            fill
+          />
+        </FormGroup>
+        <FormGroup label="Idle weight" inline>
+          <NumericInput
+            value={idleWeight}
+            min={0}
+            stepSize={0.1}
+            minorStepSize={0.01}
+            onValueChange={v => setIdleWeight(v)}
             fill
           />
         </FormGroup>

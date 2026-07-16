@@ -207,7 +207,7 @@ export interface SupervisorsViewState {
   alertErrorMsg?: string;
 
   supervisorTableActionDialogId?: string;
-  supervisorTableActionDialogType?: string,
+  supervisorTableActionDialogType?: string;
   supervisorTableActionDialogActions: BasicAction[];
 
   visibleColumns: LocalStorageBackedVisibility;
@@ -1386,7 +1386,7 @@ export class SupervisorsView extends React.PureComponent<
             onClose={() =>
               this.setState({
                 supervisorTableActionDialogId: undefined,
-                supervisorTableActionDialogType: undefined
+                supervisorTableActionDialogType: undefined,
               })
             }
           />

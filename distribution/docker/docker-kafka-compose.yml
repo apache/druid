@@ -1,0 +1,224 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+# All Druid services share one locally-built image. Build context is the repo
+# root because distribution/docker/Dockerfile does `COPY . /src`.
+#
+# On Apple Silicon the builder stage is pinned to linux/amd64 and emulating it
+# is painfully slow. Prefer building the distribution natively first:
+#   mvn clean package -DskipTests -Pdist
+#   DRUID_BUILD_FROM_SOURCE=false docker compose -f distribution/docker/docker-kafka-compose.yml build
+# Env shared by every Druid service. Kept in its own anchor because YAML merge
+# keys do not deep-merge: any service declaring `environment:` replaces the
+# anchor's wholesale, so it must re-merge this explicitly.
+x-druid-env: &druid-env
+  # Overrides the loadList in `environment`, which is shared with docker-compose.yml.
+  # Same list plus druid-kafka-indexing-service, needed for Kafka supervisors.
+  druid_extensions_loadList: '["druid-histogram", "druid-datasketches", "druid-lookups-cached-global", "postgresql-metadata-storage", "druid-kafka-indexing-service"]'
+
+x-druid: &druid
+  image: apache/druid:local
+  build:
+    context: ../..
+    dockerfile: distribution/docker/Dockerfile
+    args:
+      BUILD_FROM_SOURCE: "${DRUID_BUILD_FROM_SOURCE:-true}"
+  env_file:
+    - environment
+  environment:
+    <<: *druid-env
+
+volumes:
+  metadata_data: {}
+  middle_var: {}
+  historical_var: {}
+  broker_var: {}
+  coordinator_var: {}
+  overlord_var: {}
+  router_var: {}
+  druid_shared: {}
+
+
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:17.6
+    ports:
+      - "5432:5432"
+    volumes:
+      - metadata_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=FoolishPassword
+      - POSTGRES_USER=druid
+      - POSTGRES_DB=druid
+
+  # Needed by Druid only. Kafka 4.x is KRaft-only and does not use ZooKeeper.
+  zookeeper:
+    container_name: zookeeper
+    image: zookeeper:3.5.10
+    ports:
+      - "2181:2181"
+    environment:
+      - ZOO_MY_ID=1
+
+  # Single-node Kafka in KRaft combined mode (broker + controller in one process).
+  # Two listeners: PLAINTEXT for in-network clients (Druid), EXTERNAL for the host.
+  kafka:
+    container_name: kafka
+    image: apache/kafka:4.3.0
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+  # Creates the topic, then emits exactly one JSON event per second, forever.
+  kafka-producer:
+    container_name: kafka-producer
+    image: apache/kafka:4.3.0
+    depends_on:
+      - kafka
+    entrypoint: ["/bin/sh", "-c"]
+    # $$ escapes compose interpolation so the shell sees a single $.
+    command:
+      - |
+        until /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1; do
+          echo "waiting for kafka..."
+          sleep 1
+        done
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 \
+          --create --if-not-exists --topic druid-events \
+          --partitions 4 --replication-factor 1
+        i=0
+        while true; do
+          i=$$((i + 1))
+          echo "{\"timestamp\":\"$$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"page\":\"page-$$((i % 10))\",\"user\":\"user-$$((i % 100))\",\"latency\":$$((i % 500)),\"count\":1}"
+          sleep 1
+        done | /opt/kafka/bin/kafka-console-producer.sh \
+          --bootstrap-server kafka:9092 --topic druid-events
+
+  coordinator:
+    <<: *druid
+    container_name: coordinator
+    volumes:
+      - druid_shared:/opt/shared
+      - coordinator_var:/opt/druid/var
+    depends_on:
+      - zookeeper
+      - postgres
+    ports:
+      - "8081:8081"
+    command:
+      - coordinator
+    environment:
+      <<: *druid-env
+      # The shared coordinator-overlord config enables this; turn it off so the
+      # standalone overlord below is the only one.
+      druid_coordinator_asOverlord_enabled: "false"
+
+  # druid.sh maps both `coordinator` and `overlord` to the coordinator-overlord
+  # config dir, which hardcodes druid.service=druid/coordinator on port 8081.
+  # Override both so this announces itself as a real, separate overlord.
+  overlord:
+    <<: *druid
+    container_name: overlord
+    volumes:
+      - druid_shared:/opt/shared
+      - overlord_var:/opt/druid/var
+    depends_on:
+      - zookeeper
+      - postgres
+    ports:
+      - "8090:8090"
+    command:
+      - overlord
+    environment:
+      <<: *druid-env
+      druid_service: druid/overlord
+      druid_plaintextPort: "8090"
+
+  broker:
+    <<: *druid
+    container_name: broker
+    volumes:
+      - broker_var:/opt/druid/var
+    depends_on:
+      - zookeeper
+      - postgres
+      - coordinator
+    ports:
+      - "8082:8082"
+    command:
+      - broker
+
+  historical:
+    <<: *druid
+    container_name: historical
+    volumes:
+      - druid_shared:/opt/shared
+      - historical_var:/opt/druid/var
+    depends_on:
+      - zookeeper
+      - postgres
+      - coordinator
+    ports:
+      - "8083:8083"
+    command:
+      - historical
+
+  middlemanager:
+    <<: *druid
+    container_name: middlemanager
+    volumes:
+      - druid_shared:/opt/shared
+      - middle_var:/opt/druid/var
+    depends_on:
+      - zookeeper
+      - postgres
+      - coordinator
+      - overlord
+    ports:
+      - "8091:8091"
+      - "8100-8105:8100-8105"
+    command:
+      - middleManager
+
+  router:
+    <<: *druid
+    container_name: router
+    volumes:
+      - router_var:/opt/druid/var
+    depends_on:
+      - zookeeper
+      - postgres
+      - coordinator
+    ports:
+      - "8888:8888"
+    command:
+      - router

@@ -74,7 +74,7 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
     ...(isKafka
       ? [
           {
-            icon: 'predictive-analysis' as any,
+            icon: 'predictive-analysis' as const,
             text: 'Auto-scaler',
             active: activeTab === 'auto-scaler',
             onClick: () => setActiveTab('auto-scaler'),
@@ -112,9 +112,7 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
         />
       )}
       {activeTab === 'history' && <SupervisorHistoryPanel supervisorId={supervisorId} />}
-      {activeTab === 'auto-scaler' && isKafka && (
-        <AutoScalerPanel supervisorId={supervisorId} />
-      )}
+      {activeTab === 'auto-scaler' && isKafka && <AutoScalerPanel supervisorId={supervisorId} />}
     </TableActionDialog>
   );
 });

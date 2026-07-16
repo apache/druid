@@ -36,6 +36,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
@@ -58,6 +59,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -74,6 +76,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.AUTOSCALER_TYPE_NAME;
 
 /**
  * Endpoints for submitting and starting a {@link SupervisorSpec}, getting running supervisors, stopping supervisors,
@@ -184,7 +188,9 @@ public class SupervisorResource
     );
   }
 
-  /** Audits supervisor spec submissions that changed or restarted the supervisor. */
+  /**
+   * Audits supervisor spec submissions that changed or restarted the supervisor.
+   */
   private void auditSupervisorUpdate(final SupervisorSpec spec, final HttpServletRequest req)
   {
     final String auditPayload
@@ -539,41 +545,43 @@ public class SupervisorResource
   @Path("/{id}/autoscaler")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
-  public Response simulateAutoscalingWithLag(
+  public Response simulateAutoscaling(
       @PathParam("id") String supervisorId,
+      @QueryParam("autoScalerStrategy") @DefaultValue(AUTOSCALER_TYPE_NAME) String autoScalerStrategy,
       @QueryParam("taskCountMin") int taskCountMin,
       @QueryParam("taskCountMax") int taskCountMax,
       @QueryParam("maxProcessingRatePerTask") int maxProcessingRatePerTask,
       @QueryParam("optimalTaskIdleRatio") double optimalTaskIdleRatio,
+      @QueryParam("lagWeight") Double lagWeight,
+      @QueryParam("idleWeight") Double idleWeight,
       @QueryParam("criticalLag") int criticalLag,
+      @QueryParam("currentTaskCount") Integer currentTaskCount,
       @Context HttpServletRequest request
   )
   {
-    final CostBasedAutoScalerConfig autoScalerConfig = new CostBasedAutoScalerConfig(
-        taskCountMax,
-        taskCountMin,
-        true,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        optimalTaskIdleRatio,
-        null,
-        null,
-        null,
-        null,
-        null,
-        false
-    );
+    if (!AUTOSCALER_TYPE_NAME.equals(autoScalerStrategy)) {
+      throw InvalidInput.exception(
+          "Cannot simulate autoScalerStrategy[%s]. Only [%s] is supported.",
+          autoScalerStrategy,
+          AUTOSCALER_TYPE_NAME
+      );
+    }
+    final CostBasedAutoScalerConfig autoScalerConfig =
+        CostBasedAutoScalerConfig.forSimulation(
+            taskCountMin,
+            taskCountMax,
+            optimalTaskIdleRatio,
+            lagWeight,
+            idleWeight
+        );
     return asLeaderWithSupervisorManager(
         manager -> Response.ok(
-            manager.simulateAutoscalingWithLag(
+            manager.simulateAutoscaling(
                 supervisorId,
                 autoScalerConfig,
                 criticalLag,
-                maxProcessingRatePerTask
+                maxProcessingRatePerTask,
+                currentTaskCount
             )
         ).build()
     );
@@ -607,7 +615,12 @@ public class SupervisorResource
   {
     if (count != null && count <= 0) {
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.of("error", StringUtils.format("Count must be greater than zero if set (count was %d)", count)))
+                     .entity(ImmutableMap.of("error",
+                                             StringUtils.format(
+                                                 "Count must be greater than zero if set (count was %d)",
+                                                 count
+                                             )
+                     ))
                      .build();
     }
 
