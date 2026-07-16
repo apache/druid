@@ -65,8 +65,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
   public static final String LAG_WEIGHT_METRIC = "task/autoScaler/costBased/lagWeight";
   public static final String IDLE_WEIGHT_METRIC = "task/autoScaler/costBased/idleWeight";
+  public static final String CURRENT_COST_METRIC = "task/autoScaler/costBased/currentCost";
   public static final String CURRENT_LAG_COST_METRIC = "task/autoScaler/costBased/currentLagCost";
   public static final String CURRENT_IDLE_COST_METRIC = "task/autoScaler/costBased/currentIdleCost";
+  public static final String OPTIMAL_COST_METRIC = "task/autoScaler/costBased/optimalCost";
   public static final String OPTIMAL_LAG_COST_METRIC = "task/autoScaler/costBased/optimalLagCost";
   public static final String OPTIMAL_IDLE_COST_METRIC = "task/autoScaler/costBased/optimalIdleCost";
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
@@ -307,6 +309,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     emitter.emit(getMetricBuilder().setMetric(IDLE_WEIGHT_METRIC, config.getIdleWeight()));
     emitter.emit(getMetricBuilder().setMetric(CURRENT_LAG_COST_METRIC, currentCost.lagCost()));
     emitter.emit(getMetricBuilder().setMetric(CURRENT_IDLE_COST_METRIC, currentCost.idleCost()));
+    emitter.emit(getMetricBuilder().setMetric(CURRENT_COST_METRIC, currentCost.totalCost()));
 
     // Emit avg rate and idle metrics only if they are available
     if (metrics.getAvgProcessingRate() >= 0) {
@@ -326,6 +329,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       );
       emitter.emit(getMetricBuilder().setMetric(OPTIMAL_LAG_COST_METRIC, optimalCost.lagCost()));
       emitter.emit(getMetricBuilder().setMetric(OPTIMAL_IDLE_COST_METRIC, optimalCost.idleCost()));
+      emitter.emit(getMetricBuilder().setMetric(OPTIMAL_COST_METRIC, optimalCost.totalCost()));
     }
 
     // Scale-up is applied eagerly; scale-down may be deferred by computeTaskCountForScaleAction().
