@@ -310,6 +310,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     emitter.emit(getMetricBuilder().setMetric(CURRENT_LAG_COST_METRIC, currentCost.lagCost()));
     emitter.emit(getMetricBuilder().setMetric(CURRENT_IDLE_COST_METRIC, currentCost.idleCost()));
     emitter.emit(getMetricBuilder().setMetric(CURRENT_COST_METRIC, currentCost.totalCost()));
+    emitter.emit(getMetricBuilder().setMetric(OPTIMAL_COST_METRIC, optimalCost.totalCost()));
 
     // Emit avg rate and idle metrics only if they are available
     if (metrics.getAvgProcessingRate() >= 0) {
@@ -329,7 +330,15 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       );
       emitter.emit(getMetricBuilder().setMetric(OPTIMAL_LAG_COST_METRIC, optimalCost.lagCost()));
       emitter.emit(getMetricBuilder().setMetric(OPTIMAL_IDLE_COST_METRIC, optimalCost.idleCost()));
-      emitter.emit(getMetricBuilder().setMetric(OPTIMAL_COST_METRIC, optimalCost.totalCost()));
+
+      final double costDropPercent = (currentCost.totalCost() - optimalCost.totalCost()) / currentCost.totalCost();
+      if (costDropPercent < config.getMinCostDropPercentForScaling()) {
+        log.info(
+            "Skipping scaling since cost drop percent[%.2f] is less than required minCostDropPercentForScaling[%d]",
+            costDropPercent, config.getMinCostDropPercentForScaling()
+        );
+        return currentTaskCount;
+      }
     }
 
     // Scale-up is applied eagerly; scale-down may be deferred by computeTaskCountForScaleAction().
