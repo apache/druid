@@ -61,7 +61,7 @@ import java.util.UUID;
 
 @Command(
     name = "export-metadata",
-    description = "Exports the contents of a Druid Derby metadata store to CSV files to assist with cluster migration. This tool also provides the ability to rewrite segment locations in the Derby metadata to assist with deep storage migration."
+    description = "Exports the contents of a Druid metadata store (Derby or PostgreSQL) to CSV files to assist with cluster migration. This tool also provides the ability to rewrite segment locations in the metadata to assist with deep storage migration."
 )
 public class ExportMetadata extends GuiceRunnable
 {
@@ -245,10 +245,16 @@ public class ExportMetadata extends GuiceRunnable
     } else {
       pathFormatString = "%s/%s.csv";
     }
+    final String exportTableName = isDerby() ? StringUtils.toUpperCase(tableName) : tableName;
     dbConnector.exportTable(
-        StringUtils.toUpperCase(tableName),
+        exportTableName,
         StringUtils.format(pathFormatString, outputPath, tableName)
     );
+  }
+
+  private boolean isDerby()
+  {
+    return connectURI != null && connectURI.startsWith("jdbc:derby");
   }
 
   private void rewriteDatasourceExport(

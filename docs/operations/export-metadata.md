@@ -36,9 +36,10 @@ This tool exports the contents of the following Druid metadata tables:
 Additionally, the tool can rewrite the local deep storage location descriptors in the rows of the segments table
 to point to new deep storage locations (S3, HDFS, and local rewrite paths are supported).
 
+The tool supports exporting from both Derby and PostgreSQL metadata stores.
+
 The tool has the following limitations:
 
-- Only exporting from Derby metadata is currently supported
 - If rewriting load specs for deep storage migration, only migrating from local deep storage is currently supported.
 
 ## `export-metadata` Options
@@ -47,7 +48,7 @@ The `export-metadata` tool provides the following options:
 
 ### Connection Properties
 
-- `--connectURI`: The URI of the Derby database, e.g. `jdbc:derby://localhost:1527/var/druid/metadata.db;create=true`
+- `--connectURI`: The URI of the metadata database, e.g. `jdbc:derby://localhost:1527/var/druid/metadata.db;create=true` for Derby or `jdbc:postgresql://localhost:5432/druid` for PostgreSQL
 - `--user`: Username
 - `--password`: Password
 - `--base`: corresponds to the value of `druid.metadata.storage.tables.base` in the configuration, `druid` by default.
@@ -133,7 +134,9 @@ If the new path  was `/migration/example`, the contents of `/migration/example/`
 
 ## Running the tool
 
-To use the tool, you can run the following from the root of the Druid package:
+To use the tool, you can run the following from the root of the Druid package.
+
+### Exporting from Derby
 
 ```bash
 cd ${DRUID_ROOT}
@@ -141,7 +144,17 @@ mkdir -p /tmp/csv
 java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[] org.apache.druid.cli.Main tools export-metadata --connectURI "jdbc:derby://localhost:1527/var/druid/metadata.db;" -o /tmp/csv
 ```
 
-In the example command above:
+### Exporting from PostgreSQL
+
+When exporting from PostgreSQL, you must load the `postgresql-metadata-storage` extension and set the storage type to `postgresql`:
+
+```bash
+cd ${DRUID_ROOT}
+mkdir -p /tmp/csv
+java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList='["postgresql-metadata-storage"]' -Ddruid.metadata.storage.type=postgresql org.apache.druid.cli.Main tools export-metadata --connectURI "jdbc:postgresql://localhost:5432/druid" --user druid --password druid -o /tmp/csv
+```
+
+In the example commands above:
 
 - `lib` is the Druid lib directory
 - `extensions` is the Druid extensions directory
@@ -151,7 +164,7 @@ In the example command above:
 
 After running the tool, the output directory will contain `<table-name>_raw.csv` and `<table-name>.csv` files.
 
-The `<table-name>_raw.csv` files are intermediate files used by the tool, containing the table data as exported by Derby without modification.
+The `<table-name>_raw.csv` files are intermediate files used by the tool, containing the table data as exported from the source database without deep-storage rewrites. BLOB columns are hex-encoded and booleans are written as `true`/`false` strings.
 
 The `<table-name>.csv` files are used for import into another database such as MySQL and PostgreSQL and have any configured deep storage location rewrites applied.
 
