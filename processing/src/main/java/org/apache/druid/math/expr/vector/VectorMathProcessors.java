@@ -367,7 +367,8 @@ public class VectorMathProcessors
           (left, right) -> left / right,
           (left, right) -> (double) left / right,
           (left, right) -> left / (double) right,
-          (left, right) -> left / right
+          (left, right) -> left / right,
+          SimdSupportedBinaryOp.DIV
       );
     }
   }
