@@ -46,8 +46,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
 {
   static final double DEFAULT_LAG_WEIGHT = 0.4;
   static final double DEFAULT_IDLE_WEIGHT = 0.6;
-  static final Duration DEFAULT_MIN_SCALE_UP_DELAY = Duration.standardMinutes(10);
-  static final Duration DEFAULT_MIN_SCALE_DOWN_DELAY = Duration.standardMinutes(30);
+  static final Duration DEFAULT_MIN_SCALE_UP_DELAY = Duration.standardMinutes(15);
+  static final Duration DEFAULT_MIN_SCALE_DOWN_DELAY = Duration.standardMinutes(20);
   static final Duration DEFAULT_SCALE_ACTION_PERIOD = Duration.standardMinutes(2);
 
   private final boolean enableTaskAutoScaler;
