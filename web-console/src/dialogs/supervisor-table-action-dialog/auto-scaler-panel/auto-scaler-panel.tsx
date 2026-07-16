@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { FormGroup, NumericInput } from '@blueprintjs/core';
+import { FormGroup, NumericInput, Slider } from '@blueprintjs/core';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -44,7 +44,8 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
   const [maxProcessingRatePerTask, setMaxProcessingRatePerTask] = useState<number>(10000);
   const [optimalTaskIdleRatio, setOptimalTaskIdleRatio] = useState<number>(0.2);
   const [lagWeight, setLagWeight] = useState<number>(0.4);
-  const [idleWeight, setIdleWeight] = useState<number>(0.6);
+  // Idle weight is the complement of lag weight; one slider drives both.
+  const idleWeight = Math.round((1 - lagWeight) * 10) / 10;
   const [criticalLag, setCriticalLag] = useState<number>(100000);
   // Undefined means "let the server use the supervisor's live task count".
   const [currentTaskCount, setCurrentTaskCount] = useState<number | undefined>(undefined);
@@ -229,26 +230,6 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
             fill
           />
         </FormGroup>
-        <FormGroup label="Lag weight" inline>
-          <NumericInput
-            value={lagWeight}
-            min={0}
-            stepSize={0.1}
-            minorStepSize={0.01}
-            onValueChange={v => setLagWeight(v)}
-            fill
-          />
-        </FormGroup>
-        <FormGroup label="Idle weight" inline>
-          <NumericInput
-            value={idleWeight}
-            min={0}
-            stepSize={0.1}
-            minorStepSize={0.01}
-            onValueChange={v => setIdleWeight(v)}
-            fill
-          />
-        </FormGroup>
         <FormGroup label="Critical lag (records)" inline>
           <NumericInput
             value={criticalLag}
@@ -256,6 +237,16 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
             onValueChange={v => setCriticalLag(v)}
             buttonPosition="none"
             fill
+          />
+        </FormGroup>
+        <FormGroup label={`Lag ${lagWeight.toFixed(1)} / Idle ${idleWeight.toFixed(1)} weight`}>
+          <Slider
+            min={0}
+            max={1}
+            stepSize={0.1}
+            labelStepSize={0.5}
+            value={lagWeight}
+            onChange={v => setLagWeight(Math.round(v * 10) / 10)}
           />
         </FormGroup>
       </div>

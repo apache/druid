@@ -26,7 +26,7 @@
   .auto-scaler-controls {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 40px;
     margin-bottom: 15px;
 
     .bp4-form-group {
@@ -39,6 +39,12 @@
 
       .bp4-numeric-input {
         width: 100px;
+      }
+
+      .bp4-slider {
+        width: 200px;
+        min-width: 200px;
+        margin-top: -15px;
       }
     }
   }
