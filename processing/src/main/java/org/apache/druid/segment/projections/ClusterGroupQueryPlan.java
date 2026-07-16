@@ -28,8 +28,10 @@ import org.apache.druid.segment.filter.TrueFilter;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -134,10 +136,19 @@ public final class ClusterGroupQueryPlan
       rewritten = Projections.rewriteFilterRequiredColumns(rewritten, virtualColumnRemap);
     }
 
-    return CursorBuildSpec.builder(spec)
-                          .setFilter(rewritten)
-                          .setVirtualColumns(VirtualColumns.create(prunedVcs))
-                          .build();
+    final CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder(spec)
+                                                                          .setFilter(rewritten)
+                                                                          .setVirtualColumns(VirtualColumns.create(prunedVcs));
+
+    // The dropped query VCs now read their materialized target columns, so add them
+    final Set<String> physicalColumns = spec.getPhysicalColumns();
+    if (physicalColumns != null) {
+      final Set<String> withTargets = new HashSet<>(physicalColumns);
+      withTargets.addAll(virtualColumnRemap.values());
+      builder.setPhysicalColumns(withTargets);
+    }
+
+    return builder.build();
   }
 }
 

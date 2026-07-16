@@ -47,6 +47,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Coverage for {@link Projections#planClusterGroupQuery}, exercised through both facets of the returned
@@ -1013,6 +1014,94 @@ class ProjectionsPlanClusterGroupQueryTest
         buildSpec(null, queryVcs)
     );
     Assertions.assertEquals(Map.of("v1", "region_upper"), plan.virtualColumnRemap());
+  }
+
+  @Test
+  void testVirtualColumnRemapExcludesTargetShadowedByAnotherQueryVc()
+  {
+    // v1 := upper(region) is equivalent to the materialized region_upper, but the query also has a VC NAMED
+    // region_upper (:= lower(region)). Remapping v1 -> region_upper would route through the per-group delegate, which
+    // resolves "region_upper" to the shadowing query VC (lowercase) instead of the stored column -- so v1 must NOT be
+    // remapped (it recomputes upper(region) instead). See the shadow guard in buildClusterVirtualColumnRemap.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("region_upper", "lower(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(materializedVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertTrue(plan.virtualColumnRemap().isEmpty());
+  }
+
+  @Test
+  void testRebuildCursorBuildSpecDeclaresRemapTargetsInPhysicalColumns()
+  {
+    // v1 := upper(region) remaps to the materialized region_upper. A populated physicalColumns set carried the VC's
+    // raw input (region), not the target, so the rebuilt spec must add region_upper -- otherwise partial-segment
+    // prefetch omits it and the remapped read hits deep storage synchronously (and incremental capability checks
+    // reject the undeclared column). The raw input stays too.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final TableClusterGroupSpec group = materializedVcGroup("acme");
+    final CursorBuildSpec spec = CursorBuildSpec.builder()
+                                                .setVirtualColumns(queryVcs)
+                                                .setPhysicalColumns(Set.of("region"))
+                                                .build();
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(List.of(group), spec);
+    Assertions.assertEquals(Map.of("v1", "region_upper"), plan.virtualColumnRemap());
+
+    final CursorBuildSpec rebuilt = plan.rebuildCursorBuildSpec(spec, group);
+    Assertions.assertTrue(rebuilt.getPhysicalColumns().contains("region_upper"));
+    Assertions.assertTrue(rebuilt.getPhysicalColumns().contains("region"));
+  }
+
+  @Test
+  void testRebuildCursorBuildSpecLeavesNullPhysicalColumnsNull()
+  {
+    // A null physicalColumns means "all columns"; rebuild must not fabricate a (now-incomplete) set from the remap.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final TableClusterGroupSpec group = materializedVcGroup("acme");
+    final CursorBuildSpec spec = buildSpec(null, queryVcs);
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(List.of(group), spec);
+    Assertions.assertFalse(plan.virtualColumnRemap().isEmpty());
+
+    Assertions.assertNull(plan.rebuildCursorBuildSpec(spec, group).getPhysicalColumns());
+  }
+
+  @Test
+  void testRebuildCursorBuildSpecLeavesUnrewritableFilterUntouchedWhenDisjointFromRemap()
+  {
+    // A filter that can't rewrite its required columns, used alongside a remappable VC it does NOT reference, must be
+    // left untouched: v0 := lower(tenant) still remaps to tenant_lower, but the filter (on region) does not intersect
+    // the remap, so rebuildCursorBuildSpec must not call rewriteRequiredColumns on it (which would throw).
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final Filter filter = new NoRewriteFilter("region");
+    final TableClusterGroupSpec group = materializedVcGroup("acme");
+    final CursorBuildSpec spec = buildSpec(filter, queryVcs);
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(List.of(group), spec);
+    Assertions.assertEquals(Map.of("v0", "tenant_lower"), plan.virtualColumnRemap());
+
+    Assertions.assertSame(filter, plan.rebuildCursorBuildSpec(spec, group).getFilter());
+  }
+
+  @Test
+  void testVirtualColumnRemapExcludesColumnReferencedByUnrewritableFilter()
+  {
+    // The unrewritable filter references v1 (a VC equivalent to the materialized region_upper). v1 must NOT be
+    // remapped: the filter can't be rewritten to region_upper, and dropping v1 would leave the filter referencing a
+    // column the per-group cursor no longer carries. Leaving v1 unremapped keeps it computed for the filter.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final CursorBuildSpec spec = buildSpec(new NoRewriteFilter("v1"), queryVcs);
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(List.of(materializedVcGroup("acme")), spec);
+    Assertions.assertTrue(plan.virtualColumnRemap().isEmpty());
   }
 
   @Test
