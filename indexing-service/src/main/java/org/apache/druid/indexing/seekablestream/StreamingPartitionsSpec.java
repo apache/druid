@@ -21,6 +21,8 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.annotation.JsonTypeResolver;
+import org.apache.druid.jackson.StrictTypeIdResolver;
 
 import javax.annotation.Nullable;
 
@@ -37,10 +39,12 @@ import javax.annotation.Nullable;
  * collects the distinct values of a set of dimensions; future strategies (e.g. min/max ranges or bloom filters) can be
  * added by registering a new subtype below with its own collector, without changing the task runner.
  *
- * <p>For backward compatibility the type defaults to {@link DimensionValueSetPartitionsSpec}, so existing configs that
- * specify only {@code partitionDimensions} (no {@code type}) continue to deserialize unchanged.
+ * <p>An omitted {@code type} defaults to {@link DimensionValueSetPartitionsSpec} for backward compatibility, but an
+ * explicit unknown {@code type} (a typo, or a subtype whose extension isn't loaded here) is rejected by
+ * {@link StrictTypeIdResolver} rather than silently falling back.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DimensionValueSetPartitionsSpec.class)
+@JsonTypeResolver(StrictTypeIdResolver.Builder.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, property = "type", defaultImpl = DimensionValueSetPartitionsSpec.class)
 @JsonSubTypes({
     @JsonSubTypes.Type(name = DimensionValueSetPartitionsSpec.TYPE, value = DimensionValueSetPartitionsSpec.class)
 })

@@ -221,6 +221,27 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(List.of("tenant", "region"), partitionDimensionsOf(config));
   }
 
+  @Test
+  public void testSerdeWithUnknownStreamingPartitionsSpecTypeIsRejected()
+  {
+    // An explicit but unknown type (e.g. a typo, or a subtype whose extension isn't loaded on this peon) must fail
+    // rather than silently falling back to the default DimensionValueSetPartitionsSpec.
+    final String jsonStr = "{\n"
+                           + "  \"type\": \"kafka\",\n"
+                           + "  \"streamingPartitionsSpec\": "
+                           + "{\"type\": \"dim_value_sets\", \"partitionDimensions\": [\"tenant\"]}\n"
+                           + "}";
+
+    final Exception e = Assert.assertThrows(
+        Exception.class,
+        () -> mapper.readValue(jsonStr, TuningConfig.class)
+    );
+    Assert.assertTrue(
+        "Expected the unknown type id to be surfaced, got: " + e.getMessage(),
+        e.getMessage().contains("dim_value_sets")
+    );
+  }
+
   private KafkaIndexTaskTuningConfig roundTripWithStreamingPartitionsSpec(String partitionDimensionsJson)
       throws IOException
   {
