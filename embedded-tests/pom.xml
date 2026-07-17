@@ -34,7 +34,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>38.0.0-SNAPSHOT</version>
+    <version>39.0.0-SNAPSHOT</version>
   </parent>
 
   <dependencies>
