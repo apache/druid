@@ -197,7 +197,11 @@ public class SupervisorManager implements SupervisorStatsProvider
       if (!skipRestartIfUnmodified) {
         // Always stop/recreate, persisting whenever the spec actually changed (or is new).
         final boolean specChanged = isSpecChangedAndValidated(spec);
-        final SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
+        final SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(
+            spec.getId(),
+            false,
+            spec.shouldRestartCauseTaskDisruption()
+        );
         spec.merge(existingSpec);
         createAndStartSupervisorInternal(spec, specChanged);
         return SupervisorSpecUpdateResult.of(specChanged, true);
@@ -234,7 +238,7 @@ public class SupervisorManager implements SupervisorStatsProvider
       }
 
       // Restart path: stop+recreate, persisting the changed spec.
-      possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
+      possiblyStopAndRemoveSupervisorInternal(spec.getId(), false, spec.shouldRestartCauseTaskDisruption());
       createAndStartSupervisorInternal(spec, true);
       return SupervisorSpecUpdateResult.of(true, true);
     }
@@ -277,7 +281,7 @@ public class SupervisorManager implements SupervisorStatsProvider
 
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
-      return possiblyStopAndRemoveSupervisorInternal(id, true) != null;
+      return possiblyStopAndRemoveSupervisorInternal(id, true, true) != null;
     }
   }
 
@@ -650,7 +654,11 @@ public class SupervisorManager implements SupervisorStatsProvider
    * @return reference to existing supervisor, if exists and was stopped, null if there was no supervisor with this id
    */
   @Nullable
-  private SupervisorSpec possiblyStopAndRemoveSupervisorInternal(String id, boolean writeTombstone)
+  private SupervisorSpec possiblyStopAndRemoveSupervisorInternal(
+      String id,
+      boolean writeTombstone,
+      boolean shouldRestartCauseTaskDisruption
+  )
   {
     Pair<Supervisor, SupervisorSpec> pair = supervisors.get(id);
     if (pair == null || pair.rhs == null || pair.lhs == null) {
@@ -663,7 +671,7 @@ public class SupervisorManager implements SupervisorStatsProvider
           new NoopSupervisorSpec(null, pair.rhs.getDataSources())
       ); // where NoopSupervisorSpec is a tombstone
     }
-    pair.lhs.stop(true);
+    pair.lhs.stop(shouldRestartCauseTaskDisruption);
     supervisors.remove(id);
 
     SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
@@ -692,7 +700,7 @@ public class SupervisorManager implements SupervisorStatsProvider
     }
 
     SupervisorSpec nextState = suspend ? pair.rhs.createSuspendedSpec() : pair.rhs.createRunningSpec();
-    possiblyStopAndRemoveSupervisorInternal(nextState.getId(), false);
+    possiblyStopAndRemoveSupervisorInternal(nextState.getId(), false, nextState.shouldRestartCauseTaskDisruption());
     return createAndStartSupervisorInternal(nextState, true);
   }
 

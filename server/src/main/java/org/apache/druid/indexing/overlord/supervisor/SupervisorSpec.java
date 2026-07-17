@@ -148,4 +148,12 @@ public interface SupervisorSpec
   {
     return true;
   }
+
+  /**
+   * Returns true if the supervisor restart should cause task disruption, false otherwise
+   */
+  default boolean shouldRestartCauseTaskDisruption()
+  {
+    return true;
+  }
 }
