@@ -400,6 +400,104 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
   }
 
   @Test
+  void testResidentBundleEvictedBeforeHoldAcquisitionIsRefetched() throws IOException
+  {
+    // A resident-but-unheld bundle can be evicted between makeCursorHolderAsync's plan resolution and the bundle
+    // hold acquisition; evictContainer clears the residency bitmap, so a residency snapshot taken before the hold
+    // would omit the formerly-resident files and never restore them, making materialization throw on their
+    // non-resident mapFile. Fetch planning is deferred until the bundle's hold is acquired (PrefetchBundle
+    // .planFetches), so the plan sees post-eviction residency and re-fetches. Model the worst-case timing by
+    // evicting inside acquire() itself, immediately before the hold exists.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "evict_window")) {
+      final PartialQueryableIndex index = opened.index();
+      final PartialSegmentFileMapperV10 mapper = opened.mapper();
+
+      // the query's columns are resident before the query arrives
+      mapper.fetchFiles(Set.of("__base/__time", "__base/dim1"));
+      Assertions.assertTrue(mapper.getDownloadedFiles().containsAll(Set.of("__base/__time", "__base/dim1")));
+
+      final ListeningExecutorService exec = directExec();
+      final PartialBundleAcquirer evictingAcquirer = new PartialBundleAcquirer()
+      {
+        @Override
+        public Closeable acquire(String bundleName)
+        {
+          // the eviction lands in the unheld window: every container's residency is wiped just before the hold
+          for (int i = 0; i < mapper.getSegmentFileMetadata().getContainers().size(); i++) {
+            mapper.evictContainer(i);
+          }
+          return () -> {};
+        }
+
+        @Override
+        public <T> AsyncResource<T> submitDownload(Callable<T> task)
+        {
+          return AsyncResources.fromFutureUnmanaged(exec.submit(task));
+        }
+      };
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          evictingAcquirer
+      );
+
+      final CursorBuildSpec spec = CursorBuildSpec.builder().setPhysicalColumns(Set.of("dim1")).build();
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(spec);
+           CursorHolder holder = asyncHolder.release()) {
+        Assertions.assertNotNull(holder);
+        Assertions.assertTrue(
+            mapper.getDownloadedFiles().containsAll(Set.of("__base/__time", "__base/dim1")),
+            "evicted files must be re-fetched by the post-hold plan; got: " + mapper.getDownloadedFiles()
+        );
+      }
+    }
+  }
+
+  @Test
+  void testMemoizedColumnsSurviveBundleEvictionBetweenQueries() throws IOException
+  {
+    // Query 1 materializes (and memoizes) its columns; with all holds released, the bundle evicts; query 2
+    // re-acquires and re-fetches. The holders memoized by query 1 wrap the unmapped old container mmap — serving
+    // them to query 2 would read freed memory without ever consulting mapFile (so the non-resident throw can't
+    // catch it). The eviction-aware suppliers detect the bundle-generation change and rebuild against the fresh
+    // container, so query 2 reads correct values.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "evict_between_queries")) {
+      final PartialQueryableIndex index = opened.index();
+      final PartialSegmentFileMapperV10 mapper = opened.mapper();
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          noOpAcquirer(directExec())
+      );
+      final CursorBuildSpec spec = CursorBuildSpec.builder().setPhysicalColumns(Set.of("dim1")).build();
+
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(spec);
+           CursorHolder holder = asyncHolder.release()) {
+        Assertions.assertNotNull(holder.asCursor());
+      }
+
+      // every hold is released; the bundle evicts
+      for (int i = 0; i < mapper.getSegmentFileMetadata().getContainers().size(); i++) {
+        mapper.evictContainer(i);
+      }
+
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(spec);
+           CursorHolder holder = asyncHolder.release()) {
+        final Cursor cursor = holder.asCursor();
+        final ColumnValueSelector<?> dim1 = cursor.getColumnSelectorFactory().makeColumnValueSelector("dim1");
+        final List<Object> values = new ArrayList<>();
+        while (!cursor.isDone()) {
+          values.add(dim1.getObject());
+          cursor.advance();
+        }
+        Assertions.assertEquals(List.of("a", "a", "b", "b"), values);
+      }
+    }
+  }
+
+  @Test
   void testMatchedProjectionDownloadsOnlyRequestedColumns() throws IOException
   {
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
