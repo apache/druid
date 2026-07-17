@@ -56,7 +56,7 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"minScaleDownDelay\": \"PT10M\",\n"
                   + "  \"scaleDownDuringTaskRolloverOnly\": true,\n"
                   + "  \"usePollIdleRatio\": false,\n"
-                  + "  \"criticalLagThreshold\": 500000\n"
+                  + "  \"criticalLagThreshold\": 500000,\n"
                   + "  \"minCostDropPercentForScaling\": 10\n"
                   + "}";
 

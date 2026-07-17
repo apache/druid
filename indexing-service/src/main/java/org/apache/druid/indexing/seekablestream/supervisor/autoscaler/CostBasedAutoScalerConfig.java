@@ -89,7 +89,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("minScaleDownDelay") Duration minScaleDownDelay,
       @Nullable @JsonProperty("scaleDownDuringTaskRolloverOnly") Boolean scaleDownDuringTaskRolloverOnly,
       @Nullable @JsonProperty("usePollIdleRatio") Boolean usePollIdleRatio,
-      @Nullable @JsonProperty("criticalLagThreshold") Long criticalLagThreshold
+      @Nullable @JsonProperty("criticalLagThreshold") Long criticalLagThreshold,
       @Nullable @JsonProperty("minCostDropPercentForScaling") Integer minCostDropPercentForScaling
   )
   {
@@ -558,7 +558,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           minScaleDownDelay,
           scaleDownDuringTaskRolloverOnly,
           usePollIdleRatio,
-          criticalLagThreshold
+          criticalLagThreshold,
           minCostDropPercentForScaling
       );
     }
