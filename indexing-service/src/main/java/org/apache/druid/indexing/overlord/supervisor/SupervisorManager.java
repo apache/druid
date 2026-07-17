@@ -197,10 +197,12 @@ public class SupervisorManager implements SupervisorStatsProvider
       if (!skipRestartIfUnmodified) {
         // Always stop/recreate, persisting whenever the spec actually changed (or is new).
         final boolean specChanged = isSpecChangedAndValidated(spec);
+        final Pair<Supervisor, SupervisorSpec> current = supervisors.get(spec.getId());
+        final SupervisorSpec currentSpec = current == null ? null : current.rhs;
         final SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(
             spec.getId(),
             false,
-            spec.shouldRestartCauseTaskDisruption()
+            currentSpec == null || currentSpec.shouldRolloverTasksOnRestart(spec)
         );
         spec.merge(existingSpec);
         createAndStartSupervisorInternal(spec, specChanged);
@@ -238,7 +240,7 @@ public class SupervisorManager implements SupervisorStatsProvider
       }
 
       // Restart path: stop+recreate, persisting the changed spec.
-      possiblyStopAndRemoveSupervisorInternal(spec.getId(), false, spec.shouldRestartCauseTaskDisruption());
+      possiblyStopAndRemoveSupervisorInternal(spec.getId(), false, currentSpec.shouldRolloverTasksOnRestart(spec));
       createAndStartSupervisorInternal(spec, true);
       return SupervisorSpecUpdateResult.of(true, true);
     }
@@ -657,7 +659,7 @@ public class SupervisorManager implements SupervisorStatsProvider
   private SupervisorSpec possiblyStopAndRemoveSupervisorInternal(
       String id,
       boolean writeTombstone,
-      boolean shouldRestartCauseTaskDisruption
+      boolean terminateTasks
   )
   {
     Pair<Supervisor, SupervisorSpec> pair = supervisors.get(id);
@@ -671,7 +673,7 @@ public class SupervisorManager implements SupervisorStatsProvider
           new NoopSupervisorSpec(null, pair.rhs.getDataSources())
       ); // where NoopSupervisorSpec is a tombstone
     }
-    pair.lhs.stop(shouldRestartCauseTaskDisruption);
+    pair.lhs.stop(terminateTasks);
     supervisors.remove(id);
 
     SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
