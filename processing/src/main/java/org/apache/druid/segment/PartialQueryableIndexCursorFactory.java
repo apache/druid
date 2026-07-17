@@ -143,7 +143,8 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
       for (PartialQueryableIndex.PrefetchBundle bundle : bundles) {
         final BundleHoldRelease holdRelease = new BundleHoldRelease(bundleAcquirer.acquire(bundle.bundleName()));
         holdReleases.add(holdRelease);
-        for (PartialSegmentFileMapperV10.PlannedFetch fetch : bundle.fetches()) {
+        // Plan the bundle's range reads only now, under its freshly-acquired hold
+        for (PartialSegmentFileMapperV10.PlannedFetch fetch : bundle.planFetches()) {
           runDownloads.add(submitRunFetch(bundle.bundleName(), fetch, holdRelease));
         }
       }
