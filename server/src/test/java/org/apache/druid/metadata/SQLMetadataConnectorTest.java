@@ -502,7 +502,7 @@ public class SQLMetadataConnectorTest
         }
     );
 
-    final File outputFile = File.createTempFile("export_test", ".csv");
+    final File outputFile = Files.createTempFile("export_test", ".csv").toFile();
     outputFile.deleteOnExit();
 
     // Call the base class exportTable (the generic JDBC path used by PostgreSQL)
@@ -557,7 +557,7 @@ public class SQLMetadataConnectorTest
         }
     );
 
-    final File outputFile = File.createTempFile("export_special_test", ".csv");
+    final File outputFile = Files.createTempFile("export_special_test", ".csv").toFile();
     outputFile.deleteOnExit();
 
     connector.exportTableGeneric(
@@ -605,7 +605,7 @@ public class SQLMetadataConnectorTest
         }
     );
 
-    final File outputFile = File.createTempFile("export_nulls_test", ".csv");
+    final File outputFile = Files.createTempFile("export_nulls_test", ".csv").toFile();
     outputFile.deleteOnExit();
 
     connector.exportTableGeneric(
@@ -664,7 +664,7 @@ public class SQLMetadataConnectorTest
         }
     );
 
-    final File outputFile = File.createTempFile("export_allcols_test", ".csv");
+    final File outputFile = Files.createTempFile("export_allcols_test", ".csv").toFile();
     outputFile.deleteOnExit();
 
     connector.exportTableGeneric(
