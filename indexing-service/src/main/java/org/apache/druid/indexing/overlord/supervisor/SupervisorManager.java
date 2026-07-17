@@ -700,7 +700,7 @@ public class SupervisorManager implements SupervisorStatsProvider
     }
 
     SupervisorSpec nextState = suspend ? pair.rhs.createSuspendedSpec() : pair.rhs.createRunningSpec();
-    possiblyStopAndRemoveSupervisorInternal(nextState.getId(), false, nextState.shouldRestartCauseTaskDisruption());
+    possiblyStopAndRemoveSupervisorInternal(nextState.getId(), false, true);
     return createAndStartSupervisorInternal(nextState, true);
   }
 
