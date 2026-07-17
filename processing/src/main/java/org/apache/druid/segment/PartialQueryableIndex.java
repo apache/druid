@@ -478,6 +478,7 @@ public class PartialQueryableIndex implements QueryableIndex
     final Map<String, Supplier<BaseColumnHolder>> baseColumns = clusterGroupColumnsByIndex.computeIfAbsent(
         groupIndex,
         i -> buildColumnSuppliers(
+            Projections.getClusterGroupBundleName(groupSpec.getClusteringValueIds()),
             clusteredBaseSummary.getTimeColumnName(),
             groupSpec.getNumRows(),
             clusteredBaseSummary.getGroupColumnNames(),
@@ -553,7 +554,7 @@ public class PartialQueryableIndex implements QueryableIndex
                 Projections.getClusterGroupBundleName(group.getClusteringValueIds()),
                 groupIndex,
                 required,
-                planClusterGroupPrefetch(group, required)
+                () -> planClusterGroupPrefetch(group, required)
             )
         );
       }
@@ -566,10 +567,17 @@ public class PartialQueryableIndex implements QueryableIndex
     final QueryableIndex rowSelector = matched != null ? matched.getRowSelector() : this;
     final String bundleName = matched != null ? matched.getName() : Projections.BASE_TABLE_PROJECTION_NAME;
     final Set<String> required = requiredColumns(rowSelector, matched, spec);
-    final List<PartialSegmentFileMapperV10.PlannedFetch> fetches =
-        matched != null ? planProjectionPrefetch(matched.getName(), required) : planBaseTablePrefetch(required);
     final List<PrefetchBundle> bundles = new ArrayList<>(2);
-    bundles.add(new PrefetchBundle(bundleName, rowSelector, required, fetches));
+    bundles.add(
+        new PrefetchBundle(
+            bundleName,
+            rowSelector,
+            required,
+            matched != null
+            ? () -> planProjectionPrefetch(matched.getName(), required)
+            : () -> planBaseTablePrefetch(required)
+        )
+    );
     if (matched != null) {
       final Set<String> parents = projectionParentColumns(matched.getName(), required);
       if (!parents.isEmpty()) {
@@ -584,7 +592,7 @@ public class PartialQueryableIndex implements QueryableIndex
                 Projections.BASE_TABLE_PROJECTION_NAME,
                 this,
                 parents,
-                planBaseTablePrefetch(parents)
+                () -> planBaseTablePrefetch(parents)
             )
         );
       }
@@ -649,6 +657,7 @@ public class PartialQueryableIndex implements QueryableIndex
   )
   {
     return buildColumnSuppliers(
+        projectionSpec.getSchema().getName(),
         projectionSpec.getSchema().getTimeColumnName(),
         projectionSpec.getNumRows(),
         projectionSpec.getSchema().getColumnNames(),
@@ -658,13 +667,15 @@ public class PartialQueryableIndex implements QueryableIndex
   }
 
   /**
-   * Shared builder for lazy per-column suppliers. Each supplier is memoized and defers both
-   * {@link SegmentFileMapper#mapFile} and {@link ColumnDescriptor#read} until the column is actually accessed, by
-   * which point the column's files must be resident (made so by a planned fetch, mapFile throws otherwise).
-   * {@code fileNameFn} maps a logical column name to its segment-internal (smoosh) file name in the right bundle
-   * namespace.
+   * Shared builder for lazy per-column suppliers. Each supplier memoizes with eviction awareness (see
+   * {@link EvictionAwareColumnSupplier}) and defers both {@link SegmentFileMapper#mapFile} and
+   * {@link ColumnDescriptor#read} until the column is actually accessed, by which point the column's files must be
+   * resident (made so by a planned fetch, mapFile throws otherwise). {@code bundleName} is the cache-layer bundle the
+   * columns live in (their eviction unit); {@code fileNameFn} maps a logical column name to its segment-internal
+   * (smoosh) file name in that bundle's namespace.
    */
   private Map<String, Supplier<BaseColumnHolder>> buildColumnSuppliers(
+      String bundleName,
       @Nullable String timeColumnName,
       int numRows,
       List<String> columnNames,
@@ -683,7 +694,10 @@ public class PartialQueryableIndex implements QueryableIndex
       }
 
       final String internedColumnName = SmooshedFileMapper.STRING_INTERNER.intern(column);
-      final Supplier<BaseColumnHolder> columnSupplier = Suppliers.memoize(() -> {
+      // a column with a same-named base parent deserializes through the parent's buffers (dictionary reuse), so its
+      // memoization must also invalidate when the parent's (__base) bundle is evicted
+      final boolean readsParent = parentColumns.containsKey(column);
+      final Supplier<BaseColumnHolder> columnSupplier = new EvictionAwareColumnSupplier(bundleName, readsParent, () -> {
         try {
           final ByteBuffer colBuffer = fileMapper.mapFile(smooshName);
           final BaseColumnHolder parentColumn =
@@ -935,17 +949,94 @@ public class PartialQueryableIndex implements QueryableIndex
   }
 
   /**
-   * One bundle's worth of planned download work: the cache-layer {@code bundleName} to mount, the row selector whose
-   * {@code getColumnHolder} materializes the columns, the columns to materialize once resident, and the planned
-   * coalesced range reads that make them resident, each paired with the (main or external) mapper that executes it
-   * and each executable concurrently via {@link PartialSegmentFileMapperV10.PlannedFetch#fetch()}.
+   * One bundle's worth of download work: the cache-layer {@code bundleName} to mount, the row selector whose
+   * {@code getColumnHolder} materializes the columns, the columns to materialize once resident, and a planner for
+   * the coalesced range reads that make them resident, each paired with the (main or external) mapper that executes
+   * it and each executable concurrently via {@link PartialSegmentFileMapperV10.PlannedFetch#fetch()}.
    */
   record PrefetchBundle(
       String bundleName,
       QueryableIndex rowSelector,
       Set<String> requiredColumns,
-      List<PartialSegmentFileMapperV10.PlannedFetch> fetches
+      Supplier<List<PartialSegmentFileMapperV10.PlannedFetch>> fetchPlanner
   )
   {
+    /**
+     * Plan this bundle's range reads against CURRENT residency. Call only once the bundle is protected from
+     * eviction (its cache-layer hold is acquired); planning drops already-resident files from the runs, so a
+     * residency snapshot taken while the bundle is unheld can be invalidated by a concurrent eviction
+     * ({@code evictContainer} clears the residency bitmap), leaving a plan whose runs never restore the
+     * formerly-resident files. Files that become resident after a held plan only shrink the work
+     * ({@code fetchRun} re-checks under its locks); they can never grow it.
+     */
+    List<PartialSegmentFileMapperV10.PlannedFetch> planFetches()
+    {
+      return fetchPlanner.get();
+    }
+  }
+
+  /**
+   * Memoizing column supplier that invalidates on bundle eviction. This index (and its supplier maps) is cached
+   * across acquisitions, but the deserialized {@link BaseColumnHolder}s wrap slices of container mmaps, and a bundle
+   * eviction between queries unmaps those containers; a plainly-memoized holder would then be a dangling reference
+   * into freed memory that never consults {@link SegmentFileMapper#mapFile} again (so the non-resident throw can't
+   * catch it). Each {@code get()} compares the {@link PartialSegmentFileMapperV10#getBundleGeneration bundle
+   * generation} captured at deserialization time against the current one and rebuilds on mismatch; a column that
+   * reads through a base-table parent also captures the parent bundle's generation, since its holder references the
+   * parent's buffers (dictionary reuse) and must be rebuilt when only {@code __base} was evicted.
+   * <p>
+   * The comparison is only meaningful under the bundle's eviction exclusion (the caller's cache-layer hold), which
+   * is where the cursor factory materializes columns: under the hold the generation cannot advance, so a holder
+   * returned here stays valid for as long as the hold is held.
+   */
+  private final class EvictionAwareColumnSupplier implements Supplier<BaseColumnHolder>
+  {
+    private final String bundleName;
+    private final boolean readsParent;
+    private final Supplier<BaseColumnHolder> delegate;
+
+    @Nullable
+    private volatile Memoized memoized = null;
+
+    private EvictionAwareColumnSupplier(String bundleName, boolean readsParent, Supplier<BaseColumnHolder> delegate)
+    {
+      this.bundleName = bundleName;
+      this.readsParent = readsParent;
+      this.delegate = delegate;
+    }
+
+    @Override
+    public BaseColumnHolder get()
+    {
+      final long generation = currentGeneration();
+      Memoized current = memoized;
+      if (current != null && current.generation == generation) {
+        return current.holder;
+      }
+      synchronized (this) {
+        // re-read both under the lock: a concurrent get() may have rebuilt already
+        final long lockedGeneration = currentGeneration();
+        current = memoized;
+        if (current != null && current.generation == lockedGeneration) {
+          return current.holder;
+        }
+        final BaseColumnHolder holder = delegate.get();
+        memoized = new Memoized(holder, lockedGeneration);
+        return holder;
+      }
+    }
+
+    private long currentGeneration()
+    {
+      long generation = fileMapper.getBundleGeneration(bundleName);
+      if (readsParent) {
+        generation += fileMapper.getBundleGeneration(Projections.BASE_TABLE_PROJECTION_NAME);
+      }
+      return generation;
+    }
+
+    private record Memoized(BaseColumnHolder holder, long generation)
+    {
+    }
   }
 }

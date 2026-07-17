@@ -285,7 +285,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
       // execute the plan for this spec: the projection bundle plus the __base parent bundle
       final PartialQueryableIndex.CursorPrefetchPlan plan = index.planCursorPrefetch(matchingSpec);
       for (PartialQueryableIndex.PrefetchBundle bundle : plan.bundles()) {
-        for (PartialSegmentFileMapperV10.PlannedFetch fetch : bundle.fetches()) {
+        for (PartialSegmentFileMapperV10.PlannedFetch fetch : bundle.planFetches()) {
           fetch.fetch();
         }
       }
@@ -450,11 +450,12 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
       Assertions.assertEquals(0, rangeReader.getReadCount(), "planning must not download");
       Assertions.assertEquals(1, plan.bundles().size());
       final PartialQueryableIndex.PrefetchBundle bundle = plan.bundles().get(0);
-      Assertions.assertEquals(2, bundle.fetches().size(), "one run per mapper: " + bundle.fetches());
+      final List<PartialSegmentFileMapperV10.PlannedFetch> fetches = bundle.planFetches();
+      Assertions.assertEquals(2, fetches.size(), "one run per mapper: " + fetches);
 
       boolean sawMain = false;
       boolean sawExternal = false;
-      for (PartialSegmentFileMapperV10.PlannedFetch fetch : bundle.fetches()) {
+      for (PartialSegmentFileMapperV10.PlannedFetch fetch : fetches) {
         if (fetch.mapper() == mapper) {
           sawMain = true;
           // __time and dimA are adjacent in the main container; dimB is an unrequested trailing file, never fetched
@@ -508,7 +509,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
       final PartialQueryableIndex.CursorPrefetchPlan plan = index.planCursorPrefetch(
           CursorBuildSpec.builder().setPhysicalColumns(Set.of("dimA")).build()
       );
-      for (PartialSegmentFileMapperV10.PlannedFetch fetch : plan.bundles().get(0).fetches()) {
+      for (PartialSegmentFileMapperV10.PlannedFetch fetch : plan.bundles().get(0).planFetches()) {
         fetch.fetch();
       }
 
@@ -523,6 +524,41 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
           "fallback must cover the external's part of the bundle"
       );
       Assertions.assertEquals(2, rangeReader.getReadCount(), "one whole-bundle read per mapper");
+    }
+  }
+
+  @Test
+  void testColumnHolderRebuildsAfterBundleEviction() throws IOException
+  {
+    // The index (and its memoized column suppliers) outlives bundle evictions: a memoized holder wraps slices of
+    // the container mmap that eviction unmaps, and once memoized it never consults mapFile again, so the
+    // non-resident throw can't catch the staleness. The eviction-aware supplier compares bundle generations and
+    // rebuilds instead of returning the dangling holder.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    final File cacheDir = newCacheDir("evict_rebuild");
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      final PartialQueryableIndex index = new PartialQueryableIndex(
+          mapper.getSegmentFileMetadata(),
+          mapper,
+          COLUMN_CONFIG
+      );
+
+      mapper.fetchFiles(Set.of("__base/dim1"));
+      final ColumnHolder before = index.getColumnHolder("dim1");
+      Assertions.assertNotNull(before);
+      Assertions.assertSame(before, index.getColumnHolder("dim1"), "no eviction: the holder is memoized");
+
+      // evict the base bundle's containers, then make the files resident again (as a re-acquired query would)
+      for (int containerIndex : mapper.getContainerIndicesForBundle(Projections.BASE_TABLE_PROJECTION_NAME)) {
+        mapper.evictContainer(containerIndex);
+      }
+      mapper.fetchFiles(Set.of("__base/dim1"));
+
+      final ColumnHolder after = index.getColumnHolder("dim1");
+      Assertions.assertNotNull(after);
+      Assertions.assertNotSame(before, after, "an evicted bundle's holder must be rebuilt, not returned stale");
+      Assertions.assertSame(after, index.getColumnHolder("dim1"), "the rebuilt holder memoizes again");
     }
   }
 
@@ -551,14 +587,15 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
       Assertions.assertEquals(Projections.BASE_TABLE_PROJECTION_NAME, parentBundle.bundleName());
       Assertions.assertEquals(Set.of("dim1"), parentBundle.requiredColumns());
 
+      final List<PartialSegmentFileMapperV10.PlannedFetch> parentFetches = parentBundle.planFetches();
       final Set<String> parentFiles = new TreeSet<>();
-      for (PartialSegmentFileMapperV10.PlannedFetch fetch : parentBundle.fetches()) {
+      for (PartialSegmentFileMapperV10.PlannedFetch fetch : parentFetches) {
         parentFiles.addAll(fetch.run().files());
       }
       Assertions.assertEquals(Set.of("__base/dim1"), parentFiles);
 
       // executing the parent fetches makes exactly the parent's file resident, nothing else from the base bundle
-      for (PartialSegmentFileMapperV10.PlannedFetch fetch : parentBundle.fetches()) {
+      for (PartialSegmentFileMapperV10.PlannedFetch fetch : parentFetches) {
         fetch.fetch();
       }
       Assertions.assertEquals(Set.of("__base/dim1"), mapper.getDownloadedFiles());

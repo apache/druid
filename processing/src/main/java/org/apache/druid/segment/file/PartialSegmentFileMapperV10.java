@@ -58,6 +58,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -284,6 +285,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   private final MappedByteBuffer[] containers;
   private final File[] containerFiles;
   private final ReentrantLock[] containerLocks;
+  // per-container eviction generation; see getBundleGeneration
+  private final AtomicLongArray containerGenerations;
 
   // bundle name -> indices (into metadata.getContainers()) of this single mapper's containers in that bundle.
   // Computed once at construction from the immutable container metadata. Single-mapper scope only: stitching bundles
@@ -345,6 +348,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     this.containers = new MappedByteBuffer[numContainers];
     this.containerFiles = new File[numContainers];
     this.containerLocks = new ReentrantLock[numContainers];
+    this.containerGenerations = new AtomicLongArray(numContainers);
     final Map<String, List<Integer>> bundleIndices = new HashMap<>();
     for (int i = 0; i < numContainers; i++) {
       this.containerLocks[i] = new ReentrantLock();
@@ -1011,6 +1015,41 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       }
       clearBitmapBit(fileName);
     }
+
+    // last: readers that observe the bumped generation must also observe the cleared residency above
+    containerGenerations.incrementAndGet(containerIndex);
+  }
+
+  /**
+   * Monotonic eviction generation for {@code bundleName}: increments every time one of the bundle's containers is
+   * evicted ({@link #evictContainer}), summed across this mapper and every attached external mapper (a bundle's
+   * containers can span them). Readers that cache objects deserialized from container mmaps (e.g.
+   * {@code PartialQueryableIndex}'s memoized column holders) compare generations to detect that a cached object may
+   * reference since-unmapped memory and must be rebuilt. A comparison is only meaningful while the caller holds the
+   * bundle's eviction exclusion (its cache-layer hold): under the hold the generation cannot advance, so a matching
+   * value stays valid for as long as the hold is held.
+   * <p>
+   * A bundle name with no containers in a mapper conservatively reflects every container of that mapper (the name
+   * may resolve to a catch-all bundle at the cache layer, e.g. untagged legacy segments, so any eviction must
+   * invalidate).
+   */
+  public long getBundleGeneration(String bundleName)
+  {
+    long generation = 0;
+    final List<Integer> indices = bundleToContainerIndices.get(bundleName);
+    if (indices == null) {
+      for (int i = 0; i < containerGenerations.length(); i++) {
+        generation += containerGenerations.get(i);
+      }
+    } else {
+      for (int i : indices) {
+        generation += containerGenerations.get(i);
+      }
+    }
+    for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
+      generation += external.getBundleGeneration(bundleName);
+    }
+    return generation;
   }
 
   private void clearBitmapBit(String name)

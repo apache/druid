@@ -970,6 +970,36 @@ class PartialSegmentFileMapperV10Test
   }
 
   @Test
+  void testEvictContainerBumpsBundleGeneration() throws IOException
+  {
+    final File segmentFile = buildMultiBundleSegment(3, 4);
+    final File cacheDir = newCacheDir("generation");
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      final long b1Before = mapper.getBundleGeneration("b1");
+      final long b0Before = mapper.getBundleGeneration("b0");
+      final long unknownBefore = mapper.getBundleGeneration("no-such-bundle");
+
+      mapper.ensureBundleDownloaded("b1");
+      Assertions.assertEquals(b1Before, mapper.getBundleGeneration("b1"), "downloads must not advance the generation");
+
+      for (int containerIndex : mapper.getContainerIndicesForBundle("b1")) {
+        mapper.evictContainer(containerIndex);
+      }
+
+      Assertions.assertTrue(
+          mapper.getBundleGeneration("b1") > b1Before,
+          "eviction must advance the evicted bundle's generation"
+      );
+      Assertions.assertEquals(b0Before, mapper.getBundleGeneration("b0"), "other bundles' generations must not move");
+      // a name with no containers in this mapper (the cache layer can resolve names to a catch-all bundle)
+      // conservatively reflects every eviction
+      Assertions.assertTrue(mapper.getBundleGeneration("no-such-bundle") > unknownBefore);
+    }
+  }
+
+  @Test
   void testEnsureBundleDownloadedFetchesOnlyThatBundle() throws IOException
   {
     final File segmentFile = buildMultiBundleSegment(3, 4);
