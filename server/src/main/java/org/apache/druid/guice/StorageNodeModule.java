@@ -137,11 +137,10 @@ public class StorageNodeModule implements Module
 
   /**
    * Process-wide, always-virtual on-demand loading pool shared by the ephemeral per-task segment caches built via
-   * {@code SegmentCacheManagerFactory} (tasks and MSQ workers). Lifecycle-managed so those caches need not each create
-   * (and leak) their own pool on long-lived workers.
+   * {@code SegmentCacheManagerFactory} (tasks and MSQ workers).
    */
   @Provides
-  @ManageLifecycle
+  @LazySingleton
   @EphemeralStorageLoading
   public StorageLoadingThreadPool getEphemeralStorageLoadingThreadPool(SegmentLoaderConfig config)
   {

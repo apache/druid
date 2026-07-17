@@ -160,6 +160,8 @@ public class SegmentLoaderConfig
     this.virtualStorageIsEphemeral = other.virtualStorageIsEphemeral;
     this.virtualStorageMetadataReservationEstimate = other.virtualStorageMetadataReservationEstimate;
     this.virtualStoragePartialDownloadsEnabled = other.virtualStoragePartialDownloadsEnabled;
+    this.virtualStorageCoalesceGapBytes = other.virtualStorageCoalesceGapBytes;
+    this.virtualStorageMaxFetchRunBytes = other.virtualStorageMaxFetchRunBytes;
     this.combinedMaxSize = other.combinedMaxSize;
   }
 
