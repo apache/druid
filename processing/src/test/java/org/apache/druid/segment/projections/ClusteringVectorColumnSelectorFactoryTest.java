@@ -291,6 +291,81 @@ class ClusteringVectorColumnSelectorFactoryTest
     );
   }
 
+  @Test
+  void testReadableVectorInspectorFollowsCurrentDelegate()
+  {
+    // getReadableVectorInspector() must return an inspector that reflects the current delegate, even for a reference
+    // grabbed before a group transition. A multi-group ConcatenatingVectorCursor swaps the delegate on each group, and
+    // a consumer that cached the inspector must observe the active group's size (not the group that was current when
+    // it first asked).
+    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+        new StubDelegate(new NoFilterVectorOffset(8, 0, 5)),   // current vector size 5
+        CLUSTER_SIGNATURE,
+        new Object[]{"acme"}
+    );
+
+    ReadableVectorInspector inspector = f.getReadableVectorInspector();
+    Assertions.assertEquals(8, inspector.getMaxVectorSize());
+    Assertions.assertEquals(5, inspector.getCurrentVectorSize());
+    int firstId = inspector.getId();
+
+    // Simulate a group transition. The second group's offset restarts its id at 0 and has a smaller final vector.
+    f.setDelegate(new StubDelegate(new NoFilterVectorOffset(8, 0, 3)), new Object[]{"globex"});
+
+    // The previously-acquired inspector reference now reports the second group's size ...
+    Assertions.assertEquals(3, inspector.getCurrentVectorSize());
+    // ... and a distinct id, even though the delegate offset restarted at 0.
+    Assertions.assertNotEquals(firstId, inspector.getId());
+  }
+
+  @Test
+  void testGetIdUniqueAcrossSingleVectorGroups()
+  {
+    // A group that fits in one vector reports delegate id 0; the next group's offset also restarts at 0. The remapped
+    // id must differ across the transition so a single-slot id cache doesn't treat the new group's first vector as
+    // unchanged and hand back the previous group's stale vector.
+    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+        new StubDelegate(new NoFilterVectorOffset(8, 0, 4)),
+        CLUSTER_SIGNATURE,
+        new Object[]{"a"}
+    );
+    ReadableVectorInspector inspector = f.getReadableVectorInspector();
+    int idA = inspector.getId();
+
+    f.setDelegate(new StubDelegate(new NoFilterVectorOffset(8, 0, 4)), new Object[]{"b"});
+    int idB = inspector.getId();
+
+    f.setDelegate(new StubDelegate(new NoFilterVectorOffset(8, 0, 4)), new Object[]{"c"});
+    int idC = inspector.getId();
+
+    Assertions.assertNotEquals(idA, idB);
+    Assertions.assertNotEquals(idB, idC);
+    Assertions.assertNotEquals(idA, idC);
+  }
+
+  @Test
+  void testGetIdAdvancesWithinGroupAndStaysAheadAcrossTransition()
+  {
+    // Within a group, ids track the delegate offset as it advances. Across a transition, the next group's first id
+    // must be strictly greater than the last id the previous group handed out.
+    NoFilterVectorOffset offset = new NoFilterVectorOffset(4, 0, 12); // ids 0, 4, 8 as it advances
+    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+        new StubDelegate(offset),
+        CLUSTER_SIGNATURE,
+        new Object[]{"a"}
+    );
+    ReadableVectorInspector inspector = f.getReadableVectorInspector();
+    int id0 = inspector.getId();
+    offset.advance();
+    int id1 = inspector.getId();
+    offset.advance();
+    int id2 = inspector.getId();
+    Assertions.assertTrue(id0 < id1 && id1 < id2, "ids must increase as the group advances");
+
+    f.setDelegate(new StubDelegate(new NoFilterVectorOffset(4, 0, 4)), new Object[]{"b"});
+    Assertions.assertTrue(inspector.getId() > id2, "new group's first id must exceed the previous group's last id");
+  }
+
   private static ReadableVectorInspector inspectorFor(int size)
   {
     return new NoFilterVectorOffset(size, 0, size);

@@ -85,6 +85,9 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   // Bumped on every setDelegate(...) so per-call selector wrappers can detect group transitions and rebuild their
   // cached inner state
   private long generation;
+  private long rowIdBase;
+  private long lastDelegateRowId = RowIdSupplier.INIT;
+  private final RowIdSupplier rowIdSupplier = new DelegatingRowIdSupplier(this);
 
   public ClusteringColumnSelectorFactory(
       ColumnSelectorFactory delegate,
@@ -110,6 +113,11 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
           clusteringColumns.size()
       );
     }
+    // Advance the row-id base past every id issued for the outgoing group so getRowId() stays globally unique across
+    // the concatenation (each per-group delegate restarts its row offset at 0). lastDelegateRowId is that group's
+    // high-water mark; +1 makes the incoming group's first row id strictly greater than the previous group's last.
+    this.rowIdBase += this.lastDelegateRowId + 1;
+    this.lastDelegateRowId = RowIdSupplier.INIT;
     this.delegate = delegate;
     this.clusteringValues = clusteringValues;
     this.generation++;
@@ -177,12 +185,52 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public RowIdSupplier getRowIdSupplier()
   {
-    return delegate.getRowIdSupplier();
+    // A delegate may not support row-id caching; mirror that so callers skip caching (null)
+    return delegate.getRowIdSupplier() == null ? null : rowIdSupplier;
+  }
+
+  /**
+   * The current row id, remapped to be unique across the whole concatenation (see {@link #rowIdBase}). Records the
+   * delegate's raw row id as this group's running high-water mark for the next transition.
+   */
+  long currentRowId()
+  {
+    final RowIdSupplier supplier = delegate.getRowIdSupplier();
+    if (supplier == null) {
+      // getRowIdSupplier() only hands out this wrapper when the delegate supports row ids; clustered groups are
+      // homogeneous, so a null here would mean a group mid-cursor stopped supporting them.
+      throw DruidException.defensive("delegate row id supplier became null across a cluster-group transition");
+    }
+    final long rowId = supplier.getRowId();
+    lastDelegateRowId = rowId;
+    return rowIdBase + rowId;
   }
 
   Object currentValue(int idx)
   {
     return clusteringValues[idx];
+  }
+
+  /**
+   * A {@link RowIdSupplier} that forwards to the factory's <em>current</em> delegate. A single instance is handed out
+   * for the factory's lifetime; because a multi-group {@code ConcatenatingCursor} swaps the delegate on each group
+   * transition via {@link #setDelegate}, a consumer that grabbed the supplier once must observe the active group's
+   * row id. Row ids are remapped to stay unique across group boundaries (see {@link #currentRowId}).
+   */
+  private static final class DelegatingRowIdSupplier implements RowIdSupplier
+  {
+    private final ClusteringColumnSelectorFactory parent;
+
+    private DelegatingRowIdSupplier(ClusteringColumnSelectorFactory parent)
+    {
+      this.parent = parent;
+    }
+
+    @Override
+    public long getRowId()
+    {
+      return parent.currentRowId();
+    }
   }
 
   /**
