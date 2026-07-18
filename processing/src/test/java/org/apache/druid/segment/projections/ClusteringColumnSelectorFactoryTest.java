@@ -268,6 +268,29 @@ class ClusteringColumnSelectorFactoryTest
   }
 
   @Test
+  void testGetRowIdMintsMonotonicIdsRegardlessOfDelegateIdOrder()
+  {
+    // The RowIdSupplier contract does not require monotonic (or meaningful) delegate ids. We mint our own
+    // strictly-increasing ids purely from change detection, so a non-monotonic sequence within a group and an id that
+    // overlaps across a group boundary both still yield clean, collision-free ids.
+    RecordingDelegate d = new RecordingDelegate();
+    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(d, SIGNATURE, new Object[]{"a"});
+    RowIdSupplier supplier = f.getRowIdSupplier();
+
+    d.rowId = 100;
+    long a = supplier.getRowId();
+    d.rowId = 5;                       // non-monotonic within the group
+    long b = supplier.getRowId();
+
+    RecordingDelegate second = new RecordingDelegate();
+    second.rowId = 100;                // reuse an id the first group already handed out
+    f.setDelegate(second, new Object[]{"b"});
+    long c = supplier.getRowId();
+
+    Assertions.assertTrue(a < b && b < c, "minted row ids must be strictly increasing regardless of delegate id order");
+  }
+
+  @Test
   void testGetRowIdSupplierNullWhenDelegateHasNone()
   {
     // A delegate that doesn't support row-id caching (null supplier) must surface as a null supplier on the wrapper,
@@ -276,6 +299,35 @@ class ClusteringColumnSelectorFactoryTest
     d.supportsRowId = false;
     ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(d, SIGNATURE, new Object[]{"a"});
     Assertions.assertNull(f.getRowIdSupplier());
+  }
+
+  @Test
+  void testGetRowIdStableWhenPositionUnchanged()
+  {
+    // The caching contract: reading twice without the cursor moving (same delegate, same raw id) must return the SAME
+    // minted id, so a downstream row-id-keyed cache hits instead of recomputing. Guards against an always-tick regression.
+    RecordingDelegate d = new RecordingDelegate();
+    d.rowId = 3;
+    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(d, SIGNATURE, new Object[]{"a"});
+    RowIdSupplier supplier = f.getRowIdSupplier();
+    long first = supplier.getRowId();
+    Assertions.assertEquals(first, supplier.getRowId());
+    Assertions.assertEquals(first, supplier.getRowId());
+  }
+
+  @Test
+  void testGetRowIdReturnsSentinelWhenDelegateUnpositioned()
+  {
+    // When the delegate reports the unpositioned sentinel (INIT), the wrapper must pass it through unchanged and not
+    // advance its minted counter, so a later real row still mints a fresh id starting at 0.
+    RecordingDelegate d = new RecordingDelegate();
+    d.rowId = RowIdSupplier.INIT;
+    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(d, SIGNATURE, new Object[]{"a"});
+    RowIdSupplier supplier = f.getRowIdSupplier();
+    Assertions.assertEquals(RowIdSupplier.INIT, supplier.getRowId());
+
+    d.rowId = 0;
+    Assertions.assertEquals(0L, supplier.getRowId());
   }
 
   @Test
@@ -471,6 +523,10 @@ class ClusteringColumnSelectorFactoryTest
     // group cursor. supportsRowId=false models a delegate with no row-id caching (getRowIdSupplier() == null).
     long rowId;
     boolean supportsRowId = true;
+    // A single stable supplier instance (reads the mutable rowId each call), mirroring a real factory that returns
+    // `this` from getRowIdSupplier(). A fresh lambda per call would make the wrapper's delegate-identity check tick on
+    // every read, hiding whether the raw-id-change branch works.
+    private final RowIdSupplier stableRowIdSupplier = () -> rowId;
 
     @Override
     public DimensionSelector makeDimensionSelector(org.apache.druid.query.dimension.DimensionSpec dimensionSpec)
@@ -498,7 +554,7 @@ class ClusteringColumnSelectorFactoryTest
     @Override
     public RowIdSupplier getRowIdSupplier()
     {
-      return supportsRowId ? () -> rowId : null;
+      return supportsRowId ? stableRowIdSupplier : null;
     }
   }
 }

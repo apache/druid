@@ -21,6 +21,7 @@ package org.apache.druid.segment.projections;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -366,9 +367,106 @@ class ClusteringVectorColumnSelectorFactoryTest
     Assertions.assertTrue(inspector.getId() > id2, "new group's first id must exceed the previous group's last id");
   }
 
+  @Test
+  void testGetIdMintsMonotonicIdsRegardlessOfDelegateIdOrder()
+  {
+    // The ReadableVectorInspector contract does not require monotonic (or meaningful) delegate ids. We mint our own
+    // strictly-increasing ids purely from change detection, so a non-monotonic sequence within a group and an id that
+    // overlaps across a group boundary both still yield clean, collision-free ids.
+    SettableVectorInspector first = new SettableVectorInspector(4);
+    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+        new StubDelegate(first),
+        CLUSTER_SIGNATURE,
+        new Object[]{"a"}
+    );
+    ReadableVectorInspector inspector = f.getReadableVectorInspector();
+
+    first.id = 100;
+    int a = inspector.getId();
+    first.id = 5;                    // non-monotonic within the group
+    int b = inspector.getId();
+
+    SettableVectorInspector second = new SettableVectorInspector(4);
+    second.id = 100;                 // reuse an id the first group already handed out
+    f.setDelegate(new StubDelegate(second), new Object[]{"b"});
+    int c = inspector.getId();
+
+    Assertions.assertTrue(a < b && b < c, "minted ids must be strictly increasing regardless of delegate id order");
+  }
+
+  @Test
+  void testGetIdStableWhenPositionUnchanged()
+  {
+    // The caching contract: reading getId() twice without advancing (same delegate, same raw id) must return the SAME
+    // minted id, so a downstream id-keyed cache hits instead of recomputing. Guards against an always-tick regression.
+    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+        new StubDelegate(new NoFilterVectorOffset(8, 0, 5)),
+        CLUSTER_SIGNATURE,
+        new Object[]{"a"}
+    );
+    ReadableVectorInspector inspector = f.getReadableVectorInspector();
+    int first = inspector.getId();
+    Assertions.assertEquals(first, inspector.getId());
+    Assertions.assertEquals(first, inspector.getId());
+  }
+
+  @Test
+  void testGetIdReturnsSentinelWhenDelegateUnpositioned()
+  {
+    // When the delegate inspector reports NULL_ID (no stable vector), the wrapper must pass it through unchanged and
+    // not advance its minted counter, so a later real vector still mints a fresh id starting at 0.
+    SettableVectorInspector state = new SettableVectorInspector(4);
+    state.id = ReadableVectorInspector.NULL_ID;
+    ClusteringVectorColumnSelectorFactory f = new ClusteringVectorColumnSelectorFactory(
+        new StubDelegate(state),
+        CLUSTER_SIGNATURE,
+        new Object[]{"a"}
+    );
+    ReadableVectorInspector inspector = f.getReadableVectorInspector();
+    Assertions.assertEquals(ReadableVectorInspector.NULL_ID, inspector.getId());
+
+    state.id = 0;
+    Assertions.assertEquals(0, inspector.getId());
+  }
+
   private static ReadableVectorInspector inspectorFor(int size)
   {
     return new NoFilterVectorOffset(size, 0, size);
+  }
+
+  /**
+   * A {@link ReadableVectorInspector} whose id and current size can be set arbitrarily, to exercise delegate id
+   * sequences that are not monotonic (which the contract permits).
+   */
+  private static final class SettableVectorInspector implements ReadableVectorInspector
+  {
+    private final int maxSize;
+    private int id;
+    private int currentSize;
+
+    private SettableVectorInspector(int maxSize)
+    {
+      this.maxSize = maxSize;
+      this.currentSize = maxSize;
+    }
+
+    @Override
+    public int getId()
+    {
+      return id;
+    }
+
+    @Override
+    public int getMaxVectorSize()
+    {
+      return maxSize;
+    }
+
+    @Override
+    public int getCurrentVectorSize()
+    {
+      return currentSize;
+    }
   }
 
   private static class StubDelegate implements VectorColumnSelectorFactory
@@ -392,7 +490,7 @@ class ClusteringVectorColumnSelectorFactoryTest
 
     @Override
     public SingleValueDimensionVectorSelector makeSingleValueDimensionSelector(
-        org.apache.druid.query.dimension.DimensionSpec dimensionSpec
+        DimensionSpec dimensionSpec
     )
     {
       lastSingleValDimRequest = dimensionSpec.getDimension();
@@ -401,7 +499,7 @@ class ClusteringVectorColumnSelectorFactoryTest
 
     @Override
     public MultiValueDimensionVectorSelector makeMultiValueDimensionSelector(
-        org.apache.druid.query.dimension.DimensionSpec dimensionSpec
+        DimensionSpec dimensionSpec
     )
     {
       throw new UnsupportedOperationException("not used");

@@ -58,8 +58,6 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
   // Bumped on every setDelegate(...) so per-call selector wrappers can detect group transitions and rebuild their
   // cached inner state.
   private long generation;
-  private int idBase;
-  private int lastDelegateId = -1;
   private final ReadableVectorInspector readableVectorInspector = new DelegatingReadableVectorInspector(this);
 
   /**
@@ -100,11 +98,6 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
           clusteringColumns.size()
       );
     }
-    // Advance the id base past every id issued for the outgoing group so getId() stays globally unique across the
-    // concatenation (each per-group offset restarts its id sequence at 0). lastDelegateId is that group's high-water
-    // mark; +1 makes the incoming group's first id strictly greater than the last id the previous group handed out.
-    this.idBase += this.lastDelegateId + 1;
-    this.lastDelegateId = -1;
     this.delegate = delegate;
     this.clusteringValues = clusteringValues;
     this.generation++;
@@ -123,31 +116,6 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
   Object currentValue(int idx)
   {
     return clusteringValues[idx];
-  }
-
-  /**
-   * Current-vector size of the group the factory currently delegates to. Read live so that a
-   * {@link DelegatingReadableVectorInspector} handed out once still reports the active group's size after a
-   * {@link #setDelegate} transition.
-   */
-  int currentVectorSize()
-  {
-    return delegate.getReadableVectorInspector().getCurrentVectorSize();
-  }
-
-  /**
-   * The current vector id, remapped to be unique across the whole concatenation. Returns
-   * {@link ReadableVectorInspector#NULL_ID} unchanged when the delegate has no stable id, so callers still know
-   * caching is unsafe. Records the delegate's raw id as this group's running high-water mark for the next transition.
-   */
-  int currentVectorId()
-  {
-    final int id = delegate.getReadableVectorInspector().getId();
-    if (id == ReadableVectorInspector.NULL_ID) {
-      return ReadableVectorInspector.NULL_ID;
-    }
-    lastDelegateId = id;
-    return idBase + id;
   }
 
   @Override
@@ -235,18 +203,16 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
   }
 
   /**
-   * A {@link ReadableVectorInspector} that forwards to the factory's <em>current</em> delegate. A single instance is
-   * handed out for the factory's lifetime; because a multi-group {@code ConcatenatingVectorCursor} swaps the delegate
-   * on each group transition via {@link #setDelegate}, a consumer that grabbed the inspector once must observe the
-   * active group's size and id.
-   * <p>
-   * {@link #getMaxVectorSize} reports the factory's fixed max (stable for the cursor lifetime, matching
-   * {@code ConcatenatingVectorCursor#getMaxVectorSize}); {@link #getCurrentVectorSize} and {@link #getId} track the
-   * current delegate, with ids remapped to stay unique across group boundaries (see {@link #currentVectorId}).
+   * A {@link ReadableVectorInspector} bound to the factory, not to one delegate: {@link #getCurrentVectorSize} and
+   * {@link #getId} follow whichever delegate is current, so an inspector grabbed once keeps tracking the active group
+   * across {@code ConcatenatingVectorCursor} transitions. {@link #getMaxVectorSize} is the factory's fixed max.
    */
   private static final class DelegatingReadableVectorInspector implements ReadableVectorInspector
   {
     private final ClusteringVectorColumnSelectorFactory parent;
+    private int vectorId = NULL_ID;
+    private int lastDelegateId = NULL_ID;
+    private VectorColumnSelectorFactory lastDelegate;
 
     private DelegatingReadableVectorInspector(ClusteringVectorColumnSelectorFactory parent)
     {
@@ -262,13 +228,23 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
     @Override
     public int getCurrentVectorSize()
     {
-      return parent.currentVectorSize();
+      return parent.getDelegate().getReadableVectorInspector().getCurrentVectorSize();
     }
 
     @Override
     public int getId()
     {
-      return parent.currentVectorId();
+      final VectorColumnSelectorFactory delegate = parent.getDelegate();
+      final int id = delegate.getReadableVectorInspector().getId();
+      if (id == NULL_ID) {
+        return NULL_ID;
+      }
+      if (delegate != lastDelegate || id != lastDelegateId) {
+        lastDelegate = delegate;
+        lastDelegateId = id;
+        vectorId++;
+      }
+      return vectorId;
     }
   }
 
