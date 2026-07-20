@@ -80,4 +80,22 @@ class SegmentLoaderConfigTest
     );
     Assertions.assertEquals(8388608L, configured.getVirtualStorageMaxFetchRunBytes());
   }
+
+  @Test
+  public void testWithVirtualStorageReturnsCopyAndDoesNotMutateOriginal()
+  {
+    final SegmentLoaderConfig original = new SegmentLoaderConfig();
+    Assertions.assertFalse(original.isVirtualStorage());
+
+    final SegmentLoaderConfig copy = original.withVirtualStorage(true);
+
+    // The copy has the flag flipped, while other settings are preserved.
+    Assertions.assertTrue(copy.isVirtualStorage());
+    Assertions.assertEquals(original.getVirtualStorageLoadThreads(), copy.getVirtualStorageLoadThreads());
+    Assertions.assertEquals(original.isVirtualStorageUseVirtualThreads(), copy.isVirtualStorageUseVirtualThreads());
+
+    // The original is untouched and the copy is a distinct instance.
+    Assertions.assertNotSame(original, copy);
+    Assertions.assertFalse(original.isVirtualStorage());
+  }
 }

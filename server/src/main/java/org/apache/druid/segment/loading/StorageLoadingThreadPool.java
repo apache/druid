@@ -27,7 +27,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.asyncresource.AsyncResource;
 import org.apache.druid.common.asyncresource.AsyncResources;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -50,7 +49,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class StorageLoadingThreadPool
 {
-  private static final Logger log = new Logger(StorageNodeModule.class);
+  private static final Logger log = new Logger(StorageLoadingThreadPool.class);
 
   private final ListeningExecutorService exec;
 
