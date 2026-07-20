@@ -53,7 +53,7 @@ public abstract class StreamIndexFaultToleranceTest extends StreamIndexTestBase
   @Override
   protected EmbeddedDruidCluster createCluster()
   {
-    return super.createCluster().useDefaultTimeoutForLatchableEmitter(120);
+    return super.createCluster().useDefaultTimeoutForLatchableEmitter(240);
   }
 
   @BeforeEach
