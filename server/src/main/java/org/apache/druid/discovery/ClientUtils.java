@@ -22,8 +22,10 @@ package org.apache.druid.discovery;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.server.DruidNode;
 
 import javax.annotation.Nullable;
+
 import java.net.URL;
 import java.util.Iterator;
 import java.util.List;
@@ -34,6 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class ClientUtils
 {
+
   @Nullable
   public static String pickOneHost(DruidNodeDiscovery druidNodeDiscovery)
   {
@@ -41,10 +44,11 @@ public class ClientUtils
     List<DiscoveryDruidNode> discoveryDruidNodeList = Lists.newArrayList(iter);
     if (!discoveryDruidNodeList.isEmpty()) {
       DiscoveryDruidNode node = discoveryDruidNodeList.get(ThreadLocalRandom.current().nextInt(discoveryDruidNodeList.size()));
+      DruidNode druidNode = node.getDruidNode();
       return StringUtils.format(
           "%s://%s",
-          node.getDruidNode().getServiceScheme(),
-          node.getDruidNode().getHostAndPortToUse()
+          druidNode.getServiceScheme(),
+          druidNode.getHostAndPortToUse()
       );
     }
     return null;

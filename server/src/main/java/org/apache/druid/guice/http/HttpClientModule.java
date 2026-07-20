@@ -26,6 +26,7 @@ import com.google.inject.Binder;
 import com.google.inject.Binding;
 import com.google.inject.Inject;
 import com.google.inject.Module;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.EscalatedClient;
@@ -41,10 +42,10 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.Escalator;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.joda.time.Duration;
 
 import javax.net.ssl.SSLContext;
+
 import java.lang.annotation.Annotation;
 import java.util.Set;
 
@@ -146,7 +147,7 @@ public class HttpClientModule implements Module
             Duration readTimeout
         )
         {
-          request.setHeader(HttpHeaders.Names.USER_AGENT, StringUtils.format("%s/%s", node.getServiceName(), node.getVersion()));
+          request.setHeader(HttpHeaderNames.USER_AGENT.toString(), StringUtils.format("%s/%s", node.getServiceName(), node.getVersion()));
           return client.go(request, handler, readTimeout);
         }
       };
