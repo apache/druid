@@ -27,10 +27,12 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.error.ExceptionMatcher;
+import org.apache.druid.guice.annotations.EphemeralStorageLoading;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -165,6 +167,26 @@ public class StorageNodeModuleTest
         .of(ProvisionException.class)
         .expectMessageContains("Must override the binding for ServerTypeConfig if you want a DruidServerMetadata.")
         .assertThrowsAndMatches(() -> injector.getInstance(DruidServerMetadata.class));
+  }
+
+  @Test
+  public void testEphemeralStorageLoadingThreadPoolIsInjectedAndAvailable()
+  {
+    // The qualified ephemeral loading pool must resolve from the core injector (StorageNodeModule is universal via
+    // CoreInjectorBuilder), so SegmentCacheManagerFactory's @Inject constructor can be satisfied on every process.
+    // The provider forces virtual storage via config.withVirtualStorage(true) regardless of the node's flag.
+    Mockito.when(segmentLoaderConfig.withVirtualStorage(true))
+           .thenReturn(new SegmentLoaderConfig().setVirtualStorage(true));
+
+    final StorageLoadingThreadPool pool = injector().getInstance(
+        Key.get(StorageLoadingThreadPool.class, EphemeralStorageLoading.class)
+    );
+    try {
+      Assert.assertTrue(pool.isAvailable());
+    }
+    finally {
+      pool.stop();
+    }
   }
 
   private Injector injector()
