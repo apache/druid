@@ -1065,50 +1065,61 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       final String outputPath
   )
   {
-    retryWithHandle(
-            (HandleCallback<Void>) handle -> {
-              try (Statement stmt = handle.getConnection().createStatement();
-                   ResultSet rs = stmt.executeQuery(StringUtils.format("SELECT * FROM %s", tableName));
-                   FileOutputStream fos = new FileOutputStream(outputPath);
-                   OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
-                final ResultSetMetaData meta = rs.getMetaData();
-                final int columnCount = meta.getColumnCount();
-                while (rs.next()) {
-                  for (int i = 1; i <= columnCount; i++) {
-                    if (i > 1) {
-                      writer.write(',');
-                    }
-                    final int colType = meta.getColumnType(i);
-                    if (colType == Types.BINARY || colType == Types.VARBINARY
-                        || colType == Types.LONGVARBINARY || colType == Types.BLOB
-                        || (colType == Types.OTHER && "bytea".equalsIgnoreCase(meta.getColumnTypeName(i)))) {
-                      final byte[] bytes = rs.getBytes(i);
-                      if (bytes != null) {
-                        writer.write(BaseEncoding.base16().encode(bytes));
+    // Use a transaction so that the connection has autoCommit=false.
+    // PostgreSQL JDBC requires autoCommit=false and a positive fetch size
+    // to use cursor-based streaming instead of buffering the entire ResultSet.
+    retryTransaction(
+            (TransactionCallback<Void>) (handle, status) -> {
+              final Connection conn = handle.getConnection();
+              try (Statement stmt = conn.createStatement()) {
+                final int fetchSize = getStreamingFetchSize();
+                if (fetchSize > 0) {
+                  stmt.setFetchSize(fetchSize);
+                }
+                try (ResultSet rs = stmt.executeQuery(StringUtils.format("SELECT * FROM %s", tableName));
+                     FileOutputStream fos = new FileOutputStream(outputPath);
+                     OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
+                  final ResultSetMetaData meta = rs.getMetaData();
+                  final int columnCount = meta.getColumnCount();
+                  while (rs.next()) {
+                    for (int i = 1; i <= columnCount; i++) {
+                      if (i > 1) {
+                        writer.write(',');
                       }
-                    } else if (colType == Types.BOOLEAN || colType == Types.BIT) {
-                      final boolean val = rs.getBoolean(i);
-                      if (!rs.wasNull()) {
-                        writer.write(String.valueOf(val));
-                      }
-                    } else {
-                      final String val = rs.getString(i);
-                      if (val != null) {
-                        if (val.contains(",") || val.contains("\"") || val.contains("\n") || val.contains("\r")) {
-                          writer.write('"');
-                          writer.write(StringUtils.replace(val, "\"", "\"\""));
-                          writer.write('"');
-                        } else {
-                          writer.write(val);
+                      final int colType = meta.getColumnType(i);
+                      if (colType == Types.BINARY || colType == Types.VARBINARY
+                          || colType == Types.LONGVARBINARY || colType == Types.BLOB
+                          || (colType == Types.OTHER && "bytea".equalsIgnoreCase(meta.getColumnTypeName(i)))) {
+                        final byte[] bytes = rs.getBytes(i);
+                        if (bytes != null) {
+                          writer.write(BaseEncoding.base16().encode(bytes));
+                        }
+                      } else if (colType == Types.BOOLEAN || colType == Types.BIT) {
+                        final boolean val = rs.getBoolean(i);
+                        if (!rs.wasNull()) {
+                          writer.write(String.valueOf(val));
+                        }
+                      } else {
+                        final String val = rs.getString(i);
+                        if (val != null) {
+                          if (val.contains(",") || val.contains("\"") || val.contains("\n") || val.contains("\r")) {
+                            writer.write('"');
+                            writer.write(StringUtils.replace(val, "\"", "\"\""));
+                            writer.write('"');
+                          } else {
+                            writer.write(val);
+                          }
                         }
                       }
                     }
+                    writer.write('\n');
                   }
-                  writer.write('\n');
                 }
               }
               return null;
-            }
+            },
+            QUIET_RETRIES,
+            DEFAULT_MAX_TRIES
     );
   }
 
