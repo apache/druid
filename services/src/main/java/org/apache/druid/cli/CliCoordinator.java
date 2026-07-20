@@ -241,7 +241,12 @@ public class CliCoordinator extends ServerRunnable
                     : ServerConfig.getDefaultMaxConcurrentRequests(serverHttpNumThreads);
             if (maxConcurrentRequests > 0) {
               log.info("Coordinator QoS filtering enabled. Max concurrent requests: [%d]", maxConcurrentRequests);
-              JettyBindings.addQosFilter(binder, new String[]{"/druid/coordinator/v1/*", "/druid-internal/*"}, maxConcurrentRequests);
+              JettyBindings.addQosFilter(
+                  binder,
+                  new String[]{"/druid/coordinator/v1/*", "/druid-internal/*"},
+                  maxConcurrentRequests,
+                  new String[]{"/druid/coordinator/v1/isLeader", "/druid/coordinator/v1/leader"}
+              );
             } else {
               log.info("Coordinator QoS filtering disabled.");
             }

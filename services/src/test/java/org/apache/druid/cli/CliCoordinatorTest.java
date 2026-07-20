@@ -68,6 +68,29 @@ public class CliCoordinatorTest
     );
   }
 
+  @Test
+  public void testLeaderEndpointsExcludedFromQos()
+  {
+    final Injector injector = makeCoordinatorInjector(new Properties());
+
+    final JettyBindings.QosFilterHolder coordinatorQosFilter =
+        getQosFilterHolders(injector).stream()
+                                     .filter(holder -> Arrays.asList(holder.getPaths()).contains(COORDINATOR_QOS_PATH))
+                                     .findFirst()
+                                     .orElseThrow(() -> new AssertionError("Coordinator QoS filter should be bound"));
+
+
+    final Set<String> excludedPaths = Set.of(coordinatorQosFilter.getExcludedPaths());
+    Assert.assertTrue(
+        "isLeader should be exempt from QoS filtering",
+        excludedPaths.contains("/druid/coordinator/v1/isLeader")
+    );
+    Assert.assertTrue(
+        "leader should be exempt from QoS filtering",
+        excludedPaths.contains("/druid/coordinator/v1/leader")
+    );
+  }
+
   private static boolean hasCoordinatorQosFilter(Set<JettyBindings.QosFilterHolder> qosFilters)
   {
     return qosFilters.stream()
