@@ -681,7 +681,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         DirectQueryProcessingPool.INSTANCE,
         NoopJoinableFactory.INSTANCE,
         () -> EasyMock.createMock(MonitorScheduler.class),
-        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper),
+        SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, objectMapper),
         objectMapper,
         testUtils.getTestIndexIO(),
         MapCache.create(1024),

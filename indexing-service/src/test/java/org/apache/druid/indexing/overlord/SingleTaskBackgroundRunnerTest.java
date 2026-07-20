@@ -117,7 +117,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         NoopJoinableFactory.INSTANCE,
         null,
-        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, utils.getTestObjectMapper()),
+        SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, utils.getTestObjectMapper()),
         utils.getTestObjectMapper(),
         utils.getTestIndexIO(),
         null,

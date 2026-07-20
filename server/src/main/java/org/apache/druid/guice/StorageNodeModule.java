@@ -28,6 +28,7 @@ import com.google.inject.name.Named;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.discovery.DataNodeService;
+import org.apache.druid.guice.annotations.EphemeralStorageLoading;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -132,6 +133,20 @@ public class StorageNodeModule implements Module
   public StorageLoadingThreadPool getStorageLoadingThreadPool(SegmentLoaderConfig config)
   {
     return StorageLoadingThreadPool.createFromConfig(config);
+  }
+
+  /**
+   * Process-wide, always-virtual on-demand loading pool shared by the ephemeral per-task segment caches built via
+   * {@code SegmentCacheManagerFactory} (tasks and MSQ workers).
+   */
+  @Provides
+  @LazySingleton
+  @EphemeralStorageLoading
+  public StorageLoadingThreadPool getEphemeralStorageLoadingThreadPool(SegmentLoaderConfig config)
+  {
+    // Force virtual-storage mode: this pool serves per-task caches even when the node itself is not in virtual-storage
+    // mode. Threads are created lazily, so an unused pool on a non-task process is cheap.
+    return StorageLoadingThreadPool.createFromConfig(config.withVirtualStorage(true));
   }
 
   @Provides
