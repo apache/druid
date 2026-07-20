@@ -165,19 +165,7 @@ public class ExportMetadataTest
     final String datasource = "ds,with,commas";
     final String version = "v\"quoted\"";
 
-    // The raw CSV file from exportTableWithJdbc would have properly escaped these
-    final String rawLine = csvEscapeField(datasource) + ","
-                           + csvEscapeField("seg,id,1") + ","  // swapped: id first in raw but we're writing fields in schema order
-                           + "2024-01-15,"
-                           + "2024-01-01,"
-                           + "2024-01-02,"
-                           + "true,"
-                           + csvEscapeField(version) + ","
-                           + "false,"
-                           + payloadHex + ","
-                           + "2024-06-01";
-
-    // Actually let's be precise about column order: id, dataSource, created_date, start, end, partitioned, version, used, payload, ...
+    // Column order: id, dataSource, created_date, start, end, partitioned, version, used, payload, ...
     final String rawLineCorrected = csvEscapeField("seg,id,1") + ","
                                     + csvEscapeField(datasource) + ","
                                     + "2024-01-15,"
