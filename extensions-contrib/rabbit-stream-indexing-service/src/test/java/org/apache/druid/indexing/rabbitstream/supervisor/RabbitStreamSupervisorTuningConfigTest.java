@@ -61,14 +61,18 @@ public class RabbitStreamSupervisorTuningConfigTest
     final RabbitStreamSupervisorSpec oldSpec = supervisorSpec(tuningConfig(15, 16, 17));
 
     // getActionOnUpdateTo is invoked on the running (old) spec with the proposed spec as argument.
-    Assert.assertTrue(requiresRestart(oldSpec, supervisorSpec(tuningConfig(20, 16, 17))));
-    Assert.assertTrue(requiresRestart(oldSpec, supervisorSpec(tuningConfig(15, 20, 17))));
-    Assert.assertTrue(requiresRestart(oldSpec, supervisorSpec(tuningConfig(15, 16, 20))));
-  }
-
-  private static boolean requiresRestart(RabbitStreamSupervisorSpec oldSpec, RabbitStreamSupervisorSpec newSpec)
-  {
-    return oldSpec.getActionOnUpdateTo(newSpec) != SupervisorSpecUpdateAction.NONE;
+    Assert.assertEquals(
+        SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS,
+        oldSpec.getActionOnUpdateTo(supervisorSpec(tuningConfig(20, 16, 17)))
+    );
+    Assert.assertEquals(
+        SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS,
+        oldSpec.getActionOnUpdateTo(supervisorSpec(tuningConfig(15, 20, 17)))
+    );
+    Assert.assertEquals(
+        SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS,
+        oldSpec.getActionOnUpdateTo(supervisorSpec(tuningConfig(15, 16, 20)))
+    );
   }
 
   @Test
