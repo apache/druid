@@ -32,7 +32,7 @@ Build from Source
 You can build Apache Druid directly from source.
 
 Prerequisites:
-  JDK 21 or JDK 25
+  JDK 25
   Maven version 3.x
 
 
