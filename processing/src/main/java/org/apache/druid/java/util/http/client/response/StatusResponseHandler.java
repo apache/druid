@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 
 import java.nio.charset.StandardCharsets;
 
@@ -41,10 +41,15 @@ public class StatusResponseHandler implements HttpResponseHandler<StatusResponse
   @Override
   public ClientResponse<StatusResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
+    StringBuilder builder = new StringBuilder();
+    if (response instanceof HttpContent) {
+      builder.append(((HttpContent) response).content().toString(StandardCharsets.UTF_8));
+    }
+
     return ClientResponse.unfinished(
         new StatusResponseHolder(
-            response.getStatus(),
-            new StringBuilder(response.getContent().toString(StandardCharsets.UTF_8))
+            response.status(),
+            builder
         )
     );
   }
@@ -52,7 +57,7 @@ public class StatusResponseHandler implements HttpResponseHandler<StatusResponse
   @Override
   public ClientResponse<StatusResponseHolder> handleChunk(
       ClientResponse<StatusResponseHolder> response,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   )
   {
@@ -62,7 +67,7 @@ public class StatusResponseHandler implements HttpResponseHandler<StatusResponse
       return ClientResponse.finished(null);
     }
 
-    builder.append(chunk.getContent().toString(StandardCharsets.UTF_8));
+    builder.append(chunk.content().toString(StandardCharsets.UTF_8));
     return response;
   }
 

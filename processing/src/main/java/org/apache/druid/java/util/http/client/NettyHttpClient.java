@@ -24,6 +24,24 @@ import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.timeout.ReadTimeoutException;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.Timer;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -34,25 +52,6 @@ import org.apache.druid.java.util.http.client.pool.ResourceContainer;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.timeout.ReadTimeoutException;
-import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
-import org.jboss.netty.util.Timer;
 import org.joda.time.Duration;
 
 import java.net.URL;
@@ -102,6 +101,8 @@ public class NettyHttpClient extends AbstractHttpClient
   @LifecycleStop
   public void stop()
   {
+    // Mark as closed but let in-flight requests complete
+    // Don't wait - this allows shutdown to proceed without interrupting active requests
     pool.close();
   }
 
@@ -125,35 +126,46 @@ public class NettyHttpClient extends AbstractHttpClient
     final Channel channel;
     final String hostKey = getPoolKey(url);
     final ResourceContainer<ChannelFuture> channelResourceContainer = pool.take(hostKey);
+
+    // Handle pool exhaustion - take() returns null if pool is exhausted or timed out
+    if (channelResourceContainer == null) {
+      return Futures.immediateFailedFuture(
+          new ChannelException(
+              "Connection pool exhausted or timed out for host: " + hostKey
+          )
+      );
+    }
+
     final ChannelFuture channelFuture = channelResourceContainer.get().awaitUninterruptibly();
     if (!channelFuture.isSuccess()) {
       channelResourceContainer.returnResource(); // Some other poor sap will have to deal with it...
       return Futures.immediateFailedFuture(
           new ChannelException(
               "Faulty channel in resource pool",
-              channelFuture.getCause()
+              channelFuture.cause()
           )
       );
     } else {
-      channel = channelFuture.getChannel();
+      channel = channelFuture.channel();
 
       // In case we get a channel that never had its readability turned back on.
-      channel.setReadable(true);
+      channel.config().setAutoRead(true);
     }
     final String urlFile = StringUtils.nullToEmptyNonDruidDataString(url.getFile());
-    final HttpRequest httpRequest = new DefaultHttpRequest(
+    final DefaultFullHttpRequest httpRequest = new DefaultFullHttpRequest(
         HttpVersion.HTTP_1_1,
         method,
-        urlFile.isEmpty() ? "/" : urlFile
+        urlFile.isEmpty() ? "/" : urlFile,
+        request.hasContent() ? request.getContent() : Unpooled.EMPTY_BUFFER
     );
 
-    if (!headers.containsKey(HttpHeaders.Names.HOST)) {
-      httpRequest.headers().add(HttpHeaders.Names.HOST, getHost(url));
+    if (!headers.containsKey(HttpHeaderNames.HOST.toString())) {
+      httpRequest.headers().add(HttpHeaderNames.HOST, getHost(url));
     }
 
     // If Accept-Encoding is set in the Request, use that. Otherwise use the default from "compressionCodec".
-    if (!headers.containsKey(HttpHeaders.Names.ACCEPT_ENCODING)) {
-      httpRequest.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, compressionCodec.getEncodingString());
+    if (!headers.containsKey(HttpHeaderNames.ACCEPT_ENCODING.toString())) {
+      httpRequest.headers().set(HttpHeaderNames.ACCEPT_ENCODING, compressionCodec.getEncodingString());
     }
 
     for (Map.Entry<String, Collection<String>> entry : headers.asMap().entrySet()) {
@@ -162,10 +174,6 @@ public class NettyHttpClient extends AbstractHttpClient
       for (String obj : entry.getValue()) {
         httpRequest.headers().add(key, obj);
       }
-    }
-
-    if (request.hasContent()) {
-      httpRequest.setContent(request.getContent());
     }
 
     final long readTimeout = getReadTimeout(requestReadTimeout);
@@ -177,15 +185,15 @@ public class NettyHttpClient extends AbstractHttpClient
     final AtomicBoolean didEncounterException = new AtomicBoolean();
 
     if (readTimeout > 0) {
-      channel.getPipeline().addLast(
+      channel.pipeline().addLast(
           READ_TIMEOUT_HANDLER_NAME,
-          new ReadTimeoutHandler(timer, readTimeout, TimeUnit.MILLISECONDS)
+          new ReadTimeoutHandler(readTimeout, TimeUnit.MILLISECONDS)
       );
     }
 
-    channel.getPipeline().addLast(
+    channel.pipeline().addLast(
         LAST_HANDLER_NAME,
-        new SimpleChannelUpstreamHandler()
+        new ChannelInboundHandlerAdapter()
         {
           private volatile ClientResponse<Intermediate> response = null;
 
@@ -200,23 +208,22 @@ public class NettyHttpClient extends AbstractHttpClient
           private long resumeWatermark = -1;
 
           @Override
-          public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+          public void channelRead(ChannelHandlerContext ctx, Object msg)
           {
             if (log.isDebugEnabled()) {
-              log.debug("[%s] messageReceived: %s", requestDesc, e.getMessage());
+              log.debug("[%s] messageReceived: %s", requestDesc, msg);
             }
             try {
-              Object msg = e.getMessage();
-
               if (msg instanceof HttpResponse) {
                 if (didEncounterException.get()) {
                   // Don't process HttpResponse after encountering an exception.
+                  ReferenceCountUtil.release(msg);
                   return;
                 }
 
                 HttpResponse httpResponse = (HttpResponse) msg;
                 if (log.isDebugEnabled()) {
-                  log.debug("[%s] Got response: %s", requestDesc, httpResponse.getStatus());
+                  log.debug("[%s] Got response: %s", requestDesc, httpResponse.status());
                 }
 
                 HttpResponseHandler.TrafficCop trafficCop = new HttpResponseHandler.TrafficCop()
@@ -229,7 +236,7 @@ public class NettyHttpClient extends AbstractHttpClient
 
                       if (suspendWatermark >= 0 && resumeWatermark >= suspendWatermark) {
                         suspendWatermark = -1;
-                        channel.setReadable(true);
+                        channel.config().setAutoRead(true);
                         long backPressureDuration = System.nanoTime() - backPressureStartTimeNs;
                         log.debug("[%s] Resumed reads from channel (chunkNum = %,d).", requestDesc, resumeChunkNum);
                         return backPressureDuration;
@@ -246,7 +253,6 @@ public class NettyHttpClient extends AbstractHttpClient
                     channel.close();
                   }
                 };
-
                 response = handler.handleResponse(httpResponse, trafficCop);
                 if (response.isFinished()) {
                   retVal.set((Final) response.getObj());
@@ -255,35 +261,45 @@ public class NettyHttpClient extends AbstractHttpClient
                 assert currentChunkNum == 0;
                 possiblySuspendReads(response);
 
-                if (!httpResponse.isChunked()) {
+                if (msg instanceof LastHttpContent) {
                   finishRequest();
                 }
-              } else if (msg instanceof HttpChunk) {
+                
+                // In Netty 4, we must release inbound messages after processing
+                // The handler has copied any data it needs
+                ReferenceCountUtil.release(msg);
+              } else if (msg instanceof HttpContent) {
                 if (didEncounterException.get()) {
                   // Don't process HttpChunk after encountering an exception.
+                  ReferenceCountUtil.release(msg);
                   return;
                 }
 
-                HttpChunk httpChunk = (HttpChunk) msg;
+                HttpContent httpChunk = (HttpContent) msg;
                 if (log.isDebugEnabled()) {
                   log.debug(
                       "[%s] Got chunk: %sB, last=%s",
                       requestDesc,
-                      httpChunk.getContent().readableBytes(),
-                      httpChunk.isLast()
+                      httpChunk.content().readableBytes(),
+                      msg instanceof LastHttpContent
                   );
                 }
 
-                if (httpChunk.isLast()) {
-                  finishRequest();
-                } else {
-                  response = handler.handleChunk(response, httpChunk, ++currentChunkNum);
-                  if (response.isFinished() && !retVal.isDone()) {
-                    retVal.set((Final) response.getObj());
-                  }
-                  possiblySuspendReads(response);
+                response = handler.handleChunk(response, httpChunk, ++currentChunkNum);
+                if (response.isFinished() && !retVal.isDone()) {
+                  retVal.set((Final) response.getObj());
                 }
+                possiblySuspendReads(response);
+
+                if (msg instanceof LastHttpContent) {
+                  finishRequest();
+                }
+                
+                // In Netty 4, we must release inbound messages after processing
+                // The handler has copied any data it needs
+                ReferenceCountUtil.release(msg);
               } else {
+                ReferenceCountUtil.release(msg);
                 throw new ISE("Unknown message type[%s]", msg.getClass());
               }
             }
@@ -306,7 +322,7 @@ public class NettyHttpClient extends AbstractHttpClient
               synchronized (watermarkLock) {
                 suspendWatermark = Math.max(suspendWatermark, currentChunkNum);
                 if (suspendWatermark > resumeWatermark) {
-                  channel.setReadable(false);
+                  channel.config().setAutoRead(false);
                   backPressureStartTimeNs = System.nanoTime();
                   log.debug("[%s] Suspended reads from channel (chunkNum = %,d).", requestDesc, currentChunkNum);
                 }
@@ -331,18 +347,18 @@ public class NettyHttpClient extends AbstractHttpClient
               retVal.set(finalResponse.getObj());
             }
             removeHandlers();
-            channel.setReadable(true);
+            channel.config().setAutoRead(true);
             channelResourceContainer.returnResource();
           }
 
           @Override
-          public void exceptionCaught(ChannelHandlerContext context, ExceptionEvent event)
+          public void exceptionCaught(ChannelHandlerContext context, Throwable cause)
           {
-            handleExceptionAndCloseChannel(event.getCause(), false);
+            handleExceptionAndCloseChannel(cause, false);
           }
 
           @Override
-          public void channelDisconnected(ChannelHandlerContext context, ChannelStateEvent event)
+          public void channelInactive(ChannelHandlerContext context)
           {
             handleExceptionAndCloseChannel(new ChannelException("Channel disconnected"), true);
           }
@@ -399,14 +415,14 @@ public class NettyHttpClient extends AbstractHttpClient
           private void removeHandlers()
           {
             if (readTimeout > 0) {
-              channel.getPipeline().remove(READ_TIMEOUT_HANDLER_NAME);
+              channel.pipeline().remove(READ_TIMEOUT_HANDLER_NAME);
             }
-            channel.getPipeline().remove(LAST_HANDLER_NAME);
+            channel.pipeline().remove(LAST_HANDLER_NAME);
           }
         }
     );
 
-    channel.write(httpRequest).addListener(
+    channel.writeAndFlush(httpRequest).addListener(
         new ChannelFutureListener()
         {
           @Override
@@ -419,10 +435,11 @@ public class NettyHttpClient extends AbstractHttpClient
                 retVal.setException(
                     new ChannelException(
                         StringUtils.format("[%s] Failed to write request to channel", requestDesc),
-                        future.getCause()
+                        future.cause()
                     )
                 );
               }
+              // Note: Netty automatically releases the httpRequest after write attempt (success or failure)
             }
           }
         }
@@ -474,4 +491,5 @@ public class NettyHttpClient extends AbstractHttpClient
     return url.getProtocol() + "://" + url.getHost() + ":"
            + (url.getPort() == -1 ? url.getDefaultPort() : url.getPort());
   }
+
 }
