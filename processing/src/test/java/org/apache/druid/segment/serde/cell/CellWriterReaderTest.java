@@ -22,8 +22,8 @@ package org.apache.druid.segment.serde.cell;
 import com.google.common.primitives.Ints;
 import org.apache.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -103,7 +103,7 @@ public class CellWriterReaderTest extends BytesReadWriteTestBase
         ByteBuffer buffer = byteBufferList.get(i);
         ByteBuffer readCell = cellReader.getCell(i);
 
-        Assert.assertEquals(buffer, readCell);
+        Assertions.assertEquals(buffer, readCell);
       }
     }
   }

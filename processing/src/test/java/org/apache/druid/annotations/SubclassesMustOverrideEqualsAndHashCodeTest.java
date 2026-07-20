@@ -19,8 +19,8 @@
 
 package org.apache.druid.annotations;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.reflections.Reflections;
 import org.reflections.util.ClasspathHelper;
 
@@ -51,7 +51,7 @@ public class SubclassesMustOverrideEqualsAndHashCodeTest
       Method m = clazz.getMethod("hashCode");
       String className = clazz.getName();
       try {
-        Assert.assertNotSame(className + " does not implment hashCode", Object.class, m.getDeclaringClass());
+        Assertions.assertNotSame(Object.class, m.getDeclaringClass(), className + " does not implment hashCode");
       }
       catch (AssertionError e) {
         failed.add(className);
@@ -60,7 +60,7 @@ public class SubclassesMustOverrideEqualsAndHashCodeTest
     if (!failed.isEmpty()) {
       System.err.println("failed classes [" + failed.size() + "] : ");
       failed.forEach(c -> System.err.println("\t" + c));
-      Assert.fail();
+      Assertions.fail();
     }
   }
 }

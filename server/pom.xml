@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>37.0.0-SNAPSHOT</version>
+        <version>39.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -77,10 +77,6 @@
                 <groupId>log4j</groupId>
               </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.curator</groupId>
-            <artifactId>curator-x-discovery</artifactId>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.jaxrs</groupId>

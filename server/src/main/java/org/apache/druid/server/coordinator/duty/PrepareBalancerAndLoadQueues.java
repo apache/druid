@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -36,10 +37,10 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
-import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -92,7 +93,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     cancelLoadsOnDecommissioningServers(cluster);
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    collectHistoricalStats(cluster, stats);
+    collectHistoricalStats(cluster, stats, dynamicConfig.getTierToAliasName());
     collectUsedSegmentStats(params, stats);
     collectDebugStats(segmentLoadingConfig, stats);
 
@@ -170,10 +171,17 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     return cluster.build();
   }
 
-  private void collectHistoricalStats(DruidCluster cluster, CoordinatorRunStats stats)
+  private void collectHistoricalStats(
+      DruidCluster cluster,
+      CoordinatorRunStats stats,
+      Map<String, String> tierToAliasName
+  )
   {
     cluster.getHistoricals().forEach((tier, historicals) -> {
-      RowKey rowKey = RowKey.of(Dimension.TIER, tier);
+      final String alias = tierToAliasName.get(tier);
+      final RowKey rowKey = alias == null
+                            ? RowKey.of(Dimension.TIER, tier)
+                            : RowKey.with(Dimension.TIER, tier).and(Dimension.TIER_ALIAS, alias);
       stats.add(Stats.Tier.HISTORICAL_COUNT, rowKey, historicals.size());
 
       long totalCapacity = 0;
@@ -195,14 +203,14 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
 
   private void collectUsedSegmentStats(DruidCoordinatorRuntimeParams params, CoordinatorRunStats stats)
   {
-    params.getUsedSegmentsTimelinesPerDataSource().forEach((dataSource, timeline) -> {
-      long totalSizeOfUsedSegments = timeline.iterateAllObjects().stream()
-                                             .mapToLong(DataSegment::getSize).sum();
+    for (final ImmutableDruidDataSource dataSource : params.getDataSourcesSnapshot().getDataSourcesWithAllUsedSegments()) {
+      final long totalSizeOfUsedSegments = dataSource.getTotalSizeOfSegments();
+      final int numUsedSegments = dataSource.getNumSegments();
 
-      RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, dataSource);
+      final RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, dataSource.getName());
       stats.add(Stats.Segments.USED_BYTES, datasourceKey, totalSizeOfUsedSegments);
-      stats.add(Stats.Segments.USED, datasourceKey, timeline.getNumObjects());
-    });
+      stats.add(Stats.Segments.USED, datasourceKey, numUsedSegments);
+    }
   }
 
   private void collectDebugStats(SegmentLoadingConfig config, CoordinatorRunStats stats)

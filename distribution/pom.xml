@@ -30,7 +30,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>37.0.0-SNAPSHOT</version>
+        <version>39.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -403,6 +403,8 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-influxdb-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:kafka-emitter</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:openlineage-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-opentsdb-emitter</argument>
                                         <argument>-c</argument>

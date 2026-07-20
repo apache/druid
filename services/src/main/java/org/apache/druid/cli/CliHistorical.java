@@ -24,12 +24,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
@@ -39,7 +37,6 @@ import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentWranglerModule;
@@ -58,7 +55,6 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.ServerManager;
 import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
@@ -80,17 +76,9 @@ public class CliHistorical extends ServerRunnable
 {
   private static final Logger log = new Logger(CliHistorical.class);
 
-  private boolean isZkEnabled = true;
-
   public CliHistorical()
   {
     super(log);
-  }
-
-  @Inject
-  public void configure(Properties properties)
-  {
-    isZkEnabled = ZkEnablementConfig.isEnabled(properties);
   }
 
   @Override
@@ -116,11 +104,9 @@ public class CliHistorical extends ServerRunnable
           binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
           binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
 
-          // register Server before binding ZkCoordinator to ensure HTTP endpoints are available immediately
           LifecycleModule.register(binder, Server.class);
           binder.bind(ServerManager.class).in(LazySingleton.class);
           binder.bind(SegmentManager.class).in(LazySingleton.class);
-          binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
           bindQuerySegmentWalker(binder);
 
           binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.HISTORICAL));
@@ -131,9 +117,6 @@ public class CliHistorical extends ServerRunnable
           Jerseys.addResource(binder, HistoricalResource.class);
           LifecycleModule.register(binder, QueryResource.class);
 
-          if (isZkEnabled) {
-            LifecycleModule.register(binder, ZkCoordinator.class);
-          }
           LifecycleModule.register(binder, SegmentCacheBootstrapper.class);
 
           JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);

@@ -26,9 +26,9 @@ import org.asynchttpclient.Request;
 import org.asynchttpclient.Response;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.time.Duration;
@@ -48,7 +48,7 @@ public class HttpEmitterTest
 
   private final AtomicLong timeoutUsed = new AtomicLong();
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     timeoutUsed.set(-1L);
@@ -86,7 +86,7 @@ public class HttpEmitterTest
 
     // sometimes System.currentTimeMillis() - startMs might be 0, so we need to use Math.max(1, System.currentTimeMillis() - startMs)
     long fillTimeMs = Math.max(1, System.currentTimeMillis() - startMs);
-    Assume.assumeTrue(fillTimeMs >= (Long) lastBatchFillTimeMillis.get(emitter));
+    Assumptions.assumeTrue(fillTimeMs >= (Long) lastBatchFillTimeMillis.get(emitter));
     MatcherAssert.assertThat(
         (double) timeoutUsed.get(),
         Matchers.lessThanOrEqualTo(fillTimeMs * timeoutAllowanceFactor)
@@ -99,7 +99,7 @@ public class HttpEmitterTest
     emitter.flush();
     // sometimes System.currentTimeMillis() - startMs might be 0, so we need to use Math.max(1, System.currentTimeMillis() - startMs)
     fillTimeMs = Math.max(1, System.currentTimeMillis() - startMs);
-    Assume.assumeTrue(fillTimeMs >= (Long) lastBatchFillTimeMillis.get(emitter));
+    Assumptions.assumeTrue(fillTimeMs >= (Long) lastBatchFillTimeMillis.get(emitter));
     MatcherAssert.assertThat(
         (double) timeoutUsed.get(),
         Matchers.lessThanOrEqualTo(fillTimeMs * timeoutAllowanceFactor)

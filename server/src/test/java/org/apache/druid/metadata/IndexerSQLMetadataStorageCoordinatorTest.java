@@ -66,6 +66,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
+import org.apache.druid.timeline.partition.DimensionValueSetShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -144,7 +145,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   {
     derbyConnector = derbyConnectorRule.getConnector();
     segmentsTable = derbyConnectorRule.segments();
-    mapper.registerSubtypes(LinearShardSpec.class, NumberedShardSpec.class, HashBasedNumberedShardSpec.class);
+    mapper.registerSubtypes(
+        LinearShardSpec.class,
+        NumberedShardSpec.class,
+        HashBasedNumberedShardSpec.class,
+        DimensionValueSetShardSpec.class
+    );
     derbyConnector.createDataSourceTable();
     derbyConnector.createTaskTables();
     derbyConnector.createSegmentTable();
@@ -438,6 +444,106 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(replaceLock.getVersion(), Iterables.getOnlyElement(observedLockVersions));
   }
 
+  /**
+   * When a concurrent REPLACE upgrades a still-appending task, the upgraded copy must take its partition number and
+   * core-partition count from the (numbered) pending segment while preserving the original append segment's
+   * {@link DimensionValueSetShardSpec}, so it stays prunable by the broker.
+   */
+  @Test
+  public void testCommitAppendSegments_upgradedSegmentPreservesDimensionValueSetShardSpec()
+  {
+    final String appendVersion = "2023-01-01";
+    final String upgradedVersion = "2023-02-01";
+
+    final String taskAllocatorId = "appendTask";
+    final String replaceTaskId = "replaceTask1";
+    final ReplaceTaskLock replaceLock = new ReplaceTaskLock(
+        replaceTaskId,
+        Intervals.of("2023-01-01/2023-02-01"),
+        upgradedVersion
+    );
+
+    final Map<String, List<String>> partitionDimensionValues = ImmutableMap.of("tenant_id", ImmutableList.of("tenant_a"));
+    // The published append segment carries a DimensionValueSetShardSpec, as stamped at publish time by the streaming task.
+    final DataSegment appendSegment = createSegment(
+        Intervals.of("2023-01-01/2023-01-02"),
+        appendVersion,
+        new DimensionValueSetShardSpec(0, 1, partitionDimensionValues)
+    );
+
+    final List<PendingSegmentRecord> pendingSegmentsForTask = new ArrayList<>();
+    // The pending segment for the append segment itself.
+    pendingSegmentsForTask.add(
+        PendingSegmentRecord.create(
+            SegmentIdWithShardSpec.fromDataSegment(appendSegment),
+            appendVersion,
+            appendSegment.getId().toString(),
+            null,
+            taskAllocatorId
+        )
+    );
+    // The upgraded pending segment minted by the concurrent REPLACE — numbered, pointing back to the append segment.
+    final SegmentIdWithShardSpec upgradedPendingId = new SegmentIdWithShardSpec(
+        TestDataSource.WIKI,
+        Intervals.of("2023-01-01/2023-02-01"),
+        upgradedVersion,
+        new NumberedShardSpec(5, 8)
+    );
+    pendingSegmentsForTask.add(
+        PendingSegmentRecord.create(
+            upgradedPendingId,
+            upgradedVersion,
+            appendSegment.getId().toString(),
+            appendSegment.getId().toString(),
+            taskAllocatorId
+        )
+    );
+    insertPendingSegments(TestDataSource.WIKI, pendingSegmentsForTask, false);
+
+    final SegmentPublishResult commitResult = coordinator.commitAppendSegments(
+        Set.of(appendSegment),
+        Map.of(appendSegment, replaceLock),
+        taskAllocatorId,
+        null
+    );
+    Assert.assertTrue(commitResult.isSuccess());
+
+    final Set<DataSegment> allCommittedSegments
+        = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+    final Map<String, String> upgradedFromSegmentIdMap = coordinator.retrieveUpgradedFromSegmentIds(
+        TestDataSource.WIKI,
+        allCommittedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
+    );
+
+    // The original append segment is published as-is, retaining its DimensionValueSetShardSpec.
+    Assert.assertTrue(allCommittedSegments.contains(appendSegment));
+    Assert.assertTrue(appendSegment.getShardSpec() instanceof DimensionValueSetShardSpec);
+
+    // Find the upgraded copy (the one whose upgradedFromSegmentId points back to the append segment).
+    DataSegment upgradedSegment = null;
+    for (DataSegment segment : allCommittedSegments) {
+      if (appendSegment.getId().toString().equals(upgradedFromSegmentIdMap.get(segment.getId().toString()))) {
+        upgradedSegment = segment;
+      }
+    }
+    Assert.assertNotNull("Expected an upgraded copy of the append segment", upgradedSegment);
+
+    // The upgraded copy is published under the replace version, with the pending segment's partition number and core
+    // partitions, but it preserves the original DimensionValueSetShardSpec (and partitionDimensionValues).
+    Assert.assertEquals(upgradedVersion, upgradedSegment.getVersion());
+    Assert.assertTrue(
+        "upgraded append segment should preserve DimensionValueSetShardSpec",
+        upgradedSegment.getShardSpec() instanceof DimensionValueSetShardSpec
+    );
+    Assert.assertEquals(
+        partitionDimensionValues,
+        ((DimensionValueSetShardSpec) upgradedSegment.getShardSpec()).getPartitionDimensionValues()
+    );
+    // Partition number and core partitions come from the (numbered) pending segment.
+    Assert.assertEquals(5, upgradedSegment.getShardSpec().getPartitionNum());
+    Assert.assertEquals(8, upgradedSegment.getShardSpec().getNumCorePartitions());
+  }
+
   @Test
   public void testCommitReplaceSegments_partiallyOverlappingPendingSegmentUnsupported()
   {
@@ -629,6 +735,82 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(1, pendingSegmentsOutsideInterval.size());
     Assert.assertEquals(
         pendingSegmentOutsideInterval.getId().asSegmentId(), pendingSegmentsOutsideInterval.get(0).getId().asSegmentId()
+    );
+  }
+
+  /**
+   * When a REPLACE commits over an interval with already-published APPEND segments held under a REPLACE lock, the
+   * upgraded (re-versioned) copies must preserve their {@link DimensionValueSetShardSpec} so they remain prunable by
+   * the broker.
+   */
+  @Test
+  public void testCommitReplaceSegments_upgradedPublishedSegmentPreservesDimensionValueSetShardSpec()
+  {
+    final ReplaceTaskLock replaceLock = new ReplaceTaskLock("g1", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01");
+
+    final Map<String, List<String>> partitionDimensionValues = ImmutableMap.of("tenant_id", ImmutableList.of("tenant_a"));
+    // A published APPEND segment carrying a DimensionValueSetShardSpec (as stamped at publish time by the streaming task).
+    final DataSegment appendSegment = new DataSegment(
+        "foo",
+        Intervals.of("2023-01-01/2023-01-02"),
+        "2023-01-01",
+        ImmutableMap.of("path", "a-0"),
+        ImmutableList.of("dim1"),
+        ImmutableList.of("m1"),
+        new DimensionValueSetShardSpec(0, 1, partitionDimensionValues),
+        9,
+        100
+    );
+    segmentSchemaTestUtils.insertUsedSegments(Set.of(appendSegment), Collections.emptyMap());
+    insertIntoUpgradeSegmentsTable(
+        Map.of(appendSegment, replaceLock),
+        derbyConnectorRule.metadataTablesConfigSupplier().get()
+    );
+
+    final Set<DataSegment> replacingSegments = new HashSet<>();
+    for (int i = 0; i < 4; i++) {
+      replacingSegments.add(
+          new DataSegment(
+              "foo",
+              Intervals.of("2023-01-01/2023-02-01"),
+              "2023-02-01",
+              ImmutableMap.of("path", "b-" + i),
+              ImmutableList.of("dim1"),
+              ImmutableList.of("m1"),
+              new NumberedShardSpec(i, 4),
+              9,
+              100
+          )
+      );
+    }
+    Assert.assertTrue(coordinator.commitReplaceSegments(replacingSegments, Set.of(replaceLock), null).isSuccess());
+
+    final Set<DataSegment> usedSegments
+        = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+    final Map<String, String> upgradedFromSegmentIdMap = coordinator.retrieveUpgradedFromSegmentIds(
+        "foo",
+        usedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
+    );
+
+    // Find the upgraded copy of the append segment (the one whose upgradedFromSegmentId points back to it).
+    DataSegment upgradedSegment = null;
+    for (DataSegment segment : usedSegments) {
+      if (appendSegment.getId().toString().equals(upgradedFromSegmentIdMap.get(segment.getId().toString()))) {
+        upgradedSegment = segment;
+      }
+    }
+    Assert.assertNotNull("Expected an upgraded published segment", upgradedSegment);
+
+    // The upgraded published segment is re-versioned to the replace version but keeps its DimensionValueSetShardSpec
+    // (and partitionDimensionValues), so it remains prunable by the broker.
+    Assert.assertEquals("2023-02-01", upgradedSegment.getVersion());
+    Assert.assertTrue(
+        "upgraded published segment should preserve DimensionValueSetShardSpec",
+        upgradedSegment.getShardSpec() instanceof DimensionValueSetShardSpec
+    );
+    Assert.assertEquals(
+        partitionDimensionValues,
+        ((DimensionValueSetShardSpec) upgradedSegment.getShardSpec()).getPartitionDimensionValues()
     );
   }
 
@@ -2070,29 +2252,29 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
-  public void testRetrieveUnusedSegmentIntervals()
+  public void testRetrieveSomeUnusedSegmentIntervals()
   {
     final String dataSource = defaultSegment.getDataSource();
     coordinator.commitSegments(Set.of(defaultSegment, defaultSegment3), null);
 
-    Assert.assertTrue(coordinator.retrieveUnusedSegmentIntervals(dataSource, 100).isEmpty());
+    Assert.assertTrue(coordinator.retrieveSomeUnusedSegmentIntervals(dataSource, 100).isEmpty());
 
     markAllSegmentsUnused(Set.of(defaultSegment), DateTimes.nowUtc().minusHours(1));
     Assert.assertEquals(
         List.of(defaultSegment.getInterval()),
-        coordinator.retrieveUnusedSegmentIntervals(dataSource, 100)
+        coordinator.retrieveSomeUnusedSegmentIntervals(dataSource, 100)
     );
 
     markAllSegmentsUnused(Set.of(defaultSegment3), DateTimes.nowUtc().minusHours(1));
     Assert.assertEquals(
         Set.of(defaultSegment.getInterval(), defaultSegment3.getInterval()),
-        Set.copyOf(coordinator.retrieveUnusedSegmentIntervals(dataSource, 100))
+        Set.copyOf(coordinator.retrieveSomeUnusedSegmentIntervals(dataSource, 100))
     );
 
     // Verify retrieve with limit 1 returns only 1 interval
     Assert.assertEquals(
         1,
-        coordinator.retrieveUnusedSegmentIntervals(dataSource, 1).size()
+        coordinator.retrieveSomeUnusedSegmentIntervals(dataSource, 1).size()
     );
   }
 
@@ -4563,12 +4745,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
   private CompactionState createTestIndexingState()
   {
-    return new CompactionState(
-        new DynamicPartitionsSpec(100, null),
-        null, null, null,
-        IndexSpec.getDefault(),
-        null, null
-    );
+    return CompactionState.builder()
+                          .partitionsSpec(new DynamicPartitionsSpec(100, null))
+                          .indexSpec(IndexSpec.getDefault())
+                          .build();
   }
 
   private SegmentIdWithShardSpec allocatePendingSegment(

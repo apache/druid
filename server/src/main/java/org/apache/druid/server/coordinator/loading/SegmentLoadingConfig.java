@@ -22,6 +22,9 @@ package org.apache.druid.server.coordinator.loading;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
+import java.util.Map;
+import java.util.Set;
+
 /**
  * Contains recomputed configs from {@link CoordinatorDynamicConfig} based on
  * whether {@link CoordinatorDynamicConfig#isSmartSegmentLoading} is enabled or not.
@@ -37,6 +40,9 @@ public class SegmentLoadingConfig
   private final int balancerComputeThreads;
 
   private final boolean useRoundRobinSegmentAssignment;
+
+  private final Map<String, Set<String>> historicalTierAliases;
+  private final Map<String, String> tierToAliasName;
 
   /**
    * Creates a new SegmentLoadingConfig with recomputed coordinator config values
@@ -61,7 +67,9 @@ public class SegmentLoadingConfig
           replicationThrottleLimit,
           60,
           true,
-          numBalancerThreads
+          numBalancerThreads,
+          dynamicConfig.getHistoricalTierAliases(),
+          dynamicConfig.getTierToAliasName()
       );
     } else {
       // Use the configured values
@@ -70,7 +78,9 @@ public class SegmentLoadingConfig
           dynamicConfig.getReplicationThrottleLimit(),
           dynamicConfig.getReplicantLifetime(),
           dynamicConfig.isUseRoundRobinSegmentAssignment(),
-          dynamicConfig.getBalancerComputeThreads()
+          dynamicConfig.getBalancerComputeThreads(),
+          dynamicConfig.getHistoricalTierAliases(),
+          dynamicConfig.getTierToAliasName()
       );
     }
   }
@@ -80,7 +90,9 @@ public class SegmentLoadingConfig
       int replicationThrottleLimit,
       int maxLifetimeInLoadQueue,
       boolean useRoundRobinSegmentAssignment,
-      int balancerComputeThreads
+      int balancerComputeThreads,
+      Map<String, Set<String>> historicalTierAliases,
+      Map<String, String> tierToAliasName
   )
   {
     this.maxSegmentsInLoadQueue = maxSegmentsInLoadQueue;
@@ -88,6 +100,8 @@ public class SegmentLoadingConfig
     this.maxLifetimeInLoadQueue = maxLifetimeInLoadQueue;
     this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
     this.balancerComputeThreads = balancerComputeThreads;
+    this.historicalTierAliases = historicalTierAliases;
+    this.tierToAliasName = tierToAliasName;
   }
 
   public int getMaxSegmentsInLoadQueue()
@@ -113,5 +127,19 @@ public class SegmentLoadingConfig
   public int getBalancerComputeThreads()
   {
     return balancerComputeThreads;
+  }
+
+  public Map<String, Set<String>> getHistoricalTierAliases()
+  {
+    return historicalTierAliases;
+  }
+
+  /**
+   * Maps each physical tier to the alias tier it belongs to. Used to tag
+   * coordinator metrics with {@link org.apache.druid.server.coordinator.stats.Dimension#TIER_ALIAS}.
+   */
+  public Map<String, String> getTierToAliasName()
+  {
+    return tierToAliasName;
   }
 }

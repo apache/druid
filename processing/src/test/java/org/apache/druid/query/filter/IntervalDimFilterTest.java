@@ -28,9 +28,9 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -39,7 +39,7 @@ public class IntervalDimFilterTest
 {
   private static ObjectMapper mapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     Injector defaultInjector = GuiceInjectors.makeStartupInjector();
@@ -59,7 +59,7 @@ public class IntervalDimFilterTest
     );
     String filterStr = mapper.writeValueAsString(intervalFilter);
     IntervalDimFilter actualFilter = mapper.readerFor(DimFilter.class).readValue(filterStr);
-    Assert.assertEquals(intervalFilter, actualFilter);
+    Assertions.assertEquals(intervalFilter, actualFilter);
 
     intervalFilter = new IntervalDimFilter(
         ColumnHolder.TIME_COLUMN_NAME,
@@ -72,7 +72,7 @@ public class IntervalDimFilterTest
 
     filterStr = mapper.writeValueAsString(intervalFilter);
     actualFilter = mapper.readerFor(DimFilter.class).readValue(filterStr);
-    Assert.assertEquals(intervalFilter, actualFilter);
+    Assertions.assertEquals(intervalFilter, actualFilter);
   }
 
   @Test
@@ -95,7 +95,7 @@ public class IntervalDimFilterTest
         ),
         null
     );
-    Assert.assertNotEquals(intervalFilter1.getCacheKey(), intervalFilter2.getCacheKey());
+    Assertions.assertNotEquals(intervalFilter1.getCacheKey(), intervalFilter2.getCacheKey());
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
     DimFilter intervalFilter3 = new IntervalDimFilter(
@@ -114,7 +114,7 @@ public class IntervalDimFilterTest
         ),
         regexFn
     );
-    Assert.assertNotEquals(intervalFilter3.getCacheKey(), intervalFilter4.getCacheKey());
+    Assertions.assertNotEquals(intervalFilter3.getCacheKey(), intervalFilter4.getCacheKey());
   }
 
   @Test
@@ -149,8 +149,8 @@ public class IntervalDimFilterTest
         null
     );
 
-    Assert.assertNotEquals(intervalFilter1.hashCode(), intervalFilter2.hashCode());
-    Assert.assertNotEquals(intervalFilter1.hashCode(), intervalFilter3.hashCode());
+    Assertions.assertNotEquals(intervalFilter1.hashCode(), intervalFilter2.hashCode());
+    Assertions.assertNotEquals(intervalFilter1.hashCode(), intervalFilter3.hashCode());
 
     DimFilter intervalFilter4 = new IntervalDimFilter(
         ColumnHolder.TIME_COLUMN_NAME,
@@ -162,7 +162,7 @@ public class IntervalDimFilterTest
         null
     );
 
-    Assert.assertEquals(intervalFilter1.hashCode(), intervalFilter4.hashCode());
+    Assertions.assertEquals(intervalFilter1.hashCode(), intervalFilter4.hashCode());
 
     DimFilter intervalFilter5 = new IntervalDimFilter(
         "__thyme",
@@ -172,7 +172,7 @@ public class IntervalDimFilterTest
         ),
         null
     );
-    Assert.assertNotEquals(intervalFilter1.hashCode(), intervalFilter5.hashCode());
+    Assertions.assertNotEquals(intervalFilter1.hashCode(), intervalFilter5.hashCode());
   }
 
   @Test
@@ -207,8 +207,8 @@ public class IntervalDimFilterTest
         null
     );
 
-    Assert.assertNotEquals(intervalFilter1, intervalFilter2);
-    Assert.assertNotEquals(intervalFilter1, intervalFilter3);
+    Assertions.assertNotEquals(intervalFilter1, intervalFilter2);
+    Assertions.assertNotEquals(intervalFilter1, intervalFilter3);
 
     DimFilter intervalFilter4 = new IntervalDimFilter(
         ColumnHolder.TIME_COLUMN_NAME,
@@ -219,7 +219,7 @@ public class IntervalDimFilterTest
         ),
         null
     );
-    Assert.assertEquals(intervalFilter1, intervalFilter4);
+    Assertions.assertEquals(intervalFilter1, intervalFilter4);
 
     DimFilter intervalFilter5 = new IntervalDimFilter(
         "__thyme",
@@ -229,7 +229,7 @@ public class IntervalDimFilterTest
         ),
         null
     );
-    Assert.assertNotEquals(intervalFilter1, intervalFilter5);
+    Assertions.assertNotEquals(intervalFilter1, intervalFilter5);
   }
 
   @Test
@@ -243,6 +243,6 @@ public class IntervalDimFilterTest
         ),
         null
     );
-    Assert.assertEquals(intervalFilter.getRequiredColumns(), Sets.newHashSet(ColumnHolder.TIME_COLUMN_NAME));
+    Assertions.assertEquals(intervalFilter.getRequiredColumns(), Sets.newHashSet(ColumnHolder.TIME_COLUMN_NAME));
   }
 }

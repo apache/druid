@@ -66,6 +66,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class QueryableIndexCursorHolder implements CursorHolder
 {
@@ -84,11 +85,30 @@ public class QueryableIndexCursorHolder implements CursorHolder
   private final QueryContext queryContext;
   private final int vectorSize;
   private final Supplier<CursorResources> resourcesSupplier;
+  private final AtomicBoolean resourcesComputed = new AtomicBoolean(false);
 
   public QueryableIndexCursorHolder(
       QueryableIndex index,
       CursorBuildSpec cursorBuildSpec,
       TimeBoundaryInspector timeBoundaryInspector
+  )
+  {
+    this(index, cursorBuildSpec, timeBoundaryInspector, null);
+  }
+
+  /**
+   * Variant that overrides the ordering this holder reports and reasons about, instead of taking it from
+   * {@code index.getOrdering()}. Used by the clustered single-group cursor path: the group sub-index is physically
+   * sorted by the segment ordering with the clustering prefix dropped (e.g. {@code [__time]}), but at the cursor
+   * level the clustering columns are injected back as constants, so the cursor actually yields rows in the full
+   * segment ordering. Reporting that full ordering keeps a clustered segment's advertised ordering independent of how
+   * many groups survive filter pruning.
+   */
+  public QueryableIndexCursorHolder(
+      QueryableIndex index,
+      CursorBuildSpec cursorBuildSpec,
+      TimeBoundaryInspector timeBoundaryInspector,
+      @Nullable List<OrderBy> orderingOverride
   )
   {
     this.index = index;
@@ -97,7 +117,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
     this.aggregatorFactories = cursorBuildSpec.getAggregators();
     this.filter = cursorBuildSpec.getFilter();
 
-    final List<OrderBy> indexOrdering = index.getOrdering();
+    final List<OrderBy> indexOrdering = orderingOverride != null ? orderingOverride : index.getOrdering();
     if (Cursors.preferDescendingTimeOrdering(cursorBuildSpec)
         && Cursors.getTimeOrdering(indexOrdering) == Order.ASCENDING) {
       this.ordering = Cursors.descendingTimeOrder();
@@ -109,16 +129,20 @@ public class QueryableIndexCursorHolder implements CursorHolder
     this.vectorSize = cursorBuildSpec.getQueryContext().getVectorSize();
     this.metrics = cursorBuildSpec.getQueryMetrics();
     this.resourcesSupplier = Suppliers.memoize(
-        () -> new CursorResources(
-            index,
-            timeBoundaryInspector,
-            virtualColumns,
-            Cursors.getTimeOrdering(ordering),
-            interval,
-            filter,
-            cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CURSOR_AUTO_ARRANGE_FILTERS, true),
-            metrics
-        )
+        () -> {
+          final CursorResources resources = new CursorResources(
+              index,
+              timeBoundaryInspector,
+              virtualColumns,
+              Cursors.getTimeOrdering(ordering),
+              interval,
+              filter,
+              cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CURSOR_AUTO_ARRANGE_FILTERS, true),
+              metrics
+          );
+          resourcesComputed.set(true);
+          return resources;
+        }
     );
   }
 
@@ -315,7 +339,9 @@ public class QueryableIndexCursorHolder implements CursorHolder
   @Override
   public void close()
   {
-    CloseableUtils.closeAndWrapExceptions(resourcesSupplier.get());
+    if (resourcesComputed.get()) {
+      CloseableUtils.closeAndWrapExceptions(resourcesSupplier.get());
+    }
   }
 
 

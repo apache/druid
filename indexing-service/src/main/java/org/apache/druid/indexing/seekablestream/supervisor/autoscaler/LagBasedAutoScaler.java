@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
@@ -30,8 +31,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.util.ArrayList;
@@ -51,7 +50,6 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
   private final SeekableStreamSupervisor supervisor;
   private final LagBasedAutoScalerConfig lagBasedAutoScalerConfig;
   private final ServiceEmitter emitter;
-  private final ServiceMetricEvent.Builder metricBuilder;
 
   private static final ReentrantLock LOCK = new ReentrantLock(true);
 
@@ -76,10 +74,6 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     this.spec = spec;
     this.supervisor = supervisor;
     this.emitter = emitter;
-    metricBuilder = ServiceMetricEvent.builder()
-                                      .setDimension(DruidMetrics.SUPERVISOR_ID, spec.getId())
-                                      .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                                      .setDimension(DruidMetrics.STREAM, this.supervisor.getIoConfig().getStream());
   }
 
   @Override
@@ -87,7 +81,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
   {
     Callable<Integer> scaleAction = () -> {
       LOCK.lock();
-      int desiredTaskCount = -1;
+      int desiredTaskCount = CANNOT_COMPUTE;
       try {
         desiredTaskCount = computeDesiredTaskCount(new ArrayList<>(lagMetricsQueue));
       }
@@ -196,26 +190,9 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     };
   }
 
-  /**
-   * This method determines whether to do scale actions based on collected lag points.
-   * The current algorithm of scale is straightforward:
-   * <ul>
-   * <li>First, compute the proportion of lag points higher/lower than {@code scaleOutThreshold/scaleInThreshold},
-   * getting {@code scaleInThreshold/scaleOutThreshold},.
-   * <li>Secondly, compare {@code scaleInThreshold/scaleOutThreshold} with
-   * {@code triggerScaleOutFractionThreshold/triggerScaleInFractionThreshold}.
-   * <ul><li>P.S. Scale out action has a higher priority than scale in action.</ul>
-   * <li>Finally, if {@code scaleOutThreshold/scaleInThreshold}, is higher than
-   * {@code triggerScaleOutFractionThreshold/triggerScaleInFractionThreshold}, scale out/in action would be triggered.
-   * </ul>
-   *
-   * @param lags the lag metrics of Stream (Kafka/Kinesis)
-   * @return Integer, target number of tasksCount. -1 means skip scale action.
-   */
-  private int computeDesiredTaskCount(List<Long> lags)
+  @VisibleForTesting
+  int computeDesiredTaskCount(List<Long> lags)
   {
-    // if the supervisor is not suspended, ensure required tasks are running
-    // if suspended, ensure tasks have been requested to gracefully stop
     log.debug(
         "Computing the desired task count for supervisor[%s], based on following lags : [%s]",
         spec.getId(),
@@ -235,64 +212,30 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     double beyondProportion = beyond * 1.0 / metricsCount;
     double withinProportion = within * 1.0 / metricsCount;
 
-    log.debug("Calculated beyondProportion is [%s] and withinProportion is [%s] for supervisor[%s].", beyondProportion,
-        withinProportion, spec.getId()
+    log.debug(
+        "Calculated beyondProportion is [%s] and withinProportion is [%s] for supervisor[%s].",
+        beyondProportion,
+        withinProportion,
+        spec.getId()
     );
 
-    int currentActiveTaskCount = supervisor.getActiveTaskGroupsCount();
-    int desiredActiveTaskCount;
-    int partitionCount = supervisor.getPartitionCount();
+    final int partitionCount = supervisor.getPartitionCount();
     if (partitionCount <= 0) {
       log.warn("Partition number for supervisor[%s] <= 0 ? how can it be?", spec.getId());
-      return -1;
+      return CANNOT_COMPUTE;
     }
+
+    final int currentActiveTaskCount = supervisor.getIoConfig().getTaskCount();
 
     if (beyondProportion >= lagBasedAutoScalerConfig.getTriggerScaleOutFractionThreshold()) {
-      // Do Scale out
-      int taskCount = currentActiveTaskCount + lagBasedAutoScalerConfig.getScaleOutStep();
-
-      int actualTaskCountMax = Math.min(lagBasedAutoScalerConfig.getTaskCountMax(), partitionCount);
-      if (currentActiveTaskCount == actualTaskCountMax) {
-        log.debug(
-            "CurrentActiveTaskCount reached task count Max limit, skipping scale out action for supervisor[%s].",
-            spec.getId()
-        );
-        emitter.emit(metricBuilder
-                         .setDimension(
-                             SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,
-                             "Already at max task count"
-                         )
-                         .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, taskCount));
-        return -1;
-      } else {
-        desiredActiveTaskCount = Math.min(taskCount, actualTaskCountMax);
-      }
-      return desiredActiveTaskCount;
+      // scale-out: step up from current, capped by partition count (scaler-internal constraint)
+      return Math.min(currentActiveTaskCount + lagBasedAutoScalerConfig.getScaleOutStep(), partitionCount);
     }
-
     if (withinProportion >= lagBasedAutoScalerConfig.getTriggerScaleInFractionThreshold()) {
-      // Do Scale in
-      int taskCount = currentActiveTaskCount - lagBasedAutoScalerConfig.getScaleInStep();
-      int actualTaskCountMin = Math.min(lagBasedAutoScalerConfig.getTaskCountMin(), partitionCount);
-      if (currentActiveTaskCount == actualTaskCountMin) {
-        log.debug(
-            "CurrentActiveTaskCount reached task count Min limit[%d], skipping scale in action for supervisor[%s].",
-            actualTaskCountMin,
-            spec.getId()
-        );
-        emitter.emit(metricBuilder
-                         .setDimension(
-                             SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,
-                             "Already at min task count"
-                         )
-                         .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, taskCount));
-        return -1;
-      } else {
-        desiredActiveTaskCount = Math.max(taskCount, actualTaskCountMin);
-      }
-      return desiredActiveTaskCount;
+      return Math.max(1, currentActiveTaskCount - lagBasedAutoScalerConfig.getScaleInStep());
     }
-    return -1;
+    // Neither trigger fired; the scaler's preferred count is the current count.
+    return currentActiveTaskCount;
   }
 
   public LagBasedAutoScalerConfig getAutoScalerConfig()

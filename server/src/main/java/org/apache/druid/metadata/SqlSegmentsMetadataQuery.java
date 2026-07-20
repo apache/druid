@@ -1065,20 +1065,43 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Gets unused segment intervals for the specified datasource. There is no
-   * guarantee on the order of intervals in the list or on whether the limited
-   * list contains the earliest or latest intervals present in the datasource.
+   * Retrieves intervals containing unused segments for the specified datasource.
+   * <p>
+   * This method ensures that if there is any unused segment for the datasource,
+   * the returned list is not empty. However, it does NOT guarantee that:
+   * <ul>
+   * <li>the intervals in the result would be ordered</li>
+   * <li>the result would contain the earliest or latest intervals for this datasource</li>
+   * <li>it would scan all unused segments for this datasource. So, the result
+   * may contain less than {@code limit} entries even when there are more distinct
+   * unused segment intervals in the metadata store for this datasource.</li>
+   * </ul>
    *
-   * @return List of unused segment intervals containing upto {@code limit} entries.
+   * @return List of distinct unused segment intervals for the specified datasource
+   * containing at least 1 entry if there is any unused segment for the datasource,
+   * upto a maximum of {@code limit} entries.
    */
-  public List<Interval> retrieveUnusedSegmentIntervals(String dataSource, int limit)
+  public List<Interval> retrieveSomeUnusedSegmentIntervals(String dataSource, int limit)
   {
     final String sql = StringUtils.format(
-        "SELECT start, %2$send%2$s FROM %1$s"
-        + " WHERE dataSource = :dataSource AND used = false"
-        + " GROUP BY start, %2$send%2$s"
-        + "  %3$s",
-        dbTables.getSegmentsTable(), connector.getQuoteString(), connector.limitClause(limit)
+        // Disable checkstyle to avoid argumentLineBreaking rule from getting triggered
+        //CHECKSTYLE.OFF: Regexp
+        """
+            SELECT start, %2$send%2$s
+            FROM (
+              SELECT start, %2$send%2$s
+              FROM %1$s
+              WHERE dataSource = :dataSource AND used = false
+              %3$s
+            ) AS unused
+            GROUP BY %2$send%2$s, start
+            %4$s
+            """,
+        //CHECKSTYLE.ON: Regexp
+        dbTables.getSegmentsTable(),
+        connector.getQuoteString(),
+        connector.limitClause(1_000_000), // limit unused segment rows scanned to 1M
+        connector.limitClause(limit)
     );
 
     final List<Interval> intervals = connector.inReadOnlyTransaction(

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.guice.PeonProcessingModule;
 import org.apache.druid.indexer.TaskIdStatus;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
@@ -176,16 +177,13 @@ public interface Task
   <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
-   * True if this task type embeds a query stack, and therefore should preload resources (like broadcast tables)
-   * that may be needed by queries. Tasks supporting queries are also allocated processing buffers, processing threads
-   * and merge buffers. Those which do not should not assume that these resources are present and must explicitly allocate
-   * any direct buffers or processing pools if required.
-   *
-   * If true, {@link #getQueryRunner(Query)} does not necessarily return nonnull query runners. For example,
-   * MSQWorkerTask returns true from this method (because it embeds a query stack for running multi-stage queries)
-   * even though it is not directly queryable via HTTP.
+   * Declares which resources provided by {@link PeonProcessingModule} this task actually needs. The default
+   * implementation has all the optional items disabled.
    */
-  boolean supportsQueries();
+  default PeonProcessingModule.Config getPeonProcessingModuleConfig()
+  {
+    return new PeonProcessingModule.Config();
+  }
 
   /**
    * Returns an extra classpath that should be prepended to the default classpath when running this task. If no

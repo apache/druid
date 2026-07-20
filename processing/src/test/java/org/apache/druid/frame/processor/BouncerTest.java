@@ -20,8 +20,8 @@
 package org.apache.druid.frame.processor;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
 
@@ -37,39 +37,39 @@ public class BouncerTest
   {
     final Bouncer bouncer = new Bouncer(2);
 
-    Assert.assertEquals(2, bouncer.getMaxCount());
-    Assert.assertEquals(0, bouncer.getCurrentCount());
+    Assertions.assertEquals(2, bouncer.getMaxCount());
+    Assertions.assertEquals(0, bouncer.getCurrentCount());
 
     // First ticket should be immediately available since count is 0 < maxCount
     final ListenableFuture<Bouncer.Ticket> future1 = bouncer.ticket();
-    Assert.assertTrue(future1.isDone());
+    Assertions.assertTrue(future1.isDone());
     final Bouncer.Ticket ticket1 = future1.get();
-    Assert.assertEquals(1, bouncer.getCurrentCount());
+    Assertions.assertEquals(1, bouncer.getCurrentCount());
 
     // Second ticket should be immediately available since count is 1 < maxCount
     final ListenableFuture<Bouncer.Ticket> future2 = bouncer.ticket();
-    Assert.assertTrue(future2.isDone());
+    Assertions.assertTrue(future2.isDone());
     final Bouncer.Ticket ticket2 = future2.get();
-    Assert.assertEquals(2, bouncer.getCurrentCount());
+    Assertions.assertEquals(2, bouncer.getCurrentCount());
 
     // Third ticket should not be ready yet because maxCount is reached
     final ListenableFuture<Bouncer.Ticket> future3 = bouncer.ticket();
-    Assert.assertFalse(future3.isDone());
-    Assert.assertEquals(2, bouncer.getCurrentCount());
+    Assertions.assertFalse(future3.isDone());
+    Assertions.assertEquals(2, bouncer.getCurrentCount());
 
     // Giving back ticket1 should make future3 ready and transfer the slot
     ticket1.giveBack();
-    Assert.assertEquals(2, bouncer.getCurrentCount());
-    Assert.assertTrue(future3.isDone());
+    Assertions.assertEquals(2, bouncer.getCurrentCount());
+    Assertions.assertTrue(future3.isDone());
     final Bouncer.Ticket ticket3 = future3.get();
 
     // Giving back ticket2 should decrease count since no waiters remain
     ticket2.giveBack();
-    Assert.assertEquals(1, bouncer.getCurrentCount());
+    Assertions.assertEquals(1, bouncer.getCurrentCount());
 
     // Giving back ticket3 should decrease count to 0 since no waiters remain
     ticket3.giveBack();
-    Assert.assertEquals(0, bouncer.getCurrentCount());
+    Assertions.assertEquals(0, bouncer.getCurrentCount());
   }
 
   @Test
@@ -78,34 +78,34 @@ public class BouncerTest
     final Bouncer parentBouncer = new Bouncer(1);
     final Bouncer bouncer = new Bouncer(2, parentBouncer);
 
-    Assert.assertEquals(1, bouncer.getMaxCount());
-    Assert.assertEquals(0, bouncer.getCurrentCount());
-    Assert.assertEquals(0, parentBouncer.getCurrentCount());
+    Assertions.assertEquals(1, bouncer.getMaxCount());
+    Assertions.assertEquals(0, bouncer.getCurrentCount());
+    Assertions.assertEquals(0, parentBouncer.getCurrentCount());
 
     // First ticket should be immediately available, requiring both child and parent slots
     final ListenableFuture<Bouncer.Ticket> future1 = bouncer.ticket();
-    Assert.assertTrue(future1.isDone());
+    Assertions.assertTrue(future1.isDone());
     final Bouncer.Ticket ticket1 = future1.get();
-    Assert.assertEquals(1, bouncer.getCurrentCount());
-    Assert.assertEquals(1, parentBouncer.getCurrentCount());
+    Assertions.assertEquals(1, bouncer.getCurrentCount());
+    Assertions.assertEquals(1, parentBouncer.getCurrentCount());
 
     // Second ticket should not be ready yet because parent maxCount is reached
     final ListenableFuture<Bouncer.Ticket> future2 = bouncer.ticket();
-    Assert.assertFalse(future2.isDone());
-    Assert.assertEquals(2, bouncer.getCurrentCount());
-    Assert.assertEquals(1, parentBouncer.getCurrentCount());
+    Assertions.assertFalse(future2.isDone());
+    Assertions.assertEquals(2, bouncer.getCurrentCount());
+    Assertions.assertEquals(1, parentBouncer.getCurrentCount());
 
     // Giving back ticket1 should make future2 ready and reuse the parent slot
     ticket1.giveBack();
-    Assert.assertEquals(1, bouncer.getCurrentCount());
-    Assert.assertEquals(1, parentBouncer.getCurrentCount());
-    Assert.assertTrue(future2.isDone());
+    Assertions.assertEquals(1, bouncer.getCurrentCount());
+    Assertions.assertEquals(1, parentBouncer.getCurrentCount());
+    Assertions.assertTrue(future2.isDone());
     final Bouncer.Ticket ticket2 = future2.get();
 
     // Giving back ticket2 should return both child and parent slots to 0
     ticket2.giveBack();
-    Assert.assertEquals(0, bouncer.getCurrentCount());
-    Assert.assertEquals(0, parentBouncer.getCurrentCount());
+    Assertions.assertEquals(0, bouncer.getCurrentCount());
+    Assertions.assertEquals(0, parentBouncer.getCurrentCount());
   }
 
   @Test
@@ -114,45 +114,45 @@ public class BouncerTest
     final Bouncer parentBouncer = new Bouncer(3);
     final Bouncer bouncer = new Bouncer(2, parentBouncer);
 
-    Assert.assertEquals(2, bouncer.getMaxCount());
-    Assert.assertEquals(0, bouncer.getCurrentCount());
-    Assert.assertEquals(0, parentBouncer.getCurrentCount());
+    Assertions.assertEquals(2, bouncer.getMaxCount());
+    Assertions.assertEquals(0, bouncer.getCurrentCount());
+    Assertions.assertEquals(0, parentBouncer.getCurrentCount());
 
     // First ticket should be immediately available, child is limiting factor
     final ListenableFuture<Bouncer.Ticket> future1 = bouncer.ticket();
-    Assert.assertTrue(future1.isDone());
+    Assertions.assertTrue(future1.isDone());
     final Bouncer.Ticket ticket1 = future1.get();
-    Assert.assertEquals(1, bouncer.getCurrentCount());
-    Assert.assertEquals(1, parentBouncer.getCurrentCount());
+    Assertions.assertEquals(1, bouncer.getCurrentCount());
+    Assertions.assertEquals(1, parentBouncer.getCurrentCount());
 
     // Second ticket should be immediately available, child is limiting factor
     final ListenableFuture<Bouncer.Ticket> future2 = bouncer.ticket();
-    Assert.assertTrue(future2.isDone());
+    Assertions.assertTrue(future2.isDone());
     final Bouncer.Ticket ticket2 = future2.get();
-    Assert.assertEquals(2, bouncer.getCurrentCount());
-    Assert.assertEquals(2, parentBouncer.getCurrentCount());
+    Assertions.assertEquals(2, bouncer.getCurrentCount());
+    Assertions.assertEquals(2, parentBouncer.getCurrentCount());
 
     // Third ticket should not be ready yet because child maxCount is reached
     final ListenableFuture<Bouncer.Ticket> future3 = bouncer.ticket();
-    Assert.assertFalse(future3.isDone());
-    Assert.assertEquals(2, bouncer.getCurrentCount());
-    Assert.assertEquals(2, parentBouncer.getCurrentCount());
+    Assertions.assertFalse(future3.isDone());
+    Assertions.assertEquals(2, bouncer.getCurrentCount());
+    Assertions.assertEquals(2, parentBouncer.getCurrentCount());
 
     // Giving back ticket1 should make future3 ready and transfer the slot
     ticket1.giveBack();
-    Assert.assertEquals(2, bouncer.getCurrentCount());
-    Assert.assertEquals(2, parentBouncer.getCurrentCount());
-    Assert.assertTrue(future3.isDone());
+    Assertions.assertEquals(2, bouncer.getCurrentCount());
+    Assertions.assertEquals(2, parentBouncer.getCurrentCount());
+    Assertions.assertTrue(future3.isDone());
     final Bouncer.Ticket ticket3 = future3.get();
 
     // Giving back ticket2 should decrease counts since no waiters remain
     ticket2.giveBack();
-    Assert.assertEquals(1, bouncer.getCurrentCount());
-    Assert.assertEquals(1, parentBouncer.getCurrentCount());
+    Assertions.assertEquals(1, bouncer.getCurrentCount());
+    Assertions.assertEquals(1, parentBouncer.getCurrentCount());
 
     // Giving back ticket3 should return both counts to 0 since no waiters remain
     ticket3.giveBack();
-    Assert.assertEquals(0, bouncer.getCurrentCount());
-    Assert.assertEquals(0, parentBouncer.getCurrentCount());
+    Assertions.assertEquals(0, bouncer.getCurrentCount());
+    Assertions.assertEquals(0, parentBouncer.getCurrentCount());
   }
 }

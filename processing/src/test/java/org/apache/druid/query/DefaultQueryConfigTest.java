@@ -25,8 +25,8 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.annotations.Global;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
@@ -46,10 +46,10 @@ public class DefaultQueryConfigTest
     properties.put(propertyPrefix + ".context.vectorize", "true");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final DefaultQueryConfig defaultQueryConfig = provider.get();
-    Assert.assertNotNull(defaultQueryConfig.getContext());
-    Assert.assertEquals(2, defaultQueryConfig.getContext().size());
-    Assert.assertEquals("10", defaultQueryConfig.getContext().get("joinFilterRewriteMaxSize"));
-    Assert.assertEquals("true", defaultQueryConfig.getContext().get("vectorize"));
+    Assertions.assertNotNull(defaultQueryConfig.getContext());
+    Assertions.assertEquals(2, defaultQueryConfig.getContext().size());
+    Assertions.assertEquals("10", defaultQueryConfig.getContext().get("joinFilterRewriteMaxSize"));
+    Assertions.assertEquals("true", defaultQueryConfig.getContext().get("vectorize"));
   }
 
   @Test
@@ -64,8 +64,8 @@ public class DefaultQueryConfigTest
     final Properties properties = new Properties();
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final DefaultQueryConfig defaultQueryConfig = provider.get();
-    Assert.assertNotNull(defaultQueryConfig.getContext());
-    Assert.assertEquals(0, defaultQueryConfig.getContext().size());
+    Assertions.assertNotNull(defaultQueryConfig.getContext());
+    Assertions.assertEquals(0, defaultQueryConfig.getContext().size());
   }
 
   private Injector createInjector()

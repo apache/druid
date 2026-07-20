@@ -101,13 +101,28 @@ public class WeightedCostFunctionTest
     double amplification = 1.0 + WeightedCostFunction.LAG_AMPLIFICATION_MULTIPLIER * Math.log(aggregateLag / 100);
 
     double costCurrent = costFunction.computeCost(metrics, 10, lagOnlyConfig).totalCost();
-    Assert.assertEquals("Cost of current tasks", aggregateLag * amplification / (10 * 1000.0), costCurrent, 0.1);
+    Assert.assertEquals(
+        "Cost of current tasks",
+        aggregateLag * amplification / (10 * WeightedCostFunction.MIN_PROCESSING_RATE),
+        costCurrent,
+        0.1
+    );
 
     double costUp5 = costFunction.computeCost(metrics, 15, lagOnlyConfig).totalCost();
-    Assert.assertEquals("Cost when scaling up by 5", aggregateLag * amplification / (15 * 1000.0), costUp5, 0.1);
+    Assert.assertEquals(
+        "Cost when scaling up by 5",
+        aggregateLag * amplification / (15 * WeightedCostFunction.MIN_PROCESSING_RATE),
+        costUp5,
+        0.1
+    );
 
     double costUp10 = costFunction.computeCost(metrics, 20, lagOnlyConfig).totalCost();
-    Assert.assertEquals("Cost when scaling up by 10", aggregateLag * amplification / (20 * 1000.0), costUp10, 0.1);
+    Assert.assertEquals(
+        "Cost when scaling up by 10",
+        aggregateLag * amplification / (20 * WeightedCostFunction.MIN_PROCESSING_RATE),
+        costUp10,
+        0.1
+    );
 
     // Adding more tasks reduces lag recovery time
     Assert.assertTrue("Adding more tasks reduces lag cost", costUp10 < costUp5);
@@ -195,10 +210,10 @@ public class WeightedCostFunctionTest
   }
 
   @Test
-  public void testIdleCostMonotonicWithTaskCount()
+  public void testIdleCostIsUShapedAroundOptimalTaskIdleRatio()
   {
-    // Test that idle cost increases monotonically with task count.
-    // With fixed load, adding more tasks means each task has less work, so idle increases.
+    // U-shaped cost: minimum near OPTIMAL_TASK_IDLE_RATIO=0.25, higher on both sides.
+    // Current: 10 tasks with 25% idle (already at optimum).
     CostBasedAutoScalerConfig idleOnlyConfig = CostBasedAutoScalerConfig.builder()
                                                                         .taskCountMax(100)
                                                                         .taskCountMin(1)
@@ -207,18 +222,19 @@ public class WeightedCostFunctionTest
                                                                         .idleWeight(1.0)
                                                                         .build();
 
-    // Current: 10 tasks with 40% idle (60% busy)
-    CostMetrics metrics = createMetrics(0.0, 10, 100, 0.4);
+    CostMetrics metrics = createMetrics(0.0, 10, 100, 0.25);
 
-    double costAt5 = costFunction.computeCost(metrics, 5, idleOnlyConfig).totalCost();
-    double costAt10 = costFunction.computeCost(metrics, 10, idleOnlyConfig).totalCost();
-    double costAt15 = costFunction.computeCost(metrics, 15, idleOnlyConfig).totalCost();
-    double costAt20 = costFunction.computeCost(metrics, 20, idleOnlyConfig).totalCost();
+    // At current (idle=0.25=ideal): baseline cost only, penalty=0
+    double costAtIdeal = costFunction.computeCost(metrics, 10, idleOnlyConfig).totalCost();
 
-    // Monotonically increasing idle cost as tasks increase
-    Assert.assertTrue("cost(5) < cost(10)", costAt5 < costAt10);
-    Assert.assertTrue("cost(10) < cost(15)", costAt10 < costAt15);
-    Assert.assertTrue("cost(15) < cost(20)", costAt15 < costAt20);
+    // Scale down → predicted idle falls below ideal → under-provisioning penalty
+    double costScaleDown = costFunction.computeCost(metrics, 5, idleOnlyConfig).totalCost();
+
+    // Scale up → predicted idle rises above ideal → over-provisioning penalty
+    double costScaleUp = costFunction.computeCost(metrics, 20, idleOnlyConfig).totalCost();
+
+    Assert.assertTrue("scale-down costs more than ideal", costScaleDown > costAtIdeal);
+    Assert.assertTrue("scale-up costs more than ideal", costScaleUp > costAtIdeal);
   }
 
   @Test
@@ -233,21 +249,57 @@ public class WeightedCostFunctionTest
                                                                         .build();
 
     // Extreme scale-down: 10 tasks → 2 tasks with 40% idle
-    // busyFraction = 0.6, taskRatio = 0.2
-    // predictedIdle = 1 - 0.6/0.2 = 1 - 3 = -2 → clamped to 0
+    // busyFraction = 0.6; projectedBusy = 0.6 * (10/2)^0.32 ≈ 1.004
+    // predictedIdle = 1 - 1.004 ≈ -0.004 → still clamped to 0 at this extreme
     CostMetrics metrics = createMetrics(0.0, 10, 100, 0.4);
     double costAt2 = costFunction.computeCost(metrics, 2, idleOnlyConfig).totalCost();
 
-    // idlenessCost = taskCount * 0.0 (clamped) = 0
-    Assert.assertEquals("Idle cost should be 0 when predicted idle is clamped to 0", 0.0, costAt2, 0.0001);
+    // idle = 0: max under-provisioning penalty; cost = taskCount * (IDEAL + UNDER_PENALTY)
+    double expectedAt2 = 2 * (
+        WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO
+        + WeightedCostFunction.UNDER_PROVISIONING_PENALTY
+    );
+    Assert.assertEquals("Idle cost at clamped-to-zero idle ratio should reflect full under-provisioning penalty",
+                        expectedAt2, costAt2, 0.0001);
 
     // Extreme scale-up shouldn't exceed 1.0 for idle ratio
     // 10 tasks → 100 tasks with 10% idle
-    // busyFraction = 0.9, taskRatio = 10
-    // predictedIdle = 1 - 0.9/10 = 1 - 0.09 = 0.91 (within bounds)
+    // busyFraction = 0.9; projectedBusy = 0.9 * (10/100)^0.32 ≈ 0.431
+    // predictedIdle = 1 - 0.431 ≈ 0.569 (within bounds)
     CostMetrics lowIdle = createMetrics(0.0, 10, 100, 0.1);
     double costAt100 = costFunction.computeCost(lowIdle, 100, idleOnlyConfig).totalCost();
     Assert.assertTrue("Cost should be finite and positive", Double.isFinite(costAt100) && costAt100 > 0);
+  }
+
+  @Test
+  public void testModerateConsolidationProjectsHealthyIdle()
+  {
+    // The regime the linear model got wrong: a healthy 2x consolidation from 40% idle.
+    // Sublinear gives predictedIdle ≈ 0.25 (near ideal, no overrun), not the linear -0.2 that clamps to 0.
+    CostBasedAutoScalerConfig idleOnlyConfig = CostBasedAutoScalerConfig.builder()
+                                                                        .taskCountMax(100)
+                                                                        .taskCountMin(1)
+                                                                        .enableTaskAutoScaler(true)
+                                                                        .lagWeight(0.0)
+                                                                        .idleWeight(1.0)
+                                                                        .build();
+
+    CostMetrics metrics = createMetrics(0.0, 10, 100, 0.4);
+    double costCurrent = costFunction.computeCost(metrics, 10, idleOnlyConfig).totalCost();
+    double costScaleDown = costFunction.computeCost(metrics, 5, idleOnlyConfig).totalCost();
+
+    Assert.assertTrue(
+        "Healthy 2x consolidation should be cheaper than staying at the current count",
+        costScaleDown < costCurrent
+    );
+
+    // Far below the clamped-to-zero cost the linear model produced: idle is healthy, not clamped.
+    double clampedToZeroCost =
+        5 * (WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO + WeightedCostFunction.UNDER_PROVISIONING_PENALTY);
+    Assert.assertTrue(
+        "Predicted idle should be healthy, not clamped to zero",
+        costScaleDown < clampedToZeroCost
+    );
   }
 
   @Test
@@ -267,11 +319,13 @@ public class WeightedCostFunctionTest
     double cost10 = costFunction.computeCost(missingIdleData, 10, idleOnlyConfig).totalCost();
     double cost20 = costFunction.computeCost(missingIdleData, 20, idleOnlyConfig).totalCost();
 
-    // With missing data, predicted idle = 0.5 for all task counts
-    // idlenessCost at 10 = 10 * 0.5 = 5
-    // idlenessCost at 20 = 20 * 0.5 = 10
-    Assert.assertEquals("Cost at 10 tasks with missing idle data", 10 * 0.5, cost10, 0.0001);
-    Assert.assertEquals("Cost at 20 tasks with missing idle data", 20 * 0.5, cost20, 0.0001);
+    // With missing data, predicted idle = 0.5 for all task counts regardless of proposed count.
+    // U-shaped cost at idle=0.5: idle > IDEAL(0.25), norm=(0.5-0.25)/0.75=1/3, penalty=1*(1/3)^2=1/9
+    double expectedCostPerTask = WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO
+                                 + WeightedCostFunction.OVER_PROVISIONING_PENALTY * (1.0 / 3.0) * (1.0 / 3.0);
+    Assert.assertEquals("Cost at 10 tasks with missing idle data", 10 * expectedCostPerTask, cost10, 0.0001);
+    Assert.assertEquals("Cost at 20 tasks with missing idle data", 20 * expectedCostPerTask, cost20, 0.0001);
+    Assert.assertEquals("Cost scales linearly with task count at fixed idle ratio", 2 * cost10, cost20, 0.0001);
   }
 
   @Test
@@ -298,7 +352,7 @@ public class WeightedCostFunctionTest
     double aggregateLag = 150.0 * partitionCount;
     double lagPerPartition = aggregateLag / partitionCount;
     double amplification = 1.0 + WeightedCostFunction.LAG_AMPLIFICATION_MULTIPLIER * Math.log(lagPerPartition);
-    double expected = aggregateLag * amplification / (proposedTaskCount * 1000.0);
+    double expected = aggregateLag * amplification / (proposedTaskCount * WeightedCostFunction.MIN_PROCESSING_RATE);
 
     Assert.assertEquals("Lag amplification should increase lag recovery time", expected, costWithAmp, 0.0001);
   }
@@ -338,6 +392,146 @@ public class WeightedCostFunctionTest
   }
 
 
+  @Test
+  public void testUShapedIdleCostFormula()
+  {
+    int n = 10;
+
+    // At optimal ratio: penalty = 0, cost = n * OPTIMAL_TASK_IDLE_RATIO
+    Assert.assertEquals(
+        n * WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO,
+        costFunction.uShapedIdleCost(
+            WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO,
+            n,
+            WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO
+        ),
+        1e-9
+    );
+
+    // At idle = 0 (fully under-provisioned): norm = 1, penalty = UNDER_PROVISIONING_PENALTY
+    Assert.assertEquals(
+        n * (WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO + WeightedCostFunction.UNDER_PROVISIONING_PENALTY),
+        costFunction.uShapedIdleCost(0.0, n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
+        1e-9
+    );
+
+    // At idle = 1 (fully over-provisioned): norm = 1, penalty = OVER_PROVISIONING_PENALTY
+    Assert.assertEquals(
+        n * (WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO + WeightedCostFunction.OVER_PROVISIONING_PENALTY),
+        costFunction.uShapedIdleCost(1.0, n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
+        1e-9
+    );
+
+    // Both extremes exceed the optimal cost
+    final double optimalCost = costFunction.uShapedIdleCost(
+        WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO,
+        n,
+        WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO
+    );
+    Assert.assertTrue(
+        "idle=0 costs more than optimal",
+        costFunction.uShapedIdleCost(0.0, n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO) > optimalCost
+    );
+    Assert.assertTrue(
+        "idle=1 costs more than optimal",
+        costFunction.uShapedIdleCost(1.0, n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO) > optimalCost
+    );
+
+    // Over-provisioning is penalized more than under-provisioning (OVER > UNDER)
+    Assert.assertTrue(
+        "over-provisioning penalty exceeds under-provisioning penalty",
+        costFunction.uShapedIdleCost(1.0, n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO)
+        > costFunction.uShapedIdleCost(0.0, n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO)
+    );
+
+    // Cost scales linearly with task count at any fixed idle ratio
+    Assert.assertEquals(
+        2 * costFunction.uShapedIdleCost(0.5, n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
+        costFunction.uShapedIdleCost(0.5, 2 * n, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
+        1e-9
+    );
+  }
+
+  @Test
+  public void testEstimateIdleRatioFromProcessingRate()
+  {
+    // 75% utilization (750/1000) -> idle = 0.25
+    final CostMetrics utilized = createMetricsWithMaxObservedRate(750.0, 1000.0, 0.3);
+    Assert.assertEquals(
+        0.25,
+        utilized.estimateIdleRatioFromProcessingRate(),
+        0.0001
+    );
+
+    // Utilization above 100% (rate exceeds the watermark) clamps idle to 0, not negative
+    final CostMetrics overUtilized = createMetricsWithMaxObservedRate(1500.0, 1000.0, 0.3);
+    Assert.assertEquals(
+        0.0,
+        overUtilized.estimateIdleRatioFromProcessingRate(),
+        0.0001
+    );
+
+    // No throughput baseline yet (maxObservedRate=0) -> return negative (unknown), never NaN from 0/0
+    final CostMetrics noBaseline = createMetricsWithMaxObservedRate(0.0, 0.0, 0.3);
+    Assert.assertTrue(noBaseline.estimateIdleRatioFromProcessingRate() < 0);
+  }
+
+  @Test
+  public void testComputeCostSwitchesBetweenPollIdleRatioAndUtilizationRatio()
+  {
+    CostBasedAutoScalerConfig idleOnlyConfig = CostBasedAutoScalerConfig.builder()
+                                                                        .taskCountMax(100)
+                                                                        .taskCountMin(1)
+                                                                        .enableTaskAutoScaler(true)
+                                                                        .lagWeight(0.0)
+                                                                        .idleWeight(1.0)
+                                                                        .build();
+    CostBasedAutoScalerConfig utilizationConfig = CostBasedAutoScalerConfig.builder()
+                                                                           .taskCountMax(100)
+                                                                           .taskCountMin(1)
+                                                                           .enableTaskAutoScaler(true)
+                                                                           .lagWeight(0.0)
+                                                                           .idleWeight(1.0)
+                                                                           .usePollIdleRatio(false)
+                                                                           .build();
+
+    // pollIdleRatio says 90% idle, but utilization (100/1000 used) says 90% idle too -- pick values that
+    // diverge so the two code paths are distinguishable.
+    CostMetrics metrics = createMetricsWithMaxObservedRate(100.0, 1000.0, 0.9);
+
+    double costWithPollIdleRatio = costFunction.computeCost(metrics, 10, idleOnlyConfig).totalCost();
+    Assert.assertEquals(
+        "Default config should cost using the raw pollIdleRatio",
+        costFunction.uShapedIdleCost(0.9, 10, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
+        costWithPollIdleRatio,
+        0.0001
+    );
+
+    double costWithUtilizationRatio = costFunction.computeCost(metrics, 10, utilizationConfig).totalCost();
+    Assert.assertEquals(
+        "usePollIdleRatio=false should cost using the rate-derived idle ratio instead of pollIdleRatio",
+        costFunction.uShapedIdleCost(0.9, 10, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
+        costWithUtilizationRatio,
+        0.0001
+    );
+
+    // Now diverge pollIdleRatio from the utilization-derived value to prove the flag actually switches sources.
+    CostMetrics divergingMetrics = createMetricsWithMaxObservedRate(100.0, 1000.0, 0.1);
+    double costStillPollIdle = costFunction.computeCost(divergingMetrics, 10, idleOnlyConfig).totalCost();
+    double costStillUtilization = costFunction.computeCost(divergingMetrics, 10, utilizationConfig).totalCost();
+    Assert.assertEquals(
+        costFunction.uShapedIdleCost(0.1, 10, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
+        costStillPollIdle,
+        0.0001
+    );
+    Assert.assertEquals(
+        "Utilization-derived idle ratio (0.9) should be used instead of the diverging pollIdleRatio (0.1)",
+        costFunction.uShapedIdleCost(0.9, 10, WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO),
+        costStillUtilization,
+        0.0001
+    );
+  }
+
   private CostMetrics createMetrics(
       double avgPartitionLag,
       int currentTaskCount,
@@ -351,8 +545,18 @@ public class WeightedCostFunctionTest
         partitionCount,
         pollIdleRatio,
         3600,
+        1000.0,
         1000.0
     );
+  }
+
+  private CostMetrics createMetricsWithMaxObservedRate(
+      double avgProcessingRate,
+      double maxObservedRate,
+      double pollIdleRatio
+  )
+  {
+    return new CostMetrics(0.0, 10, 100, pollIdleRatio, 3600, avgProcessingRate, maxObservedRate);
   }
 
   private CostMetrics createMetricsWithRate(
@@ -369,7 +573,8 @@ public class WeightedCostFunctionTest
         partitionCount,
         pollIdleRatio,
         3600,
-        avgProcessingRate
+        avgProcessingRate,
+        1000.0
     );
   }
 }

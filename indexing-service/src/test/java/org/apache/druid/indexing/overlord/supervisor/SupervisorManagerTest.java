@@ -19,6 +19,9 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
@@ -26,6 +29,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.InvalidInput;
@@ -35,14 +40,20 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIngestionSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.indexing.seekablestream.supervisor.SupervisorIOConfigBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.metrics.SupervisorStatsProvider;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -59,11 +70,13 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.concurrent.ConcurrentHashMap;
 
 @RunWith(EasyMockRunner.class)
@@ -116,7 +129,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
     Assert.assertEquals(1, manager.getSupervisorIds().size());
 
-    manager.createOrUpdateAndStartSupervisor(spec);
+    manager.createOrUpdateAndStartSupervisor(spec, false);
     Assert.assertEquals(2, manager.getSupervisorIds().size());
     Assert.assertEquals(spec, manager.getSupervisorSpec("id1").get());
     verifyAll();
@@ -127,7 +140,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     supervisor1.stop(true);
     replayAll();
 
-    manager.createOrUpdateAndStartSupervisor(spec2);
+    manager.createOrUpdateAndStartSupervisor(spec2, false);
     Assert.assertEquals(2, manager.getSupervisorIds().size());
     Assert.assertEquals(spec2, manager.getSupervisorSpec("id1").get());
     verifyAll();
@@ -179,7 +192,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
     Assert.assertEquals(0, manager.getSupervisorIds().size());
 
-    manager.createOrUpdateAndStartSupervisor(spec);
+    manager.createOrUpdateAndStartSupervisor(spec, false);
     Assert.assertEquals(1, manager.getSupervisorIds().size());
     Assert.assertEquals(spec, manager.getSupervisorSpec("id1").get());
     verifyAll();
@@ -188,7 +201,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     exception.expect(DruidException.class);
     replayAll();
 
-    manager.createOrUpdateAndStartSupervisor(spec2);
+    manager.createOrUpdateAndStartSupervisor(spec2, false);
     verifyAll();
   }
 
@@ -196,7 +209,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   public void testCreateOrUpdateAndStartSupervisorNotStarted()
   {
     exception.expect(IllegalStateException.class);
-    manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec("id", null));
+    manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec("id", null), false);
   }
 
   @Test
@@ -208,7 +221,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     exception.expect(NullPointerException.class);
 
     manager.start();
-    manager.createOrUpdateAndStartSupervisor(null);
+    manager.createOrUpdateAndStartSupervisor(null, false);
     verifyAll();
   }
 
@@ -221,26 +234,167 @@ public class SupervisorManagerTest extends EasyMockSupport
     exception.expect(NullPointerException.class);
 
     manager.start();
-    manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec(null, null));
+    manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec(null, null), false);
     verifyAll();
   }
 
   @Test
-  public void testShouldUpdateSupervisor()
+  public void testUnchangedSpecDoesNotRestart()
   {
     SupervisorSpec spec = new TestSupervisorSpec("id1", supervisor1);
+    Map<String, SupervisorSpec> existingSpecs = Map.of("id1", spec);
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    replayAll();
+    manager.start();
+    final SupervisorSpecUpdateResult result = manager.createOrUpdateAndStartSupervisor(spec, true);
+    Assert.assertFalse(result.isModified());
+    Assert.assertFalse(result.isRestarted());
+    verifyAll();
+  }
+
+  @Test
+  public void testNewSupervisorRequiresRestart()
+  {
     SupervisorSpec spec2 = new TestSupervisorSpec("id2", supervisor2);
     Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
-        "id1", spec
+        "id1", new TestSupervisorSpec("id1", supervisor1)
     );
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
     EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     replayAll();
     manager.start();
-    Assert.assertFalse(manager.shouldUpdateSupervisor(spec));
-    Assert.assertTrue(manager.shouldUpdateSupervisor(spec2));
-    Assert.assertTrue(manager.shouldUpdateSupervisor(new NoopSupervisorSpec("id1", null)));
+    verifyAll();
+
+    resetAll();
+    supervisor2.start();
+    EasyMock.expect(supervisor2.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    metadataSupervisorManager.insert(EasyMock.eq("id2"), EasyMock.anyObject());
+    replayAll();
+    final SupervisorSpecUpdateResult result = manager.createOrUpdateAndStartSupervisor(spec2, true);
+    Assert.assertTrue(result.isModified());
+    Assert.assertTrue(result.isRestarted());
+    verifyAll();
+  }
+
+  @Test
+  public void testCreateOrUpdateSkipRestart_changedNoRestart_persistsWithoutRestart()
+  {
+    final Capture<TestSupervisorSpec> capturedInsert = Capture.newInstance();
+    final Map<String, SupervisorSpec> existingSpecs =
+        Map.of("id1", new VersionedTestSupervisorSpec("id1", supervisor1, 1));
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    // Persist is expected; supervisor1.stop(...) is NOT expected, so verifyAll() asserts no restart.
+    metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.capture(capturedInsert));
+    replayAll();
+
+    manager.start();
+    // version differs (byte change) but requireRestart() is false.
+    final SupervisorSpec updated = new VersionedTestSupervisorSpec("id1", supervisor1, 2);
+    final SupervisorSpecUpdateResult updateResult = manager.createOrUpdateAndStartSupervisor(updated, true);
+    Assert.assertTrue(updateResult.isModified());
+    Assert.assertFalse(updateResult.isRestarted());
+    Assert.assertSame(updated, capturedInsert.getValue());
+    Assert.assertSame(updated, manager.getSupervisorSpec("id1").get());
+    verifyAll();
+  }
+
+  @Test
+  public void testCreateOrUpdateSkipRestart_identicalSpec_isNoop()
+  {
+    final Map<String, SupervisorSpec> existingSpecs = Map.of("id1", new TestSupervisorSpec("id1", supervisor1));
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    // No insert and no stop expected for an identical spec.
+    replayAll();
+
+    manager.start();
+    final SupervisorSpecUpdateResult updateResult =
+        manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec("id1", supervisor1), true);
+    Assert.assertFalse(updateResult.isModified());
+    Assert.assertFalse(updateResult.isRestarted());
+    verifyAll();
+  }
+
+  @Test
+  public void testCreateOrUpdateSkipRestart_changedRequiringRestart_restartsAndPersists()
+  {
+    // The restart decision belongs to the running spec, so requireRestart=true is set on the existing spec.
+    final Map<String, SupervisorSpec> existingSpecs =
+        Map.of("id1", new VersionedTestSupervisorSpec("id1", supervisor1, 1, true));
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    replayAll();
+    manager.start();
+    verifyAll();
+
+    resetAll();
+    // A changed spec that requires a restart must be fully applied (stop + recreate + persist), even on the
+    // skip-restart path — it must never be silently dropped or persisted without restarting.
+    supervisor1.stop(true);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.anyObject());
+    replayAll();
+
+    final SupervisorSpec updated = new VersionedTestSupervisorSpec("id1", supervisor1, 2);
+    final SupervisorSpecUpdateResult updateResult = manager.createOrUpdateAndStartSupervisor(updated, true);
+    Assert.assertTrue(updateResult.isModified());
+    Assert.assertTrue(updateResult.isRestarted());
+    Assert.assertSame(updated, manager.getSupervisorSpec("id1").get());
+    verifyAll();
+  }
+
+  @Test
+  public void testCreateOrUpdateSkipRestart_mergesBeforeDiffAndRestartDecision()
+  {
+    final MergingVersionedTestSupervisorSpec existing =
+        new MergingVersionedTestSupervisorSpec("id1", supervisor1, 1);
+    final Map<String, SupervisorSpec> existingSpecs = Map.of("id1", existing);
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    replayAll();
+
+    manager.start();
+    final MergingVersionedTestSupervisorSpec updated =
+        new MergingVersionedTestSupervisorSpec("id1", supervisor1, null);
+    final SupervisorSpecUpdateResult updateResult = manager.createOrUpdateAndStartSupervisor(updated, true);
+    Assert.assertFalse(updateResult.isModified());
+    Assert.assertFalse(updateResult.isRestarted());
+    Assert.assertEquals(Integer.valueOf(1), updated.getVersion());
+    Assert.assertSame(existing, manager.getSupervisorSpec("id1").get());
+    verifyAll();
+  }
+
+  @Test
+  public void testCreateOrUpdateWithoutSkipRestart_forcesRestartWhenSpecUnchanged()
+  {
+    final Map<String, SupervisorSpec> existingSpecs = Map.of("id1", new TestSupervisorSpec("id1", supervisor1));
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    replayAll();
+    manager.start();
+    verifyAll();
+
+    resetAll();
+    supervisor1.stop(true);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    replayAll();
+
+    final SupervisorSpecUpdateResult updateResult =
+        manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec("id1", supervisor1), false);
+    Assert.assertFalse(updateResult.isModified());
+    Assert.assertTrue(updateResult.isRestarted());
+    verifyAll();
   }
 
   @Test
@@ -264,7 +418,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     exception.expect(DruidException.class);
     replayAll();
     manager.start();
-    manager.shouldUpdateSupervisor(spec2);
+    manager.createOrUpdateAndStartSupervisor(spec2, true);
     verifyAll();
   }
 
@@ -580,8 +734,8 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     manager.start();
     try {
-      manager.createOrUpdateAndStartSupervisor(testSpecOld);
-      manager.createOrUpdateAndStartSupervisor(testSpecNew);
+      manager.createOrUpdateAndStartSupervisor(testSpecOld, false);
+      manager.createOrUpdateAndStartSupervisor(testSpecNew, false);
     }
     catch (Exception e) {
       Assert.assertEquals(testSpecOld, capturedInsert.getValue());
@@ -707,7 +861,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
     Assert.assertEquals(1, manager.getSupervisorIds().size());
 
-    manager.createOrUpdateAndStartSupervisor(spec);
+    manager.createOrUpdateAndStartSupervisor(spec, false);
     Assert.assertEquals(2, manager.getSupervisorIds().size());
     Assert.assertEquals(spec, manager.getSupervisorSpec("id1").get());
     verifyAll();
@@ -768,7 +922,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetActiveSupervisorIdForDatasourceWithAppendLock()
+  public void testGetActiveSupervisorIdsForDatasourceWithAppendLock()
   {
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(Collections.emptyMap());
 
@@ -848,26 +1002,26 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
     manager.start();
 
-    Assert.assertFalse(manager.getActiveSupervisorIdForDatasourceWithAppendLock("nonExistent").isPresent());
+    Assert.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("nonExistent").isEmpty());
 
-    manager.createOrUpdateAndStartSupervisor(noopSupervisorSpec);
-    Assert.assertFalse(manager.getActiveSupervisorIdForDatasourceWithAppendLock("noopDS").isPresent());
+    manager.createOrUpdateAndStartSupervisor(noopSupervisorSpec, false);
+    Assert.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("noopDS").isEmpty());
 
-    manager.createOrUpdateAndStartSupervisor(suspendedSpec);
-    Assert.assertFalse(manager.getActiveSupervisorIdForDatasourceWithAppendLock("suspendedDS").isPresent());
+    manager.createOrUpdateAndStartSupervisor(suspendedSpec, false);
+    Assert.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeDS").isEmpty());
 
-    manager.createOrUpdateAndStartSupervisor(activeSpec);
-    Assert.assertFalse(manager.getActiveSupervisorIdForDatasourceWithAppendLock("activeDS").isPresent());
+    manager.createOrUpdateAndStartSupervisor(activeSpec, false);
+    Assert.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeDS").isEmpty());
 
-    manager.createOrUpdateAndStartSupervisor(activeAppendSpec);
-    Assert.assertTrue(manager.getActiveSupervisorIdForDatasourceWithAppendLock("activeAppendDS").isPresent());
+    manager.createOrUpdateAndStartSupervisor(activeAppendSpec, false);
+    Assert.assertFalse(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeAppendDS").isEmpty());
 
-    manager.createOrUpdateAndStartSupervisor(activeSpecWithConcurrentLocks);
-    Assert.assertTrue(manager.getActiveSupervisorIdForDatasourceWithAppendLock("activeConcurrentLocksDS").isPresent());
+    manager.createOrUpdateAndStartSupervisor(activeSpecWithConcurrentLocks, false);
+    Assert.assertFalse(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeConcurrentLocksDS").isEmpty());
 
-    manager.createOrUpdateAndStartSupervisor(specWithUseConcurrentLocksFalse);
-    Assert.assertFalse(
-        manager.getActiveSupervisorIdForDatasourceWithAppendLock("dsWithUseConcurrentLocksFalse").isPresent()
+    manager.createOrUpdateAndStartSupervisor(specWithUseConcurrentLocksFalse, false);
+    Assert.assertTrue(
+        manager.getActiveSupervisorIdsForDatasourceWithAppendLock("dsWithUseConcurrentLocksFalse").isEmpty()
     );
 
     verifyAll();
@@ -883,8 +1037,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     SeekableStreamSupervisorSpec streamingSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
     SeekableStreamSupervisor streamSupervisor = EasyMock.createNiceMock(SeekableStreamSupervisor.class);
-    streamSupervisor.registerNewVersionOfPendingSegment(EasyMock.anyObject());
-    EasyMock.expectLastCall().once();
+    EasyMock.expect(streamSupervisor.registerNewVersionOfPendingSegment(EasyMock.anyObject())).andReturn(1).once();
     EasyMock.expect(streamingSpec.getId()).andReturn("sss").anyTimes();
     EasyMock.expect(streamingSpec.isSuspended()).andReturn(false).anyTimes();
     EasyMock.expect(streamingSpec.getDataSources()).andReturn(ImmutableList.of("DS")).anyTimes();
@@ -911,11 +1064,11 @@ public class SupervisorManagerTest extends EasyMockSupport
     );
     manager.start();
 
-    manager.createOrUpdateAndStartSupervisor(noopSpec);
-    Assert.assertFalse(manager.registerUpgradedPendingSegmentOnSupervisor("noop", pendingSegment));
+    manager.createOrUpdateAndStartSupervisor(noopSpec, false);
+    Assert.assertFalse(manager.registerUpgradedPendingSegmentOnSupervisor("noop", pendingSegment).isPresent());
 
-    manager.createOrUpdateAndStartSupervisor(streamingSpec);
-    Assert.assertTrue(manager.registerUpgradedPendingSegmentOnSupervisor("sss", pendingSegment));
+    manager.createOrUpdateAndStartSupervisor(streamingSpec, false);
+    Assert.assertEquals(OptionalInt.of(1), manager.registerUpgradedPendingSegmentOnSupervisor("sss", pendingSegment));
 
     verifyAll();
   }
@@ -1068,6 +1221,186 @@ public class SupervisorManagerTest extends EasyMockSupport
     );
   }
 
+  @Test
+  public void testResetToLatestAndBackfill() throws Exception
+  {
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
+    replayAll();
+    manager.start();
+
+    final ConcurrentHashMap<String, Pair<Supervisor, SupervisorSpec>> supervisorsMap = getSupervisorsMap();
+    final SeekableStreamSupervisorSpec streamSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
+    final SeekableStreamSupervisor streamSupervisor = EasyMock.createNiceMock(SeekableStreamSupervisor.class);
+    final SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createNiceMock(SeekableStreamSupervisorIOConfig.class);
+
+    // non-SeekableStream supervisor → IAE
+    // Use a concrete anonymous Supervisor (not a mock) to reliably fail instanceof SeekableStreamSupervisor
+    final Supervisor nonStreamSupervisor = new Supervisor()
+    {
+      @Override
+      public void start()
+      {
+      }
+
+      @Override
+      public void stop(boolean stopGracefully)
+      {
+      }
+
+      @Override
+      public SupervisorReport getStatus()
+      {
+        return null;
+      }
+
+      @Override
+      public SupervisorStateManager.State getState()
+      {
+        return null;
+      }
+
+      @Override
+      public void reset(DataSourceMetadata dataSourceMetadata)
+      {
+      }
+    };
+    supervisorsMap.put("id1", Pair.of(nonStreamSupervisor, streamSpec));
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+
+    // useEarliestSequenceNumber=true → IAE
+    supervisorsMap.put("id1", Pair.of(streamSupervisor, streamSpec));
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(true).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // useConcurrentLocks not set (null context) → IAE
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(null).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // useConcurrentLocks=false → IAE
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", false)).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // useConcurrentLocks="true" (string) → accepted, fails at next guard (not RUNNING)
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", "true")).once();
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.SUSPENDED).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // taskLockType=APPEND → accepted, fails at next guard (not RUNNING)
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("taskLockType", "APPEND")).once();
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.SUSPENDED).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // supervisor not RUNNING → IAE
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", true)).once();
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.SUSPENDED).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // empty latest offsets → ISE
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", true)).once();
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.RUNNING).once();
+    streamSupervisor.updatePartitionLagFromStream();
+    EasyMock.expectLastCall().once();
+    EasyMock.expect(streamSupervisor.getLatestSequencesFromStream()).andReturn(ImmutableMap.of()).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalStateException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+    EasyMock.reset(streamSupervisor, streamSpec, ioConfig);
+
+    // empty start offsets from metadata → ISE
+    EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
+    EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", true)).once();
+    EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.RUNNING).once();
+    streamSupervisor.updatePartitionLagFromStream();
+    EasyMock.expectLastCall().once();
+    EasyMock.expect(streamSupervisor.getLatestSequencesFromStream()).andReturn(ImmutableMap.of("0", 100L)).once();
+    EasyMock.expect(streamSupervisor.getOffsetsFromMetadataStorage()).andReturn(ImmutableMap.of()).once();
+    EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
+    Assert.assertThrows(
+        IllegalStateException.class,
+        () -> manager.resetToLatestAndBackfill("id1", null)
+    );
+
+    verifyAll();
+  }
+
+  @Test
+  public void testCreateBackfillSpec()
+  {
+    final TestBackfillSupervisorSpec.IOConfig ioConfig = new TestBackfillSupervisorSpec.IOConfig("test-stream", null, null);
+    final TestBackfillSupervisorSpec.IngestionSpec ingestionSpec = new TestBackfillSupervisorSpec.IngestionSpec(ioConfig);
+    final SeekableStreamSupervisorSpec sourceSpec = new TestBackfillSupervisorSpec("original-id", ingestionSpec);
+
+    final BoundedStreamConfig boundedStreamConfig = new BoundedStreamConfig(
+        ImmutableMap.of("0", 100L),
+        ImmutableMap.of("0", 200L)
+    );
+
+    // Without overriding taskCount
+    final SupervisorSpec backfillSpec = sourceSpec.createBackfillSpec("backfill-id", boundedStreamConfig, null);
+    Assert.assertEquals("backfill-id", backfillSpec.getId());
+    final TestBackfillSupervisorSpec backfillCast = (TestBackfillSupervisorSpec) backfillSpec;
+    final BoundedStreamConfig actualConfig = backfillCast.getIoConfig().getBoundedStreamConfig();
+    Assert.assertNotNull(actualConfig);
+    Assert.assertEquals(ImmutableMap.of("0", 100L), actualConfig.getStartSequenceNumbers());
+    Assert.assertEquals(ImmutableMap.of("0", 200L), actualConfig.getEndSequenceNumbers());
+    Assert.assertEquals(1, backfillCast.getIoConfig().getTaskCount());
+
+    // With overriding taskCount
+    final SupervisorSpec backfillSpecWithCount = sourceSpec.createBackfillSpec("backfill-id-2", boundedStreamConfig, 5);
+    Assert.assertEquals("backfill-id-2", backfillSpecWithCount.getId());
+    final TestBackfillSupervisorSpec backfillWithCount = (TestBackfillSupervisorSpec) backfillSpecWithCount;
+    Assert.assertEquals(5, backfillWithCount.getIoConfig().getTaskCount());
+  }
+
   private static class TestSupervisorSpec implements SupervisorSpec
   {
     private final String id;
@@ -1135,6 +1468,188 @@ public class SupervisorManagerTest extends EasyMockSupport
     public List<String> getDataSources()
     {
       return Collections.singletonList(id);
+    }
+  }
+
+  @JsonTypeName("testBackfill")
+  private static class TestBackfillSupervisorSpec extends SeekableStreamSupervisorSpec
+  {
+    @JsonCreator
+    TestBackfillSupervisorSpec(
+        @JsonProperty("id") String id,
+        @JsonProperty("spec") IngestionSpec ingestionSpec
+    )
+    {
+      super(
+          id,
+          ingestionSpec,
+          ImmutableMap.of("useConcurrentLocks", true),
+          false,
+          null, null, null, null,
+          MAPPER,
+          null, null, null, null
+      );
+    }
+
+    @Override
+    public Supervisor createSupervisor()
+    {
+      return null;
+    }
+
+    @Override
+    public String getType()
+    {
+      return "testBackfill";
+    }
+
+    @Override
+    public String getSource()
+    {
+      return "test-stream";
+    }
+
+    @Override
+    protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend)
+    {
+      return this;
+    }
+
+    @Override
+    public SeekableStreamSupervisorSpec createBackfillSpec(
+        String backfillId,
+        BoundedStreamConfig boundedStreamConfig,
+        @Nullable Integer taskCount
+    )
+    {
+      return new TestBackfillSupervisorSpec(
+          backfillId,
+          new IngestionSpec(new IOConfig(getIoConfig().getStream(), taskCount, boundedStreamConfig))
+      );
+    }
+
+    @Override
+    public SeekableStreamSupervisorIOConfig getIoConfig()
+    {
+      return getSpec().getIOConfig();
+    }
+
+    @Override
+    public Builder<?> toBuilder()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @JsonTypeName("testBackfillIngestionSpec")
+    static class IngestionSpec extends SeekableStreamSupervisorIngestionSpec
+    {
+      @JsonCreator
+      IngestionSpec(
+          @JsonProperty("ioConfig") IOConfig ioConfig
+      )
+      {
+        super(
+            DataSchema.builder()
+                      .withDataSource("testDS")
+                      .withTimestamp(new TimestampSpec("time", "auto", null))
+                      .withDimensions(new DimensionsSpec(Collections.emptyList()))
+                      .build(),
+            ioConfig,
+            null
+        );
+      }
+    }
+
+    @JsonTypeName("testBackfillIOConfig")
+    static class IOConfig extends SeekableStreamSupervisorIOConfig
+    {
+      @JsonCreator
+      IOConfig(
+          @JsonProperty("stream") String stream,
+          @JsonProperty("taskCount") Integer taskCount,
+          @JsonProperty("boundedStreamConfig") BoundedStreamConfig boundedStreamConfig
+      )
+      {
+        super(stream, null, 1, taskCount, null, null, null, false, null, null, null, null, LagAggregator.DEFAULT, null, null, null, null, boundedStreamConfig);
+      }
+
+      @Override
+      public SupervisorIOConfigBuilder<?, ?> toBuilder()
+      {
+        return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder().copyFromBase(this);
+      }
+    }
+  }
+
+  /**
+   * A {@link TestSupervisorSpec} with an explicitly-serialized {@code version} field, so two specs
+   * sharing the same id can still differ in their serialized form (the base spec serializes only
+   * id-derived properties).
+   */
+  private static class VersionedTestSupervisorSpec extends TestSupervisorSpec
+  {
+    private final int version;
+    private final boolean requireRestart;
+
+    VersionedTestSupervisorSpec(String id, Supervisor supervisor, int version)
+    {
+      this(id, supervisor, version, false);
+    }
+
+    VersionedTestSupervisorSpec(String id, Supervisor supervisor, int version, boolean requireRestart)
+    {
+      super(id, supervisor);
+      this.version = version;
+      this.requireRestart = requireRestart;
+    }
+
+    @JsonProperty
+    public int getVersion()
+    {
+      return version;
+    }
+
+    /**
+     * Lets a test model either a no-restart change (default) or a restart-requiring change.
+     * Invoked on therunning spec, so this models whether the running supervisor requires a restart.
+     * The default {@link SupervisorSpec#getActionOnUpdateTo} is conservative and
+     * returns {@link SupervisorSpecUpdateAction#RESTART_SUPERVISOR_AND_TASKS}.
+     */
+    @Override
+    public SupervisorSpecUpdateAction getActionOnUpdateTo(SupervisorSpec proposedSpec)
+    {
+      return requireRestart ? SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS : SupervisorSpecUpdateAction.NONE;
+    }
+  }
+
+  private static class MergingVersionedTestSupervisorSpec extends TestSupervisorSpec
+  {
+    @Nullable
+    private Integer version;
+
+    MergingVersionedTestSupervisorSpec(
+        final String id,
+        final Supervisor supervisor,
+        @Nullable final Integer version
+    )
+    {
+      super(id, supervisor);
+      this.version = version;
+    }
+
+    @JsonProperty
+    @Nullable
+    public Integer getVersion()
+    {
+      return version;
+    }
+
+    @Override
+    public void merge(@Nullable final SupervisorSpec existingSpec)
+    {
+      if (version == null && existingSpec instanceof MergingVersionedTestSupervisorSpec) {
+        version = ((MergingVersionedTestSupervisorSpec) existingSpec).version;
+      }
     }
   }
 }

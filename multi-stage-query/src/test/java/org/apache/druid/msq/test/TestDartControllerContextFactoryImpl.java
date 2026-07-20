@@ -46,6 +46,7 @@ import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
+import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.query.QueryContext;
@@ -53,6 +54,7 @@ import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 
 public class TestDartControllerContextFactoryImpl extends DartControllerContextFactoryImpl
@@ -74,11 +76,22 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
       @EscalatedGlobal final ServiceClientFactory serviceClientFactory,
       final MemoryIntrospector memoryIntrospector,
       final TimelineServerView serverView,
+      @Dart final Set<InputSpecSlicerProvider> inputSpecSlicerProviders,
       final ServiceEmitter emitter,
       @Dart Map<String, WorkerRunRef> workerMap
   )
   {
-    super(injector, jsonMapper, smileMapper, selfNode, serviceClientFactory, memoryIntrospector, serverView, emitter);
+    super(
+        injector,
+        jsonMapper,
+        smileMapper,
+        selfNode,
+        serviceClientFactory,
+        memoryIntrospector,
+        serverView,
+        inputSpecSlicerProviders,
+        emitter
+    );
     this.workerMap = workerMap;
   }
 
@@ -92,6 +105,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
         new DartTestWorkerClient(),
         memoryIntrospector,
         serverView,
+        inputSpecSlicerProviders,
         emitter,
         context
     )
@@ -108,6 +122,12 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
       {
         serviceEmitter.emit(metricBuilder.build("controller", queryId()));
       }
+
+      @Override
+      public boolean isDebug()
+      {
+        return true;
+      }
     };
   }
 
@@ -116,7 +136,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
 
     public DartTestWorkerClient()
     {
-      super(workerMap, jsonMapper);
+      super(workerMap, jsonMapper, true);
     }
 
     @Override

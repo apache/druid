@@ -64,7 +64,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`query/failed/count`|Number of failed queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
 |`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
 |`query/timeout/count`|Number of timed out queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
-|`query/segments/count`|This metric is not enabled by default. See the `QueryMetrics` Interface for reference regarding enabling this metric. Number of segments that will be touched by the query. In the broker, it makes a plan to distribute the query to realtime tasks and historicals based on a snapshot of segment distribution state. If there are some segments moved after this snapshot is created, certain historicals and realtime tasks can report those segments as missing to the broker. The broker will resend the query to the new servers that serve those segments after move. In this case, those segments can be counted more than once in this metric.||Varies|
+|`query/segments/count`|This metric is not enabled by default. Number of segments that will be touched by the query. The Broker makes a plan to distribute the query to realtime tasks and historicals based on a snapshot of segment distribution state. If there are some segments moved after this snapshot is created, certain historicals and realtime tasks can report those segments as missing to the Broker. The Broker will resend the query to the new servers that serve those segments after move. In this case, those segments can be counted more than once in this metric.||Varies|
 |`query/priority`|Assigned lane and priority, only if Laning strategy is enabled. Refer to [Laning strategies](../configuration/index.md#laning-strategies)|`lane`, `dataSource`, `type`|0|
 |`sqlQuery/time`|Milliseconds taken to complete a SQL query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`, `statusCode`|< 1s|
 |`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
@@ -74,6 +74,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`segment/metadataCache/sync/time`|Time taken to poll segment metadata from the Coordinator and update the segment metadata cache. This metric is emitted only if [metadata cache](../configuration/index.md#sql) is enabled on the Broker.||Depends on the number of segments.|
 |`segment/schemaCache/refresh/count`|Number of segments refreshed in broker segment schema cache.|`dataSource`||
 |`segment/schemaCache/refresh/time`|Time taken to refresh segments in broker segment schema cache.|`dataSource`||
+|`segment/schemaCache/refresh/failed`|Number of dataSources whose schema refresh failed in the broker segment schema cache (for example, a segment metadata query timeout). Emitted only when a refresh fails; the failed dataSource is skipped for the cycle and retried later, while other dataSources are unaffected. Recurring emission indicates a dataSource missing from the SQL schema.|`dataSource`||
 |`segment/schemaCache/poll/count`|Number of coordinator polls to fetch datasource schema.|||
 |`segment/schemaCache/poll/failed`|Number of failed coordinator polls to fetch datasource schema.|||
 |`metadatacache/schemaPoll/time`|Time taken for coordinator polls to fetch datasource schema.|||
@@ -106,6 +107,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
 |`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `statusCode`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
+|`query/segments/count`|This metric is not enabled by default. Number of segments this Historical scans for a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|Varies|
 |`query/segment/time`|Milliseconds taken to query individual segment. Includes time to page in the segment from disk.|`id`, `status`, `segment`, `vectorized`.|several hundred milliseconds|
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|`id`, `segment`|< several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
@@ -140,6 +142,7 @@ to represent the task ID are deprecated and will be removed in a future release.
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
 |`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `statusCode`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
+|`query/segments/count`|This metric is not enabled by default. Number of segments this Peon scans for a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`. </p><p>TopN: `threshold`, `dimension`.</p>|Varies|
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|`id`, `segment`|several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
 |`segment/scan/active`|Number of segments currently scanned. This metric also indicates how many threads from `druid.processing.numThreads` are currently being used.||Close to `druid.processing.numThreads`|
@@ -314,11 +317,19 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.|`supervisorId`, `dataSource`, `tags`| < 1s |
 |`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|`dataSource`, `taskId`, `tags`| < 10 seconds|
 |`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the coordinator cycle time.|
+|`ingest/realtime/segmentUpgrade/persisted`|Number of pending segments that were upgraded in the metadata store while publishing segments to an interval. Emitted by the Overlord only when a REPLACE task (e.g., compaction task with `useConcurrentLocks` set to `true`) commits segments to an interval already containing pending segments allocated to an APPEND task (e.g. streaming task with `useConcurrentLocks` set to `true`).|`dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `version`, `tags`|0 unless [concurrent append and replace](../ingestion/concurrent-append-replace.md) is in use.|
+|`ingest/realtime/segmentUpgrade/notified`|Number of notifications the supervisor sent to running tasks, emitted once per task so it scales with the replica count. Reconcile against the per-task outcomes: `notified` should equal `announced` + `skipped` + `sendFailed` over the same period and `dataSource`, since every notified task either announces, skips, or fails to receive the request. A shortfall indicates a notification was silently dropped.|`supervisorId`, `dataSource`, `stream`, `taskId`, `interval`, `version`, `tags`|Equal to `announced` + `skipped` + `sendFailed`.|
+|`ingest/realtime/segmentUpgrade/unmatched`|Number of upgraded pending segments the supervisor could not route to any running task. These are not announced under the new version until handoff, so the corresponding data may be briefly missing from queries.|`supervisorId`, `dataSource`, `stream`, `interval`, `version`, `tags`|0. A non-zero value indicates a lost upgrade announcement.|
+|`ingest/realtime/segmentUpgrade/sendFailed`|Number of upgrade requests that matched a running task but failed to reach it over the wire after retries.|`supervisorId`, `dataSource`, `stream`, `taskId`, `interval`, `version`, `tags`|0|
+|`ingest/realtime/segmentUpgrade/announced`|Number of upgraded segments a task announced under the new version. Emitted once per task, so it scales with the replica count. Reconcile against `notified` (also per task), not `ingest/realtime/segmentUpgrade/persisted`, which is per segment rather than per replica.|`dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `version`, `tags`|Greater than 0 while concurrent replace occurs.|
+|`ingest/realtime/segmentUpgrade/skipped`|Number of upgrade requests a task received but did not announce. The `reason` dimension is one of `unknown base` (the request reached the wrong task), `base sink already dropped` (the base sink is no longer present), or `dropping base sink` (the base sink is handing off, which is benign and covered by the durable publish path).|`dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `version`, `tags`, `reason`|0, excluding `reason=dropping base sink`.|
 |`task/autoScaler/requiredCount`|Count of required tasks based on the calculations of the auto scaler.|`supervisorId`, `dataSource`, `stream`, `scalingSkipReason`|Depends on auto scaler config.|
 |`task/autoScaler/scaleActionTime`|Time taken in milliseconds to complete the scale action.|`supervisorId`, `dataSource`, `stream`, `tags`|Depends on auto scaler config.|
 |`task/autoScaler/costBased/optimalTaskCount`|Optimal task count computed by the cost-based auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
-|`task/autoScaler/costBased/lagCost`|Lag cost component of the cost-based auto scaler's cost function.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
-|`task/autoScaler/costBased/idleCost`|Idle cost component of the cost-based auto scaler's cost function.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/lagWeight`|Lag weight used in the cost function for the auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/idleWeight`|Idle weight used in the cost function for the auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/avgProcessingRate`|Windowed average rate of processing records across all tasks in the supervisor.|`supervisorId`, `dataSource`, `stream`|Depends on rate of incoming data and processing capacity of the tasks.|
+|`task/autoScaler/costBased/avgPollIdleRatio`|Poll-to-idle-ratio as reported by the streaming consumer averaged across all tasks in the supervisor. Currently supported only with Kafka supervisors.|`supervisorId`, `dataSource`, `stream`|0 if the consumer is never idle, 1 if the consumer is always idle, -1 if ratio is not available.|
 
 If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 
@@ -340,6 +351,7 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |`segment/added/bytes`|Size in bytes of new segments created.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`segment/moved/bytes`|Size in bytes of segments moved/archived via the Move Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`segment/nuked/bytes`|Size in bytes of segments deleted via the Kill Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
+|`segment/allocated/count`|Number of segments successfully allocated by the Overlord to an append (realtime or batch) task. May be emitted multiple times for a single allocated segment ID if multiple tasks request an allocation with the same parameters.|`id`, `dataSource`, `taskId`, `taskType`, `groupId`, `tags`, `supervisorId`|Always 1|
 |`task/success/count`|Number of successful tasks per emission period. This metric is available only if the `TaskCountStatsMonitor` module is included.| `dataSource`,`taskType`, `supervisorId`|Varies|
 |`task/failed/count`|Number of failed tasks per emission period. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`, `supervisorId`|Varies|
 |`task/running/count`|Number of current running tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`, `supervisorId`|Varies|
@@ -364,7 +376,7 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 
 ### Segment metadata cache
 
-The following metrics are emitted only when [segment metadata caching](../configuration/index.md#segment-metadata-cache-experimental) is enabled on the Overlord.
+The following metrics are emitted only when [segment metadata caching](../configuration/index.md#segment-metadata-cache) is enabled on the Overlord.
 
 |Metric|Description|Dimensions|
 |------|-----------|----------|
@@ -372,11 +384,19 @@ The following metrics are emitted only when [segment metadata caching](../config
 |`segment/pending/count`|Number of pending segments currently present in the metadata store.|`dataSource`|
 |`segment/metadataCache/interval/count`|Total number of intervals present in the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/used/count`|Total number of used segments present in the cache for a single datasource.|`dataSource`|
+|`segment/metadataCache/unused/count`|Total number of unused segments present in the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/pending/count`|Total number of pending segments present in the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/transactions/readOnly`|Number of read-only transactions performed on the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/transactions/readWrite`|Number of read-write transactions performed on the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/transactions/writeOnly`|Number of write-only transactions performed on the cache for a single datasource. These transactions happen only if the cache is operating in mode `ifSynced` and the first sync on the leader Overlord is not complete yet.|`dataSource`|
 |`segment/metadataCache/sync/time`|Number of milliseconds taken for the cache to sync with the metadata store.||
+|`segment/metadataCache/fetchIds/time`|Time taken in a sync to fetch the IDs of used segments from the metadata store.||
+|`segment/metadataCache/fetchPayloads/time`|Time taken in a sync to fetch the payloads of used segments that have changed since the last sync.||
+|`segment/metadataCache/fetchPending/time`|Time taken in a sync to fetch pending segments from the metadata store.||
+|`segment/metadataCache/fetchSchemas/time`|Time taken in a sync to fetch segment schemas from the metadata store. Emitted only when centralized datasource schema is enabled.||
+|`segment/metadataCache/fetchIndexingStates/time`|Time taken in a sync to fetch segment indexing states from the metadata store.||
+|`segment/metadataCache/updateIds/time`|Time taken in a sync to reconcile the cached segment IDs of each datasource with the metadata store.||
+|`segment/metadataCache/updateSnapshot/time`|Time taken in a sync to rebuild the datasource snapshot from the cache.||
 |`segment/metadataCache/dataSource/deleted`|Indicates that a datasource has no used or pending segments anymore and has been removed from the cache.|`dataSource`|
 |`segment/metadataCache/deleted`|Total number of segments deleted from the cache during the latest sync.||
 |`segment/metadataCache/skipped`|Total number of unparseable segment records that were skipped in the latest sync.||
@@ -385,6 +405,9 @@ The following metrics are emitted only when [segment metadata caching](../config
 |`segment/metadataCache/pending/deleted`|Number of pending segments deleted from the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/updated`|Number of pending segments updated in the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/skipped`|Number of unparseable pending segment records that were skipped in the latest sync.|`dataSource`|
+|`segment/metadataCache/schema/skipped`|Number of unparseable segment schema records that were skipped in the latest sync. Emitted only when centralized datasource schema is enabled.||
+|`segment/metadataCache/indexingState/added`|Number of segment indexing states added to the cache during the latest sync.||
+|`segment/metadataCache/indexingState/deleted`|Number of segment indexing states deleted from the cache during the latest sync.||
 
 ### Auto-kill unused segments
 
@@ -439,10 +462,10 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/unavailable/count`|Number of unique segments left to load until all used segments are available for queries.|`dataSource`|0|
 |`segment/underReplicated/count`|Number of segments, including replicas, left to load until all used segments are available for queries.|`tier`, `dataSource`|0|
 |`segment/availableDeepStorageOnly/count`|Number of unique segments that are only available for querying directly from deep storage.|`dataSource`|Varies|
-|`tier/historical/count`|Number of available historical nodes in each tier.|`tier`|Varies|
-|`tier/replication/factor`|Configured maximum replication factor in each tier.|`tier`|Varies|
-|`tier/required/capacity`|Total capacity in bytes required in each tier.|`tier`|Varies|
-|`tier/total/capacity`|Total capacity in bytes available in each tier.|`tier`|Varies|
+|`tier/historical/count`|Number of available historical nodes in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration), and can be used to aggregate metrics across the tiers in an alias.|`tier`, `tierAlias`|Varies|
+|`tier/replication/factor`|Configured maximum replication factor in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/required/capacity`|Total capacity in bytes required in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/total/capacity`|Total capacity in bytes available in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
 |`compact/task/count`|Number of tasks issued in the auto compaction run.| |Varies|
 |`compactTask/maxSlot/count`|Maximum number of task slots available for auto compaction tasks in the auto compaction run.| |Varies|
 |`compactTask/availableSlot/count`|Number of currently vacant task slots out of the total slots allocated for auto compaction tasks. This value is computed as the difference between the total number of task slots allocated for auto compaction and the estimated number of task slots currently occupied by running compaction tasks. The number of sub-tasks of each compaction task is estimated to be `maxNumConcurrentSubTasks`.| |Varies|
@@ -475,6 +498,7 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/schemaCache/refreshSkipped/count`|Number of segments for which schema refresh was skipped due to presence of segment metadata in datasource polled from coordinator.|`dataSource`||
 |`segment/schemaCache/dataSource/removed`|Emitted when a datasource is removed from the Broker cache due to segments being marked as unused.|`dataSource`||
 |`segment/schemaCache/refresh/time`|Time taken to refresh segments in coordinator segment schema cache.|`dataSource`||
+|`segment/schemaCache/refresh/failed`|Number of dataSources whose schema refresh failed in the coordinator segment schema cache (for example, a segment metadata query timeout). Emitted only when a refresh fails; the failed dataSource is skipped for the cycle and retried later, while other dataSources are unaffected. Recurring emission indicates a dataSource missing from the SQL schema.|`dataSource`||
 |`segment/schemaCache/backfill/count`|Number of segments for which schema was back filled in the database.|`dataSource`||
 |`segment/schemaCache/rowSignature/changed`|Emitted when the cached row signature on the Broker's segment metadata cache for a datasource changes, indicating schema evolution or some form of flapping.|`dataSource`||
 |`segment/schemaCache/rowSignature/column/count`|Number of columns in the row signature on the Broker's segment metadata cache for a datasource when it's initialized or updated.|`dataSource`||
@@ -485,6 +509,15 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/used/deepStorageOnly/count`|Number of published used segments present only on deep storage.|`dataSource`||
 |`segment/schemaCache/deepStorageOnly/count`|Number of deep storage only segments with cached schema.|`dataSource`||
 |`segment/schemaCache/deepStorageOnly/refresh/time`|Time taken in milliseconds to refresh schemas of deep storage only segments.||Under a minute|
+
+## Security
+
+These metrics are emitted when `druid.auth.emitAuthMetrics` is set to `true`.
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
+|`auth/forbidden`|Emitted when a request is denied due to insufficient permissions. This includes both outright access denials and cases where basic access is granted but a row-level policy restricts full access.|`identity`, `authorizerName`, `resourceName`, `resourceType`, `action`, `errorMessage`|1|
+|`auth/exception`|Emitted when an internal authorization error occurs, such as a missing authorizer, duplicate resource policies, or a double-authorization check on the same request.|`identity`, `authorizerName`, `resourceName` (when available), `resourceType` (when available), `action` (when available), `errorMessage` (when available)|1|
 
 ## General Health
 

@@ -25,8 +25,8 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-This topic describes the API endpoints to manage and monitor supervisors for Apache Druid.
-The topic uses the Apache Kafka term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
+This topic describes the API endpoints to manage and monitor supervisors for Apache&circledR; Druid.
+The topic uses the Apache Kafka&circledR; term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
@@ -2508,10 +2508,15 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?skipRestartIfUnmo
 
   ```json
 {
-    "id": "social_media"
+    "id": "social_media",
+    "restarted": true
 }
   ```
 </details>
+
+The response includes the following fields:
+- `id`: The supervisor ID.
+- `restarted`: A boolean indicating whether the supervisor was restarted. When `skipRestartIfUnmodified` is set to `true` and the supervisor spec is unchanged, this field will be `false`; otherwise, it will be `true`.
 
 ### Suspend a running supervisor
 
@@ -3530,6 +3535,109 @@ when the supervisor's tasks restart, they resume reading from `{"0": 100, "1": 1
   ```json
 {
     "id": "social_media"
+}
+  ```
+</details>
+
+### Reset offsets to latest and start a backfill supervisor
+
+This endpoint is supported for Apache Kafka and RabbitMQ Stream supervisors. Amazon Kinesis is not supported yet.
+
+Resets the supervisor to the latest available stream offsets and starts a new bounded backfill supervisor to ingest the data in the skipped range.
+
+This endpoint is useful when a supervisor has fallen behind and you want to catch it up to the latest offsets without losing the skipped data. The main supervisor resumes ingesting from the latest offsets, while the backfill supervisor processes the range from the previously checkpointed offsets up to the latest offsets at the time of the reset.
+
+**Duplicate ingestion notice:** The main supervisor is not quiesced before the reset. This means duplicate data can occur in two ways:
+- **Backfill overlap:** Any tasks that were in-flight at the time of the reset may publish segments covering part of the backfill range before being shut down.
+- **Reset race:** If a task checkpoint is written to the metadata store between when this endpoint captures the current offsets and when it applies the reset, that checkpoint can be overwritten, causing the main supervisor to re-ingest already-processed data.
+
+Both windows are narrow in practice, but cannot be fully eliminated without manually suspending the main supervisor before calling this endpoint and waiting for all pending tasks to complete.
+
+The following requirements must be met before calling this endpoint:
+
+- The supervisor must be a [streaming supervisor](../ingestion/supervisor.md).
+- The supervisor's `useEarliestSequenceNumber` property must be `false`.
+- The supervisor context must have `useConcurrentLocks` set to `true` to allow the backfill supervisor's tasks to write concurrently with the main supervisor's tasks.
+- The supervisor must be in a `RUNNING` state.
+
+The backfill supervisor has the same configuration as the source supervisor except for its ID, which takes the form `{supervisorId}_backfill_{randomSuffix}`, and its `boundedStreamConfig`, which is set to the skipped offset range. If `backfillTaskCount` is specified, it overrides the `taskCount` for the backfill supervisor only.
+
+#### URL
+
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/resetToLatestAndBackfill`
+
+#### Query parameters
+
+| Parameter | Type | Description | Default |
+|---------|---------|---------|---------|
+| `backfillTaskCount` | Integer | Number of parallel tasks for the backfill supervisor. | Defaults to `taskCount` from the source supervisor if not specified |
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="5" label="200 SUCCESS">
+
+
+*Successfully reset and started backfill supervisor*
+
+</TabItem>
+<TabItem value="6" label="400 BAD REQUEST">
+
+
+*Supervisor does not meet requirements (wrong type, `useEarliestSequenceNumber` is true, `useConcurrentLocks` not enabled, or supervisor not RUNNING)*
+
+</TabItem>
+<TabItem value="7" label="404 NOT FOUND">
+
+
+*Invalid supervisor ID*
+
+</TabItem>
+<TabItem value="8" label="500 SERVER ERROR">
+
+
+*Failed to retrieve stream offsets or serialize the backfill spec*
+
+</TabItem>
+</Tabs>
+
+---
+
+#### Sample request
+
+The following example resets a supervisor named `social_media` and starts a backfill supervisor with 2 tasks.
+
+<Tabs>
+
+<TabItem value="9" label="cURL">
+
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/resetToLatestAndBackfill?backfillTaskCount=2"
+```
+
+</TabItem>
+<TabItem value="10" label="HTTP">
+
+
+```HTTP
+POST /druid/indexer/v1/supervisor/social_media/resetToLatestAndBackfill?backfillTaskCount=2 HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
+
+  ```json
+{
+    "id": "social_media",
+    "backfillSupervisorId": "social_media_backfill_abcdefgh"
 }
   ```
 </details>

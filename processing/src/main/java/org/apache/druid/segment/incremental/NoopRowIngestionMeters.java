@@ -23,9 +23,8 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * This class is used only in {@code DartFrameContext}.
- *
- * Consider using {@link RowIngestionMetersFactory} instead.
+ * This class is used when stats are not needed. Consider using {@link RowIngestionMetersFactory} instead
+ * when stats are needed.
  */
 public class NoopRowIngestionMeters implements RowIngestionMeters
 {

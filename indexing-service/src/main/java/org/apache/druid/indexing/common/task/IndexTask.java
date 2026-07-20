@@ -435,7 +435,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         // ParallelIndexSupervisorTask because it doesn't support APIs for live ingestion reports.
         log.warn("Chat handler is already registered. Skipping chat handler registration.");
       } else {
-        toolbox.getChatHandlerProvider().register(getId(), this, false);
+        toolbox.getChatHandlerProvider().register(getId(), this);
       }
 
       this.authorizerMapper = toolbox.getAuthorizerMapper();

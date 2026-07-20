@@ -26,9 +26,6 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import kafka.server.KafkaConfig;
-import kafka.server.KafkaServer;
-import org.apache.curator.test.TestingCluster;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.ISE;
@@ -42,7 +39,6 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
-import org.apache.kafka.common.utils.Time;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
@@ -51,16 +47,14 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import scala.Some;
+import org.testcontainers.kafka.KafkaContainer;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertThrows;
 
@@ -78,8 +72,10 @@ public class TestKafkaExtractionCluster
 
   private final Closer closer = Closer.create();
 
-  private TestingCluster zkServer;
-  private KafkaServer kafkaServer;
+  private static final String KAFKA_IMAGE =
+      System.getProperty("druid.testing.kafka.image", "apache/kafka:4.3.0");
+
+  private KafkaContainer kafkaServer;
   private Injector injector;
   private ObjectMapper mapper;
   private KafkaLookupExtractorFactory factory;
@@ -95,23 +91,9 @@ public class TestKafkaExtractionCluster
   @Before
   public void setUp() throws Exception
   {
-    zkServer = new TestingCluster(1);
-    zkServer.start();
-    closer.register(() -> {
-      zkServer.stop();
-    });
-
-    kafkaServer = new KafkaServer(
-          getBrokerProperties(),
-          Time.SYSTEM,
-          Some.apply(StringUtils.format("TestingBroker[%d]-", 1)),
-          false);
-
-    kafkaServer.startup();
-    closer.register(() -> {
-      kafkaServer.shutdown();
-      kafkaServer.awaitShutdown();
-    });
+    kafkaServer = new KafkaContainer(KAFKA_IMAGE);
+    kafkaServer.start();
+    closer.register(() -> kafkaServer.stop());
     log.info("---------------------------Started Kafka Broker ---------------------------");
 
     log.info("---------------------------Publish Messages to topic-----------------------");
@@ -163,8 +145,7 @@ public class TestKafkaExtractionCluster
   private Map<String, String> getConsumerProperties()
   {
     final Map<String, String> props = new HashMap<>(KAFKA_PROPERTIES);
-    int port = kafkaServer.advertisedListeners().apply(0).port();
-    props.put("bootstrap.servers", StringUtils.format("127.0.0.1:%d", port));
+    props.put("bootstrap.servers", kafkaServer.getBootstrapServers());
     return props;
   }
 
@@ -177,26 +158,6 @@ public class TestKafkaExtractionCluster
     }
   }
 
-  @Nonnull
-  private KafkaConfig getBrokerProperties() throws IOException
-  {
-    final Properties serverProperties = new Properties();
-    serverProperties.putAll(KAFKA_PROPERTIES);
-    serverProperties.put("broker.id", "0");
-    serverProperties.put("zookeeper.connect", zkServer.getConnectString());
-    serverProperties.put("port", String.valueOf(ThreadLocalRandom.current().nextInt(9999) + 10000));
-    serverProperties.put("auto.create.topics.enable", "true");
-    serverProperties.put("log.dir", temporaryFolder.newFolder().getAbsolutePath());
-    serverProperties.put("num.partitions", "1");
-    serverProperties.put("offsets.topic.replication.factor", "1");
-    serverProperties.put("default.replication.factor", "1");
-    serverProperties.put("log.cleaner.enable", "true");
-    serverProperties.put("advertised.host.name", "localhost");
-    serverProperties.put("zookeeper.session.timeout.ms", "30000");
-    serverProperties.put("zookeeper.sync.time.ms", "200");
-    return new KafkaConfig(serverProperties);
-  }
-
   @After
   public void tearDown() throws Exception
   {
@@ -207,8 +168,7 @@ public class TestKafkaExtractionCluster
   {
     final Properties kafkaProducerProperties = new Properties();
     kafkaProducerProperties.putAll(KAFKA_PROPERTIES);
-    int port = kafkaServer.advertisedListeners().apply(0).port();
-    kafkaProducerProperties.put("bootstrap.servers", StringUtils.format("127.0.0.1:%d", port));
+    kafkaProducerProperties.put("bootstrap.servers", kafkaServer.getBootstrapServers());
     kafkaProducerProperties.put("key.serializer", ByteArraySerializer.class.getName());
     kafkaProducerProperties.put("value.serializer", ByteArraySerializer.class.getName());
     kafkaProducerProperties.put("acks", "all");

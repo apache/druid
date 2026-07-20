@@ -21,8 +21,10 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.java.util.common.IAE;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 public abstract class SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>
@@ -30,17 +32,36 @@ public abstract class SeekableStreamDataSourceMetadata<PartitionIdType, Sequence
 {
   private final SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> seekableStreamSequenceNumbers;
 
+  @Nullable
+  private final BoundedStreamConfig boundedStreamConfig;
+
   public SeekableStreamDataSourceMetadata(
       SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> seekableStreamSequenceNumbers
   )
   {
+    this(seekableStreamSequenceNumbers, null);
+  }
+
+  public SeekableStreamDataSourceMetadata(
+      SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> seekableStreamSequenceNumbers,
+      @Nullable BoundedStreamConfig boundedStreamConfig
+  )
+  {
     this.seekableStreamSequenceNumbers = seekableStreamSequenceNumbers;
+    this.boundedStreamConfig = boundedStreamConfig;
   }
 
   @JsonProperty("partitions")
   public SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> getSeekableStreamSequenceNumbers()
   {
     return seekableStreamSequenceNumbers;
+  }
+
+  @Nullable
+  @JsonProperty("boundedStreamConfig")
+  public BoundedStreamConfig getBoundedStreamConfig()
+  {
+    return boundedStreamConfig;
   }
 
   @Override
@@ -105,13 +126,14 @@ public abstract class SeekableStreamDataSourceMetadata<PartitionIdType, Sequence
       return false;
     }
     SeekableStreamDataSourceMetadata that = (SeekableStreamDataSourceMetadata) o;
-    return Objects.equals(getSeekableStreamSequenceNumbers(), that.getSeekableStreamSequenceNumbers());
+    return Objects.equals(getSeekableStreamSequenceNumbers(), that.getSeekableStreamSequenceNumbers()) &&
+           Objects.equals(boundedStreamConfig, that.boundedStreamConfig);
   }
 
   @Override
   public int hashCode()
   {
-    return seekableStreamSequenceNumbers.hashCode();
+    return Objects.hash(seekableStreamSequenceNumbers, boundedStreamConfig);
   }
 
   @Override

@@ -42,6 +42,8 @@ import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.SortedValueDictionary;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
+import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableLongColumnValueSelector;
 import org.apache.druid.utils.CloseableUtils;
@@ -50,6 +52,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -129,6 +132,12 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public List<String> getDimensionNames(final boolean includeTime)
   {
+    // Clustered base tables have no top-level columns; their logical dimensions (clustering + per-group) come
+    // from the cluster summary so segment-level merging machinery sees the same shape as a regular segment.
+    final ClusteredValueGroupsBaseTableSchema clusteredSummary = input.getClusteredBaseSummary();
+    if (clusteredSummary != null) {
+      return includeTime ? clusteredSummary.getColumns() : clusteredSummary.getDimensionNames();
+    }
     if (includeTime) {
       final List<String> retVal = new ArrayList<>(availableDimensions.size() + 1);
       retVal.add(ColumnHolder.TIME_COLUMN_NAME);
@@ -142,6 +151,10 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public List<String> getMetricNames()
   {
+    final ClusteredValueGroupsBaseTableSchema clusteredSummary = input.getClusteredBaseSummary();
+    if (clusteredSummary != null) {
+      return Collections.emptyList();
+    }
     final Set<String> columns = Sets.newLinkedHashSet(input.getColumnNames());
     final HashSet<String> dimensions = Sets.newHashSet(availableDimensions);
     return ImmutableList.copyOf(Sets.difference(columns, dimensions));
@@ -269,6 +282,15 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     QueryableIndex projectionIndex = input.getProjectionQueryableIndex(projection);
     DruidException.conditionalDefensive(projectionIndex != null, "Projection[%s] was not found", projection);
     return new QueryableIndexIndexableAdapter(projectionIndex);
+  }
+
+  @Override
+  public IndexableAdapter getClusterGroupAdapter(TableClusterGroupSpec spec)
+  {
+    // Merge/persist must not write clustering columns into the per-group files, so omit them here.
+    final QueryableIndex groupIndex = input.getClusterGroupQueryableIndex(spec, false);
+    DruidException.conditionalDefensive(groupIndex != null, "Cluster group spec [%s] was not found", spec);
+    return new QueryableIndexIndexableAdapter(groupIndex);
   }
 
   /**

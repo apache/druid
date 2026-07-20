@@ -65,6 +65,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.sink.Sink;
@@ -81,6 +82,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -466,7 +468,9 @@ public class BatchAppenderator implements Appenderator
           identifier.getVersion(),
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
-          maxBytesTuningConfig
+          maxBytesTuningConfig,
+          tuningConfig.getIndexSpec(),
+          Collections.emptyList()
       );
       bytesCurrentlyInMemory += calculateSinkMemoryInUsed();
       sinks.put(identifier, retVal);
@@ -838,11 +842,19 @@ public class BatchAppenderator implements Appenderator
         log.debug("Segment[%s] built in %,dms.", identifier, mergeTimeMillis);
         QueryableIndex index = indexIO.loadIndex(mergedFile);
         closer.register(index);
+        // Clustered segments have no top-level columns (getAvailableDimensions() is empty); their logical
+        // dimensions live on the cluster summary and are identical across all groups, so source the published
+        // dimensions list from there.
+        final ClusteredValueGroupsBaseTableSchema clusterSummary = index.getClusteredBaseSummary();
+        final List<String> dimensions = clusterSummary == null
+                                        ? Lists.newArrayList(index.getAvailableDimensions().iterator())
+                                        : new ArrayList<>(clusterSummary.getDimensionNames());
         mergedSegment =
             sink.getSegment()
                 .toBuilder()
-                .dimensions(Lists.newArrayList(index.getAvailableDimensions().iterator()))
+                .dimensions(dimensions)
                 .totalRows(index.getNumRows())
+                .clusterGroups(clusterSummary == null ? null : clusterSummary.toClusterGroupTuples())
                 .build();
       }
       catch (Throwable t) {
@@ -1068,6 +1080,7 @@ public class BatchAppenderator implements Appenderator
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         maxBytesTuningConfig,
+        tuningConfig.getIndexSpec(),
         hydrants
     );
     retVal.finishWriting(); // this sink is not writable

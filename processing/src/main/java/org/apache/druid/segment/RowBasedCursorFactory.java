@@ -32,7 +32,7 @@ import org.apache.druid.utils.CloseableUtils;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class RowBasedCursorFactory<RowType> implements CursorFactory
+public class RowBasedCursorFactory<RowType> implements ResidentCursorFactory
 {
   private final Sequence<RowType> rowSequence;
   private final RowAdapter<RowType> rowAdapter;

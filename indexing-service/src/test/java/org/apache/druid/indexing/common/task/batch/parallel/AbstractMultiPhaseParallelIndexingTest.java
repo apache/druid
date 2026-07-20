@@ -53,6 +53,7 @@ import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
@@ -257,10 +258,10 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   private Segment loadSegment(DataSegment dataSegment, File tempSegmentDir)
   {
     final SegmentCacheManager cacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper())
-        .manufacturate(tempSegmentDir, false);
+        .manufacturate(tempSegmentDir, null, false);
     try {
       cacheManager.load(dataSegment);
-      return cacheManager.acquireCachedSegment(dataSegment.getId()).orElseThrow();
+      return cacheManager.acquireCachedSegment(dataSegment.getId(), AcquireMode.FULL).orElseThrow();
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);

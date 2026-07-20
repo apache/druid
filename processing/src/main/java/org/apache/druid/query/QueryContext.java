@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.QueryContexts.RealtimeSegmentsMode;
 import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
@@ -461,6 +462,14 @@ public class QueryContext
     );
   }
 
+  public boolean isOptimizeAggregators()
+  {
+    return getBoolean(
+        QueryContexts.OPTIMIZE_AGGREGATORS_KEY,
+        QueryContexts.DEFAULT_OPTIMIZE_AGGREGATORS
+    );
+  }
+
   public long getMaxQueuedBytes(long defaultValue)
   {
     return getLong(QueryContexts.MAX_QUEUED_BYTES_KEY, defaultValue);
@@ -773,8 +782,48 @@ public class QueryContext
     return getBoolean(QueryContexts.CTX_PREPLANNED, QueryContexts.DEFAULT_PREPLANNED);
   }
 
+  /**
+   * Returns the realtime segments mode for this query. If {@link QueryContexts#REALTIME_SEGMENTS_MODE} is absent
+   * or null, falls back to the deprecated {@code realtimeSegmentsOnly} boolean: {@code true} maps
+   * to {@link RealtimeSegmentsMode#EXCLUSIVE}; otherwise returns {@link RealtimeSegmentsMode#INCLUDE}.
+   * Throws {@link BadQueryContextException} if both fields are set simultaneously.
+   */
+  public RealtimeSegmentsMode getRealtimeSegmentsMode()
+  {
+    RealtimeSegmentsMode mode = getEnum(
+        QueryContexts.REALTIME_SEGMENTS_MODE,
+        RealtimeSegmentsMode.class,
+        null
+    );
+    boolean hasDeprecatedFlag = get(QueryContexts.REALTIME_SEGMENTS_ONLY) != null;
+    if (mode != null && hasDeprecatedFlag) {
+      throw new BadQueryContextException(
+          StringUtils.format(
+              "Cannot set both [%s] and deprecated [%s]; use [%s] only.",
+              QueryContexts.REALTIME_SEGMENTS_MODE,
+              QueryContexts.REALTIME_SEGMENTS_ONLY,
+              QueryContexts.REALTIME_SEGMENTS_MODE
+          )
+      );
+    }
+    if (mode != null) {
+      return mode;
+    }
+    if (hasDeprecatedFlag) {
+      // Backward-compat: honour the deprecated realtimeSegmentsOnly flag.
+      return getBoolean(QueryContexts.REALTIME_SEGMENTS_ONLY, QueryContexts.DEFAULT_REALTIME_SEGMENTS_ONLY)
+             ? RealtimeSegmentsMode.EXCLUSIVE
+             : QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
+    }
+    return QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
+  }
+
+  /**
+   * @deprecated Use {@link #getRealtimeSegmentsMode()} instead.
+   */
+  @Deprecated
   public boolean isRealtimeSegmentsOnly()
   {
-    return getBoolean(QueryContexts.REALTIME_SEGMENTS_ONLY, QueryContexts.DEFAULT_REALTIME_SEGMENTS_ONLY);
+    return getRealtimeSegmentsMode() == RealtimeSegmentsMode.EXCLUSIVE;
   }
 }

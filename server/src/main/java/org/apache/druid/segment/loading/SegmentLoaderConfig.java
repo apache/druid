@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.utils.RuntimeInfo;
 
 import java.io.File;
@@ -75,7 +76,16 @@ public class SegmentLoaderConfig
   private boolean virtualStorage = false;
 
   @JsonProperty("virtualStorageLoadThreads")
-  private int virtualStorageLoadThreads = 2 * runtimeInfo.getAvailableProcessors();
+  private int virtualStorageLoadThreads = Math.max(32, 4 * runtimeInfo.getAvailableProcessors());
+
+  /**
+   * When true (the default), the on-demand load executor uses one virtual thread per task with a {@link
+   * java.util.concurrent.Semaphore} sized by {@link #virtualStorageLoadThreads} for backpressure. When false, falls back
+   * to a fixed platform-thread pool of that size. The escape hatch exists in case virtual threads behave poorly with a
+   * particular deep storage SDK or workload.
+   */
+  @JsonProperty("virtualStorageUseVirtualThreads")
+  private boolean virtualStorageUseVirtualThreads = true;
 
   /**
    * When enabled, weakly-held cache entries are evicted immediately upon release of all holds, rather than
@@ -84,6 +94,46 @@ public class SegmentLoaderConfig
    */
   @JsonProperty("virtualStorageIsEphemeral")
   private boolean virtualStorageIsEphemeral = false;
+
+  /**
+   * Up-front size reservation (in bytes) used when mounting a partial-segment metadata cache entry. The entry
+   * range-reads the V10 header from deep storage at mount time, then calls
+   * {@link StorageLocation#adjustReservation} to shrink to the actual on-disk size. If the actual header exceeds this
+   * estimate, the mount fails with an operator-facing error directing them to raise this value. Defaults to 16 MiB,
+   * which comfortably covers the metadata of typical V10 segments; outliers with many columns and/or projections may
+   * need a higher value.
+   */
+  @JsonProperty("virtualStorageMetadataReservationEstimate")
+  private long virtualStorageMetadataReservationEstimate = 16L * 1024L * 1024L;
+
+  /**
+   * When true, partial-eligible V10 segments are mounted via the partial machinery and
+   * {@link SegmentCacheManager#acquireSegment} with {@link AcquireMode#PARTIAL} returns a metadata-anchored segment
+   * whose columns are downloaded on demand. When false (the default), {@link AcquireMode#PARTIAL} falls back to
+   * {@link AcquireMode#FULL} so the entire segment is downloaded up front (matching pre-partial-download behavior).
+   */
+  @JsonProperty("virtualStoragePartialDownloadsEnabled")
+  private boolean virtualStoragePartialDownloadsEnabled = false;
+
+  /**
+   * Maximum number of unrequested bytes a partial-download range read will fetch in order to bridge two requested
+   * internal files into a single deep-storage request. Bridged bytes are whole valid internal files that are kept in
+   * the local cache (they aren't waste), so this trades at most this many extra bytes per bridged gap (one read can
+   * bridge several gaps) for one fewer deep-storage round trip each. {@code <= 0} disables bridging (adjacent files
+   * still coalesce into single reads). Defaults to 1 MiB, which is conservative relative to typical deep-storage
+   * request latency vs streaming throughput.
+   */
+  @JsonProperty("virtualStorageCoalesceGapBytes")
+  private long virtualStorageCoalesceGapBytes = PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES;
+
+  /**
+   * Maximum size of a single range read in a query-driven partial download. Larger fetches split at internal-file
+   * boundaries into multiple reads of at most this size that proceed concurrently, so throughput isn't bounded by a
+   * single deep-storage connection. Only applies to the concurrent on-demand path; full-download paths stream
+   * containers sequentially and are unaffected. {@code <= 0} disables splitting. Defaults to 64 MiB.
+   */
+  @JsonProperty("virtualStorageMaxFetchRunBytes")
+  private long virtualStorageMaxFetchRunBytes = PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES;
 
   private long combinedMaxSize = 0;
 
@@ -162,9 +212,34 @@ public class SegmentLoaderConfig
     return virtualStorageLoadThreads;
   }
 
+  public boolean isVirtualStorageUseVirtualThreads()
+  {
+    return virtualStorageUseVirtualThreads;
+  }
+
   public boolean isVirtualStorageEphemeral()
   {
     return virtualStorageIsEphemeral;
+  }
+
+  public long getVirtualStorageMetadataReservationEstimate()
+  {
+    return virtualStorageMetadataReservationEstimate;
+  }
+
+  public boolean isVirtualStoragePartialDownloadsEnabled()
+  {
+    return virtualStorage && virtualStoragePartialDownloadsEnabled;
+  }
+
+  public long getVirtualStorageCoalesceGapBytes()
+  {
+    return virtualStorageCoalesceGapBytes;
+  }
+
+  public long getVirtualStorageMaxFetchRunBytes()
+  {
+    return virtualStorageMaxFetchRunBytes;
   }
 
   public SegmentLoaderConfig setLocations(List<StorageLocationConfig> locations)
@@ -173,15 +248,26 @@ public class SegmentLoaderConfig
     return this;
   }
 
+  public SegmentLoaderConfig setVirtualStoragePartialDownloadsEnabled(boolean enabled)
+  {
+    this.virtualStoragePartialDownloadsEnabled = enabled;
+    return this;
+  }
+
   /**
-   * Sets {@link #virtualStorage} and {@link #virtualStorageIsEphemeral}.
+   * Sets {@link #virtualStorage}.
    */
-  public SegmentLoaderConfig setVirtualStorage(
-      boolean virtualStorage,
-      boolean virtualStorageFabricEphemeral
-  )
+  public SegmentLoaderConfig setVirtualStorage(boolean virtualStorage)
   {
     this.virtualStorage = virtualStorage;
+    return this;
+  }
+
+  /**
+   * Sets {@link #virtualStorageIsEphemeral}.
+   */
+  public SegmentLoaderConfig setVirtualStorageIsEphemeral(boolean virtualStorageFabricEphemeral)
+  {
     this.virtualStorageIsEphemeral = virtualStorageFabricEphemeral;
     return this;
   }
@@ -195,9 +281,19 @@ public class SegmentLoaderConfig
   {
     return this.getLocations()
                .stream()
-               .map(locationConfig -> new StorageLocation(locationConfig.getPath(),
-                                                          locationConfig.getMaxSize(),
-                                                          locationConfig.getFreeSpacePercent()))
+               .map(locationConfig -> {
+                 final StorageLocation location = new StorageLocation(
+                     locationConfig.getPath(),
+                     locationConfig.getMaxSize(),
+                     locationConfig.getFreeSpacePercent()
+                 );
+
+                 if (isVirtualStorageEphemeral()) {
+                   location.setAreWeakEntriesEphemeral(true);
+                 }
+
+                 return location;
+               })
                .collect(Collectors.toList());
   }
 
@@ -218,7 +314,12 @@ public class SegmentLoaderConfig
            ", statusQueueMaxSize=" + statusQueueMaxSize +
            ", virtualStorage=" + virtualStorage +
            ", virtualStorageLoadThreads=" + virtualStorageLoadThreads +
+           ", virtualStorageUseVirtualThreads=" + virtualStorageUseVirtualThreads +
            ", virtualStorageIsEphemeral=" + virtualStorageIsEphemeral +
+           ", virtualStorageMetadataReservationEstimate=" + virtualStorageMetadataReservationEstimate +
+           ", virtualStoragePartialDownloadsEnabled=" + virtualStoragePartialDownloadsEnabled +
+           ", virtualStorageCoalesceGapBytes=" + virtualStorageCoalesceGapBytes +
+           ", virtualStorageMaxFetchRunBytes=" + virtualStorageMaxFetchRunBytes +
            ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }

@@ -31,7 +31,7 @@ import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class NestedCommonFormatColumnFormatSpecTest
@@ -50,7 +50,7 @@ public class NestedCommonFormatColumnFormatSpecTest
             .setDoubleFieldBitmapIndexType(BitmapIndexType.NullValueIndex.INSTANCE)
             .build();
     // NestedCommonFormatColumnFormatSpec does not support serde for BitmapEncoding, value would be ignored
-    Assert.assertEquals(
+    Assertions.assertEquals(
         NestedCommonFormatColumnFormatSpec.builder(spec).setBitmapEncoding(null).build(),
         TestHelper.JSON_MAPPER.readValue(
             TestHelper.JSON_MAPPER.writeValueAsString(spec),
@@ -75,7 +75,7 @@ public class NestedCommonFormatColumnFormatSpecTest
         TestHelper.JSON_MAPPER.writeValueAsString(spec),
         NestedCommonFormatColumnPartSerde.FormatSpec.class
     );
-    Assert.assertEquals(spec.toString(), formatSpec.toString());
+    Assertions.assertEquals(spec.toString(), formatSpec.toString());
   }
 
   @Test
@@ -86,27 +86,27 @@ public class NestedCommonFormatColumnFormatSpecTest
         IndexSpec.getDefault().getEffectiveSpec()
     );
 
-    Assert.assertEquals(StringEncodingStrategy.UTF8_STRATEGY, defaults.getObjectFieldsDictionaryEncoding());
-    Assert.assertEquals(ObjectStorageEncoding.SMILE, defaults.getObjectStorageEncoding());
-    Assert.assertEquals(CompressionStrategy.LZ4, defaults.getObjectStorageCompression());
-    Assert.assertEquals(
+    Assertions.assertEquals(StringEncodingStrategy.UTF8_STRATEGY, defaults.getObjectFieldsDictionaryEncoding());
+    Assertions.assertEquals(ObjectStorageEncoding.SMILE, defaults.getObjectStorageEncoding());
+    Assertions.assertEquals(CompressionStrategy.LZ4, defaults.getObjectStorageCompression());
+    Assertions.assertEquals(
         IndexSpec.getDefault().getEffectiveSpec().getDimensionCompression(),
         defaults.getDictionaryEncodedColumnCompression()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         IndexSpec.getDefault().getEffectiveSpec().getStringDictionaryEncoding(),
         defaults.getStringDictionaryEncoding()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         IndexSpec.getDefault().getEffectiveSpec().getMetricCompression(),
         defaults.getLongColumnCompression()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         IndexSpec.getDefault().getEffectiveSpec().getMetricCompression(),
         defaults.getDoubleColumnCompression()
     );
-    Assert.assertEquals(BitmapIndexType.DictionaryEncodedValueIndex.INSTANCE, defaults.getLongFieldBitmapIndexType());
-    Assert.assertEquals(BitmapIndexType.DictionaryEncodedValueIndex.INSTANCE, defaults.getLongFieldBitmapIndexType());
+    Assertions.assertEquals(BitmapIndexType.DictionaryEncodedValueIndex.INSTANCE, defaults.getLongFieldBitmapIndexType());
+    Assertions.assertEquals(BitmapIndexType.DictionaryEncodedValueIndex.INSTANCE, defaults.getLongFieldBitmapIndexType());
   }
 
   @Test
@@ -129,21 +129,21 @@ public class NestedCommonFormatColumnFormatSpecTest
                  .getEffectiveSpec()
     );
 
-    Assert.assertEquals(frontcoded, defaults.getObjectFieldsDictionaryEncoding());
-    Assert.assertEquals(ObjectStorageEncoding.NONE, defaults.getObjectStorageEncoding());
-    Assert.assertEquals(CompressionStrategy.LZ4, defaults.getObjectStorageCompression());
-    Assert.assertEquals(
+    Assertions.assertEquals(frontcoded, defaults.getObjectFieldsDictionaryEncoding());
+    Assertions.assertEquals(ObjectStorageEncoding.NONE, defaults.getObjectStorageEncoding());
+    Assertions.assertEquals(CompressionStrategy.LZ4, defaults.getObjectStorageCompression());
+    Assertions.assertEquals(
         IndexSpec.getDefault().getEffectiveSpec().getDimensionCompression(),
         defaults.getDictionaryEncodedColumnCompression()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         IndexSpec.getDefault().getEffectiveSpec().getStringDictionaryEncoding(),
         defaults.getStringDictionaryEncoding()
     );
-    Assert.assertEquals(CompressionStrategy.LZF, defaults.getLongColumnCompression());
-    Assert.assertEquals(CompressionStrategy.LZF, defaults.getDoubleColumnCompression());
-    Assert.assertEquals(BitmapIndexType.NullValueIndex.INSTANCE, defaults.getLongFieldBitmapIndexType());
-    Assert.assertEquals(BitmapIndexType.NullValueIndex.INSTANCE, defaults.getDoubleFieldBitmapIndexType());
+    Assertions.assertEquals(CompressionStrategy.LZF, defaults.getLongColumnCompression());
+    Assertions.assertEquals(CompressionStrategy.LZF, defaults.getDoubleColumnCompression());
+    Assertions.assertEquals(BitmapIndexType.NullValueIndex.INSTANCE, defaults.getLongFieldBitmapIndexType());
+    Assertions.assertEquals(BitmapIndexType.NullValueIndex.INSTANCE, defaults.getDoubleFieldBitmapIndexType());
   }
 
   @Test
@@ -163,33 +163,33 @@ public class NestedCommonFormatColumnFormatSpecTest
         IndexSpec.getDefault().getEffectiveSpec()
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1),
         merged.getObjectFieldsDictionaryEncoding()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1),
         merged.getStringDictionaryEncoding()
     );
-    Assert.assertEquals(ObjectStorageEncoding.NONE, merged.getObjectStorageEncoding());
-    Assert.assertEquals(
+    Assertions.assertEquals(ObjectStorageEncoding.NONE, merged.getObjectStorageEncoding());
+    Assertions.assertEquals(
         IndexSpec.getDefault().getEffectiveSpec().getDimensionCompression(),
         merged.getDictionaryEncodedColumnCompression()
     );
-    Assert.assertEquals(CompressionStrategy.ZSTD, merged.getObjectStorageCompression());
-    Assert.assertEquals(
+    Assertions.assertEquals(CompressionStrategy.ZSTD, merged.getObjectStorageCompression());
+    Assertions.assertEquals(
         IndexSpec.getDefault().getEffectiveSpec().getMetricCompression(),
         merged.getLongColumnCompression()
     );
-    Assert.assertEquals(CompressionStrategy.ZSTD, merged.getDoubleColumnCompression());
-    Assert.assertEquals(BitmapIndexType.NullValueIndex.INSTANCE, merged.getLongFieldBitmapIndexType());
-    Assert.assertEquals(BitmapIndexType.NullValueIndex.INSTANCE, merged.getDoubleFieldBitmapIndexType());
+    Assertions.assertEquals(CompressionStrategy.ZSTD, merged.getDoubleColumnCompression());
+    Assertions.assertEquals(BitmapIndexType.NullValueIndex.INSTANCE, merged.getLongFieldBitmapIndexType());
+    Assertions.assertEquals(BitmapIndexType.NullValueIndex.INSTANCE, merged.getDoubleFieldBitmapIndexType());
   }
 
   @Test
   public void testGetEffectiveSpecInvalid()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         ISE.class,
         () -> NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(
             NestedCommonFormatColumnFormatSpec.builder().setBitmapEncoding(new ConciseBitmapSerdeFactory()).build(),
@@ -200,7 +200,7 @@ public class NestedCommonFormatColumnFormatSpecTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "bitmapEncoding[ConciseBitmapSerdeFactory{}] does not match indexSpec.bitmap[RoaringBitmapSerdeFactory{}]",
         t.getMessage()
     );

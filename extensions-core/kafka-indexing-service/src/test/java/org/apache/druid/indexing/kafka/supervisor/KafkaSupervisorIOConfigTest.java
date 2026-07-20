@@ -22,13 +22,20 @@ package org.apache.druid.indexing.kafka.supervisor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
+import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -43,6 +50,8 @@ import org.junit.rules.ExpectedException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+
+import static org.easymock.EasyMock.createMock;
 
 public class KafkaSupervisorIOConfigTest
 {
@@ -315,6 +324,8 @@ public class KafkaSupervisorIOConfigTest
     autoScalerConfig.put("scaleInStep", 1);
     autoScalerConfig.put("scaleOutStep", 2);
     autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
+    autoScalerConfig.put("minScaleUpDelay", "PT20M");
+    autoScalerConfig.put("minScaleDownDelay", "PT20M");
 
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("bootstrap.servers", "localhost:8082");
@@ -341,6 +352,7 @@ public class KafkaSupervisorIOConfigTest
         null,
         null,
         false,
+        null,
         null
     );
     String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
@@ -377,9 +389,10 @@ public class KafkaSupervisorIOConfigTest
         null,
         null,
         false,
+        null,
         null
     );
-    Assert.assertEquals(5, kafkaSupervisorIOConfig.getTaskCount().intValue());
+    Assert.assertEquals(1, kafkaSupervisorIOConfig.getTaskCount());
 
     Assert.assertThrows(
         "taskCountMin <= taskCountStart <= taskCountMax",
@@ -395,6 +408,52 @@ public class KafkaSupervisorIOConfigTest
           autoScalerConfig.put("taskCountStart", 0); // < min task count
           mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class);
         }
+    );
+  }
+
+  @Test
+  public void testTaskCountStartFallbackAndExplicitFlag()
+  {
+    final Map<String, Object> autoScalerConfig = ImmutableMap.of(
+        "enableTaskAutoScaler", true,
+        "taskCountMin", 1,
+        "taskCountMax", 10,
+        "taskCountStart", 5
+    );
+
+    Assert.assertEquals(7, makeIOConfig(7, autoScalerConfig).getTaskCount());
+    Assert.assertTrue(makeIOConfig(7, autoScalerConfig).isTaskCountExplicit());
+
+    Assert.assertEquals(5, makeIOConfig(null, autoScalerConfig).getTaskCount());
+    Assert.assertFalse(makeIOConfig(null, autoScalerConfig).isTaskCountExplicit());
+  }
+
+  private KafkaSupervisorIOConfig makeIOConfig(Integer taskCount, Map<String, Object> autoScalerConfig)
+  {
+    return new KafkaSupervisorIOConfig(
+        "test",
+        null,
+        null,
+        1,
+        taskCount,
+        new Period("PT1H"),
+        ImmutableMap.of("bootstrap.servers", "localhost:8082"),
+        mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class),
+        LagAggregator.DEFAULT,
+        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+        new Period("P1D"),
+        new Period("PT30S"),
+        true,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        null,
+        null
     );
   }
 
@@ -430,6 +489,7 @@ public class KafkaSupervisorIOConfigTest
         mapper.convertValue(idleConfig, IdleConfig.class),
         null,
         false,
+        null,
         null
     );
     String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
@@ -438,5 +498,207 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertNotNull(kafkaSupervisorIOConfig1.getIdleConfig());
     Assert.assertTrue(kafkaSupervisorIOConfig1.getIdleConfig().isEnabled());
     Assert.assertEquals(Long.valueOf(600000), kafkaSupervisorIOConfig1.getIdleConfig().getInactiveAfterMillis());
+  }
+
+  @Test
+  public void testBoundedModeSerdeWithIntegerOffsets() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"type\": \"kafka\",\n"
+                     + "  \"topic\": \"my-topic\",\n"
+                     + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
+                     + "  \"boundedStreamConfig\": {\n"
+                     + "    \"startSequenceNumbers\": {\"0\": 100, \"1\": 200},\n"
+                     + "    \"endSequenceNumbers\": {\"0\": 500, \"1\": 600}\n"
+                     + "  }\n"
+                     + "}";
+
+    KafkaSupervisorIOConfig config = mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
+
+    Assert.assertTrue(config.isBounded());
+    Assert.assertNotNull(config.getBoundedStreamConfig());
+    Assert.assertEquals(2, config.getBoundedStreamConfig().getStartSequenceNumbers().size());
+    Assert.assertEquals(2, config.getBoundedStreamConfig().getEndSequenceNumbers().size());
+  }
+
+  @Test
+  public void testBoundedModeSerdeWithStringOffsets() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"type\": \"kafka\",\n"
+                     + "  \"topic\": \"my-topic\",\n"
+                     + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
+                     + "  \"boundedStreamConfig\": {\n"
+                     + "    \"startSequenceNumbers\": {\"0\": \"100\", \"1\": \"200\"},\n"
+                     + "    \"endSequenceNumbers\": {\"0\": \"500\", \"1\": \"600\"}\n"
+                     + "  }\n"
+                     + "}";
+
+    KafkaSupervisorIOConfig config = mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
+
+    Assert.assertTrue(config.isBounded());
+    Assert.assertNotNull(config.getBoundedStreamConfig());
+    Assert.assertEquals(2, config.getBoundedStreamConfig().getStartSequenceNumbers().size());
+    Assert.assertEquals(2, config.getBoundedStreamConfig().getEndSequenceNumbers().size());
+  }
+
+  @Test
+  public void testBoundedModeSerdeWithMixedOffsets() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"type\": \"kafka\",\n"
+                     + "  \"topic\": \"my-topic\",\n"
+                     + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
+                     + "  \"boundedStreamConfig\": {\n"
+                     + "    \"startSequenceNumbers\": {\"0\": 100, \"1\": \"200\"},\n"
+                     + "    \"endSequenceNumbers\": {\"0\": 500, \"1\": \"600\"}\n"
+                     + "  }\n"
+                     + "}";
+
+    KafkaSupervisorIOConfig config = mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
+
+    Assert.assertTrue(config.isBounded());
+    Assert.assertNotNull(config.getBoundedStreamConfig());
+  }
+
+  @Test
+  public void testUnboundedModeByDefault() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"type\": \"kafka\",\n"
+                     + "  \"topic\": \"my-topic\",\n"
+                     + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"}\n"
+                     + "}";
+
+    KafkaSupervisorIOConfig config = mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
+
+    Assert.assertFalse(config.isBounded());
+    Assert.assertNull(config.getBoundedStreamConfig());
+  }
+
+  @Test
+  public void testBoundedModeRoundTrip() throws Exception
+  {
+    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
+    consumerProperties.put("bootstrap.servers", "localhost:8082");
+
+    Map<String, Integer> startOffsets = new HashMap<>();
+    startOffsets.put("0", 100);
+    startOffsets.put("1", 200);
+
+    Map<String, Integer> endOffsets = new HashMap<>();
+    endOffsets.put("0", 500);
+    endOffsets.put("1", 600);
+
+    BoundedStreamConfig boundedConfig = new BoundedStreamConfig(startOffsets, endOffsets);
+
+    KafkaSupervisorIOConfig original = new KafkaSupervisorIOConfig(
+        "test-topic",
+        null,
+        null,
+        1,
+        1,
+        new Period("PT1H"),
+        consumerProperties,
+        null,
+        LagAggregator.DEFAULT,
+        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        null,
+        boundedConfig
+    );
+
+    String json = mapper.writeValueAsString(original);
+    KafkaSupervisorIOConfig deserialized = mapper.readValue(json, KafkaSupervisorIOConfig.class);
+
+    Assert.assertTrue(deserialized.isBounded());
+    Assert.assertNotNull(deserialized.getBoundedStreamConfig());
+    Assert.assertEquals(2, deserialized.getBoundedStreamConfig().getStartSequenceNumbers().size());
+    Assert.assertEquals(2, deserialized.getBoundedStreamConfig().getEndSequenceNumbers().size());
+  }
+
+  private static KafkaIOConfigBuilder ioConfigBuilder()
+  {
+    return new KafkaIOConfigBuilder()
+        .withTopic("topic")
+        .withConsumerProperties(Map.of("bootstrap.servers", "localhost:9092"))
+        .withReplicas(1)
+        .withTaskCount(2)
+        .withTaskDuration(new Period("PT1H"));
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    final KafkaSupervisorIOConfig config = ioConfigBuilder().build();
+    Assert.assertEquals(config, ioConfigBuilder().build());
+    Assert.assertEquals(config.hashCode(), ioConfigBuilder().build().hashCode());
+    Assert.assertNotEquals(config, null);
+    Assert.assertNotEquals(config, "not an io config");
+    Assert.assertNotEquals(config, ioConfigBuilder().withTopic("other").build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withReplicas(9).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withTaskCount(9).build());
+    Assert.assertNotEquals(
+        config,
+        ioConfigBuilder().withConsumerProperties(Map.of("bootstrap.servers", "other:9092")).build()
+    );
+    Assert.assertNotEquals(config, ioConfigBuilder().withEmitTimeLagMetrics(true).build());
+  }
+
+  @Test
+  public void testTuningConfigEqualsAndHashCode()
+  {
+    final KafkaSupervisorTuningConfig config = new KafkaTuningConfigBuilder().build();
+    Assert.assertEquals(config, new KafkaTuningConfigBuilder().build());
+    Assert.assertEquals(config.hashCode(), new KafkaTuningConfigBuilder().build().hashCode());
+    Assert.assertNotEquals(config, null);
+    Assert.assertNotEquals(config, "not a tuning config");
+    Assert.assertNotEquals(config, new KafkaTuningConfigBuilder().withWorkerThreads(99).build());
+    Assert.assertNotEquals(config, new KafkaTuningConfigBuilder().withShutdownTimeout(new Period("PT99M")).build());
+    Assert.assertNotEquals(config, new KafkaTuningConfigBuilder().withOffsetFetchPeriod(new Period("PT99S")).build());
+  }
+
+  /**
+   * Drift guard for this class's own fields (base fields are covered by SeekableStreamSupervisorIOConfigTest):
+   * a field omitted from {@code equals} would let a changed spec persist without restarting the supervisor.
+   */
+  @Test
+  public void testEqualsContractCoversAllFields()
+  {
+    EqualsVerifier.forClass(KafkaSupervisorIOConfig.class)
+                  .usingGetClass()
+                  .withRedefinedSuperclass()
+                  .withIgnoredFields("taskCountExplicit", "autoScalerEnabled")
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .withPrefabValues(Optional.class, Optional.of("a"), Optional.of("b"))
+                  .withPrefabValues(InputFormat.class, createMock(InputFormat.class), createMock(InputFormat.class))
+                  .withPrefabValues(AutoScalerConfig.class, createMock(AutoScalerConfig.class), createMock(AutoScalerConfig.class))
+                  .withPrefabValues(LagAggregator.class, createMock(LagAggregator.class), createMock(LagAggregator.class))
+                  .withPrefabValues(
+                      KafkaConfigOverrides.class,
+                      createMock(KafkaConfigOverrides.class),
+                      createMock(KafkaConfigOverrides.class)
+                  )
+                  .verify();
+  }
+
+  @Test
+  public void testTuningConfigEqualsContractCoversAllFields()
+  {
+    EqualsVerifier.forClass(KafkaSupervisorTuningConfig.class)
+                  .usingGetClass()
+                  .withRedefinedSuperclass()
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .verify();
   }
 }

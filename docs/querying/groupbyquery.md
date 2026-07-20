@@ -24,13 +24,13 @@ sidebar_label: "GroupBy"
   -->
 
 :::info
- Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
  This document describes a query
  type in the native language. For information about when Druid SQL will use this query type, refer to the
  [SQL documentation](sql-translation.md#query-types).
 :::
 
-These types of Apache Druid queries take a groupBy query object and return an array of JSON objects where each object represents a
+These types of Apache&circledR; Druid queries take a groupBy query object and return an array of JSON objects where each object represents a
 grouping asked for by the query.
 
 :::info
@@ -358,6 +358,7 @@ Supported runtime properties:
 |`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for per-query string dictionaries. When the dictionary exceeds this size, a spill to disk will be triggered. If set to `0` (automatic), each query's dictionary uses 30% of the Java heap divided by `druid.processing.numMergeBuffers`, or 1GB, whichever is smaller.<br /><br />See [Memory tuning and resource limits](#memory-tuning-and-resource-limits) for details on changing this property.|0 (automatic)|
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
 |`druid.query.groupBy.maxSpillFileCount`|Maximum number of spill files allowed per GroupBy query. Queries that exceed this limit will fail.<br /><br />See [Memory tuning and resource limits](#memory-tuning-and-resource-limits) for details on changing this property.|Integer.MAX_VALUE (unlimited)|
+|`druid.query.groupBy.minSpillFileSize`|Minimum number of bytes that must accumulate across pending in-memory spill runs before they are flushed as a single file to disk. Smaller spills are batched in heap memory to avoid creating many tiny files. Higher values reduce file count but increase heap usage.|1048576 (1 MiB)|
 
 Supported query contexts:
 
@@ -365,6 +366,7 @@ Supported query contexts:
 |---|-----------|
 |`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
 |`maxSpillFileCount`|Can be used to override the value of `druid.query.groupBy.maxSpillFileCount` for this query.|
+|`minSpillFileSize`|Can be used to override the value of `druid.query.groupBy.minSpillFileSize` for this query.|
 
 ### Advanced configurations
 

@@ -21,6 +21,7 @@ package org.apache.druid.rpc;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.TestHttpClient;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -60,7 +61,7 @@ public class MockServiceClient implements ServiceClient
 
     if (expectation.response.isValue()) {
       final ClientResponse<FinalType> response =
-          handler.done(handler.handleResponse(expectation.response.valueOrThrow(), chunkNum -> 0));
+          handler.done(handler.handleResponse(expectation.response.valueOrThrow(), TestHttpClient.NOOP_TRAFFIC_COP));
       return Futures.immediateFuture(response.getObj());
     } else {
       return Futures.immediateFailedFuture(expectation.response.error());

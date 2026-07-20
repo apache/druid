@@ -19,18 +19,25 @@
 
 package org.apache.druid.timeline;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -60,13 +67,13 @@ public class CompactionStateTest
         .granularitySpec(granularitySpec)
         .build();
 
-    Assert.assertEquals(partitionsSpec, state.getPartitionsSpec());
-    Assert.assertEquals(dimensionsSpec, state.getDimensionsSpec());
-    Assert.assertEquals(metricsSpec, state.getMetricsSpec());
-    Assert.assertEquals(transformSpec, state.getTransformSpec());
-    Assert.assertEquals(indexSpec, state.getIndexSpec());
-    Assert.assertEquals(granularitySpec, state.getGranularitySpec());
-    Assert.assertNull(state.getProjections());
+    Assertions.assertEquals(partitionsSpec, state.getPartitionsSpec());
+    Assertions.assertEquals(dimensionsSpec, state.getDimensionsSpec());
+    Assertions.assertEquals(metricsSpec, state.getMetricsSpec());
+    Assertions.assertEquals(transformSpec, state.getTransformSpec());
+    Assertions.assertEquals(indexSpec, state.getIndexSpec());
+    Assertions.assertEquals(granularitySpec, state.getGranularitySpec());
+    Assertions.assertNull(state.getProjections());
   }
 
   @Test
@@ -102,7 +109,45 @@ public class CompactionStateTest
         .projections(projections)
         .build();
 
-    Assert.assertEquals(projections, state.getProjections());
+    Assertions.assertEquals(projections, state.getProjections());
+  }
+
+  @Test
+  public void testBuilderWithBaseTable()
+  {
+    DynamicPartitionsSpec partitionsSpec = new DynamicPartitionsSpec(null, null);
+    DimensionsSpec dimensionsSpec = DimensionsSpec.builder().build();
+    List<AggregatorFactory> metricsSpec = List.of(new CountAggregatorFactory("count"));
+    CompactionTransformSpec transformSpec = new CompactionTransformSpec(null, null);
+    IndexSpec indexSpec = IndexSpec.getDefault();
+    UniformGranularitySpec granularitySpec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.NONE,
+        Collections.emptyList()
+    );
+    ClusteredValueGroupsBaseTableProjectionSpec baseTable =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new LongDimensionSchema("__time")
+                                                   )
+                                                   .clusteringColumns("tenant")
+                                                   .build();
+
+    CompactionState state = new CompactionState.Builder()
+        .partitionsSpec(partitionsSpec)
+        .dimensionsSpec(dimensionsSpec)
+        .metricsSpec(metricsSpec)
+        .transformSpec(transformSpec)
+        .indexSpec(indexSpec)
+        .granularitySpec(granularitySpec)
+        .baseTable(baseTable)
+        .build();
+
+    Assertions.assertEquals(baseTable, state.getBaseTable());
+
+    // round-trips through the builder
+    Assertions.assertEquals(baseTable, state.toBuilder().build().getBaseTable());
   }
 
   @Test
@@ -135,19 +180,21 @@ public class CompactionStateTest
         transformSpec,
         indexSpec,
         granularitySpec,
+        null,
+        null,
         projections
     );
 
     CompactionState rebuiltState = originalState.toBuilder().build();
 
-    Assert.assertEquals(originalState, rebuiltState);
-    Assert.assertEquals(originalState.getPartitionsSpec(), rebuiltState.getPartitionsSpec());
-    Assert.assertEquals(originalState.getDimensionsSpec(), rebuiltState.getDimensionsSpec());
-    Assert.assertEquals(originalState.getMetricsSpec(), rebuiltState.getMetricsSpec());
-    Assert.assertEquals(originalState.getTransformSpec(), rebuiltState.getTransformSpec());
-    Assert.assertEquals(originalState.getIndexSpec(), rebuiltState.getIndexSpec());
-    Assert.assertEquals(originalState.getGranularitySpec(), rebuiltState.getGranularitySpec());
-    Assert.assertEquals(originalState.getProjections(), rebuiltState.getProjections());
+    Assertions.assertEquals(originalState, rebuiltState);
+    Assertions.assertEquals(originalState.getPartitionsSpec(), rebuiltState.getPartitionsSpec());
+    Assertions.assertEquals(originalState.getDimensionsSpec(), rebuiltState.getDimensionsSpec());
+    Assertions.assertEquals(originalState.getMetricsSpec(), rebuiltState.getMetricsSpec());
+    Assertions.assertEquals(originalState.getTransformSpec(), rebuiltState.getTransformSpec());
+    Assertions.assertEquals(originalState.getIndexSpec(), rebuiltState.getIndexSpec());
+    Assertions.assertEquals(originalState.getGranularitySpec(), rebuiltState.getGranularitySpec());
+    Assertions.assertEquals(originalState.getProjections(), rebuiltState.getProjections());
   }
 
   @Test
@@ -171,6 +218,8 @@ public class CompactionStateTest
         transformSpec,
         indexSpec,
         granularitySpec,
+        null,
+        null,
         null
     );
 
@@ -183,11 +232,11 @@ public class CompactionStateTest
         .dimensionsSpec(newDimensionsSpec)
         .build();
 
-    Assert.assertNotEquals(originalState, modifiedState);
-    Assert.assertEquals(originalState.getPartitionsSpec(), modifiedState.getPartitionsSpec());
-    Assert.assertNotEquals(originalState.getDimensionsSpec(), modifiedState.getDimensionsSpec());
-    Assert.assertEquals(newDimensionsSpec, modifiedState.getDimensionsSpec());
-    Assert.assertEquals(originalState.getMetricsSpec(), modifiedState.getMetricsSpec());
+    Assertions.assertNotEquals(originalState, modifiedState);
+    Assertions.assertEquals(originalState.getPartitionsSpec(), modifiedState.getPartitionsSpec());
+    Assertions.assertNotEquals(originalState.getDimensionsSpec(), modifiedState.getDimensionsSpec());
+    Assertions.assertEquals(newDimensionsSpec, modifiedState.getDimensionsSpec());
+    Assertions.assertEquals(originalState.getMetricsSpec(), modifiedState.getMetricsSpec());
   }
 
   @Test
@@ -212,6 +261,8 @@ public class CompactionStateTest
         transformSpec,
         indexSpec,
         granularitySpec,
+        null,
+        null,
         null
     );
 
@@ -221,8 +272,100 @@ public class CompactionStateTest
     CompactionState modifiedState = builder.build();
 
     // Original state should be unchanged
-    Assert.assertEquals(partitionsSpec1, originalState.getPartitionsSpec());
+    Assertions.assertEquals(partitionsSpec1, originalState.getPartitionsSpec());
     // Modified state should have the new partitionsSpec
-    Assert.assertEquals(partitionsSpec2, modifiedState.getPartitionsSpec());
+    Assertions.assertEquals(partitionsSpec2, modifiedState.getPartitionsSpec());
+  }
+
+  @Test
+  public void testSerdeWithBaseTable() throws Exception
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    ClusteredValueGroupsBaseTableProjectionSpec baseTable =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new LongDimensionSchema("__time")
+                                                   )
+                                                   .clusteringColumns("tenant")
+                                                   .build();
+
+    CompactionState state = CompactionState.builder()
+        .partitionsSpec(new DynamicPartitionsSpec(null, null))
+        .dimensionsSpec(DimensionsSpec.builder().build())
+        .metricsSpec(List.of(new CountAggregatorFactory("count")))
+        .transformSpec(new CompactionTransformSpec(null, null))
+        .indexSpec(IndexSpec.getDefault())
+        .granularitySpec(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, Collections.emptyList()))
+        .baseTable(baseTable)
+        .build();
+
+    CompactionState roundTrip = mapper.readValue(mapper.writeValueAsString(state), CompactionState.class);
+    Assertions.assertEquals(state, roundTrip);
+    Assertions.assertEquals(baseTable, roundTrip.getBaseTable());
+  }
+
+  @Test
+  public void testSerdeWithSegmentGranularitySpec() throws Exception
+  {
+    // The baseTable carries a query-granularity expression virtual column, whose deserialization needs an injected
+    // ExprMacroTable, so use the TestHelper mapper instead of the plain DefaultObjectMapper.
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    ClusteredValueGroupsBaseTableProjectionSpec baseTable =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new LongDimensionSchema("__time")
+                                                   )
+                                                   .clusteringColumns("tenant")
+                                                   .build()
+                                                   .withQueryGranularity(Granularities.HOUR);
+
+    SegmentGranularitySpec segmentGranularitySpec = new SegmentGranularitySpec(Granularities.DAY, null);
+
+    CompactionState state = CompactionState.builder()
+        .partitionsSpec(new DynamicPartitionsSpec(null, null))
+        .dimensionsSpec(DimensionsSpec.builder().build())
+        .metricsSpec(List.of(new CountAggregatorFactory("count")))
+        .transformSpec(new CompactionTransformSpec(null, null))
+        .indexSpec(IndexSpec.getDefault())
+        .segmentGranularitySpec(segmentGranularitySpec)
+        .baseTable(baseTable)
+        .build();
+
+    final String json = mapper.writeValueAsString(state);
+    CompactionState roundTrip = mapper.readValue(json, CompactionState.class);
+    Assertions.assertEquals(state, roundTrip);
+    Assertions.assertEquals(segmentGranularitySpec, roundTrip.getSegmentGranularitySpec());
+    Assertions.assertEquals(baseTable, roundTrip.getBaseTable());
+    Assertions.assertTrue(json.contains("segmentGranularitySpec"));
+  }
+
+  /**
+   * Legacy (non-baseTable) CompactionState must serialize WITHOUT a "segmentGranularitySpec" key (the field is
+   * {@code @JsonInclude(NON_NULL)}), so legacy fingerprints are byte-for-byte unchanged.
+   */
+  @Test
+  public void testSerdeLegacyOmitsSegmentGranularitySpec() throws Exception
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    CompactionState state = new CompactionState(
+        new DynamicPartitionsSpec(null, null),
+        DimensionsSpec.builder().build(),
+        List.of(new CountAggregatorFactory("count")),
+        new CompactionTransformSpec(null, null),
+        IndexSpec.getDefault(),
+        new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, Collections.emptyList()),
+        null,
+        null,
+        null
+    );
+
+    final String json = mapper.writeValueAsString(state);
+    Assertions.assertFalse(json.contains("segmentGranularitySpec"));
+
+    CompactionState roundTrip = mapper.readValue(json, CompactionState.class);
+    Assertions.assertEquals(state, roundTrip);
+    Assertions.assertNull(roundTrip.getSegmentGranularitySpec());
   }
 }

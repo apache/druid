@@ -149,7 +149,7 @@ public class SegmentLoadDropHandlerTest
 
     // Make sure the scheduled runnable that "deletes" segment files has been executed.
     // Because another addSegment() call is executed, which removes the segment from segmentsToDelete field in
-    // ZkCoordinator, the scheduled runnable will not actually delete segment files.
+    // SegmentLoadDropHandler, the scheduled runnable will not actually delete segment files.
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
@@ -197,7 +197,7 @@ public class SegmentLoadDropHandlerTest
 
     // Make sure the scheduled runnable that "deletes" segment files has been executed.
     // Because another addSegment() call is executed, which removes the segment from segmentsToDelete field in
-    // ZkCoordinator, the scheduled runnable will not actually delete segment files.
+    // SegmentLoadDropHandler, the scheduled runnable will not actually delete segment files.
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
@@ -257,10 +257,11 @@ public class SegmentLoadDropHandlerTest
   public void testProcessBatchDuplicateLoadRequestsWhenFirstRequestFailsSecondRequestShouldSucceed() throws Exception
   {
     final SegmentManager segmentManager = Mockito.mock(SegmentManager.class);
-    Mockito.doThrow(new RuntimeException("segment loading failure test"))
-           .doNothing()
-           .when(segmentManager)
-           .loadSegment(ArgumentMatchers.any());
+    // loadSegment returns DataSegment, so doNothing() would be rejected by Mockito. Throw on the first call,
+    // then return the input segment on subsequent calls (the announcement path uses the returned segment).
+    Mockito.when(segmentManager.loadSegment(ArgumentMatchers.any()))
+           .thenThrow(new RuntimeException("segment loading failure test"))
+           .thenAnswer(invocation -> invocation.getArgument(0));
 
     final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager);
 
@@ -291,7 +292,9 @@ public class SegmentLoadDropHandlerTest
   public void testProcessBatchLoadDropLoadSequenceForSameSegment() throws Exception
   {
     final SegmentManager segmentManager = Mockito.mock(SegmentManager.class);
-    Mockito.doNothing().when(segmentManager).loadSegment(ArgumentMatchers.any());
+    // loadSegment returns DataSegment; return the input so the announcement path sees a plain DataSegment.
+    Mockito.when(segmentManager.loadSegment(ArgumentMatchers.any()))
+           .thenAnswer(invocation -> invocation.getArgument(0));
     Mockito.doNothing().when(segmentManager).dropSegment(ArgumentMatchers.any());
 
     final File storageDir = temporaryFolder.newFolder();

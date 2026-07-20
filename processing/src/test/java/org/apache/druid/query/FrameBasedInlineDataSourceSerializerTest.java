@@ -37,8 +37,8 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.Closeable;
 import java.util.ArrayList;
@@ -149,6 +149,6 @@ public class FrameBasedInlineDataSourceSerializerTest
   {
     String s = objectMapper.writeValueAsString(frameBasedInlineDataSource);
     DataSource back = objectMapper.readValue(s, DataSource.class);
-    Assert.assertEquals(inlineDataSource, back);
+    Assertions.assertEquals(inlineDataSource, back);
   }
 }

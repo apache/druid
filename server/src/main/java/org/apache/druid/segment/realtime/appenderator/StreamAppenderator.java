@@ -75,6 +75,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.sink.Sink;
@@ -516,7 +517,9 @@ public class StreamAppenderator implements Appenderator
           identifier.getVersion(),
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
-          maxBytesTuningConfig
+          maxBytesTuningConfig,
+          tuningConfig.getIndexSpec(),
+          Collections.emptyList()
       );
       bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
 
@@ -973,11 +976,19 @@ public class StreamAppenderator implements Appenderator
         log.debug("Segment[%s] built in %,dms.", identifier, mergeTimeMillis);
         QueryableIndex index = indexIO.loadIndex(mergedFile);
         closer.register(index);
+        // Clustered segments have no top-level columns (getAvailableDimensions() is empty); their logical
+        // dimensions live on the cluster summary and are identical across all groups, so source the published
+        // dimensions list from there.
+        final ClusteredValueGroupsBaseTableSchema clusterSummary = index.getClusteredBaseSummary();
+        final List<String> dimensions = clusterSummary == null
+                                        ? Lists.newArrayList(index.getAvailableDimensions().iterator())
+                                        : new ArrayList<>(clusterSummary.getDimensionNames());
         mergedSegment =
             sink.getSegment()
                 .toBuilder()
-                .dimensions(Lists.newArrayList(index.getAvailableDimensions().iterator()))
+                .dimensions(dimensions)
                 .totalRows(index.getNumRows())
+                .clusterGroups(clusterSummary == null ? null : clusterSummary.toClusterGroupTuples())
                 .build();
       }
       catch (Throwable t) {
@@ -1170,12 +1181,53 @@ public class StreamAppenderator implements Appenderator
     }
   }
 
-  public void registerUpgradedPendingSegment(PendingSegmentRecord pendingSegmentRecord) throws IOException
+  /**
+   * Result of a {@link #registerUpgradedPendingSegment} call. Each skipped outcome carries the human-readable
+   * {@link #getReason() reason} emitted as the {@code reason} metric dimension.
+   */
+  public enum PendingSegmentUpgradeResult
+  {
+    ANNOUNCED(null),
+    /** The task holds no pending segment matching upgradedFromSegmentId (request targeted the wrong task). */
+    SKIPPED_UNKNOWN_BASE("unknown base sink"),
+    /** The base sink is gone even though this task once held it. */
+    SKIPPED_NO_SINK("base sink already dropped"),
+    /** The base sink is being dropped (handoff in progress); the durable path re-announces at the new version. */
+    SKIPPED_DROPPING("dropping base sink");
+
+    @Nullable
+    private final String reason;
+
+    PendingSegmentUpgradeResult(@Nullable String reason)
+    {
+      this.reason = reason;
+    }
+
+    /**
+     * Reason a request was skipped, for the {@code reason} metric dimension; null for {@link #ANNOUNCED}.
+     */
+    @Nullable
+    public String getReason()
+    {
+      return reason;
+    }
+  }
+
+  public PendingSegmentUpgradeResult registerUpgradedPendingSegment(PendingSegmentRecord pendingSegmentRecord) throws IOException
   {
     SegmentIdWithShardSpec basePendingSegment = idToPendingSegment.get(pendingSegmentRecord.getUpgradedFromSegmentId());
     SegmentIdWithShardSpec upgradedPendingSegment = pendingSegmentRecord.getId();
-    if (!sinks.containsKey(basePendingSegment) || droppingSinks.contains(basePendingSegment)) {
-      return;
+    if (basePendingSegment == null || droppingSinks.contains(basePendingSegment) || !sinks.containsKey(basePendingSegment)) {
+      if (basePendingSegment == null) {
+        // This task never allocated a segment matching upgradedFromSegmentId, i.e. the request targeted the wrong task.
+        return PendingSegmentUpgradeResult.SKIPPED_UNKNOWN_BASE;
+      } else if (droppingSinks.contains(basePendingSegment)) {
+        // Expected during handoff: the base sink is being dropped.
+        return PendingSegmentUpgradeResult.SKIPPED_DROPPING;
+      } else {
+        // Unexpected: the base sink is gone even though this task once held it.
+        return PendingSegmentUpgradeResult.SKIPPED_NO_SINK;
+      }
     }
 
     final Sink sink = sinks.get(basePendingSegment);
@@ -1190,6 +1242,8 @@ public class StreamAppenderator implements Appenderator
     segmentAnnouncer.announceSegment(newSegment);
     baseSegmentToUpgradedSegments.get(basePendingSegment).add(upgradedPendingSegment);
     upgradedSegmentToBaseSegment.put(upgradedPendingSegment, basePendingSegment);
+    log.info("Announced upgraded segment[%s] for base segment[%s] on task[%s]", upgradedPendingSegment, basePendingSegment, myId);
+    return PendingSegmentUpgradeResult.ANNOUNCED;
   }
 
   private DataSegment getUpgradedSegment(DataSegment baseSegment, SegmentIdWithShardSpec upgradedVersion)
@@ -1412,6 +1466,7 @@ public class StreamAppenderator implements Appenderator
             tuningConfig.getAppendableIndexSpec(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
+            tuningConfig.getIndexSpec(),
             hydrants
         );
         rowsSoFar += currSink.getNumRows();

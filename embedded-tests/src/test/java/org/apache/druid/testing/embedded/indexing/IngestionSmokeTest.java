@@ -59,6 +59,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -85,7 +86,9 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   protected EmbeddedIndexer indexer = new EmbeddedIndexer()
       .setServerMemory(300_000_000)
       .addProperty("druid.worker.capacity", "2")
-      .addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
+      .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
+      // Use separate task log files because here, we're actually testing TaskLogStreamer.
+      .addProperty("druid.worker.useSeparateTaskLogFiles", "true");
 
   /**
    * Broker with a short metadata refresh period.
@@ -188,6 +191,9 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasService("druid/broker")
     );
+
+    waitForNextCoordinatorCacheSync();
+    waitForNextBrokerCacheSync();
 
     cluster.callApi().verifySqlQuery("SELECT * FROM sys.segments WHERE datasource='%s'", dataSource, "");
 
@@ -297,7 +303,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(kafkaSupervisorSpec)
     );
-    Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
+    validateSupervisorUpdateResponse(startSupervisorResult, supervisorId);
 
     waitForSegmentsToBeQueryable(1);
 
@@ -318,6 +324,37 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     );
     supervisorStatus = cluster.callApi().getSupervisorStatus(supervisorId);
     Assertions.assertTrue(supervisorStatus.isSuspended());
+  }
+
+  @Test
+  public void test_kafkaSupervisor_modifiedAndRestartedCombinations()
+  {
+    final String topic = dataSource;
+    kafkaServer.createTopicWithPartitions(topic, 2);
+
+    final String supervisorId = dataSource;
+
+    // (1) First submission of a new supervisor: persisted and started.
+    Assertions.assertEquals(
+        Map.of("id", supervisorId, "modified", "true", "restarted", "true"),
+        postKafkaSupervisor(createKafkaSupervisor(topic, Period.millis(500)))
+    );
+
+    // (2) Resubmitting a byte-identical spec is a no-op (the client always sets skipRestartIfUnmodified).
+    Assertions.assertEquals(
+        Map.of("id", supervisorId, "modified", "false", "restarted", "false"),
+        postKafkaSupervisor(createKafkaSupervisor(topic, Period.millis(500)))
+    );
+
+    // (3) A restart-requiring change (taskDuration): persisted and restarted.
+    Assertions.assertEquals(
+        Map.of("id", supervisorId, "modified", "true", "restarted", "true"),
+        postKafkaSupervisor(createKafkaSupervisor(topic, Period.seconds(10)))
+    );
+
+    // The (modified=true, restarted=false) case needs the autoscaler to mutate taskCount at runtime
+    // (a plain resubmit is reset to taskCountStart by merge()), so it is covered deterministically in
+    // SupervisorManagerTest#testCreateOrUpdateSkipRestart_changedNoRestart_persistsWithoutRestart.
   }
 
   @Test
@@ -364,6 +401,11 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
 
   private KafkaSupervisorSpec createKafkaSupervisor(String topic)
   {
+    return createKafkaSupervisor(topic, Period.millis(500));
+  }
+
+  private KafkaSupervisorSpec createKafkaSupervisor(String topic, Period taskDuration)
+  {
     return MoreResources.Supervisor.KAFKA_JSON
         .get()
         .withDataSchema(schema -> schema.withTimestamp(TimestampSpec.DEFAULT))
@@ -371,9 +413,15 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withInputFormat(new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false))
+                .withTaskDuration(taskDuration)
         )
         .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(1))
         .build(dataSource, topic);
+  }
+
+  private Map<String, String> postKafkaSupervisor(KafkaSupervisorSpec spec)
+  {
+    return cluster.callApi().onLeaderOverlord(o -> o.postSupervisor(spec));
   }
 
   private List<ProducerRecord<byte[], byte[]>> generateRecordsForTopic(
@@ -417,11 +465,24 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     );
   }
 
+  protected void validateSupervisorUpdateResponse(Map<String, String> startSupervisorResult, String supervisorId)
+  {
+    Assertions.assertEquals(Map.of("id", supervisorId, "modified", "true", "restarted", "true"), startSupervisorResult);
+  }
+
   protected void waitForNextCoordinatorCacheSync()
   {
     eventCollector.latchableEmitter().waitForNextEvent(
         event -> event.hasMetricName("segment/metadataCache/sync/time")
                       .hasService("druid/coordinator")
+    );
+  }
+
+  protected void waitForNextBrokerCacheSync()
+  {
+    eventCollector.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("segment/metadataCache/sync/time")
+                      .hasService("druid/broker")
     );
   }
 

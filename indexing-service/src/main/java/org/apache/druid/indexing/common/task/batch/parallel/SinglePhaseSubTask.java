@@ -242,7 +242,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       }
       this.authorizerMapper = toolbox.getAuthorizerMapper();
 
-      toolbox.getChatHandlerProvider().register(getId(), this, false);
+      toolbox.getChatHandlerProvider().register(getId(), this);
 
       rowIngestionMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
       parseExceptionHandler = new ParseExceptionHandler(

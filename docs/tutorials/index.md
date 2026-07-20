@@ -23,7 +23,7 @@ sidebar_label: Local quickstart
   ~ under the License.
   -->
 
-This quickstart helps you install Apache Druid and introduces you to Druid ingestion and query features. For this tutorial, you need a machine with at least 6 GiB of RAM.
+This quickstart helps you install Apache&circledR; Druid and introduces you to Druid ingestion and query features. For this tutorial, you need a machine with at least 6 GiB of RAM.
 
 In this quickstart, you'll:
 - install Druid
@@ -67,7 +67,7 @@ The distribution directory contains `LICENSE` and `NOTICE` files and subdirector
 ## Start up Druid services
 
 Start up Druid services using the automatic single-machine configuration.
-This configuration includes default settings that are appropriate for this tutorial, such as loading the `druid-multi-stage-query` extension by default so that you can use the MSQ task engine.
+This configuration includes default settings that are appropriate for this tutorial.
 
 You can view the default settings in the configuration files located in `conf/druid/auto`.
 

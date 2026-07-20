@@ -80,6 +80,7 @@ import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -829,7 +830,7 @@ public class QueryLifecycleTest
   public void testRunSimple_queryBlocklisted()
   {
     // Create a blocklist rule that matches our test query
-    QueryBlocklistRule rule = new QueryBlocklistRule(
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule(
         "test-rule",
         ImmutableSet.of(DATASOURCE),
         null,
@@ -859,6 +860,7 @@ public class QueryLifecycleTest
         authConfig,
         policyEnforcer,
         queryBlocklist,
+        Collections.emptyMap(),
         System.currentTimeMillis(),
         System.nanoTime()
     );
@@ -878,7 +880,7 @@ public class QueryLifecycleTest
   public void testRunSimple_queryNotBlocklisted()
   {
     // Create a blocklist rule that does NOT match our test query
-    QueryBlocklistRule rule = new QueryBlocklistRule(
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule(
         "test-rule",
         ImmutableSet.of("other_datasource"),
         null,
@@ -910,6 +912,7 @@ public class QueryLifecycleTest
         authConfig,
         policyEnforcer,
         queryBlocklist,
+        Collections.emptyMap(),
         System.currentTimeMillis(),
         System.nanoTime()
     );

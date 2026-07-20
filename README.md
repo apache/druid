@@ -83,7 +83,7 @@ See the [latest documentation](https://druid.apache.org/docs/latest/) for the do
 
 Make documentation and tutorials updates in [`/docs`](https://github.com/apache/druid/tree/master/docs) using [Markdown](https://www.markdownguide.org/) or extended Markdown [(MDX)](https://mdxjs.com/). Then, open a pull request.
 
-To build the site locally, you need Node 18 or higher and to install Docusaurus 3 with `npm|yarn install`  in the `website` directory. Then you can run `npm|yarn start` to launch a local build of the docs.
+To build the site locally, you need Node 22 or higher and to install Docusaurus 3 with `npm|yarn install`  in the `website` directory. Then you can run `npm|yarn start` to launch a local dev preview of the docs.
 
 If you're looking to update non-doc pages like Use Cases, those files are in the [`druid-website-src`](https://github.com/apache/druid-website-src/tree/master) repo.
 
@@ -102,7 +102,7 @@ Find articles written by community members and a calendar of upcoming events on 
 
 ### Building from source
 
-Please note that JDK 17 or JDK 21 is required to build Druid.
+Please note that JDK 21 or JDK 25 is required to build Druid.
 
 See the latest [build guide](https://druid.apache.org/docs/latest/development/build.html) for instructions on building Apache Druid from source.
 

@@ -65,6 +65,7 @@ import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.partition.DimensionValueSetShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -163,10 +164,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<Interval> retrieveUnusedSegmentIntervals(String dataSource, int limit)
+  public List<Interval> retrieveSomeUnusedSegmentIntervals(String dataSource, int limit)
   {
     return inReadOnlyTransaction(
-        sql -> sql.retrieveUnusedSegmentIntervals(dataSource, limit)
+        sql -> sql.retrieveSomeUnusedSegmentIntervals(dataSource, limit)
     );
   }
 
@@ -1223,10 +1224,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             final SegmentId newVersionSegmentId = pendingSegment.getId().asSegmentId();
             newVersionSegmentToParent.put(newVersionSegmentId, oldSegment.getId());
             upgradedFromSegmentIdMap.put(newVersionSegmentId.toString(), oldSegment.getId().toString());
+            final ShardSpec upgradedShardSpec = getUpgradedSegmentShardSpec(oldSegment, pendingSegment);
             allSegmentsToInsert.add(DataSegment.builder(oldSegment)
                                                .interval(newVersionSegmentId.getInterval())
                                                .version(newVersionSegmentId.getVersion())
-                                               .shardSpec(pendingSegment.getId().getShardSpec())
+                                               .shardSpec(upgradedShardSpec)
                                                .build());
           }
         }
@@ -1285,6 +1287,25 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     catch (CallbackFailedException e) {
       throw e;
     }
+  }
+
+  /**
+   * Builds the shard spec for the upgraded copy of an append segment. The partition number and core-partition count come
+   * from the pending segment, but a {@link DimensionValueSetShardSpec} on the original is preserved so the upgraded copy
+   * stays prunable by the broker.
+   */
+  private static ShardSpec getUpgradedSegmentShardSpec(DataSegment oldSegment, PendingSegmentRecord pendingSegment)
+  {
+    final ShardSpec pendingShardSpec = pendingSegment.getId().getShardSpec();
+    final ShardSpec oldShardSpec = oldSegment.getShardSpec();
+    if (oldShardSpec instanceof DimensionValueSetShardSpec) {
+      return new DimensionValueSetShardSpec(
+          pendingShardSpec.getPartitionNum(),
+          pendingShardSpec.getNumCorePartitions(),
+          ((DimensionValueSetShardSpec) oldShardSpec).getPartitionDimensionValues()
+      );
+    }
+    return pendingShardSpec;
   }
 
   private Map<SegmentCreateRequest, PendingSegmentRecord> createNewSegments(

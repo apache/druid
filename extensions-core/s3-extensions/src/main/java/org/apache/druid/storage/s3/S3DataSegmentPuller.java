@@ -87,9 +87,6 @@ public class S3DataSegmentPuller implements URIDataPuller
       FileUtils.mkdirp(outDir);
 
       if (CompressionUtils.isZip(s3Coords.getPath())) {
-        if (!isObjectInBucket(s3Coords)) {
-          throw new SegmentLoadingException("IndexFile[%s] does not exist.", s3Coords);
-        }
         final URI uri = s3Coords.toUri(S3StorageDruidModule.SCHEME);
         final ByteSource byteSource = getByteSource(uri);
         final FileUtils.FileCopyResult result = CompressionUtils.unzip(
@@ -101,9 +98,6 @@ public class S3DataSegmentPuller implements URIDataPuller
         log.info("Loaded %d bytes from [%s] to [%s]", result.size(), s3Coords.toString(), outDir.getAbsolutePath());
         return result;
       } else if (CompressionUtils.isGz(s3Coords.getPath())) {
-        if (!isObjectInBucket(s3Coords)) {
-          throw new SegmentLoadingException("IndexFile[%s] does not exist.", s3Coords);
-        }
         final URI uri = s3Coords.toUri(S3StorageDruidModule.SCHEME);
         final ByteSource byteSource = getByteSource(uri);
         final String fname = Files.getNameWithoutExtension(uri.getPath());
@@ -235,6 +229,9 @@ public class S3DataSegmentPuller implements URIDataPuller
           };
         }
         catch (SdkException e) {
+          if (e instanceof S3Exception && ((S3Exception) e).statusCode() == 404) {
+            throw new IOE(e, "IndexFile[s3://%s/%s] does not exist", coords.getBucket(), coords.getPath());
+          }
           throw new IOE(e, "Could not load S3 URI [%s]", uri);
         }
       }
@@ -318,18 +315,4 @@ public class S3DataSegmentPuller implements URIDataPuller
     }
   }
 
-  private boolean isObjectInBucket(final CloudObjectLocation coords) throws SegmentLoadingException
-  {
-    try {
-      return S3Utils.retryS3Operation(
-          () -> S3Utils.isObjectInBucketIgnoringPermission(s3Client, coords.getBucket(), coords.getPath())
-      );
-    }
-    catch (S3Exception | IOException e) {
-      throw new SegmentLoadingException(e, "S3 fail! Key[%s]", coords);
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
 }

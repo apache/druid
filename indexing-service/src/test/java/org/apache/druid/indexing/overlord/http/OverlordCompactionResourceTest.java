@@ -31,6 +31,8 @@ import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.supervisor.CompactionSupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpecUpdateAction;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpecUpdateResult;
 import org.apache.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestDataSource;
@@ -315,10 +317,8 @@ public class OverlordCompactionResourceTest
     final CompactionSupervisorSpec supervisorSpec =
         new CompactionSupervisorSpec(wikiConfig, false, validator);
 
-    EasyMock.expect(supervisorManager.shouldUpdateSupervisor(supervisorSpec))
-            .andReturn(true).once();
-    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(supervisorSpec))
-            .andReturn(true).once();
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(supervisorSpec, true))
+            .andReturn(SupervisorSpecUpdateResult.of(true, SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS)).once();
     EasyMock.expect(scheduler.validateCompactionConfig(wikiConfig))
             .andReturn(CompactionConfigValidationResult.success()).once();
     replayAll();
@@ -461,10 +461,10 @@ public class OverlordCompactionResourceTest
   private void setupMockRequestForUser(String user)
   {
     EasyMock.expect(httpRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
-    EasyMock.expect(httpRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(httpRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(new AuthenticationResult(user, "druid", null, null))
             .atLeastOnce();
+    EasyMock.expect(httpRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     httpRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().anyTimes();
   }

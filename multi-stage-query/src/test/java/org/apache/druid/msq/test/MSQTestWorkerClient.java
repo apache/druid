@@ -49,12 +49,18 @@ public class MSQTestWorkerClient implements WorkerClient
 
   protected final Map<String, WorkerRunRef> inMemoryWorkers;
   private final ObjectMapper objectMapper;
+  private final boolean closeWorkersOnClose;
   private final AtomicBoolean closed = new AtomicBoolean();
 
-  public MSQTestWorkerClient(Map<String, WorkerRunRef> inMemoryWorkers, ObjectMapper objectMapper)
+  public MSQTestWorkerClient(
+      Map<String, WorkerRunRef> inMemoryWorkers,
+      ObjectMapper objectMapper,
+      boolean closeWorkersOnClose
+  )
   {
     this.inMemoryWorkers = inMemoryWorkers;
     this.objectMapper = objectMapper;
+    this.closeWorkersOnClose = closeWorkersOnClose;
   }
 
   @Override
@@ -191,7 +197,7 @@ public class MSQTestWorkerClient implements WorkerClient
   @Override
   public void close()
   {
-    if (closed.compareAndSet(false, true)) {
+    if (closed.compareAndSet(false, true) && closeWorkersOnClose) {
       inMemoryWorkers.forEach((k, v) -> v.cancel());
     }
   }

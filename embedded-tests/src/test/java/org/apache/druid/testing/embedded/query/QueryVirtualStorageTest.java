@@ -24,8 +24,7 @@ import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidProcessingConfigTest;
@@ -47,6 +46,8 @@ import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 import org.apache.druid.testing.embedded.msq.EmbeddedDurableShuffleStorageTest;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -66,10 +67,15 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 {
-  // size of wiki segments, adjust this if segment size changes for some reason
-  private static final long SIZE_BYTES = 3776682L;
+  // size of wiki segments (size here is size with uncompressed metadata as an upper bound since the zstd default
+  // appears to make different sizes on different platforms) adjust this if segment size changes for some reason
+  private static final long SIZE_BYTES = 3778338L;
   private static final long CACHE_SIZE = HumanReadableBytes.parse("1MiB");
   private static final long MAX_SIZE = HumanReadableBytes.parse("100MiB");
+  private static final long ESTIMATE_SIZE = HumanReadableBytes.parse("2KiB");
+  // Quiescence wait for the storage monitor: a few times its PT1s emission period, so a single missed tick doesn't
+  // falsely read as "idle" while still bounding how long we wait once activity has actually stopped.
+  private static final long MONITOR_QUIESCE_TIMEOUT_MILLIS = 3_000L;
 
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
@@ -86,6 +92,11 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   {
     historical.setServerMemory(500_000_000)
               .addProperty("druid.segmentCache.virtualStorage", "true")
+              .addProperty("druid.segmentCache.virtualStoragePartialDownloadsEnabled", "true")
+              .addProperty(
+                  "druid.segmentCache.virtualStorageMetadataReservationEstimate",
+                  String.valueOf(ESTIMATE_SIZE)
+              )
               .addProperty("druid.segmentCache.virtualStorageLoadThreads", String.valueOf(Runtime.getRuntime().availableProcessors()))
               .addBeforeStartHook(
                   (cluster, self) -> self.addProperty(
@@ -152,8 +163,10 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
         RuntimeException.class,
         () -> cluster.runSql("select count(*) from \"%s\"", dataSource)
     );
-    Assertions.assertTrue(t.getMessage().contains("Unable to load segment"));
-    Assertions.assertTrue(t.getMessage().contains("] on demand, ensure enough disk space has been allocated to load all segments involved in the query"));
+    Assertions.assertTrue(t.getMessage().contains("Unable to reserve bundle"));
+    Assertions.assertTrue(t.getMessage()
+                           .contains(
+                               "ensure enough disk space has been allocated to load all segments involved in the query"));
   }
 
   @Test
@@ -180,18 +193,9 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     LatchableEmitter emitter = historical.latchableEmitter();
     LatchableEmitter coordinatorEmitter = coordinator.latchableEmitter();
 
-    // clear out the pipe to get zerod out storage monitor metrics
-    ServiceMetricEvent monitorEvent = emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
-    while (monitorEvent != null && monitorEvent.getValue().longValue() > 0) {
-      monitorEvent = emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
-    }
-    // then flush (which clears out the internal events stores in test emitter) so we can do clean sums across them
+    // Wait for any in-flight storage activity to settle before taking our baseline.
+    emitter.awaitMetricQuiescent(StorageMonitor.VSF_LOAD_BEGIN_COUNT, MONITOR_QUIESCE_TIMEOUT_MILLIS);
     emitter.flush();
-
-    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
-    long beforeLoads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT);
-    // confirm flushed
-    Assertions.assertEquals(0, beforeLoads);
 
     // run the queries in order
     Assertions.assertEquals(expectedResults[0], Long.parseLong(cluster.runSql(queries[0], dataSource)));
@@ -203,8 +207,8 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(expectedResults[3], Long.parseLong(cluster.runSql(queries[3], dataSource)));
     assertQueryMetrics(4, expectedLoads[3]);
 
-    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
-    long firstLoads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT);
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_BEGIN_COUNT));
+    long firstLoads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BEGIN_COUNT);
     Assertions.assertTrue(firstLoads >= 24, "expected " + 24 + " but only got " + firstLoads);
 
     long expectedTotalHits = 0;
@@ -223,14 +227,20 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(hits >= expectedTotalHits, "expected " + expectedTotalHits + " but only got " + hits);
     if (expectedTotalHits > 0) {
       emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_HIT_BYTES));
-      Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_HIT_BYTES) >= 0);
+      Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_HIT_BYTES) > 0);
     }
-    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
-    long loads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT);
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_BEGIN_COUNT));
+    long loads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BEGIN_COUNT);
     Assertions.assertTrue(loads >= expectedTotalLoad, "expected " + expectedTotalLoad + " but only got " + loads);
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BEGIN_BYTES) > 0);
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT) > 0);
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BYTES) > 0);
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_READ_COUNT));
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_READ_COUNT) > 0);
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_READ_BYTES) > 0);
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_READ_TIME) >= 0);
     emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_EVICT_COUNT));
-    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_COUNT) >= 0);
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_COUNT) > 0);
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_BYTES) > 0);
     Assertions.assertEquals(0, emitter.getMetricEventLongSum(StorageMonitor.VSF_REJECT_COUNT));
     Assertions.assertTrue(emitter.getLatestMetricEventValue(StorageMonitor.VSF_USED_BYTES, 0).longValue() > 0);
@@ -275,38 +285,41 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 
     // Now fetch the report using the SQL query ID
     final GetQueryReportResponse reportResponse = msqApis.getDartQueryReport(sqlQueryId, broker);
-
-    // Verify the report response
     Assertions.assertNotNull(reportResponse, "Report response should not be null");
-    ChannelCounters.Snapshot segmentChannelCounters =
-        (ChannelCounters.Snapshot) reportResponse.getReportMap()
-                                                 .findReport("multiStageQuery")
-                                                 .map(r ->
-                                                          ((MSQTaskReportPayload) r.getPayload()).getCounters()
-                                                                                                 .snapshotForStage(0)
-                                                                                                 .get(0)
-                                                                                                 .getMap()
-                                                                                                 .get("input0")
-                                                 ).orElse(null);
 
-    Assertions.assertNotNull(segmentChannelCounters);
-    Assertions.assertArrayEquals(new long[]{24L}, segmentChannelCounters.getFiles());
-    Assertions.assertTrue(segmentChannelCounters.getLoadFiles()[0] > 0 && segmentChannelCounters.getLoadFiles()[0] <= segmentChannelCounters.getFiles()[0]);
-    // size of all segments at time of writing, possibly we have to load all of them, but possibly less depending on
-    // test order
-    Assertions.assertTrue(segmentChannelCounters.getLoadBytes()[0] > 0 && segmentChannelCounters.getLoadBytes()[0] <= SIZE_BYTES);
-    Assertions.assertTrue(segmentChannelCounters.getLoadTime()[0] > 0);
-    Assertions.assertTrue(segmentChannelCounters.getLoadWait()[0] > 0);
+    final MSQTaskReportPayload reportPayload =
+        ((MSQTaskReport) reportResponse.getReportMap().get(MSQTaskReport.REPORT_KEY)).getPayload();
+
+    // Verify stage 0 (segment read) input counters
+    final EmbeddedMSQApis.ChannelSums inputChannelSums = msqApis.getInputChannelSums(reportPayload, 0);
+    Assertions.assertEquals(24L, inputChannelSums.files());
+    Assertions.assertEquals(24L, inputChannelSums.totalFiles());
+    Assertions.assertEquals(0L, inputChannelSums.queries());
+    Assertions.assertEquals(0L, inputChannelSums.totalQueries());
+    Assertions.assertEquals(39244L, inputChannelSums.rows());
+    MatcherAssert.assertThat(inputChannelSums.bytes(), Matchers.greaterThan(0L));
+    MatcherAssert.assertThat(inputChannelSums.bytes(), Matchers.lessThanOrEqualTo(SIZE_BYTES));
+
+    // Verify stage 0 (segment read) VSF load counters
+    // partial loading is only partially metered at the moment, so depending on how stuff landed in and was evicted
+    // from the cache,there can be 0 loads (because loads are currently only counted when the metadata entry is mounted)
+    MatcherAssert.assertThat(inputChannelSums.loadFiles(), Matchers.greaterThanOrEqualTo(0L));
+    MatcherAssert.assertThat(inputChannelSums.loadFiles(), Matchers.lessThanOrEqualTo(24L));
+    MatcherAssert.assertThat(inputChannelSums.loadTime(), Matchers.greaterThanOrEqualTo(0L));
+    MatcherAssert.assertThat(inputChannelSums.loadWait(), Matchers.greaterThanOrEqualTo(0L));
+    MatcherAssert.assertThat(inputChannelSums.loadBytes(), Matchers.greaterThanOrEqualTo(0L));
+    MatcherAssert.assertThat(inputChannelSums.loadBytes(), Matchers.lessThanOrEqualTo(SIZE_BYTES));
   }
 
   @Test
   void testQuerySysTables()
   {
-    String query = "SELECT curr_size, max_size, storage_size FROM sys.servers WHERE tier IS NOT NULL AND server_type = 'historical'";
-    Assertions.assertEquals(
-        StringUtils.format("%s,%s,%s", SIZE_BYTES, MAX_SIZE, CACHE_SIZE),
-        cluster.callApi().runSql(query)
-    );
+    final String query = "SELECT curr_size, max_size, storage_size FROM sys.servers WHERE tier IS NOT NULL AND server_type = 'historical'";
+    final String resultString = cluster.callApi().runSql(query);
+    final String[] split = resultString.split(",");
+    Assertions.assertTrue(Long.parseLong(split[0]) <= SIZE_BYTES);
+    Assertions.assertEquals(MAX_SIZE, Long.parseLong(split[1]));
+    Assertions.assertEquals(CACHE_SIZE, Long.parseLong(split[2]));
   }
 
 
@@ -316,7 +329,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 
     long loadCount = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_COUNT, expectedEventCount);
     if (expectedLoadCount != null) {
-      Assertions.assertEquals(expectedLoadCount, loadCount);
+      MatcherAssert.assertThat(loadCount, Matchers.lessThanOrEqualTo(expectedLoadCount));
     }
     boolean hasLoads = loadCount > 0;
 

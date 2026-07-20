@@ -31,13 +31,14 @@ import org.apache.druid.query.DataSegmentAndDescriptor;
 import org.apache.druid.query.LeafSegmentsBundle;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -137,12 +138,12 @@ public class SegmentManager
    * present in the cache on demand.
    * <p>
    * What this means mechanically, is that for each {@link DataSegmentAndDescriptor} we check if it is already cached
-   * with {@link #acquireCachedSegment(DataSegment)} to add to {@link LeafSegmentsBundle#cachedSegments}, else if
-   * {@link #canLoadSegmentOnDemand(DataSegment)} is true it is added to {@link LeafSegmentsBundle#loadableSegments} or
-   * {@link LeafSegmentsBundle#missingSegments} if not.
+   * with {@link #acquireCachedSegment(DataSegment, AcquireMode)} to add to {@link LeafSegmentsBundle#cachedSegments},
+   * else if {@link #canLoadSegmentOnDemand(DataSegment)} is true it is added to
+   * {@link LeafSegmentsBundle#loadableSegments} or {@link LeafSegmentsBundle#missingSegments} if not.
    * <p>
    * The segments in {@link LeafSegmentsBundle#loadableSegments} can be retrieved with
-   * {@link #acquireSegment(DataSegment)} to ensure they are loaded from deep storage.
+   * {@link #acquireSegment(DataSegment, AcquireMode)} to ensure they are loaded from deep storage.
    */
   public LeafSegmentsBundle getSegmentsBundle(
       List<DataSegmentAndDescriptor> segments,
@@ -162,7 +163,7 @@ public class SegmentManager
           missingSegments.add(segment.getDescriptor());
           continue;
         }
-        final Optional<Segment> ref = acquireCachedSegment(dataSegment);
+        final Optional<Segment> ref = acquireCachedSegment(dataSegment, AcquireMode.FULL);
         if (ref.isPresent()) {
           try {
             final Optional<Segment> mapped = segmentMapFunction.apply(ref).map(safetyNet::register);
@@ -193,36 +194,44 @@ public class SegmentManager
   }
 
   /**
-   * Returns a {@link Segment} transformed with a {@link SegmentMapFunction}, if it is available in the cache. The
-   * returned {@link Segment} must be closed when the caller is finished doing segment things. This method will not
-   * download a {@link DataSegment} if it is not already present in {@link #cacheManager}, use
-   * {@link #acquireSegment(DataSegment)} instead.
+   * Returns a {@link Segment}, if it is available in the cache. The returned {@link Segment} must be closed when the
+   * caller is finished doing segment things. This method will not download a {@link DataSegment} if it is not already
+   * present in {@link #cacheManager}, use {@link #acquireSegment(DataSegment, AcquireMode)} instead.
+   * <p>
+   * With {@link AcquireMode#PARTIAL} the returned segment may not be fully loaded, and callers must use async methods
+   * like {@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync} to download data on-demand; the
+   * synchronous {@code makeCursorHolder} will fail if anything is still missing. See {@link AcquireMode}.
    */
-  public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
+  public Optional<Segment> acquireCachedSegment(SegmentId segmentId, AcquireMode acquireMode)
   {
-    return cacheManager.acquireCachedSegment(segmentId);
+    return cacheManager.acquireCachedSegment(segmentId, acquireMode);
   }
 
   /**
-   * Convenience overload of {@link #acquireCachedSegment(SegmentId)} that accepts a {@link DataSegment}.
+   * Convenience overload of {@link #acquireCachedSegment(SegmentId, AcquireMode)} that accepts a {@link DataSegment}.
    */
-  public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
+  public Optional<Segment> acquireCachedSegment(DataSegment dataSegment, AcquireMode acquireMode)
   {
-    return acquireCachedSegment(dataSegment.getId());
+    return acquireCachedSegment(dataSegment.getId(), acquireMode);
   }
 
   /**
-   * Returns a {@link AcquireSegmentAction}, where calling {@link AcquireSegmentAction#getSegmentFuture()} will either return
-   * immediately if the {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage if not.
-   * The returned {@link Segment}, if present, must be closed when the caller is finished doing segment things.
+   * Returns a {@link AcquireSegmentAction}, where calling {@link AcquireSegmentAction#getSegmentFuture()} will either
+   * return immediately if the {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage
+   * if not. The returned {@link Segment}, if present, must be closed when the caller is finished doing segment things.
    * <p>
    * Calling this method is treated as an intent to acquire and use the segment via resolving the future, and cache
    * manager implementations will place a hold on this segment until the 'loadCleanup' closer is closed - typically
    * after resolving the future to acquire the reference to the actual {@link Segment} object.
+   * <p>
+   * With {@link AcquireMode#PARTIAL} the action resolves to a partial-load capable segment (when the segment supports
+   * range reads), and callers must use async methods like
+   * {@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync} to download data on-demand. See
+   * {@link AcquireMode}.
    */
-  public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
+  public AcquireSegmentAction acquireSegment(DataSegment dataSegment, AcquireMode acquireMode)
   {
-    return cacheManager.acquireSegment(dataSegment);
+    return cacheManager.acquireSegment(dataSegment, acquireMode);
   }
 
   /**
@@ -262,22 +271,30 @@ public class SegmentManager
    * @param loadFailed callback to execute when segment lazy load fails. This applies only
    *                   when lazy loading is enabled.
    *
+   * @return the input {@code dataSegment}, or a
+   *         {@link org.apache.druid.client.DataSegmentAndLoadProfile} wrapping it when the historical actually
+   *         materialized a partial-load footprint. Callers pass the returned value to the announcement layer so
+   *         partial-load announcements carry accurate {@code loadedBytes}.
    * @throws SegmentLoadingException if the segment cannot be loaded
    * @throws IOException if the segment info cannot be cached on disk
    */
-  public void loadSegmentOnBootstrap(
+  public DataSegment loadSegmentOnBootstrap(
       final DataSegment dataSegment,
       final SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException, IOException
   {
+    final DataSegment loaded;
     try {
-      cacheManager.bootstrap(dataSegment, loadFailed);
+      loaded = cacheManager.bootstrap(dataSegment, loadFailed);
     }
     catch (SegmentLoadingException e) {
       cacheManager.drop(dataSegment);
       throw e;
     }
+    // Pass the plain dataSegment (not the potentially-wrapped `loaded`) to loadSegmentInternal: the wrapper is a
+    // load-time announcement-path artifact only
     loadSegmentInternal(dataSegment);
+    return loaded;
   }
 
 
@@ -289,19 +306,27 @@ public class SegmentManager
    *
    * @param dataSegment segment to load
    *
+   * @return the input {@code dataSegment}, or a
+   *         {@link org.apache.druid.client.DataSegmentAndLoadProfile} wrapping it when the historical actually
+   *         materialized a partial-load footprint. Callers pass the returned value to the announcement layer so
+   *         partial-load announcements carry accurate {@code loadedBytes}.
    * @throws SegmentLoadingException if the segment cannot be loaded
    * @throws IOException if the segment info cannot be cached on disk
    */
-  public void loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
+  public DataSegment loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
   {
+    final DataSegment loaded;
     try {
-      cacheManager.load(dataSegment);
+      loaded = cacheManager.load(dataSegment);
     }
     catch (SegmentLoadingException e) {
       cacheManager.drop(dataSegment);
       throw e;
     }
+    // Pass the plain dataSegment (not the potentially-wrapped `loaded`) to loadSegmentInternal: the wrapper is a
+    // load-time announcement-path artifact only
     loadSegmentInternal(dataSegment);
+    return loaded;
   }
 
   private void loadSegmentInternal(
@@ -335,7 +360,8 @@ public class SegmentManager
             );
 
             long numOfRows = 0;
-            final Optional<Segment> loadedSegment = cacheManager.acquireCachedSegment(dataSegment.getId());
+            final Optional<Segment> loadedSegment =
+                cacheManager.acquireCachedSegment(dataSegment.getId(), AcquireMode.FULL);
             if (loadedSegment.isPresent()) {
               final Segment segment = loadedSegment.get();
               final IndexedTable table = segment.as(IndexedTable.class);
@@ -357,7 +383,7 @@ public class SegmentManager
                     segment.getId()
                 );
               }
-              final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
+              final RowCountInspector countInspector = segment.as(RowCountInspector.class);
               if (countInspector != null) {
                 numOfRows = countInspector.getNumRows();
               }
@@ -402,10 +428,11 @@ public class SegmentManager
 
             if (oldSegmentRef != null) {
               try (final Closer closer = Closer.create()) {
-                final Optional<Segment> oldSegment = cacheManager.acquireCachedSegment(oldSegmentRef.getId());
+                final Optional<Segment> oldSegment =
+                    cacheManager.acquireCachedSegment(oldSegmentRef.getId(), AcquireMode.FULL);
                 long numberOfRows = oldSegment.map(segment -> {
                   closer.register(segment);
-                  final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
+                  final RowCountInspector countInspector = segment.as(RowCountInspector.class);
                   if (countInspector != null) {
                     return countInspector.getNumRows();
                   }

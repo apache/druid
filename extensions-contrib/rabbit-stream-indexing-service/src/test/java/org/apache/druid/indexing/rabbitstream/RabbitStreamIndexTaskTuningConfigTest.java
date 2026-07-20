@@ -21,6 +21,8 @@ package org.apache.druid.indexing.rabbitstream;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -163,6 +165,7 @@ public class RabbitStreamIndexTaskTuningConfigTest
                     "longEncoding=null, " +
                     "complexMetricCompression=null, " +
                     "autoColumnFormatSpec=null, " +
+                    "stringColumnFormatSpec=null, " +
                     "jsonCompression=null, " +
                     "segmentLoader=null" +
                     "}, " +
@@ -187,5 +190,20 @@ public class RabbitStreamIndexTaskTuningConfigTest
 
 
     Assert.assertEquals(resStr, config.toString());
+  }
+
+  /**
+   * Drift guard for the fields this class adds ({@code recordBufferSize}, {@code recordBufferOfferTimeout},
+   * {@code maxRecordsPerPoll}): if one were dropped from {@code equals}, a tuning change would persist
+   * without restarting the supervisor.
+   */
+  @Test
+  public void testEqualsContractCoversAllFields()
+  {
+    EqualsVerifier.forClass(RabbitStreamIndexTaskTuningConfig.class)
+                  .usingGetClass()
+                  .withRedefinedSuperclass()
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .verify();
   }
 }

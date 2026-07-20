@@ -28,7 +28,7 @@ import TabItem from '@theme/TabItem';
   -->
 
 
-This document describes the API endpoints to retrieve service status, cluster information for Apache Druid.
+This document describes the API endpoints to retrieve service status, cluster information for Apache&circledR; Druid.
 
 In this document, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://ROUTER_IP:ROUTER_PORT` with `http://localhost:8888`.
 
@@ -153,36 +153,6 @@ Host: http://ROUTER_IP:ROUTER_PORT
         {
             "name": "org.apache.druid.query.aggregation.datasketches.kll.KllSketchModule",
             "artifact": "druid-datasketches",
-            "version": "26.0.0"
-        },
-        {
-            "name": "org.apache.druid.msq.guice.MSQExternalDataSourceModule",
-            "artifact": "druid-multi-stage-query",
-            "version": "26.0.0"
-        },
-        {
-            "name": "org.apache.druid.msq.guice.MSQIndexingModule",
-            "artifact": "druid-multi-stage-query",
-            "version": "26.0.0"
-        },
-        {
-            "name": "org.apache.druid.msq.guice.MSQDurableStorageModule",
-            "artifact": "druid-multi-stage-query",
-            "version": "26.0.0"
-        },
-        {
-            "name": "org.apache.druid.msq.guice.MSQServiceClientModule",
-            "artifact": "druid-multi-stage-query",
-            "version": "26.0.0"
-        },
-        {
-            "name": "org.apache.druid.msq.guice.MSQSqlModule",
-            "artifact": "druid-multi-stage-query",
-            "version": "26.0.0"
-        },
-        {
-            "name": "org.apache.druid.msq.guice.SqlTaskModule",
-            "artifact": "druid-multi-stage-query",
             "version": "26.0.0"
         }
     ],
@@ -326,7 +296,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "log4j.shutdownHookEnabled": "true",
     "java.vm.vendor": "Homebrew",
     "sun.arch.data.model": "64",
-    "druid.extensions.loadList": "[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-datasketches\", \"druid-multi-stage-query\"]",
+    "druid.extensions.loadList": "[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-datasketches\"]",
     "java.vendor.url": "https://github.com/Homebrew/homebrew-core/issues",
     "druid.router.coordinatorServiceName": "druid/coordinator",
     "user.timezone": "UTC",
@@ -413,7 +383,6 @@ Host: http://ROUTER_IP:ROUTER_PORT
 Retrieves a JSON map of the form `{"selfDiscovered": true/false}`, indicating whether the node has received a confirmation from the central node discovery mechanism (currently ZooKeeper) of the Druid cluster that the node has been added to the cluster.
 
 Only consider a Druid node "healthy" or "ready" in automated deployment/container management systems when this endpoint returns `{"selfDiscovered": true}`. Nodes experiencing network issues may become isolated and are not healthy.
-For nodes that use Zookeeper segment discovery, a response of `{"selfDiscovered": true}` indicates that the node's Zookeeper client has started receiving data from the Zookeeper cluster, enabling timely discovery of segments and other nodes.
 
 #### URL
 

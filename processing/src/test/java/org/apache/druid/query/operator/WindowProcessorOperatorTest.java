@@ -24,8 +24,8 @@ import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -69,7 +69,7 @@ public class WindowProcessorOperatorTest
     new OperatorTestHelper()
         .withPushFn(() ->
             rowsAndColumns -> {
-              Assert.assertSame(rac, rowsAndColumns);
+              Assertions.assertSame(rac, rowsAndColumns);
               return Operator.Signal.GO;
             }
         )

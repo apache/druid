@@ -27,6 +27,7 @@ import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestSegmentUtils;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
@@ -102,17 +103,19 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public void bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
+  public DataSegment bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
   {
     observedBootstrapSegments.add(segment);
     getSegmentInternal(segment);
+    return segment;
   }
 
   @Override
-  public void load(final DataSegment segment)
+  public DataSegment load(final DataSegment segment)
   {
     observedSegments.add(segment);
     getSegmentInternal(segment);
+    return segment;
   }
 
   private ReferenceCountedSegmentProvider getSegmentInternal(final DataSegment segment)
@@ -141,7 +144,7 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
+  public Optional<Segment> acquireCachedSegment(SegmentId segmentId, AcquireMode acquireMode)
   {
     if (observedSegmentsRemovedFromCache.contains(segmentId)) {
       return Optional.empty();
@@ -154,7 +157,7 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
+  public AcquireSegmentAction acquireSegment(DataSegment dataSegment, AcquireMode acquireMode)
   {
     if (observedSegmentsRemovedFromCache.contains(dataSegment.getId())) {
       return AcquireSegmentAction.missingSegment();

@@ -35,8 +35,8 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -79,7 +79,7 @@ public class SearchQueryQueryToolChestTest extends InitializedNullHandlingTest
 
     Result<SearchResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result, fromCacheResult);
+    Assertions.assertEquals(result, fromCacheResult);
   }
 
   @Test
@@ -131,22 +131,22 @@ public class SearchQueryQueryToolChestTest extends InitializedNullHandlingTest
         null
     );
 
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         toolChest.getCacheStrategy(query1).computeCacheKey(query1),
         toolChest.getCacheStrategy(query1).computeCacheKey(query1)
     );
 
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         toolChest.getCacheStrategy(query2).computeCacheKey(query2),
         toolChest.getCacheStrategy(query2).computeCacheKey(query2)
     );
 
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         toolChest.getCacheStrategy(query1).computeCacheKey(query1),
         toolChest.getCacheStrategy(query3).computeCacheKey(query3)
     );
 
-    Assert.assertFalse(
+    Assertions.assertFalse(
         Arrays.equals(
             toolChest.getCacheStrategy(query1).computeCacheKey(query1),
             toolChest.getCacheStrategy(query2).computeCacheKey(query2)

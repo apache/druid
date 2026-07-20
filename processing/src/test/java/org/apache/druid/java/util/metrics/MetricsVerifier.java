@@ -20,7 +20,7 @@
 package org.apache.druid.java.util.metrics;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -53,10 +53,10 @@ public interface MetricsVerifier
    */
   default void verifyEmitted(String metricName, @Nullable Map<String, Object> dimensionFilters, int times)
   {
-    Assert.assertEquals(
-        StringUtils.format("Metric [%s] was emitted unexpected number of times.", metricName),
+    Assertions.assertEquals(
         times,
-        getMetricValues(metricName, dimensionFilters).size()
+        getMetricValues(metricName, dimensionFilters).size(),
+        StringUtils.format("Metric [%s] was emitted unexpected number of times.", metricName)
     );
   }
 
@@ -74,7 +74,7 @@ public interface MetricsVerifier
    */
   default void verifyValue(String metricName, @Nullable Map<String, Object> dimensionFilters, Number expectedValue)
   {
-    Assert.assertEquals(expectedValue, getValue(metricName, dimensionFilters));
+    Assertions.assertEquals(expectedValue, getValue(metricName, dimensionFilters));
   }
 
   /**
@@ -84,10 +84,10 @@ public interface MetricsVerifier
   default Number getValue(String metricName, @Nullable Map<String, Object> dimensionFilters)
   {
     List<Number> values = getMetricValues(metricName, dimensionFilters);
-    Assert.assertEquals(
-        "Metric must have been emitted exactly once for the given dimensions.",
+    Assertions.assertEquals(
         1,
-        values.size()
+        values.size(),
+        "Metric must have been emitted exactly once for the given dimensions."
     );
     return values.get(0);
   }
@@ -110,12 +110,13 @@ public interface MetricsVerifier
         .stream()
         .mapToLong(Number::longValue)
         .sum();
-    Assert.assertEquals(
+    Assertions.assertEquals(
+        expectedSum,
+        observedSum,
         StringUtils.format(
             "Unexpected sum[%s] of metric[%s] with filters[%s]",
             observedSum, metricName, dimensionFilters
-        ),
-        expectedSum, observedSum
+        )
     );
   }
 

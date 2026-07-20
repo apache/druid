@@ -25,34 +25,31 @@ import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class CgroupCpuSetMonitorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  private Path tempDir;
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = temporaryFolder.newFolder();
-    procDir = temporaryFolder.newFolder();
+    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroup");
+    procDir = FileUtils.createTempDirInLocation(tempDir, "proc");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File cpusetDir = new File(
@@ -72,22 +69,22 @@ public class CgroupCpuSetMonitorTest
   {
     final CgroupCpuSetMonitor monitor = new CgroupCpuSetMonitor(discoverer, "some_feed");
     final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
-    Assert.assertTrue(monitor.doMonitor(emitter));
-    Assert.assertEquals(4, emitter.getNumEmittedEvents());
+    Assertions.assertTrue(monitor.doMonitor(emitter));
+    Assertions.assertEquals(4, emitter.getNumEmittedEvents());
 
     emitter.verifyValue("cgroup/cpuset/cpu_count", 8);
     emitter.verifyValue("cgroup/cpuset/effective_cpu_count", 7);
     emitter.verifyValue("cgroup/cpuset/mems_count", 4);
     emitter.verifyValue("cgroup/cpuset/effective_mems_count", 1);
-    Assert.assertEquals(CgroupVersion.V1.name(), emitter.getEvents().get(0).toMap().get("cgroupversion"));
+    Assertions.assertEquals(CgroupVersion.V1.name(), emitter.getEvents().get(0).toMap().get("cgroupversion"));
   }
 
   @Test
   public void testCgroupsV2DetectionInConstructor() throws IOException
   {
     // Set up cgroups v2 structure
-    File cgroupV2Dir = temporaryFolder.newFolder();
-    File procV2Dir = temporaryFolder.newFolder();
+    File cgroupV2Dir = FileUtils.createTempDirInLocation(tempDir, "cgroupV2");
+    File procV2Dir = FileUtils.createTempDirInLocation(tempDir, "procV2");
     TestUtils.setUpCgroupsV2(procV2Dir, cgroupV2Dir);
     
     // Create v2 cpuset files in unified hierarchy
@@ -97,7 +94,7 @@ public class CgroupCpuSetMonitorTest
     Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"), "0\n".getBytes(StandardCharsets.UTF_8));
 
     CgroupDiscoverer v2Discoverer = ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(procV2Dir.toPath());
-    Assert.assertEquals(CgroupVersion.V2, v2Discoverer.getCgroupVersion());
+    Assertions.assertEquals(CgroupVersion.V2, v2Discoverer.getCgroupVersion());
 
     // Constructor should detect v2 and log warning
     CgroupCpuSetMonitor monitor = new CgroupCpuSetMonitor(v2Discoverer, "test-feed");
@@ -105,9 +102,9 @@ public class CgroupCpuSetMonitorTest
     final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
     
     // doMonitor should return true but skip actual monitoring
-    Assert.assertTrue(monitor.doMonitor(emitter));
-    Assert.assertEquals(4, emitter.getNumEmittedEvents());
-    Assert.assertEquals(CgroupVersion.V2.name(), emitter.getEvents().get(0).toMap().get("cgroupversion"));
+    Assertions.assertTrue(monitor.doMonitor(emitter));
+    Assertions.assertEquals(4, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(CgroupVersion.V2.name(), emitter.getEvents().get(0).toMap().get("cgroupversion"));
   }
 
 }

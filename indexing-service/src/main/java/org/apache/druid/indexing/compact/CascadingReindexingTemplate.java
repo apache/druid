@@ -22,7 +22,9 @@ package org.apache.druid.indexing.compact;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -38,6 +40,8 @@ import org.apache.druid.server.compaction.IntervalPartitioningInfo;
 import org.apache.druid.server.compaction.ReindexingPartitioningRule;
 import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
@@ -250,6 +254,53 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   }
 
   /**
+   * Validates this template using a subset of the standard MSQ compaction checks.
+   * The standard path in {@link ClientCompactionRunnerInfo#validateCompactionConfig}
+   * assumes partitioning is controlled by {@code tuningConfig.partitionsSpec}, but
+   * this template forbids that field and uses {@code defaultPartitionsSpec} instead.
+   *
+   * <p>Checks performed:
+   * <ul>
+   *   <li>partitionsSpec type and options — validated against {@code defaultPartitionsSpec}.
+   *       Range partition dimension type checking passes {@code null} for dimensionSchemas
+   *       since those are not known at template level.</li>
+   *   <li>maxNumTasks >= 2 in taskContext.</li>
+   * </ul>
+   *
+   * <p>Standard MSQ checks skipped (not applicable at template level):
+   * <ul>
+   *   <li>rollup vs metricsSpec consistency — {@code granularitySpec} is always null on the
+   *       template; rollup is configured per-rule at job generation time.</li>
+   *   <li>metricsSpec aggregator combining factory — there is no metricsSpec on the template;
+   *       metrics come from per-rule data schema rules resolved at job generation time.</li>
+   * </ul>
+   *
+   * <p>Per-rule overrides (partitionsSpec, metricsSpec, rollup) are validated at task
+   * runtime by {@code MSQCompactionRunner.validateCompactionTask()} once the full config
+   * is resolved against actual data schemas.
+   */
+  @Override
+  public CompactionConfigValidationResult validate(ClusterCompactionConfig clusterCompactionConfig)
+  {
+    List<CompactionConfigValidationResult> results = new ArrayList<>();
+
+    results.add(ClientCompactionRunnerInfo.validatePartitionsSpecForMSQ(
+        this.getDefaultPartitionsSpec(),
+        null,
+        this.getDefaultPartitioningVirtualColumns() != null
+        ? this.getDefaultPartitioningVirtualColumns()
+        : VirtualColumns.EMPTY
+    ));
+
+    results.add(ClientCompactionRunnerInfo.validateMaxNumTasksForMSQ(this.getTaskContext()));
+
+    return results.stream()
+                  .filter(result -> !result.isValid())
+                  .findFirst()
+                  .orElse(CompactionConfigValidationResult.success());
+  }
+
+  /**
    * Checks if the given interval's end time is after the specified boundary.
    * Used to determine if intervals should be skipped based on skip offset configuration.
    *
@@ -304,7 +355,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       return Collections.emptyList();
     }
 
-    for (IntervalPartitioningInfo intervalInfo : searchIntervals) {
+    for (int i = 0; i < searchIntervals.size(); i++) {
+      IntervalPartitioningInfo intervalInfo = searchIntervals.get(i);
       Interval reindexingInterval = intervalInfo.getInterval();
 
       if (!reindexingInterval.overlaps(adjustedTimelineInterval)) {
@@ -313,14 +365,24 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         continue;
       }
 
-      // Skip intervals that extend past the skip offset boundary (not just data boundary)
-      // This preserves granularity alignment and ensures intervals exist in synthetic timeline
-      // Only apply this when a skip offset is actually configured
+      // Skip offsets, if configured, can result in needing to truncate a search interval. If the truncation makes the interval invalid, skip it.
       if ((skipOffsetFromNow != null || skipOffsetFromLatest != null) &&
           intervalEndsAfter(reindexingInterval, adjustedTimelineInterval.getEnd())) {
-        LOG.debug("Search interval[%s] extends past skip offset boundary[%s], skipping to preserve alignment",
-                  reindexingInterval, adjustedTimelineInterval.getEnd());
-        continue;
+
+        DateTime alignedEnd = intervalInfo.getGranularity().bucketStart(adjustedTimelineInterval.getEnd());
+        if (!alignedEnd.isAfter(reindexingInterval.getStart())) {
+          LOG.debug("Search interval[%s] is entirely within skip offset, skipping", reindexingInterval);
+          continue;
+        }
+        reindexingInterval = new Interval(reindexingInterval.getStart(), alignedEnd);
+        // Replace the entry in searchIntervals so the downstream synthetic-timeline lookup
+        // in ReindexingConfigBuilder matches the truncated interval.
+        intervalInfo = new IntervalPartitioningInfo(
+            reindexingInterval,
+            intervalInfo.getSourceRule(),
+            intervalInfo.isRuleSynthetic()
+        );
+        searchIntervals.set(i, intervalInfo);
       }
 
       InlineSchemaDataSourceCompactionConfig.Builder builder = createBaseBuilder();
@@ -827,6 +889,13 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   public List<AggregateProjectionSpec> getProjections()
   {
     return List.of();
+  }
+
+  @Nullable
+  @Override
+  public BaseTableProjectionSpec getBaseTable()
+  {
+    return null;
   }
 
   @Nullable

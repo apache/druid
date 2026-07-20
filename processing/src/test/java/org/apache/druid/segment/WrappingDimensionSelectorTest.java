@@ -21,8 +21,8 @@ package org.apache.druid.segment;
 
 import org.apache.druid.query.extraction.DimExtractionFn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 
@@ -35,24 +35,24 @@ public class WrappingDimensionSelectorTest extends InitializedNullHandlingTest
     TestNullableLongColumnSelector lngSelector = new TestNullableLongColumnSelector(vals);
 
     LongWrappingDimensionSelector lngWrapSelector = new LongWrappingDimensionSelector(lngSelector, null);
-    Assert.assertEquals(24L, lngSelector.getLong());
-    Assert.assertEquals("24", lngWrapSelector.getValue());
+    Assertions.assertEquals(24L, lngSelector.getLong());
+    Assertions.assertEquals("24", lngWrapSelector.getValue());
 
     lngSelector.increment();
-    Assert.assertTrue(lngSelector.isNull());
-    Assert.assertNull(lngWrapSelector.getValue());
+    Assertions.assertTrue(lngSelector.isNull());
+    Assertions.assertNull(lngWrapSelector.getValue());
 
     lngSelector.increment();
-    Assert.assertEquals(50L, lngSelector.getLong());
-    Assert.assertEquals("50", lngWrapSelector.getValue());
+    Assertions.assertEquals(50L, lngSelector.getLong());
+    Assertions.assertEquals("50", lngWrapSelector.getValue());
 
     lngSelector.increment();
-    Assert.assertEquals(0L, lngSelector.getLong());
-    Assert.assertEquals("0", lngWrapSelector.getValue());
+    Assertions.assertEquals(0L, lngSelector.getLong());
+    Assertions.assertEquals("0", lngWrapSelector.getValue());
 
     lngSelector.increment();
-    Assert.assertEquals(-60L, lngSelector.getLong());
-    Assert.assertEquals("-60", lngWrapSelector.getValue());
+    Assertions.assertEquals(-60L, lngSelector.getLong());
+    Assertions.assertEquals("-60", lngWrapSelector.getValue());
   }
 
   @Test
@@ -62,24 +62,24 @@ public class WrappingDimensionSelectorTest extends InitializedNullHandlingTest
     TestNullableDoubleColumnSelector dblSelector = new TestNullableDoubleColumnSelector(vals);
 
     DoubleWrappingDimensionSelector dblWrapSelector = new DoubleWrappingDimensionSelector(dblSelector, null);
-    Assert.assertEquals(32.0d, dblSelector.getDouble(), 0);
-    Assert.assertEquals("32.0", dblWrapSelector.getValue());
+    Assertions.assertEquals(32.0d, dblSelector.getDouble(), 0);
+    Assertions.assertEquals("32.0", dblWrapSelector.getValue());
 
     dblSelector.increment();
-    Assert.assertTrue(dblSelector.isNull());
-    Assert.assertNull(dblWrapSelector.getValue());
+    Assertions.assertTrue(dblSelector.isNull());
+    Assertions.assertNull(dblWrapSelector.getValue());
 
     dblSelector.increment();
-    Assert.assertEquals(5.0d, dblSelector.getDouble(), 0);
-    Assert.assertEquals("5.0", dblWrapSelector.getValue());
+    Assertions.assertEquals(5.0d, dblSelector.getDouble(), 0);
+    Assertions.assertEquals("5.0", dblWrapSelector.getValue());
 
     dblSelector.increment();
-    Assert.assertEquals(0.0d, dblSelector.getDouble(), 0);
-    Assert.assertEquals("0.0", dblWrapSelector.getValue());
+    Assertions.assertEquals(0.0d, dblSelector.getDouble(), 0);
+    Assertions.assertEquals("0.0", dblWrapSelector.getValue());
 
     dblSelector.increment();
-    Assert.assertEquals(-45.0d, dblSelector.getDouble(), 0);
-    Assert.assertEquals("-45.0", dblWrapSelector.getValue());
+    Assertions.assertEquals(-45.0d, dblSelector.getDouble(), 0);
+    Assertions.assertEquals("-45.0", dblWrapSelector.getValue());
   }
 
   @Test
@@ -89,24 +89,24 @@ public class WrappingDimensionSelectorTest extends InitializedNullHandlingTest
     TestNullableFloatColumnSelector flSelector = new TestNullableFloatColumnSelector(vals);
 
     FloatWrappingDimensionSelector flWrapSelector = new FloatWrappingDimensionSelector(flSelector, null);
-    Assert.assertEquals(32.0f, flSelector.getFloat(), 0);
-    Assert.assertEquals("32.0", flWrapSelector.getValue());
+    Assertions.assertEquals(32.0f, flSelector.getFloat(), 0);
+    Assertions.assertEquals("32.0", flWrapSelector.getValue());
 
     flSelector.increment();
-    Assert.assertTrue(flSelector.isNull());
-    Assert.assertNull(flWrapSelector.getValue());
+    Assertions.assertTrue(flSelector.isNull());
+    Assertions.assertNull(flWrapSelector.getValue());
 
     flSelector.increment();
-    Assert.assertEquals(5.0f, flSelector.getFloat(), 0);
-    Assert.assertEquals("5.0", flWrapSelector.getValue());
+    Assertions.assertEquals(5.0f, flSelector.getFloat(), 0);
+    Assertions.assertEquals("5.0", flWrapSelector.getValue());
 
     flSelector.increment();
-    Assert.assertEquals(0.0f, flSelector.getFloat(), 0);
-    Assert.assertEquals("0.0", flWrapSelector.getValue());
+    Assertions.assertEquals(0.0f, flSelector.getFloat(), 0);
+    Assertions.assertEquals("0.0", flWrapSelector.getValue());
 
     flSelector.increment();
-    Assert.assertEquals(-45.0f, flSelector.getFloat(), 0);
-    Assert.assertEquals("-45.0", flWrapSelector.getValue());
+    Assertions.assertEquals(-45.0f, flSelector.getFloat(), 0);
+    Assertions.assertEquals("-45.0", flWrapSelector.getValue());
   }
 
   @Test
@@ -117,24 +117,24 @@ public class WrappingDimensionSelectorTest extends InitializedNullHandlingTest
     final TestExtractionFn extractionFn = new TestExtractionFn();
 
     LongWrappingDimensionSelector lngWrapSelector = new LongWrappingDimensionSelector(lngSelector, extractionFn);
-    Assert.assertEquals(24L, lngSelector.getLong());
-    Assert.assertEquals("24x", lngWrapSelector.getValue());
+    Assertions.assertEquals(24L, lngSelector.getLong());
+    Assertions.assertEquals("24x", lngWrapSelector.getValue());
 
     lngSelector.increment();
-    Assert.assertTrue(lngSelector.isNull());
-    Assert.assertEquals("nullx", lngWrapSelector.getValue());
+    Assertions.assertTrue(lngSelector.isNull());
+    Assertions.assertEquals("nullx", lngWrapSelector.getValue());
 
     lngSelector.increment();
-    Assert.assertEquals(50L, lngSelector.getLong());
-    Assert.assertEquals("50x", lngWrapSelector.getValue());
+    Assertions.assertEquals(50L, lngSelector.getLong());
+    Assertions.assertEquals("50x", lngWrapSelector.getValue());
 
     lngSelector.increment();
-    Assert.assertEquals(0L, lngSelector.getLong());
-    Assert.assertEquals("0x", lngWrapSelector.getValue());
+    Assertions.assertEquals(0L, lngSelector.getLong());
+    Assertions.assertEquals("0x", lngWrapSelector.getValue());
 
     lngSelector.increment();
-    Assert.assertEquals(-60L, lngSelector.getLong());
-    Assert.assertEquals("-60x", lngWrapSelector.getValue());
+    Assertions.assertEquals(-60L, lngSelector.getLong());
+    Assertions.assertEquals("-60x", lngWrapSelector.getValue());
   }
 
   @Test
@@ -145,24 +145,24 @@ public class WrappingDimensionSelectorTest extends InitializedNullHandlingTest
     final TestExtractionFn extractionFn = new TestExtractionFn();
 
     DoubleWrappingDimensionSelector dblWrapSelector = new DoubleWrappingDimensionSelector(dblSelector, extractionFn);
-    Assert.assertEquals(32.0d, dblSelector.getDouble(), 0);
-    Assert.assertEquals("32.0x", dblWrapSelector.getValue());
+    Assertions.assertEquals(32.0d, dblSelector.getDouble(), 0);
+    Assertions.assertEquals("32.0x", dblWrapSelector.getValue());
 
     dblSelector.increment();
-    Assert.assertTrue(dblSelector.isNull());
-    Assert.assertEquals("nullx", dblWrapSelector.getValue());
+    Assertions.assertTrue(dblSelector.isNull());
+    Assertions.assertEquals("nullx", dblWrapSelector.getValue());
 
     dblSelector.increment();
-    Assert.assertEquals(5.0d, dblSelector.getDouble(), 0);
-    Assert.assertEquals("5.0x", dblWrapSelector.getValue());
+    Assertions.assertEquals(5.0d, dblSelector.getDouble(), 0);
+    Assertions.assertEquals("5.0x", dblWrapSelector.getValue());
 
     dblSelector.increment();
-    Assert.assertEquals(0.0d, dblSelector.getDouble(), 0);
-    Assert.assertEquals("0.0x", dblWrapSelector.getValue());
+    Assertions.assertEquals(0.0d, dblSelector.getDouble(), 0);
+    Assertions.assertEquals("0.0x", dblWrapSelector.getValue());
 
     dblSelector.increment();
-    Assert.assertEquals(-45.0d, dblSelector.getDouble(), 0);
-    Assert.assertEquals("-45.0x", dblWrapSelector.getValue());
+    Assertions.assertEquals(-45.0d, dblSelector.getDouble(), 0);
+    Assertions.assertEquals("-45.0x", dblWrapSelector.getValue());
   }
 
   @Test
@@ -173,24 +173,24 @@ public class WrappingDimensionSelectorTest extends InitializedNullHandlingTest
     final TestExtractionFn extractionFn = new TestExtractionFn();
 
     FloatWrappingDimensionSelector flWrapSelector = new FloatWrappingDimensionSelector(flSelector, extractionFn);
-    Assert.assertEquals(32.0f, flSelector.getFloat(), 0);
-    Assert.assertEquals("32.0x", flWrapSelector.getValue());
+    Assertions.assertEquals(32.0f, flSelector.getFloat(), 0);
+    Assertions.assertEquals("32.0x", flWrapSelector.getValue());
 
     flSelector.increment();
-    Assert.assertTrue(flSelector.isNull());
-    Assert.assertEquals("nullx", flWrapSelector.getValue());
+    Assertions.assertTrue(flSelector.isNull());
+    Assertions.assertEquals("nullx", flWrapSelector.getValue());
 
     flSelector.increment();
-    Assert.assertEquals(5.0f, flSelector.getFloat(), 0);
-    Assert.assertEquals("5.0x", flWrapSelector.getValue());
+    Assertions.assertEquals(5.0f, flSelector.getFloat(), 0);
+    Assertions.assertEquals("5.0x", flWrapSelector.getValue());
 
     flSelector.increment();
-    Assert.assertEquals(0.0f, flSelector.getFloat(), 0);
-    Assert.assertEquals("0.0x", flWrapSelector.getValue());
+    Assertions.assertEquals(0.0f, flSelector.getFloat(), 0);
+    Assertions.assertEquals("0.0x", flWrapSelector.getValue());
 
     flSelector.increment();
-    Assert.assertEquals(-45.0f, flSelector.getFloat(), 0);
-    Assert.assertEquals("-45.0x", flWrapSelector.getValue());
+    Assertions.assertEquals(-45.0f, flSelector.getFloat(), 0);
+    Assertions.assertEquals("-45.0x", flWrapSelector.getValue());
   }
 
   /**

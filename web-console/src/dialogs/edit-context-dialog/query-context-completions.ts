@@ -73,8 +73,8 @@ export const QUERY_CONTEXT_COMPLETIONS: JsonCompletionRule[] = [
         documentation: 'Enable vectorized query execution',
       },
       {
-        value: 'realtimeSegmentsOnly',
-        documentation: 'Whether to query only realtime segments',
+        value: 'realtimeSegmentsMode',
+        documentation: 'Controls whether realtime segments are queried',
       },
       {
         value: 'vectorSize',
@@ -150,6 +150,14 @@ export const QUERY_CONTEXT_COMPLETIONS: JsonCompletionRule[] = [
     completions: [
       { value: 'false', documentation: 'Disable vectorized execution' },
       { value: 'force', documentation: 'Force vectorized execution' },
+    ],
+  },
+  {
+    path: '$.realtimeSegmentsMode',
+    completions: [
+      { value: 'include', documentation: 'Query all segments, including realtime (default)' },
+      { value: 'exclude', documentation: 'Skip realtime segments; query only historical' },
+      { value: 'exclusive', documentation: 'Query only realtime segments' },
     ],
   },
 ];

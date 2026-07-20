@@ -72,9 +72,11 @@ import org.apache.druid.segment.file.SegmentFileMapperV10;
 import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.projections.BaseTableProjectionSchema;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.ConstantTimeColumn;
 import org.apache.druid.segment.projections.ProjectionMetadata;
 import org.apache.druid.segment.projections.Projections;
+import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.FloatNumericColumnSupplier;
 import org.apache.druid.segment.serde.LongNumericColumnSupplier;
@@ -952,16 +954,33 @@ public class IndexIO
       // projections can omit a __time column, but one still has to exist, so we use the interval start to make a
       // constant for this case
       final long intervalStartMillis = Intervals.of(metadata.getInterval()).getStartMillis();
-      // read base table projection columns, which are shared with other projections
-      final Map<String, Supplier<BaseColumnHolder>> baseColumns = readProjectionColumns(
-          metadata,
-          baseProjection,
-          fileMapper,
-          Map.of(),
-          intervalStartMillis,
-          lazy,
-          loadFailed
-      );
+
+      // For clustered base tables the columns are always accessed through cluster groups, skip reading any base
+      // columns so we don't try to map files that don't exist
+      final boolean isClusteredSummary = baseSchema instanceof ClusteredValueGroupsBaseTableSchema;
+      final ClusteredValueGroupsBaseTableSchema clusteredBaseSummary;
+      final Map<String, Supplier<BaseColumnHolder>> baseColumns;
+      if (isClusteredSummary) {
+        clusteredBaseSummary = (ClusteredValueGroupsBaseTableSchema) baseSchema;
+        if (clusteredBaseSummary.getSharedColumns().isEmpty()) {
+          baseColumns = Map.of();
+        } else {
+          throw DruidException.defensive(
+              "Reading clustered segments with non-empty sharedColumns is not yet supported"
+          );
+        }
+      } else {
+        clusteredBaseSummary = null;
+        baseColumns = readProjectionColumns(
+            metadata,
+            baseProjection,
+            fileMapper,
+            Map.of(),
+            intervalStartMillis,
+            lazy,
+            loadFailed
+        );
+      }
 
       final Map<String, Map<String, Supplier<BaseColumnHolder>>> projectionsColumns = new LinkedHashMap<>();
       final List<AggregateProjectionMetadata> aggProjections = new ArrayList<>(metadata.getProjections().size() - 1);
@@ -971,6 +990,13 @@ public class IndexIO
         if (first) {
           first = false;
           continue;
+        }
+        if (!(projectionSpec.getSchema() instanceof AggregateProjectionSchema)) {
+          throw DruidException.defensive(
+              "Unexpected projection[%s] with type[%s]; only aggregate projections are valid as top-level entries",
+              projectionSpec.getSchema().getName(),
+              projectionSpec.getSchema().getClass()
+          );
         }
         final Map<String, Supplier<BaseColumnHolder>> projectionColumns = readProjectionColumns(
             metadata,
@@ -983,31 +1009,51 @@ public class IndexIO
         );
 
         projectionsColumns.put(projectionSpec.getSchema().getName(), projectionColumns);
-        if (projectionSpec.getSchema() instanceof AggregateProjectionSchema) {
-          aggProjections.add(
-              new AggregateProjectionMetadata(
-                  (AggregateProjectionSchema) projectionSpec.getSchema(),
-                  projectionSpec.getNumRows()
-              )
-          );
-        } else {
-          throw DruidException.defensive(
-              "Unexpected projection[%s] with type[%s]",
-              projectionSpec.getSchema().getName(),
-              projectionSpec.getSchema().getClass()
-          );
-        }
+        aggProjections.add(
+            new AggregateProjectionMetadata(
+                (AggregateProjectionSchema) projectionSpec.getSchema(),
+                projectionSpec.getNumRows()
+            )
+        );
       }
+
+      final List<Map<String, Supplier<BaseColumnHolder>>> clusterGroupColumnsList;
+      if (isClusteredSummary) {
+        final List<TableClusterGroupSpec> nestedGroups = clusteredBaseSummary.getClusterGroups();
+        clusterGroupColumnsList = new ArrayList<>(nestedGroups.size());
+        for (int i = 0; i < nestedGroups.size(); i++) {
+          clusterGroupColumnsList.add(readClusterGroupColumns(
+              metadata,
+              clusteredBaseSummary,
+              i,
+              fileMapper,
+              intervalStartMillis,
+              lazy,
+              loadFailed
+          ));
+        }
+      } else {
+        clusterGroupColumnsList = List.of();
+      }
+
       final Metadata reconstructedMetadata = baseSchema.asMetadata(aggProjections);
+
+      // For clustered segments, the top-level index has no per-column data of its own, so pass an empty dimensions
+      // list so the SimpleQueryableIndex precondition passes and dimension-handler init has nothing to materialize
+      final Indexed<String> dimensionsIndex = isClusteredSummary
+                                              ? new ListIndexed<>(List.of())
+                                              : new ListIndexed<>(baseSchema.getDimensionNames());
 
       return new SimpleQueryableIndex(
           Intervals.fromString(metadata.getInterval()),
-          new ListIndexed<>(baseSchema.getDimensionNames()),
+          dimensionsIndex,
           metadata.getBitmapEncoding().getBitmapFactory(),
           baseColumns,
           fileMapper,
           reconstructedMetadata,
-          projectionsColumns
+          projectionsColumns,
+          clusteredBaseSummary,
+          clusterGroupColumnsList
       )
       {
         @Override
@@ -1039,12 +1085,12 @@ public class IndexIO
       final Map<String, Supplier<BaseColumnHolder>> projectionColumns = new LinkedHashMap<>();
 
       for (String column : projectionSpec.getSchema().getColumnNames()) {
-        final String smooshName = Projections.getProjectionSmooshFileName(projectionSpec.getSchema(), column);
-        final ByteBuffer colBuffer = segmentFileMapper.mapFile(smooshName);
+        final String smooshName = Projections.getProjectionSegmentInternalFileName(projectionSpec.getSchema(), column);
         final ColumnDescriptor columnDescriptor = metadata.getColumnDescriptors().get(smooshName);
         if (columnDescriptor == null) {
           continue;
         }
+        final ByteBuffer colBuffer = segmentFileMapper.mapFile(smooshName);
 
         final BaseColumnHolder parentColumn;
         if (parentColumns.containsKey(column)) {
@@ -1078,6 +1124,63 @@ public class IndexIO
         );
       }
       return projectionColumns;
+    }
+
+    /**
+     * Read the per-column data for cluster group {@code groupIndex}. Mirrors {@link #readProjectionColumns} but
+     * with the dictionary-id-tuple smoosh prefix {@code __base$<id0>_<id1>...<idK>/<col>}; the column set
+     * excludes clustering columns (constants, injected at query time).
+     */
+    private Map<String, Supplier<BaseColumnHolder>> readClusterGroupColumns(
+        SegmentFileMetadata metadata,
+        ClusteredValueGroupsBaseTableSchema summary,
+        int groupIndex,
+        SegmentFileMapper segmentFileMapper,
+        long intervalStartMillis,
+        boolean lazy,
+        SegmentLazyLoadFailCallback loadFailed
+    ) throws IOException
+    {
+      final TableClusterGroupSpec spec = summary.getClusterGroups().get(groupIndex);
+      final List<Integer> clusteringValueIds = spec.getClusteringValueIds();
+      final String timeColumnName = summary.getTimeColumnName();
+      final boolean renameTime = !ColumnHolder.TIME_COLUMN_NAME.equals(timeColumnName);
+      final Map<String, Supplier<BaseColumnHolder>> groupColumns = new LinkedHashMap<>();
+
+      for (String column : summary.getGroupColumnNames()) {
+        final String smooshName = Projections.getClusterGroupSegmentInternalFileName(clusteringValueIds, column);
+        final ColumnDescriptor columnDescriptor = metadata.getColumnDescriptors().get(smooshName);
+        if (columnDescriptor == null) {
+          continue;
+        }
+        final ByteBuffer colBuffer = segmentFileMapper.mapFile(smooshName);
+
+        final String internedColumnName = SmooshedFileMapper.STRING_INTERNER.intern(column);
+        groupColumns.put(
+            internedColumnName,
+            makeColumnHolderSupplier(
+                internedColumnName,
+                columnDescriptor,
+                colBuffer,
+                segmentFileMapper,
+                null,
+                lazy,
+                loadFailed
+            )
+        );
+
+        if (column.equals(timeColumnName) && renameTime) {
+          groupColumns.put(ColumnHolder.TIME_COLUMN_NAME, groupColumns.get(column));
+          groupColumns.remove(column);
+        }
+      }
+      if (timeColumnName == null) {
+        groupColumns.put(
+            ColumnHolder.TIME_COLUMN_NAME,
+            ConstantTimeColumn.makeConstantTimeSupplier(spec.getNumRows(), intervalStartMillis)
+        );
+      }
+      return groupColumns;
     }
 
     private Supplier<BaseColumnHolder> makeColumnHolderSupplier(

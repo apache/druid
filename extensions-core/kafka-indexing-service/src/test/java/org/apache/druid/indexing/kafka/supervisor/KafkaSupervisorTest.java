@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.curator.test.TestingCluster;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -50,7 +49,7 @@ import org.apache.druid.indexing.kafka.KafkaIndexTaskIOConfig;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskRunner;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
-import org.apache.druid.indexing.kafka.test.TestBroker;
+import org.apache.druid.indexing.kafka.test.EmbeddedKafkaBroker;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -70,6 +69,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.St
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
@@ -122,7 +122,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -160,8 +159,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private static final Period TEST_HTTP_TIMEOUT = new Period("PT10S");
   private static final Period TEST_SHUTDOWN_TIMEOUT = new Period("PT80S");
 
-  private static TestingCluster zkServer;
-  private static TestBroker kafkaServer;
+  private static EmbeddedKafkaBroker kafkaServer;
   private static String kafkaHost;
   private static DataSchema dataSchema;
   private static int topicPostfix;
@@ -207,24 +205,21 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @BeforeClass
-  public static void setupClass() throws Exception
+  public static void setupClass()
   {
-    zkServer = new TestingCluster(1);
-    zkServer.start();
-
-    kafkaServer = new TestBroker(
-        zkServer.getConnectString(),
-        null,
-        1,
+    kafkaServer = new EmbeddedKafkaBroker(
         ImmutableMap.of(
-            "num.partitions",
+            "KAFKA_NUM_PARTITIONS",
             String.valueOf(NUM_PARTITIONS),
-            "auto.create.topics.enable",
-            String.valueOf(false)
+            "KAFKA_AUTO_CREATE_TOPICS_ENABLE",
+            String.valueOf(false),
+            // Kafka 4.x defaults log.message.timestamp.after.max.ms to 1h; addSomeEvents emits future timestamps.
+            "KAFKA_LOG_MESSAGE_TIMESTAMP_AFTER_MAX_MS",
+            String.valueOf(Long.MAX_VALUE)
         )
     );
     kafkaServer.start();
-    kafkaHost = StringUtils.format("localhost:%d", kafkaServer.getPort());
+    kafkaHost = kafkaServer.getBootstrapServerUrl();
 
     dataSchema = getDataSchema(DATASOURCE);
   }
@@ -258,13 +253,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @AfterClass
-  public static void tearDownClass() throws IOException
+  public static void tearDownClass()
   {
     kafkaServer.close();
     kafkaServer = null;
-
-    zkServer.stop();
-    zkServer = null;
   }
 
   @Test
@@ -1724,6 +1716,84 @@ public class KafkaSupervisorTest extends EasyMockSupport
         retriedTask.getIOConfig().getBaseSequenceName()
     );
     Assert.assertEquals(Integer.valueOf(1), retriedTask.getServerPriority());
+  }
+
+  /**
+   * Regression test: {@link SeekableStreamSupervisor.TaskGroup#tasks} and {@link SeekableStreamSupervisor.TaskGroup#taskIdToServerPriority}
+   * must not go out of sync when a newly-submitted task dies before the next supervisor run observes it. Otherwise, the orphan priority entry
+   * makes {@link SeekableStreamSupervisor#computeUnassignedServerPriorities} throw on the replacement attempt.
+   */
+  @Test
+  public void testReplacementSubmittedWhenPriorityTaskDiesBeforeDiscovery() throws Exception
+  {
+    // replicas=2, taskCount=1, priorities {0:1, 1:1}
+    supervisor = getTestableSupervisor(null, 2, 1, true, true, "PT1H", null, null, false, kafkaHost, null, Map.of(0, 1, 1, 1));
+    addSomeEvents(1);
+
+    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(Status.NOT_STARTED))
+            .anyTimes();
+    EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(null)
+    ).anyTimes();
+    // Run 1 submits the initial 2 replicas. (Run 2's 1 replacement is programmed after the reset below.)
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
+
+    // discoverTasks() on run 2 calls verifyAndMergeCheckpoints -> taskClient.getCheckpointsAsync on the survivor.
+    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(new TreeMap<>()))
+            .anyTimes();
+
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    final List<Task> run1Tasks = captured.getValues();
+    Assert.assertEquals(2, run1Tasks.size());
+    final KafkaIndexTask orphan = (KafkaIndexTask) run1Tasks.get(0);
+    final KafkaIndexTask survivor = (KafkaIndexTask) run1Tasks.get(1);
+    // Sanity check: the two replicas must hold the two configured priorities.
+    Assert.assertEquals(
+        Set.of(0, 1),
+        Set.of(orphan.getServerPriority(), survivor.getServerPriority())
+    );
+
+    // Run 2: the first replica died before discoverTasks() could observe it, so activeTaskMap contains only
+    // the survivor. Prior to the fix, createTasksForGroup had already written the orphan's priority into
+    // taskIdToServerPriority during run 1, so run 2's computeUnassignedServerPriorities would see both
+    // priorities as "assigned" and throw.
+    EasyMock.reset(taskStorage);
+    EasyMock.reset(taskQueue);
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE))
+            .andReturn(toMap(List.of(survivor)))
+            .anyTimes();
+    EasyMock.expect(taskStorage.getStatus(survivor.getId()))
+            .andReturn(Optional.of(TaskStatus.running(survivor.getId())))
+            .anyTimes();
+    EasyMock.expect(taskStorage.getTask(survivor.getId())).andReturn(Optional.of(survivor)).anyTimes();
+    final Capture<Task> replacementCapture = Capture.newInstance();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(replacementCapture))).andReturn(true);
+    EasyMock.replay(taskStorage);
+    EasyMock.replay(taskQueue);
+
+    // Must not throw.
+    supervisor.runInternal();
+    verifyAll();
+
+    // The replacement task should take the orphan's priority, not duplicate the survivor's or block.
+    final KafkaIndexTask replacement = (KafkaIndexTask) replacementCapture.getValue();
+    Assert.assertEquals(orphan.getServerPriority(), replacement.getServerPriority());
   }
 
   @Test
@@ -3670,15 +3740,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
                 new KafkaDataSourceMetadata(
                     new SeekableStreamEndSequenceNumbers<>(topic, singlePartitionMap(topic, 1, -100L, 2, 200L))
                 )
-            ).times(3);
-    // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
-    // Since getOffsetFromStorageForPartition() is called per partition, all partitions can't be reset at the same time.
-    // Instead, subsequent partitions will be reset in the following supervisor runs.
+            ).times(4);
+    // All unavailable partitions are collected in a single pass and reset together in one resetInternal() call.
+    // Only partition 1 (-100L) is unavailable (below earliest=0); partition 2 (200L) is valid since
+    // Kafka only checks offset >= earliest.
     EasyMock.expect(
         indexerMetadataStorageCoordinator.resetDataSourceMetadata(
             DATASOURCE,
             new KafkaDataSourceMetadata(
-                // Only one partition is reset in a single supervisor run.
                 new SeekableStreamEndSequenceNumbers<>(topic, singlePartitionMap(topic, 2, 200L))
             )
         )
@@ -5376,33 +5445,19 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("bootstrap.servers", kafkaHost);
 
-    final KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
-        topic,
-        null,
-        INPUT_FORMAT,
-        null,
-        1,
-        new Period("PT1H"),
-        consumerProperties,
-        null,
-        null,
-        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-        new Period("P1D"),
-        new Period("PT30S"),
-        true,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        true,
-        Map.of(
-            10, 2,
-            20, 3
-        )
-    );
+    final KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
+        .withTopic(topic)
+        .withInputFormat(INPUT_FORMAT)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withConsumerProperties(consumerProperties)
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(true)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withEmitTimeLagMetrics(true)
+        .withServerPriorityToReplicas(Map.of(10, 2, 20, 3))
+        .build();
 
     Assert.assertEquals(5, (int) kafkaSupervisorIOConfig.getReplicas());
 
@@ -5474,6 +5529,101 @@ public class KafkaSupervisorTest extends EasyMockSupport
         );
 
     Assert.assertEquals(List.of(20, 20), supervisor.computeUnassignedServerPriorities(taskGroup3, 2));
+  }
+
+  @Test
+  public void testBoundedModeCreateTasksWithCorrectOffsets() throws JsonProcessingException
+  {
+    Map<String, Object> startOffsets = ImmutableMap.of(
+        topic + ":0", 100,
+        topic + ":1", 200,
+        topic + ":2", 300
+    );
+    Map<String, Object> endOffsets = ImmutableMap.of(
+        topic + ":0", 500,
+        topic + ":1", 600,
+        topic + ":2", 700
+    );
+
+    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
+    consumerProperties.put("bootstrap.servers", kafkaHost);
+
+    final KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
+        .withTopic(topic)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withConsumerProperties(consumerProperties)
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withEmitTimeLagMetrics(true)
+        .withBoundedStreamConfig(new BoundedStreamConfig(startOffsets, endOffsets))
+        .build();
+
+    Assert.assertTrue(kafkaSupervisorIOConfig.isBounded());
+
+    final KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(null, null);
+    final KafkaSupervisorSpec spec = new KafkaSupervisorSpec(
+        null,
+        null,
+        dataSchema,
+        KafkaSupervisorTuningConfig.defaultConfig(),
+        kafkaSupervisorIOConfig,
+        null,
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        OBJECT_MAPPER,
+        new NoopServiceEmitter(),
+        new DruidMonitorSchedulerConfig(),
+        rowIngestionMetersFactory,
+        new SupervisorStateManagerConfig()
+    );
+
+    supervisor = new TestableKafkaSupervisor(
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        OBJECT_MAPPER,
+        spec,
+        rowIngestionMetersFactory
+    );
+
+    // Test type conversion methods
+    KafkaTopicPartition partition0 = supervisor.createPartitionIdFromString(topic + ":0");
+    Assert.assertEquals(topic, partition0.topic().get());
+    Assert.assertEquals(0, partition0.partition());
+
+    Long offset = supervisor.createSequenceOffsetFromObject(100);
+    Assert.assertEquals(Long.valueOf(100L), offset);
+
+    offset = supervisor.createSequenceOffsetFromObject("200");
+    Assert.assertEquals(Long.valueOf(200L), offset);
+
+    // Test offset comparison
+    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(500L, 100L));
+    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(100L, 100L));
+    Assert.assertFalse(supervisor.isOffsetAtOrBeyond(50L, 100L));
+  }
+
+  @Test
+  public void testCreateSequenceOffsetFromObject_invalidType()
+  {
+    Map<String, Object> startOffsets = ImmutableMap.of("0", 0, "1", 0);
+    Map<String, Object> endOffsets = ImmutableMap.of("0", 100, "1", 100);
+    supervisor = getTestableSupervisorWithBoundedConfig(1, 1, "PT1H", new BoundedStreamConfig(startOffsets, endOffsets));
+
+    Exception e = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> supervisor.createSequenceOffsetFromObject(new Object())
+    );
+    Assert.assertTrue(e.getMessage().contains("Cannot convert"));
   }
 
   private void addSomeEvents(int numEventsPerPartition) throws Exception
@@ -5664,30 +5814,24 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
-    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
-        multiTopic ? null : topic,
-        multiTopic ? topicPattern : null,
-        INPUT_FORMAT,
-        replicas,
-        taskCount,
-        new Period(duration),
-        consumerProperties,
-        null,
-        null,
-        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-        new Period("P1D"),
-        new Period("PT30S"),
-        useEarliestOffset,
-        new Period("PT30M"),
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        null,
-        null,
-        idleConfig,
-        null,
-        true,
-        serverPriorityToReplicas
-    );
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
+        .withTopic(multiTopic ? null : topic)
+        .withTopicPattern(multiTopic ? topicPattern : null)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(replicas)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period(duration))
+        .withConsumerProperties(consumerProperties)
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(useEarliestOffset)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLateMessageRejectionPeriod(lateMessageRejectionPeriod)
+        .withEarlyMessageRejectionPeriod(earlyMessageRejectionPeriod)
+        .withIdleConfig(idleConfig)
+        .withEmitTimeLagMetrics(true)
+        .withServerPriorityToReplicas(serverPriorityToReplicas)
+        .build();
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
         null,
@@ -5759,30 +5903,20 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
     consumerProperties.put("isolation.level", "read_committed");
-    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
-        topic,
-        null,
-        INPUT_FORMAT,
-        replicas,
-        taskCount,
-        new Period(duration),
-        consumerProperties,
-        null,
-        null,
-        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-        new Period("P1D"),
-        new Period("PT30S"),
-        useEarliestOffset,
-        new Period("PT30M"),
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null
-    );
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
+        .withTopic(topic)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(replicas)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period(duration))
+        .withConsumerProperties(consumerProperties)
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(useEarliestOffset)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLateMessageRejectionPeriod(lateMessageRejectionPeriod)
+        .withEarlyMessageRejectionPeriod(earlyMessageRejectionPeriod)
+        .build();
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
         null,
@@ -5854,30 +5988,20 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
     consumerProperties.put("isolation.level", "read_committed");
-    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
-        topic,
-        null,
-        INPUT_FORMAT,
-        replicas,
-        taskCount,
-        new Period(duration),
-        consumerProperties,
-        null,
-        null,
-        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-        new Period("P1D"),
-        new Period("PT30S"),
-        useEarliestOffset,
-        new Period("PT30M"),
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null
-    );
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
+        .withTopic(topic)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(replicas)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period(duration))
+        .withConsumerProperties(consumerProperties)
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(useEarliestOffset)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLateMessageRejectionPeriod(lateMessageRejectionPeriod)
+        .withEarlyMessageRejectionPeriod(earlyMessageRejectionPeriod)
+        .build();
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
         null,
@@ -6169,7 +6293,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
       Deserializer valueDeserializerObject = new ByteArrayDeserializer();
       return new KafkaRecordSupplier(
           new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject),
-          getIoConfig().isMultiTopic()
+          getIoConfig().isMultiTopic(),
+          null
       );
     }
 
@@ -6235,5 +6360,294 @@ public class KafkaSupervisorTest extends EasyMockSupport
     {
       return isTaskCurrentReturn;
     }
+  }
+
+  @Test
+  public void testBoundedStreamConfig_tasksIncludeBoundedConfig() throws Exception
+  {
+    Map<String, Long> startOffsets = ImmutableMap.of("0", 10L, "1", 20L, "2", 30L);
+    Map<String, Long> endOffsets = ImmutableMap.of("0", 100L, "1", 100L, "2", 100L);
+    BoundedStreamConfig boundedConfig = new BoundedStreamConfig(startOffsets, endOffsets);
+
+    supervisor = getTestableSupervisorWithBoundedConfig(1, 1, "PT1H", boundedConfig);
+    addSomeEvents(100);
+
+    Capture<KafkaIndexTask> captured = Capture.newInstance();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(null)
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    // Task should be created with bounded config
+    KafkaIndexTask task = captured.getValue();
+    Assert.assertNotNull(task);
+    Assert.assertEquals(boundedConfig, task.getIOConfig().getBoundedStreamConfig());
+
+    // Start offsets should come from bounded config
+    KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
+    Assert.assertEquals(10L, (long) taskConfig.getStartSequenceNumbers()
+                                              .getPartitionSequenceNumberMap()
+                                              .get(new KafkaTopicPartition(false, topic, 0)));
+    Assert.assertEquals(20L, (long) taskConfig.getStartSequenceNumbers()
+                                              .getPartitionSequenceNumberMap()
+                                              .get(new KafkaTopicPartition(false, topic, 1)));
+    Assert.assertEquals(30L, (long) taskConfig.getStartSequenceNumbers()
+                                              .getPartitionSequenceNumberMap()
+                                              .get(new KafkaTopicPartition(false, topic, 2)));
+
+    // End offsets should match bounded config
+    Assert.assertEquals(100L, (long) taskConfig.getEndSequenceNumbers()
+                                                .getPartitionSequenceNumberMap()
+                                                .get(new KafkaTopicPartition(false, topic, 0)));
+  }
+
+  @Test
+  public void testBoundedStreamConfig_withCheckpoint_resumesFromCheckpoint() throws Exception
+  {
+    Map<String, Long> startOffsets = ImmutableMap.of("0", 0L, "1", 0L, "2", 0L);
+    Map<String, Long> endOffsets = ImmutableMap.of("0", 100L, "1", 100L, "2", 100L);
+    BoundedStreamConfig boundedConfig = new BoundedStreamConfig(startOffsets, endOffsets);
+
+    supervisor = getTestableSupervisorWithBoundedConfig(1, 1, "PT1H", boundedConfig);
+    addSomeEvents(100);
+
+    // Simulate existing checkpoint from previous run with same bounded config
+    SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long> checkpointSequences =
+        new SeekableStreamStartSequenceNumbers<>(
+            topic,
+            ImmutableMap.of(
+                new KafkaTopicPartition(false, topic, 0), 50L,
+                new KafkaTopicPartition(false, topic, 1), 60L,
+                new KafkaTopicPartition(false, topic, 2), 70L
+            ),
+            ImmutableSet.of()
+        );
+
+    Capture<KafkaIndexTask> captured = Capture.newInstance();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(checkpointSequences, boundedConfig)
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    // Task should be created with bounded config
+    KafkaIndexTask task = captured.getValue();
+    Assert.assertNotNull(task);
+    Assert.assertEquals(boundedConfig, task.getIOConfig().getBoundedStreamConfig());
+
+    // Start offsets should resume from checkpoint
+    KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
+    Assert.assertEquals(50L, (long) taskConfig.getStartSequenceNumbers()
+                                              .getPartitionSequenceNumberMap()
+                                              .get(new KafkaTopicPartition(false, topic, 0)));
+    Assert.assertEquals(60L, (long) taskConfig.getStartSequenceNumbers()
+                                              .getPartitionSequenceNumberMap()
+                                              .get(new KafkaTopicPartition(false, topic, 1)));
+    Assert.assertEquals(70L, (long) taskConfig.getStartSequenceNumbers()
+                                              .getPartitionSequenceNumberMap()
+                                              .get(new KafkaTopicPartition(false, topic, 2)));
+
+    // End offsets should still match bounded config
+    Assert.assertEquals(100L, (long) taskConfig.getEndSequenceNumbers()
+                                                .getPartitionSequenceNumberMap()
+                                                .get(new KafkaTopicPartition(false, topic, 0)));
+  }
+
+  @Test
+  public void testBoundedStreamConfig_endOffsetsSetCorrectly() throws Exception
+  {
+    Map<String, Long> startOffsets = ImmutableMap.of("0", 0L, "1", 0L, "2", 0L);
+    Map<String, Long> endOffsets = ImmutableMap.of("0", 150L, "1", 250L, "2", 350L);
+    BoundedStreamConfig boundedConfig = new BoundedStreamConfig(startOffsets, endOffsets);
+
+    supervisor = getTestableSupervisorWithBoundedConfig(1, 1, "PT1H", boundedConfig);
+    addSomeEvents(350);
+
+    Capture<KafkaIndexTask> captured = Capture.newInstance();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(null)
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    // Task end offsets should match bounded config (not Long.MAX_VALUE)
+    KafkaIndexTask task = captured.getValue();
+    KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
+
+    Assert.assertEquals(150L, (long) taskConfig.getEndSequenceNumbers()
+                                                .getPartitionSequenceNumberMap()
+                                                .get(new KafkaTopicPartition(false, topic, 0)));
+    Assert.assertEquals(250L, (long) taskConfig.getEndSequenceNumbers()
+                                                .getPartitionSequenceNumberMap()
+                                                .get(new KafkaTopicPartition(false, topic, 1)));
+    Assert.assertEquals(350L, (long) taskConfig.getEndSequenceNumbers()
+                                                .getPartitionSequenceNumberMap()
+                                                .get(new KafkaTopicPartition(false, topic, 2)));
+  }
+
+  @Test
+  public void testBoundedStreamConfig_allPartitionsEmptyRange_completesImmediately() throws Exception
+  {
+    // All partitions have start == end (nothing to process)
+    Map<String, Long> startOffsets = ImmutableMap.of("0", 100L, "1", 100L, "2", 100L);
+    Map<String, Long> endOffsets = ImmutableMap.of("0", 100L, "1", 100L, "2", 100L);
+    BoundedStreamConfig boundedConfig = new BoundedStreamConfig(startOffsets, endOffsets);
+
+    supervisor = getTestableSupervisorWithBoundedConfig(1, 1, "PT1H", boundedConfig);
+    addSomeEvents(100);
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(null)
+    ).anyTimes();
+    // registerListener may or may not be called depending on when completion is detected
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    EasyMock.expectLastCall().anyTimes();
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+
+    // With all partitions having empty ranges, supervisor should detect completion
+    // State should transition to COMPLETED
+    SupervisorReport<KafkaSupervisorReportPayload> report = supervisor.getStatus();
+    Assert.assertEquals(
+        SupervisorStateManager.BasicState.COMPLETED,
+        report.getPayload().getDetailedState()
+    );
+  }
+
+  private TestableKafkaSupervisor getTestableSupervisorWithBoundedConfig(
+      int replicas,
+      int taskCount,
+      String duration,
+      BoundedStreamConfig boundedConfig
+  )
+  {
+    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
+    consumerProperties.put("myCustomKey", "myCustomValue");
+    consumerProperties.put("bootstrap.servers", kafkaHost);
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
+        .withTopic(topic)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(replicas)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period(duration))
+        .withConsumerProperties(consumerProperties)
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(true)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withEmitTimeLagMetrics(true)
+        .withBoundedStreamConfig(boundedConfig)
+        .build();
+
+    KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
+        null,
+        null
+    )
+    {
+      @Override
+      public SeekableStreamIndexTaskClient<KafkaTopicPartition, Long> build(
+          String dataSource,
+          TaskInfoProvider taskInfoProvider,
+          SeekableStreamSupervisorTuningConfig tuningConfig,
+          ScheduledExecutorService connectExec
+      )
+      {
+        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), tuningConfig.getHttpTimeout());
+        Assert.assertEquals(TEST_CHAT_RETRIES, (long) tuningConfig.getChatRetries());
+        return taskClient;
+      }
+    };
+
+    final KafkaSupervisorTuningConfig tuningConfig = tuningConfigBuilder()
+        .withMaxSavedParseExceptions(10)
+        .build();
+
+    return new TestableKafkaSupervisor(
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        OBJECT_MAPPER,
+        new KafkaSupervisorSpec(
+            null,
+            null,
+            dataSchema,
+            tuningConfig,
+            kafkaSupervisorIOConfig,
+            null,
+            false,
+            taskStorage,
+            taskMaster,
+            indexerMetadataStorageCoordinator,
+            taskClientFactory,
+            OBJECT_MAPPER,
+            new NoopServiceEmitter(),
+            new DruidMonitorSchedulerConfig(),
+            rowIngestionMetersFactory,
+            supervisorConfig
+        ),
+        rowIngestionMetersFactory
+    );
+  }
+
+  @Test
+  public void testBoundedMode_equalOffsetsIsEmpty()
+  {
+    // Kafka has exclusive end offsets, so start == end represents an EMPTY range
+    Map<String, Object> startOffsets = ImmutableMap.of("0", 100, "1", 100);
+    Map<String, Object> endOffsets = ImmutableMap.of("0", 100, "1", 100);
+    supervisor = getTestableSupervisorWithBoundedConfig(1, 1, "PT1H", new BoundedStreamConfig(startOffsets, endOffsets));
+
+    // Kafka uses exclusive end offsets
+    Assert.assertTrue("Kafka should have exclusive end offsets", supervisor.isEndOffsetExclusive());
+
+    // Verify that start == end is treated correctly based on offset semantics
+    // For exclusive offsets: start == end means ZERO records (empty)
+    Long start = 100L;
+    Long end = 100L;
+
+    // start >= end is true (they're equal)
+    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(start, end));
+
+    // For Kafka (exclusive), this IS an empty range
+    // The empty range check should be: isOffsetAtOrBeyond(start, end)
+    // Which evaluates to: true (IS empty)
+    boolean shouldBeEmpty = supervisor.isOffsetAtOrBeyond(start, end);
+
+    Assert.assertTrue(
+        "For Kafka with exclusive end offsets, start == end should be considered an empty range",
+        shouldBeEmpty
+    );
   }
 }

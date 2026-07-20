@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.search.FragmentSearchQuerySpec;
 import org.apache.druid.query.search.SearchQuerySpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -63,7 +63,7 @@ public class SearchQuerySpecDimExtractionFnTest
       }
     }
 
-    Assert.assertEquals(expected, extracted);
+    Assertions.assertEquals(expected, extracted);
   }
 
   @Test
@@ -84,7 +84,7 @@ public class SearchQuerySpecDimExtractionFnTest
       }
     }
 
-    Assert.assertEquals(expected, extracted);
+    Assertions.assertEquals(expected, extracted);
   }
 
   @Test
@@ -105,7 +105,7 @@ public class SearchQuerySpecDimExtractionFnTest
       }
     }
 
-    Assert.assertEquals(expected, extracted);
+    Assertions.assertEquals(expected, extracted);
   }
 
   @Test
@@ -123,8 +123,8 @@ public class SearchQuerySpecDimExtractionFnTest
         ExtractionFn.class
     );
     FragmentSearchQuerySpec spec2 = (FragmentSearchQuerySpec) ((SearchQuerySpecDimExtractionFn) extractionFn2).getSearchQuerySpec();
-    Assert.assertEquals(extractionFn, extractionFn2);
-    Assert.assertEquals(true, spec2.isCaseSensitive());
-    Assert.assertEquals(ImmutableList.of("to", "yo"), spec2.getValues());
+    Assertions.assertEquals(extractionFn, extractionFn2);
+    Assertions.assertEquals(true, spec2.isCaseSensitive());
+    Assertions.assertEquals(ImmutableList.of("to", "yo"), spec2.getValues());
   }
 }
