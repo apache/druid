@@ -100,6 +100,7 @@ public class ForkingTaskRunner
   private static final EmittingLogger LOGGER = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
 
+  private static final String RUN_JAVA_COMMAND = "bin/run-java";
   /**
    * Properties to add on Java 11+. When updating this list, update all four:
    *  1) ForkingTaskRunner#STRONG_ENCAPSULATION_PROPERTIES (here) -->
@@ -245,7 +246,7 @@ public class ForkingTaskRunner
                           taskClasspath = config.getClasspath();
                         }
 
-                        command.add(config.getJavaCommand());
+                        command.add(getJavaCommand());
 
                         if (JvmUtils.majorVersion() >= 11) {
                           command.addAll(STRONG_ENCAPSULATION_PROPERTIES);
@@ -504,6 +505,28 @@ public class ForkingTaskRunner
       saveRunningTasks();
       return tasks.get(task.getId()).getResult();
     }
+  }
+
+  private String getJavaCommand()
+  {
+    return getJavaCommand(config.getJavaCommand(), new File("."));
+  }
+
+  /**
+   * Resolves the command used to launch the peon JVM. When the operator has not overridden
+   * {@code druid.indexer.runner.javaCommand} (i.e. it is still the default {@code "java"}), and the bundled
+   * {@link #RUN_JAVA_COMMAND} script is present in {@code workingDir}, prefer it so that {@code DRUID_JAVA_HOME} /
+   * {@code JAVA_HOME} are honored. Otherwise fall back to the configured command (the plain {@code java} on the
+   * PATH by default). The existence check against {@code workingDir} is reliable because peons inherit this
+   * process's working directory.
+   */
+  public static String getJavaCommand(String configuredJavaCommand, File workingDir)
+  {
+    if (ForkingTaskRunnerConfig.DEFAULT_JAVA_COMMAND.equals(configuredJavaCommand)
+        && new File(workingDir, RUN_JAVA_COMMAND).exists()) {
+      return RUN_JAVA_COMMAND;
+    }
+    return configuredJavaCommand;
   }
 
   @VisibleForTesting

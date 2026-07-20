@@ -79,6 +79,46 @@ public class ForkingTaskRunnerTest
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+  @Test
+  public void testGetJavaCommandPrefersRunJavaScriptWhenPresent() throws IOException
+  {
+    final File workingDir = temporaryFolder.newFolder();
+    final File binDir = new File(workingDir, "bin");
+    Assert.assertTrue(binDir.mkdirs());
+    Assert.assertTrue(new File(binDir, "run-java").createNewFile());
+
+    Assert.assertEquals(
+        "bin/run-java",
+        ForkingTaskRunner.getJavaCommand(new ForkingTaskRunnerConfig().getJavaCommand(), workingDir)
+    );
+  }
+
+  @Test
+  public void testGetJavaCommandFallsBackToJavaWhenScriptAbsent() throws IOException
+  {
+    final File workingDir = temporaryFolder.newFolder();
+
+    Assert.assertEquals(
+        "java",
+        ForkingTaskRunner.getJavaCommand(new ForkingTaskRunnerConfig().getJavaCommand(), workingDir)
+    );
+  }
+
+  @Test
+  public void testGetJavaCommandRespectsExplicitOverride() throws IOException
+  {
+    final File workingDir = temporaryFolder.newFolder();
+    final File binDir = new File(workingDir, "bin");
+    Assert.assertTrue(binDir.mkdirs());
+    Assert.assertTrue(new File(binDir, "run-java").createNewFile());
+
+    // An explicit, non-default javaCommand must be used verbatim even when the run-java script is present.
+    Assert.assertEquals(
+        "/opt/jdk/bin/java",
+        ForkingTaskRunner.getJavaCommand("/opt/jdk/bin/java", workingDir)
+    );
+  }
+
   // This tests the test to make sure the test fails when it should.
   @Test(expected = AssertionError.class)
   public void testPatternMatcherFailureForJavaOptions()

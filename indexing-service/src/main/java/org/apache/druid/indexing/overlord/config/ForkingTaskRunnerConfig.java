@@ -36,9 +36,11 @@ public class ForkingTaskRunnerConfig
   public static final String JAVA_OPTS_ARRAY_PROPERTY = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX
                                                   + ".javaOptsArray";
 
+  public static final String DEFAULT_JAVA_COMMAND = "java";
+
   @JsonProperty
   @NotNull
-  private String javaCommand = "java";
+  private String javaCommand = DEFAULT_JAVA_COMMAND;
 
   /**
    * This is intended for setting -X parameters on the underlying java.  It is used by first splitting on whitespace,
