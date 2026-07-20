@@ -244,8 +244,8 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
     Assertions.assertEquals("5", cluster.runSql(
         "SELECT COUNT(*) FROM %s WHERE %s = 'tenant_b'", dataSource, COL_TENANT));
 
-    // Numeric dimension equality filter still returns correct counts. Note this does NOT prune (numeric filters
-    // opt out of segment pruning); pruning behavior is asserted in test_numericDimension_isNotPruned.
+    // Numeric equality filter correctness. Its LongDimensionSchema makes it eligible for type-gated pruning, which is
+    // asserted in test_numericLongDimension_isPruned.
     Assertions.assertEquals("5", cluster.runSql(
         "SELECT COUNT(*) FROM %s WHERE %s = 1", dataSource, colRegionCode));
     Assertions.assertEquals("5", cluster.runSql(
@@ -277,26 +277,24 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
   }
 
   /**
-   * Numeric (Long) tracked dimensions are recorded in the shard spec but are NOT used for pruning: numeric query
-   * filters opt out of segment pruning (their getDimensionRangeSet returns null, since pruning compares values
-   * lexicographically), so a numeric equality filter scans every segment even though each segment declares exactly
-   * one numeric value. Queries stay correct; there is simply no pruning benefit.
-   *
-   * <p>This is intentional for now. We could either consider extending pruning to numeric types with type-aware
-   * (non-lexicographic) comparison, or (b) reject numeric dimensions outright when they're declared.
+   * A numeric (LONG) tracked dimension with an explicit {@link LongDimensionSchema} IS pruned: the broker's
+   * equality/IN/IS NULL channel is type-gated on {@code dimensionColumnTypes}, which the task stamps only for such a
+   * schema (a LONG stringifies identically on ingest and query, so set membership is exact). This is exact
+   * set-membership, not a range comparison, so it works even though the dimension is numeric.
    */
   @Test
-  public void test_numericDimension_isNotPruned()
+  public void test_numericLongDimension_isPruned()
   {
-    final String colCode = "code"; // numeric (Long), tracked
+    final String colCode = "code"; // numeric (Long), tracked, explicit LongDimensionSchema
     final String topic = dataSource + "_topic";
     kafkaServer.createTopicWithPartitions(topic, 1);
 
-    // One distinct numeric code per DAY segment: Day1=1, Day2=2, Day3=3. If numeric pruning worked, "code = 1" would
-    // scan only Day1; because it does NOT, all three segments are scanned.
+    // One code per day: Day1=1, Day2=2, Day3=3; stamped LONG, so "code = 1" prunes to Day1 only. Day1's raw tokens are
+    // deliberately non-canonical ("00001", "+1") to exercise the capture-time coercion to the canonical "1" (the
+    // broker's query value); without it Day1 would stamp ["00001","+1"], miss the query set {"1"}, and be wrongly pruned.
     final List<ProducerRecord<byte[], byte[]>> records = new ArrayList<>();
-    records.add(record(topic, "%s,1,val_0", DateTimes.of("2025-01-01T01:00:00")));
-    records.add(record(topic, "%s,1,val_1", DateTimes.of("2025-01-01T02:00:00")));
+    records.add(record(topic, "%s,00001,val_0", DateTimes.of("2025-01-01T01:00:00")));
+    records.add(record(topic, "%s,+1,val_1", DateTimes.of("2025-01-01T02:00:00")));
     records.add(record(topic, "%s,2,val_2", DateTimes.of("2025-01-02T01:00:00")));
     records.add(record(topic, "%s,2,val_3", DateTimes.of("2025-01-02T02:00:00")));
     records.add(record(topic, "%s,3,val_4", DateTimes.of("2025-01-03T01:00:00")));
@@ -341,20 +339,43 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
     awaitRowsProcessed(6);
     suspendAndAwaitHandoff(spec, 1);
 
-    // The numeric value IS recorded in the shard spec (stringified), even though it is never used for pruning.
     verifyAllSegmentsHaveDimensionValueSetShardSpec(dataSource);
+
+    // The published shard spec stamps colCode's type as LONG, gating the broker's numeric pruning channel.
+    final List<Map<String, Object>> shardSpecs = getShardSpecs(dataSource);
+    for (Map<String, Object> shardSpec : shardSpecs) {
+      @SuppressWarnings("unchecked")
+      final Map<String, Object> columnTypes = (Map<String, Object>) shardSpec.get("dimensionColumnTypes");
+      Assertions.assertNotNull(columnTypes, "Expected dimensionColumnTypes on shard spec: " + shardSpec);
+      Assertions.assertEquals(
+          "LONG",
+          columnTypes.get(colCode),
+          "Expected " + colCode + " stamped as LONG in dimensionColumnTypes: " + shardSpec
+      );
+    }
 
     final Map<String, String> startToSegmentId = getStartToSegmentId(dataSource);
     final String day1 = startToSegmentId.get("2025-01-01T00:00:00.000Z");
     final String day2 = startToSegmentId.get("2025-01-02T00:00:00.000Z");
     final String day3 = startToSegmentId.get("2025-01-03T00:00:00.000Z");
-    final Set<String> allDays = Set.of(day1, day2, day3);
+    Assertions.assertNotNull(day1, "Missing Day1 segment id in: " + startToSegmentId);
+    Assertions.assertNotNull(day2, "Missing Day2 segment id in: " + startToSegmentId);
+    Assertions.assertNotNull(day3, "Missing Day3 segment id in: " + startToSegmentId);
 
-    // Correct count, but ALL segments scanned: numeric equality does not prune even though each segment holds one code.
-    assertScan("2", allDays, "SELECT COUNT(*) FROM %s WHERE %s = 1", dataSource, colCode);
-    assertScan("2", allDays, "SELECT COUNT(*) FROM %s WHERE %s = 3", dataSource, colCode);
-    // A non-existent code returns 0 rows but is still NOT pruned (would be a full prune if numeric pruning worked).
-    assertScan("0", allDays, "SELECT COUNT(*) FROM %s WHERE %s = 999", dataSource, colCode);
+    // Day1's non-canonical tokens ("00001", "+1") are stamped as the canonical Long string "1", not verbatim.
+    @SuppressWarnings("unchecked")
+    final Set<String> allCodes = shardSpecs.stream()
+        .map(shardSpec -> ((Map<String, List<String>>) shardSpec.get("partitionDimensionValues")).get(colCode))
+        .flatMap(List::stream)
+        .collect(Collectors.toSet());
+    Assertions.assertEquals(Set.of("1", "2", "3"), allCodes, "Expected canonical LONG codes in partitionDimensionValues");
+
+    // Numeric equality now prunes exactly like the string case: each query scans only the one segment whose
+    // stamped value set contains the queried code.
+    assertScan("2", Set.of(day1), "SELECT COUNT(*) FROM %s WHERE %s = 1", dataSource, colCode);
+    assertScan("2", Set.of(day3), "SELECT COUNT(*) FROM %s WHERE %s = 3", dataSource, colCode);
+    // A non-existent code is a full prune: zero rows and zero segments scanned.
+    assertScan("0", Set.of(), "SELECT COUNT(*) FROM %s WHERE %s = 999", dataSource, colCode);
 
     // Strict correctness: the RIGHT rows survive, not just the right count.
     assertValues(Set.of("val_0", "val_1"), "SELECT \"%s\" FROM %s WHERE %s = 1", COL_VALUE, dataSource, colCode);

@@ -63,10 +63,12 @@ import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.timeline.partition.TypedValueSet;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
@@ -226,6 +228,23 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       retSet.add(Range.singleton(matchValueEval.asString()));
     }
     return retSet;
+  }
+
+  @Nullable
+  @Override
+  public TypedValueSet getDimensionValueSet(String dimension)
+  {
+    if (!Objects.equals(getColumn(), dimension)) {
+      return null;
+    }
+    // Only LONG is safe: a LONG stringifies identically on ingest and query, so set membership is exact. DOUBLE/FLOAT
+    // ("1.0" vs "1") is not safe and is excluded; STRING is handled by getDimensionRangeSet.
+    if (!matchValueType.is(ValueType.LONG)) {
+      return null;
+    }
+    // Use the coerced matchValueEval (not the raw getMatchValue()) so an EqualityFilter(col, LONG, "1.0") yields "1",
+    // matching how a LONG is stamped at ingest.
+    return new TypedValueSet(Collections.singleton(matchValueEval.asString()), matchValueType);
   }
 
   @Nullable

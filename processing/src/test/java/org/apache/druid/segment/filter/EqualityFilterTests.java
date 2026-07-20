@@ -43,6 +43,7 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.timeline.partition.TypedValueSet;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -52,6 +53,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class EqualityFilterTests
 {
@@ -1620,6 +1622,43 @@ public class EqualityFilterTests
               null
           ).getDimensionRangeSet("x")
       );
+    }
+
+    @Test
+    public void testGetDimensionValueSet()
+    {
+      // LONG equality yields a single-element, LONG-typed value set for the matching column, null for another.
+      final EqualityFilter longFilter = new EqualityFilter("x", ColumnType.LONG, 1L, null);
+      final TypedValueSet valueSet = longFilter.getDimensionValueSet("x");
+      Assert.assertNotNull(valueSet);
+      Assert.assertEquals(ColumnType.LONG, valueSet.getType());
+      Assert.assertEquals(Collections.singleton("1"), valueSet.getValues());
+      Assert.assertNull(longFilter.getDimensionValueSet("y"));
+
+      // Non-LONG match value types must NOT return a typed value set (STRING is served by the range channel;
+      // DOUBLE/FLOAT/ARRAY are excluded for canonicalization safety).
+      Assert.assertNull(new EqualityFilter("x", ColumnType.STRING, "hello", null).getDimensionValueSet("x"));
+      Assert.assertNull(new EqualityFilter("x", ColumnType.DOUBLE, 1.5, null).getDimensionValueSet("x"));
+      Assert.assertNull(new EqualityFilter("x", ColumnType.FLOAT, 1.5f, null).getDimensionValueSet("x"));
+      Assert.assertNull(
+          new EqualityFilter(
+              "x",
+              ColumnType.STRING_ARRAY,
+              ExprEval.ofType(ExpressionType.STRING_ARRAY, new Object[]{"abc", "def"}).value(),
+              null
+          ).getDimensionValueSet("x")
+      );
+    }
+
+    @Test
+    public void testGetDimensionValueSet_usesCoercedValue()
+    {
+      // The coerced value is stringified, not the raw one: a LONG filter built from 1.0 coerces to 1, so the value
+      // set holds "1" (matching ingest), not "1.0".
+      final EqualityFilter filter = new EqualityFilter("x", ColumnType.LONG, 1.0, null);
+      final TypedValueSet valueSet = filter.getDimensionValueSet("x");
+      Assert.assertNotNull(valueSet);
+      Assert.assertEquals(Collections.singleton("1"), valueSet.getValues());
     }
 
     @Test

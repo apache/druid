@@ -25,21 +25,44 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class DimensionValueSetShardSpecTest
 {
   private static final String TENANT = "tenant";
+  private static final String CODE = "code";
 
   private static DimensionValueSetShardSpec spec(Map<String, List<String>> filters)
   {
     return new DimensionValueSetShardSpec(0, 1, filters);
+  }
+
+  private static DimensionValueSetShardSpec spec(
+      Map<String, List<String>> filters,
+      Map<String, ColumnType> types
+  )
+  {
+    return new DimensionValueSetShardSpec(0, 1, filters, types);
+  }
+
+  private static TypedValueSet longValues(String... values)
+  {
+    final Set<String> set = new HashSet<>(Arrays.asList(values));
+    return new TypedValueSet(set, ColumnType.LONG);
+  }
+
+  private static Map<String, TypedValueSet> longValueDomain(String dimension, String... values)
+  {
+    return ImmutableMap.of(dimension, longValues(values));
   }
 
   private static RangeSet<String> points(String... values)
@@ -309,5 +332,196 @@ public class DimensionValueSetShardSpecTest
     // An empty allowed list means no values were observed for the dimension, so any constraining query is pruned.
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of()));
     Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_a")));
+  }
+
+  @Test
+  public void testValueDomain_noFilters_alwaysTrue()
+  {
+    final DimensionValueSetShardSpec s = spec(Collections.emptyMap(), Collections.emptyMap());
+    Assert.assertTrue(s.possibleInValueDomain(longValueDomain(CODE, "1")));
+    Assert.assertTrue(s.possibleInValueDomain(Collections.emptyMap()));
+  }
+
+  @Test
+  public void testValueDomain_longMatch_returnsTrue()
+  {
+    final DimensionValueSetShardSpec s = spec(
+        ImmutableMap.of(CODE, List.of("1", "2")),
+        ImmutableMap.of(CODE, ColumnType.LONG)
+    );
+    Assert.assertTrue(s.possibleInValueDomain(longValueDomain(CODE, "1")));
+    Assert.assertTrue(s.possibleInValueDomain(longValueDomain(CODE, "2")));
+    Assert.assertTrue(s.possibleInValueDomain(longValueDomain(CODE, "3", "2")));
+  }
+
+  @Test
+  public void testValueDomain_longNoMatch_returnsFalse()
+  {
+    final DimensionValueSetShardSpec s = spec(
+        ImmutableMap.of(CODE, List.of("1", "2")),
+        ImmutableMap.of(CODE, ColumnType.LONG)
+    );
+    Assert.assertFalse(s.possibleInValueDomain(longValueDomain(CODE, "3")));
+    Assert.assertFalse(s.possibleInValueDomain(longValueDomain(CODE, "999", "1000")));
+  }
+
+  @Test
+  public void testValueDomain_noStampedType_cannotPrune()
+  {
+    // Values stamped but no type recorded (legacy/schemaless): must NOT prune without a matching type.
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(CODE, List.of("1", "2")));
+    Assert.assertTrue(s.possibleInValueDomain(longValueDomain(CODE, "3")));
+  }
+
+  @Test
+  public void testValueDomain_typeMismatch_cannotPrune()
+  {
+    // A LONG filter must not prune a DOUBLE-stamped dim: cross-type stringification is unsafe (data-loss guard).
+    final DimensionValueSetShardSpec s = spec(
+        ImmutableMap.of(CODE, List.of("1.0", "2.0")),
+        ImmutableMap.of(CODE, ColumnType.DOUBLE)
+    );
+    Assert.assertTrue(s.possibleInValueDomain(longValueDomain(CODE, "3")));
+    Assert.assertTrue(s.possibleInValueDomain(longValueDomain(CODE, "1")));
+  }
+
+  @Test
+  public void testValueDomain_dimensionNotDeclared_cannotPrune()
+  {
+    final DimensionValueSetShardSpec s = spec(
+        ImmutableMap.of(TENANT, List.of("tenant_a")),
+        ImmutableMap.of(TENANT, ColumnType.STRING)
+    );
+    // Shard declares no values for the queried dimension → cannot prune.
+    Assert.assertTrue(s.possibleInValueDomain(longValueDomain(CODE, "3")));
+  }
+
+  @Test
+  public void testValueDomain_multipleDimensions_oneMismatches_returnsFalse()
+  {
+    final DimensionValueSetShardSpec s = spec(
+        ImmutableMap.of(CODE, List.of("1"), "other", List.of("10")),
+        ImmutableMap.of(CODE, ColumnType.LONG, "other", ColumnType.LONG)
+    );
+    Assert.assertTrue(s.possibleInValueDomain(ImmutableMap.of(
+        CODE, longValues("1"),
+        "other", longValues("10")
+    )));
+    Assert.assertFalse(s.possibleInValueDomain(ImmutableMap.of(
+        CODE, longValues("1"),
+        "other", longValues("999")
+    )));
+  }
+
+  @Test
+  public void testValueDomain_nullValueMembership()
+  {
+    // A null match value (e.g. IN (NULL)) must match a shard that declares a null value.
+    final DimensionValueSetShardSpec withNull = spec(
+        ImmutableMap.of(CODE, Arrays.asList("1", null)),
+        ImmutableMap.of(CODE, ColumnType.LONG)
+    );
+    final Set<String> nullSet = new HashSet<>();
+    nullSet.add(null);
+    Assert.assertTrue(withNull.possibleInValueDomain(ImmutableMap.of(CODE, new TypedValueSet(nullSet, ColumnType.LONG))));
+
+    // A shard with only concrete values is pruned for a null-only match.
+    final DimensionValueSetShardSpec concreteOnly = spec(
+        ImmutableMap.of(CODE, List.of("1")),
+        ImmutableMap.of(CODE, ColumnType.LONG)
+    );
+    Assert.assertFalse(concreteOnly.possibleInValueDomain(ImmutableMap.of(CODE, new TypedValueSet(nullSet, ColumnType.LONG))));
+  }
+
+  @Test
+  public void testValueDomain_emptyAllowedList_prunes()
+  {
+    final DimensionValueSetShardSpec s = spec(
+        ImmutableMap.of(CODE, List.of()),
+        ImmutableMap.of(CODE, ColumnType.LONG)
+    );
+    Assert.assertFalse(s.possibleInValueDomain(longValueDomain(CODE, "1")));
+  }
+
+  @Test
+  public void testWithPartitionNum_preservesTypes()
+  {
+    final DimensionValueSetShardSpec s = spec(
+        ImmutableMap.of(CODE, List.of("1")),
+        ImmutableMap.of(CODE, ColumnType.LONG)
+    );
+    final DimensionValueSetShardSpec renumbered = (DimensionValueSetShardSpec) s.withPartitionNum(5);
+    Assert.assertEquals(5, renumbered.getPartitionNum());
+    Assert.assertEquals(ImmutableMap.of(CODE, ColumnType.LONG), renumbered.getDimensionColumnTypes());
+    Assert.assertFalse(renumbered.possibleInValueDomain(longValueDomain(CODE, "999")));
+  }
+
+  @Test
+  public void testWithCorePartitions_preservesTypes()
+  {
+    final DimensionValueSetShardSpec s = spec(
+        ImmutableMap.of(CODE, List.of("1")),
+        ImmutableMap.of(CODE, ColumnType.LONG)
+    );
+    final DimensionValueSetShardSpec recored = (DimensionValueSetShardSpec) s.withCorePartitions(9);
+    Assert.assertEquals(9, recored.getNumCorePartitions());
+    Assert.assertEquals(ImmutableMap.of(CODE, ColumnType.LONG), recored.getDimensionColumnTypes());
+  }
+
+  @Test
+  public void testEquals_distinguishesByType()
+  {
+    final DimensionValueSetShardSpec withLong = spec(
+        ImmutableMap.of(CODE, List.of("1")),
+        ImmutableMap.of(CODE, ColumnType.LONG)
+    );
+    final DimensionValueSetShardSpec withoutType = spec(ImmutableMap.of(CODE, List.of("1")));
+    Assert.assertNotEquals(withLong, withoutType);
+    Assert.assertEquals(withLong, spec(ImmutableMap.of(CODE, List.of("1")), ImmutableMap.of(CODE, ColumnType.LONG)));
+  }
+
+  @Test
+  public void testThreeArgConstructor_hasEmptyTypes()
+  {
+    final DimensionValueSetShardSpec s = spec(ImmutableMap.of(CODE, List.of("1")));
+    Assert.assertTrue(s.getDimensionColumnTypes().isEmpty());
+    // With no stamped type, the value channel cannot prune.
+    Assert.assertTrue(s.possibleInValueDomain(longValueDomain(CODE, "999")));
+  }
+
+  @Test
+  public void testJsonSerde_withColumnTypes_roundTrips() throws Exception
+  {
+    final ObjectMapper mapper = newMapper();
+    final DimensionValueSetShardSpec original = new DimensionValueSetShardSpec(
+        3,
+        8,
+        ImmutableMap.of(CODE, List.of("1", "2")),
+        ImmutableMap.of(CODE, ColumnType.LONG)
+    );
+    final String json = mapper.writeValueAsString(original);
+    Assert.assertTrue(json.contains("\"dimensionColumnTypes\""));
+
+    final DimensionValueSetShardSpec deserialized =
+        mapper.readValue(json, DimensionValueSetShardSpec.class);
+    Assert.assertEquals(original, deserialized);
+    Assert.assertEquals(ImmutableMap.of(CODE, ColumnType.LONG), deserialized.getDimensionColumnTypes());
+    Assert.assertFalse(deserialized.possibleInValueDomain(longValueDomain(CODE, "3")));
+  }
+
+  @Test
+  public void testJsonSerde_legacyWithoutColumnTypes_deserializes() throws Exception
+  {
+    // Back-compat: JSON written before dimensionColumnTypes existed deserializes to an empty map and does not prune
+    // via the typed channel.
+    final ObjectMapper mapper = newMapper();
+    final String legacyJson =
+        "{\"type\":\"dim_value_set\",\"partitionNum\":0,\"partitions\":1,"
+        + "\"partitionDimensionValues\":{\"code\":[\"1\",\"2\"]}}";
+    final DimensionValueSetShardSpec deserialized =
+        mapper.readValue(legacyJson, DimensionValueSetShardSpec.class);
+    Assert.assertTrue(deserialized.getDimensionColumnTypes().isEmpty());
+    Assert.assertEquals(ImmutableMap.of(CODE, List.of("1", "2")), deserialized.getPartitionDimensionValues());
+    Assert.assertTrue(deserialized.possibleInValueDomain(longValueDomain(CODE, "3")));
   }
 }

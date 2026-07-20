@@ -45,6 +45,8 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
@@ -78,8 +80,11 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -476,6 +481,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     final List<String> partitionDimensions =
         StreamingPartitionsSpec.getPartitionDimensionsOrEmpty(tuningConfig.getStreamingPartitionsSpec());
+    // Partition dimensions declared as LONG. Their observed values are coerced to a canonical Long string at capture
+    // time so the stamped set matches the broker's canonical query value exactly (see the capture loop below).
+    final Set<String> longPartitionDimensions = getLongPartitionDimensions(partitionDimensions);
 
     try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier =
              task.newTaskRecordSupplier(toolbox)) {
@@ -745,13 +753,17 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                           dim,
                           k -> Collections.synchronizedSet(new HashSet<>())
                       );
-                      // Empty getDimension result means a null/missing value; record null so IS NULL is not pruned
-                      // (distinct from "", which getDimension returns as ["" ]).
-                      final List<String> dimValues = row.getDimension(dim);
-                      if (dimValues == null || dimValues.isEmpty()) {
-                        dimSet.add(null);
+                      if (longPartitionDimensions.contains(dim)) {
+                        dimSet.add(canonicalLongValue(row.getRaw(dim), dim));
                       } else {
-                        dimSet.addAll(dimValues);
+                        // Empty getDimension result means a null/missing value; record null so IS NULL is not pruned
+                        // (distinct from "", which getDimension returns as ["" ]).
+                        final List<String> dimValues = row.getDimension(dim);
+                        if (dimValues == null || dimValues.isEmpty()) {
+                          dimSet.add(null);
+                        } else {
+                          dimSet.addAll(dimValues);
+                        }
                       }
                     }
                   }
@@ -1078,6 +1090,50 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   }
 
   /**
+   * The subset of the given partition dimensions declared with an explicit {@link LongDimensionSchema}. These are the
+   * only dimensions whose observed values are canonicalized to a Long string at capture and stamped
+   * {@link ColumnType#LONG} at publish, enabling type-gated numeric pruning at the broker. Schemaless/auto or non-LONG
+   * dims are excluded (no numeric pruning), avoiding canonicalization hazards.
+   */
+  private Set<String> getLongPartitionDimensions(List<String> partitionDimensions)
+  {
+    if (partitionDimensions.isEmpty()) {
+      return Collections.emptySet();
+    }
+    final DimensionsSpec dimensionsSpec = task.getDataSchema() == null ? null : task.getDataSchema().getDimensionsSpec();
+    if (dimensionsSpec == null) {
+      return Collections.emptySet();
+    }
+    final Set<String> longDimensions = new HashSet<>();
+    for (String dim : partitionDimensions) {
+      if (dimensionsSpec.getSchema(dim) instanceof LongDimensionSchema) {
+        longDimensions.add(dim);
+      }
+    }
+    return longDimensions;
+  }
+
+  /**
+   * Canonical Long string for a LONG partition dimension's raw value, matching the string the indexer stores and the
+   * broker queries with, so set membership is exact (e.g. "00001" and 1.0 yield "1", "+5" yields "5"). Returns null for
+   * a null/missing, unparseable, or multi-value value (which the indexer would reject as a long) so {@code IS NULL} is
+   * not pruned; mirrors LongDimensionIndexer's convertObjectToLong on getRaw.
+   */
+  @Nullable
+  @VisibleForTesting
+  static String canonicalLongValue(@Nullable Object rawValue, String dimension)
+  {
+    Long coerced = null;
+    try {
+      coerced = DimensionHandlerUtils.convertObjectToLong(rawValue, false, dimension);
+    }
+    catch (ParseException ignored) {
+      // Multi-value or invalid type: treated as null (no numeric pruning for this value).
+    }
+    return coerced == null ? null : Long.toString(coerced);
+  }
+
+  /**
    * Stamps a segment with a {@link DimensionValueSetShardSpec} declaring its observed dimension values so the broker can
    * prune it. When the feature is on we always return a {@link DimensionValueSetShardSpec}, falling back to an empty
    * (non-pruning) filter map when values can't be safely declared, so segments in an interval stay class-uniform for
@@ -1094,6 +1150,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
     final Integer maxValuesPerDimension = StreamingPartitionsSpec.getMaxValuesPerDimensionOrNull(partitionsSpec);
     final Map<String, List<String>> snapshotFilters = new HashMap<>();
+    // Per-dimension type stamp, gating the broker's typed numeric-value pruning (possibleInValueDomain). Only
+    // populated for explicit LONG dimensions: a LONG stringifies identically at ingest and query, so set membership
+    // is exact. Others are left unstamped (no numeric pruning).
+    final Map<String, ColumnType> dimensionColumnTypes = new HashMap<>();
+    final Set<String> longPartitionDimensions = getLongPartitionDimensions(partitionDimensions);
     final SegmentId lookupKey = s.getId();
     final Map<String, Set<String>> segObserved = observedPartitionDimValuesBySegment.get(lookupKey);
     // Leave filters empty for restart-spanned segments: their pre-restart values can't be re-observed.
@@ -1128,13 +1189,19 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         // Sort for deterministic published metadata; null (missing value) sorts first.
         snapshot.sort(Comparator.nullsFirst(Comparator.naturalOrder()));
         snapshotFilters.put(dim, snapshot);
+
+        // Stamp the type only for an explicitly-declared LONG dimension; any other case is left unstamped.
+        if (longPartitionDimensions.contains(dim)) {
+          dimensionColumnTypes.put(dim, ColumnType.LONG);
+        }
       }
     }
     return s.withShardSpec(
         new DimensionValueSetShardSpec(
             s.getShardSpec().getPartitionNum(),
             s.getShardSpec().getNumCorePartitions(),
-            snapshotFilters
+            snapshotFilters,
+            dimensionColumnTypes
         )
     );
   }

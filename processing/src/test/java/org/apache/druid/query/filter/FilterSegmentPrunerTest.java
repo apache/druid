@@ -31,6 +31,7 @@ import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
+import org.apache.druid.timeline.partition.DimensionValueSetShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
@@ -40,6 +41,7 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -282,7 +284,7 @@ class FilterSegmentPrunerTest
   {
     EqualsVerifier.forClass(FilterSegmentPruner.class)
                   .usingGetClass()
-                  .withIgnoredFields("rangeCache", "shardEquivalenceCache")
+                  .withIgnoredFields("rangeCache", "valueSetCache", "shardEquivalenceCache")
                   .verify();
   }
 
@@ -326,6 +328,75 @@ class FilterSegmentPrunerTest
     final DimFilter filter = new TypedInFilter("id", ColumnType.LONG, List.of(1L, 2L), null, null);
     final FilterSegmentPruner pruner = new FilterSegmentPruner(filter, null, null);
 
+    Assertions.assertTrue(pruner.include(seg));
+  }
+
+  @Test
+  void testPruneDimValueSetNumericEquality()
+  {
+    // LONG equality prunes on an absent value, keeps on a present one. Prune twice to exercise the value-set cache.
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final DataSegment seg = makeDataSegment(
+        interval,
+        new DimensionValueSetShardSpec(
+            0,
+            1,
+            Map.of("id", List.of("1", "2")),
+            Map.of("id", ColumnType.LONG)
+        )
+    );
+
+    final FilterSegmentPruner keeps =
+        new FilterSegmentPruner(new EqualityFilter("id", ColumnType.LONG, 1L, null), null, null);
+    Assertions.assertTrue(keeps.include(seg));
+    Assertions.assertTrue(keeps.include(seg));
+
+    final FilterSegmentPruner prunes =
+        new FilterSegmentPruner(new EqualityFilter("id", ColumnType.LONG, 3L, null), null, null);
+    Assertions.assertFalse(prunes.include(seg));
+    Assertions.assertFalse(prunes.include(seg));
+
+    final FilterSegmentPruner prunesIn =
+        new FilterSegmentPruner(new TypedInFilter("id", ColumnType.LONG, List.of(7L, 8L), null, null), null, null);
+    Assertions.assertFalse(prunesIn.include(seg));
+  }
+
+  @Test
+  void testPruneDimValueSetNumericEquality_compoundAndFilter()
+  {
+    // WHERE id = 3 AND note = 'x' reaches the pruner as an AndDimFilter; the LONG constraint still prunes when 3 is absent.
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final DataSegment seg = makeDataSegment(
+        interval,
+        new DimensionValueSetShardSpec(
+            0,
+            1,
+            Map.of("id", List.of("1", "2")),
+            Map.of("id", ColumnType.LONG)
+        )
+    );
+
+    final DimFilter compound = new AndDimFilter(
+        new EqualityFilter("id", ColumnType.LONG, 3L, null),
+        new SelectorDimFilter("note", "x", null)
+    );
+    final FilterSegmentPruner pruner = new FilterSegmentPruner(compound, null, null);
+    Assertions.assertFalse(pruner.include(seg));
+  }
+
+  @Test
+  void testDimValueSetNoStampedType_isNotPruned()
+  {
+    // A dim_value_set segment WITHOUT a stamped type (legacy) must NOT be pruned by a numeric filter: the typed
+    // channel returns true (cannot prune) and there is no string domain for a LONG equality.
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final DataSegment seg = makeDataSegment(
+        interval,
+        new DimensionValueSetShardSpec(0, 1, Map.of("id", List.of("1", "2")))
+    );
+
+    final FilterSegmentPruner pruner =
+        new FilterSegmentPruner(new EqualityFilter("id", ColumnType.LONG, 3L, null), null, null);
     Assertions.assertTrue(pruner.include(seg));
   }
 

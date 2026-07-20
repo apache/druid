@@ -1299,10 +1299,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final ShardSpec pendingShardSpec = pendingSegment.getId().getShardSpec();
     final ShardSpec oldShardSpec = oldSegment.getShardSpec();
     if (oldShardSpec instanceof DimensionValueSetShardSpec) {
+      final DimensionValueSetShardSpec oldValueSetSpec = (DimensionValueSetShardSpec) oldShardSpec;
       return new DimensionValueSetShardSpec(
           pendingShardSpec.getPartitionNum(),
           pendingShardSpec.getNumCorePartitions(),
-          ((DimensionValueSetShardSpec) oldShardSpec).getPartitionDimensionValues()
+          oldValueSetSpec.getPartitionDimensionValues(),
+          oldValueSetSpec.getDimensionColumnTypes()
       );
     }
     return pendingShardSpec;

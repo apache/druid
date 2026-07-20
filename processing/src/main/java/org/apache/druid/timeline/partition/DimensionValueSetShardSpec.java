@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -44,21 +45,56 @@ public class DimensionValueSetShardSpec extends NumberedShardSpec
    */
   private final Map<String, List<String>> partitionDimensionValues;
 
+  /**
+   * Maps dimension name → the {@link ColumnType} of the values stamped in {@link #partitionDimensionValues} for that
+   * dimension. Only populated for types safe for typed value-set pruning (currently {@link ColumnType#LONG}); a
+   * dimension absent from this map is pruned only via the string/range channel ({@link #possibleInDomain(Map)}),
+   * never via {@link #possibleInValueDomain(Map)}.
+   *
+   * <p>This is the safety gate for numeric pruning: {@link #possibleInValueDomain(Map)} may only prune a dimension
+   * when the query filter's match type equals the type recorded here, because value stringification only agrees
+   * across ingest and query for identical types.
+   */
+  private final Map<String, ColumnType> dimensionColumnTypes;
+
   @JsonCreator
   public DimensionValueSetShardSpec(
       @JsonProperty("partitionNum") int partitionNum,
       @JsonProperty("partitions") int partitions,
-      @JsonProperty("partitionDimensionValues") @Nullable Map<String, List<String>> partitionDimensionValues
+      @JsonProperty("partitionDimensionValues") @Nullable Map<String, List<String>> partitionDimensionValues,
+      @JsonProperty("dimensionColumnTypes") @Nullable Map<String, ColumnType> dimensionColumnTypes
   )
   {
     super(partitionNum, partitions);
     this.partitionDimensionValues = partitionDimensionValues == null ? Collections.emptyMap() : partitionDimensionValues;
+    this.dimensionColumnTypes = dimensionColumnTypes == null ? Collections.emptyMap() : dimensionColumnTypes;
+  }
+
+  /**
+   * Convenience constructor for callers that carry no per-dimension type information (e.g. non-numeric streaming,
+   * the append→replace upgrade fallback, or tests). A null {@code dimensionColumnTypes} disables the typed
+   * {@link #possibleInValueDomain(Map)} numeric-pruning channel but leaves the string/range channel
+   * ({@link #possibleInDomain(Map)}) fully functional.
+   */
+  public DimensionValueSetShardSpec(
+      int partitionNum,
+      int partitions,
+      @Nullable Map<String, List<String>> partitionDimensionValues
+  )
+  {
+    this(partitionNum, partitions, partitionDimensionValues, null);
   }
 
   @JsonProperty("partitionDimensionValues")
   public Map<String, List<String>> getPartitionDimensionValues()
   {
     return partitionDimensionValues;
+  }
+
+  @JsonProperty("dimensionColumnTypes")
+  public Map<String, ColumnType> getDimensionColumnTypes()
+  {
+    return dimensionColumnTypes;
   }
 
   @Override
@@ -112,6 +148,60 @@ public class DimensionValueSetShardSpec extends NumberedShardSpec
     return true;
   }
 
+  /**
+   * Type-aware, set-membership pruning for numeric ({@code LONG}) equality/IN filters. For each dimension the query
+   * constrains to a {@link TypedValueSet}, this shard can be pruned only when:
+   * <ul>
+   *   <li>this shard declares values for that dimension ({@link #partitionDimensionValues} contains it), and</li>
+   *   <li>this shard has a stamped type for that dimension ({@link #dimensionColumnTypes}) that <em>equals</em> the
+   *       filter's match type, and</li>
+   *   <li>none of this shard's declared values for the dimension is in the filter's value set.</li>
+   * </ul>
+   *
+   * <p>The type-equality check is the data-safety gate: if the stamped type is missing or differs from the filter's
+   * type (e.g. a LONG filter against a DOUBLE-stamped dimension), stringified values may not agree ({@code "1"} vs
+   * {@code "1.0"}), so this method must not prune and keeps the segment. Filters only produce LONG value sets today.
+   *
+   * @return true if the segment must be considered for the query, false if it can be pruned
+   */
+  @Override
+  public boolean possibleInValueDomain(Map<String, TypedValueSet> valueDomain)
+  {
+    if (partitionDimensionValues.isEmpty()) {
+      return true;
+    }
+
+    for (Map.Entry<String, TypedValueSet> entry : valueDomain.entrySet()) {
+      final String dimension = entry.getKey();
+      final TypedValueSet filterValues = entry.getValue();
+
+      final List<String> allowedValues = partitionDimensionValues.get(dimension);
+      if (allowedValues == null) {
+        // This shard declares no values for this dimension, so it cannot be pruned on it.
+        continue;
+      }
+
+      final ColumnType stampedType = dimensionColumnTypes.get(dimension);
+      if (stampedType == null || !stampedType.equals(filterValues.getType())) {
+        // No stamped type or a type mismatch: stringified values may not agree, so it is not safe to prune.
+        continue;
+      }
+
+      boolean anyMatch = false;
+      for (String value : allowedValues) {
+        if (filterValues.contains(value)) {
+          anyMatch = true;
+          break;
+        }
+      }
+      if (!anyMatch) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   @Override
   public String getType()
   {
@@ -121,13 +211,13 @@ public class DimensionValueSetShardSpec extends NumberedShardSpec
   @Override
   public ShardSpec withPartitionNum(int partitionNum)
   {
-    return new DimensionValueSetShardSpec(partitionNum, getNumCorePartitions(), partitionDimensionValues);
+    return new DimensionValueSetShardSpec(partitionNum, getNumCorePartitions(), partitionDimensionValues, dimensionColumnTypes);
   }
 
   @Override
   public ShardSpec withCorePartitions(int partitions)
   {
-    return new DimensionValueSetShardSpec(getPartitionNum(), partitions, partitionDimensionValues);
+    return new DimensionValueSetShardSpec(getPartitionNum(), partitions, partitionDimensionValues, dimensionColumnTypes);
   }
 
   @Override
@@ -143,13 +233,14 @@ public class DimensionValueSetShardSpec extends NumberedShardSpec
       return false;
     }
     DimensionValueSetShardSpec that = (DimensionValueSetShardSpec) o;
-    return Objects.equals(partitionDimensionValues, that.partitionDimensionValues);
+    return Objects.equals(partitionDimensionValues, that.partitionDimensionValues) &&
+           Objects.equals(dimensionColumnTypes, that.dimensionColumnTypes);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), partitionDimensionValues);
+    return Objects.hash(super.hashCode(), partitionDimensionValues, dimensionColumnTypes);
   }
 
   @Override
@@ -159,6 +250,7 @@ public class DimensionValueSetShardSpec extends NumberedShardSpec
            "partitionNum=" + getPartitionNum() +
            ", partitions=" + getNumCorePartitions() +
            ", partitionDimensionValues=" + partitionDimensionValues +
+           ", dimensionColumnTypes=" + dimensionColumnTypes +
            '}';
   }
 }
