@@ -644,6 +644,7 @@ public class ServerManager implements QuerySegmentWalker
             segmentMapFn
         );
         closer.registerAll(segmentReferences);
+        queryPlus.getQueryMetrics().reportQueriedSegmentCount(segmentReferences.size()).emit(emitter);
 
         final FunctionalIterable<QueryRunner<T>> queryRunners = getQueryRunnersForSegments(
             query,

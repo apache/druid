@@ -58,6 +58,7 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
   // Bumped on every setDelegate(...) so per-call selector wrappers can detect group transitions and rebuild their
   // cached inner state.
   private long generation;
+  private final ReadableVectorInspector readableVectorInspector = new DelegatingReadableVectorInspector(this);
 
   /**
    * Convenience overload that derives {@code maxVectorSize} from the supplied delegate. Used by single-group
@@ -120,7 +121,7 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
   @Override
   public ReadableVectorInspector getReadableVectorInspector()
   {
-    return delegate.getReadableVectorInspector();
+    return readableVectorInspector;
   }
 
   @Override
@@ -199,6 +200,52 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
       return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities();
     }
     return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
+  }
+
+  /**
+   * A {@link ReadableVectorInspector} bound to the factory, not to one delegate: {@link #getCurrentVectorSize} and
+   * {@link #getId} follow whichever delegate is current, so an inspector grabbed once keeps tracking the active group
+   * across {@code ConcatenatingVectorCursor} transitions. {@link #getMaxVectorSize} is the factory's fixed max.
+   */
+  private static final class DelegatingReadableVectorInspector implements ReadableVectorInspector
+  {
+    private final ClusteringVectorColumnSelectorFactory parent;
+    private int vectorId = NULL_ID;
+    private int lastDelegateId = NULL_ID;
+    private VectorColumnSelectorFactory lastDelegate;
+
+    private DelegatingReadableVectorInspector(ClusteringVectorColumnSelectorFactory parent)
+    {
+      this.parent = parent;
+    }
+
+    @Override
+    public int getMaxVectorSize()
+    {
+      return parent.getMaxVectorSize();
+    }
+
+    @Override
+    public int getCurrentVectorSize()
+    {
+      return parent.getDelegate().getReadableVectorInspector().getCurrentVectorSize();
+    }
+
+    @Override
+    public int getId()
+    {
+      final VectorColumnSelectorFactory delegate = parent.getDelegate();
+      final int id = delegate.getReadableVectorInspector().getId();
+      if (id == NULL_ID) {
+        return NULL_ID;
+      }
+      if (delegate != lastDelegate || id != lastDelegateId) {
+        lastDelegate = delegate;
+        lastDelegateId = id;
+        vectorId++;
+      }
+      return vectorId;
+    }
   }
 
   private static final class ClusteringVectorValueSelector implements VectorValueSelector

@@ -932,9 +932,9 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         new NoopSegmentCacheManager()
         {
           @Override
-          public void load(DataSegment segment)
+          public DataSegment load(DataSegment segment)
           {
-            // do nothing
+            return segment;
           }
 
           @Override

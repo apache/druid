@@ -29,7 +29,7 @@ import TabItem from '@theme/TabItem';
 
 When you enable the Kinesis indexing service, you can configure supervisors on the Overlord to manage the creation and lifetime of Kinesis indexing tasks. Kinesis indexing tasks read events using the Kinesis shard and sequence number mechanism to guarantee exactly-once ingestion. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that scalability and replication requirements are maintained.
 
-This topic contains configuration information for the Kinesis indexing service supervisor for Apache Druid.
+This topic contains configuration information for the Kinesis indexing service supervisor for Apache&circledR; Druid.
 
 ## Setup
 

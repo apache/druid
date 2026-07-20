@@ -419,12 +419,16 @@ class IndexMergerV10ClusteredTest extends InitializedNullHandlingTest
     Assertions.assertEquals(1, groups.get(1).getNumRows());
     Assertions.assertEquals(3, index.getNumRows());
 
-    // Per-group QueryableIndex: region physically present, clustering column not.
-    final QueryableIndex acmeGroup = index.getClusterGroupQueryableIndex(groups.get(0));
+    // Per-group QueryableIndex (merge/persist view, withClusteringColumns=false): region physically present,
+    // clustering column not.
+    final QueryableIndex acmeGroup = index.getClusterGroupQueryableIndex(groups.get(0), false);
     Assertions.assertNotNull(acmeGroup);
     Assertions.assertEquals(2, acmeGroup.getNumRows());
     Assertions.assertNotNull(acmeGroup.getColumnHolder("region"));
     Assertions.assertNull(acmeGroup.getColumnHolder("tenant"));
+    // Query view (withClusteringColumns=true): the clustering column is fabricated as a constant column.
+    final QueryableIndex acmeGroupForQuery = index.getClusterGroupQueryableIndex(groups.get(0), true);
+    Assertions.assertNotNull(acmeGroupForQuery.getColumnHolder("tenant"));
 
     // Full scan through the real clustered cursor path: groups in clustering order, constants injected.
     Assertions.assertEquals(

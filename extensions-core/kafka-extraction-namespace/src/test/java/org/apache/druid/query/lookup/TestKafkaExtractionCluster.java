@@ -73,7 +73,7 @@ public class TestKafkaExtractionCluster
   private final Closer closer = Closer.create();
 
   private static final String KAFKA_IMAGE =
-      System.getProperty("druid.testing.kafka.image", "apache/kafka:4.2.0");
+      System.getProperty("druid.testing.kafka.image", "apache/kafka:4.3.0");
 
   private KafkaContainer kafkaServer;
   private Injector injector;

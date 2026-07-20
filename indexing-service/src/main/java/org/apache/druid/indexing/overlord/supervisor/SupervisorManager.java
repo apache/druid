@@ -60,6 +60,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
@@ -124,11 +125,15 @@ public class SupervisorManager implements SupervisorStatsProvider
   }
 
   /**
+   * Finds the list of active streaming supervisors ingest into the given datasource
+   * using an APPEND lock.
+   *
    * @param datasource Datasource to find active supervisor id with append lock for.
-   * @return An optional with the active appending supervisor id if it exists.
+   * @return List of active appending supervisor IDs, if any.
    */
-  public Optional<String> getActiveSupervisorIdForDatasourceWithAppendLock(String datasource)
+  public List<String> getActiveSupervisorIdsForDatasourceWithAppendLock(String datasource)
   {
+    final List<String> matchingSupervisorIds = new ArrayList<>();
     for (Map.Entry<String, Pair<Supervisor, SupervisorSpec>> entry : supervisors.entrySet()) {
       final String supervisorId = entry.getKey();
       final Supervisor supervisor = entry.getValue().lhs;
@@ -141,11 +146,11 @@ public class SupervisorManager implements SupervisorStatsProvider
           && !supervisorSpec.isSuspended()
           && supervisorSpec.getDataSources().contains(datasource)
           && (hasAppendLock)) {
-        return Optional.of(supervisorId);
+        matchingSupervisorIds.add(supervisorId);
       }
     }
 
-    return Optional.absent();
+    return matchingSupervisorIds;
   }
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)
@@ -172,12 +177,14 @@ public class SupervisorManager implements SupervisorStatsProvider
   }
 
   /**
-   * Creates or updates a supervisor and then starts it.
-   * If no change has been made to the supervisor spec, it is only restarted.
-   *
-   * @return true if the supervisor was updated, false otherwise
+   * Applies {@code spec} under a single lock. With {@code skipRestartIfUnmodified=true}, an unchanged spec
+   * is a no-op; a changed spec is persisted without restart when {@link SupervisorSpec#requireRestart} is
+   * false. With {@code skipRestartIfUnmodified=false}, the supervisor is always recreated (legacy behavior).
    */
-  public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)
+  public SupervisorSpecUpdateResult createOrUpdateAndStartSupervisor(
+      final SupervisorSpec spec,
+      final boolean skipRestartIfUnmodified
+  )
   {
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(spec, "spec");
@@ -186,47 +193,81 @@ public class SupervisorManager implements SupervisorStatsProvider
 
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
-      final boolean shouldUpdateSpec = shouldUpdateSupervisor(spec);
-      SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
-      spec.merge(existingSpec);
-      createAndStartSupervisorInternal(spec, shouldUpdateSpec);
-      return shouldUpdateSpec;
+
+      if (!skipRestartIfUnmodified) {
+        // Always stop/recreate, persisting whenever the spec actually changed (or is new).
+        final boolean specChanged = isSpecChangedAndValidated(spec);
+        final SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
+        spec.merge(existingSpec);
+        createAndStartSupervisorInternal(spec, specChanged);
+        return SupervisorSpecUpdateResult.of(specChanged, true);
+      }
+
+      final Pair<Supervisor, SupervisorSpec> current = supervisors.get(spec.getId());
+      final boolean isNew = current == null || current.rhs == null;
+
+      if (isNew) {
+        // merge() self-initializes taskCount from taskCountStart for a new autoscaling supervisor (no existing spec).
+        spec.merge(null);
+        createAndStartSupervisorInternal(spec, true);
+        return SupervisorSpecUpdateResult.of(true, true);
+      }
+
+      final SupervisorSpec currentSpec = current.rhs;
+      if (!areSpecBytesChanged(spec, currentSpec)) {
+        return SupervisorSpecUpdateResult.of(false, false);
+      }
+
+      // merge() may carry forward omitted fields (e.g. taskCount); compare the effective spec.
+      spec.merge(currentSpec);
+      if (!areSpecBytesChanged(spec, currentSpec)) {
+        return SupervisorSpecUpdateResult.of(false, false);
+      }
+
+      // The effective (merged) spec is what will be persisted, so validate that transition exactly once.
+      currentSpec.validateSpecUpdateTo(spec);
+
+      if (!currentSpec.requireRestart(spec)) {
+        metadataSupervisorManager.insert(spec.getId(), spec);
+        supervisors.put(spec.getId(), Pair.of(current.lhs, spec));
+        return SupervisorSpecUpdateResult.of(true, false);
+      }
+
+      // Restart path: stop+recreate, persisting the changed spec.
+      possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
+      createAndStartSupervisorInternal(spec, true);
+      return SupervisorSpecUpdateResult.of(true, true);
     }
   }
 
-  /**
-   * Checks whether the submitted SupervisorSpec differs from the current spec in SupervisorManager's supervisor list.
-   * This is used in SupervisorResource specPost to determine whether the Supervisor needs to be restarted
-   *
-   * @param spec The spec submitted
-   * @return boolean - true only if the spec has been modified, false otherwise
-   */
-  public boolean shouldUpdateSupervisor(SupervisorSpec spec)
+  /** Byte-level diff against the running spec; validates allowed updates when bytes differ. */
+  private boolean isSpecChangedAndValidated(SupervisorSpec spec)
   {
-    Preconditions.checkState(started, "SupervisorManager not started");
-    Preconditions.checkNotNull(spec, "spec");
-    Preconditions.checkNotNull(spec.getId(), "spec.getId()");
-    Preconditions.checkNotNull(spec.getDataSources(), "spec.getDatasources()");
-    synchronized (lock) {
-      Preconditions.checkState(started, "SupervisorManager not started");
-      try {
-        byte[] specAsBytes = jsonMapper.writeValueAsBytes(spec);
-        Pair<Supervisor, SupervisorSpec> currentSupervisor = supervisors.get(spec.getId());
-        if (currentSupervisor == null || currentSupervisor.rhs == null) {
-          return true;
-        } else if (Arrays.equals(specAsBytes, jsonMapper.writeValueAsBytes(currentSupervisor.rhs))) {
-          return false;
-        } else {
-          // The spec bytes are different, so we need to check if the update is allowed
-          currentSupervisor.rhs.validateSpecUpdateTo(spec);
-          return true;
-        }
-      }
-      catch (JsonProcessingException ex) {
-        log.warn("Failed to write spec as bytes for spec_id[%s]", spec.getId());
-      }
+    final Pair<Supervisor, SupervisorSpec> current = supervisors.get(spec.getId());
+    final SupervisorSpec currentSpec = current == null ? null : current.rhs;
+    if (currentSpec == null) {
+      return true;
+    } else if (!areSpecBytesChanged(spec, currentSpec)) {
+      return false;
+    } else {
+      currentSpec.validateSpecUpdateTo(spec);
+      return true;
     }
-    return true;
+  }
+
+  /** Byte-level diff of {@code proposedSpec} against {@code currentSpec}. Does not validate the transition. */
+  private boolean areSpecBytesChanged(SupervisorSpec proposedSpec, SupervisorSpec currentSpec)
+  {
+    try {
+      return !Arrays.equals(
+          jsonMapper.writeValueAsBytes(proposedSpec),
+          jsonMapper.writeValueAsBytes(currentSpec)
+      );
+    }
+    catch (JsonProcessingException ex) {
+      log.warn(ex, "Failed to write spec as bytes for spec_id[%s]", proposedSpec.getId());
+      return true;
+    }
   }
 
   public boolean stopAndRemoveSupervisor(String id)
@@ -428,7 +469,7 @@ public class SupervisorManager implements SupervisorStatsProvider
       Map<String, Object> normalizedEndOffsets = jsonMapper.readValue(jsonMapper.writeValueAsString(endOffsets), Map.class);
       BoundedStreamConfig boundedStreamConfig = new BoundedStreamConfig(normalizedStartOffsets, normalizedEndOffsets);
       SupervisorSpec backfillSpec = streamSpec.createBackfillSpec(backfillSupervisorId, boundedStreamConfig, backfillTaskCount);
-      createOrUpdateAndStartSupervisor(backfillSpec);
+      createOrUpdateAndStartSupervisor(backfillSpec, false);
     }
     catch (JsonProcessingException e) {
       throw new ISE(e, "Failed to serialize offsets for backfill supervisor[%s]", backfillSupervisorId);
@@ -511,8 +552,11 @@ public class SupervisorManager implements SupervisorStatsProvider
    * Registers a new version of the given pending segment on a supervisor. This
    * allows the supervisor to include the pending segment in queries fired against
    * that segment version.
+   *
+   * @return the number of tasks notified if the segment was registered on a seekable stream supervisor, or
+   * {@link OptionalInt#empty()} if no such supervisor was found or the registration failed
    */
-  public boolean registerUpgradedPendingSegmentOnSupervisor(
+  public OptionalInt registerUpgradedPendingSegmentOnSupervisor(
       String supervisorId,
       PendingSegmentRecord upgradedPendingSegment
   )
@@ -529,12 +573,11 @@ public class SupervisorManager implements SupervisorStatsProvider
       Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
       if (!(supervisor.lhs instanceof SeekableStreamSupervisor)) {
-        return false;
+        return OptionalInt.empty();
       }
 
       SeekableStreamSupervisor<?, ?, ?> seekableStreamSupervisor = (SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs;
-      seekableStreamSupervisor.registerNewVersionOfPendingSegment(upgradedPendingSegment);
-      return true;
+      return OptionalInt.of(seekableStreamSupervisor.registerNewVersionOfPendingSegment(upgradedPendingSegment));
     }
     catch (Exception e) {
       log.error(
@@ -545,7 +588,7 @@ public class SupervisorManager implements SupervisorStatsProvider
           supervisorId
       );
     }
-    return false;
+    return OptionalInt.empty();
   }
 
   /**

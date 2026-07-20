@@ -540,12 +540,11 @@ public class StorageLocation
           id,
           (cacheEntryIdentifier, weakCacheEntry) -> {
             if (weakCacheEntry.isHeld()) {
-              // a holder is responsible for cleanup when it releases; leave the entry in place
               return weakCacheEntry;
             }
             final boolean isMounted = weakCacheEntry.cacheEntry.isMounted();
             unlinkWeakEntry(weakCacheEntry);
-            weakCacheEntry.unmount(); // terminate the phaser; fires cacheEntry.unmount() (idempotent)
+            weakCacheEntry.unmount();
             if (isMounted) {
               weakStats.getAndUpdate(s -> s.evict(weakCacheEntry.cacheEntry.getSize()));
             }

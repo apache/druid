@@ -22,7 +22,7 @@ title: "Apache Avro"
   ~ under the License.
   -->
 
-This Apache Druid extension enables Druid to ingest and parse the Apache Avro data format as follows:
+This Apache&circledR; Druid extension enables Druid to ingest and parse the Apache Avro data format as follows:
 - [Avro stream input format](../../ingestion/data-formats.md#avro-stream) for Kafka and Kinesis.
 - [Avro OCF input format](../../ingestion/data-formats.md#avro-ocf) for native batch ingestion.
 

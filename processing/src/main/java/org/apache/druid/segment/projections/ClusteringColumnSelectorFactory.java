@@ -85,6 +85,7 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   // Bumped on every setDelegate(...) so per-call selector wrappers can detect group transitions and rebuild their
   // cached inner state
   private long generation;
+  private final RowIdSupplier rowIdSupplier = new DelegatingRowIdSupplier(this);
 
   public ClusteringColumnSelectorFactory(
       ColumnSelectorFactory delegate,
@@ -177,12 +178,51 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public RowIdSupplier getRowIdSupplier()
   {
-    return delegate.getRowIdSupplier();
+    // A delegate may not support row-id caching; mirror that so callers skip caching (null)
+    return delegate.getRowIdSupplier() == null ? null : rowIdSupplier;
   }
 
   Object currentValue(int idx)
   {
     return clusteringValues[idx];
+  }
+
+  /**
+   * A {@link RowIdSupplier} bound to the factory, {@link #getRowId} follows whichever delegate is current, so a
+   * supplier grabbed once keeps tracking the active group across {@code ConcatenatingCursor} transitions.
+   */
+  private static final class DelegatingRowIdSupplier implements RowIdSupplier
+  {
+    private final ClusteringColumnSelectorFactory parent;
+    private long rowId = INIT;
+    private long lastDelegateRowId = INIT;
+    private RowIdSupplier lastDelegate;
+
+    private DelegatingRowIdSupplier(ClusteringColumnSelectorFactory parent)
+    {
+      this.parent = parent;
+    }
+
+    @Override
+    public long getRowId()
+    {
+      final RowIdSupplier delegate = parent.getDelegate().getRowIdSupplier();
+      if (delegate == null) {
+        // getRowIdSupplier() only hands out this wrapper when the delegate supports row ids; clustered groups are
+        // homogeneous, so a null here would mean a group mid-cursor stopped supporting them.
+        throw DruidException.defensive("delegate row id supplier became null across a cluster-group transition");
+      }
+      final long id = delegate.getRowId();
+      if (id == INIT) {
+        return INIT;
+      }
+      if (delegate != lastDelegate || id != lastDelegateRowId) {
+        lastDelegate = delegate;
+        lastDelegateRowId = id;
+        rowId++;
+      }
+      return rowId;
+    }
   }
 
   /**

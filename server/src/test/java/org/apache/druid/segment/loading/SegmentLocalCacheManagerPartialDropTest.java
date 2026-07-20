@@ -200,7 +200,9 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
         new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
         null,
-        ESTIMATE
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     final StorageLocation.ReservationHold<SegmentCacheEntry> hold = location.addWeakReservationHold(
         new SegmentCacheEntryIdentifier(SEGMENT_ID),

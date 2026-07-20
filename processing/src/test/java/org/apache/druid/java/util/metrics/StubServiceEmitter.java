@@ -152,8 +152,10 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   {
     final Queue<ServiceMetricEvent> metricEventQueue = metricEvents.get(metricName);
     long total = 0;
-    for (ServiceMetricEvent event : metricEventQueue) {
-      total += event.getValue().longValue();
+    if (metricEventQueue != null) {
+      for (ServiceMetricEvent event : metricEventQueue) {
+        total += event.getValue().longValue();
+      }
     }
     return total;
   }

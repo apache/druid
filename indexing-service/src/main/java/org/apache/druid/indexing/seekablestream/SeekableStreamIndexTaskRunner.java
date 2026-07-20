@@ -60,6 +60,7 @@ import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskContextReport;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.SegmentUpgradeMetrics;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -83,6 +84,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.InputRowFilterResult;
@@ -1913,7 +1915,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req);
     try {
-      ((StreamAppenderator) appenderator).registerUpgradedPendingSegment(upgradedPendingSegment);
+      final StreamAppenderator.PendingSegmentUpgradeResult outcome =
+          ((StreamAppenderator) appenderator).registerUpgradedPendingSegment(upgradedPendingSegment);
+      recordUpgradeResult(upgradedPendingSegment, outcome);
       return Response.ok().build();
     }
     catch (DruidException e) {
@@ -1930,6 +1934,61 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       );
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
     }
+  }
+
+  /**
+   * Logs and emits a metric for the result of a pending-segment upgrade request, keyed off the {@code result}
+   * returned by {@link StreamAppenderator#registerUpgradedPendingSegment}.
+   */
+  private void recordUpgradeResult(
+      PendingSegmentRecord upgradedPendingSegment,
+      StreamAppenderator.PendingSegmentUpgradeResult result
+  )
+  {
+    final SegmentIdWithShardSpec upgradedId = upgradedPendingSegment.getId();
+    final String upgradedFromSegmentId = upgradedPendingSegment.getUpgradedFromSegmentId();
+
+    if (result == StreamAppenderator.PendingSegmentUpgradeResult.ANNOUNCED) {
+      toolbox.getEmitter().emit(
+          IndexTaskUtils.setPendingSegmentDimensions(task.getMetricBuilder(), upgradedPendingSegment)
+                        .setMetric(SegmentUpgradeMetrics.ANNOUNCED, 1)
+      );
+      return;
+    }
+    // Log at the level appropriate to the result; the reason string itself is carried by the enum.
+    switch (result) {
+      case SKIPPED_UNKNOWN_BASE:
+        // The request targeted the wrong task: this task never held a base sink matching upgradedFromSegmentId.
+        log.warn(
+            "Not announcing upgraded pending segment[%s] on task[%s] because it has no base sink matching"
+            + " upgradedFromSegmentId[%s]; the upgrade request likely targeted the wrong task.",
+            upgradedId, task.getId(), upgradedFromSegmentId
+        );
+        break;
+      case SKIPPED_NO_SINK:
+        // Unexpected: the base sink is gone even though this task once held it.
+        log.info(
+            "Not announcing upgraded pending segment[%s] (upgradedFrom[%s]) on task[%s] because the base sink is no"
+            + " longer present.",
+            upgradedId, upgradedFromSegmentId, task.getId()
+        );
+        break;
+      case SKIPPED_DROPPING:
+        // Expected during handoff: the base sink is being dropped and the durable path re-announces at the new version.
+        log.debug(
+            "Not announcing upgraded pending segment[%s] (upgradedFrom[%s]) on task[%s] because the base sink is being"
+            + " dropped.",
+            upgradedId, upgradedFromSegmentId, task.getId()
+        );
+        break;
+      default:
+        return;
+    }
+    toolbox.getEmitter().emit(
+        IndexTaskUtils.setPendingSegmentDimensions(task.getMetricBuilder(), upgradedPendingSegment)
+                      .setDimension(DruidMetrics.REASON, result.getReason())
+                      .setMetric(SegmentUpgradeMetrics.SKIPPED, 1)
+    );
   }
 
   public Map<String, Object> doGetRowStats()
