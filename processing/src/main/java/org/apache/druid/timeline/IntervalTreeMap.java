@@ -832,9 +832,9 @@ public class IntervalTreeMap<T> extends AbstractMap<Interval, T> implements Navi
    * @return The contents of the tree as a string
    */
   @Override
-  public @Nullable String toString()
+  public String toString()
   {
-    return (root != null) ? root.print(1) : null;
+    return (root != null) ? root.print(1) : "";
   }
 
   @SafeVarargs

@@ -29,9 +29,6 @@ import javax.annotation.Nullable;
  */
 public class SegmentTimelineConfig
 {
-  /**
-   * Use an indexing mechanism based on an interval tree for organizing segments in memory that leads to faster search
-   */
   @JsonProperty
   private final boolean fastIntervalSearch;
 
@@ -49,6 +46,10 @@ public class SegmentTimelineConfig
     this.fastIntervalSearch = fastIntervalSearch != null && fastIntervalSearch;
   }
 
+  /**
+   * Whether an indexing mechanism based on an interval tree for organizing segments in memory is being used, that
+   * leads to faster search
+   */
   public boolean isFastIntervalSearch()
   {
     return fastIntervalSearch;
