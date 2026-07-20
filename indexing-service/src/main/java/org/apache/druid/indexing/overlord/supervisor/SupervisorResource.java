@@ -40,6 +40,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -76,8 +77,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.AUTOSCALER_TYPE_NAME;
 
 /**
  * Endpoints for submitting and starting a {@link SupervisorSpec}, getting running supervisors, stopping supervisors,
@@ -547,7 +546,7 @@ public class SupervisorResource
   @ResourceFilters(SupervisorResourceFilter.class)
   public Response simulateAutoscaling(
       @PathParam("id") String supervisorId,
-      @QueryParam("autoScalerStrategy") @DefaultValue(AUTOSCALER_TYPE_NAME) String autoScalerStrategy,
+      @QueryParam("autoScalerStrategy") @DefaultValue(CostBasedAutoScaler.AUTOSCALER_TYPE_NAME) String autoScalerStrategy,
       @QueryParam("taskCountMin") int taskCountMin,
       @QueryParam("taskCountMax") int taskCountMax,
       @QueryParam("maxProcessingRatePerTask") int maxProcessingRatePerTask,
@@ -559,11 +558,11 @@ public class SupervisorResource
       @Context HttpServletRequest request
   )
   {
-    if (!AUTOSCALER_TYPE_NAME.equals(autoScalerStrategy)) {
+    if (!CostBasedAutoScaler.AUTOSCALER_TYPE_NAME.equals(autoScalerStrategy)) {
       throw InvalidInput.exception(
           "Cannot simulate autoScalerStrategy[%s]. Only [%s] is supported.",
           autoScalerStrategy,
-          AUTOSCALER_TYPE_NAME
+          CostBasedAutoScaler.AUTOSCALER_TYPE_NAME
       );
     }
     final CostBasedAutoScalerConfig autoScalerConfig =
