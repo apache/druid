@@ -178,7 +178,7 @@ public class SupervisorManager implements SupervisorStatsProvider
 
   /**
    * Applies {@code spec} under a single lock. With {@code skipRestartIfUnmodified=true}, an unchanged spec
-   * is a no-op; a changed spec is persisted without restart when {@link SupervisorSpec#requireRestart} is
+   * is a no-op; a changed spec is persisted without restart when {@link SupervisorSpec#getActionOnUpdateTo} is
    * false. With {@code skipRestartIfUnmodified=false}, the supervisor is always recreated (legacy behavior).
    */
   public SupervisorSpecUpdateResult createOrUpdateAndStartSupervisor(
@@ -199,10 +199,13 @@ public class SupervisorManager implements SupervisorStatsProvider
         final boolean specChanged = isSpecChangedAndValidated(spec);
         final Pair<Supervisor, SupervisorSpec> current = supervisors.get(spec.getId());
         final SupervisorSpec currentSpec = current == null ? null : current.rhs;
+        final boolean shouldTerminateTasks =
+            currentSpec == null
+            || currentSpec.getActionOnUpdateTo(spec) == SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS;
         final SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(
             spec.getId(),
             false,
-            currentSpec == null || currentSpec.shouldRolloverTasksOnRestart(spec)
+            shouldTerminateTasks
         );
         spec.merge(existingSpec);
         createAndStartSupervisorInternal(spec, specChanged);
@@ -233,14 +236,16 @@ public class SupervisorManager implements SupervisorStatsProvider
       // The effective (merged) spec is what will be persisted, so validate that transition exactly once.
       currentSpec.validateSpecUpdateTo(spec);
 
-      if (!currentSpec.requireRestart(spec)) {
+      SupervisorSpecUpdateAction action = currentSpec.getActionOnUpdateTo(spec);
+      if (action == SupervisorSpecUpdateAction.NONE) {
         metadataSupervisorManager.insert(spec.getId(), spec);
         supervisors.put(spec.getId(), Pair.of(current.lhs, spec));
         return SupervisorSpecUpdateResult.of(true, false);
       }
 
       // Restart path: stop+recreate, persisting the changed spec.
-      possiblyStopAndRemoveSupervisorInternal(spec.getId(), false, currentSpec.shouldRolloverTasksOnRestart(spec));
+      boolean shouldTaskBeTerminated = action == SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS;
+      possiblyStopAndRemoveSupervisorInternal(spec.getId(), false, shouldTaskBeTerminated);
       createAndStartSupervisorInternal(spec, true);
       return SupervisorSpecUpdateResult.of(true, true);
     }

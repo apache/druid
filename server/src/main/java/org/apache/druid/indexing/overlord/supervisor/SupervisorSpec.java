@@ -141,21 +141,11 @@ public interface SupervisorSpec
   }
 
   /**
-   * Returns true if replacing this (running) spec with {@code proposedSpec} requires a supervisor restart.
+   * Returns a required
    * Invoked on the running spec; default is conservative (always restart).
    */
-  default boolean requireRestart(SupervisorSpec proposedSpec)
+  default SupervisorSpecUpdateAction getActionOnUpdateTo(SupervisorSpec proposedSpec)
   {
-    return true;
-  }
-
-  /**
-   * Returns true if replacing this (running) spec with {@code proposedSpec} should roll over (stop and
-   * republish) the currently running tasks, false if the existing tasks should be left running as-is.
-   * Invoked on the running spec; default is conservative (always roll over).
-   */
-  default boolean shouldRolloverTasksOnRestart(SupervisorSpec proposedSpec)
-  {
-    return true;
+    return SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS;
   }
 }
