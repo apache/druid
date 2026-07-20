@@ -141,8 +141,10 @@ public interface SupervisorSpec
   }
 
   /**
-   * Returns a required
-   * Invoked on the running spec; default is conservative (always restart).
+   * Returns the action to take when this (running) spec is updated to {@code proposedSpec}.
+   * Invoked on the running spec; default is conservative and always restarts the supervisor and its tasks.
+   *
+   * @param proposedSpec the proposed supervisor spec
    */
   default SupervisorSpecUpdateAction getActionOnUpdateTo(SupervisorSpec proposedSpec)
   {
