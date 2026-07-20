@@ -165,7 +165,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
     EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, false))
-            .andReturn(SupervisorSpecUpdateResult.of(true, true));
+            .andReturn(SupervisorSpecUpdateResult.of(true, SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS));
 
     setupMockRequest();
     setupMockRequestForAudit();
@@ -185,7 +185,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
     EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, false))
-            .andReturn(SupervisorSpecUpdateResult.of(false, true));
+            .andReturn(SupervisorSpecUpdateResult.of(false, SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS));
 
     setupMockRequest();
     setupMockRequestForAudit();
@@ -261,7 +261,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
     // Changed but no restart needed: persisted without restarting — and the persist must be audited.
     EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, true))
-            .andReturn(SupervisorSpecUpdateResult.of(true, false));
+            .andReturn(SupervisorSpecUpdateResult.of(true, SupervisorSpecUpdateAction.NONE));
 
     setupMockRequest();
     setupMockRequestForAudit();
@@ -281,7 +281,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
     EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, true))
-            .andReturn(SupervisorSpecUpdateResult.of(false, false));
+            .andReturn(SupervisorSpecUpdateResult.of(false, SupervisorSpecUpdateAction.NONE));
 
     setupMockRequest();
 
@@ -299,7 +299,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
     EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, true))
-            .andReturn(SupervisorSpecUpdateResult.of(true, true));
+            .andReturn(SupervisorSpecUpdateResult.of(true, SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS));
 
     setupMockRequest();
     setupMockRequestForAudit();
@@ -332,7 +332,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
     EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, false))
-            .andReturn(SupervisorSpecUpdateResult.of(true, true));
+            .andReturn(SupervisorSpecUpdateResult.of(true, SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS));
     setupMockRequest();
     setupMockRequestForAudit();
 

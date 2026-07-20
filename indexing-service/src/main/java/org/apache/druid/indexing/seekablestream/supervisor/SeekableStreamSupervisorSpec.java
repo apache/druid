@@ -33,6 +33,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpecUpdateAction;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
@@ -298,10 +299,10 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  public boolean requireRestart(SupervisorSpec proposedSpec)
+  public SupervisorSpecUpdateAction getActionOnUpdateTo(SupervisorSpec proposedSpec)
   {
     if (!(proposedSpec instanceof SeekableStreamSupervisorSpec proposed)) {
-      return true;
+      return SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS;
     }
 
     final Builder<?> proposedCopy = proposed.toBuilder();
@@ -313,7 +314,9 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       proposedCopy.taskCount(getIoConfig().getTaskCount());
     }
 
-    return !proposedCopy.build().equals(this);
+    return !proposedCopy.build().equals(this)
+           ? SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS
+           : SupervisorSpecUpdateAction.NONE;
   }
 
   private boolean isAutoScalerEnabled()
@@ -353,7 +356,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   );
 
   /**
-   * Returns a copy builder seeded from this spec, used by {@link #requireRestart} for structured comparison.
+   * Returns a copy builder seeded from this spec, used by {@link #getActionOnUpdateTo} for structured comparison.
    * Abstract so that every stream supervisor spec participates in the restart decision.
    */
   public abstract Builder<?> toBuilder();
