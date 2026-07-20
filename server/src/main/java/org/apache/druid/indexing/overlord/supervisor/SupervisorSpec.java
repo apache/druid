@@ -141,11 +141,13 @@ public interface SupervisorSpec
   }
 
   /**
-   * Returns true if replacing this (running) spec with {@code proposedSpec} requires a supervisor restart.
-   * Invoked on the running spec; default is conservative (always restart).
+   * Returns the action to take when this (running) spec is updated to {@code proposedSpec}.
+   * Invoked on the running spec; default is conservative and always restarts the supervisor and its tasks.
+   *
+   * @param proposedSpec the proposed supervisor spec
    */
-  default boolean requireRestart(SupervisorSpec proposedSpec)
+  default SupervisorSpecUpdateAction getActionOnUpdateTo(SupervisorSpec proposedSpec)
   {
-    return true;
+    return SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS;
   }
 }
