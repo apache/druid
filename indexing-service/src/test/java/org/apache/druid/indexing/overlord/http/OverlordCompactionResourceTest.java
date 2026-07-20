@@ -31,6 +31,7 @@ import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.supervisor.CompactionSupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpecUpdateAction;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpecUpdateResult;
 import org.apache.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -317,7 +318,7 @@ public class OverlordCompactionResourceTest
         new CompactionSupervisorSpec(wikiConfig, false, validator);
 
     EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(supervisorSpec, true))
-            .andReturn(SupervisorSpecUpdateResult.of(true, true)).once();
+            .andReturn(SupervisorSpecUpdateResult.of(true, SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS)).once();
     EasyMock.expect(scheduler.validateCompactionConfig(wikiConfig))
             .andReturn(CompactionConfigValidationResult.success()).once();
     replayAll();

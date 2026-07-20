@@ -17,35 +17,15 @@
  * under the License.
  */
 
+
 package org.apache.druid.indexing.overlord.supervisor;
 
 /**
- * Outcome of {@link SupervisorManager#createOrUpdateAndStartSupervisor(SupervisorSpec, boolean)}.
+ * Enum representing the possible actions to take when a supervisor spec is updated.
  */
-public final class SupervisorSpecUpdateResult
+public enum SupervisorSpecUpdateAction
 {
-  private final boolean modified;
-  private final SupervisorSpecUpdateAction action;
-
-  private SupervisorSpecUpdateResult(final boolean modified, final SupervisorSpecUpdateAction action)
-  {
-    this.modified = modified;
-    this.action = action;
-  }
-
-  public static SupervisorSpecUpdateResult of(final boolean modified, final SupervisorSpecUpdateAction action)
-  {
-    return new SupervisorSpecUpdateResult(modified, action);
-  }
-
-  public boolean isModified()
-  {
-    return modified;
-  }
-
-  public boolean isRestarted()
-  {
-    return action != SupervisorSpecUpdateAction.NONE;
-  }
-
+  NONE,
+  RESTART_SUPERVISOR,
+  RESTART_SUPERVISOR_AND_TASKS
 }
