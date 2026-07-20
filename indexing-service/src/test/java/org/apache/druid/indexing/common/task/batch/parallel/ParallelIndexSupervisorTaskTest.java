@@ -23,6 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.Futures;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.commons.codec.Charsets;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -56,9 +61,6 @@ import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -405,10 +407,11 @@ public class ParallelIndexSupervisorTaskTest
       final String taskId = "task";
 
       final OverlordClient client = mock(OverlordClient.class);
-      final HttpResponse response = mock(HttpResponse.class);
-      expect(response.getContent()).andReturn(ChannelBuffers.buffer(0));
-      expect(response.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).anyTimes();
-      EasyMock.replay(response);
+      final HttpResponse response = new DefaultFullHttpResponse(
+          HttpVersion.HTTP_1_1,
+          HttpResponseStatus.NOT_FOUND,
+          Unpooled.EMPTY_BUFFER
+      );
 
       expect(client.taskReportAsMap(taskId)).andReturn(
           Futures.immediateFailedFuture(
@@ -418,7 +421,7 @@ public class ParallelIndexSupervisorTaskTest
       EasyMock.replay(client);
 
       Assert.assertNull(ParallelIndexSupervisorTask.getTaskReport(client, taskId));
-      EasyMock.verify(client, response);
+      EasyMock.verify(client);
     }
 
     @Test
@@ -427,10 +430,11 @@ public class ParallelIndexSupervisorTaskTest
       final String taskId = "task";
 
       final OverlordClient client = mock(OverlordClient.class);
-      final HttpResponse response = mock(HttpResponse.class);
-      expect(response.getContent()).andReturn(ChannelBuffers.buffer(0));
-      expect(response.getStatus()).andReturn(HttpResponseStatus.FORBIDDEN).anyTimes();
-      EasyMock.replay(response);
+      final HttpResponse response = new DefaultFullHttpResponse(
+          HttpVersion.HTTP_1_1,
+          HttpResponseStatus.FORBIDDEN,
+          Unpooled.EMPTY_BUFFER
+      );
 
       expect(client.taskReportAsMap(taskId)).andReturn(
           Futures.immediateFailedFuture(
@@ -450,7 +454,7 @@ public class ParallelIndexSupervisorTaskTest
           ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Server error [403 Forbidden]"))
       );
 
-      EasyMock.verify(client, response);
+      EasyMock.verify(client);
     }
 
     @Test

@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.query;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.SleepModule;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -41,11 +42,11 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 
 import javax.ws.rs.core.MediaType;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -204,7 +205,7 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
     Assertions.assertNotNull(response);
 
     onResponse.accept(
-        response.getStatus().getCode(),
+        response.getStatus().code(),
         response.getContent().trim()
     );
   }

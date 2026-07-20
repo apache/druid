@@ -22,6 +22,14 @@ package org.apache.druid.frame.file;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
@@ -37,14 +45,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.jboss.netty.buffer.ByteBufferBackedChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -57,7 +57,6 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.math.RoundingMode;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
@@ -428,22 +427,14 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
 
   private static HttpResponse makeResponse(final HttpResponseStatus status, final byte[] content)
   {
-    final ByteBufferBackedChannelBuffer channelBuffer = new ByteBufferBackedChannelBuffer(ByteBuffer.wrap(content));
-
-    return new DefaultHttpResponse(HttpVersion.HTTP_1_1, status)
-    {
-      @Override
-      public ChannelBuffer getContent()
-      {
-        return channelBuffer;
-      }
-    };
+    final ByteBuf buffer = Unpooled.wrappedBuffer(content);
+    return new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, buffer);
   }
 
-  private static HttpChunk makeChunk(final byte[] content)
+  private static HttpContent makeChunk(final byte[] content)
   {
-    final ByteBufferBackedChannelBuffer channelBuffer = new ByteBufferBackedChannelBuffer(ByteBuffer.wrap(content));
-    return new DefaultHttpChunk(channelBuffer);
+    final ByteBuf buffer = Unpooled.wrappedBuffer(content);
+    return new DefaultHttpContent(buffer);
   }
 
   private static byte[] byteSlice(final byte[] bytes, final int start, final int length)

@@ -21,6 +21,14 @@ package org.apache.druid.security.basic.authorization.db.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -36,13 +44,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -199,13 +200,13 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     );
     serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, fullPath),
-        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)
+        new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)
         {
           @Override
-          public ChannelBuffer getContent()
+          public ByteBuf content()
           {
             try {
-              return ChannelBuffers.wrappedBuffer(responseHolder.answer().getContent());
+              return Unpooled.wrappedBuffer(responseHolder.answer().getContent());
             }
             catch (Throwable e) {
               throw new RuntimeException(e);
