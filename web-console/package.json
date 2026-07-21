@@ -93,7 +93,7 @@
     "react-table": "~6.11.5",
     "regenerator-runtime": "^0.13.7",
     "tslib": "^2.8.0",
-    "uuid": "^7.0.3",
+    "uuid": "^14.0.0",
     "zustand": "^4.5.5"
   },
   "devDependencies": {
