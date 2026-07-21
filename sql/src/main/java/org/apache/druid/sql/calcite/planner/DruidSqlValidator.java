@@ -59,6 +59,7 @@ import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Static;
 import org.apache.calcite.util.Util;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.common.utils.IdUtils;
@@ -66,6 +67,7 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
@@ -83,9 +85,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -536,12 +540,16 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
 
     // disable sealed mode validation if catalog validation is disabled.
     final boolean isStrict = tableMetadata.isSealed();
+    // Base table layouts (which require 'sealed') may declare ingest-time virtual columns; the columns those virtual
+    // columns consume are allowed in the source even though they are not stored (e.g. a raw column feeding an
+    // expression that computes a stored clustering column).
+    final Set<String> baseTableVirtualColumnInputs = getBaseTableVirtualColumnInputs(tableMetadata.baseTableMetadata());
     final List<Map.Entry<String, RelDataType>> fields = new ArrayList<>();
     for (RelDataTypeField sourceField : sourceFields) {
       final String colName = sourceField.getName();
       final DatasourceFacade.ColumnFacade definedCol = tableMetadata.column(colName);
       if (definedCol == null) {
-        if (isStrict) {
+        if (isStrict && !baseTableVirtualColumnInputs.contains(colName)) {
           throw InvalidSqlInput.exception(
               "Column [%s] is not defined in the target table [%s] strict schema",
               colName,
@@ -549,7 +557,8 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
           );
         }
 
-        // Table is not strict: add a new column based on the SELECT column.
+        // Table is not strict (or the column feeds a base table virtual column): add a new column based on the
+        // SELECT column.
         fields.add(Pair.of(colName, sourceField.getType()));
         continue;
       }
@@ -642,6 +651,23 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     }
     // the call to base class definition will insert implicit casts / coercions where needed.
     super.checkTypeAssignment(sourceScope, table, sourceRowType, targetRowType, query);
+  }
+
+  /**
+   * The union of columns required as inputs by a base table layout's ingest-time virtual columns. These columns are
+   * consumed to compute stored columns without being stored themselves, so they are allowed in an INSERT/REPLACE
+   * source even though the base table schema is otherwise strict.
+   */
+  private static Set<String> getBaseTableVirtualColumnInputs(@Nullable DatasourceBaseTableMetadata baseTableMetadata)
+  {
+    if (baseTableMetadata == null) {
+      return Collections.emptySet();
+    }
+    final Set<String> inputs = new HashSet<>();
+    for (VirtualColumn virtualColumn : baseTableMetadata.getVirtualColumns().getVirtualColumns()) {
+      inputs.addAll(virtualColumn.requiredColumns());
+    }
+    return inputs;
   }
 
   protected RelDataType computeTypeForDefinedCol(

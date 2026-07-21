@@ -100,6 +100,10 @@ public class CatalogInsertTest extends CalciteCatalogInsertTest
           tableBuilder.clusterColumns(catalogMetadata.clusterKeys().toArray(new ClusterKeySpec[0]));
         }
 
+        if (catalogMetadata.baseTableMetadata() != null) {
+          tableBuilder.baseTable(catalogMetadata.baseTableMetadata());
+        }
+
         createTableMetadata(tableBuilder.build());
       });
     }

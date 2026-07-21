@@ -19,11 +19,13 @@
 
 package org.apache.druid.catalog.storage;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.storage.sql.CatalogManager;
 import org.apache.druid.catalog.storage.sql.SQLCatalogManager;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -70,7 +72,9 @@ public class CatalogTests
     }
   }
 
-  public static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+  public static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper().setInjectableValues(
+      new InjectableValues.Std().addValue(ExprMacroTable.class, ExprMacroTable.nil())
+  );
 
   public static class DbFixture
   {

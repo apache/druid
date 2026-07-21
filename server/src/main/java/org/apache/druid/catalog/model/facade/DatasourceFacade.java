@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
@@ -190,6 +191,26 @@ public class DatasourceFacade extends TableFacade
       LOG.error(
           "Failed to convert a catalog %s property of value [%s]",
           DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,
+          value
+      );
+      return null;
+    }
+  }
+
+  @Nullable
+  public DatasourceBaseTableMetadata baseTableMetadata()
+  {
+    Object value = property(DatasourceDefn.BASE_TABLE_PROPERTY);
+    if (value == null) {
+      return null;
+    }
+    try {
+      return jsonMapper().convertValue(value, DatasourceDefn.BaseTableDefn.TYPE_REF);
+    }
+    catch (Exception e) {
+      LOG.error(
+          "Failed to convert a catalog %s property of value [%s]",
+          DatasourceDefn.BASE_TABLE_PROPERTY,
           value
       );
       return null;
