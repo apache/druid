@@ -513,20 +513,25 @@ public class ForkingTaskRunner
   }
 
   /**
-   * Resolves the command used to launch the peon JVM. When the operator has not overridden
-   * {@code druid.indexer.runner.javaCommand} (i.e. it is still the default {@code "java"}), and the bundled
-   * {@link #RUN_JAVA_COMMAND} script is present in {@code workingDir}, prefer it so that {@code DRUID_JAVA_HOME} /
-   * {@code JAVA_HOME} are honored. Otherwise fall back to the configured command (the plain {@code java} on the
-   * PATH by default). The existence check against {@code workingDir} is reliable because peons inherit this
-   * process's working directory.
+   * Resolves the command used to launch the peon JVM, in order of precedence:
+   * <ol>
+   *   <li>the operator-specified {@code druid.indexer.runner.javaCommand}, if set;</li>
+   *   <li>the bundled {@link #RUN_JAVA_COMMAND} script if present in {@code workingDir}, so that
+   *   {@code DRUID_JAVA_HOME} / {@code JAVA_HOME} are honored;</li>
+   *   <li>otherwise plain {@code java} on the {@code PATH}.</li>
+   * </ol>
+   * The existence check against {@code workingDir} is reliable because peons inherit this process's working
+   * directory.
    */
-  public static String getJavaCommand(String configuredJavaCommand, File workingDir)
+  public static String getJavaCommand(@Nullable String configuredJavaCommand, File workingDir)
   {
-    if (ForkingTaskRunnerConfig.DEFAULT_JAVA_COMMAND.equals(configuredJavaCommand)
-        && new File(workingDir, RUN_JAVA_COMMAND).exists()) {
+    if (configuredJavaCommand != null) {
+      return configuredJavaCommand;
+    }
+    if (new File(workingDir, RUN_JAVA_COMMAND).exists()) {
       return RUN_JAVA_COMMAND;
     }
-    return configuredJavaCommand;
+    return ForkingTaskRunnerConfig.DEFAULT_JAVA_COMMAND;
   }
 
   @VisibleForTesting

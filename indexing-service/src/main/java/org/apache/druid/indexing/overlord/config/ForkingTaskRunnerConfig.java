@@ -24,9 +24,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.io.File;
 import java.util.List;
 
 public class ForkingTaskRunnerConfig
@@ -38,9 +40,12 @@ public class ForkingTaskRunnerConfig
 
   public static final String DEFAULT_JAVA_COMMAND = "java";
 
+  /**
+   * Intentionally has no default. A null value means the operator has not overridden it, which lets
+   * {@code ForkingTaskRunner} decide between the bundled {@code bin/run-java} script and plain {@code java}.
+   */
   @JsonProperty
-  @NotNull
-  private String javaCommand = DEFAULT_JAVA_COMMAND;
+  private String javaCommand = null;
 
   /**
    * This is intended for setting -X parameters on the underlying java.  It is used by first splitting on whitespace,
@@ -89,6 +94,12 @@ public class ForkingTaskRunnerConfig
       "hadoop"
   );
 
+  /**
+   * See method {@link org.apache.druid.indexing.overlord.ForkingTaskRunner#getJavaCommand(String, File)} method to see
+   * how this config is used.
+   * @return
+   */
+  @Nullable
   public String getJavaCommand()
   {
     return javaCommand;

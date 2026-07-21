@@ -41,6 +41,7 @@ import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTaskIOCon
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateTest;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
@@ -84,12 +85,13 @@ public class ForkingTaskRunnerTest
   {
     final File workingDir = temporaryFolder.newFolder();
     final File binDir = new File(workingDir, "bin");
-    Assert.assertTrue(binDir.mkdirs());
+    FileUtils.mkdirp(binDir);
     Assert.assertTrue(new File(binDir, "run-java").createNewFile());
 
+    // No configured command (null) and the run-java script is present -> use it.
     Assert.assertEquals(
         "bin/run-java",
-        ForkingTaskRunner.getJavaCommand(new ForkingTaskRunnerConfig().getJavaCommand(), workingDir)
+        ForkingTaskRunner.getJavaCommand(null, workingDir)
     );
   }
 
@@ -97,11 +99,16 @@ public class ForkingTaskRunnerTest
   public void testGetJavaCommandFallsBackToJavaWhenScriptAbsent() throws IOException
   {
     final File workingDir = temporaryFolder.newFolder();
-
     Assert.assertEquals(
         "java",
-        ForkingTaskRunner.getJavaCommand(new ForkingTaskRunnerConfig().getJavaCommand(), workingDir)
+        ForkingTaskRunner.getJavaCommand(null, workingDir)
     );
+  }
+
+  @Test
+  public void testConfigHasNoDefaultJavaCommand()
+  {
+    Assert.assertNull(new ForkingTaskRunnerConfig().getJavaCommand());
   }
 
   @Test
