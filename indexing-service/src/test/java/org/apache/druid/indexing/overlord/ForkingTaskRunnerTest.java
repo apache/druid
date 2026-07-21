@@ -116,7 +116,7 @@ public class ForkingTaskRunnerTest
   {
     final File workingDir = temporaryFolder.newFolder();
     final File binDir = new File(workingDir, "bin");
-    Assert.assertTrue(binDir.mkdirs());
+    FileUtils.mkdirp(binDir);
     Assert.assertTrue(new File(binDir, "run-java").createNewFile());
 
     // An explicit, non-default javaCommand must be used verbatim even when the run-java script is present.
