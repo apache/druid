@@ -43,8 +43,8 @@ public class TestPodTemplateSelector implements PodTemplateSelector
   }
 
   @Override
-  public List<PodTemplateWithName> getPodTemplates()
+  public List<String> getPodTemplateNames()
   {
-    return Collections.singletonList(new PodTemplateWithName("base", basePodTemplate));
+    return Collections.singletonList("base");
   }
 }

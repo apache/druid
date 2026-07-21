@@ -34,7 +34,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 /**
- * Resource that exposes the pod templates currently configured for running peons in Kubernetes.
+ * Resource that exposes the names of the pod templates currently configured for running peons in
+ * Kubernetes.
  *
  * <p>Pod templates only exist for the pod template adapter ("customTemplateAdapter"). For any other
  * adapter this endpoint returns a 404.</p>
@@ -51,15 +52,15 @@ public class KubernetesTaskRunnerPodTemplateResource
   }
 
   /**
-   * Retrieves the currently configured peon pod templates.
+   * Retrieves the names of the currently configured peon pod templates.
    *
-   * @return a Response with the configured templates (200), or 404 when the configured adapter has
-   *         no pod templates.
+   * @return a Response with the configured template names (200), or 404 when the configured adapter
+   *         has no pod templates.
    */
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
-  public Response getPodTemplates()
+  public Response getPodTemplateNames()
   {
     if (!(taskAdapter instanceof PodTemplateTaskAdapter)) {
       return ServletResourceUtils.buildErrorResponseFrom(
@@ -71,6 +72,6 @@ public class KubernetesTaskRunnerPodTemplateResource
                         )
       );
     }
-    return Response.ok(((PodTemplateTaskAdapter) taskAdapter).getPodTemplateSelector().getPodTemplates()).build();
+    return Response.ok(((PodTemplateTaskAdapter) taskAdapter).getPodTemplateSelector().getPodTemplateNames()).build();
   }
 }

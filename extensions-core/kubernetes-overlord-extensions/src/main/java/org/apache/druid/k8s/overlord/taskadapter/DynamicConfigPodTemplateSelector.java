@@ -149,10 +149,10 @@ public class DynamicConfigPodTemplateSelector implements PodTemplateSelector
   }
 
   @Override
-  public List<PodTemplateWithName> getPodTemplates()
+  public List<String> getPodTemplateNames()
   {
-    List<PodTemplateWithName> resolved = new ArrayList<>();
-    podTemplates.forEach((name, supplier) -> resolved.add(new PodTemplateWithName(name, supplier.get())));
-    return Collections.unmodifiableList(resolved);
+    List<String> names = new ArrayList<>(podTemplates.keySet());
+    Collections.sort(names);
+    return names;
   }
 }

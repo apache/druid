@@ -41,8 +41,8 @@ public interface PodTemplateSelector
   Optional<PodTemplateWithName> getPodTemplateForTask(Task task);
 
   /**
-   * Returns all currently configured pod templates.
-   * @return the configured templates as a list of name + {@link io.fabric8.kubernetes.api.model.PodTemplate}.
+   * Returns the names of all currently configured pod templates.
+   * @return the configured template names.
    */
-  List<PodTemplateWithName> getPodTemplates();
+  List<String> getPodTemplateNames();
 }

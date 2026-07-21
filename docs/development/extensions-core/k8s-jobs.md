@@ -344,11 +344,11 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ```
 </details>
 
-#### Get pod templates
+#### Get pod template names
 
-Retrieves the peon pod templates currently configured on the Overlord for the Kubernetes task runner.
-Returns a JSON array of the configured templates, each with its runtime property name and the full
-[Pod Template](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates) spec.
+Retrieves the names of the peon pod templates currently configured on the Overlord for the Kubernetes
+task runner. Returns a JSON array of the configured template names (the keys of the
+`druid.indexer.runner.k8s.podTemplate.*` runtime properties, such as `base` and per task type names).
 
 This endpoint is only available when the [Custom Template Pod Adapter](#custom-template-pod-adapter) is
 configured (`druid.indexer.runner.k8s.adapter.type: customTemplateAdapter`). For any other adapter it
@@ -365,7 +365,7 @@ returns a `404` response.
 <TabItem value="13" label="200 SUCCESS">
 
 
-*Successfully retrieved pod templates*
+*Successfully retrieved pod template names*
 
 </TabItem>
 
@@ -407,46 +407,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ```json
 [
-  {
-    "name": "base",
-    "podTemplate": {
-      "apiVersion": "v1",
-      "kind": "PodTemplate",
-      "metadata": {
-        "name": "druid-peon-template"
-      },
-      "template": {
-        "spec": {
-          "containers": [
-            {
-              "name": "main",
-              "image": "apache/druid:latest"
-            }
-          ]
-        }
-      }
-    }
-  },
-  {
-    "name": "index_kafka",
-    "podTemplate": {
-      "apiVersion": "v1",
-      "kind": "PodTemplate",
-      "metadata": {
-        "name": "druid-kafka-peon-template"
-      },
-      "template": {
-        "spec": {
-          "containers": [
-            {
-              "name": "main",
-              "image": "apache/druid:latest"
-            }
-          ]
-        }
-      }
-    }
-  }
+  "base",
+  "index_kafka"
 ]
 ```
 </details>

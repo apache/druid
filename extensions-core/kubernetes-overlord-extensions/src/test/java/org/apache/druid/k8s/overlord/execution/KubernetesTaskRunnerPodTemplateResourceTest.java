@@ -20,12 +20,8 @@
 package org.apache.druid.k8s.overlord.execution;
 
 import com.google.common.collect.ImmutableList;
-import io.fabric8.kubernetes.api.model.PodTemplate;
-import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateSelector;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
-import org.apache.druid.k8s.overlord.taskadapter.PodTemplateWithName;
-import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
@@ -37,30 +33,29 @@ import java.util.List;
 public class KubernetesTaskRunnerPodTemplateResourceTest
 {
   @Test
-  public void test_getPodTemplates_returnsConfiguredTemplates()
+  public void test_getPodTemplateNames_returnsConfiguredTemplateNames()
   {
-    PodTemplate template = K8sTestUtils.fileToResource("basePodTemplate.yaml", PodTemplate.class);
-    List<PodTemplateWithName> templates = ImmutableList.of(new PodTemplateWithName("base", template));
+    List<String> names = ImmutableList.of("base", "index_kafka");
 
     PodTemplateSelector selector = EasyMock.createMock(PodTemplateSelector.class);
-    EasyMock.expect(selector.getPodTemplates()).andReturn(templates);
+    EasyMock.expect(selector.getPodTemplateNames()).andReturn(names);
     PodTemplateTaskAdapter adapter = EasyMock.createMock(PodTemplateTaskAdapter.class);
     EasyMock.expect(adapter.getPodTemplateSelector()).andReturn(selector);
     EasyMock.replay(selector, adapter);
 
-    Response result = new KubernetesTaskRunnerPodTemplateResource(adapter).getPodTemplates();
+    Response result = new KubernetesTaskRunnerPodTemplateResource(adapter).getPodTemplateNames();
 
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
-    Assertions.assertEquals(templates, result.getEntity());
+    Assertions.assertEquals(names, result.getEntity());
   }
 
   @Test
-  public void test_getPodTemplates_whenAdapterIsNotPodTemplateAdapter_returnsNotFound()
+  public void test_getPodTemplateNames_whenAdapterIsNotPodTemplateAdapter_returnsNotFound()
   {
-    TaskAdapter adapter = EasyMock.createMock(SingleContainerTaskAdapter.class);
+    TaskAdapter adapter = EasyMock.createMock(TaskAdapter.class);
     EasyMock.replay(adapter);
 
-    Response result = new KubernetesTaskRunnerPodTemplateResource(adapter).getPodTemplates();
+    Response result = new KubernetesTaskRunnerPodTemplateResource(adapter).getPodTemplateNames();
 
     Assertions.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), result.getStatus());
   }
