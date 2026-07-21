@@ -40,6 +40,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
@@ -194,13 +195,7 @@ class PartialSegmentCacheBootstrapTest
     primeOnDiskState();
 
     // remove the aggregate bundle's container file(s), base's containers stay
-    final PartialSegmentFileMapperV10 introspect = PartialSegmentFileMapperV10.create(
-        new DirectoryBackedRangeReader(deepStorageDir),
-        JSON_MAPPER,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of()
-    );
+    final PartialSegmentFileMapperV10 introspect = createMapper(deepStorageDir, cacheDir);
     final List<Integer> aggContainers = new ArrayList<>();
     final String prefix = AGG_BUNDLE + "/";
     for (var entry : introspect.getSegmentFileMetadata().getFiles().entrySet()) {
@@ -236,13 +231,7 @@ class PartialSegmentCacheBootstrapTest
 
     // Remove base's container files. After this, base is unrestorable on disk, which makes the aggregate (which
     // depends on base) an orphan that must be deleted rather than restored in a degenerate state.
-    final PartialSegmentFileMapperV10 introspect = PartialSegmentFileMapperV10.create(
-        new DirectoryBackedRangeReader(deepStorageDir),
-        JSON_MAPPER,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of()
-    );
+    final PartialSegmentFileMapperV10 introspect = createMapper(deepStorageDir, cacheDir);
     final Set<Integer> baseContainers = new HashSet<>();
     final Set<Integer> aggContainers = new HashSet<>();
     for (var entry : introspect.getSegmentFileMetadata().getFiles().entrySet()) {
@@ -335,22 +324,28 @@ class PartialSegmentCacheBootstrapTest
     final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
     final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(SEGMENT_ID);
 
-    // Reserve the metadata entry weakly, exactly as the bootstrap path does (no protecting hold).
+    // Reserve the metadata entry weakly, exactly as the bootstrap path does (no protecting hold), but with a range
+    // reader that fails every fetch so we can force a mount failure below.
+    final SegmentRangeReader failingReader = (filename, offset, length) -> {
+      throw new IOException("simulated deep-storage fetch failure during mount");
+    };
     final PartialSegmentMetadataCacheEntry metadata = PartialSegmentCacheBootstrap.reserveFromDisk(
         SEGMENT_ID,
         cacheDir,
         IndexIO.V10_FILE_NAME,
         List.of(),
+        failingReader,
         JSON_MAPPER,
         null,
-        location
+        location,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     Assertions.assertTrue(location.isWeakReserved(id));
 
-    // Delete the header so the mount's file-mapper build must re-fetch it from deep storage; the bootstrap
-    // disk-only range reader throws, failing the mount (the same poison that arises when create() detects header
-    // corruption and tries to re-fetch). The mount rollback deletes the header, so the entry is now both unmounted
-    // and un-re-mountable.
+    // Delete the header so the mount's file-mapper build must re-fetch it from deep storage; the failing reader throws,
+    // failing the mount (the same poison that arises when create() detects header corruption and the deep-storage
+    // fetch fails). The mount rollback deletes the header, so the entry is now both unmounted and un-re-mountable.
     final File headerFile = new File(
         cacheDir,
         IndexIO.V10_FILE_NAME + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX
@@ -360,11 +355,42 @@ class PartialSegmentCacheBootstrapTest
     Assertions.assertThrows(Throwable.class, () -> metadata.mount(location));
 
     // The failed mount must not leave the lingering weak entry behind: a later findExistingPartialWithHold would
-    // otherwise resurrect it and re-mount would fail forever (disk-only reader + deleted header). It must be gone so
+    // otherwise resurrect it and re-mount would fail forever (failing reader + deleted header). It must be gone so
     // the cold acquire path rebuilds a fresh, deep-storage-capable entry via reservePartial.
     Assertions.assertEquals(0, location.getWeakEntryCount(), "failed mount must remove the lingering weak entry");
     Assertions.assertFalse(location.isWeakReserved(id));
     Assertions.assertEquals(0, location.currentSizeBytes(), "failed mount must release the reservation");
+  }
+
+  @Test
+  void testRestoredEntryCanFetchUndownloadedFile() throws IOException
+  {
+    // a bootstrap-restored entry must keep the segment's real deep-storage range reader so a later query can
+    // fetch a bundle/column that wasn't on disk at startup. Previously the entry held a throwing disk-only reader, so
+    // this fetch failed with "bootstrap should only read from local disk".
+    primeOnDiskState();
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    final PartialSegmentMetadataCacheEntry metadata = restoreFromDisk(location);
+
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+    Assertions.assertNotNull(mapper, "restored entry must be mounted");
+
+    // Priming sparse-allocated the containers but downloaded no column data, so every internal file is un-downloaded.
+    final String fileToFetch = mapper.getSegmentFileMetadata().getFiles().keySet().stream()
+                                     .filter(f -> f.startsWith(Projections.BASE_TABLE_PROJECTION_NAME + "/"))
+                                     .findFirst()
+                                     .orElseThrow();
+    Assertions.assertFalse(
+        mapper.getDownloadedFiles().contains(fileToFetch),
+        "precondition: " + fileToFetch + " should not be downloaded yet"
+    );
+
+    mapper.fetchFiles(Set.of(fileToFetch));
+    Assertions.assertNotNull(
+        mapper.mapFile(fileToFetch),
+        "restored entry must be able to fetch an un-downloaded file from deep storage"
+    );
+    Assertions.assertTrue(mapper.getDownloadedFiles().contains(fileToFetch));
   }
 
   @Test
@@ -379,9 +405,12 @@ class PartialSegmentCacheBootstrapTest
             cacheDir,
             IndexIO.V10_FILE_NAME,
             List.of(),
+            new DirectoryBackedRangeReader(deepStorageDir),
             JSON_MAPPER,
             null,
-            location
+            location,
+            PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+            PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
         )
     );
   }
@@ -404,13 +433,7 @@ class PartialSegmentCacheBootstrapTest
   {
     primeOnDiskState();
     // download a file in the aggregate bundle to set a bit, then close (persists the bitmap)
-    final PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
-        new DirectoryBackedRangeReader(deepStorageDir),
-        JSON_MAPPER,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of()
-    );
+    final PartialSegmentFileMapperV10 mapper = createMapper(deepStorageDir, cacheDir);
     final String prefix = AGG_BUNDLE + "/";
     String fileInAgg = null;
     int aggContainerIdx = -1;
@@ -435,6 +458,7 @@ class PartialSegmentCacheBootstrapTest
       mapper.close();
       return;
     }
+    mapper.fetchFiles(Set.of(fileInAgg));
     Assertions.assertNotNull(mapper.mapFile(fileInAgg), "expected file " + fileInAgg + " to be downloadable");
     Assertions.assertTrue(mapper.getDownloadedFiles().contains(fileInAgg));
     mapper.close();
@@ -447,13 +471,7 @@ class PartialSegmentCacheBootstrapTest
     Assertions.assertTrue(aggContainer.delete());
 
     // re-open the mapper: the bitmap-vs-container repair should clear the bit for the missing file
-    try (PartialSegmentFileMapperV10 restored = PartialSegmentFileMapperV10.create(
-        new DirectoryBackedRangeReader(deepStorageDir),
-        JSON_MAPPER,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of()
-    )) {
+    try (PartialSegmentFileMapperV10 restored = createMapper(deepStorageDir, cacheDir)) {
       Assertions.assertFalse(
           restored.getDownloadedFiles().contains(fileInAgg),
           "bitmap repair should have cleared the bit for " + fileInAgg
@@ -476,7 +494,9 @@ class PartialSegmentCacheBootstrapTest
         new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
         null,
-        ESTIMATE
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     Assertions.assertTrue(seedLocation.reserve(seedMeta));
     seedMeta.mount(seedLocation);
@@ -521,12 +541,28 @@ class PartialSegmentCacheBootstrapTest
         cacheDir,
         IndexIO.V10_FILE_NAME,
         List.of(),
+        new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
         null,
-        location
+        location,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     metadata.mount(location);
     return metadata;
   }
 
+  private static PartialSegmentFileMapperV10 createMapper(File deepStorageDir, File cacheDir) throws IOException
+  {
+    return PartialSegmentFileMapperV10.create(
+        new DirectoryBackedRangeReader(deepStorageDir),
+        JSON_MAPPER,
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(),
+        PartialSegmentDownloadListener.NOOP,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
+    );
+  }
 }

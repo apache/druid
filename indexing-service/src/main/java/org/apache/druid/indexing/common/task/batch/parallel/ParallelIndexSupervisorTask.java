@@ -1841,7 +1841,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
           DeepStorageIntermediaryDataManager.retrieveShuffleDataStoragePath(getId())
       );
     }
-    catch (IOException e) {
+    catch (Exception e) {
+      // Best effort cleanup, do not fail the task if cleanup fails
       LOG.warn(e, "Failed recursive deep storage cleanup for intermediary path for task[%s]", getId());
     }
 

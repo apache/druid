@@ -25,7 +25,7 @@ title: "MM-less Druid in K8s"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Apache Druid Extension to enable using Kubernetes for launching and managing tasks instead of the Middle Managers.  This extension allows you to launch tasks as kubernetes jobs removing the need for your middle manager.  
+Apache&circledR; Druid Extension to enable using Kubernetes&circledR; for launching and managing tasks instead of the Middle Managers.  This extension allows you to launch tasks as kubernetes jobs removing the need for your middle manager.  
 
 ## How it works
 
@@ -344,13 +344,82 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ```
 </details>
 
+#### Get pod template names
+
+Retrieves the names of the peon pod templates currently configured on the Overlord for the Kubernetes
+task runner. Returns a JSON array of the configured template names (the keys of the
+`druid.indexer.runner.k8s.podTemplate.*` runtime properties, such as `base` and per task type names).
+
+This endpoint is only available when the [Custom Template Pod Adapter](#custom-template-pod-adapter) is
+configured (`druid.indexer.runner.k8s.adapter.type: customTemplateAdapter`). For any other adapter it
+returns a `404` response.
+
+##### URL
+
+`GET` `/druid/indexer/v1/k8s/taskrunner/podTemplates`
+
+##### Responses
+
+<Tabs>
+
+<TabItem value="13" label="200 SUCCESS">
+
+
+*Successfully retrieved pod template names*
+
+</TabItem>
+
+<TabItem value="14" label="404 NOT FOUND">
+
+
+*The configured pod adapter is not the custom template pod adapter*
+
+</TabItem>
+</Tabs>
+
+---
+
+##### Sample request
+
+<Tabs>
+
+<TabItem value="15" label="cURL">
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskrunner/podTemplates"
+```
+</TabItem>
+
+<TabItem value="16" label="HTTP">
+
+```HTTP
+GET /druid/indexer/v1/k8s/taskrunner/podTemplates HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+##### Sample response
+
+<details>
+<summary>View the response</summary>
+
+```json
+[
+  "base",
+  "index_kafka"
+]
+```
+</details>
+
 ## Pod adapters
 The logic defining how the pod template is built for your Kubernetes Job depends on which pod adapter you have specified.
 
 ### Overlord Single Container Pod Adapter/Overlord Multi Container Pod Adapter
 The overlord single container pod adapter takes the podSpec of your `Overlord` pod and creates a kubernetes job from this podSpec.  This is the default pod adapter implementation, to explicitly enable it you can specify the runtime property `druid.indexer.runner.k8s.adapter.type: overlordSingleContainer`
 
-The overlord multi container pod adapter takes the podSpec of your `Overlord` pod and creates a kubernetes job from this podSpec.  It uses kubexit to manage dependency ordering between the main container that runs your druid peon and other sidecars defined in the `Overlord` pod spec. Thus if you have sidecars such as Splunk or Istio it will be able to handle them. To enable this pod adapter you can specify the runtime property `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer` 
+The Overlord multi-container pod adapter uses the pod specification of your Overlord pod to create a Kubernetes job. It uses kubexit to manage dependency ordering between the main container that runs your Druid peon and other sidecars defined in the Overlord pod specification. This allows the adapter to handle sidecars such Splunk&circledR; or Istio. To enable this pod adapter, set the runtime property `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer`.
 
 For the sidecar support to work for the multi container pod adapter, your entry point / command in docker must be explicitly defined your spec.
 

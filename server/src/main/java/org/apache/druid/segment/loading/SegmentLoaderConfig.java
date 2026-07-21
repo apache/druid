@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.utils.RuntimeInfo;
 
 import java.io.File;
@@ -114,7 +115,55 @@ public class SegmentLoaderConfig
   @JsonProperty("virtualStoragePartialDownloadsEnabled")
   private boolean virtualStoragePartialDownloadsEnabled = false;
 
+  /**
+   * Maximum number of unrequested bytes a partial-download range read will fetch in order to bridge two requested
+   * internal files into a single deep-storage request. Bridged bytes are whole valid internal files that are kept in
+   * the local cache (they aren't waste), so this trades at most this many extra bytes per bridged gap (one read can
+   * bridge several gaps) for one fewer deep-storage round trip each. {@code <= 0} disables bridging (adjacent files
+   * still coalesce into single reads). Defaults to 1 MiB, which is conservative relative to typical deep-storage
+   * request latency vs streaming throughput.
+   */
+  @JsonProperty("virtualStorageCoalesceGapBytes")
+  private long virtualStorageCoalesceGapBytes = PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES;
+
+  /**
+   * Maximum size of a single range read in a query-driven partial download. Larger fetches split at internal-file
+   * boundaries into multiple reads of at most this size that proceed concurrently, so throughput isn't bounded by a
+   * single deep-storage connection. Only applies to the concurrent on-demand path; full-download paths stream
+   * containers sequentially and are unaffected. {@code <= 0} disables splitting. Defaults to 64 MiB.
+   */
+  @JsonProperty("virtualStorageMaxFetchRunBytes")
+  private long virtualStorageMaxFetchRunBytes = PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES;
+
   private long combinedMaxSize = 0;
+
+  public SegmentLoaderConfig()
+  {
+  }
+
+  private SegmentLoaderConfig(SegmentLoaderConfig other)
+  {
+    this.locations = other.locations;
+    this.lazyLoadOnStart = other.lazyLoadOnStart;
+    this.deleteOnRemove = other.deleteOnRemove;
+    this.dropSegmentDelayMillis = other.dropSegmentDelayMillis;
+    this.announceIntervalMillis = other.announceIntervalMillis;
+    this.numLoadingThreads = other.numLoadingThreads;
+    this.numBootstrapThreads = other.numBootstrapThreads;
+    this.numThreadsToLoadSegmentsIntoPageCacheOnDownload = other.numThreadsToLoadSegmentsIntoPageCacheOnDownload;
+    this.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap = other.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap;
+    this.infoDir = other.infoDir;
+    this.statusQueueMaxSize = other.statusQueueMaxSize;
+    this.virtualStorage = other.virtualStorage;
+    this.virtualStorageLoadThreads = other.virtualStorageLoadThreads;
+    this.virtualStorageUseVirtualThreads = other.virtualStorageUseVirtualThreads;
+    this.virtualStorageIsEphemeral = other.virtualStorageIsEphemeral;
+    this.virtualStorageMetadataReservationEstimate = other.virtualStorageMetadataReservationEstimate;
+    this.virtualStoragePartialDownloadsEnabled = other.virtualStoragePartialDownloadsEnabled;
+    this.virtualStorageCoalesceGapBytes = other.virtualStorageCoalesceGapBytes;
+    this.virtualStorageMaxFetchRunBytes = other.virtualStorageMaxFetchRunBytes;
+    this.combinedMaxSize = other.combinedMaxSize;
+  }
 
   public List<StorageLocationConfig> getLocations()
   {
@@ -211,6 +260,16 @@ public class SegmentLoaderConfig
     return virtualStorage && virtualStoragePartialDownloadsEnabled;
   }
 
+  public long getVirtualStorageCoalesceGapBytes()
+  {
+    return virtualStorageCoalesceGapBytes;
+  }
+
+  public long getVirtualStorageMaxFetchRunBytes()
+  {
+    return virtualStorageMaxFetchRunBytes;
+  }
+
   public SegmentLoaderConfig setLocations(List<StorageLocationConfig> locations)
   {
     this.locations = Lists.newArrayList(locations);
@@ -230,6 +289,19 @@ public class SegmentLoaderConfig
   {
     this.virtualStorage = virtualStorage;
     return this;
+  }
+
+  /**
+   * Returns a copy of this config with {@link #virtualStorage} set to {@code virtualStorage}. All other settings
+   * (notably {@link #getVirtualStorageLoadThreads()} and {@link #isVirtualStorageUseVirtualThreads()}) are preserved.
+   * Used to derive an always-virtual config for the shared ephemeral on-demand loading pool from a node config that
+   * may not itself run in virtual-storage mode.
+   */
+  public SegmentLoaderConfig withVirtualStorage(boolean virtualStorage)
+  {
+    final SegmentLoaderConfig copy = new SegmentLoaderConfig(this);
+    copy.virtualStorage = virtualStorage;
+    return copy;
   }
 
   /**
@@ -287,6 +359,8 @@ public class SegmentLoaderConfig
            ", virtualStorageIsEphemeral=" + virtualStorageIsEphemeral +
            ", virtualStorageMetadataReservationEstimate=" + virtualStorageMetadataReservationEstimate +
            ", virtualStoragePartialDownloadsEnabled=" + virtualStoragePartialDownloadsEnabled +
+           ", virtualStorageCoalesceGapBytes=" + virtualStorageCoalesceGapBytes +
+           ", virtualStorageMaxFetchRunBytes=" + virtualStorageMaxFetchRunBytes +
            ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }

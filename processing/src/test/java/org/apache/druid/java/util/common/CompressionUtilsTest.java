@@ -34,7 +34,6 @@ import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStr
 import org.apache.druid.utils.CompressionUtils;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -592,41 +591,8 @@ public class CompressionUtilsTest
     }
   }
 
-  // If this ever passes, er... fails to fail... then the bug is fixed
-  // http://bugs.java.com/bugdatabase/view_bug.do?bug_id=7036144
-  @Test(expected = AssertionError.class)
-  @Ignore("This test fails in JDK 21, looks like the bug was fixed in 21.0.9 at least.")
-  public void testGunzipBug() throws IOException
-  {
-    final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(GZ_BYTES.length * 3);
-    tripleGzByteStream.write(GZ_BYTES);
-    tripleGzByteStream.write(GZ_BYTES);
-    tripleGzByteStream.write(GZ_BYTES);
-    try (final InputStream inputStream = new GZIPInputStream(
-        new ZeroRemainingInputStream(
-            new ByteArrayInputStream(
-                tripleGzByteStream.toByteArray()
-            )
-        )
-    )) {
-      try (final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(EXPECTED.length * 3)) {
-        Assert.assertEquals(
-            "Read terminated too soon (bug 7036144)",
-            EXPECTED.length * 3,
-            ByteStreams.copy(inputStream, outputStream)
-        );
-        final byte[] found = outputStream.toByteArray();
-        Assert.assertEquals(EXPECTED.length * 3, found.length);
-        Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 0, EXPECTED.length * 1));
-        Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 1, EXPECTED.length * 2));
-        Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 2, EXPECTED.length * 3));
-      }
-    }
-  }
-
   @Test
-  // http://bugs.java.com/bugdatabase/view_bug.do?bug_id=7036144
-  public void testGunzipBugworkarround() throws IOException
+  public void testGunzipConcatenatedByteSource() throws IOException
   {
     testFile.delete();
     Assert.assertFalse(testFile.exists());
@@ -650,7 +616,7 @@ public class CompressionUtilsTest
     try (final InputStream inputStream = new FileInputStream(testFile)) {
       try (final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(EXPECTED.length * 3)) {
         Assert.assertEquals(
-            "Read terminated too soon (7036144)",
+            "Read terminated too soon",
             EXPECTED.length * 3,
             ByteStreams.copy(inputStream, outputStream)
         );
@@ -664,8 +630,7 @@ public class CompressionUtilsTest
   }
 
   @Test
-  // http://bugs.java.com/bugdatabase/view_bug.do?bug_id=7036144
-  public void testGunzipBugStreamWorkarround() throws IOException
+  public void testGunzipConcatenatedStream() throws IOException
   {
 
     final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(GZ_BYTES.length * 3);

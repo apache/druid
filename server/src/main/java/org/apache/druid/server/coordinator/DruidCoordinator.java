@@ -87,6 +87,7 @@ import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
+import org.apache.druid.server.coordinator.loading.SegmentStatsSnapshot;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -247,12 +248,10 @@ public class DruidCoordinator
 
     final Iterable<DataSegment> dataSegments = metadataManager.iterateAllUsedSegments();
     for (DataSegment segment : dataSegments) {
-      SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
-      if (replicaCount != null && (replicaCount.totalLoaded() > 0 || replicaCount.required() == 0)) {
-        datasourceToUnavailableSegments.addTo(segment.getDataSource(), 0);
-      } else {
-        datasourceToUnavailableSegments.addTo(segment.getDataSource(), 1);
-      }
+      datasourceToUnavailableSegments.addTo(
+          segment.getDataSource(),
+          segmentReplicationStatus.isUnavailable(segment.getId()) ? 1 : 0
+      );
     }
 
     return datasourceToUnavailableSegments;
@@ -268,8 +267,7 @@ public class DruidCoordinator
 
     final Iterable<DataSegment> dataSegments = metadataManager.iterateAllUsedSegments();
     for (DataSegment segment : dataSegments) {
-      SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
-      if (replicaCount != null && replicaCount.totalLoaded() == 0 && replicaCount.required() == 0) {
+      if (segmentReplicationStatus.isDeepStorageOnly(segment.getId())) {
         datasourceToDeepStorageOnlySegments.addTo(segment.getDataSource(), 1);
       }
     }
@@ -784,9 +782,11 @@ public class DruidCoordinator
     {
       broadcastSegments = params.getBroadcastSegments();
       segmentReplicationStatus = params.getSegmentReplicationStatus();
+
       if (coordinatorSegmentMetadataCache != null) {
         coordinatorSegmentMetadataCache.updateSegmentReplicationStatus(segmentReplicationStatus);
       }
+
       return params;
     }
   }
@@ -801,25 +801,28 @@ public class DruidCoordinator
     {
       // Collect stats for unavailable and under-replicated segments
       final CoordinatorRunStats stats = params.getCoordinatorStats();
-      getDatasourceToUnavailableSegmentCount().forEach(
-          (dataSource, numUnavailable) -> stats.add(
-              Stats.Segments.UNAVAILABLE,
-              RowKey.of(Dimension.DATASOURCE, dataSource),
-              numUnavailable
+
+      // Compute unavailable, under-replicated, deep-storage only counts in a single pass
+      final SegmentStatsSnapshot snapshot =
+          segmentReplicationStatus == null
+          ? SegmentStatsSnapshot.empty()
+          : segmentReplicationStatus.computeSegmentStats(metadataManager.iterateAllUsedSegments(), true);
+
+      snapshot.getDatasourceToUnavailableCount().forEach(
+          (datasource, count) ->
+              stats.add(Stats.Segments.UNAVAILABLE, RowKey.of(Dimension.DATASOURCE, datasource), count)
+      );
+
+      snapshot.getTierToDatasourceToUnderReplicatedCount().forEach(
+          (tier, datasourceToCount) -> datasourceToCount.forEach(
+              (datasource, count) ->
+                  stats.addToSegmentStat(Stats.Segments.UNDER_REPLICATED, tier, datasource, count)
           )
       );
-      getTierToDatasourceToUnderReplicatedCount(false).forEach(
-          (tier, countsPerDatasource) -> countsPerDatasource.forEach(
-              (dataSource, underReplicatedCount) ->
-                  stats.addToSegmentStat(Stats.Segments.UNDER_REPLICATED, tier, dataSource, underReplicatedCount)
-          )
-      );
-      getDatasourceToDeepStorageQueryOnlySegmentCount().forEach(
-          (dataSource, numDeepStorageOnly) -> stats.add(
-              Stats.Segments.DEEP_STORAGE_ONLY,
-              RowKey.of(Dimension.DATASOURCE, dataSource),
-              numDeepStorageOnly
-          )
+
+      snapshot.getDatasourceToDeepStorageOnlyCount().forEach(
+          (datasource, count) ->
+              stats.add(Stats.Segments.DEEP_STORAGE_ONLY, RowKey.of(Dimension.DATASOURCE, datasource), count)
       );
 
       return params;

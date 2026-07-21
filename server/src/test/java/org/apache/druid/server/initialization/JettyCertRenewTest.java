@@ -28,6 +28,7 @@ import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -135,7 +136,11 @@ public class JettyCertRenewTest extends BaseJettyTest
       throw new RuntimeException(e);
     }
 
-    final int ephemeralPort = ThreadLocalRandom.current().nextInt(49152, 65535);
+    // Pick ports that are actually bindable rather than guessing a random one: with reused forks and
+    // many concurrent test shards a blind random port frequently collides (BindException). Verify the
+    // plaintext and TLS ports independently since both are enabled below.
+    final int ephemeralPort = SocketUtil.findOpenPortFrom(ThreadLocalRandom.current().nextInt(49152, 60000));
+    final int tlsEphemeralPort = SocketUtil.findOpenPortFrom(ephemeralPort + 1);
 
     latchedRequestState = new LatchedRequestStateHolder();
     injector = Initialization.makeInjectorWithModules(
@@ -149,7 +154,7 @@ public class JettyCertRenewTest extends BaseJettyTest
                 JsonConfigProvider.bindInstance(
                     binder,
                     Key.get(DruidNode.class, Self.class),
-                    new DruidNode("test", "localhost", false, ephemeralPort, ephemeralPort + 1, true, true)
+                    new DruidNode("test", "localhost", false, ephemeralPort, tlsEphemeralPort, true, true)
                 );
                 binder.bind(TLSServerConfig.class).toInstance(tlsConfig);
                 binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);

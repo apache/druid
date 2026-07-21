@@ -443,7 +443,7 @@ Projections you define become a dimension for your datasource. To remove a proje
 
 ## `ioConfig`
 
-The `ioConfig` influences how data is read from a source system, such as Apache Kafka, Amazon S3, a mounted
+The `ioConfig` influences how data is read from a source system, such as Apache Kafka&circledR;, Amazon S3, a mounted
 filesystem, or any other supported source system. The `inputFormat` property applies to all
 [ingestion method](./index.md#ingestion-methods).
 The rest of `ioConfig` is specific to each individual ingestion method.

@@ -25,7 +25,7 @@ sidebar_label: Reference
 
 ## SQL reference
 
-This topic is a reference guide for the multi-stage query architecture in Apache Druid. For examples of real-world
+This topic is a reference guide for the multi-stage query architecture in Apache&circledR; Druid. For examples of real-world
 usage, refer to the [Examples](examples.md) page.
 
 `INSERT` and `REPLACE` load data into a Druid datasource from either an external input source, or from another
@@ -528,7 +528,7 @@ SQL-based ingestion supports using durable storage to store intermediate files t
 
 ### Durable storage configurations
 
-Durable storage is supported on Amazon S3 storage, Microsoft's Azure Blob Storage and Google Cloud Storage. 
+Durable storage is supported on Amazon S3 storage, Microsoft&circledR; Azure Blob Storage and Google Cloud Storage. 
 There are common configurations that control the behavior regardless of which storage service you use. Apart from these common configurations, there are a few properties specific to S3 and to Azure.
 
 Common properties to configure the behavior of durable storage

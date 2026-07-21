@@ -212,7 +212,7 @@ class PartialQueryableIndexCursorFactoryClusteredTest extends PartialQueryableIn
       );
 
       // Eager-acquire equivalent: materialize every internal file, then the sync clustered path works via the delegate.
-      mapper.ensureFilesAvailable(mapper.getSegmentFileMetadata().getFiles().keySet());
+      mapper.fetchFiles(mapper.getSegmentFileMetadata().getFiles().keySet());
       Assertions.assertTrue(mapper.isFullyDownloaded());
       try (CursorHolder holder = factory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         Assertions.assertEquals(

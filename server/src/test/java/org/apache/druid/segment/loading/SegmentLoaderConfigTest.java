@@ -19,25 +19,83 @@
 
 package org.apache.druid.segment.loading;
 
-import org.junit.Assert;
-import org.junit.Test;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.utils.RuntimeInfo;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-public class SegmentLoaderConfigTest
+class SegmentLoaderConfigTest
 {
   @Test
-  public void testSetVirtualStorage()
+  void testSetVirtualStorage()
   {
     final SegmentLoaderConfig config = new SegmentLoaderConfig();
 
     // Verify default values
-    Assert.assertFalse(config.isVirtualStorage());
-    Assert.assertFalse(config.isVirtualStorageEphemeral());
+    Assertions.assertFalse(config.isVirtualStorage());
+    Assertions.assertFalse(config.isVirtualStorageEphemeral());
 
     // Set both to true
     config.setVirtualStorage(true).setVirtualStorageIsEphemeral(true);
 
     // Verify both fields are set
-    Assert.assertTrue(config.isVirtualStorage());
-    Assert.assertTrue(config.isVirtualStorageEphemeral());
+    Assertions.assertTrue(config.isVirtualStorage());
+    Assertions.assertTrue(config.isVirtualStorageEphemeral());
+  }
+
+  @Test
+  void testVirtualStorageCoalesceGapBytes() throws Exception
+  {
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(RuntimeInfo.class, new RuntimeInfo()));
+
+    // default
+    final SegmentLoaderConfig defaults = jsonMapper.readValue("{}", SegmentLoaderConfig.class);
+    Assertions.assertEquals(1024L * 1024L, defaults.getVirtualStorageCoalesceGapBytes());
+
+    // configured
+    final SegmentLoaderConfig configured = jsonMapper.readValue(
+        "{\"virtualStorageCoalesceGapBytes\": 65536}",
+        SegmentLoaderConfig.class
+    );
+    Assertions.assertEquals(65536L, configured.getVirtualStorageCoalesceGapBytes());
+  }
+
+  @Test
+  void testVirtualStorageMaxFetchRunBytes() throws Exception
+  {
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(RuntimeInfo.class, new RuntimeInfo()));
+
+    // default
+    final SegmentLoaderConfig defaults = jsonMapper.readValue("{}", SegmentLoaderConfig.class);
+    Assertions.assertEquals(64L * 1024L * 1024L, defaults.getVirtualStorageMaxFetchRunBytes());
+
+    // configured
+    final SegmentLoaderConfig configured = jsonMapper.readValue(
+        "{\"virtualStorageMaxFetchRunBytes\": 8388608}",
+        SegmentLoaderConfig.class
+    );
+    Assertions.assertEquals(8388608L, configured.getVirtualStorageMaxFetchRunBytes());
+  }
+
+  @Test
+  public void testWithVirtualStorageReturnsCopyAndDoesNotMutateOriginal()
+  {
+    final SegmentLoaderConfig original = new SegmentLoaderConfig();
+    Assertions.assertFalse(original.isVirtualStorage());
+
+    final SegmentLoaderConfig copy = original.withVirtualStorage(true);
+
+    // The copy has the flag flipped, while other settings are preserved.
+    Assertions.assertTrue(copy.isVirtualStorage());
+    Assertions.assertEquals(original.getVirtualStorageLoadThreads(), copy.getVirtualStorageLoadThreads());
+    Assertions.assertEquals(original.isVirtualStorageUseVirtualThreads(), copy.isVirtualStorageUseVirtualThreads());
+
+    // The original is untouched and the copy is a distinct instance.
+    Assertions.assertNotSame(original, copy);
+    Assertions.assertFalse(original.isVirtualStorage());
   }
 }
