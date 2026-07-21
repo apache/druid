@@ -23,6 +23,9 @@ import com.google.common.base.Optional;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import org.apache.druid.indexing.common.task.Task;
 
+import java.util.Collections;
+import java.util.List;
+
 public class TestPodTemplateSelector implements PodTemplateSelector
 {
 
@@ -37,5 +40,11 @@ public class TestPodTemplateSelector implements PodTemplateSelector
   public Optional<PodTemplateWithName> getPodTemplateForTask(Task task)
   {
     return Optional.of(new PodTemplateWithName("base", basePodTemplate));
+  }
+
+  @Override
+  public List<PodTemplateWithName> getPodTemplates()
+  {
+    return Collections.singletonList(new PodTemplateWithName("base", basePodTemplate));
   }
 }

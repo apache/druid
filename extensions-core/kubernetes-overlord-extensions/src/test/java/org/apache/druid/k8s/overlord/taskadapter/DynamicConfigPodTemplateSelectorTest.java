@@ -49,7 +49,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 public class DynamicConfigPodTemplateSelectorTest
 {
@@ -184,6 +186,29 @@ public class DynamicConfigPodTemplateSelectorTest
         1
     );
     Assertions.assertEquals("base", podTemplateWithName.get().getName());
+  }
+
+  @Test
+  public void test_getPodTemplates() throws IOException
+  {
+    Path baseTemplatePath = Files.createFile(tempDir.resolve("base.yaml"));
+    mapper.writeValue(baseTemplatePath.toFile(), podTemplateSpec);
+
+    Path kafkaTemplatePath = Files.createFile(tempDir.resolve("kafka.yaml"));
+    mapper.writeValue(kafkaTemplatePath.toFile(), podTemplateSpec);
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.index_kafka", kafkaTemplatePath.toString());
+
+    DynamicConfigPodTemplateSelector selector = new DynamicConfigPodTemplateSelector(props, effectiveConfig);
+
+    List<PodTemplateWithName> templates = selector.getPodTemplates();
+    Assertions.assertEquals(2, templates.size());
+    Assertions.assertEquals(
+        Sets.newSet("base", "index_kafka"),
+        templates.stream().map(PodTemplateWithName::getName).collect(Collectors.toSet())
+    );
   }
 
   @Test

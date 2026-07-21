@@ -344,6 +344,113 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ```
 </details>
 
+#### Get pod templates
+
+Retrieves the peon pod templates currently configured on the Overlord for the Kubernetes task runner.
+Returns a JSON array of the configured templates, each with its runtime property name and the full
+[Pod Template](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates) spec.
+
+This endpoint is only available when the [Custom Template Pod Adapter](#custom-template-pod-adapter) is
+configured (`druid.indexer.runner.k8s.adapter.type: customTemplateAdapter`). For any other adapter it
+returns a `404` response.
+
+##### URL
+
+`GET` `/druid/indexer/v1/k8s/taskrunner/podTemplates`
+
+##### Responses
+
+<Tabs>
+
+<TabItem value="13" label="200 SUCCESS">
+
+
+*Successfully retrieved pod templates*
+
+</TabItem>
+
+<TabItem value="14" label="404 NOT FOUND">
+
+
+*The configured pod adapter is not the custom template pod adapter*
+
+</TabItem>
+</Tabs>
+
+---
+
+##### Sample request
+
+<Tabs>
+
+<TabItem value="15" label="cURL">
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskrunner/podTemplates"
+```
+</TabItem>
+
+<TabItem value="16" label="HTTP">
+
+```HTTP
+GET /druid/indexer/v1/k8s/taskrunner/podTemplates HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+##### Sample response
+
+<details>
+<summary>View the response</summary>
+
+```json
+[
+  {
+    "name": "base",
+    "podTemplate": {
+      "apiVersion": "v1",
+      "kind": "PodTemplate",
+      "metadata": {
+        "name": "druid-peon-template"
+      },
+      "template": {
+        "spec": {
+          "containers": [
+            {
+              "name": "main",
+              "image": "apache/druid:latest"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "index_kafka",
+    "podTemplate": {
+      "apiVersion": "v1",
+      "kind": "PodTemplate",
+      "metadata": {
+        "name": "druid-kafka-peon-template"
+      },
+      "template": {
+        "spec": {
+          "containers": [
+            {
+              "name": "main",
+              "image": "apache/druid:latest"
+            }
+          ]
+        }
+      }
+    }
+  }
+]
+```
+</details>
+
 ## Pod adapters
 The logic defining how the pod template is built for your Kubernetes Job depends on which pod adapter you have specified.
 

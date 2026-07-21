@@ -32,8 +32,11 @@ import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -143,5 +146,13 @@ public class DynamicConfigPodTemplateSelector implements PodTemplateSelector
     }
 
     return Optional.of(effectiveConfig.getPodTemplateSelectStrategy().getPodTemplateForTask(task, podTemplates));
+  }
+
+  @Override
+  public List<PodTemplateWithName> getPodTemplates()
+  {
+    List<PodTemplateWithName> resolved = new ArrayList<>();
+    podTemplates.forEach((name, supplier) -> resolved.add(new PodTemplateWithName(name, supplier.get())));
+    return Collections.unmodifiableList(resolved);
   }
 }

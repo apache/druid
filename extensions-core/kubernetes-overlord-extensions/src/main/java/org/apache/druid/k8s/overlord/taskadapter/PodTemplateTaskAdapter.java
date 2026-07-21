@@ -103,6 +103,11 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     return TYPE;
   }
 
+  public PodTemplateSelector getPodTemplateSelector()
+  {
+    return podTemplateSelector;
+  }
+
   /**
    * Create a {@link Job} from a {@link Task}
    *
