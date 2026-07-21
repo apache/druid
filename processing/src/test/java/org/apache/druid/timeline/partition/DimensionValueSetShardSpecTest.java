@@ -335,6 +335,18 @@ public class DimensionValueSetShardSpecTest
   }
 
   @Test
+  public void testStringDomain_skipsTypeStampedDimension()
+  {
+    // A LONG-stamped dim holds canonicalized values ("1"); a non-canonical selector like code = "00001" matches
+    // the indexed LONG via coercion, so the literal string range must not prune this segment.
+    final DimensionValueSetShardSpec s = spec(
+        ImmutableMap.of(CODE, List.of("1")),
+        ImmutableMap.of(CODE, ColumnType.LONG)
+    );
+    Assert.assertTrue(s.possibleInDomain(domain(CODE, "00001")));
+  }
+
+  @Test
   public void testValueDomain_noFilters_alwaysTrue()
   {
     final DimensionValueSetShardSpec s = spec(Collections.emptyMap(), Collections.emptyMap());

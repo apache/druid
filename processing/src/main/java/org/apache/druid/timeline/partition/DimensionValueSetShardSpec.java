@@ -125,6 +125,11 @@ public class DimensionValueSetShardSpec extends NumberedShardSpec
       final String dimension = entry.getKey();
       final List<String> allowedValues = entry.getValue();
 
+      if (dimensionColumnTypes.containsKey(dimension)) {
+        // Canonicalized numeric dimension: pruned only via possibleInValueDomain, not the literal string range.
+        continue;
+      }
+
       final RangeSet<String> domainRangeSet = domain.get(dimension);
       if (domainRangeSet == null || domainRangeSet.isEmpty()) {
         // Query doesn't constrain this dimension — cannot prune on it.
