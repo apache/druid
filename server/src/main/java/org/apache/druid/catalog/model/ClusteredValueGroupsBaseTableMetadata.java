@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.utils.CollectionUtils;
@@ -90,7 +91,10 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
    * physical segment order, so the clustering columns must be declared as the leading prefix of the column list (in
    * {@link #clusteringColumns} order) — anything else is a validation error, mirroring the physical spec. Column
    * types come from the catalog column types ({@link Columns#druidType}; untyped columns default to STRING, mirroring
-   * {@link Columns#convertSignature}). Every clustering column must be a declared column — a clustering column
+   * {@link Columns#convertSignature}); the declared type is retained in the ingestion schema (primitive arrays cast
+   * an auto column to the declared type, {@code COMPLEX<json>} uses the nested column schema, and other complex
+   * types are rejected — clustered base tables have no aggregators to produce them). Every clustering column must be
+   * a declared column — a clustering column
    * computed by a virtual column at ingest time is still a stored, queryable column, so it too must appear in the
    * column list. All ordering and layout rules (leading prefix, allowed clustering types, explicit non-clustering
    * {@code __time}, no duplicates) are enforced by the spec itself.
@@ -133,7 +137,23 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
     if (druidType == null) {
       druidType = ColumnType.STRING;
     }
-    return DimensionSchema.getDefaultSchemaForBuiltInType(column.name(), druidType);
+    if (druidType.isPrimitive() || druidType.isPrimitiveArray()) {
+      // The declared type is retained in the ingestion schema (primitive arrays are cast, rather than left to an
+      // untyped auto column whose type is inferred from the ingested values; note that the auto schema stores
+      // FLOAT ARRAY as DOUBLE ARRAY).
+      return DimensionSchema.getDefaultSchemaForBuiltInType(column.name(), druidType);
+    }
+    if (ColumnType.NESTED_DATA.equals(druidType)) {
+      return new NestedDataColumnSchema(column.name(), 5);
+    }
+    // Other complex types cannot be ingested into a clustered base table: there is no dimension handler for them,
+    // and clustered base tables have no aggregators to produce them.
+    throw InvalidInput.exception(
+        "column [%s] has unsupported type [%s] for a clustered base table; supported types are primitive, primitive"
+        + " array, and COMPLEX<json> columns",
+        column.name(),
+        druidType
+    );
   }
 
   @Override

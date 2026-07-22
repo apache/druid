@@ -30,6 +30,8 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.segment.AutoTypeColumnSchema;
+import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -177,6 +179,56 @@ public class ClusteredValueGroupsBaseTableMetadataTest
                                                    .build(),
         metadata.createSpec(columns)
     );
+  }
+
+  @Test
+  public void testCreateSpecRetainsDeclaredArrayAndNestedTypes()
+  {
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null
+    );
+    final List<ColumnSpec> columns = Arrays.asList(
+        new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
+        new ColumnSpec(Columns.TIME_COLUMN, null, null),
+        new ColumnSpec("tags", Columns.SQL_VARCHAR_ARRAY, null),
+        new ColumnSpec("vals", Columns.SQL_BIGINT_ARRAY, null),
+        new ColumnSpec("ratios", Columns.SQL_FLOAT_ARRAY, null),
+        new ColumnSpec("attrs", ColumnType.NESTED_DATA.asTypeString(), null)
+    );
+    // Declared types are retained in the ingestion schema rather than left to inference: arrays cast an auto column
+    // to the declared type (an all-null batch has no values to infer from; FLOAT ARRAY is stored as DOUBLE ARRAY by
+    // the auto schema), and COMPLEX<json> uses the dedicated nested column schema.
+    Assert.assertEquals(
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new LongDimensionSchema(Columns.TIME_COLUMN),
+                                                       new AutoTypeColumnSchema("tags", ColumnType.STRING_ARRAY, null),
+                                                       new AutoTypeColumnSchema("vals", ColumnType.LONG_ARRAY, null),
+                                                       new AutoTypeColumnSchema("ratios", ColumnType.DOUBLE_ARRAY, null),
+                                                       new NestedDataColumnSchema("attrs", 5)
+                                                   )
+                                                   .clusteringColumns("tenant")
+                                                   .build(),
+        metadata.createSpec(columns)
+    );
+  }
+
+  @Test
+  public void testCreateSpecUnsupportedComplexTypeFails()
+  {
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null
+    );
+    final List<ColumnSpec> columns = Arrays.asList(
+        new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
+        new ColumnSpec(Columns.TIME_COLUMN, null, null),
+        new ColumnSpec("unique_things", "COMPLEX<hyperUnique>", null)
+    );
+    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
+    Assert.assertTrue(e.getMessage().contains("column [unique_things] has unsupported type [COMPLEX<hyperUnique>]"));
   }
 
   @Test

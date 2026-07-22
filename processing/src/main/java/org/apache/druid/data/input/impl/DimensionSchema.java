@@ -38,6 +38,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -90,6 +91,12 @@ public abstract class DimensionSchema
       case DOUBLE:
         return new DoubleDimensionSchema(name);
       default:
+        if (type.isPrimitiveArray()) {
+          // An untyped auto column infers its physical type from the ingested values, discarding the known type
+          // (e.g. an all-null batch of an ARRAY<STRING> column has no values to infer the array type from), so cast
+          // to the given type. Note that the auto schema stores ARRAY<FLOAT> as ARRAY<DOUBLE>.
+          return new AutoTypeColumnSchema(name, ColumnTypeFactory.ofType(type), null);
+        }
         // the auto column indexer can handle any type
         return AutoTypeColumnSchema.of(name);
     }
