@@ -21,7 +21,6 @@ package org.apache.druid.timeline;
 
 import com.google.common.base.Predicate;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.joda.time.Interval;
 
