@@ -1886,6 +1886,46 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
+  public void testPropertiesTable_filterPushdownInFilter()
+  {
+    SystemServerPropertiesTable propertiesTable = new SystemServerPropertiesTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+
+    mockAllNodeRolesWithCoordinator(coordinator, coordinator2);
+
+    // server IN ('localhost:8081', 'nonexistent:9999') — only coordinator (8081) matches, so exactly
+    // one node is fetched. A single HTTP call proves the IN predicate is pushed down (pre-refactor the
+    // SEARCH form was not extracted and both nodes would have been fetched).
+    HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    StringFullResponseHolder holder = new StringFullResponseHolder(resp, StandardCharsets.UTF_8);
+    holder.addChunk("{\"druid.key\": \"val\"}");
+    EasyMock.expect(
+        httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class))
+    ).andReturn(Futures.immediateFuture(holder)).once();
+
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
+    final RelDataType rowType = propertiesTable.getRowType(new JavaTypeFactoryImpl());
+    final RexNode serverIn = rexBuilder.makeIn(
+        rexBuilder.makeInputRef(rowType.getFieldList().get(SERVER_INDEX).getType(), SERVER_INDEX),
+        ImmutableList.of(rexBuilder.makeLiteral("localhost:8081"), rexBuilder.makeLiteral("nonexistent:9999"))
+    );
+
+    final List<Object[]> rows =
+        propertiesTable.scan(createDataContext(Users.SUPER), ImmutableList.of(serverIn), null).toList();
+
+    Assert.assertEquals(1, rows.size());
+    Assert.assertEquals("localhost:8081", rows.get(0)[0]);
+
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+  }
+
+  @Test
   public void testPropertiesTable_filterPushdownServiceNameAndNonMatching()
   {
     SystemServerPropertiesTable propertiesTable = new SystemServerPropertiesTable(

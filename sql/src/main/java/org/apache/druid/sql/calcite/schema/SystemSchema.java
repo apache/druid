@@ -25,9 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -40,17 +38,12 @@ import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexInputRef;
-import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
-import org.apache.calcite.util.NlsString;
-import org.apache.calcite.util.Sarg;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidServer;
@@ -539,113 +532,15 @@ public class SystemSchema extends AbstractSchema
     /**
      * Best-effort extraction of an exact-match {@code datasource} constraint (column
      * {@link #DATASOURCE_COLUMN}) from the pushed-down filters, so sys.segments can restrict its scan
-     * to the matching datasources rather than materializing every segment in the cluster. Handles
-     * {@code datasource = 'x'}, {@code datasource IN (...)} (normalized by Calcite to SEARCH),
-     * OR-of-equalities, and conjunctions - including a whole {@code WHERE} passed as a single
-     * {@code AND(...)} RexCall (as Calcite's filter-scan rule may do), where any non-datasource
-     * conjunct (e.g. {@code is_active = 1}) is simply ignored. Returns {@code null} when no usable
+     * to the matching datasources rather than materializing every segment in the cluster. Delegates to
+     * {@link SystemSchemaFilters}, which handles {@code datasource = 'x'}, {@code datasource IN (...)},
+     * OR-of-equalities, and nested {@code AND}/{@code OR}. Returns {@code null} when no usable
      * datasource predicate is present, in which case the previous full-scan behavior is retained.
-     * Because the filters are not removed from the planner's filter list, Calcite still applies them
-     * and correctness holds even if this extraction is conservative or over-broad.
      */
     @Nullable
     static Set<String> getDataSourceFilter(List<RexNode> filters)
     {
-      // The top-level filter list is implicitly ANDed, same as a single AND RexCall.
-      return intersectConjuncts(filters);
-    }
-
-    /**
-     * AND semantics: intersect the datasource sets from the extractable conjuncts, ignoring conjuncts
-     * that don't constrain datasource. Returns {@code null} if no conjunct yields a datasource set.
-     */
-    @Nullable
-    private static Set<String> intersectConjuncts(List<RexNode> conjuncts)
-    {
-      Set<String> result = null;
-      for (RexNode conjunct : conjuncts) {
-        final Set<String> values = extractDataSourceValues(conjunct);
-        if (values != null) {
-          result = (result == null) ? values : Sets.intersection(result, values).immutableCopy();
-        }
-      }
-      return result;
-    }
-
-    @Nullable
-    private static Set<String> extractDataSourceValues(RexNode node)
-    {
-      if (!(node instanceof RexCall)) {
-        return null;
-      }
-      final RexCall call = (RexCall) node;
-      switch (call.getKind()) {
-        case EQUALS:
-          return equalsDataSource(call);
-        case AND:
-          return intersectConjuncts(call.getOperands());
-        case OR:
-          final Set<String> union = new HashSet<>();
-          for (RexNode operand : call.getOperands()) {
-            final Set<String> values = extractDataSourceValues(operand);
-            if (values == null) {
-              // An un-extractable disjunct means we cannot bound the datasource set for this OR.
-              return null;
-            }
-            union.addAll(values);
-          }
-          return union;
-        case SEARCH:
-          return searchDataSource(call);
-        default:
-          return null;
-      }
-    }
-
-    @Nullable
-    private static Set<String> equalsDataSource(RexCall call)
-    {
-      final List<RexNode> ops = call.getOperands();
-      if (ops.size() != 2) {
-        return null;
-      }
-      final RexNode a = ops.get(0);
-      final RexNode b = ops.get(1);
-      final RexLiteral literal;
-      if (isDataSourceRef(a) && b instanceof RexLiteral) {
-        literal = (RexLiteral) b;
-      } else if (isDataSourceRef(b) && a instanceof RexLiteral) {
-        literal = (RexLiteral) a;
-      } else {
-        return null;
-      }
-      final String value = RexLiteral.stringValue(literal);
-      return value == null ? null : ImmutableSet.of(value);
-    }
-
-    @Nullable
-    private static Set<String> searchDataSource(RexCall call)
-    {
-      final List<RexNode> ops = call.getOperands();
-      if (ops.size() != 2 || !isDataSourceRef(ops.get(0)) || !(ops.get(1) instanceof RexLiteral)) {
-        return null;
-      }
-      final Sarg<?> sarg = ((RexLiteral) ops.get(1)).getValueAs(Sarg.class);
-      // Only exact-value sets (IN / OR-of-=) can bound the scan; ranges (>, <, LIKE) cannot.
-      if (sarg == null || !sarg.isPoints()) {
-        return null;
-      }
-      final Set<String> values = new HashSet<>();
-      for (Range<?> range : sarg.rangeSet.asRanges()) {
-        final Object endpoint = range.lowerEndpoint();
-        values.add(endpoint instanceof NlsString ? ((NlsString) endpoint).getValue() : String.valueOf(endpoint));
-      }
-      return values;
-    }
-
-    private static boolean isDataSourceRef(RexNode node)
-    {
-      return node instanceof RexInputRef && ((RexInputRef) node).getIndex() == DATASOURCE_COLUMN;
+      return SystemSchemaFilters.extractColumnValues(filters, DATASOURCE_COLUMN);
     }
 
     private static class PartialSegmentData
