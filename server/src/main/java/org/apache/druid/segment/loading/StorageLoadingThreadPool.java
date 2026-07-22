@@ -49,44 +49,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class StorageLoadingThreadPool
 {
-  private static final Logger log = new Logger(StorageLoadingThreadPool.class);
-
-  /**
-   * A handle to a held on-demand-load permit. {@link #close()} releases the permit.
-   *
-   * @see #acquireLoadPermit()
-   */
-  public interface LoadPermit extends Closeable
-  {
-    /**
-     * Releases the permit.
-     */
-    @Override
-    void close();
-  }
-
-  /**
-   * A permit handle whose {@code close()} releases nothing. Returned by {@link #acquireLoadPermit()} when there is no
-   * semaphore (the fixed-thread-pool mode, where the thread count is the bound, and the "no pool" instance).
-   */
-  private static final LoadPermit NOOP_PERMIT = () -> {};
-
-  @Nullable
-  private final ListeningExecutorService exec;
-  /**
-   * Bounds concurrent on-demand deep-storage reads in the virtual-thread mode, where the executor is otherwise
-   * unbounded (one virtual thread per task). Null in the fixed-thread-pool mode (the pool size is the bound) and in
-   * the "no pool" instance.
-   */
-  @Nullable
-  private final Semaphore permits;
-
-  private StorageLoadingThreadPool(@Nullable final ListeningExecutorService exec, @Nullable final Semaphore permits)
-  {
-    this.exec = exec;
-    this.permits = permits;
-  }
-
   public static StorageLoadingThreadPool createFromConfig(final SegmentLoaderConfig config)
   {
     if (!config.isVirtualStorage()) {
@@ -142,6 +104,30 @@ public class StorageLoadingThreadPool
   public static StorageLoadingThreadPool none()
   {
     return new StorageLoadingThreadPool(null, null);
+  }
+
+  private static final Logger log = new Logger(StorageLoadingThreadPool.class);
+
+  /**
+   * A permit handle whose {@code close()} releases nothing. Returned by {@link #acquireLoadPermit()} when there is no
+   * semaphore (the fixed-thread-pool mode, where the thread count is the bound, and the "no pool" instance).
+   */
+  private static final LoadPermit NOOP_PERMIT = () -> {};
+
+  @Nullable
+  private final ListeningExecutorService exec;
+  /**
+   * Bounds concurrent on-demand deep-storage reads in the virtual-thread mode, where the executor is otherwise
+   * unbounded (one virtual thread per task). Null in the fixed-thread-pool mode (the pool size is the bound) and in
+   * the "no pool" instance.
+   */
+  @Nullable
+  private final Semaphore permits;
+
+  private StorageLoadingThreadPool(@Nullable final ListeningExecutorService exec, @Nullable final Semaphore permits)
+  {
+    this.exec = exec;
+    this.permits = permits;
   }
 
   public boolean isAvailable()
@@ -228,5 +214,19 @@ public class StorageLoadingThreadPool
     if (exec != null) {
       exec.shutdownNow();
     }
+  }
+
+  /**
+   * A handle to a held on-demand-load permit. {@link #close()} releases the permit.
+   *
+   * @see #acquireLoadPermit()
+   */
+  public interface LoadPermit extends Closeable
+  {
+    /**
+     * Releases the permit.
+     */
+    @Override
+    void close();
   }
 }
