@@ -22,6 +22,7 @@ package org.apache.druid.server.router;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
+import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.query.Query;
 import org.apache.druid.sql.http.SqlQuery;
 
@@ -58,5 +59,13 @@ public interface TieredBrokerSelectorStrategy
   default Optional<String> getBrokerServiceName(TieredBrokerConfig config, SqlQuery sqlQuery)
   {
     return Optional.absent();
+  }
+
+  /**
+   * Determines whether a discovered broker node is eligible for query routing.
+   */
+  default boolean isBrokerEligible(DiscoveryDruidNode brokerNode)
+  {
+    return true;
   }
 }
