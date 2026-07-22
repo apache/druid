@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -200,13 +201,47 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       );
     }
 
+    // A single cluster group is physically sorted by its group ordering (the segment ordering with the constant
+    // clustering prefix dropped). When the query wants __time ordering and __time is the first non-clustering column,
+    // advertise that __time-first group ordering so the holder reports (and honors, incl. descending) time ordering --
+    // matching the multi-group merge path, so the same query does not depend on how many groups survive pruning.
+    // Otherwise advertise the full clustering-first segment ordering. Note the clustering prefix is constant across
+    // this single group, so both orderings are truthful descriptions of the exposed rows.
+    final ClusteredValueGroupsBaseTableSchema summary = valueGroup.getSummary();
+    final List<OrderBy> ordering =
+        isGroupTimeOrderingRequested(spec, summary) ? summary.getGroupOrdering() : summary.getOrdering();
+
     // groupIndex exposes the group's clustering columns as constant columns, no selector wrapper is needed
     return new QueryableIndexCursorHolder(
         groupIndex,
         plan.rebuildCursorBuildSpec(spec, valueGroup),
         QueryableIndexTimeBoundaryInspector.create(groupIndex),
-        valueGroup.getSummary().getOrdering()
+        ordering
     );
+  }
+
+  /**
+   * Whether the query requests {@code __time} ordering and each cluster group is individually {@code __time}-sorted
+   * (i.e. {@code __time} is the first non-clustering column, so {@link ClusteredValueGroupsBaseTableSchema#getGroupOrdering()}
+   * is {@code __time}-first). In that case a clustered read can serve a globally {@code __time}-ordered cursor: the
+   * single-group path advertises the group's {@code __time}-first ordering directly, and the multi-group path k-way
+   * merges the groups (see {@link #makeTimeMergedClusteredCursorHolder} / {@link MergingClusterGroupCursor}).
+   */
+  private static boolean isGroupTimeOrderingRequested(CursorBuildSpec spec, ClusteredValueGroupsBaseTableSchema summary)
+  {
+    if (Cursors.getTimeOrdering(spec.getPreferredOrdering()) == Order.NONE) {
+      return false;
+    }
+    final List<OrderBy> groupOrdering = summary.getGroupOrdering();
+    if (groupOrdering.isEmpty()) {
+      return false;
+    }
+    final OrderBy first = groupOrdering.get(0);
+    // Require __time to be the first non-clustering column AND natively ASCENDING. Each per-group cursor can flip
+    // ascending->descending on request but never the reverse, so an ascending group ordering guarantees the per-group
+    // cursors emit the direction the merge's heap (and the single-group holder) assume. Druid always writes __time
+    // ascending; guarding here keeps a hypothetical descending-written group from being mis-ordered rather than served.
+    return ColumnHolder.TIME_COLUMN_NAME.equals(first.getColumnName()) && first.getOrder() == Order.ASCENDING;
   }
 
   /**
@@ -248,6 +283,19 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
                   )
               )
           )
+      );
+    }
+
+    // Time-ordered merge path: when the query asks for __time ordering AND __time is the first non-clustering column
+    // (so each group, whose clustering prefix is constant, is individually __time-sorted), present a globally
+    // __time-ordered cursor via a k-way merge across the groups instead of the (clustering-first) concatenation. The
+    // per-group build spec carries the query's preferred ordering through rebuildCursorBuildSpec, so each group cursor
+    // independently honors the requested direction (ascending, or descending via a reversed offset).
+    if (isGroupTimeOrderingRequested(spec, clusterSummary)) {
+      return makeTimeMergedClusteredCursorHolder(
+          holderSuppliers,
+          closer,
+          Cursors.getTimeOrdering(spec.getPreferredOrdering())
       );
     }
 
@@ -316,6 +364,49 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
         // back-to-back walking yields rows in the full segment ordering; the writer-side contract makes the
         // concatenation order-preserving without any merge work at read time.
         return clusterSummary.getOrdering();
+      }
+
+      @Override
+      public void close()
+      {
+        try {
+          closer.close();
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+  }
+
+  /**
+   * Builds a {@link CursorHolder} whose scalar cursor is a globally {@code __time}-ordered {@link
+   * MergingClusterGroupCursor} k-way-merging the per-group cursors. Only invoked when the query requested {@code
+   * __time} ordering and each group is individually {@code __time}-sorted (see caller). Scalar only for now: {@code
+   * canVectorize()} and {@code asVectorCursor()} keep their {@link CursorHolder} defaults (false / null), so a
+   * vectorizing engine falls back to the scalar path.
+   */
+  private static CursorHolder makeTimeMergedClusteredCursorHolder(
+      List<Supplier<CursorHolder>> holderSuppliers,
+      Closer closer,
+      Order timeOrder
+  )
+  {
+    final boolean descending = timeOrder == Order.DESCENDING;
+    final MergingClusterGroupCursor cursor = new MergingClusterGroupCursor(holderSuppliers, descending);
+    final List<OrderBy> ordering = descending ? Cursors.descendingTimeOrder() : Cursors.ascendingTimeOrder();
+    return new CursorHolder()
+    {
+      @Override
+      public Cursor asCursor()
+      {
+        return cursor;
+      }
+
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return ordering;
       }
 
       @Override
