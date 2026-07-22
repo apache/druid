@@ -168,7 +168,15 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       // 61-63: cast
       "SELECT CAST(string1 as BIGINT) + CAST(string3 as DOUBLE) + long3, COUNT(*) FROM expressions GROUP BY 1 ORDER BY 2",
       "SELECT COUNT(*), SUM(CAST(string1 as BIGINT) + CAST(string3 as BIGINT)) FROM expressions WHERE double3 < 1010.0 AND double3 > 100.0",
-      "SELECT COUNT(*) FROM expressions WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' AND (UPPER(COALESCE(string3,'')) LIKE '1%' OR TRIM(UPPER(COALESCE(string3,''))) LIKE '1%' OR SUBSTRING(UPPER(COALESCE(string3,'')),1,1) IN ('1','2','3','4','5') OR ('X' || UPPER(COALESCE(string3,''))) LIKE 'X1%') AND (UPPER(COALESCE(string5,'')) LIKE '2%' OR TRIM(UPPER(COALESCE(string5,''))) LIKE '2%' OR SUBSTRING(UPPER(COALESCE(string5,'')),1,1) IN ('1','2','3','4','5') OR ('Y' || UPPER(COALESCE(string5,''))) LIKE 'Y2%') AND CAST(double4 * 1000 AS BIGINT) BETWEEN -850000000 AND 850000000"
+      "SELECT COUNT(*) FROM expressions WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' AND (UPPER(COALESCE(string3,'')) LIKE '1%' OR TRIM(UPPER(COALESCE(string3,''))) LIKE '1%' OR SUBSTRING(UPPER(COALESCE(string3,'')),1,1) IN ('1','2','3','4','5') OR ('X' || UPPER(COALESCE(string3,''))) LIKE 'X1%') AND (UPPER(COALESCE(string5,'')) LIKE '2%' OR TRIM(UPPER(COALESCE(string5,''))) LIKE '2%' OR SUBSTRING(UPPER(COALESCE(string5,'')),1,1) IN ('1','2','3','4','5') OR ('Y' || UPPER(COALESCE(string5,''))) LIKE 'Y2%') AND CAST(double4 * 1000 AS BIGINT) BETWEEN -850000000 AND 850000000",
+      // 64,65: unary negate on a double column (companion to 15 which does long negate)
+      "SELECT SUM(-double1) FROM expressions",
+      "SELECT SUM(-double4) FROM expressions",
+      // 66,67: unary abs on long and double columns
+      "SELECT SUM(ABS(long4)) FROM expressions",
+      "SELECT SUM(ABS(double1)) FROM expressions",
+      // 68: unary abs of a binary subtraction (composes SIMD sub with SIMD abs)
+      "SELECT SUM(ABS(long1 - long4)) FROM expressions"
   );
 
   @Param({
@@ -248,7 +256,12 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "60",
       "61",
       "62",
-      "63"
+      "63",
+      "64",
+      "65",
+      "66",
+      "67",
+      "68"
   })
   private String query;
 
