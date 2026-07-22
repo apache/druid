@@ -25,7 +25,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -38,12 +40,17 @@ import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
+import org.apache.calcite.util.NlsString;
+import org.apache.calcite.util.Sarg;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidServer;
@@ -93,6 +100,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -312,6 +320,8 @@ public class SystemSchema extends AbstractSchema
    */
   static class SegmentsTable extends AbstractTable implements ProjectableFilterableTable
   {
+    private static final int DATASOURCE_COLUMN = SEGMENTS_SIGNATURE.indexOf("datasource");
+
     private final DruidSchema druidSchema;
     private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
@@ -352,14 +362,23 @@ public class SystemSchema extends AbstractSchema
       // get available segments from druidSchema
       final BrokerSegmentMetadataCache availableMetadataCache = druidSchema.cache();
 
+      // Best-effort push-down of a `datasource` equality/IN filter so we scan only the matching
+      // datasources instead of every segment in the cluster. Null => no usable filter => full scan.
+      // The filters are intentionally left in the list, so Calcite still applies them and correctness
+      // holds even if this extraction is conservative or over-broad.
+      final Set<String> dataSourceFilter = getDataSourceFilter(filters);
+
       // Keep track of which segments we emitted from the publishedSegments iterator, so we don't emit them again
-      // from the availableSegments iterator.
+      // from the availableSegments iterator. When a datasource filter is pushed down we only emit the matching
+      // datasources' segments, so avoid pre-sizing to the whole-cluster segment count (a huge, wasted allocation).
       final Set<SegmentId> segmentsAlreadySeen =
-          Sets.newHashSetWithExpectedSize(availableMetadataCache.getTotalSegments());
+          dataSourceFilter == null
+          ? Sets.newHashSetWithExpectedSize(availableMetadataCache.getTotalSegments())
+          : new HashSet<>();
 
       // Get segments from metadata segment cache (if enabled in SQL planner config), else directly from
       // Coordinator. This may include both published and realtime segments.
-      final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getSegments();
+      final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getSegments(dataSourceFilter);
       final FluentIterable<Object[]> publishedSegments = FluentIterable
           .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments, root))
           .transform(val -> {
@@ -428,7 +447,7 @@ public class SystemSchema extends AbstractSchema
       // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, all the segments in this loop
       // would be covered in the previous iteration since Coordinator would return realtime segments as well.
       final FluentIterable<Object[]> availableSegments = FluentIterable
-          .from(() -> getAuthorizedAvailableSegments(availableMetadataCache.iterateSegmentMetadata(), root))
+          .from(() -> getAuthorizedAvailableSegments(availableMetadataCache.iterateSegmentMetadata(dataSourceFilter), root))
           .transform(val -> {
             final DataSegment segment = val.getSegment();
             if (segmentsAlreadySeen.contains(segment.getId())) {
@@ -515,6 +534,118 @@ public class SystemSchema extends AbstractSchema
           );
 
       return authorizedSegments.iterator();
+    }
+
+    /**
+     * Best-effort extraction of an exact-match {@code datasource} constraint (column
+     * {@link #DATASOURCE_COLUMN}) from the pushed-down filters, so sys.segments can restrict its scan
+     * to the matching datasources rather than materializing every segment in the cluster. Handles
+     * {@code datasource = 'x'}, {@code datasource IN (...)} (normalized by Calcite to SEARCH),
+     * OR-of-equalities, and conjunctions - including a whole {@code WHERE} passed as a single
+     * {@code AND(...)} RexCall (as Calcite's filter-scan rule may do), where any non-datasource
+     * conjunct (e.g. {@code is_active = 1}) is simply ignored. Returns {@code null} when no usable
+     * datasource predicate is present, in which case the previous full-scan behavior is retained.
+     * Because the filters are not removed from the planner's filter list, Calcite still applies them
+     * and correctness holds even if this extraction is conservative or over-broad.
+     */
+    @Nullable
+    static Set<String> getDataSourceFilter(List<RexNode> filters)
+    {
+      // The top-level filter list is implicitly ANDed, same as a single AND RexCall.
+      return intersectConjuncts(filters);
+    }
+
+    /**
+     * AND semantics: intersect the datasource sets from the extractable conjuncts, ignoring conjuncts
+     * that don't constrain datasource. Returns {@code null} if no conjunct yields a datasource set.
+     */
+    @Nullable
+    private static Set<String> intersectConjuncts(List<RexNode> conjuncts)
+    {
+      Set<String> result = null;
+      for (RexNode conjunct : conjuncts) {
+        final Set<String> values = extractDataSourceValues(conjunct);
+        if (values != null) {
+          result = (result == null) ? values : Sets.intersection(result, values).immutableCopy();
+        }
+      }
+      return result;
+    }
+
+    @Nullable
+    private static Set<String> extractDataSourceValues(RexNode node)
+    {
+      if (!(node instanceof RexCall)) {
+        return null;
+      }
+      final RexCall call = (RexCall) node;
+      switch (call.getKind()) {
+        case EQUALS:
+          return equalsDataSource(call);
+        case AND:
+          return intersectConjuncts(call.getOperands());
+        case OR:
+          final Set<String> union = new HashSet<>();
+          for (RexNode operand : call.getOperands()) {
+            final Set<String> values = extractDataSourceValues(operand);
+            if (values == null) {
+              // An un-extractable disjunct means we cannot bound the datasource set for this OR.
+              return null;
+            }
+            union.addAll(values);
+          }
+          return union;
+        case SEARCH:
+          return searchDataSource(call);
+        default:
+          return null;
+      }
+    }
+
+    @Nullable
+    private static Set<String> equalsDataSource(RexCall call)
+    {
+      final List<RexNode> ops = call.getOperands();
+      if (ops.size() != 2) {
+        return null;
+      }
+      final RexNode a = ops.get(0);
+      final RexNode b = ops.get(1);
+      final RexLiteral literal;
+      if (isDataSourceRef(a) && b instanceof RexLiteral) {
+        literal = (RexLiteral) b;
+      } else if (isDataSourceRef(b) && a instanceof RexLiteral) {
+        literal = (RexLiteral) a;
+      } else {
+        return null;
+      }
+      final String value = RexLiteral.stringValue(literal);
+      return value == null ? null : ImmutableSet.of(value);
+    }
+
+    @Nullable
+    private static Set<String> searchDataSource(RexCall call)
+    {
+      final List<RexNode> ops = call.getOperands();
+      if (ops.size() != 2 || !isDataSourceRef(ops.get(0)) || !(ops.get(1) instanceof RexLiteral)) {
+        return null;
+      }
+      final Sarg<?> sarg = ((RexLiteral) ops.get(1)).getValueAs(Sarg.class);
+      // Only exact-value sets (IN / OR-of-=) can bound the scan; ranges (>, <, LIKE) cannot.
+      if (sarg == null || !sarg.isPoints()) {
+        return null;
+      }
+      final Set<String> values = new HashSet<>();
+      for (Range<?> range : sarg.rangeSet.asRanges()) {
+        final Object endpoint = range.lowerEndpoint();
+        values.add(endpoint instanceof NlsString ? ((NlsString) endpoint).getValue() : String.valueOf(endpoint));
+      }
+      return values;
+    }
+
+    private static boolean isDataSourceRef(RexNode node)
+    {
+      return node instanceof RexInputRef && ((RexInputRef) node).getIndex() == DATASOURCE_COLUMN;
     }
 
     private static class PartialSegmentData
