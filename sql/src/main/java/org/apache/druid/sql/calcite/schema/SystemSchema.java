@@ -316,9 +316,145 @@ public class SystemSchema extends AbstractSchema
   }
 
   /**
+   * Per-segment status/measure fields derived identically for {@code sys.segments} rows and the
+   * internal per-datasource rollup (see {@code SegmentsRollup}), so the two can never drift. Encoding
+   * of the boolean flags into the row's LONG columns is left to the caller. {@link #replicationFactor}
+   * is already encoded ({@link #REPLICATION_FACTOR_UNKNOWN} when unknown), matching the row column, so
+   * counters that key off {@code replication_factor} agree with a query over sys.segments.
+   */
+  static final class DerivedSegmentStatus
+  {
+    final long numReplicas;
+    final long numRows;
+    final boolean isAvailable;
+    final boolean isRealtime;
+    final boolean isPublished;
+    final boolean isActive;
+    final boolean isOvershadowed;
+    final long replicationFactor;
+
+    DerivedSegmentStatus(
+        long numReplicas,
+        long numRows,
+        boolean isAvailable,
+        boolean isRealtime,
+        boolean isPublished,
+        boolean isActive,
+        boolean isOvershadowed,
+        long replicationFactor
+    )
+    {
+      this.numReplicas = numReplicas;
+      this.numRows = numRows;
+      this.isAvailable = isAvailable;
+      this.isRealtime = isRealtime;
+      this.isPublished = isPublished;
+      this.isActive = isActive;
+      this.isOvershadowed = isOvershadowed;
+      this.replicationFactor = replicationFactor;
+    }
+
+    /**
+     * Derivation for a segment from the Coordinator's published (+ realtime, with centralized schema)
+     * set, joined with any available metadata the broker has for it.
+     */
+    static DerivedSegmentStatus forPublished(
+        final SegmentStatusInCluster val,
+        @Nullable final AvailableSegmentMetadata available
+    )
+    {
+      final DataSegment segment = val.getDataSegment();
+
+      long numReplicas = 0L;
+      boolean isAvailable = false;
+      if (available != null) {
+        numReplicas = available.getNumReplicas();
+        isAvailable = available.getNumReplicas() > 0;
+      }
+
+      final long numRows;
+      if (segment.getTotalRows() != null) {
+        // the recent version of DataSegment stores numRows
+        numRows = segment.getTotalRows();
+      } else if (val.getNumRows() != null) {
+        // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, SegmentMetadataCache
+        // on the broker might have outdated or no information regarding numRows and rowSignature for a
+        // segment. In that case, we use numRows from the segment polled from the Coordinator.
+        numRows = val.getNumRows();
+      } else if (available != null) {
+        numRows = available.getNumRows();
+      } else {
+        numRows = 0L;
+      }
+
+      final boolean isRealtime = val.isRealtime();
+      // A segment from this set is published unless it is a realtime segment (mutually exclusive).
+      final boolean isPublished = !val.isRealtime();
+      // is_active is true for published segments that are not overshadowed, or else realtime segments.
+      final boolean isActive = isPublished ? !val.isOvershadowed() : val.isRealtime();
+      final long replicationFactor =
+          val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : val.getReplicationFactor();
+
+      return new DerivedSegmentStatus(
+          numReplicas,
+          numRows,
+          isAvailable,
+          isRealtime,
+          isPublished,
+          isActive,
+          val.isOvershadowed(),
+          replicationFactor
+      );
+    }
+
+    /**
+     * Derivation for a segment known only from the broker's available (served) view - not present in
+     * the published set. Assumed available, unpublished, non-overshadowed.
+     */
+    static DerivedSegmentStatus forAvailable(final AvailableSegmentMetadata val)
+    {
+      final DataSegment segment = val.getSegment();
+      final long numRows = segment.getTotalRows() != null ? segment.getTotalRows() : val.getNumRows();
+      // AvailableSegmentMetadata.isRealtime() returns a long flag (0/1), unlike SegmentStatusInCluster.
+      final boolean isRealtime = val.isRealtime() != 0;
+      return new DerivedSegmentStatus(
+          val.getNumReplicas(),
+          numRows,
+          true,
+          isRealtime,
+          false,
+          // is_active is true for unpublished segments iff they are realtime.
+          isRealtime,
+          false,
+          REPLICATION_FACTOR_UNKNOWN
+      );
+    }
+  }
+
+  /**
+   * Marker for the {@code sys.segments} table so an optimizer rule can recognize a scan of it, plus
+   * the {@link #SEGMENTS_SIGNATURE} column positions the rule needs - derived from the signature here
+   * (rather than hardcoded in the rule) so they can never silently drift if the column order changes.
+   * The rule depends on this interface instead of the package-private {@link SegmentsTable}.
+   */
+  public interface SegmentsRollupSource
+  {
+    int COL_DATASOURCE = SEGMENTS_SIGNATURE.indexOf("datasource");
+    int COL_SIZE = SEGMENTS_SIGNATURE.indexOf("size");
+    int COL_NUM_REPLICAS = SEGMENTS_SIGNATURE.indexOf("num_replicas");
+    int COL_NUM_ROWS = SEGMENTS_SIGNATURE.indexOf("num_rows");
+    int COL_IS_ACTIVE = SEGMENTS_SIGNATURE.indexOf("is_active");
+    int COL_IS_PUBLISHED = SEGMENTS_SIGNATURE.indexOf("is_published");
+    int COL_IS_AVAILABLE = SEGMENTS_SIGNATURE.indexOf("is_available");
+    int COL_IS_REALTIME = SEGMENTS_SIGNATURE.indexOf("is_realtime");
+    int COL_IS_OVERSHADOWED = SEGMENTS_SIGNATURE.indexOf("is_overshadowed");
+    int COL_REPLICATION_FACTOR = SEGMENTS_SIGNATURE.indexOf("replication_factor");
+  }
+
+  /**
    * This table contains row per segment from metadata store as well as served segments.
    */
-  static class SegmentsTable extends AbstractTable implements ProjectableFilterableTable
+  static class SegmentsTable extends AbstractTable implements ProjectableFilterableTable, SegmentsRollupSource
   {
     private static final int DATASOURCE_COLUMN = SEGMENTS_SIGNATURE.indexOf("datasource");
 
@@ -387,35 +523,7 @@ public class SystemSchema extends AbstractSchema
                 availableMetadataCache.getAvailableSegmentMetadata(segment.getDataSource(), segment.getId());
             segmentsAlreadySeen.add(segment.getId());
 
-            long numReplicas = 0L, isAvailable = 0L;
-            if (availableSegmentMetadata != null) {
-              numReplicas = availableSegmentMetadata.getNumReplicas();
-              isAvailable = availableSegmentMetadata.getNumReplicas() > 0 ? IS_AVAILABLE_TRUE : IS_ACTIVE_FALSE;
-            }
-
-            final long numRows;
-            if (segment.getTotalRows() != null) {
-              // the recent version of DataSegment stores numRows
-              numRows = segment.getTotalRows().longValue();
-            } else if (val.getNumRows() != null) {
-              // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, SegmentMetadataCache on the
-              // broker might have outdated or no information regarding numRows and rowSignature for a segment.
-              // In that case, we should use {@code numRows} from the segment polled from the coordinator.
-              numRows = val.getNumRows();
-            } else if (availableSegmentMetadata != null) {
-              numRows = availableSegmentMetadata.getNumRows();
-            } else {
-              numRows = 0L;
-            }
-
-            long isRealtime = val.isRealtime() ? 1 : 0;
-
-            // set of segments returned from Coordinator include published and realtime segments
-            // so realtime segments are not published and vice versa
-            boolean isPublished = !val.isRealtime();
-
-            // is_active is true for published segments that are not overshadowed or else they should be realtime
-            boolean isActive = isPublished ? !val.isOvershadowed() : val.isRealtime();
+            final DerivedSegmentStatus status = DerivedSegmentStatus.forPublished(val, availableSegmentMetadata);
 
             return new Object[]{
                 segment.getId(),
@@ -425,13 +533,13 @@ public class SystemSchema extends AbstractSchema
                 segment.getSize(),
                 segment.getVersion(),
                 (long) segment.getShardSpec().getPartitionNum(),
-                numReplicas,
-                numRows,
-                isActive ? IS_ACTIVE_TRUE : IS_ACTIVE_FALSE,
-                isPublished ? IS_PUBLISHED_TRUE : IS_PUBLISHED_FALSE,
-                isAvailable,
-                isRealtime,
-                val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
+                status.numReplicas,
+                status.numRows,
+                status.isActive ? IS_ACTIVE_TRUE : IS_ACTIVE_FALSE,
+                status.isPublished ? IS_PUBLISHED_TRUE : IS_PUBLISHED_FALSE,
+                status.isAvailable ? IS_AVAILABLE_TRUE : IS_ACTIVE_FALSE,
+                status.isRealtime ? 1L : 0L,
+                status.isOvershadowed ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
                 segment.getShardSpec(),
                 segment.getDimensions(),
                 segment.getMetrics(),
@@ -440,7 +548,7 @@ public class SystemSchema extends AbstractSchema
                 // If the segment is unpublished, we won't have this information yet.
                 // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
                 // This should be automatically updated in the next Coordinator poll.
-                val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : (long) val.getReplicationFactor()
+                status.replicationFactor
             };
           });
 
@@ -453,6 +561,7 @@ public class SystemSchema extends AbstractSchema
             if (segmentsAlreadySeen.contains(segment.getId())) {
               return null;
             }
+            final DerivedSegmentStatus status = DerivedSegmentStatus.forAvailable(val);
             return new Object[]{
                 segment.getId(),
                 segment.getDataSource(),
@@ -461,15 +570,15 @@ public class SystemSchema extends AbstractSchema
                 segment.getSize(),
                 segment.getVersion(),
                 (long) segment.getShardSpec().getPartitionNum(),
-                val.getNumReplicas(),
-                segment.getTotalRows() != null ? segment.getTotalRows() : val.getNumRows(),
+                status.numReplicas,
+                status.numRows,
                 // is_active is true for unpublished segments iff they are realtime
-                val.isRealtime() /* is_active */,
+                status.isActive ? IS_ACTIVE_TRUE : IS_ACTIVE_FALSE,
                 // is_published is false for unpublished segments
                 IS_PUBLISHED_FALSE,
                 // is_available is assumed to be always true for segments announced by historicals or realtime tasks
                 IS_AVAILABLE_TRUE,
-                val.isRealtime(),
+                status.isRealtime ? 1L : 0L,
                 IS_OVERSHADOWED_FALSE,
                 // there is an assumption here that unpublished segments are never overshadowed
                 segment.getShardSpec(),

@@ -55,6 +55,7 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.JoinAlgorithm;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
 import org.apache.druid.sql.calcite.rule.AggregateMergeRule;
 import org.apache.druid.sql.calcite.rule.AggregatePullUpLookupRule;
@@ -74,6 +75,7 @@ import org.apache.druid.sql.calcite.rule.FlattenConcatRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.rule.RewriteFirstValueLastValueRule;
+import org.apache.druid.sql.calcite.rule.SegmentsRollupRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidAggregateRemoveRedundancyRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidJoinRule;
@@ -81,7 +83,10 @@ import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.rule.logical.LogicalUnnestRule;
 import org.apache.druid.sql.calcite.rule.logical.UnnestInputCleanupRule;
 import org.apache.druid.sql.calcite.run.EngineFeature;
+import org.apache.druid.sql.calcite.schema.SegmentsRollup;
 import org.apache.druid.sql.hook.DruidHook;
+
+import javax.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -238,17 +243,40 @@ public class CalciteRulesManager
       );
 
   private final Set<ExtensionCalciteRuleProvider> extensionCalciteRuleProviderSet;
+  /**
+   * Broker rollup used to transparently accelerate the console's {@code GROUP BY datasource} query
+   * over sys.segments, and the authorizer applied per datasource when doing so. Null when the broker
+   * rollup is unavailable (e.g. in unit tests using the single-arg constructor), in which case the
+   * acceleration rule is not added and queries use the normal scan.
+   */
+  @Nullable
+  private final SegmentsRollup segmentsRollup;
+  @Nullable
+  private final AuthorizerMapper authorizerMapper;
+
+  public CalciteRulesManager(final Set<ExtensionCalciteRuleProvider> extensionCalciteRuleProviderSet)
+  {
+    this(extensionCalciteRuleProviderSet, null, null);
+  }
 
   /**
    * Manages the rules for planning of SQL queries via Calcite. Also provides methods for extensions to provide custom
    * rules for planning.
    *
    * @param extensionCalciteRuleProviderSet the set of custom rules coming from extensions
+   * @param segmentsRollup                  broker per-datasource segment-stats rollup (may be null)
+   * @param authorizerMapper                authorizer for the accelerated path (may be null)
    */
   @Inject
-  public CalciteRulesManager(final Set<ExtensionCalciteRuleProvider> extensionCalciteRuleProviderSet)
+  public CalciteRulesManager(
+      final Set<ExtensionCalciteRuleProvider> extensionCalciteRuleProviderSet,
+      @Nullable final SegmentsRollup segmentsRollup,
+      @Nullable final AuthorizerMapper authorizerMapper
+  )
   {
     this.extensionCalciteRuleProviderSet = extensionCalciteRuleProviderSet;
+    this.segmentsRollup = segmentsRollup;
+    this.authorizerMapper = authorizerMapper;
   }
 
   public List<Program> programs(final PlannerContext plannerContext)
@@ -333,9 +361,23 @@ public class CalciteRulesManager
     if (isDruid) {
       prePrograms.add(buildPreVolcanoManipulationProgram(plannerContext));
       prePrograms.add(new LoggingProgram("Finished pre-Volcano manipulation program", isDebug));
+    } else if (segmentsRollup != null && authorizerMapper != null) {
+      // Bindable (sys.*) path: transparently accelerate the console's GROUP BY datasource query over
+      // sys.segments from the broker rollup. No-op (falls back to the scan) unless the rollup is
+      // populated and the exact aggregate shape is recognized.
+      prePrograms.add(buildBindablePreManipulationProgram(plannerContext));
+      prePrograms.add(new LoggingProgram("Finished bindable pre-manipulation program", isDebug));
     }
 
     return Programs.sequence(prePrograms.toArray(new Program[0]));
+  }
+
+  private Program buildBindablePreManipulationProgram(final PlannerContext plannerContext)
+  {
+    final HepProgramBuilder builder = HepProgram.builder();
+    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
+    builder.addRuleInstance(new SegmentsRollupRule(segmentsRollup, authorizerMapper, plannerContext));
+    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
   }
 
   private Program sqlToRelWorkaroundProgram()
