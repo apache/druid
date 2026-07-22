@@ -664,13 +664,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             // executor tasks. The entry's own mount-future dedup would prevent the actual work from being duplicated,
             // but the executor scheduling and timing capture would still be wasted.
             Suppliers.memoize(() -> {
-              // Capture submit time on first invocation of getSegmentFuture(), so waitTime measures the queue delay
-              // until the executor picks up the task. loadTime then covers mount (+ ensureAllDownloaded for the
-              // full-download path).
+              // Capture submit time on first invocation of getSegmentFuture(). loadTime then covers mount
+              // (+ ensureAllDownloaded for the full-download path).
               final long submitNanos = System.nanoTime();
               return virtualStorageLoadingThreadPool.getExecutorService().submit(() -> {
-                // The executor bounds concurrency itself (permit acquired inside the task on the worker thread), so
-                // waitNanos measures both the queue delay and any permit wait until this task actually starts.
+                // waitNanos is only the executor scheduling delay until this task body starts; it no longer reflects
+                // load-slot contention when using virtual threads. Load permits are acquired inside the deep-storage
+                // reads now, so that wait is folded into loadTime instead, and the query-time bundle/column fetches
+                // (separate permit-bounded tasks) are not reflected here at all. A meaningful load-wait metric would
+                // have to time the permit acquire at the read sites and aggregate it across those fetches.
                 final long taskStartNanos = System.nanoTime();
                 final long waitNanos = taskStartNanos - submitNanos;
                 final boolean wasMounted = reserved.metadata.isMounted();
@@ -1669,6 +1671,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           final long startTime = System.nanoTime();
           return virtualStorageLoadingThreadPool.getExecutorService().submit(
               () -> {
+                // waitTime is only the executor scheduling delay; when using virtual threads for the pool, load-slot
+                // contention is folded into loadTime now, since mount acquires the load permit around the deep-storage
+                // read.
                 final long execStartTime = System.nanoTime();
                 final long waitTime = execStartTime - startTime;
                 entry.mount(location);
