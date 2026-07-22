@@ -92,6 +92,7 @@ public class StorageLoadingThreadPool
     if (!config.isVirtualStorage()) {
       return new StorageLoadingThreadPool(null, null);
     }
+
     if (config.getVirtualStorageLoadThreads() <= 0) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
@@ -100,6 +101,9 @@ public class StorageLoadingThreadPool
                               config.getVirtualStorageLoadThreads()
                           );
     }
+
+    final ListeningExecutorService exec;
+    final Semaphore permits;
     if (config.isVirtualStorageUseVirtualThreads()) {
       log.info(
           "Using virtual storage mode with virtual threads - max concurrent on demand loads: [%d].",
@@ -107,32 +111,29 @@ public class StorageLoadingThreadPool
       );
       // Unbounded thread-per-virtual-thread executor; concurrency is bounded by the permit count, acquired by callers
       // via acquireLoadPermit() around the actual deep-storage reads.
-      return new StorageLoadingThreadPool(
-          MoreExecutors.listeningDecorator(
-              Executors.newThreadPerTaskExecutor(
-                  Thread.ofVirtual()
-                        .name("VirtualStorageOnDemandLoadingThread-", 0)
-                        .factory()
-              )
-          ),
-          new Semaphore(config.getVirtualStorageLoadThreads())
+      exec = MoreExecutors.listeningDecorator(
+          Executors.newThreadPerTaskExecutor(
+              Thread.ofVirtual()
+                    .name("VirtualStorageOnDemandLoadingThread-", 0)
+                    .factory()
+          )
       );
+      permits = new Semaphore(config.getVirtualStorageLoadThreads());
     } else {
       log.info(
           "Using virtual storage mode with fixed platform thread pool - on demand load threads: [%d].",
           config.getVirtualStorageLoadThreads()
       );
       // Fixed pool: the thread count is the concurrency bound, so no separate permit is needed.
-      return new StorageLoadingThreadPool(
-          MoreExecutors.listeningDecorator(
-              Executors.newFixedThreadPool(
-                  config.getVirtualStorageLoadThreads(),
-                  Execs.makeThreadFactory("VirtualStorageOnDemandLoadingThread-%s")
-              )
-          ),
-          null
+      exec = MoreExecutors.listeningDecorator(
+          Executors.newFixedThreadPool(
+              config.getVirtualStorageLoadThreads(),
+              Execs.makeThreadFactory("VirtualStorageOnDemandLoadingThread-%s")
+          )
       );
+      permits = null;
     }
+    return new StorageLoadingThreadPool(exec, permits);
   }
 
   /**
