@@ -829,7 +829,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
     try {
       final LoadSpec loadSpec = jsonMapper.convertValue(dataSegment.getLoadSpec(), LoadSpec.class);
-      return loadSpec.openRangeReader();
+      final SegmentRangeReader rangeReader = loadSpec.openRangeReader();
+      if (rangeReader == null) {
+        return null;
+      }
+      // Bound concurrent deep-storage reads at the actual range-read (see PermitLimitedSegmentRangeReader).
+      return new PermitLimitedSegmentRangeReader(rangeReader, virtualStorageLoadingThreadPool);
     }
     catch (IOException e) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
@@ -1235,7 +1240,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       throws SegmentLoadingException
   {
     try {
-      return wrapper.openRangeReader();
+      final SegmentRangeReader rangeReader = wrapper.openRangeReader();
+      if (rangeReader == null) {
+        return null;
+      }
+      // Bound concurrent deep-storage reads at the actual range-read (see PermitLimitedSegmentRangeReader).
+      return new PermitLimitedSegmentRangeReader(rangeReader, virtualStorageLoadingThreadPool);
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "Failed to open range reader for segment[%s]", dataSegment.getId());
@@ -1952,7 +1962,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             }
           }
           if (needsLoad) {
-            loadInLocationWithStartMarker(dataSegment, storageDir);
+            // Hold a load permit only around the actual deep-storage read, not the surrounding entryLock or the
+            // factorize/deserialize below. Acquired after entryLock, so a permit is never held while blocking on it.
+            try (StorageLoadingThreadPool.LoadPermit ignored = virtualStorageLoadingThreadPool.acquireLoadPermit()) {
+              loadInLocationWithStartMarker(dataSegment, storageDir);
+            }
           }
           final SegmentizerFactory factory = getSegmentFactory(storageDir);
 
