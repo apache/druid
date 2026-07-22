@@ -297,6 +297,11 @@
       <groupId>io.timeandspace</groupId>
       <artifactId>cron-scheduler</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.google.re2j</groupId>
+      <artifactId>re2j</artifactId>
+      <version>1.7</version>
+    </dependency>
 
     <!-- com.lmax.disruptor is optional in log4j-core, so we explicitly include it here -->
     <dependency>
