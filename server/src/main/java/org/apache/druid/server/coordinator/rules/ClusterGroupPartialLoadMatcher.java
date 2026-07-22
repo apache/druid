@@ -24,7 +24,6 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import org.apache.druid.segment.loading.PartialClusterGroupLoadSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.ShardSpec;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -60,22 +59,22 @@ public abstract class ClusterGroupPartialLoadMatcher implements PartialLoadMatch
    * Returns the load spec for the resolved cluster-group indices, or null when this matcher has nothing to
    * contribute for the given segment.
    *
-   * <p>Null is returned when:
+   * <p>Null (opaque) is returned only when the matcher cannot reason about the segment at all:
    * <ul>
-   *   <li>the segment is not clustered,</li>
+   *   <li>the segment is not clustered, or</li>
    *   <li>the matcher's patterns are incompatible with the segment's clustering scheme (see
-   *       {@link #resolveClusterGroupIndices}), or</li>
-   *   <li>no configured pattern matches the segment's tuples <em>and</em> the segment is not a core partition
-   *       (i.e. {@code partitionNum >= numCorePartitions}). The empty load is only useful to keep the broker's
-   *       shard-group completeness check happy, and that check applies only to the core partition group; appended
-   *       segments are queried individually and don't need an empty stub when no positive content matches.</li>
+   *       {@link #resolveClusterGroupIndices}).</li>
    * </ul>
+   * A null result hands the decision to the rule's {@link CannotMatchBehavior}.
    *
-   * <p>When the segment is a core partition of a clustered shard group, the matcher is compatible, and no pattern
-   * matches any tuple, returns the "empty" load (same {@code partialClusterGroup} type with an empty index list
-   * and {@link #EMPTY_LOAD_FINGERPRINT}). The historical-side loader honors it by performing no load, leaving the
-   * segment uniformly placed in the timeline alongside its positively-matched siblings so the broker treats the
-   * group as complete.
+   * <p>When the matcher <em>is</em> compatible with the segment's clustering scheme, it always returns a non-null
+   * result: a positive load for the matched cluster-group indices, or the "empty" load (same
+   * {@code partialClusterGroup} type with an empty index list and {@link #EMPTY_LOAD_FINGERPRINT}) when no configured
+   * pattern matches any tuple. This holds regardless of whether the segment is a core or an appended
+   * ({@code partitionNum >= numCorePartitions}) partition: an empty result means "the matcher analyzed this segment
+   * and nothing here should load," which keeps the segment announceable rather than silently dropping it. The empty
+   * load is dispatched like any other partial load onto the rule's tiered replicants, so the segment stays in the
+   * broker's timeline; the historical-side loader honors the empty index list by downloading no cluster-group data.
    */
   @Override
   @Nullable
@@ -88,12 +87,6 @@ public abstract class ClusterGroupPartialLoadMatcher implements PartialLoadMatch
     if (resolved == null) {
       // Matcher is incompatible with this segment's clustering scheme. Treat as opaque so the rule's cannot-match
       // handling takes over rather than dispatching a stub empty load.
-      return null;
-    }
-    final ShardSpec shardSpec = segment.getShardSpec();
-    if (resolved.isEmpty() && shardSpec.getPartitionNum() >= shardSpec.getNumCorePartitions()) {
-      // No patterns match and this segment isn't part of a core partition group, so no need for an empty load. Fall
-      // through to the cannot-match handling.
       return null;
     }
     final String fingerprint = resolved.isEmpty() ? EMPTY_LOAD_FINGERPRINT : computeFingerprint(resolved);
