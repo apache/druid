@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.duty;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
@@ -467,7 +468,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
     }
 
     @Override
-    protected Map<String, String> fetchParentIdsForSegments(TaskToolbox toolbox, List<DataSegmentPlus> unusedSegments)
+    protected Optional<Map<String, String>> fetchParentIdsForSegments(TaskToolbox toolbox, List<DataSegmentPlus> unusedSegments)
     {
       // No need to make another DB call, the parent IDs have already been fetched
       // in fetchNextBatchOfUnusedSegments
@@ -481,7 +482,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
         }
       }
 
-      return unusedSegmentIdToParentId;
+      return Optional.of(unusedSegmentIdToParentId);
     }
 
     @Override
