@@ -154,19 +154,40 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
     final List<Supplier<CursorHolder>> holderSuppliers = new ArrayList<>(surviving.size());
     final Closer closer = Closer.create();
     for (TableClusterGroupSpec valueGroup : surviving) {
-      final OnHeapClusterGroup group = clusteredBaseTable.getGroupForClusteringValues(
-          valueGroup.lookupClusteringValues()
-      );
+      final Object[] groupClusteringValues = valueGroup.lookupClusteringValues();
+      final OnHeapClusterGroup group = clusteredBaseTable.getGroupForClusteringValues(groupClusteringValues);
       if (group == null) {
         throw DruidException.defensive(
             "No cluster group for clustering values [%s]",
-            Arrays.toString(valueGroup.lookupClusteringValues())
+            Arrays.toString(groupClusteringValues)
         );
       }
-      clusteringValuesByGroup.add(valueGroup.lookupClusteringValues());
+      clusteringValuesByGroup.add(groupClusteringValues);
       final CursorBuildSpec groupSpec = plan.rebuildCursorBuildSpec(spec, valueGroup);
+      // Expose this group's clustering columns as constants to the per-group cursor's selector factory so that a
+      // per-group filter that survived folding and references a clustering column resolves it instead of matching a
+      // missing/all-null column. This happens when walkClusterGroupFilter does not collapse the leaf (e.g. a range,
+      // like, or search predicate on the clustering column, directly or via a query virtual column remapped to it).
+      // OnHeapClusterGroup does not itself store clustering columns; the historical path gets them from
+      // getClusterGroupQueryableIndex(group, true) injecting constant columns into the per-group index.
       holderSuppliers.add(
-          Suppliers.memoize(() -> closer.register(new IncrementalIndexCursorHolder(group, groupSpec)))
+          Suppliers.memoize(() -> closer.register(
+              new IncrementalIndexCursorHolder(group, groupSpec)
+              {
+                @Override
+                public ColumnSelectorFactory makeSelectorFactory(
+                    CursorBuildSpec buildSpec,
+                    IncrementalIndexRowHolder currEntry
+                )
+                {
+                  return new ClusteringColumnSelectorFactory(
+                      super.makeSelectorFactory(buildSpec, currEntry),
+                      clusteringColumns,
+                      groupClusteringValues
+                  );
+                }
+              }
+          ))
       );
     }
 

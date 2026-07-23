@@ -147,7 +147,7 @@ class QueryableIndexCursorFactoryClusteredTest
   private QueryableIndex segmentIndex;
 
   @AfterEach
-  void tearDown() throws java.io.IOException
+  void tearDown()
   {
     if (segmentIndex != null) {
       segmentIndex.close();
@@ -156,9 +156,10 @@ class QueryableIndexCursorFactoryClusteredTest
 
   /**
    * Cluster spec for a segment clustered on {@code tenant_lower := lower(tenant)} (a clustering column produced by a
-   * group VC; raw {@code tenant} is NOT a stored column) plus a non-clustering materialized
-   * {@code region_upper := upper(region)} column. Columns: {@code [tenant_lower (clustering), region, region_upper,
-   * __time]}.
+   * group VC) plus a non-clustering materialized {@code region_upper := upper(region)} column. The raw inputs
+   * {@code tenant} and {@code region} are retained as stored columns, so the query-VC -> materialized-column remap is a
+   * pure optimization (the query VC could also be recomputed from the retained input). Columns:
+   * {@code [tenant_lower (clustering), tenant, region, region_upper, __time]}.
    */
   private static final ClusteredValueGroupsBaseTableProjectionSpec VIRTUAL_CLUSTER_SPEC =
       ClusteredValueGroupsBaseTableProjectionSpec.builder()
@@ -168,6 +169,7 @@ class QueryableIndexCursorFactoryClusteredTest
           ))
           .columns(
               new StringDimensionSchema("tenant_lower"),
+              StringDimensionSchema.create("tenant"),
               StringDimensionSchema.create("region"),
               StringDimensionSchema.create("region_upper"),
               new LongDimensionSchema("__time")
@@ -178,9 +180,9 @@ class QueryableIndexCursorFactoryClusteredTest
   @Test
   void testQueryVcEquivalentToClusteringColumnReadsMaterializedColumnViaAsCursor()
   {
-    // Raw `tenant` is NOT stored; query VC v0 := lower(tenant) is equivalent to the clustering column tenant_lower.
-    // The scalar selector remap must substitute the materialized tenant_lower clustering constant — recompute would
-    // be null. Read via asCursor() (non-vector) to exercise the scalar ClusteringColumnSelectorFactory path.
+    // Query VC v0 := lower(tenant) is equivalent to the clustering column tenant_lower. The scalar selector remap
+    // substitutes the materialized tenant_lower clustering constant instead of recomputing lower(tenant) from the
+    // retained raw column. Read via asCursor() (non-vector) to exercise the scalar ClusteringColumnSelectorFactory path.
     segmentIndex = buildVirtualClusteringSegment();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
         segmentIndex,
@@ -246,8 +248,8 @@ class QueryableIndexCursorFactoryClusteredTest
   void testQueryVcEquivalentToClusteringColumnSingleGroupReadsMaterializedColumn()
   {
     // Single surviving group (filter on the equivalent VC prunes to one group), exercising the single-group cursor
-    // holder path's scalar remap wrap. Raw `tenant` is not stored, so the materialized clustering constant is the
-    // only correct source.
+    // holder path's scalar remap wrap. The remap reads the materialized tenant_lower clustering constant instead of
+    // recomputing lower(tenant) from the retained raw column.
     segmentIndex = buildVirtualClusteringSegment();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
         segmentIndex,
@@ -358,8 +360,8 @@ class QueryableIndexCursorFactoryClusteredTest
   void testQueryVcEquivalentToClusteringColumnReadsMaterializedColumnViaVectorCursor()
   {
     // the query-VC -> materialized-column remap is applied on the vector factory too, so a
-    // vectorized read of v0 := lower(tenant) resolves to the materialized clustering column tenant_lower (raw tenant
-    // not stored -> recompute would be null), and the remap no longer forces the scalar path.
+    // vectorized read of v0 := lower(tenant) resolves to the materialized clustering column tenant_lower (instead of
+    // recomputing lower(tenant) from the retained raw column), and the remap no longer forces the scalar path.
     segmentIndex = buildVirtualClusteringSegment();
     final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
         segmentIndex,

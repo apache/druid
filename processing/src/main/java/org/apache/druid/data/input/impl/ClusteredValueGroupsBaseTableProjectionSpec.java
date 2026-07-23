@@ -41,6 +41,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -94,6 +95,7 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
   {
     validate(columns, clusteringColumns);
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
+    validateVirtualColumns(this.virtualColumns, columns);
     this.columns = Collections.unmodifiableList(new ArrayList<>(columns));
     this.clusteringColumns = Collections.unmodifiableList(new ArrayList<>(clusteringColumns));
     this.clusteringColumnSchemas = this.columns.subList(0, this.clusteringColumns.size());
@@ -308,6 +310,72 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
           "clustering by [%s] is not yet supported; the time column must be a non-clustering column",
           ColumnHolder.TIME_COLUMN_NAME
       );
+    }
+  }
+
+  /**
+   * A clustered base table spec is a projection of an (unstored) base table into the stored clustered table, so its
+   * virtual columns describe how stored columns are derived. Two rules keep that reasonable at query time:
+   * <ul>
+   *   <li><b>inputs</b>: every input of a virtual column must be a stored column (declared in {@code columns}) or
+   *   another virtual column in the spec (a derivation chain, e.g. {@code key := lower(v0)}, {@code v0 :=
+   *   json_value(payload)} with {@code payload} stored). Checking every virtual column then transitively forces the
+   *   physical leaves of any chain to be stored, so a query virtual column equivalent to one is always recomputable
+   *   and the query-side substitution stays a pure optimization.</li>
+   *   <li><b>outputs</b>: every virtual column must either be materialized (its output declared in {@code columns}) or
+   *   be an intermediary that feeds another virtual column. A virtual column that is neither materializes nothing and
+   *   is used by nothing and dead metadata and so it is rejected.</li>
+   * </ul>
+   * In-place transforms (output name == input name) can't be virtual columns here anyway ({@link VirtualColumns}
+   * rejects the self-reference) and belong in a {@code transformSpec}. The query-granularity carrier
+   * ({@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME}) is metadata-only (it floors the stored {@code __time}, is
+   * not itself stored, and feeds no other virtual column), so it is exempt from the output rule.
+   */
+  private static void validateVirtualColumns(VirtualColumns virtualColumns, List<DimensionSchema> columns)
+  {
+    final VirtualColumn[] all = virtualColumns.getVirtualColumns();
+    if (all.length == 0) {
+      return;
+    }
+    final Set<String> columnNames = Sets.newHashSetWithExpectedSize(columns.size());
+    for (DimensionSchema column : columns) {
+      columnNames.add(column.getName());
+    }
+    // The output rule below lets a virtual column go unstored when it is exempt: an intermediary that feeds another
+    // virtual column (collected during the input pass), or the metadata-only query-granularity carrier (seeded here).
+    final Set<String> outputExempt = new HashSet<>();
+    outputExempt.add(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    // input rule: every input must be a stored column or another virtual column; an input that is a virtual column
+    // makes that virtual column an intermediary, exempt from having to be materialized itself.
+    for (VirtualColumn virtualColumn : all) {
+      for (String input : virtualColumn.requiredColumns()) {
+        final boolean isStored = columnNames.contains(input);
+        final boolean isVirtual = virtualColumns.exists(input);
+        if (!isStored && !isVirtual) {
+          throw InvalidInput.exception(
+              "virtual column [%s] reads column [%s], which is neither a stored column nor another virtual column;"
+              + " clustered base table virtual columns must be computable from stored columns (retain [%s] in"
+              + " 'columns', or use a transformSpec for in-place transforms)",
+              virtualColumn.getOutputName(),
+              input,
+              input
+          );
+        }
+        if (isVirtual) {
+          outputExempt.add(input);
+        }
+      }
+    }
+    // output rule: every virtual column must be materialized (stored) or exempt (intermediary / granularity carrier).
+    for (VirtualColumn virtualColumn : all) {
+      final String outputName = virtualColumn.getOutputName();
+      if (!columnNames.contains(outputName) && !outputExempt.contains(outputName)) {
+        throw InvalidInput.exception(
+            "virtual column [%s] is not stored (not declared in 'columns') and does not feed another virtual column;"
+            + " clustered base table virtual columns must materialize a stored column or be an input to one that does",
+            outputName
+        );
+      }
     }
   }
 

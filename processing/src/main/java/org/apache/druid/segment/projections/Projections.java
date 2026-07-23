@@ -713,9 +713,19 @@ public class Projections
    * <p>
    * A remap target must be a column the per-group cursor can actually serve, so {@code materializedColumns} restricts
    * candidates to the summary's stored columns (clustering columns included by construction). Group virtual columns
-   * whose output name is not a stored column are metadata-only carriers -- notably the {@code __virtualGranularity}
-   * query-granularity carrier -- and are never valid substitution targets; a query VC equivalent to such a carrier is
+   * whose output name is not a stored column are metadata-only carriers; notably the {@code __virtualGranularity}
+   * query-granularity carrier, and are never valid substitution targets; a query VC equivalent to such a carrier is
    * left in place to recompute (e.g. from {@code __time}) rather than remapped to an unreadable column.
+   * <p>
+   * The substitution is always a pure optimisation: {@code ClusteredValueGroupsBaseTableProjectionSpec} requires every
+   * clustered virtual column's inputs to be stored columns, so a query VC equivalent to one can always be recomputed
+   * from stored columns and reading the materialized column merely skips that recomputation.
+   * <p>
+   * A query VC that {@code queryFilter} references is left unremapped when the filter can't rewrite its required
+   * columns ({@link Filter#supportsRequiredColumnRewrite()} is false, e.g. spatial / javascript / column-comparison
+   * filters): the filter can't have the VC name swapped for the materialized column, and since a remappable VC is
+   * (per the spec) recomputable from stored columns, keeping it lets the filter read the recomputed value instead of
+   * throwing on an unsupported rewrite.
    * <p>
    * A substituted (dropped) query virtual column is read from its materialized column and never recomputes, so it
    * imposes no requirement on its own inputs. A query virtual column must therefore be kept (recomputed, not
@@ -734,8 +744,11 @@ public class Projections
     if (all.length == 0) {
       return Map.of();
     }
-    // Columns referenced by a filter that can't rewrite its required columns must not be remapped, keeps it for the
-    // filter to reference
+    // A filter that can't rewrite its required columns (spatial, javascript, column-comparison, ...) can't have a
+    // remapped VC name swapped for the materialized column in its own required-column set, so any VC it references
+    // must stay in place. ClusteredValueGroupsBaseTableProjectionSpec guarantees every clustered VC is recomputable
+    // from stored columns, so leaving it unremapped simply lets the filter read the recomputed value rather than
+    // throwing.
     final Set<String> unrewritableFilterColumns =
         queryFilter != null && !queryFilter.supportsRequiredColumnRewrite()
         ? queryFilter.getRequiredColumns()
@@ -758,7 +771,10 @@ public class Projections
           // read goes through the per-group delegate, which would resolve the target name to that (unrelated) query VC
           // instead of the stored column. Leaving this VC makes it recompute from its own inputs instead.
           && queryVcs.getVirtualColumn(equivalent.getOutputName()) == null
-          // Don't remap a VC an unrewritable filter references (see above): keep it computed for the filter.
+          // Don't remap a VC an unrewritable filter (spatial, javascript, column-comparison, ...) references: the
+          // filter can't have the VC name swapped for the materialized column, so keep the VC in place and let the
+          // filter read its recomputed value. Clustered specs guarantee every VC's inputs are stored (see
+          // ClusteredValueGroupsBaseTableProjectionSpec), so recompute is always a correct fallback.
           && !unrewritableFilterColumns.contains(outputName)) {
         candidates.put(outputName, equivalent.getOutputName());
       }

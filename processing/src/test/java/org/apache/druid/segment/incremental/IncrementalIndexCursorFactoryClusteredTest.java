@@ -30,6 +30,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -177,9 +178,10 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
   }
 
   /**
-   * Build an index clustered on {@code tenant_lower := lower(tenant)} (a clustering column produced by a group VC;
-   * raw {@code tenant} is NOT a stored column) with a non-clustering materialized {@code region_upper := upper(region)}
-   * column. Columns are {@code [tenant_lower (clustering), region, region_upper, __time]}.
+   * Build an index clustered on {@code tenant_lower := lower(tenant)} (a clustering column produced by a group VC) with
+   * a non-clustering materialized {@code region_upper := upper(region)} column. The raw inputs {@code tenant} and
+   * {@code region} are retained as stored columns, so the query-VC -> materialized-column remap is a pure optimization
+   * can be tested. Columns are {@code [tenant_lower (clustering), tenant, region, region_upper, __time]}.
    */
   private static OnheapIncrementalIndex virtualClusteringIndex()
   {
@@ -190,6 +192,7 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
         ))
         .columns(
             new StringDimensionSchema("tenant_lower"),
+            new StringDimensionSchema("tenant"),
             new StringDimensionSchema("region"),
             new StringDimensionSchema("region_upper"),
             new LongDimensionSchema("__time")
@@ -217,9 +220,9 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
   @Test
   void testQueryVirtualColumnEquivalentToClusteringColumnReadsMaterializedColumn()
   {
-    // Query VC v0 := lower(tenant) is equivalent to the clustering column tenant_lower (also lower(tenant)). Since
-    // raw `tenant` is NOT stored, recomputing the expression per-group would yield null; the remap substitutes the
-    // materialized tenant_lower clustering constant so makeDimensionSelector("v0") returns the per-group value.
+    // Query VC v0 := lower(tenant) is equivalent to the clustering column tenant_lower (also lower(tenant)). The remap
+    // substitutes the materialized tenant_lower clustering constant (instead of recomputing lower(tenant) from the
+    // retained raw column) so makeDimensionSelector("v0") returns the per-group value.
     try (OnheapIncrementalIndex index = virtualClusteringIndex()) {
       final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
@@ -339,6 +342,29 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
       // only the acme group survives; its clustering leaf rewrites to TRUE and is dropped, so the per-group cursor
       // never sees a filter on "tenant" (which the group's facts holder doesn't carry).
       final Filter filter = new EqualityFilter("tenant", ColumnType.STRING, "acme", null);
+      try (CursorHolder holder = factory.makeCursorHolder(specWith(filter))) {
+        Assertions.assertEquals(
+            List.of(
+                List.of("acme", "us-east-1"),
+                List.of("acme", "us-west-2")
+            ),
+            scanTenantRegion(holder)
+        );
+      }
+    }
+  }
+
+  @Test
+  void testRangeFilterOnClusteringColumnResolvesViaClusteringConstant()
+  {
+    try (OnheapIncrementalIndex index = standardTwoGroup()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      // A RangeFilter on the clustering column is NOT folded by the pruner (only Equality/In/Null fold), so it
+      // survives to the per-group cursor still referencing "tenant". OnHeapClusterGroup doesn't store the clustering
+      // column, so the per-group selector factory must expose it as a per-group constant (mirroring the historical
+      // fabricated-constant path) or the filter matches a missing/all-null column and returns nothing. tenant in
+      // ['a','b'] selects the acme group and excludes globex.
+      final Filter filter = new RangeFilter("tenant", ColumnType.STRING, "a", "b", false, false, null);
       try (CursorHolder holder = factory.makeCursorHolder(specWith(filter))) {
         Assertions.assertEquals(
             List.of(

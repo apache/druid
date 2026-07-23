@@ -187,7 +187,8 @@ class ProjectionsPlanClusterGroupQueryTest
                 TestExprMacroTable.INSTANCE
             )
         ),
-        List.of("tenant_lower", ColumnHolder.TIME_COLUMN_NAME, "metric"),
+        // raw `tenant` is retained, so lower(tenant) is a pure-optimization remap (recompute from tenant is also valid)
+        List.of("tenant_lower", "tenant", ColumnHolder.TIME_COLUMN_NAME, "metric"),
         List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         clustering,
         null,
@@ -198,9 +199,10 @@ class ProjectionsPlanClusterGroupQueryTest
   }
 
   /**
-   * Group clustered on {@code tenant_lower := lower(tenant)} (a clustering column produced by a group VC; raw
-   * {@code tenant} is NOT stored) with a non-clustering materialized column {@code region_upper := upper(region)}.
-   * Both equivalences exercise the query-VC -> materialized-column remap.
+   * Group clustered on {@code tenant_lower := lower(tenant)} (a clustering column produced by a group VC) with a
+   * non-clustering materialized column {@code region_upper := upper(region)}. The raw inputs {@code tenant} and
+   * {@code region} are retained as stored columns, so both equivalences are pure-optimization remaps (the query VC
+   * could also be correctly recomputed from the retained input).
    */
   private static TableClusterGroupSpec materializedVcGroup(String loweredTenant)
   {
@@ -214,7 +216,7 @@ class ProjectionsPlanClusterGroupQueryTest
             new ExpressionVirtualColumn("tenant_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
             new ExpressionVirtualColumn("region_upper", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
         ),
-        List.of("tenant_lower", "region_upper", ColumnHolder.TIME_COLUMN_NAME, "metric"),
+        List.of("tenant_lower", "region_upper", "tenant", "region", ColumnHolder.TIME_COLUMN_NAME, "metric"),
         List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         clustering,
         null,
@@ -241,7 +243,8 @@ class ProjectionsPlanClusterGroupQueryTest
             new ExpressionVirtualColumn("tenant_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
             new ExpressionVirtualColumn("tenant_upper_lower", "upper(tenant_lower)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
         ),
-        List.of("tenant_lower", "tenant_upper_lower", ColumnHolder.TIME_COLUMN_NAME, "metric"),
+        // raw `tenant` is retained so the whole chain (lower(tenant) -> upper(...)) is recomputable, hence remappable
+        List.of("tenant_lower", "tenant_upper_lower", "tenant", ColumnHolder.TIME_COLUMN_NAME, "metric"),
         List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         clustering,
         null,
@@ -269,8 +272,9 @@ class ProjectionsPlanClusterGroupQueryTest
             new ExpressionVirtualColumn("tenant_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
             Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
         ),
-        // __virtualGranularity is intentionally absent from the stored columns; it is a metadata carrier only.
-        List.of("tenant_lower", ColumnHolder.TIME_COLUMN_NAME, "metric"),
+        // __virtualGranularity is intentionally absent from the stored columns; it is a metadata carrier only. Raw
+        // `tenant` is retained so lower(tenant) is remappable while the granularity carrier still isn't.
+        List.of("tenant_lower", "tenant", ColumnHolder.TIME_COLUMN_NAME, "metric"),
         List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         clustering,
         null,
@@ -1091,17 +1095,21 @@ class ProjectionsPlanClusterGroupQueryTest
   }
 
   @Test
-  void testVirtualColumnRemapExcludesColumnReferencedByUnrewritableFilter()
+  void testVirtualColumnRemapExcludesRetainedInputVcReferencedByUnrewritableFilter()
   {
-    // The unrewritable filter references v1 (a VC equivalent to the materialized region_upper). v1 must NOT be
-    // remapped: the filter can't be rewritten to region_upper, and dropping v1 would leave the filter referencing a
-    // column the per-group cursor no longer carries. Leaving v1 unremapped keeps it computed for the filter.
+    // v0 := lower(tenant) is remappable (tenant retained), but an unrewritable filter references it directly. The
+    // filter can't be rewritten to the materialized column, so v0 is left unremapped and recomputes from the retained
+    // tenant column -- the filter reads that value rather than throwing on an unsupported rewrite.
     final VirtualColumns queryVcs = VirtualColumns.create(
-        new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
     );
-    final CursorBuildSpec spec = buildSpec(new NoRewriteFilter("v1"), queryVcs);
-    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(List.of(materializedVcGroup("acme")), spec);
+    final Filter filter = new NoRewriteFilter("v0");
+    final TableClusterGroupSpec group = materializedVcGroup("acme");
+    final CursorBuildSpec spec = buildSpec(filter, queryVcs);
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(List.of(group), spec);
     Assertions.assertTrue(plan.virtualColumnRemap().isEmpty());
+
+    Assertions.assertSame(filter, plan.rebuildCursorBuildSpec(spec, group).getFilter());
   }
 
   @Test
