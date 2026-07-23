@@ -91,13 +91,11 @@ public abstract class DimensionSchema
       case DOUBLE:
         return new DoubleDimensionSchema(name);
       default:
+        // Use the auto column with type coercion when dealing with arrays of primitive types.
+        // Otherwise, allow type inference, which may yield a column of a different type.
         if (type.isPrimitiveArray()) {
-          // An untyped auto column infers its physical type from the ingested values, discarding the known type
-          // (e.g. an all-null batch of an ARRAY<STRING> column has no values to infer the array type from), so cast
-          // to the given type. Note that the auto schema stores ARRAY<FLOAT> as ARRAY<DOUBLE>.
           return new AutoTypeColumnSchema(name, ColumnTypeFactory.ofType(type), null);
         }
-        // the auto column indexer can handle any type
         return AutoTypeColumnSchema.of(name);
     }
   }

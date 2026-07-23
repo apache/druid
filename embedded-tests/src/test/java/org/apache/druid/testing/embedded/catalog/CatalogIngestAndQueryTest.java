@@ -82,7 +82,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
    * 2022-12-26T12:34:56,extra,8,"40",2.0,foq
    * 2022-12-26T12:34:56,extra,8,"50",2.0,fop
    * <p>
-   * When querying the table with query: 'SELECT * from ##tableName', the BIGINT type column should
+   * When querying the table with query: {@code SELECT * FROM table}, the BIGINT type column should
    * be implicitly coherced into type DOUBLE when inserted into the table, since the column being
    * written into is type DOUBLE.
    * <p>
@@ -149,7 +149,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
    * 2022-12-26T12:34:56,extra,8,"40",2.0,foq
    * 2022-12-26T12:34:56,extra,8,"50",2.0,fop
    * <p>
-   * When querying the table with query: 'SELECT * from ##tableName', because of the clustering
+   * When querying the table with query: {@code SELECT * FROM table}, because of the clustering
    * defined on the table, the data should be reordered to:
    * <p>
    * __time, bigint_col1
@@ -219,7 +219,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
    * 2022-12-26T12:34:56,extra,8,"40",2.0,foq
    * 2022-12-26T12:34:56,extra,8,"50",2.0,fop
    * <p>
-   * When querying the table with query: 'SELECT * from ##tableName', because of the clustering
+   * When querying the table with query: {@code SELECT * FROM table}, because of the clustering
    * defined on the table, the data should be reordered to:
    * <p>
    * __time, bigint_col1
@@ -289,7 +289,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
    * 2022-12-26T12:34:56,extra,8,"40",2.0,foq
    * 2022-12-26T12:34:56,extra,8,"50",2.0,fop
    * <p>
-   * When querying the table with query: 'SELECT * from ##tableName', because of the clustering
+   * When querying the table with query: {@code SELECT * FROM table}, because of the clustering
    * defined on the table, the data should be reordered to:
    * <p>
    * __time, varchar_col1, bigint_col1, float_col1, varchar_col2
@@ -368,7 +368,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
    * 2022-12-26T12:34:56,extra,8,"40",2.0,foq
    * 2022-12-26T12:34:56,extra,8,"50",2.0,fop
    * <p>
-   * When querying the table with query: 'SELECT * from ##tableName', because of the clustering
+   * When querying the table with query: {@code SELECT * FROM table}, because of the clustering
    * defined on the query, the data should be reordered to:
    * <p>
    * __time, varchar_col1, bigint_col1, float_col1, varchar_col2
@@ -424,7 +424,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
   }
 
   /**
-   * Create a table with columns (in declared order, which is the physical segment order — the clustering column
+   * Create a table with columns (in declared order, which is the physical segment order; the clustering column
    * must be declared first):
    * <p>
    * varchar_col2 VARCHAR
@@ -444,7 +444,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
    * 2022-12-26T12:34:56,extra,8,"40",2.0,foq
    * 2022-12-26T12:34:56,extra,8,"50",2.0,fop
    * <p>
-   * 'SELECT * from ##tableName' returns columns in catalog order and rows in segment order: cluster groups in
+   * {@code SELECT * FROM table} returns columns in catalog order and rows in segment order: cluster groups in
    * clustering-value order (foo, fop, foq), each group internally ordered by the declared column order (within
    * 'foo', by bigint_col1).
    */
@@ -612,7 +612,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
    * <p>
    * 2022-12-26T12:34:56,extra
    * <p>
-   * When querying the table with query: 'SELECT * from ##tableName', the data is returned as:
+   * When querying the table with query: {@code SELECT * FROM table}, the data is returned as:
    * <p>
    * __time, double_col
    * 2022-12-26T12:34:56,0.0

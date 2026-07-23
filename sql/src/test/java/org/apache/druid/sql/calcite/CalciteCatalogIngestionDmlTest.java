@@ -364,6 +364,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
             RowSignature.builder()
                 .add("tenant_lower", ColumnType.STRING)
                 .addTimeColumn()
+                .add("tenant", ColumnType.STRING)
                 .add("dim1", ColumnType.STRING)
                 .add("cnt", ColumnType.LONG)
                 .build(),
@@ -372,6 +373,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 RowSignature.builder()
                     .add("tenant_lower", ColumnType.STRING)
                     .addTimeColumn()
+                    .add("tenant", ColumnType.STRING)
                     .add("dim1", ColumnType.STRING)
                     .add("cnt", ColumnType.LONG)
                     .build(),
@@ -403,10 +405,12 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                                 )
                             )
                         ),
-                        // declared order is the physical segment order: the clustering column leads
+                        // declared order is the physical segment order: the clustering column leads. 'tenant' is
+                        // declared because virtual column inputs must themselves be stored columns.
                         ImmutableList.of(
                             new ColumnSpec("tenant_lower", Columns.STRING, null),
                             new ColumnSpec("__time", Columns.TIME_COLUMN, null),
+                            new ColumnSpec("tenant", Columns.STRING, null),
                             new ColumnSpec("dim1", Columns.STRING, null),
                             new ColumnSpec("cnt", Columns.LONG, null)
                         )
@@ -416,6 +420,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 DatasourceTable.EffectiveMetadata.toEffectiveColumns(RowSignature.builder()
                     .add("tenant_lower", ColumnType.STRING)
                     .addTimeColumn()
+                    .add("tenant", ColumnType.STRING)
                     .add("dim1", ColumnType.STRING)
                     .add("cnt", ColumnType.LONG)
                     .build()),
@@ -1148,9 +1153,9 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   }
 
   /**
-   * Columns that are required inputs of the base table layout's ingest-time virtual columns are allowed even though
-   * they are not declared: they feed stored columns (here raw 'tenant' feeding lower("tenant") -> 'tenant_lower')
-   * without being stored themselves.
+   * Base table virtual column inputs are themselves stored (declared) columns, so a query can supply just the input
+   * column (here 'tenant' feeding lower("tenant") -> 'tenant_lower') and the computed clustering column is populated
+   * by the virtual column at ingest time.
    */
   @Test
   public void testInsertVirtualColumnInputIntoBaseTableCatalogTable()

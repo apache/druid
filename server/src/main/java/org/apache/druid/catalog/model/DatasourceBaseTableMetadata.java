@@ -22,7 +22,6 @@ package org.apache.druid.catalog.model;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
-import org.apache.druid.segment.VirtualColumns;
 
 import java.util.List;
 
@@ -50,13 +49,6 @@ public interface DatasourceBaseTableMetadata
    * otherwise drop a synthetic type id.
    */
   String getType();
-
-  /**
-   * Virtual columns computed at ingest time to populate stored columns (for example a clustering column derived from
-   * an expression over raw input columns). The inputs these virtual columns require are consumed at ingest but are
-   * not themselves stored columns.
-   */
-  VirtualColumns getVirtualColumns();
 
   /**
    * Creates the physical {@link BaseTableProjectionSpec} by combining this layout metadata with the declared catalog

@@ -147,7 +147,7 @@ public class DatasourceFacade extends TableFacade
       return jsonMapper().convertValue(value, ClusterKeySpec.CLUSTER_KEY_LIST_TYPE_REF);
     }
     catch (Exception e) {
-      LOG.error("Failed to convert a catalog %s property of value [%s]",
+      LOG.error("Failed to convert a catalog [%s] property of value [%s]",
           DatasourceDefn.CLUSTER_KEYS_PROPERTY,
           value
       );
@@ -189,7 +189,7 @@ public class DatasourceFacade extends TableFacade
     }
     catch (Exception e) {
       LOG.error(
-          "Failed to convert a catalog %s property of value [%s]",
+          "Failed to convert a catalog [%s] property of value [%s]",
           DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,
           value
       );
@@ -209,7 +209,8 @@ public class DatasourceFacade extends TableFacade
     }
     catch (Exception e) {
       LOG.error(
-          "Failed to convert a catalog %s property of value [%s]",
+          e,
+          "Failed to convert a catalog [%s] property of value [%s]",
           DatasourceDefn.BASE_TABLE_PROPERTY,
           value
       );

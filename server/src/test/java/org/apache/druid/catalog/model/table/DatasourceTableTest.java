@@ -241,9 +241,9 @@ public class DatasourceTableTest
     );
     final TableDefnRegistry registryWithInjectables = new TableDefnRegistry(mapperWithInjectables);
     final DatasourceBaseTableMetadata baseTable = new ClusteredValueGroupsBaseTableMetadata(
-        Collections.singletonList("tenant"),
+        Collections.singletonList("tenant_lower"),
         VirtualColumns.create(
-            new ExpressionVirtualColumn("tenant", "lower(\"raw_tenant\")", ColumnType.STRING, ExprMacroTable.nil())
+            new ExpressionVirtualColumn("tenant_lower", "lower(\"tenant\")", ColumnType.STRING, ExprMacroTable.nil())
         )
     );
     TableSpec spec = new TableSpec(
@@ -253,8 +253,9 @@ public class DatasourceTableTest
             DatasourceDefn.BASE_TABLE_PROPERTY, baseTable
         ),
         Arrays.asList(
-            new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
-            new ColumnSpec(Columns.TIME_COLUMN, null, null)
+            new ColumnSpec("tenant_lower", Columns.SQL_VARCHAR, null),
+            new ColumnSpec(Columns.TIME_COLUMN, null, null),
+            new ColumnSpec("tenant", Columns.SQL_VARCHAR, null)
         )
     );
     ResolvedTable table = registryWithInjectables.resolve(spec);

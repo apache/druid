@@ -78,7 +78,6 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
     return clusteringColumns;
   }
 
-  @Override
   @JsonProperty("virtualColumns")
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public VirtualColumns getVirtualColumns()
@@ -89,15 +88,9 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
   /**
    * Creates the physical spec from the declared catalog columns, used verbatim: the declared column order is the
    * physical segment order, so the clustering columns must be declared as the leading prefix of the column list (in
-   * {@link #clusteringColumns} order) — anything else is a validation error, mirroring the physical spec. Column
-   * types come from the catalog column types ({@link Columns#druidType}; untyped columns default to STRING, mirroring
-   * {@link Columns#convertSignature}); the declared type is retained in the ingestion schema (primitive arrays cast
-   * an auto column to the declared type, {@code COMPLEX<json>} uses the nested column schema, and other complex
-   * types are rejected — clustered base tables have no aggregators to produce them). Every clustering column must be
-   * a declared column — a clustering column
-   * computed by a virtual column at ingest time is still a stored, queryable column, so it too must appear in the
-   * column list. All ordering and layout rules (leading prefix, allowed clustering types, explicit non-clustering
-   * {@code __time}, no duplicates) are enforced by the spec itself.
+   * {@link #clusteringColumns} order); anything else is a validation error. Every clustering column must be a declared
+   * column, a clustering column computed by a virtual column at ingest time is still a stored, queryable column, so it
+   * too must appear in the column list. All ordering and layout rules are enforced by the spec itself.
    */
   @Override
   public ClusteredValueGroupsBaseTableProjectionSpec createSpec(List<ColumnSpec> columns)
@@ -144,7 +137,7 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
       return DimensionSchema.getDefaultSchemaForBuiltInType(column.name(), druidType);
     }
     if (ColumnType.NESTED_DATA.equals(druidType)) {
-      return new NestedDataColumnSchema(column.name(), 5);
+      return new NestedDataColumnSchema(column.name(), NestedDataColumnSchema.DEFAULT_FORMAT_VERSION);
     }
     // Other complex types cannot be ingested into a clustered base table: there is no dimension handler for them,
     // and clustered base tables have no aggregators to produce them.

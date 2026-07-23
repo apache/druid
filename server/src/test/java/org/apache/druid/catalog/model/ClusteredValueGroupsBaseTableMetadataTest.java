@@ -62,9 +62,9 @@ public class ClusteredValueGroupsBaseTableMetadataTest
   public void testSerde() throws Exception
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
-        Collections.singletonList("tenant"),
+        Collections.singletonList("tenant_lower"),
         VirtualColumns.create(
-            new ExpressionVirtualColumn("tenant", "lower(\"raw_tenant\")", ColumnType.STRING, ExprMacroTable.nil())
+            new ExpressionVirtualColumn("tenant_lower", "lower(\"tenant\")", ColumnType.STRING, ExprMacroTable.nil())
         )
     );
     final String json = mapper.writeValueAsString(metadata);
@@ -130,27 +130,34 @@ public class ClusteredValueGroupsBaseTableMetadataTest
   @Test
   public void testCreateSpecWithVirtualColumn()
   {
-    // A clustering column computed at ingest time: the virtual column feeds the stored, declared 'tenant' column.
+    // A clustering column computed at ingest time: the virtual column materializes the stored, declared
+    // 'tenant_lower' column, reading the stored 'tenant' column (virtual column inputs must themselves be stored
+    // columns or other virtual columns).
     final VirtualColumns virtualColumns = VirtualColumns.create(
-        new ExpressionVirtualColumn("tenant", "lower(\"raw_tenant\")", ColumnType.STRING, ExprMacroTable.nil())
+        new ExpressionVirtualColumn("tenant_lower", "lower(\"tenant\")", ColumnType.STRING, ExprMacroTable.nil())
     );
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
-        Collections.singletonList("tenant"),
+        Collections.singletonList("tenant_lower"),
         virtualColumns
+    );
+    final List<ColumnSpec> columns = Arrays.asList(
+        new ColumnSpec("tenant_lower", Columns.SQL_VARCHAR, null),
+        new ColumnSpec(Columns.TIME_COLUMN, null, null),
+        new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
+        new ColumnSpec("region", Columns.SQL_VARCHAR, null)
     );
     Assert.assertEquals(
         ClusteredValueGroupsBaseTableProjectionSpec.builder()
                                                    .virtualColumns(virtualColumns)
                                                    .columns(
-                                                       new StringDimensionSchema("tenant"),
+                                                       new StringDimensionSchema("tenant_lower"),
                                                        new LongDimensionSchema(Columns.TIME_COLUMN),
-                                                       new StringDimensionSchema("region"),
-                                                       new LongDimensionSchema("delta"),
-                                                       new DoubleDimensionSchema("value")
+                                                       new StringDimensionSchema("tenant"),
+                                                       new StringDimensionSchema("region")
                                                    )
-                                                   .clusteringColumns("tenant")
+                                                   .clusteringColumns("tenant_lower")
                                                    .build(),
-        metadata.createSpec(COLUMNS)
+        metadata.createSpec(columns)
     );
   }
 
@@ -207,7 +214,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest
                                                        new AutoTypeColumnSchema("tags", ColumnType.STRING_ARRAY, null),
                                                        new AutoTypeColumnSchema("vals", ColumnType.LONG_ARRAY, null),
                                                        new AutoTypeColumnSchema("ratios", ColumnType.DOUBLE_ARRAY, null),
-                                                       new NestedDataColumnSchema("attrs", 5)
+                                                       new NestedDataColumnSchema("attrs", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION)
                                                    )
                                                    .clusteringColumns("tenant")
                                                    .build(),

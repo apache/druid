@@ -120,7 +120,7 @@ public class MSQCompactionRunnerTest
       null
   );
   private static final LongDimensionSchema LONG_DIMENSION = new LongDimensionSchema("long_dim");
-  private static final NestedDataColumnSchema NESTED_DIMENSION = new NestedDataColumnSchema("nested_dim", 5);
+  private static final NestedDataColumnSchema NESTED_DIMENSION = new NestedDataColumnSchema("nested_dim", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION);
   private static final AutoTypeColumnSchema AUTO_DIMENSION = AutoTypeColumnSchema.of("auto_dim");
   private static final List<DimensionSchema> DIMENSIONS = ImmutableList.of(
       STRING_DIMENSION,
