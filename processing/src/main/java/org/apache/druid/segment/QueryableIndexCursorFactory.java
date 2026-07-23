@@ -264,6 +264,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
 
     return makeConcatenatedClusteredCursorHolder(
         spec,
+        this,
         clusteringColumns,
         clusteringValuesByGroup,
         holderSuppliers,
@@ -277,7 +278,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
    *   - the summary's clustering {@link RowSignature} for clustering columns;
    *   - the first cluster group's sub-index for everything else (all groups share the same data-column shape).
    */
-  private static RowSignature getClusteredRowSignature(ClusteredValueGroupsBaseTableSchema clusterSummary)
+  private RowSignature getClusteredRowSignature(ClusteredValueGroupsBaseTableSchema clusterSummary)
   {
     final LinkedHashSet<String> columns = new LinkedHashSet<>();
 
@@ -368,6 +369,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
    */
   private static CursorHolder makeConcatenatedClusteredCursorHolder(
       CursorBuildSpec spec,
+      ColumnInspector inspector,
       RowSignature clusteringColumns,
       List<Object[]> clusteringValuesByGroup,
       List<Supplier<CursorHolder>> holderSuppliers,
@@ -406,7 +408,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     // original filter (clustering leaves fold to constant TRUE/FALSE, other leaves pass through unchanged)
     final Filter queryFilter = spec.getFilter();
     final boolean filterCanVectorize =
-        queryFilter == null || queryFilter.canVectorizeMatcher(spec.getVirtualColumns().wrapInspector(this));
+        queryFilter == null || queryFilter.canVectorizeMatcher(spec.getVirtualColumns().wrapInspector(inspector));
     // we still check that the first holder is vectorizable to make sure all the non-filter parts can be vectorized
     final boolean canVectorize = filterCanVectorize && holderSuppliers.get(0).get().canVectorize();
 
