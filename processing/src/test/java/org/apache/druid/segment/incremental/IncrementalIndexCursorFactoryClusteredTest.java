@@ -378,6 +378,60 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
   }
 
   @Test
+  void testVirtualColumnReadingClusteringColumnResolvesViaClusteringConstant()
+  {
+    try (OnheapIncrementalIndex index = standardTwoGroup()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      // v := concat(tenant, '_x') reads the clustering column `tenant` (not stored per-row in the group). It has no
+      // materialized equivalent so it is retained (recomputed at read). The VC's `tenant` input must resolve to the
+      // group's clustering constant, not a missing column.
+      final CursorBuildSpec spec = CursorBuildSpec.builder()
+          .setVirtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("v", "concat(tenant, '_x')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .build();
+      try (CursorHolder holder = factory.makeCursorHolder(spec)) {
+        final Cursor cursor = holder.asCursor();
+        final DimensionSelector sel =
+            cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("v"));
+        final List<String> out = new ArrayList<>();
+        while (!cursor.isDone()) {
+          out.add(sel.getRow().size() == 0 ? null : sel.lookupName(sel.getRow().get(0)));
+          cursor.advance();
+        }
+        Assertions.assertEquals(List.of("acme_x", "acme_x", "globex_x"), out);
+      }
+    }
+  }
+
+  @Test
+  void testFilterOnVirtualColumnReadingClusteringColumnResolvesViaClusteringConstant()
+  {
+    try (OnheapIncrementalIndex index = standardTwoGroup()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      // A filter on a retained VC that reads the clustering column (v := upper(tenant)) must evaluate the VC against
+      // the group's clustering constant, not a missing column. The VC resolves its `tenant` input through its own
+      // selector factory, so the clustering constants must be visible below the virtual-column layer or the filter
+      // silently rejects every realtime row. upper(tenant)='ACME' selects the acme group.
+      final CursorBuildSpec spec = CursorBuildSpec.builder()
+          .setVirtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("v", "upper(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .setFilter(new EqualityFilter("v", ColumnType.STRING, "ACME", null))
+          .build();
+      try (CursorHolder holder = factory.makeCursorHolder(spec)) {
+        Assertions.assertEquals(
+            List.of(
+                List.of("acme", "us-east-1"),
+                List.of("acme", "us-west-2")
+            ),
+            scanTenantRegion(holder)
+        );
+      }
+    }
+  }
+
+  @Test
   void testFilterOnNonClusteringColumnRunsOnEverySurvivingGroup()
   {
     try (OnheapIncrementalIndex index = standardTwoGroup()) {

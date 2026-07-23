@@ -164,7 +164,6 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
       }
       clusteringValuesByGroup.add(groupClusteringValues);
       final CursorBuildSpec groupSpec = plan.rebuildCursorBuildSpec(spec, valueGroup);
-      // Expose this group's clustering columns as constants to the per-group cursor's selector factory
       holderSuppliers.add(
           Suppliers.memoize(() -> closer.register(
               new IncrementalIndexCursorHolder(group, groupSpec)
@@ -175,8 +174,11 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
                     IncrementalIndexRowHolder currEntry
                 )
                 {
-                  return new ClusteringColumnSelectorFactory(
-                      super.makeSelectorFactory(buildSpec, currEntry),
+                  return new ClusteringAwareIncrementalIndexColumnSelectorFactory(
+                      group,
+                      currEntry,
+                      buildSpec,
+                      getTimeOrder(),
                       clusteringColumns,
                       groupClusteringValues
                   );
