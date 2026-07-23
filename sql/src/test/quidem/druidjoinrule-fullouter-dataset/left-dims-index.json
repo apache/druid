@@ -1,0 +1,49 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "inline",
+        "data": "{\"timestamp\":\"2000-01-01T00:00:00\",\"a\":\"abc\"}\n{\"timestamp\":\"2000-01-01T00:00:00\",\"a\":\"xyz\"}\n"
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      "appendToExisting": false
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment": 10000000,
+        "maxTotalRows": 500000000
+      },
+      "maxNumConcurrentSubTasks": 1
+    },
+    "dataSchema": {
+      "dataSource": "left_dims",
+      "granularitySpec": {
+        "type": "uniform",
+        "queryGranularity": "NONE",
+        "rollup": false,
+        "segmentGranularity": "YEAR"
+      },
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "auto"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          {
+            "type": "string",
+            "name": "a"
+          }
+        ]
+      },
+      "metricsSpec": null,
+      "transformSpec": null
+    }
+  },
+  "context": null
+}

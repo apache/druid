@@ -24,8 +24,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.CorrelationId;
@@ -76,6 +78,7 @@ import java.util.Optional;
 
 import static org.apache.druid.sql.calcite.util.CalciteTests.POLICY_RESTRICTION;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -109,8 +112,7 @@ public class DruidRelTest
   private RelOptTable mockRelOptTable;
   @Mock
   private RelOptCluster mockRelOptCluster;
-  @Mock
-  private RelTraitSet mockRelTraitSet;
+  private final RelTraitSet mockRelTraitSet = RelTraitSet.createEmpty().plus(Convention.NONE);
 
   @Mock
   private PlannerContext mockPlannerContext;
@@ -121,6 +123,7 @@ public class DruidRelTest
   {
     MockitoAnnotations.openMocks(this);
     when(mockRelOptCluster.getTypeFactory()).thenReturn(DEFAULT_TYPE_FACTORY);
+    when(mockRelOptCluster.traitSetOf(any(RelTrait.class))).thenReturn(mockRelTraitSet);
     when(mockRelOptTable.getRowType()).thenReturn(REC_TYPE);
 
     PlannerToolbox mockPlannerToolbox = mock(PlannerToolbox.class);
@@ -210,8 +213,7 @@ public class DruidRelTest
   {
     // Arrange
     PartialDruidQuery partialDruidQuerySpy = spy(druidQueryRelNode.getPartialDruidQuery());
-    when(partialDruidQuerySpy.getTraitSet(any(), any())).thenReturn(mockRelTraitSet);
-    when(mockRelTraitSet.containsIfApplicable(any())).thenReturn(true);
+    doReturn(mockRelTraitSet).when(partialDruidQuerySpy).getTraitSet(any(), any());
     PartialDruidQuery inputQuery = PartialDruidQuery.createOuterQuery(
         partialDruidQuerySpy,
         druidQueryRelNode.getPlannerContext()

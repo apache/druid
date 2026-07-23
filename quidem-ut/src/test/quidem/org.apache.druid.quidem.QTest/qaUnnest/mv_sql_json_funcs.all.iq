@@ -228,8 +228,28 @@ WHERE c_long IN (0,
                  2)
   AND (json_query(c, '$.') IS NULL
        OR json_query(c, '$.') IS NOT NULL);
-QueryInterruptedException
-!error
++-----+
+| col |
++-----+
+| ""  |
+| ""  |
+| ""  |
+| "1" |
+| "1" |
+| "1" |
+| "2" |
+| "2" |
+| "2" |
+| "3" |
+| "3" |
+| "3" |
+|     |
+|     |
+|     |
++-----+
+(15 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B4_C2
@@ -242,8 +262,28 @@ WHERE c_long IN (0,
                  2)
   AND (json_query(c_long, '$.') IS NULL
        OR json_query(c_long, '$.') IS NOT NULL);
-QueryInterruptedException
-!error
++-----+
+| col |
++-----+
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B5_C1
@@ -302,7 +342,7 @@ WHERE c_long IN (0,
                  2)
   AND (parse_json(c) IS NULL
        OR parse_json(c) IS NOT NULL);
-QueryInterruptedException
+Function[parse_json] bad string input
 !error
 
 #-------------------------------------------------------------------------
@@ -316,8 +356,28 @@ WHERE c_long IN (0,
                  2)
   AND (parse_json(cast(c_long AS char)) IS NULL
        OR parse_json(cast(c_long AS char)) IS NOT NULL);
-QueryInterruptedException
-!error
++-----+
+| col |
++-----+
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B7_C1
@@ -330,8 +390,28 @@ WHERE c_long IN (0,
                  2)
   AND (try_parse_json(c) IS NULL
        OR try_parse_json(c) IS NOT NULL);
-QueryInterruptedException
-!error
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(15 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B7_C2
@@ -344,8 +424,28 @@ WHERE c_long IN (0,
                  2)
   AND (try_parse_json(cast(c_long AS char)) IS NULL
        OR try_parse_json(cast(c_long AS char)) IS NOT NULL);
-QueryInterruptedException
-!error
++-----+
+| col |
++-----+
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B8_C1
