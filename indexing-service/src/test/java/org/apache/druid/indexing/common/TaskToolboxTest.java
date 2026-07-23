@@ -109,6 +109,9 @@ public class TaskToolboxTest
     EasyMock.expect(task.getId()).andReturn("task_id").anyTimes();
     EasyMock.expect(task.getDataSource()).andReturn("task_ds").anyTimes();
     EasyMock.expect(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)).andReturn(true).anyTimes();
+    EasyMock.expect(task.getContextValue(Tasks.VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_KEY, false))
+            .andReturn(false)
+            .anyTimes();
     IndexMergerV9 indexMergerV9 = EasyMock.createMock(IndexMergerV9.class);
     EasyMock.expect(mockIndexMergerV9.create(true)).andReturn(indexMergerV9).anyTimes();
     EasyMock.replay(task, mockHandoffNotifierFactory, mockIndexMergerV9);
