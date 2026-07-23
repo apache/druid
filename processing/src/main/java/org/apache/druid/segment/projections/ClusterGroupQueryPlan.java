@@ -36,10 +36,11 @@ import java.util.function.Function;
 
 /**
  * Per-query plan produced by {@link Projections#planClusterGroupQuery} for a clustered base-table segment: the
- * subset of cluster groups whose clustering values can't rule the query filter out (the surviving groups), plus a
- * per-group rewriter that produces the per-group cursor's filter by folding clustering-column leaves against each
- * group's constant clustering tuple. Production callers (the cursor factory) iterate {@link #survivingGroups()}
- * and call {@link #rewriteFor} once per surviving group.
+ * subset of cluster groups whose clustering values can't rule the query filter out (the surviving groups), a per-group
+ * filter rewrite that folds clustering-column leaves against each group's constant clustering tuple (see
+ * {@link #rewriteFor}), and a query-level {@link #virtualColumnRemap()} of query virtual columns equivalent to a
+ * materialized column. Production callers (the cursor factories) iterate {@link #survivingGroups()} and call
+ * {@link #rebuildCursorBuildSpec} once per surviving group to produce that group's {@link CursorBuildSpec}.
  */
 public final class ClusterGroupQueryPlan
 {
@@ -78,10 +79,11 @@ public final class ClusterGroupQueryPlan
   }
 
   /**
-   * Per-group rewrite of the query's filter against {@code group}'s constant clustering tuple: clustering-column
-   * leaves collapse to {@link TrueFilter} / {@link FalseFilter} and fold through AND / OR / NOT, so the rewritten
-   * filter no longer references columns the per-group {@link org.apache.druid.segment.QueryableIndex} doesn't
-   * physically carry. Non-clustering leaves and unrecognized filter types are left as-is.
+   * Per-group rewrite of the query's filter against {@code group}'s constant clustering tuple: recognized
+   * equality / in / null leaves on a clustering column collapse to {@link TrueFilter} / {@link FalseFilter} and fold
+   * through AND / OR / NOT. Non-clustering leaves and other filter shapes on a clustering column (e.g. range / like)
+   * are left as-is for the per-group cursor to evaluate per-row; the cursor exposes clustering columns as per-group
+   * constants, so a surviving clustering-column leaf still resolves rather than reading a missing column.
    * <p>
    * Returns {@code null} when the original query filter was {@code null} (no rewrite needed), or
    * {@link FalseFilter} for a group that didn't survive pruning (would have been excluded from
@@ -99,11 +101,14 @@ public final class ClusterGroupQueryPlan
    * columns that are equivalent to a materialized column.
    * <p>
    * When there is a remap, the matched query virtual columns (the remap keys) are dropped from the spec's virtual
-   * columns, and the per-group filter's required columns are rewritten via the remap so that non-clustering-VC filter
-   * leaves point at the materialized physical column (clustering-VC leaves were already folded to TRUE / FALSE by the
-   * per-group rewrite walk, so they won't reference the dropped virtual columns). The grouping / select / aggregator
-   * references are served instead by the {@link org.apache.druid.segment.RemapColumnSelectorFactory} the cursor
-   * factory wraps around the {@link ClusteringColumnSelectorFactory}.
+   * columns, and the per-group filter's required columns are rewritten via the remap so any surviving leaf that
+   * referenced a dropped VC now points at its materialized column: a non-clustering VC maps to the stored physical
+   * column, a clustering-equivalent VC to the clustering column (the per-group cursor exposes it as a constant).
+   * Foldable clustering-VC leaves (equality / in / null) were already collapsed to TRUE / FALSE by the per-group
+   * rewrite walk and never reach the rewrite. Grouping / select / aggregator reads of a dropped VC are served by the
+   * {@link org.apache.druid.segment.RemapColumnSelectorFactory} the cursor factory wraps around the per-group selector
+   * factory (which exposes clustering columns as constants, whether from the fabricated per-group index or the
+   * {@link ClusteringColumnSelectorFactory}).
    */
   public CursorBuildSpec rebuildCursorBuildSpec(CursorBuildSpec spec, TableClusterGroupSpec group)
   {
@@ -118,10 +123,10 @@ public final class ClusterGroupQueryPlan
       return CursorBuildSpec.builder(spec).setFilter(rewritten).build();
     }
 
-    // Drop the remapped query virtual columns from the per-group spec; the materialized columns they map to are
-    // either the per-group constant clustering column or a per-group physical column, both served directly by the
-    // ClusteringColumnSelectorFactory (the cursor factory additionally wraps it with a RemapColumnSelectorFactory so
-    // the original query VC names resolve to the materialized columns).
+    // Drop the remapped query virtual columns from the per-group spec; the materialized columns they map to are either
+    // the group's constant clustering column or a stored per-group physical column. The cursor factory wraps the
+    // per-group selector factory with a RemapColumnSelectorFactory so reads of the original query VC names resolve to
+    // those materialized columns.
     final List<VirtualColumn> prunedVcs = new ArrayList<>();
     for (VirtualColumn vc : spec.getVirtualColumns().getVirtualColumns()) {
       if (!virtualColumnRemap.containsKey(vc.getOutputName())) {
@@ -129,8 +134,8 @@ public final class ClusterGroupQueryPlan
       }
     }
 
-    // Per-group filter rewrite first (folds clustering leaves), then remap any surviving non-clustering-VC leaves to
-    // the materialized physical column.
+    // Per-group filter rewrite first (folds recognized clustering leaves), then remap any surviving leaf that still
+    // references a dropped VC to its materialized column.
     Filter rewritten = spec.getFilter() == null ? null : rewriteFor(group);
     if (rewritten != null) {
       rewritten = Projections.rewriteFilterRequiredColumns(rewritten, virtualColumnRemap);

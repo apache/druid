@@ -164,12 +164,7 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
       }
       clusteringValuesByGroup.add(groupClusteringValues);
       final CursorBuildSpec groupSpec = plan.rebuildCursorBuildSpec(spec, valueGroup);
-      // Expose this group's clustering columns as constants to the per-group cursor's selector factory so that a
-      // per-group filter that survived folding and references a clustering column resolves it instead of matching a
-      // missing/all-null column. This happens when walkClusterGroupFilter does not collapse the leaf (e.g. a range,
-      // like, or search predicate on the clustering column, directly or via a query virtual column remapped to it).
-      // OnHeapClusterGroup does not itself store clustering columns; the historical path gets them from
-      // getClusterGroupQueryableIndex(group, true) injecting constant columns into the per-group index.
+      // Expose this group's clustering columns as constants to the per-group cursor's selector factory
       holderSuppliers.add(
           Suppliers.memoize(() -> closer.register(
               new IncrementalIndexCursorHolder(group, groupSpec)

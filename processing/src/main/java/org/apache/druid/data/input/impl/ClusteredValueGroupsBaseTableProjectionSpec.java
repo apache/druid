@@ -49,9 +49,10 @@ import java.util.Set;
 /**
  * {@link BaseTableProjectionSpec} for the clustered-value-groups base table mode: rows are partitioned into per-tuple
  * "cluster groups" keyed by one or more typed clustering columns, optionally derived from {@link #virtualColumns}.
- * Essentially, each group is stored as its own internal sub-segment..
+ * Essentially, each group is stored as its own internal sub-segment. Logically, a clustered base table spec is a
+ * projection of an (imaginary/unstored) base table into the stored clustered table.
  * <p>
- * The operator declares a single ordered {@link #columns} list — the full set of columns in segment order, plus a
+ * The operator declares a single ordered {@link #columns} list, the full set of columns in segment order, plus a
  * {@link #clusteringColumns} list of NAMES designating the leading prefix of {@link #columns} that rows are
  * clustered by. The time position is an explicit positional entry in {@link #columns} named {@code __time}; clustering
  * by the time column is not yet supported, so {@code __time} must be a non-clustering column. A clustered base table
@@ -314,22 +315,16 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
   }
 
   /**
-   * A clustered base table spec is a projection of an (unstored) base table into the stored clustered table, so its
-   * virtual columns describe how stored columns are derived. Two rules keep that reasonable at query time:
+   * Rules to keep virtual columns definitions reasonable:
    * <ul>
    *   <li><b>inputs</b>: every input of a virtual column must be a stored column (declared in {@code columns}) or
-   *   another virtual column in the spec (a derivation chain, e.g. {@code key := lower(v0)}, {@code v0 :=
-   *   json_value(payload)} with {@code payload} stored). Checking every virtual column then transitively forces the
-   *   physical leaves of any chain to be stored, so a query virtual column equivalent to one is always recomputable
-   *   and the query-side substitution stays a pure optimization.</li>
+   *   another virtual column in the spec.</li>
    *   <li><b>outputs</b>: every virtual column must either be materialized (its output declared in {@code columns}) or
    *   be an intermediary that feeds another virtual column. A virtual column that is neither materializes nothing and
    *   is used by nothing and dead metadata and so it is rejected.</li>
    * </ul>
-   * In-place transforms (output name == input name) can't be virtual columns here anyway ({@link VirtualColumns}
-   * rejects the self-reference) and belong in a {@code transformSpec}. The query-granularity carrier
-   * ({@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME}) is metadata-only (it floors the stored {@code __time}, is
-   * not itself stored, and feeds no other virtual column), so it is exempt from the output rule.
+   * The query-granularity carrier ({@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME}) is special handled to
+   * capture how __time is computed, so it is exempt from the output rule.
    */
   private static void validateVirtualColumns(VirtualColumns virtualColumns, List<DimensionSchema> columns)
   {

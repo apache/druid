@@ -816,8 +816,9 @@ public class Projections
 
   /**
    * Walk the filter tree against {@code group}'s constant clustering tuple and return a rewritten filter where each
-   * leaf whose column resolves to a clustering column (physical or virtual) is folded to {@link TrueFilter} /
-   * {@link FalseFilter}, with those constants propagated through AND / OR / NOT. All other filters remain unchanged.
+   * recognized equality / in / null leaf whose column resolves to a clustering column (physical or virtual) is folded
+   * to {@link TrueFilter} / {@link FalseFilter}, with those constants propagated through AND / OR / NOT. All other
+   * filters (including other predicate shapes on a clustering column, e.g. range / like) remain unchanged.
    * <p/>
    * Output shape encodes the truth value implicitly: a top-level {@link FalseFilter} means the filter is provably
    * FALSE against this group's clustering tuple (the planner uses this to decide which groups to prune); a top-level
