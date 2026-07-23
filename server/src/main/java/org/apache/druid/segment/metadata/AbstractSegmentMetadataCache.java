@@ -446,6 +446,23 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   }
 
   /**
+   * Like {@link #iterateSegmentMetadata()} but restricted to the given datasources, so a pushed-down
+   * {@code datasource} predicate from sys.segments scans only the matching datasources' segment maps
+   * rather than the whole cluster. A {@code null} argument iterates all datasources.
+   */
+  public Iterator<AvailableSegmentMetadata> iterateSegmentMetadata(@Nullable Set<String> dataSources)
+  {
+    if (dataSources == null) {
+      return iterateSegmentMetadata();
+    }
+    return FluentIterable.from(dataSources)
+                         .transform(segmentMetadataInfo::get)
+                         .filter(Objects::nonNull)
+                         .transformAndConcat(Map::values)
+                         .iterator();
+  }
+
+  /**
    * Get metadata for the specified segment, which includes information like RowSignature, realtime & numRows.
    *
    * @param datasource segment datasource
