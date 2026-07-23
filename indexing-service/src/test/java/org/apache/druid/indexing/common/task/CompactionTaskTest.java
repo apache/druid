@@ -309,7 +309,7 @@ public class CompactionTaskTest
                   binder.bind(RowIngestionMetersFactory.class).toInstance(TEST_UTILS.getRowIngestionMetersFactory());
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
                   binder.bind(SegmentCacheManagerFactory.class)
-                        .toInstance(new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper));
+                        .toInstance(SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(new TestAppenderatorsManager());
                   binder.bind(ExprMacroTable.class).toInstance(TestExprMacroTable.INSTANCE);
                 }
@@ -377,7 +377,7 @@ public class CompactionTaskTest
         testIndexIO,
         SEGMENT_MAP
     );
-    segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, OBJECT_MAPPER);
+    segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, OBJECT_MAPPER);
   }
 
   @Test
@@ -1990,9 +1990,9 @@ public class CompactionTaskTest
     final SegmentCacheManager segmentCacheManager = new NoopSegmentCacheManager()
     {
       @Override
-      public void load(DataSegment segment)
+      public DataSegment load(DataSegment segment)
       {
-        // do nothing
+        return segment;
       }
 
       @Override

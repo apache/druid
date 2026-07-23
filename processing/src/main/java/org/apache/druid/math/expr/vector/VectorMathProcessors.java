@@ -24,6 +24,7 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.math.expr.Function;
 import org.apache.druid.math.expr.vector.simd.SimdSupportedBinaryOp;
+import org.apache.druid.math.expr.vector.simd.SimdSupportedUnaryOp;
 
 public class VectorMathProcessors
 {
@@ -367,7 +368,8 @@ public class VectorMathProcessors
           (left, right) -> left / right,
           (left, right) -> (double) left / right,
           (left, right) -> left / (double) right,
-          (left, right) -> left / right
+          (left, right) -> left / right,
+          SimdSupportedBinaryOp.DIV
       );
     }
   }
@@ -410,7 +412,8 @@ public class VectorMathProcessors
     {
       super(
           input -> -input,
-          input -> -input
+          input -> -input,
+          SimdSupportedUnaryOp.NEG
       );
     }
   }
@@ -541,7 +544,7 @@ public class VectorMathProcessors
 
     public Abs()
     {
-      super(Math::abs, Math::abs);
+      super(Math::abs, Math::abs, SimdSupportedUnaryOp.ABS);
     }
   }
 

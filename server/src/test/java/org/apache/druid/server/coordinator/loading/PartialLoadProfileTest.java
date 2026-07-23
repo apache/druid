@@ -49,7 +49,6 @@ public class PartialLoadProfileTest
     Assertions.assertEquals(WRAPPED, profile.wrappedLoadSpec());
     Assertions.assertEquals(FINGERPRINT, profile.fingerprint());
     Assertions.assertNull(profile.loadedBytes());
-    Assertions.assertFalse(profile.isFullFallback());
   }
 
   @Test
@@ -83,7 +82,6 @@ public class PartialLoadProfileTest
     Assertions.assertEquals(WRAPPED, profile.wrappedLoadSpec());
     Assertions.assertEquals(FINGERPRINT, profile.fingerprint());
     Assertions.assertEquals(12345L, profile.loadedBytes());
-    Assertions.assertFalse(profile.isFullFallback());
   }
 
   @Test
@@ -96,16 +94,6 @@ public class PartialLoadProfileTest
         ),
         DruidExceptionMatcher.invalidInput().expectMessageContains("wrappedLoadSpec must not be null or empty")
     );
-  }
-
-  @Test
-  public void testForFullFallback()
-  {
-    PartialLoadProfile profile = PartialLoadProfile.forFullFallback(FINGERPRINT, 99999L);
-    Assertions.assertNull(profile.wrappedLoadSpec());
-    Assertions.assertEquals(FINGERPRINT, profile.fingerprint());
-    Assertions.assertEquals(99999L, profile.loadedBytes());
-    Assertions.assertTrue(profile.isFullFallback());
   }
 
   @Test
@@ -131,7 +119,7 @@ public class PartialLoadProfileTest
   public void testEquals()
   {
     EqualsVerifier.forClass(PartialLoadProfile.class)
-                  .withNonnullFields("fingerprint")
+                  .withNonnullFields("wrappedLoadSpec", "fingerprint")
                   .usingGetClass()
                   .verify();
   }
@@ -155,11 +143,5 @@ public class PartialLoadProfileTest
     // Different fingerprint ⇒ different profile, no sharing.
     PartialLoadProfile pd = PartialLoadProfile.forLoaded(WRAPPED, "v1:differentfingerprint", 12345L);
     Assertions.assertNotSame(pa, pd);
-
-    // Full-fallback variants intern independently of forLoaded variants.
-    PartialLoadProfile fb1 = PartialLoadProfile.forFullFallback(FINGERPRINT, 12345L);
-    PartialLoadProfile fb2 = PartialLoadProfile.forFullFallback(FINGERPRINT, 12345L);
-    Assertions.assertSame(fb1, fb2);
-    Assertions.assertNotSame(pa, fb1);
   }
 }

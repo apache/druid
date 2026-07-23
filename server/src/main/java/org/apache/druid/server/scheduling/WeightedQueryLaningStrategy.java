@@ -21,6 +21,7 @@ package org.apache.druid.server.scheduling;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -91,13 +92,32 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
   @JsonProperty
   private final Map<String, LaneConfig> lanes;
 
+  // Optional per-threshold weight: how much a breach of that threshold adds to the query's cost. Null means the
+  // default weight of 1 (the original flat scoring). Lets a breach on one dimension count for more than another.
+  @JsonProperty("periodWeight")
+  @Nullable
+  private final Integer periodWeight;
+  @JsonProperty("durationWeight")
+  @Nullable
+  private final Integer durationWeight;
+  @JsonProperty("segmentCountWeight")
+  @Nullable
+  private final Integer segmentCountWeight;
+  @JsonProperty("segmentRangeWeight")
+  @Nullable
+  private final Integer segmentRangeWeight;
+
   @JsonCreator
   public WeightedQueryLaningStrategy(
       @JsonProperty("periodThreshold") @Nullable String periodThresholdString,
       @JsonProperty("durationThreshold") @Nullable String durationThresholdString,
       @JsonProperty("segmentCountThreshold") @Nullable Integer segmentCountThreshold,
       @JsonProperty("segmentRangeThreshold") @Nullable String segmentRangeThresholdString,
-      @JsonProperty("lanes") Map<String, LaneConfig> lanes
+      @JsonProperty("lanes") Map<String, LaneConfig> lanes,
+      @JsonProperty("periodWeight") @Nullable Integer periodWeight,
+      @JsonProperty("durationWeight") @Nullable Integer durationWeight,
+      @JsonProperty("segmentCountWeight") @Nullable Integer segmentCountWeight,
+      @JsonProperty("segmentRangeWeight") @Nullable Integer segmentRangeWeight
   )
   {
     final Period parsedPeriod;
@@ -183,6 +203,12 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
         + "produce non-deterministic results). Found duplicate minCost values in lanes: [%s]",
         lanes
     );
+    // Each weight, if set, must be >= 1 and must correspond to a threshold that is actually configured
+    // (otherwise the weight is silently inert, which is almost certainly a misconfiguration).
+    validateWeight("periodWeight", periodWeight, parsedPeriod != null, "periodThreshold");
+    validateWeight("durationWeight", durationWeight, parsedDuration != null, "durationThreshold");
+    validateWeight("segmentCountWeight", segmentCountWeight, segmentCountThreshold != null, "segmentCountThreshold");
+    validateWeight("segmentRangeWeight", segmentRangeWeight, parsedSegmentRange != null, "segmentRangeThreshold");
 
     this.segmentCountThreshold = segmentCountThreshold;
     this.periodThresholdString = periodThresholdString;
@@ -192,6 +218,47 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
     this.durationThreshold = parsedDuration;
     this.segmentRangeThreshold = parsedSegmentRange;
     this.lanes = lanes;
+    this.periodWeight = periodWeight;
+    this.durationWeight = durationWeight;
+    this.segmentCountWeight = segmentCountWeight;
+    this.segmentRangeWeight = segmentRangeWeight;
+  }
+
+  /**
+   * Convenience constructor without per-threshold weights (every breach adds 1). Retained so existing callers
+   * and tests need not pass the optional weight parameters.
+   */
+  @VisibleForTesting
+  public WeightedQueryLaningStrategy(
+      @Nullable String periodThresholdString,
+      @Nullable String durationThresholdString,
+      @Nullable Integer segmentCountThreshold,
+      @Nullable String segmentRangeThresholdString,
+      Map<String, LaneConfig> lanes
+  )
+  {
+    this(periodThresholdString, durationThresholdString, segmentCountThreshold, segmentRangeThresholdString, lanes,
+         null, null, null, null);
+  }
+
+  private static void validateWeight(String name, @Nullable Integer weight, boolean thresholdSet, String thresholdName)
+  {
+    if (weight == null) {
+      return;
+    }
+    Preconditions.checkArgument(weight >= 1, "%s must be >= 1, got [%s]", name, weight);
+    Preconditions.checkArgument(
+        thresholdSet,
+        "%s is set but %s is not configured, so the weight would have no effect", name, thresholdName
+    );
+  }
+
+  /**
+   * Weight (cost contribution) for a breached threshold; defaults to 1 when not configured.
+   */
+  private static int weightOrDefault(@Nullable Integer weight)
+  {
+    return weight == null ? 1 : weight;
   }
 
   @Override
@@ -212,7 +279,7 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
       return Optional.of(existingLane);
     }
 
-    int cost = computeCost(query.getQuery(), segments);
+    long cost = computeCost(query.getQuery(), segments);
     if (cost == 0) {
       return Optional.empty();
     }
@@ -230,9 +297,12 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
     return Optional.ofNullable(highestLane);
   }
 
-  private <T> int computeCost(Query<T> query, Set<SegmentServerSelector> segments)
+  // Accumulated as a long: with per-threshold weights up to Integer.MAX_VALUE, summing all four in an int could
+  // overflow into a negative cost, silently bypassing every lane. Callers compare this against int minCost values,
+  // so overflow of the long itself is not a concern in practice.
+  private <T> long computeCost(Query<T> query, Set<SegmentServerSelector> segments)
   {
-    int cost = 0;
+    long cost = 0;
 
     if (periodThreshold != null) {
       final DateTime now = DateTimes.nowUtc();
@@ -242,16 +312,16 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
       // query with hundreds of intervals.
       final List<Interval> intervals = query.getIntervals();
       if (!intervals.isEmpty() && intervals.get(0).getStart().isBefore(cutoff)) {
-        cost++;
+        cost += weightOrDefault(periodWeight);
       }
     }
 
     if (durationThreshold != null && query.getDuration().isLongerThan(durationThreshold)) {
-      cost++;
+      cost += weightOrDefault(durationWeight);
     }
 
     if (segmentCountThreshold != null && segments.size() > segmentCountThreshold) {
-      cost++;
+      cost += weightOrDefault(segmentCountWeight);
     }
 
     if (segmentRangeThreshold != null) {
@@ -262,7 +332,7 @@ public class WeightedQueryLaningStrategy implements QueryLaningStrategy
                                     .mapToLong(AbstractInterval::toDurationMillis)
                                     .sum();
       if (segmentRangeMs > segmentRangeThreshold.getMillis()) {
-        cost++;
+        cost += weightOrDefault(segmentRangeWeight);
       }
     }
 

@@ -159,7 +159,7 @@ public class WorkerTaskManagerTest
                 null,
                 NoopJoinableFactory.INSTANCE,
                 null,
-                new SegmentCacheManagerFactory(TestIndex.INDEX_IO, jsonMapper),
+                SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, jsonMapper),
                 jsonMapper,
                 indexIO,
                 null,

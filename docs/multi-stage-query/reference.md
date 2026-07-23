@@ -528,7 +528,7 @@ SQL-based ingestion supports using durable storage to store intermediate files t
 
 ### Durable storage configurations
 
-Durable storage is supported on Amazon S3 storage, Microsoft's Azure Blob Storage and Google Cloud Storage. 
+Durable storage is supported on Amazon S3 storage, Microsoft&circledR; Azure Blob Storage and Google Cloud Storage. 
 There are common configurations that control the behavior regardless of which storage service you use. Apart from these common configurations, there are a few properties specific to S3 and to Azure.
 
 Common properties to configure the behavior of durable storage

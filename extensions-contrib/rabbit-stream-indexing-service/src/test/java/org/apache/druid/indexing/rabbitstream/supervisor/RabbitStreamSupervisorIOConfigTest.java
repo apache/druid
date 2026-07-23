@@ -22,14 +22,23 @@ package org.apache.druid.indexing.rabbitstream.supervisor;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.rabbitstream.RabbitStreamIndexTaskModule;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Duration;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import static org.easymock.EasyMock.createMock;
 
 public class RabbitStreamSupervisorIOConfigTest
 {
@@ -210,6 +219,69 @@ public class RabbitStreamSupervisorIOConfigTest
 
     Assert.assertFalse(config.isBounded());
     Assert.assertNull(config.getBoundedStreamConfig());
+  }
+
+  private static RabbitStreamIOConfigBuilder ioConfigBuilder()
+  {
+    return new RabbitStreamIOConfigBuilder()
+        .withStream("stream")
+        .withUri("rabbit://localhost")
+        .withReplicas(1)
+        .withTaskCount(2)
+        .withTaskDuration(new Period("PT1H"));
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    final RabbitStreamSupervisorIOConfig config = ioConfigBuilder().build();
+    Assert.assertEquals(config, ioConfigBuilder().build());
+    Assert.assertEquals(config.hashCode(), ioConfigBuilder().build().hashCode());
+    Assert.assertNotEquals(config, null);
+    Assert.assertNotEquals(config, "not an io config");
+    Assert.assertNotEquals(config, ioConfigBuilder().withUri("rabbit://other").build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withReplicas(9).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withTaskCount(9).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withPollTimeout(999L).build());
+  }
+
+  @Test
+  public void testTuningConfigEqualsAndHashCode()
+  {
+    final RabbitStreamSupervisorTuningConfig config = RabbitStreamSupervisorTuningConfig.defaultConfig();
+    Assert.assertEquals(config, RabbitStreamSupervisorTuningConfig.defaultConfig());
+    Assert.assertEquals(config.hashCode(), RabbitStreamSupervisorTuningConfig.defaultConfig().hashCode());
+    Assert.assertNotEquals(config, null);
+    Assert.assertNotEquals(config, "not a tuning config");
+  }
+
+  /**
+   * Drift guard for this class's own fields (base fields are covered by SeekableStreamSupervisorIOConfigTest):
+   * a field omitted from {@code equals} would let a changed spec persist without restarting the supervisor.
+   */
+  @Test
+  public void testEqualsContractCoversAllFields()
+  {
+    EqualsVerifier.forClass(RabbitStreamSupervisorIOConfig.class)
+                  .usingGetClass()
+                  .withRedefinedSuperclass()
+                  .withIgnoredFields("taskCountExplicit", "autoScalerEnabled")
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .withPrefabValues(Optional.class, Optional.of("a"), Optional.of("b"))
+                  .withPrefabValues(InputFormat.class, createMock(InputFormat.class), createMock(InputFormat.class))
+                  .withPrefabValues(AutoScalerConfig.class, createMock(AutoScalerConfig.class), createMock(AutoScalerConfig.class))
+                  .withPrefabValues(LagAggregator.class, createMock(LagAggregator.class), createMock(LagAggregator.class))
+                  .verify();
+  }
+
+  @Test
+  public void testTuningConfigEqualsContractCoversAllFields()
+  {
+    EqualsVerifier.forClass(RabbitStreamSupervisorTuningConfig.class)
+                  .usingGetClass()
+                  .withRedefinedSuperclass()
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .verify();
   }
 
 }

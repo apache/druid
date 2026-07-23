@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.server.coordinator.rules.CannotMatchBehavior;
 import org.apache.druid.server.coordinator.rules.ForeverPartialLoadRule;
@@ -84,6 +85,12 @@ import java.util.UUID;
 class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
 {
   private static final String PROJECTION_NAME = "country_delta";
+  // A second projection ingested alongside country_delta but NOT selected by the rule. Under the partial-load rule
+  // its container bytes stay off the historical's disk, so the historical's realized footprint is measurably less
+  // than the full segment size — that inequality is what {@link #testCoordinatorSeesPartialLoadFootprint} asserts
+  // against sys.servers. Uses a min-aggregator on delta so neither test query's SUM(delta) projection-select can
+  // route through it (planner needs matching aggregator).
+  private static final String UNMATCHED_PROJECTION_NAME = "country_min_delta";
   private static final long CACHE_SIZE = HumanReadableBytes.parse("1MiB");
   private static final long MAX_SIZE = HumanReadableBytes.parse("100MiB");
   private static final long ESTIMATE_SIZE = HumanReadableBytes.parse("2KiB");
@@ -249,6 +256,43 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
   }
 
   @Test
+  void testCoordinatorSeesPartialLoadFootprint()
+  {
+    // End-to-end check that PartialLoadedDataSegment reaches the coordinator's inventory accounting: the historical's
+    // announcement stamps realizedBytes (metadata + selected projection + __base dep) as loadedBytes, so
+    // sys.servers.curr_size for the historical reflects the partial footprint — strictly less than the segment's full
+    // size (which includes the unmatched projection's bytes). Without the fix, forAnnouncement would stamp
+    // segment.getSize() and curr_size would equal the full size.
+    final long fullSize = Long.parseLong(
+        cluster.callApi().runSql(
+            "SELECT \"size\" FROM sys.segments WHERE datasource = '" + dataSource + "'"
+        ).trim()
+    );
+    Assertions.assertTrue(fullSize > 0, "sys.segments.size must be populated for the ingested segment");
+
+    final long currSize = Long.parseLong(
+        cluster.callApi().runSql(
+            "SELECT curr_size FROM sys.servers WHERE server_type = 'historical'"
+        ).trim()
+    );
+
+    Assertions.assertTrue(
+        currSize > 0,
+        "coordinator's historical curr_size must reflect the partial-load footprint, got 0"
+    );
+    Assertions.assertTrue(
+        currSize < fullSize,
+        StringUtils.format(
+            "coordinator should see the partial footprint; got curr_size=%d, full segment size=%d "
+            + "(without PartialLoadedDataSegment, forAnnouncement would stamp segment.getSize() as loadedBytes and "
+            + "these would be equal)",
+            currSize,
+            fullSize
+        )
+    );
+  }
+
+  @Test
   void testProjectionMissLoadsBaseBundleOnDemand()
   {
     // Group by the clustering column — the projection can't serve this, so MSQ must fall back to the clustered
@@ -344,6 +388,15 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
             .aggregators(new LongSumAggregatorFactory("sumDelta", "delta"))
             .build();
 
+    // Second projection ingested but NOT selected by the rule. Its containers stay off disk under the partial-load
+    // rule, giving the historical a realized footprint measurably smaller than the full segment size. The
+    // min-aggregator prevents the planner from routing SUM(delta) queries through this projection.
+    final AggregateProjectionSpec unmatchedProjection =
+        AggregateProjectionSpec.builder(UNMATCHED_PROJECTION_NAME)
+            .groupingColumns(new StringDimensionSchema("countryName"))
+            .aggregators(new LongMinAggregatorFactory("minDelta", "delta"))
+            .build();
+
     final SegmentGranularitySpec segmentGranularitySpec = new SegmentGranularitySpec(
         Granularities.HOUR,
         List.of(Intervals.of("2024-01-01/2024-01-02"))
@@ -360,7 +413,7 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
                 .withTimestamp(new TimestampSpec("time", "iso", null))
                 .withSegmentGranularity(segmentGranularitySpec)
                 .withBaseTable(clusterSpec)
-                .withProjections(List.of(projection))
+                .withProjections(List.of(projection, unmatchedProjection))
         )
         .tuningConfig(t -> t.withMaxNumConcurrentSubTasks(1))
         .withId(taskId);

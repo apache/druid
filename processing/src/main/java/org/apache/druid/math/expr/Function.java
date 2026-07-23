@@ -2172,7 +2172,6 @@ public interface Function extends NamedFunction
       return "case_searched";
     }
 
-    @SuppressFBWarnings("IM_BAD_CHECK_FOR_ODD")
     @Override
     public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
     {

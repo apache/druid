@@ -139,7 +139,8 @@ public class DruidConnection
       final SqlQueryPlus sqlQueryPlus,
       final Map<String, Object> systemDefaultContext,
       final long maxRowCount,
-      final ResultFetcherFactory fetcherFactory
+      final ResultFetcherFactory fetcherFactory,
+      final String remoteAddress
   )
   {
     final int statementId = statementCounter.incrementAndGet();
@@ -157,7 +158,8 @@ public class DruidConnection
 
       @SuppressWarnings("GuardedBy")
       final PreparedStatement statement = sqlStatementFactory.preparedStatement(
-          sqlQueryPlus.withContext(systemDefaultContext, sessionContext)
+          sqlQueryPlus.withContext(systemDefaultContext, sessionContext),
+          remoteAddress
       );
       final DruidJdbcPreparedStatement jdbcStmt = new DruidJdbcPreparedStatement(
           connectionId,

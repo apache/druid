@@ -21,8 +21,12 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
+import com.google.inject.util.Providers;
+import org.apache.druid.guice.annotations.EphemeralStorageLoading;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
@@ -43,26 +47,52 @@ public class SegmentCacheManagerFactory
 {
   private final IndexIO indexIO;
   private final ObjectMapper jsonMapper;
+  /**
+   * Resolved lazily (only on the {@code virtualStorage=true} path of {@link #manufacturate}) so that injecting this
+   * factory into a component that only builds non-virtual caches (e.g. {@code DruidInputSource}) does not force the
+   * process-wide {@link EphemeralStorageLoading} pool to be created on processes that never do on-demand loading
+   * (Overlord, MiddleManager).
+   */
+  private final Provider<StorageLoadingThreadPool> loadingThreadPoolProvider;
 
   @Inject
   public SegmentCacheManagerFactory(
       IndexIO indexIO,
-      @Json ObjectMapper mapper
+      @Json ObjectMapper mapper,
+      @EphemeralStorageLoading Provider<StorageLoadingThreadPool> loadingThreadPoolProvider
   )
   {
     this.indexIO = indexIO;
     this.jsonMapper = mapper;
+    this.loadingThreadPoolProvider = loadingThreadPoolProvider;
   }
 
   /**
-   * Creates a new {@link SegmentCacheManager} backed by a new storage location in {@code storageDir}, and a new
-   * loading thread pool of default size.
+   * Creates a factory whose {@code virtualStorage=true} managers get their own private loading pool of default size,
+   * instead of the process-wide, lifecycle-managed {@link EphemeralStorageLoading} pool that Guice injects. Intended
+   * for tests and manual construction where that shared pool is not available via injection; the created pool is not
+   * lifecycle-managed, which is fine for short-lived JVMs.
+   */
+  public static SegmentCacheManagerFactory createWithOwnedPool(IndexIO indexIO, ObjectMapper mapper)
+  {
+    return new SegmentCacheManagerFactory(
+        indexIO,
+        mapper,
+        Providers.of(StorageLoadingThreadPool.createFromConfig(new SegmentLoaderConfig().setVirtualStorage(true)))
+    );
+  }
+
+  /**
+   * Creates a new {@link SegmentCacheManager} backed by a new storage location in {@code storageDir}. When
+   * {@code virtualStorage} is true, the returned manager uses this factory's process-wide
+   * {@link EphemeralStorageLoading} loading pool (shared across all per-task caches and stopped by the lifecycle)
+   * rather than creating its own.
    *
    * @param storageDir     storage location
    * @param maxSize        size limit, or null for no limit
    * @param virtualStorage whether to configure the cache manager in ephemeral virtual storage mode. In this mode,
-   *                       loading is triggered by {@link SegmentCacheManager#acquireSegment(DataSegment)}, and
-   *                       segment files are deleted as soon as all holds are closed.
+   *                       loading is triggered by {@link SegmentCacheManager#acquireSegment(DataSegment, AcquireMode)},
+   *                       and segment files are deleted as soon as all holds are closed.
    */
   public SegmentCacheManager manufacturate(File storageDir, Long maxSize, boolean virtualStorage)
   {
@@ -77,11 +107,10 @@ public class SegmentCacheManagerFactory
             .setVirtualStorage(virtualStorage)
             .setVirtualStorageIsEphemeral(virtualStorage);
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
-    final StorageLoadingThreadPool loadingThreadPool = StorageLoadingThreadPool.createFromConfig(loaderConfig);
     return new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
-        loadingThreadPool,
+        virtualStorage ? loadingThreadPoolProvider.get() : StorageLoadingThreadPool.none(),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         indexIO,
         jsonMapper

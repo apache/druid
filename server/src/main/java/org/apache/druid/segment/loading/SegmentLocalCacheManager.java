@@ -29,6 +29,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.NullOutputStream;
+import org.apache.druid.client.DataSegmentAndLoadProfile;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.FileUtils;
@@ -42,6 +43,7 @@ import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
@@ -662,13 +664,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             // executor tasks. The entry's own mount-future dedup would prevent the actual work from being duplicated,
             // but the executor scheduling and timing capture would still be wasted.
             Suppliers.memoize(() -> {
-              // Capture submit time on first invocation of getSegmentFuture(), so waitTime measures the queue delay
-              // until the executor picks up the task. loadTime then covers mount (+ ensureAllDownloaded for the
-              // full-download path).
+              // Capture submit time on first invocation of getSegmentFuture(). loadTime then covers mount
+              // (+ ensureAllDownloaded for the full-download path).
               final long submitNanos = System.nanoTime();
               return virtualStorageLoadingThreadPool.getExecutorService().submit(() -> {
-                // The executor bounds concurrency itself (permit acquired inside the task on the worker thread), so
-                // waitNanos measures both the queue delay and any permit wait until this task actually starts.
+                // waitNanos is only the executor scheduling delay until this task body starts; it no longer reflects
+                // load-slot contention when using virtual threads. Load permits are acquired inside the deep-storage
+                // reads now, so that wait is folded into loadTime instead, and the query-time bundle/column fetches
+                // (separate permit-bounded tasks) are not reflected here at all. A meaningful load-wait metric would
+                // have to time the permit acquire at the read sites and aggregate it across those fetches.
                 final long taskStartNanos = System.nanoTime();
                 final long waitNanos = taskStartNanos - submitNanos;
                 final boolean wasMounted = reserved.metadata.isMounted();
@@ -827,7 +831,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
     try {
       final LoadSpec loadSpec = jsonMapper.convertValue(dataSegment.getLoadSpec(), LoadSpec.class);
-      return loadSpec.openRangeReader();
+      final SegmentRangeReader rangeReader = loadSpec.openRangeReader();
+      if (rangeReader == null) {
+        return null;
+      }
+      // Bound concurrent deep-storage reads at the actual range-read (see PermitLimitedSegmentRangeReader).
+      return new PermitLimitedSegmentRangeReader(rangeReader, virtualStorageLoadingThreadPool);
     }
     catch (IOException e) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
@@ -967,7 +976,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    *   <li>Release the transient hold; the metadata's self-hold keeps the entry resident under the applied rule.</li>
    * </ol>
    */
-  private void loadPartial(DataSegment dataSegment) throws SegmentLoadingException
+  private DataSegment loadPartial(DataSegment dataSegment) throws SegmentLoadingException
   {
     final PartialLoadSpec wrapper = materializePartialLoadSpec(dataSegment);
     final SegmentRangeReader rangeReader = openPartialRangeReader(dataSegment, wrapper);
@@ -989,12 +998,18 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           final ReservedPartial existing = findExistingPartialWithHold(dataSegment.getId());
           if (existing != null) {
             try {
+              // Snapshot the prior realized footprint before clearRule zeroes out ruleBundleHolds so the log can
+              // surface the coordinator-visible curr_size transition
+              final long priorRealizedBytes = existing.metadata().getRealizedBytes();
               existing.metadata().clearRule();
               log.warn(
-                  "Backend for segment[%s] does not support range reads; released rule[fingerprint=%s], segment "
-                  + "will fall back to weak full-load at query time",
+                  "Backend for segment[%s] does not support range reads; released rule[fingerprint=%s]. Segment "
+                  + "will fall back to weak full-load at query time, and the next announcement will report "
+                  + "loadedBytes=segment.getSize()=%d (up from realized=%d).",
                   dataSegment.getId(),
-                  wrapper.getFingerprint()
+                  wrapper.getFingerprint(),
+                  dataSegment.getSize(),
+                  priorRealizedBytes
               );
             }
             finally {
@@ -1014,7 +1029,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                 wrapper.getFingerprint()
             );
           }
-          return;
+          // Rule couldn't be applied, nothing partial materialized, so hand back the plain segment; the
+          // announcement layer will fall back to segment.getSize() for loadedBytes.
+          return dataSegment;
         }
 
         final ReservedPartial reserved = findOrReservePartial(dataSegment, rangeReader);
@@ -1072,6 +1089,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           // the coordinator's load queue can retry on its next sync. The announced fingerprint == "rule fully
           // realized" contract stays intact.
           awaitEagerDownloadsOrClearRule(dataSegment, metadata, selected);
+          // Wrap the announcement with a DataSegmentAndLoadProfile carrying the historical's realized footprint AFTER
+          // eager downloads finished. forAnnouncement reads the profile back via profileOf() and stamps its
+          // loadedBytes + fingerprint.
+          return new DataSegmentAndLoadProfile(
+              dataSegment,
+              PartialLoadProfile.forLoaded(dataSegment.getLoadSpec(), wrapper.getFingerprint(), metadata.getRealizedBytes())
+          );
         }
         finally {
           CloseableUtils.closeAndSuppressExceptions(
@@ -1218,7 +1242,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       throws SegmentLoadingException
   {
     try {
-      return wrapper.openRangeReader();
+      final SegmentRangeReader rangeReader = wrapper.openRangeReader();
+      if (rangeReader == null) {
+        return null;
+      }
+      // Bound concurrent deep-storage reads at the actual range-read (see PermitLimitedSegmentRangeReader).
+      return new PermitLimitedSegmentRangeReader(rangeReader, virtualStorageLoadingThreadPool);
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "Failed to open range reader for segment[%s]", dataSegment.getId());
@@ -1292,7 +1321,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public void load(final DataSegment dataSegment) throws SegmentLoadingException
+  public DataSegment load(final DataSegment dataSegment) throws SegmentLoadingException
   {
     if (config.isVirtualStorage()) {
       if (config.isVirtualStorageEphemeral()) {
@@ -1306,8 +1335,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       // take the existing weak/no-op path below.
       if (config.isVirtualStoragePartialDownloadsEnabled()
           && PartialLoadSpec.detectPartialLoadSpec(dataSegment.getLoadSpec())) {
-        loadPartial(dataSegment);
-        return;
+        return loadPartial(dataSegment);
       }
       // virtual storage doesn't do anything with loading immediately, but check to see if the segment is already cached
       // and if so, clear out the onUnmount action
@@ -1326,7 +1354,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           unlock(dataSegment, lock);
         }
       }
-      return;
+      return dataSegment;
     }
     final CompleteSegmentCacheEntry cacheEntry = new CompleteSegmentCacheEntry(dataSegment);
     final ReferenceCountingLock lock = lock(dataSegment);
@@ -1341,10 +1369,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         unlock(dataSegment, lock);
       }
     }
+    return dataSegment;
   }
 
   @Override
-  public void bootstrap(
+  public DataSegment bootstrap(
       final DataSegment dataSegment,
       final SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException
@@ -1358,6 +1387,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       // during bootstrap, check if the segment exists in a location and mount it; getCachedSegments already
       // did the reserving for us
       final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(dataSegment.getId());
+      // Assemble the loaded-profile inside the segment lock (null = no partial materialized)
+      PartialLoadProfile loadedProfile = null;
       final ReferenceCountingLock lock = lock(dataSegment);
       synchronized (lock) {
         try {
@@ -1382,7 +1413,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                 );
               }
               // If the persisted DataSegment's loadSpec is a partial-load-rule wrapper, reapply the rule so the
-              // segment continues to be protected from eviction across the restart.
+              // segment continues to be protected from eviction across the restart AND build the announcement profile.
+              // Otherwise (partial downloads disabled at restart, or persisted loadSpec no longer partial), don't
+              // advertise a rule footprint.
               //
               // Strict failure handling: reapplyRuleFromInfoFile throws on eager-download failure (and clears the
               // rule state before throwing). The exception propagates up through SegmentManager.loadSegmentOnBootstrap,
@@ -1391,6 +1424,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               if (config.isVirtualStoragePartialDownloadsEnabled()
                   && PartialLoadSpec.detectPartialLoadSpec(dataSegment.getLoadSpec())) {
                 reapplyRuleFromInfoFile(dataSegment, partial);
+                loadedProfile = PartialLoadProfile.forLoaded(
+                    dataSegment.getLoadSpec(),
+                    (String) dataSegment.getLoadSpec().get("fingerprint"),
+                    partial.getRealizedBytes()
+                );
               }
             } else {
               throw DruidException.defensive(
@@ -1399,13 +1437,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   dataSegment.getId()
               );
             }
+            // A given segment id lives in exactly one location: getCachedSegments assigns each cached segment to a
+            // single StorageLocation and getCacheEntry is location-local, so hitting one location has fully handled
+            // the segment
+            break;
           }
         }
         finally {
           unlock(dataSegment, lock);
         }
       }
-      return;
+      return loadedProfile == null ? dataSegment : new DataSegmentAndLoadProfile(dataSegment, loadedProfile);
     }
     final ReferenceCountingLock lock = lock(dataSegment);
     synchronized (lock) {
@@ -1419,6 +1461,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         unlock(dataSegment, lock);
       }
     }
+    return dataSegment;
   }
 
   @Nullable
@@ -1628,6 +1671,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           final long startTime = System.nanoTime();
           return virtualStorageLoadingThreadPool.getExecutorService().submit(
               () -> {
+                // waitTime is only the executor scheduling delay; when using virtual threads for the pool, load-slot
+                // contention is folded into loadTime now, since mount acquires the load permit around the deep-storage
+                // read.
                 final long execStartTime = System.nanoTime();
                 final long waitTime = execStartTime - startTime;
                 entry.mount(location);
@@ -1921,7 +1967,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             }
           }
           if (needsLoad) {
-            loadInLocationWithStartMarker(dataSegment, storageDir);
+            // Hold a load permit only around the actual deep-storage read, not the surrounding entryLock or the
+            // factorize/deserialize below. Acquired after entryLock, so a permit is never held while blocking on it.
+            try (StorageLoadingThreadPool.LoadPermit ignored = virtualStorageLoadingThreadPool.acquireLoadPermit()) {
+              loadInLocationWithStartMarker(dataSegment, storageDir);
+            }
           }
           final SegmentizerFactory factory = getSegmentFactory(storageDir);
 

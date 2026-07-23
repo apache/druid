@@ -17,91 +17,74 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.kafka.supervisor;
+package org.apache.druid.indexing.rabbitstream.supervisor;
 
-import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
-import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SupervisorIOConfigBuilder;
 
 import java.util.Map;
 
 /**
- * Builder for {@link KafkaSupervisorIOConfig}.
+ * Builder for {@link RabbitStreamSupervisorIOConfig}.
  */
-public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfigBuilder, KafkaSupervisorIOConfig>
+public class RabbitStreamIOConfigBuilder
+    extends SupervisorIOConfigBuilder<RabbitStreamIOConfigBuilder, RabbitStreamSupervisorIOConfig>
 {
-  private String topic;
-  private String topicPattern;
+  private String uri;
   private Map<String, Object> consumerProperties;
-  private BoundedStreamConfig boundedStreamConfig;
+  private Long pollTimeout;
 
-  public KafkaIOConfigBuilder withTopic(String topic)
+  public RabbitStreamIOConfigBuilder withUri(String uri)
   {
-    this.topic = topic;
+    this.uri = uri;
     return this;
   }
 
-  public KafkaIOConfigBuilder withTopicPattern(String topicPattern)
-  {
-    this.topicPattern = topicPattern;
-    return this;
-  }
-
-  public KafkaIOConfigBuilder withConsumerProperties(Map<String, Object> consumerProperties)
+  public RabbitStreamIOConfigBuilder withConsumerProperties(Map<String, Object> consumerProperties)
   {
     this.consumerProperties = consumerProperties;
     return this;
   }
 
-  public KafkaIOConfigBuilder withKafkaInputFormat(InputFormat valueFormat)
+  public RabbitStreamIOConfigBuilder withPollTimeout(Long pollTimeout)
   {
-    this.inputFormat = new KafkaInputFormat(
-        null,
-        null,
-        valueFormat,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    this.pollTimeout = pollTimeout;
     return this;
   }
 
-  public KafkaIOConfigBuilder withBoundedStreamConfig(BoundedStreamConfig boundedStreamConfig)
+  /**
+   * Populates this builder (base and Rabbit-specific fields) from an existing config.
+   */
+  public RabbitStreamIOConfigBuilder copyFrom(RabbitStreamSupervisorIOConfig io)
   {
-    this.boundedStreamConfig = boundedStreamConfig;
+    copyFromBase(io);
+    this.uri = io.getUri();
+    this.consumerProperties = io.getConsumerProperties();
+    this.pollTimeout = io.getPollTimeout();
     return this;
   }
 
   @Override
-  public KafkaSupervisorIOConfig build()
+  public RabbitStreamSupervisorIOConfig build()
   {
-    return new KafkaSupervisorIOConfig(
-        topic,
-        topicPattern,
+    return new RabbitStreamSupervisorIOConfig(
+        stream,
+        uri,
         inputFormat,
         replicas,
         taskCount,
         taskDuration,
         consumerProperties,
         autoScalerConfig,
-        lagAggregator,
-        null,
+        pollTimeout,
         startDelay,
         period,
-        useEarliestSequenceNumber,
         completionTimeout,
+        useEarliestSequenceNumber,
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         lateMessageRejectionStartDateTime,
-        null,
-        idleConfig,
         stopTaskCount,
-        null,
-        null,
+        serverPriorityToReplicas,
         boundedStreamConfig
     );
   }

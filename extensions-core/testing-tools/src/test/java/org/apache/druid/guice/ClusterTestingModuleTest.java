@@ -191,7 +191,7 @@ public class ClusterTestingModuleTest
           null,
           indexIO,
           new NoopCoordinatorClient(),
-          new SegmentCacheManagerFactory(indexIO, MAPPER),
+          SegmentCacheManagerFactory.createWithOwnedPool(indexIO, MAPPER),
           new TaskConfigBuilder().build()
       );
       final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(

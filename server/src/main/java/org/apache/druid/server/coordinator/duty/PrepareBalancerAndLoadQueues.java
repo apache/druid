@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -36,7 +37,6 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
-import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashSet;
 import java.util.List;
@@ -203,14 +203,14 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
 
   private void collectUsedSegmentStats(DruidCoordinatorRuntimeParams params, CoordinatorRunStats stats)
   {
-    params.getUsedSegmentsTimelinesPerDataSource().forEach((dataSource, timeline) -> {
-      long totalSizeOfUsedSegments = timeline.iterateAllObjects().stream()
-                                             .mapToLong(DataSegment::getSize).sum();
+    for (final ImmutableDruidDataSource dataSource : params.getDataSourcesSnapshot().getDataSourcesWithAllUsedSegments()) {
+      final long totalSizeOfUsedSegments = dataSource.getTotalSizeOfSegments();
+      final int numUsedSegments = dataSource.getNumSegments();
 
-      RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, dataSource);
+      final RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, dataSource.getName());
       stats.add(Stats.Segments.USED_BYTES, datasourceKey, totalSizeOfUsedSegments);
-      stats.add(Stats.Segments.USED, datasourceKey, timeline.getNumObjects());
-    });
+      stats.add(Stats.Segments.USED, datasourceKey, numUsedSegments);
+    }
   }
 
   private void collectDebugStats(SegmentLoadingConfig config, CoordinatorRunStats stats)

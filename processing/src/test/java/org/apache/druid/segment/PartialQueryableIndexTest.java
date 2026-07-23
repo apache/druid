@@ -219,7 +219,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  void testGetColumnHolderTriggersBaseTableLoad() throws IOException
+  void testGetColumnHolderRequiresResidentFiles() throws IOException
   {
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
     final File cacheDir = newCacheDir("colholder");
@@ -233,13 +233,14 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
           COLUMN_CONFIG
       );
 
-      // no downloads yet
+      // no downloads yet, and column access never triggers one: an unfetched column fails loudly
       Assertions.assertEquals(0, rangeReader.getReadCount());
+      Assertions.assertThrows(DruidException.class, () -> index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME));
+      Assertions.assertEquals(0, rangeReader.getReadCount(), "the failed access must not have downloaded anything");
 
-      // accessing a column holder should trigger downloads
+      // after an explicit fetch, deserialization finds the bytes resident
+      mapper.fetchFiles(Set.of("__base/__time", "__base/dim1"));
       Assertions.assertNotNull(index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME));
-      Assertions.assertTrue(rangeReader.getReadCount() > 0);
-
       Assertions.assertNotNull(index.getColumnHolder("dim1"));
       Assertions.assertNull(index.getColumnHolder("nonexistent"));
 
@@ -249,7 +250,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  void testGetProjectionMatchesFromMetadataAndLoadsLazily() throws IOException
+  void testGetProjectionMatchesFromMetadataAndReadsAfterPlannedFetch() throws IOException
   {
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
     final File cacheDir = newCacheDir("projection");
@@ -276,40 +277,43 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
       final QueryableIndex projIndex = projection.getRowSelector();
       Assertions.assertNotNull(projIndex);
       Assertions.assertEquals(0, rangeReader.getReadCount(), "this should not download files either");
-      // actually accessing a column on the projection triggers the column's download
-      Assertions.assertNotNull(projIndex.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME));
-      Assertions.assertTrue(rangeReader.getReadCount() > 0, "accessing a projection column should download");
+
+      // column access never downloads: an unfetched projection column fails loudly
+      Assertions.assertThrows(DruidException.class, () -> projIndex.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME));
+      Assertions.assertEquals(0, rangeReader.getReadCount(), "the failed access must not have downloaded anything");
+
+      // execute the plan for this spec: the projection bundle plus the __base parent bundle
+      final PartialQueryableIndex.CursorPrefetchPlan plan = index.planCursorPrefetch(matchingSpec);
+      for (PartialQueryableIndex.PrefetchBundle bundle : plan.bundles()) {
+        for (PartialSegmentFileMapperV10.PlannedFetch fetch : bundle.planFetches()) {
+          fetch.fetch();
+        }
+      }
+      final int readsAfterFetch = rangeReader.getReadCount();
+      Assertions.assertTrue(readsAfterFetch > 0, "executing the plan downloads");
       Assertions.assertEquals(Set.of(IndexIO.V10_FILE_NAME), rangeReader.getReadFilenames());
 
-      // downloaded files are scoped to the matched projection's namespace, not the base table (if no shared parts)
+      // now reads work, including dim1 which reads through its base parent, with no further downloads
+      Assertions.assertNotNull(projIndex.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME));
+      Assertions.assertNotNull(projIndex.getColumnHolder("dim1"));
+      Assertions.assertEquals(readsAfterFetch, rangeReader.getReadCount(), "reads must find everything resident");
+
+      // the plan covered the projection's namespace plus the dim1 parent from __base, and nothing else from base
       final Set<String> downloaded = mapper.getDownloadedFiles();
       Assertions.assertTrue(
           downloaded.stream().anyMatch(name -> name.startsWith("dim1_hourly_metric1_sum/")),
           "expected at least one file from the matched projection's namespace, got " + downloaded
       );
-      Assertions.assertTrue(
-          downloaded.stream().noneMatch(name -> name.startsWith("__base/")),
-          "no base table files should be downloaded when only the projection was accessed, got " + downloaded
-      );
-
-      // fetching a projection column which has a base table parent does download base table stuff
-      Assertions.assertNotNull(projIndex.getColumnHolder("dim1"));
-      final Set<String> downloadedAfterDim1 = mapper.getDownloadedFiles();
-      Assertions.assertTrue(
-          downloadedAfterDim1.stream().anyMatch(name -> name.startsWith("dim1_hourly_metric1_sum/")),
-          "expected at least one file from the matched projection's namespace, got " + downloadedAfterDim1
-      );
-      Assertions.assertTrue(
-          downloadedAfterDim1.stream().anyMatch(name -> name.startsWith("__base/")),
-          "base table files should be downloaded when a projection column shares data with a base table parent, got " + downloadedAfterDim1
-      );
+      Assertions.assertTrue(downloaded.contains("__base/dim1"), "parent must be planned, got " + downloaded);
+      Assertions.assertFalse(downloaded.contains("__base/metric1"), "got " + downloaded);
     }
   }
 
   @Test
-  void testPerColumnLaziness() throws IOException
+  void testPerColumnFetchIndependence() throws IOException
   {
-    // verify that accessing one column of a projection doesn't download other columns
+    // verify that fetching + reading one column leaves other columns untouched, and that reading an unfetched
+    // column fails instead of downloading
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
     final File cacheDir = newCacheDir("per_col");
 
@@ -322,26 +326,29 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
 
       rangeReader.resetCount();
 
-      // access one base table column
+      // fetch + access one base table column
+      mapper.fetchFiles(Set.of("__base/dim1"));
       Assertions.assertNotNull(index.getColumnHolder("dim1"));
       final int countAfterDim1 = rangeReader.getReadCount();
-      Assertions.assertTrue(countAfterDim1 > 0, "accessing dim1 should trigger downloads");
+      Assertions.assertTrue(countAfterDim1 > 0, "fetching dim1 should trigger downloads");
 
-      // dim1's smoosh entry is downloaded; metric1's is not
+      // dim1's smoosh entry is downloaded; metric1's is not, and accessing it fails rather than downloading
       final Set<String> filesAfterDim1 = mapper.getDownloadedFiles();
       Assertions.assertTrue(filesAfterDim1.contains("__base/dim1"), "expected __base/dim1 in " + filesAfterDim1);
-      Assertions.assertFalse(filesAfterDim1.contains("__base/metric1"), "metric1 should not be downloaded yet");
+      Assertions.assertFalse(filesAfterDim1.contains("__base/metric1"), "metric1 should not be downloaded");
+      Assertions.assertThrows(DruidException.class, () -> index.getColumnHolder("metric1"));
 
       // access the same column again should not trigger more downloads
       Assertions.assertNotNull(index.getColumnHolder("dim1"));
       Assertions.assertEquals(countAfterDim1, rangeReader.getReadCount(), "re-access should be cached");
       Assertions.assertEquals(filesAfterDim1, mapper.getDownloadedFiles(), "re-access should not download new files");
 
-      // access a different column should trigger additional downloads for its files
+      // after fetching metric1's file, the previously-failing access works
+      mapper.fetchFiles(Set.of("__base/metric1"));
       Assertions.assertNotNull(index.getColumnHolder("metric1"));
       Assertions.assertTrue(
           rangeReader.getReadCount() > countAfterDim1,
-          "accessing metric1 should trigger additional downloads"
+          "fetching metric1 should trigger additional downloads"
       );
 
       // metric1's smoosh entry is now also downloaded
@@ -443,11 +450,12 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
       Assertions.assertEquals(0, rangeReader.getReadCount(), "planning must not download");
       Assertions.assertEquals(1, plan.bundles().size());
       final PartialQueryableIndex.PrefetchBundle bundle = plan.bundles().get(0);
-      Assertions.assertEquals(2, bundle.fetches().size(), "one run per mapper: " + bundle.fetches());
+      final List<PartialSegmentFileMapperV10.PlannedFetch> fetches = bundle.planFetches();
+      Assertions.assertEquals(2, fetches.size(), "one run per mapper: " + fetches);
 
       boolean sawMain = false;
       boolean sawExternal = false;
-      for (PartialSegmentFileMapperV10.PlannedFetch fetch : bundle.fetches()) {
+      for (PartialSegmentFileMapperV10.PlannedFetch fetch : fetches) {
         if (fetch.mapper() == mapper) {
           sawMain = true;
           // __time and dimA are adjacent in the main container; dimB is an unrequested trailing file, never fetched
@@ -501,7 +509,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
       final PartialQueryableIndex.CursorPrefetchPlan plan = index.planCursorPrefetch(
           CursorBuildSpec.builder().setPhysicalColumns(Set.of("dimA")).build()
       );
-      for (PartialSegmentFileMapperV10.PlannedFetch fetch : plan.bundles().get(0).fetches()) {
+      for (PartialSegmentFileMapperV10.PlannedFetch fetch : plan.bundles().get(0).planFetches()) {
         fetch.fetch();
       }
 
@@ -516,6 +524,41 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
           "fallback must cover the external's part of the bundle"
       );
       Assertions.assertEquals(2, rangeReader.getReadCount(), "one whole-bundle read per mapper");
+    }
+  }
+
+  @Test
+  void testColumnHolderRebuildsAfterBundleEviction() throws IOException
+  {
+    // The index (and its memoized column suppliers) outlives bundle evictions: a memoized holder wraps slices of
+    // the container mmap that eviction unmaps, and once memoized it never consults mapFile again, so the
+    // non-resident throw can't catch the staleness. The eviction-aware supplier compares bundle generations and
+    // rebuilds instead of returning the dangling holder.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    final File cacheDir = newCacheDir("evict_rebuild");
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      final PartialQueryableIndex index = new PartialQueryableIndex(
+          mapper.getSegmentFileMetadata(),
+          mapper,
+          COLUMN_CONFIG
+      );
+
+      mapper.fetchFiles(Set.of("__base/dim1"));
+      final ColumnHolder before = index.getColumnHolder("dim1");
+      Assertions.assertNotNull(before);
+      Assertions.assertSame(before, index.getColumnHolder("dim1"), "no eviction: the holder is memoized");
+
+      // evict the base bundle's containers, then make the files resident again (as a re-acquired query would)
+      for (int containerIndex : mapper.getContainerIndicesForBundle(Projections.BASE_TABLE_PROJECTION_NAME)) {
+        mapper.evictContainer(containerIndex);
+      }
+      mapper.fetchFiles(Set.of("__base/dim1"));
+
+      final ColumnHolder after = index.getColumnHolder("dim1");
+      Assertions.assertNotNull(after);
+      Assertions.assertNotSame(before, after, "an evicted bundle's holder must be rebuilt, not returned stale");
+      Assertions.assertSame(after, index.getColumnHolder("dim1"), "the rebuilt holder memoizes again");
     }
   }
 
@@ -544,14 +587,15 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
       Assertions.assertEquals(Projections.BASE_TABLE_PROJECTION_NAME, parentBundle.bundleName());
       Assertions.assertEquals(Set.of("dim1"), parentBundle.requiredColumns());
 
+      final List<PartialSegmentFileMapperV10.PlannedFetch> parentFetches = parentBundle.planFetches();
       final Set<String> parentFiles = new TreeSet<>();
-      for (PartialSegmentFileMapperV10.PlannedFetch fetch : parentBundle.fetches()) {
+      for (PartialSegmentFileMapperV10.PlannedFetch fetch : parentFetches) {
         parentFiles.addAll(fetch.run().files());
       }
       Assertions.assertEquals(Set.of("__base/dim1"), parentFiles);
 
       // executing the parent fetches makes exactly the parent's file resident, nothing else from the base bundle
-      for (PartialSegmentFileMapperV10.PlannedFetch fetch : parentBundle.fetches()) {
+      for (PartialSegmentFileMapperV10.PlannedFetch fetch : parentFetches) {
         fetch.fetch();
       }
       Assertions.assertEquals(Set.of("__base/dim1"), mapper.getDownloadedFiles());
