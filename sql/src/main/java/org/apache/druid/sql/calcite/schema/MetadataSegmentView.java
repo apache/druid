@@ -194,9 +194,7 @@ public class MetadataSegmentView
 
   /**
    * Returns published (and, with centralized schema, realtime) segment metadata, optionally
-   * restricted to {@code dataSources} - a {@code datasource} predicate pushed down from sys.segments.
-   * The restriction is a cheap membership test applied before the caller's authorization and row
-   * construction, so segments of non-matching datasources skip that per-row work.
+   * restricted to {@code dataSources}.
    */
   Iterator<SegmentStatusInCluster> getSegments(@Nullable Set<String> dataSources)
   {
