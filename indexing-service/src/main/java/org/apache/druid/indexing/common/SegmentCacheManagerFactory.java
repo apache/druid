@@ -88,13 +88,22 @@ public class SegmentCacheManagerFactory
    * {@link EphemeralStorageLoading} loading pool (shared across all per-task caches and stopped by the lifecycle)
    * rather than creating its own.
    *
-   * @param storageDir     storage location
-   * @param maxSize        size limit, or null for no limit
-   * @param virtualStorage whether to configure the cache manager in ephemeral virtual storage mode. In this mode,
-   *                       loading is triggered by {@link SegmentCacheManager#acquireSegment(DataSegment, AcquireMode)},
-   *                       and segment files are deleted as soon as all holds are closed.
+   * @param storageDir              storage location
+   * @param maxSize                 size limit, or null for no limit
+   * @param virtualStorage          whether to configure the cache manager in ephemeral virtual storage mode. In this
+   *                                mode, loading is triggered by
+   *                                {@link SegmentCacheManager#acquireSegment(DataSegment, AcquireMode)}, and segment
+   *                                files are deleted as soon as all holds are closed.
+   * @param partialDownloadsEnabled when true (and {@code virtualStorage} is true), partial-eligible segments are read
+   *                                via on-demand column downloads rather than downloaded in full up front. Has no
+   *                                effect when {@code virtualStorage} is false.
    */
-  public SegmentCacheManager manufacturate(File storageDir, Long maxSize, boolean virtualStorage)
+  public SegmentCacheManager manufacturate(
+      File storageDir,
+      Long maxSize,
+      boolean virtualStorage,
+      boolean partialDownloadsEnabled
+  )
   {
     final StorageLocationConfig locationConfig = new StorageLocationConfig(
         storageDir,
@@ -105,7 +114,8 @@ public class SegmentCacheManagerFactory
         new SegmentLoaderConfig()
             .setLocations(Collections.singletonList(locationConfig))
             .setVirtualStorage(virtualStorage)
-            .setVirtualStorageIsEphemeral(virtualStorage);
+            .setVirtualStorageIsEphemeral(virtualStorage)
+            .setVirtualStoragePartialDownloadsEnabled(partialDownloadsEnabled);
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     return new SegmentLocalCacheManager(
         storageLocations,

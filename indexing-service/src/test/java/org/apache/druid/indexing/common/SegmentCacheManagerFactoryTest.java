@@ -64,8 +64,8 @@ class SegmentCacheManagerFactoryTest
     try {
       final SegmentCacheManagerFactory factory =
           new SegmentCacheManagerFactory(TestIndex.INDEX_IO, jsonMapper, Providers.of(shared));
-      final SegmentCacheManager m1 = factory.manufacturate(new File(tempDir, "a"), null, true);
-      final SegmentCacheManager m2 = factory.manufacturate(new File(tempDir, "b"), null, true);
+      final SegmentCacheManager m1 = factory.manufacturate(new File(tempDir, "a"), null, true, false);
+      final SegmentCacheManager m2 = factory.manufacturate(new File(tempDir, "b"), null, true, false);
 
       Assertions.assertSame(shared, m1.getLoadingThreadPool());
       Assertions.assertSame(shared, m2.getLoadingThreadPool());
@@ -86,7 +86,7 @@ class SegmentCacheManagerFactoryTest
     final SegmentCacheManagerFactory factory =
         new SegmentCacheManagerFactory(TestIndex.INDEX_IO, jsonMapper, throwingProvider);
 
-    final SegmentCacheManager m = factory.manufacturate(new File(tempDir, "c"), null, false);
+    final SegmentCacheManager m = factory.manufacturate(new File(tempDir, "c"), null, false, false);
     Assertions.assertFalse(m.getLoadingThreadPool().isAvailable());
   }
 
@@ -95,8 +95,8 @@ class SegmentCacheManagerFactoryTest
   {
     final SegmentCacheManagerFactory factory =
         SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, jsonMapper);
-    final SegmentCacheManager m1 = factory.manufacturate(new File(tempDir, "d"), null, true);
-    final SegmentCacheManager m2 = factory.manufacturate(new File(tempDir, "e"), null, true);
+    final SegmentCacheManager m1 = factory.manufacturate(new File(tempDir, "d"), null, true, false);
+    final SegmentCacheManager m2 = factory.manufacturate(new File(tempDir, "e"), null, true, false);
     try {
       Assertions.assertTrue(m1.getLoadingThreadPool().isAvailable());
       // createWithOwnedPool builds one pool and shares it across the factory's manufacturate calls.

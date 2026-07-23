@@ -227,7 +227,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
   public SegmentCacheManager newSegmentLoader(File storageDir)
   {
-    return segmentCacheManagerFactory.manufacturate(storageDir, null, true);
+    return segmentCacheManagerFactory.manufacturate(storageDir, null, true, false);
   }
 
   public ObjectMapper getObjectMapper()

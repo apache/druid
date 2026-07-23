@@ -247,7 +247,15 @@ public class TaskToolboxFactory
         .queryProcessingPool(queryProcessingPool)
         .joinableFactory(joinableFactory)
         .monitorSchedulerProvider(monitorSchedulerProvider)
-        .segmentCacheManager(segmentCacheManagerFactory.manufacturate(taskWorkDir, null, true))
+        .segmentCacheManager(segmentCacheManagerFactory.manufacturate(
+            taskWorkDir,
+            null,
+            true,
+            task.getContextValue(
+                Tasks.VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_KEY,
+                config.isVirtualStoragePartialDownloadsEnabled()
+            )
+        ))
         .jsonMapper(jsonMapper)
         .taskWorkDir(taskWorkDir)
         .indexIO(indexIO)
