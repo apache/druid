@@ -52,7 +52,6 @@ import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -239,7 +238,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       unusedSegmentsPlus = fetchNextBatchOfUnusedSegments(toolbox, nextBatchSize);
       if (unusedSegmentsPlus.isEmpty()) {
-        // No segments eligible for kill
+        // No more segments eligible for kill, do not proceed further
         break;
       }
 
@@ -276,12 +275,15 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       }
       catch (Exception e) {
         // Do not proceed with killing these segments as we cannot be sure if their
-        // load spec is used by any other segment or not
+        // load spec is shared by any other segment or not. If load spec is shared,
+        // segment files cannot be deleted from deep store. If load spec is not
+        // shared, segments cannot be deleted from metadata store as that would
+        // leave deep store files orphaned, and they would never be cleaned up.
         LOG.error(
             e,
             "Could not retrieve parent segment ids using task action[retrieveUpgradedFromSegmentIds]."
-            + " Stopping kill task to avoid deletion of segment files that may be"
-            + " needed for other segments."
+            + " Stopping kill task to avoid data loss in case the segment files"
+            + " are shared by other segments."
         );
         break;
       }
@@ -378,11 +380,10 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       List<DataSegmentPlus> unusedSegments
   ) throws IOException
   {
-    final Set<String> segmentIds = unusedSegments.stream()
-                                                 .map(DataSegmentPlus::getDataSegment)
-                                                 .map(DataSegment::getId)
-                                                 .map(SegmentId::toString)
-                                                 .collect(Collectors.toSet());
+    final Set<String> segmentIds = unusedSegments.stream().map(
+        s -> s.getDataSegment().getId().toString()
+    ).collect(Collectors.toSet());
+
     return toolbox.getTaskActionClient().submit(
         new RetrieveUpgradedFromSegmentIdsAction(getDataSource(), segmentIds)
     ).getUpgradedFromSegmentIds();
