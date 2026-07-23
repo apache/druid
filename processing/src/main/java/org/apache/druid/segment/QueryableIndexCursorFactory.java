@@ -50,7 +50,6 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorOffset;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.utils.CloseableUtils;
-import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
