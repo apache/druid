@@ -19,104 +19,43 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.error.DruidException;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.annotation.JsonTypeResolver;
+import org.apache.druid.jackson.StrictTypeIdResolver;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
 
 /**
  * Streaming analog of the batch/compaction {@code partitionsSpec}. Configured in the streaming tuning config, it
- * declares the dimensions whose observed values each published segment should record in a
- * {@link org.apache.druid.timeline.partition.DimensionValueSetShardSpec} so the broker can prune segments at query time
+ * declares <em>what</em> a streaming task should collect from its rows so each published segment can be stamped with a
+ * prunable {@link org.apache.druid.timeline.partition.ShardSpec}, letting the broker prune segments at query time
  * without waiting for compaction. Unlike batch partitioning this does not route rows into shards; it only annotates
- * segments with the values they happened to ingest.
+ * segments based on the values they happened to ingest.
  *
- * <p>Use low-to-medium cardinality dimensions; the {@code partitionDimensions} here should be kept in sync with the
- * {@code partitionDimensions} of the compaction config for the same datasource.
+ * <p>This is a polymorphic, pluggable type (mirroring {@link org.apache.druid.indexer.partitions.PartitionsSpec}): each
+ * implementation pairs a per-task {@link StreamingShardSpecCollector} (the "collect something per row, then build a
+ * shard spec" operation) with the shard-spec type it produces. The built-in {@link DimensionValueSetPartitionsSpec}
+ * collects the distinct values of a set of dimensions; future strategies (e.g. min/max ranges or bloom filters) can be
+ * added by registering a new subtype below with its own collector, without changing the task runner.
+ *
+ * <p>An omitted {@code type} defaults to {@link DimensionValueSetPartitionsSpec} for backward compatibility, but an
+ * explicit unknown {@code type} (a typo, or a subtype whose extension isn't loaded here) is rejected by
+ * {@link StrictTypeIdResolver} rather than silently falling back.
  */
-public class StreamingPartitionsSpec
+@JsonTypeResolver(StrictTypeIdResolver.Builder.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, property = "type", defaultImpl = DimensionValueSetPartitionsSpec.class)
+@JsonSubTypes({
+    @JsonSubTypes.Type(name = DimensionValueSetPartitionsSpec.TYPE, value = DimensionValueSetPartitionsSpec.class)
+})
+public interface StreamingPartitionsSpec
 {
-  private final List<String> partitionDimensions;
+  /**
+   * Creates a task-scoped {@link StreamingShardSpecCollector} that accumulates per-row information and stamps each
+   * segment's shard spec with it at publish time. Returns {@code null} when this spec is configured such that there is
+   * nothing to collect (e.g. no dimensions), in which case no collector runs and segments are published unchanged.
+   * One collector is created per task run.
+   */
   @Nullable
-  private final Integer maxValuesPerDimension;
-
-  @JsonCreator
-  public StreamingPartitionsSpec(
-      @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
-      @JsonProperty("maxValuesPerDimension") @Nullable Integer maxValuesPerDimension
-  )
-  {
-    this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
-    if (maxValuesPerDimension != null && maxValuesPerDimension <= 0) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("maxValuesPerDimension must be > 0, got [%d]", maxValuesPerDimension);
-    }
-    this.maxValuesPerDimension = maxValuesPerDimension;
-  }
-
-  public StreamingPartitionsSpec(@Nullable List<String> partitionDimensions)
-  {
-    this(partitionDimensions, null);
-  }
-
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_EMPTY)
-  public List<String> getPartitionDimensions()
-  {
-    return partitionDimensions;
-  }
-
-  @Nullable
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Integer getMaxValuesPerDimension()
-  {
-    return maxValuesPerDimension;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    StreamingPartitionsSpec that = (StreamingPartitionsSpec) o;
-    return Objects.equals(partitionDimensions, that.partitionDimensions)
-           && Objects.equals(maxValuesPerDimension, that.maxValuesPerDimension);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(partitionDimensions, maxValuesPerDimension);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "StreamingPartitionsSpec{"
-           + "partitionDimensions=" + partitionDimensions
-           + ", maxValuesPerDimension=" + maxValuesPerDimension
-           + '}';
-  }
-
-  public static List<String> getPartitionDimensionsOrEmpty(@Nullable StreamingPartitionsSpec spec)
-  {
-    return spec == null ? List.of() : spec.getPartitionDimensions();
-  }
-
-  @Nullable
-  public static Integer getMaxValuesPerDimensionOrNull(@Nullable StreamingPartitionsSpec spec)
-  {
-    return spec == null ? null : spec.getMaxValuesPerDimension();
-  }
+  StreamingShardSpecCollector createCollector();
 }
