@@ -21,12 +21,17 @@ package org.apache.druid.query.filter;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.FilterTestUtils;
 import org.apache.druid.segment.filter.TrueFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.timeline.partition.TypedValueSet;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.HashSet;
 
 public class AndDimFilterTest extends InitializedNullHandlingTest
 {
@@ -101,5 +106,57 @@ public class AndDimFilterTest extends InitializedNullHandlingTest
         DimFilterTestUtils.selector("col1", "2")
     );
     Assertions.assertEquals(filter.toFilter(), filter.toFilter());
+  }
+
+  @Test
+  public void testGetDimensionValueSet_singleConstrainingBranch()
+  {
+    // AND with one constraining branch → value set is that branch.
+    final DimFilter filter = new AndDimFilter(
+        new EqualityFilter("code", ColumnType.LONG, 5L, null),
+        new SelectorDimFilter("region", "us", null)
+    );
+    final TypedValueSet valueSet = filter.getDimensionValueSet("code");
+    Assertions.assertNotNull(valueSet);
+    Assertions.assertEquals(ColumnType.LONG, valueSet.getType());
+    Assertions.assertEquals(new HashSet<>(java.util.List.of("5")), valueSet.getValues());
+    // A dimension no branch constrains → null.
+    Assertions.assertNull(filter.getDimensionValueSet("region"));
+  }
+
+  @Test
+  public void testGetDimensionValueSet_intersectsBranchesOnSameDim()
+  {
+    // code = 5 AND code IN (5,6) → intersection {5}.
+    final DimFilter filter = new AndDimFilter(
+        new EqualityFilter("code", ColumnType.LONG, 5L, null),
+        new TypedInFilter("code", ColumnType.LONG, Arrays.asList(5L, 6L), null, null)
+    );
+    final TypedValueSet valueSet = filter.getDimensionValueSet("code");
+    Assertions.assertNotNull(valueSet);
+    Assertions.assertEquals(new HashSet<>(java.util.List.of("5")), valueSet.getValues());
+  }
+
+  @Test
+  public void testGetDimensionValueSet_disjointBranches_emptyIntersection()
+  {
+    // code = 5 AND code = 6 → empty intersection, which prunes everything.
+    final DimFilter filter = new AndDimFilter(
+        new EqualityFilter("code", ColumnType.LONG, 5L, null),
+        new EqualityFilter("code", ColumnType.LONG, 6L, null)
+    );
+    final TypedValueSet valueSet = filter.getDimensionValueSet("code");
+    Assertions.assertNotNull(valueSet);
+    Assertions.assertTrue(valueSet.getValues().isEmpty());
+  }
+
+  @Test
+  public void testGetDimensionValueSet_noConstrainingBranch_returnsNull()
+  {
+    final DimFilter filter = new AndDimFilter(
+        new SelectorDimFilter("region", "us", null),
+        new SelectorDimFilter("tenant", "a", null)
+    );
+    Assertions.assertNull(filter.getDimensionValueSet("code"));
   }
 }

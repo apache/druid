@@ -25,8 +25,10 @@ import com.google.common.collect.RangeSet;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.timeline.partition.TypedValueSet;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -105,6 +107,30 @@ public interface DimFilter extends Cacheable
    */
   @Nullable
   RangeSet<String> getDimensionRangeSet(String dimension);
+
+  /**
+   * A type-aware, set-membership parallel to {@link #getDimensionRangeSet(String)}, consumed only by the
+   * {@link org.apache.druid.timeline.partition.DimensionValueSetShardSpec} numeric pruning channel
+   * ({@link org.apache.druid.timeline.partition.ShardSpec#possibleInValueDomain(Map)}).
+   *
+   * <p>Returns the stringified match values (carrying the filter's match {@link org.apache.druid.segment.column.ColumnType}),
+   * or {@code null} if this filter does not constrain {@code dimension} to a finite, type-safe value set. Only
+   * equality/IN filters on {@code LONG} return non-null; {@code null} means no numeric-value pruning is possible.
+   *
+   * <p>Separate from {@link #getDimensionRangeSet(String)} on purpose: that feeds the lexicographic
+   * {@link org.apache.druid.timeline.partition.ShardSpec#possibleInDomain(Map)} path used by
+   * {@link org.apache.druid.timeline.partition.DimensionRangeShardSpec}, which must stay string-only to avoid the
+   * numeric-ordering bug of [#19408]/[#19415]. The type carried here lets a shard spec gate pruning on an exact type
+   * match, which a typeless {@code RangeSet<String>} cannot express.
+   *
+   * @param dimension name of the dimension to get the typed value set for
+   * @return the typed set of match values, or {@code null} if not determinable / not type-safe for this filter
+   */
+  @Nullable
+  default TypedValueSet getDimensionValueSet(String dimension)
+  {
+    return null;
+  }
 
   /**
    * @return a HashSet that represents all columns' name which the DimFilter required to do filter.
