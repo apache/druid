@@ -50,6 +50,12 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
   @JsonProperty
   private boolean awaitInitializationOnStart = true;
 
+  // A flag indicating whether the broker maintains the per-datasource segment-stats rollup used to
+  // transparently accelerate the console's `GROUP BY datasource` query over sys.segments. When false,
+  // the rollup is not maintained and those queries fall back to the normal full scan.
+  @JsonProperty
+  private boolean segmentsRollupEnabled = true;
+
   public static BrokerSegmentMetadataCacheConfig create()
   {
     return new BrokerSegmentMetadataCacheConfig();
@@ -80,6 +86,11 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
     return metadataSegmentPollPeriod;
   }
 
+  public boolean isSegmentsRollupEnabled()
+  {
+    return segmentsRollupEnabled;
+  }
+
   public BrokerSegmentMetadataCacheConfig setAwaitInitializationOnStart(boolean awaitInitializationOnStart)
   {
     this.awaitInitializationOnStart = awaitInitializationOnStart;
@@ -102,6 +113,7 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
            "metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
            ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
+           ", segmentsRollupEnabled=" + segmentsRollupEnabled +
            ", metadataRefreshPeriod=" + getMetadataRefreshPeriod() +
            ", metadataColumnTypeMergePolicy=" + getMetadataColumnTypeMergePolicy() +
            '}';
