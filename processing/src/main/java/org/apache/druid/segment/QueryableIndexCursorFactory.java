@@ -49,6 +49,8 @@ import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorOffset;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.utils.CloseableUtils;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -117,59 +119,6 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     return new QueryableIndexCursorHolder(index, spec, timeBoundaryInspector);
   }
 
-  private CursorHolder makeAggregateProjectionCursorHolder(QueryableProjection<QueryableIndex> projection)
-  {
-    return new QueryableIndexCursorHolder(
-        projection.getRowSelector(),
-        projection.getCursorBuildSpec(),
-        QueryableIndexTimeBoundaryInspector.create(projection.getRowSelector())
-    )
-    {
-      @Override
-      protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
-          ColumnCache columnCache,
-          Offset baseOffset
-      )
-      {
-        return projection.wrapColumnSelectorFactory(
-            super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset)
-        );
-      }
-
-      @Override
-      protected VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
-          ColumnCache columnCache,
-          VectorOffset baseOffset
-      )
-      {
-        return projection.wrapVectorColumnSelectorFactory(
-            super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset)
-        );
-      }
-
-      @Override
-      public boolean isPreAggregated()
-      {
-        return true;
-      }
-
-      @Nullable
-      @Override
-      public List<AggregatorFactory> getAggregatorsForPreAggregated()
-      {
-        return projection.getCursorBuildSpec().getAggregators();
-      }
-    };
-  }
-
-  private CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec)
-  {
-    return makeClusteredCursorHolder(
-        spec,
-        Projections.planClusterGroupQuery(new ArrayList<>(index.getClusterGroupSchemas()), spec)
-    );
-  }
-
   /**
    * Build a clustered-base-table cursor holder from an already-computed {@link ClusterGroupQueryPlan}. Exposed so the
    * partial (on-demand) cursor factory can plan the cluster groups once — to decide which group bundles to download —
@@ -187,6 +136,53 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     return makeMultiGroupClusteredCursorHolder(spec, plan);
   }
 
+  @Override
+  public RowSignature getRowSignature()
+  {
+    final ClusteredValueGroupsBaseTableSchema clusterSummary = index.getClusteredBaseSummary();
+    if (clusterSummary != null) {
+      return getClusteredRowSignature(clusterSummary);
+    }
+
+    final LinkedHashSet<String> columns = new LinkedHashSet<>();
+
+    for (final OrderBy orderBy : index.getOrdering()) {
+      columns.add(orderBy.getColumnName());
+    }
+
+    // Add __time after the defined ordering, if __time wasn't part of it.
+    columns.add(ColumnHolder.TIME_COLUMN_NAME);
+    columns.addAll(index.getColumnNames());
+
+    final RowSignature.Builder builder = RowSignature.builder();
+    for (final String column : columns) {
+      final ColumnType columnType = ColumnType.fromCapabilities(index.getColumnCapabilities(column));
+
+      // index.getOrdering() may include columns that don't exist, such as if they were omitted due to
+      // being 100% nulls. Don't add those to the row signature.
+      if (columnType != null) {
+        builder.add(column, columnType);
+      }
+    }
+
+    return builder.build();
+  }
+
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    return index.getColumnCapabilities(column);
+  }
+
+  private CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec)
+  {
+    return makeClusteredCursorHolder(
+        spec,
+        Projections.planClusterGroupQuery(new ArrayList<>(index.getClusterGroupSchemas()), spec)
+    );
+  }
+
   private CursorHolder makeSingleGroupClusteredCursorHolder(
       CursorBuildSpec spec,
       ClusterGroupQueryPlan plan,
@@ -201,15 +197,11 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       );
     }
 
-    // A single cluster group is physically sorted by its group ordering (the segment ordering with the constant
-    // clustering prefix dropped). When the query wants __time ordering and __time is the first non-clustering column,
-    // advertise that __time-first group ordering so the holder reports (and honors, incl. descending) time ordering --
-    // matching the multi-group merge path, so the same query does not depend on how many groups survive pruning.
-    // Otherwise advertise the full clustering-first segment ordering. Note the clustering prefix is constant across
-    // this single group, so both orderings are truthful descriptions of the exposed rows.
+    // Omit cluster key from ordering if the caller requests (and is granted) time ordering.
+    // This way, the returned ordering will begin with {@code __time}.
     final ClusteredValueGroupsBaseTableSchema summary = valueGroup.getSummary();
     final List<OrderBy> ordering =
-        isGroupTimeOrderingRequested(spec, summary) ? summary.getGroupOrdering() : summary.getOrdering();
+        useTimeOrderedCursors(spec, summary) ? summary.getGroupOrdering() : summary.getOrdering();
 
     // groupIndex exposes the group's clustering columns as constant columns, no selector wrapper is needed
     return new QueryableIndexCursorHolder(
@@ -218,30 +210,6 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
         QueryableIndexTimeBoundaryInspector.create(groupIndex),
         ordering
     );
-  }
-
-  /**
-   * Whether the query requests {@code __time} ordering and each cluster group is individually {@code __time}-sorted
-   * (i.e. {@code __time} is the first non-clustering column, so {@link ClusteredValueGroupsBaseTableSchema#getGroupOrdering()}
-   * is {@code __time}-first). In that case a clustered read can serve a globally {@code __time}-ordered cursor: the
-   * single-group path advertises the group's {@code __time}-first ordering directly, and the multi-group path k-way
-   * merges the groups (see {@link #makeTimeMergedClusteredCursorHolder} / {@link MergingClusterGroupCursor}).
-   */
-  private static boolean isGroupTimeOrderingRequested(CursorBuildSpec spec, ClusteredValueGroupsBaseTableSchema summary)
-  {
-    if (Cursors.getTimeOrdering(spec.getPreferredOrdering()) == Order.NONE) {
-      return false;
-    }
-    final List<OrderBy> groupOrdering = summary.getGroupOrdering();
-    if (groupOrdering.isEmpty()) {
-      return false;
-    }
-    final OrderBy first = groupOrdering.get(0);
-    // Require __time to be the first non-clustering column AND natively ASCENDING. Each per-group cursor can flip
-    // ascending->descending on request but never the reverse, so an ascending group ordering guarantees the per-group
-    // cursors emit the direction the merge's heap (and the single-group holder) assume. Druid always writes __time
-    // ascending; guarding here keeps a hypothetical descending-written group from being mis-ordered rather than served.
-    return ColumnHolder.TIME_COLUMN_NAME.equals(first.getColumnName()) && first.getOrder() == Order.ASCENDING;
   }
 
   /**
@@ -286,12 +254,8 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       );
     }
 
-    // Time-ordered merge path: when the query asks for __time ordering AND __time is the first non-clustering column
-    // (so each group, whose clustering prefix is constant, is individually __time-sorted), present a globally
-    // __time-ordered cursor via a k-way merge across the groups instead of the (clustering-first) concatenation. The
-    // per-group build spec carries the query's preferred ordering through rebuildCursorBuildSpec, so each group cursor
-    // independently honors the requested direction (ascending, or descending via a reversed offset).
-    if (isGroupTimeOrderingRequested(spec, clusterSummary)) {
+    // Use k-way merged group cursors for time ordering, or concatenated cursors otherwise.
+    if (useTimeOrderedCursors(spec, clusterSummary)) {
       return makeTimeMergedClusteredCursorHolder(
           holderSuppliers,
           closer,
@@ -299,10 +263,121 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       );
     }
 
+    return makeConcatenatedClusteredCursorHolder(
+        spec,
+        clusteringColumns,
+        clusteringValuesByGroup,
+        holderSuppliers,
+        clusterSummary,
+        closer
+    );
+  }
+
+  /**
+   * Build the row signature for a clustered segment. Top-level columns are empty, so column types are sourced from:
+   *   - the summary's clustering {@link RowSignature} for clustering columns;
+   *   - the first cluster group's sub-index for everything else (all groups share the same data-column shape).
+   */
+  private static RowSignature getClusteredRowSignature(ClusteredValueGroupsBaseTableSchema clusterSummary)
+  {
+    final LinkedHashSet<String> columns = new LinkedHashSet<>();
+
+    for (final OrderBy orderBy : clusterSummary.getOrdering()) {
+      columns.add(orderBy.getColumnName());
+    }
+    columns.add(ColumnHolder.TIME_COLUMN_NAME);
+    columns.addAll(clusterSummary.getColumnNames());
+
+    final RowSignature.Builder builder = RowSignature.builder();
+    for (final String column : columns) {
+      final ColumnType columnType = ColumnType.fromCapabilities(index.getColumnCapabilities(column));
+      if (columnType != null) {
+        builder.add(column, columnType);
+      }
+    }
+    return builder.build();
+  }
+
+  /**
+   * Whether the query requests {@code __time} ordering and each cluster group is individually time-ordered. In that
+   * case, we return time ordered cursors.
+   */
+  private static boolean useTimeOrderedCursors(CursorBuildSpec spec, ClusteredValueGroupsBaseTableSchema summary)
+  {
+    if (Cursors.getTimeOrdering(spec.getPreferredOrdering()) == Order.NONE) {
+      return false;
+    }
+    final List<OrderBy> groupOrdering = summary.getGroupOrdering();
+    if (groupOrdering.isEmpty()) {
+      return false;
+    }
+    final OrderBy first = groupOrdering.get(0);
+    // Require __time to be the first non-clustering column AND natively ASCENDING. Each per-group cursor can flip
+    // ascending->descending on request but never the reverse, so an ascending group ordering guarantees the per-group
+    // cursors emit the direction the merge's heap (and the single-group holder) assume. Druid always writes __time
+    // ascending; guarding here keeps a hypothetical descending-written group from being mis-ordered rather than served.
+    return ColumnHolder.TIME_COLUMN_NAME.equals(first.getColumnName()) && first.getOrder() == Order.ASCENDING;
+  }
+
+  private static CursorHolder makeAggregateProjectionCursorHolder(QueryableProjection<QueryableIndex> projection)
+  {
+    return new QueryableIndexCursorHolder(
+        projection.getRowSelector(),
+        projection.getCursorBuildSpec(),
+        QueryableIndexTimeBoundaryInspector.create(projection.getRowSelector())
+    )
+    {
+      @Override
+      protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
+          ColumnCache columnCache,
+          Offset baseOffset
+      )
+      {
+        return projection.wrapColumnSelectorFactory(
+            super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset)
+        );
+      }
+
+      @Override
+      protected VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
+          ColumnCache columnCache,
+          VectorOffset baseOffset
+      )
+      {
+        return projection.wrapVectorColumnSelectorFactory(
+            super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset)
+        );
+      }
+
+      @Override
+      public boolean isPreAggregated()
+      {
+        return true;
+      }
+
+      @Nullable
+      @Override
+      public List<AggregatorFactory> getAggregatorsForPreAggregated()
+      {
+        return projection.getCursorBuildSpec().getAggregators();
+      }
+    };
+  }
+
+  /**
+   * Builds a {@link CursorHolder} that concatenates cluster group cursors together.
+   */
+  private static CursorHolder makeConcatenatedClusteredCursorHolder(
+      CursorBuildSpec spec,
+      RowSignature clusteringColumns,
+      List<Object[]> clusteringValuesByGroup,
+      List<Supplier<CursorHolder>> holderSuppliers,
+      ClusteredValueGroupsBaseTableSchema clusterSummary,
+      Closer closer
+  )
+  {
     // Initial wrapper state uses the first group's clustering values + a throwing placeholder delegate. The
-    // ConcatenatingCursor immediately calls setDelegate on init (before any selector is exposed). The vector
-    // wrapper carries the query-level max vector size from the build spec, the placeholder delegate can't be
-    // queried for sizing, and the value is constant across groups anyway.
+    // ConcatenatingCursor immediately calls setDelegate on init (before any selector is exposed).
     final int vectorSize = spec.getQueryContext().getVectorSize();
     final ClusteringColumnSelectorFactory wrapperFactory = new ClusteringColumnSelectorFactory(
         ClusteringColumnSelectorFactory.UNINITIALIZED_DELEGATE,
@@ -369,22 +444,15 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       @Override
       public void close()
       {
-        try {
-          closer.close();
-        }
-        catch (IOException e) {
-          throw new RuntimeException(e);
-        }
+        CloseableUtils.closeAndWrapExceptions(closer);
       }
     };
   }
 
   /**
-   * Builds a {@link CursorHolder} whose scalar cursor is a globally {@code __time}-ordered {@link
+   * Builds a {@link CursorHolder} whose non-vectorized cursor is a globally {@code __time}-ordered {@link
    * MergingClusterGroupCursor} k-way-merging the per-group cursors. Only invoked when the query requested {@code
-   * __time} ordering and each group is individually {@code __time}-sorted (see caller). Scalar only for now: {@code
-   * canVectorize()} and {@code asVectorCursor()} keep their {@link CursorHolder} defaults (false / null), so a
-   * vectorizing engine falls back to the scalar path.
+   * __time} ordering and each group is individually {@code __time}-sorted (see caller).
    */
   private static CursorHolder makeTimeMergedClusteredCursorHolder(
       List<Supplier<CursorHolder>> holderSuppliers,
@@ -465,68 +533,4 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       return null;
     }
   };
-
-  @Override
-  public RowSignature getRowSignature()
-  {
-    final ClusteredValueGroupsBaseTableSchema clusterSummary = index.getClusteredBaseSummary();
-    if (clusterSummary != null) {
-      return getClusteredRowSignature(clusterSummary);
-    }
-
-    final LinkedHashSet<String> columns = new LinkedHashSet<>();
-
-    for (final OrderBy orderBy : index.getOrdering()) {
-      columns.add(orderBy.getColumnName());
-    }
-
-    // Add __time after the defined ordering, if __time wasn't part of it.
-    columns.add(ColumnHolder.TIME_COLUMN_NAME);
-    columns.addAll(index.getColumnNames());
-
-    final RowSignature.Builder builder = RowSignature.builder();
-    for (final String column : columns) {
-      final ColumnType columnType = ColumnType.fromCapabilities(index.getColumnCapabilities(column));
-
-      // index.getOrdering() may include columns that don't exist, such as if they were omitted due to
-      // being 100% nulls. Don't add those to the row signature.
-      if (columnType != null) {
-        builder.add(column, columnType);
-      }
-    }
-
-    return builder.build();
-  }
-
-  /**
-   * Build the row signature for a clustered segment. Top-level columns are empty, so column types are sourced from:
-   *   - the summary's clustering {@link RowSignature} for clustering columns;
-   *   - the first cluster group's sub-index for everything else (all groups share the same data-column shape).
-   */
-  private RowSignature getClusteredRowSignature(ClusteredValueGroupsBaseTableSchema clusterSummary)
-  {
-    final LinkedHashSet<String> columns = new LinkedHashSet<>();
-
-    for (final OrderBy orderBy : clusterSummary.getOrdering()) {
-      columns.add(orderBy.getColumnName());
-    }
-    columns.add(ColumnHolder.TIME_COLUMN_NAME);
-    columns.addAll(clusterSummary.getColumnNames());
-
-    final RowSignature.Builder builder = RowSignature.builder();
-    for (final String column : columns) {
-      final ColumnType columnType = ColumnType.fromCapabilities(index.getColumnCapabilities(column));
-      if (columnType != null) {
-        builder.add(column, columnType);
-      }
-    }
-    return builder.build();
-  }
-
-  @Nullable
-  @Override
-  public ColumnCapabilities getColumnCapabilities(String column)
-  {
-    return index.getColumnCapabilities(column);
-  }
 }
