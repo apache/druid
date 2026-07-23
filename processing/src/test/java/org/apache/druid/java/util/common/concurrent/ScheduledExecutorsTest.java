@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -332,5 +333,32 @@ public class ScheduledExecutorsTest
 
     Assertions.assertTrue(completed, "Should continue executing after exception");
     Assertions.assertEquals(3, executionCount.get(), "Should have exactly 3 executions");
+  }
+
+  @Test
+  public void testFixedWithKeepAliveTimeReclaimsIdleThreads() throws Exception
+  {
+    final ScheduledThreadPoolExecutor exec = ScheduledExecutors.fixedWithKeepAliveTime(8, "testKeepAlive-%d", 100);
+    try {
+      // Core threads must be eligible for timeout, otherwise a large corePoolSize would pin that many
+      // threads for the lifetime of the pool even when idle.
+      Assertions.assertTrue(exec.allowsCoreThreadTimeOut(), "Core threads should be allowed to time out");
+
+      final CountDownLatch latch = new CountDownLatch(4);
+      for (int i = 0; i < 4; i++) {
+        exec.submit(latch::countDown);
+      }
+      Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS), "Submitted tasks should run");
+
+      // Once idle past the keep-alive, all workers should be reclaimed and the pool shrink back to zero.
+      final long deadline = System.currentTimeMillis() + 5000;
+      while (exec.getPoolSize() > 0 && System.currentTimeMillis() < deadline) {
+        Thread.sleep(50);
+      }
+      Assertions.assertEquals(0, exec.getPoolSize(), "Idle core threads should be reclaimed");
+    }
+    finally {
+      exec.shutdownNow();
+    }
   }
 }
