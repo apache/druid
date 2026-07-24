@@ -225,9 +225,14 @@ public class ScheduledExecutors
   }
 
   /**
-   * Creates a new {@link ScheduledExecutorService} with a minimum number of threads along with a
-   * keep-alive time for idle non-core threads.
+   * Creates a new {@link ScheduledThreadPoolExecutor} sized to {@code corePoolSize} whose idle threads
+   * are reclaimed after {@code keepAliveTimeInMillis}.
    * <p>
+   * A {@link ScheduledThreadPoolExecutor} never grows beyond its core pool size (its work queue is
+   * unbounded), so {@code corePoolSize} is really a ceiling. Without {@code allowCoreThreadTimeOut(true)}
+   * the keep-alive would never apply to those core threads and they would live for the lifetime of the
+   * pool even while idle. Enabling core-thread timeout lets the pool shrink back toward zero when idle,
+   * so {@code corePoolSize} behaves as a peak-concurrency ceiling rather than a permanent allocation.
    */
   public static ScheduledThreadPoolExecutor fixedWithKeepAliveTime(
       int corePoolSize,
@@ -240,6 +245,7 @@ public class ScheduledExecutors
         Execs.makeThreadFactory(nameFormat)
     );
     scheduledExecutor.setKeepAliveTime(keepAliveTimeInMillis, TimeUnit.MILLISECONDS);
+    scheduledExecutor.allowCoreThreadTimeOut(true);
     return scheduledExecutor;
   }
 }
