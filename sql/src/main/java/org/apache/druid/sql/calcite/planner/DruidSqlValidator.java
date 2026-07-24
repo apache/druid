@@ -154,15 +154,6 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       );
     }
 
-    if (call.getKind() == SqlKind.FIRST_VALUE || call.getKind() == SqlKind.LAST_VALUE) {
-      if (!isUnboundedOrCurrent(lowerBound) || !isUnboundedOrCurrent(upperBound)) {
-        throw buildCalciteContextException(
-            "Framing of FIRST_VALUE/LAST_VALUE is only allowed with UNBOUNDED or CURRENT ROW.",
-            call
-        );
-      }
-    }
-
     if (!targetWindow.isRows() &&
         (!isUnboundedOrCurrent(lowerBound) || !isUnboundedOrCurrent(upperBound))) {
       // this limitation can be lifted when https://github.com/apache/druid/issues/15767 is addressed
