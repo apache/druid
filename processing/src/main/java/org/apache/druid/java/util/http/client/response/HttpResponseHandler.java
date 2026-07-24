@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 
 /**
  * A handler for an HTTP request.
@@ -49,7 +49,9 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 public interface HttpResponseHandler<IntermediateType, FinalType>
 {
   /**
-   * Handles the initial HttpResponse object that comes back from Netty.
+   * Handles the initial HttpResponse object that comes back from Netty. Note that in Netty 4 the initial
+   * {@link HttpResponse} carries no body content; the body arrives as a stream of {@link HttpContent}
+   * objects via {@link #handleChunk}, terminated by an {@link io.netty.handler.codec.http.LastHttpContent}.
    *
    * @param response   response from Netty
    * @param trafficCop flow controller, allows resuming suspended reads
@@ -59,7 +61,7 @@ public interface HttpResponseHandler<IntermediateType, FinalType>
   ClientResponse<IntermediateType> handleResponse(HttpResponse response, TrafficCop trafficCop);
 
   /**
-   * Called for chunked responses, indicating another HttpChunk has arrived.
+   * Called for each non-last {@link HttpContent} chunk delivered by Netty.
    *
    * @param clientResponse last response returned by the prior handleResponse() or handleChunk()
    * @param chunk          the new chunk of data
@@ -69,7 +71,7 @@ public interface HttpResponseHandler<IntermediateType, FinalType>
    */
   ClientResponse<IntermediateType> handleChunk(
       ClientResponse<IntermediateType> clientResponse,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   );
 
