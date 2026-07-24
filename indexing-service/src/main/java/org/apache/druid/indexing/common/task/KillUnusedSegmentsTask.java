@@ -69,7 +69,6 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
- * <p/>
  * The client representation of this task is {@link ClientKillUnusedSegmentsTaskQuery}.
  * JSON serialization fields of this class must correspond to those of {@link
  * ClientKillUnusedSegmentsTaskQuery}, except for {@link #id} and {@link #context} fields.
@@ -86,6 +85,10 @@ import java.util.stream.Collectors;
  * <li> Filter the set of unreferenced segments using load specs from the set of used segments. </li>
  * <li> Kill the filtered set of segments from deep storage. </li>
  * </ol>
+ * Note: When {@link Tasks#USE_CONCURRENT_LOCKS} is true, keep a large buffer
+ * period before killing segments after they have been marked as unused.
+ * Otherwise, there may be a potential data loss if a concurrent APPEND job
+ * upgrades one of the segments that are being killed.
  */
 public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 {
