@@ -138,10 +138,11 @@ class EmbeddedMSQPartialDownloadsTest extends EmbeddedClusterTestBase
     );
 
     // Run 2: the query context disables partial downloads, so the worker downloads segments in full and performs no
-    // range reads.
+    // range reads. The flag is passed as the string "false" (as it can arrive from a client): it is copied into the
+    // worker task context and must be parsed, not unboxed, when building the toolbox and worker context.
     emitter.awaitMetricQuiescent(StorageMonitor.VSF_READ_COUNT, MONITOR_QUIESCE_TIMEOUT_MILLIS);
     emitter.flush();
-    runMsqSelect(Map.of(MultiStageQueryContext.CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS, false));
+    runMsqSelect(Map.of(MultiStageQueryContext.CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS, "false"));
     emitter.awaitMetricQuiescent(StorageMonitor.VSF_READ_COUNT, MONITOR_QUIESCE_TIMEOUT_MILLIS);
     Assertions.assertEquals(
         0L,

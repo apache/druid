@@ -45,6 +45,7 @@ import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -251,7 +252,8 @@ public class TaskToolboxFactory
             taskWorkDir,
             null,
             true,
-            task.getContextValue(
+            // getBoolean (not the raw getContextValue) so a string "true"/"false" is parsed
+            QueryContext.of(task.getContext()).getBoolean(
                 Tasks.VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_KEY,
                 config.isVirtualStoragePartialDownloadsEnabled()
             )

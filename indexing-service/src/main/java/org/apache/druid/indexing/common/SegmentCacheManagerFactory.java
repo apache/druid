@@ -48,6 +48,11 @@ public class SegmentCacheManagerFactory
   private final IndexIO indexIO;
   private final ObjectMapper jsonMapper;
   /**
+   * The injected {@code druid.segmentCache} config. Per-task caches are derived from it (see {@link #manufacturate})
+   * so operator-tuned virtual-storage settings.
+   */
+  private final SegmentLoaderConfig segmentLoaderConfig;
+  /**
    * Resolved lazily (only on the {@code virtualStorage=true} path of {@link #manufacturate}) so that injecting this
    * factory into a component that only builds non-virtual caches (e.g. {@code DruidInputSource}) does not force the
    * process-wide {@link EphemeralStorageLoading} pool to be created on processes that never do on-demand loading
@@ -59,11 +64,13 @@ public class SegmentCacheManagerFactory
   public SegmentCacheManagerFactory(
       IndexIO indexIO,
       @Json ObjectMapper mapper,
+      SegmentLoaderConfig segmentLoaderConfig,
       @EphemeralStorageLoading Provider<StorageLoadingThreadPool> loadingThreadPoolProvider
   )
   {
     this.indexIO = indexIO;
     this.jsonMapper = mapper;
+    this.segmentLoaderConfig = segmentLoaderConfig;
     this.loadingThreadPoolProvider = loadingThreadPoolProvider;
   }
 
@@ -75,10 +82,12 @@ public class SegmentCacheManagerFactory
    */
   public static SegmentCacheManagerFactory createWithOwnedPool(IndexIO indexIO, ObjectMapper mapper)
   {
+    final SegmentLoaderConfig defaults = new SegmentLoaderConfig();
     return new SegmentCacheManagerFactory(
         indexIO,
         mapper,
-        Providers.of(StorageLoadingThreadPool.createFromConfig(new SegmentLoaderConfig().setVirtualStorage(true)))
+        defaults,
+        Providers.of(StorageLoadingThreadPool.createFromConfig(defaults.withVirtualStorage(true)))
     );
   }
 
@@ -111,9 +120,8 @@ public class SegmentCacheManagerFactory
         null
     );
     final SegmentLoaderConfig loaderConfig =
-        new SegmentLoaderConfig()
+        segmentLoaderConfig.withVirtualStorage(virtualStorage)
             .setLocations(Collections.singletonList(locationConfig))
-            .setVirtualStorage(virtualStorage)
             .setVirtualStorageIsEphemeral(virtualStorage)
             .setVirtualStoragePartialDownloadsEnabled(partialDownloadsEnabled);
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
