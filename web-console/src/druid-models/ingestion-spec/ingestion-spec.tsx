@@ -444,7 +444,7 @@ export function getPossibleSystemFieldsForInputSource(inputSource: InputSource):
     case 'local':
       return ['__file_uri', '__file_path'];
 
-    default:
+    default: // 'inline', 'druid', 'delta', 'sql', 'combining'
       return [];
   }
 }
