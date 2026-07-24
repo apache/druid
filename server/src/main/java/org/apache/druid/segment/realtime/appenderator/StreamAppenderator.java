@@ -527,7 +527,11 @@ public class StreamAppenderator implements Appenderator
       addSink(identifier, retVal);
 
       try {
-        segmentAnnouncer.announceSegment(retVal.getSegment());
+        final DataSegment announcedSegment = retVal.getSegment();
+        System.out.println("==== StreamAppenderator: announcing new realtime segment"
+                           + " segmentId=" + announcedSegment.getId()
+                           + " version=" + announcedSegment.getVersion());
+        segmentAnnouncer.announceSegment(announcedSegment);
       }
       catch (IOException e) {
         log.makeAlert(e, "Failed to announce new segment[%s]", schema.getDataSource())
@@ -1239,6 +1243,10 @@ public class StreamAppenderator implements Appenderator
     final DataSegment baseSegment = sink.getSegment();
     final DataSegment newSegment = getUpgradedSegment(baseSegment, upgradedPendingSegment);
 
+    System.out.println("==== StreamAppenderator: announcing upgraded realtime segment"
+                       + " segmentId=" + newSegment.getId()
+                       + " version=" + newSegment.getVersion()
+                       + " upgradedFrom=" + baseSegment.getVersion());
     segmentAnnouncer.announceSegment(newSegment);
     baseSegmentToUpgradedSegments.get(basePendingSegment).add(upgradedPendingSegment);
     upgradedSegmentToBaseSegment.put(upgradedPendingSegment, basePendingSegment);
