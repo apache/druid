@@ -186,7 +186,10 @@ public class NativeQueryMaker implements QueryMaker
     final QueryResponse<T> results = queryLifecycle.runSimple(
         (Query<T>) query,
         authenticationResult,
-        authorizationResult
+        authorizationResult,
+        // SQL merges static defaults into the context; pass the user-set keys so dynamic config can override a
+        // merged-in default but not a value the caller set.
+        plannerContext.authContextKeys()
     );
 
     return mapResultSequence(

@@ -74,6 +74,7 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
+import org.apache.druid.server.broker.QueryConfigSnapshot;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -772,11 +773,9 @@ public class QueryResourceTest
                 emitter,
                 testRequestLogger,
                 AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-                overrideConfig,
                 new AuthConfig(),
                 NoopPolicyEnforcer.instance(),
-                null,
-                Collections.emptyMap(),
+                new QueryConfigSnapshot(overrideConfig.getContext(), null),
                 System.currentTimeMillis(),
                 System.nanoTime()
             )

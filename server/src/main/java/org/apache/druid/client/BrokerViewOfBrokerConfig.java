@@ -36,6 +36,7 @@ import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
+import org.apache.druid.server.broker.QueryConfigSnapshot;
 
 import javax.validation.constraints.NotNull;
 import java.util.Map;
@@ -126,5 +127,14 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   public Map<String, Object> getContext()
   {
     return resolvedDefaultQueryContext.asMap();
+  }
+
+  /**
+   * Captures the resolved default context and the dynamic config atomically, so a single query resolves its context
+   * and blocklist against one consistent snapshot rather than re-reading the live config.
+   */
+  public synchronized QueryConfigSnapshot snapshotForQuery()
+  {
+    return new QueryConfigSnapshot(getContext(), getDynamicConfig());
   }
 }

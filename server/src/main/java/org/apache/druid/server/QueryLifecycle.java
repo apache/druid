@@ -37,9 +37,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
@@ -49,7 +47,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.server.broker.PerSegmentTimeoutConfig;
+import org.apache.druid.server.broker.QueryConfigSnapshot;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -64,7 +62,6 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -99,11 +96,9 @@ public class QueryLifecycle
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
-  private final QueryConfigProvider queryConfigProvider;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
-  private final List<QueryBlocklistRule> queryBlocklist;
-  private final Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig;
+  private final QueryConfigSnapshot configSnapshot;
   private final long startMs;
   private final long startNs;
 
@@ -113,8 +108,11 @@ public class QueryLifecycle
 
   @MonotonicNonNull
   private Query<?> baseQuery;
+  /**
+   * Keys present on the query context as received; the candidate set fed to context-key authorization.
+   */
   @MonotonicNonNull
-  private Set<String> userContextKeys;
+  private Set<String> authorizationContextKeys;
 
   public QueryLifecycle(
       final QueryRunnerFactoryConglomerate conglomerate,
@@ -123,11 +121,9 @@ public class QueryLifecycle
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final AuthorizerMapper authorizerMapper,
-      final QueryConfigProvider queryConfigProvider,
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
-      final List<QueryBlocklistRule> queryBlocklist,
-      final Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig,
+      final QueryConfigSnapshot configSnapshot,
       final long startMs,
       final long startNs
   )
@@ -138,11 +134,9 @@ public class QueryLifecycle
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
-    this.queryConfigProvider = queryConfigProvider;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
-    this.queryBlocklist = queryBlocklist;
-    this.perSegmentTimeoutConfig = perSegmentTimeoutConfig;
+    this.configSnapshot = configSnapshot;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -166,7 +160,21 @@ public class QueryLifecycle
       final AuthorizationResult authorizationResult
   )
   {
-    initialize(query);
+    return runSimple(query, authenticationResult, authorizationResult, null);
+  }
+
+  /**
+   * As {@link #runSimple(Query, AuthenticationResult, AuthorizationResult)}, but takes the context keys the client
+   * actually set. See {@link #initialize(Query, Set)}.
+   */
+  public <T> QueryResponse<T> runSimple(
+      final Query<T> query,
+      final AuthenticationResult authenticationResult,
+      final AuthorizationResult authorizationResult,
+      @Nullable final Set<String> clientProvidedQueryContextKeys
+  )
+  {
+    initialize(query, clientProvidedQueryContextKeys);
 
     final Sequence<T> results;
 
@@ -213,58 +221,38 @@ public class QueryLifecycle
    */
   public void initialize(final Query<?> baseQuery)
   {
+    initialize(baseQuery, null);
+  }
+
+  /**
+   * As {@link #initialize(Query)}, but takes the context keys the client actually set. Pass {@code null} to treat the
+   * whole context as client-set (native queries). The SQL layer merges static defaults into the context, so it must
+   * pass the real client-set keys so dynamic overrides can beat a merged-in default without overriding the client.
+   *
+   * @throws DruidException if the current state is not NEW, which indicates a bug
+   */
+  public void initialize(final Query<?> baseQuery, @Nullable final Set<String> clientProvidedQueryContextKeys)
+  {
     transition(State.NEW, State.INITIALIZED);
 
-    userContextKeys = new HashSet<>(baseQuery.getContext().keySet());
+    final Map<String, Object> baseContext = baseQuery.getContext();
+    authorizationContextKeys = new HashSet<>(baseContext.keySet());
+
+    // Keys the client actually set (native queries pass null, so the whole context is client-set).
+    final Set<String> effectiveClientProvidedQueryContextKeys =
+        clientProvidedQueryContextKeys != null ? clientProvidedQueryContextKeys : baseContext.keySet();
+
     String queryId = baseQuery.getId();
     if (Strings.isNullOrEmpty(queryId)) {
       queryId = UUID.randomUUID().toString();
     }
 
-    // Start with system defaults, apply per-datasource override, then user context wins
-    Map<String, Object> contextWithDefaults = new HashMap<>(queryConfigProvider.getContext());
-    applyPerDatasourcePerSegmentTimeout(baseQuery, contextWithDefaults, queryId);
-    Map<String, Object> finalContext = QueryContexts.override(contextWithDefaults, baseQuery.getContext());
+    final Map<String, Object> finalContext =
+        configSnapshot.resolveContext(baseQuery, effectiveClientProvidedQueryContextKeys);
     finalContext.put(BaseQuery.QUERY_ID, queryId);
 
     this.baseQuery = baseQuery.withOverriddenContext(finalContext);
     this.toolChest = conglomerate.getToolChest(this.baseQuery);
-  }
-
-  /**
-   * If a per-datasource per-segment timeout is configured, injects it into the context defaults.
-   * User context (applied later via {@link QueryContexts#override}) will override this if set explicitly.
-   * In monitorOnly mode, logs the configured timeout but does not inject it.
-   *
-   * For queries involving multiple datasources (e.g., joins or unions), the timeout from the first matching datasource is applied
-   * since getTableNames() returns a Set, the match order is non-deterministic.
-   */
-  private void applyPerDatasourcePerSegmentTimeout(
-      final Query<?> query,
-      final Map<String, Object> contextWithDefaults,
-      final String queryId
-  )
-  {
-    if (perSegmentTimeoutConfig.isEmpty()) {
-      return;
-    }
-
-    for (String tableName : query.getDataSource().getTableNames()) {
-      PerSegmentTimeoutConfig dsConfig = perSegmentTimeoutConfig.get(tableName);
-      if (dsConfig != null) {
-        if (dsConfig.isMonitorOnly()) {
-          log.debug(
-              "Per-segment timeout [%d ms] configured for datasource [%s] in monitorOnly mode (not enforced) for query [%s].",
-              dsConfig.getPerSegmentTimeoutMs(),
-              tableName,
-              queryId
-          );
-        } else {
-          contextWithDefaults.put(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, dsConfig.getPerSegmentTimeoutMs());
-        }
-        return;
-      }
-    }
   }
 
   /**
@@ -290,7 +278,7 @@ public class QueryLifecycle
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
         ),
         Iterables.transform(
-            authConfig.contextKeysToAuthorize(userContextKeys),
+            authConfig.contextKeysToAuthorize(authorizationContextKeys),
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
     );
@@ -328,7 +316,7 @@ public class QueryLifecycle
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
         ),
         Iterables.transform(
-            authConfig.contextKeysToAuthorize(userContextKeys),
+            authConfig.contextKeysToAuthorize(authorizationContextKeys),
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
     );
@@ -364,7 +352,9 @@ public class QueryLifecycle
    */
   private void checkQueryBlocklist()
   {
-    if (queryBlocklist == null || queryBlocklist.isEmpty()) {
+    final List<QueryBlocklistRule> queryBlocklist = configSnapshot.getQueryBlocklist();
+
+    if (queryBlocklist.isEmpty()) {
       return;
     }
 
