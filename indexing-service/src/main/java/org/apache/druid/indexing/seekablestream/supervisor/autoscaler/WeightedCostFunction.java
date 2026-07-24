@@ -37,10 +37,30 @@ public class WeightedCostFunction
   private static final Logger log = new Logger(WeightedCostFunction.class);
 
   /**
-   * Multiplier for a lag amplification factor; it was carefully chosen
-   * during extensive testing as the most balanced multiplier for high-lag recovery.
+   * Normal-path lag amplification multiplier. Critical-lag tiers provide the
+   * urgency amplification, so normal lag uses unamplified recovery time.
    */
-  static final double LAG_AMPLIFICATION_MULTIPLIER = 0.3;
+  static final double LAG_AMPLIFICATION_MULTIPLIER = 0.0;
+
+  /**
+   * Amplification multiplier used once aggregate lag crosses {@link #CRITICAL_LAG_TIER1_FRACTION} of
+   * {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()} (tier 1 of the critical-lag fast path).
+   */
+  static final double CRITICAL_LAG_AMPLIFICATION_MULTIPLIER = 6.0;
+
+  /**
+   * Fraction of {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()} at which tier 1 of the
+   * critical-lag fast path engages: amplification maxes out at {@link #CRITICAL_LAG_AMPLIFICATION_MULTIPLIER}
+   * and the scale-up candidate boundary is bypassed.
+   */
+  static final double CRITICAL_LAG_TIER1_FRACTION = 0.75;
+
+  /**
+   * Fraction of {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()} at which tier 2 of the
+   * critical-lag fast path engages: the cost-minimization search is skipped entirely and the task
+   * count jumps straight to the maximum.
+   */
+  static final double CRITICAL_LAG_TIER2_FRACTION = 0.95;
 
   /**
    * Exponent (< 1) for sublinear busy redistribution in the idle projection:
@@ -106,14 +126,20 @@ public class WeightedCostFunction
     }
 
     // Lag recovery time is decreasing by adding tasks and increasing by ejecting tasks.
-    // In case of increasing lag, we apply an amplification factor to reflect the urgency of addressing lag.
-    // Caution: we rely only on the metrics, the real issues may be absolutely different, up to hardware failure.
+    // Critical lag uses extra amplification; normal lag uses raw recovery time so capacity cost remains meaningful.
+    // Once aggregate lag crosses CRITICAL_LAG_TIER1_FRACTION of criticalLagThreshold, the multiplier is
+    // maxed out at CRITICAL_LAG_AMPLIFICATION_MULTIPLIER (vs unamplified normal recovery).
     final double lagRecoveryTime;
     if (metrics.getAggregateLag() <= 0) {
       lagRecoveryTime = 0;
     } else {
       final double lagPerPartition = metrics.getAggregateLag() / metrics.getPartitionCount();
-      final double amplification = Math.max(1.0, 1.0 + LAG_AMPLIFICATION_MULTIPLIER * Math.log(lagPerPartition));
+      final Long criticalLagThreshold = config.getCriticalLagThreshold();
+      final boolean criticalLag = criticalLagThreshold != null
+          && metrics.getAggregateLag() >= criticalLagThreshold * CRITICAL_LAG_TIER1_FRACTION;
+
+      final double amplificationMultiplier = criticalLag ? CRITICAL_LAG_AMPLIFICATION_MULTIPLIER : LAG_AMPLIFICATION_MULTIPLIER;
+      final double amplification = Math.max(1.0, 1.0 + amplificationMultiplier * Math.log(lagPerPartition));
       final double adjustedProcessingRate = Math.max(avgProcessingRate, MIN_PROCESSING_RATE);
       lagRecoveryTime = metrics.getAggregateLag() * amplification / (proposedTaskCount * adjustedProcessingRate);
     }

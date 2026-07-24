@@ -367,6 +367,7 @@ public class CostBasedAutoScalerMockTest
   {
     CostMetrics metrics = new CostMetrics(
         avgLag,
+        avgLag * PARTITION_COUNT,
         taskCount,
         PARTITION_COUNT,
         pollIdleRatio,

@@ -29,6 +29,7 @@ import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.Cos
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_LAG_WEIGHT;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DOWN_DELAY;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_UP_DELAY;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_SCALE_ACTION_PERIOD;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO;
 
 @SuppressWarnings("TextBlockMigration")
@@ -55,6 +56,7 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"minScaleDownDelay\": \"PT10M\",\n"
                   + "  \"scaleDownDuringTaskRolloverOnly\": true,\n"
                   + "  \"usePollIdleRatio\": false,\n"
+                  + "  \"criticalLagThreshold\": 500000,\n"
                   + "  \"minCostDropPercentForScaling\": 10\n"
                   + "}";
 
@@ -75,6 +77,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertFalse(config.isUsePollIdleRatio());
     Assert.assertFalse(config.isUseTaskCountBoundariesOnScaleUp());
     Assert.assertTrue(config.isUseTaskCountBoundariesOnScaleDown());
+    Assert.assertEquals(Long.valueOf(500000), config.getCriticalLagThreshold());
     Assert.assertEquals(10, config.getMinCostDropPercentForScaling());
 
     // Test serialization back to JSON
@@ -101,7 +104,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(2, config.getTaskCountMin());
 
     // Check defaults
-    Assert.assertEquals(DEFAULT_MIN_SCALE_UP_DELAY.getMillis(), config.getScaleActionPeriodMillis());
+    Assert.assertEquals(DEFAULT_SCALE_ACTION_PERIOD.getMillis(), config.getScaleActionPeriodMillis());
     Assert.assertEquals(DEFAULT_LAG_WEIGHT, config.getLagWeight(), 0.001);
     Assert.assertEquals(DEFAULT_IDLE_WEIGHT, config.getIdleWeight(), 0.001);
     Assert.assertEquals(OPTIMAL_TASK_IDLE_RATIO, config.getOptimalTaskIdleRatio(), 0.001);
@@ -114,6 +117,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertTrue(config.isUseTaskCountBoundariesOnScaleDown());
     Assert.assertNull(config.getTaskCountStart());
     Assert.assertNull(config.getStopTaskCountRatio());
+    Assert.assertNull(config.getCriticalLagThreshold());
     Assert.assertEquals(0, config.getMinCostDropPercentForScaling());
   }
 
@@ -224,6 +228,7 @@ public class CostBasedAutoScalerConfigTest
                                                                       .minScaleDownDelay(Duration.standardMinutes(10))
                                                                       .scaleDownDuringTaskRolloverOnly(true)
                                                                       .usePollIdleRatio(false)
+                                                                      .criticalLagThreshold(500000L)
                                                                       .build();
 
     Assert.assertTrue(config.getEnableTaskAutoScaler());
@@ -241,6 +246,18 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(Duration.standardMinutes(10), config.getMinScaleDownDelay());
     Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
     Assert.assertFalse(config.isUsePollIdleRatio());
+    Assert.assertEquals(Long.valueOf(500000), config.getCriticalLagThreshold());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testValidation_ZeroCriticalLagThreshold()
+  {
+    CostBasedAutoScalerConfig.builder()
+                             .taskCountMax(100)
+                             .taskCountMin(5)
+                             .criticalLagThreshold(0L)
+                             .enableTaskAutoScaler(true)
+                             .build();
   }
 
   @Test

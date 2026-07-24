@@ -241,6 +241,84 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
+  public void testCriticalLagThresholdBypassesScaleUpBoundary()
+  {
+    // aggregateLag = 100_000 * 100 = 10,000,000. With threshold=12,000,000: tier1=9,000,000 (crossed),
+    // tier2=11,400,000 (not crossed), so this exercises tier1 (boundary bypass) without triggering
+    // tier2's emergency jump-to-max.
+    final CostBasedAutoScalerConfig boundedScaleUpConfig = CostBasedAutoScalerConfig
+        .builder()
+        .taskCountMax(100)
+        .taskCountMin(1)
+        .enableTaskAutoScaler(true)
+        .lagWeight(1.0)
+        .idleWeight(0.0)
+        .useTaskCountBoundariesOnScaleUp(true)
+        .criticalLagThreshold(12_000_000L)
+        .build();
+    final CostBasedAutoScaler scaler = createAutoScaler(boundedScaleUpConfig);
+
+    Assert.assertEquals(
+        "Critical lag should bypass the scale-up boundary and jump straight to the argmin",
+        100,
+        scaler.computeOptimalTaskCount(createMetrics(100_000.0, 10, 100, 0.25))
+    );
+
+    // Below the threshold, the boundary still applies as usual.
+    Assert.assertEquals(
+        "Below criticalLagThreshold, the scale-up boundary still limits candidates",
+        13,
+        scaler.computeOptimalTaskCount(createMetrics(10.0, 10, 100, 0.25))
+    );
+  }
+
+  @Test
+  public void testCriticalLagThresholdUsesExactAggregateLag()
+  {
+    final CostBasedAutoScalerConfig boundedScaleUpConfig = CostBasedAutoScalerConfig
+        .builder()
+        .taskCountMax(1_000)
+        .taskCountMin(1)
+        .enableTaskAutoScaler(true)
+        .lagWeight(1.0)
+        .idleWeight(0.0)
+        .useTaskCountBoundariesOnScaleUp(true)
+        .criticalLagThreshold(1_000L)
+        .build();
+    final CostBasedAutoScaler scaler = createAutoScaler(boundedScaleUpConfig);
+
+    Assert.assertEquals(
+        "Exact aggregate lag should engage tier 1 even when integer average lag is zero",
+        1_000,
+        scaler.computeOptimalTaskCount(createMetrics(0.0, 999.0, 10, 1_000, 0.25))
+    );
+  }
+
+  @Test
+  public void testEmergencyLagJumpsStraightToMaxTaskCount()
+  {
+    // aggregateLag = 100_000 * 500 = 50,000,000. With threshold=10,000,000: tier2=9,500,000 is
+    // comfortably crossed, so the argmin search is skipped entirely in favor of the maximum task count.
+    final CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig
+        .builder()
+        .taskCountMax(500)
+        .taskCountMin(1)
+        .enableTaskAutoScaler(true)
+        .lagWeight(0.1)
+        .idleWeight(0.9)
+        .criticalLagThreshold(10_000_000L)
+        .build();
+    final CostBasedAutoScaler scaler = createAutoScaler(config);
+
+    // Idle-heavy weights would normally argue for scaling down, but emergency lag overrides that entirely.
+    Assert.assertEquals(
+        "Emergency lag should jump straight to the maximum task count regardless of idle-favoring weights",
+        500,
+        scaler.computeOptimalTaskCount(createMetrics(100_000.0, 10, 500, 0.9))
+    );
+  }
+
+  @Test
   public void testExtractPollIdleRatio()
   {
     // Null and empty return -1 (no data)
@@ -554,6 +632,35 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
+  public void testCollectMetricsPreservesExactAggregateLag()
+  {
+    final SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
+    final SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
+    final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    final SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
+
+    when(spec.getId()).thenReturn("test-supervisor");
+    when(spec.getDataSources()).thenReturn(List.of("test-datasource"));
+    when(spec.isSuspended()).thenReturn(false);
+    when(supervisor.getIoConfig()).thenReturn(ioConfig);
+    when(ioConfig.getStream()).thenReturn("test-stream");
+    when(ioConfig.getTaskDuration()).thenReturn(Duration.standardHours(1));
+    when(ioConfig.getTaskCount()).thenReturn(10);
+    when(supervisor.getPartitionCount()).thenReturn(1_000);
+    when(supervisor.computeLagStats()).thenReturn(new LagStats(999, 999, 0));
+    when(supervisor.getStats()).thenReturn(Collections.emptyMap());
+
+    final CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig.builder()
+                                                                       .taskCountMax(1_000)
+                                                                       .taskCountMin(1)
+                                                                       .enableTaskAutoScaler(true)
+                                                                       .build();
+    final CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, config, spec, emitter);
+
+    Assert.assertEquals(999.0, scaler.collectMetrics().getAggregateLag(), 0.0);
+  }
+
+  @Test
   public void testCollectMetricsTracksMaxProcessingRateOnlyWhenPollIdleRatioDisabled()
   {
     SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
@@ -635,6 +742,27 @@ public class CostBasedAutoScalerTest
   {
     return new CostMetrics(
         avgPartitionLag,
+        avgPartitionLag * partitionCount,
+        currentTaskCount,
+        partitionCount,
+        pollIdleRatio,
+        3600,
+        1000.0,
+        0.
+    );
+  }
+
+  private CostMetrics createMetrics(
+      double avgPartitionLag,
+      double aggregateLag,
+      int currentTaskCount,
+      int partitionCount,
+      double pollIdleRatio
+  )
+  {
+    return new CostMetrics(
+        avgPartitionLag,
+        aggregateLag,
         currentTaskCount,
         partitionCount,
         pollIdleRatio,
