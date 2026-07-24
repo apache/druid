@@ -203,8 +203,12 @@ public class DruidSqlParser
                              .withContext("sourceType", "sql");
       } else {
         final String theUnexpectedToken = getUnexpectedTokenString(parseException);
+        final String[] tokenDictionary = e.getTokenImages();
+        final int[][] expectedTokenSequences = e.getExpectedTokenSequences();
 
-        if (parserMetadata.isReservedWord(theUnexpectedToken.toUpperCase(Locale.ROOT))) {
+        if (parserMetadata != null
+            && isIdentifierExpected(tokenDictionary, expectedTokenSequences)
+            && parserMetadata.isReservedWord(theUnexpectedToken.toUpperCase(Locale.ROOT))) {
           return InvalidSqlInput
               .exception(
                   e,
@@ -222,8 +226,6 @@ public class DruidSqlParser
               .withContext("token", theUnexpectedToken);
         }
 
-        final String[] tokenDictionary = e.getTokenImages();
-        final int[][] expectedTokenSequences = e.getExpectedTokenSequences();
         final ArrayList<String> expectedTokens = new ArrayList<>(expectedTokenSequences.length);
         for (int[] expectedTokenSequence : expectedTokenSequences) {
           String[] strings = new String[expectedTokenSequence.length];
@@ -253,6 +255,23 @@ public class DruidSqlParser
     }
 
     return InvalidSqlInput.exception(e.getMessage());
+  }
+
+  private static boolean isIdentifierExpected(String[] tokenDictionary, int[][] expectedTokenSequences)
+  {
+    for (int[] expectedTokenSequence : expectedTokenSequences) {
+      if (expectedTokenSequence.length > 0) {
+        final String token = tokenDictionary[expectedTokenSequence[0]];
+        if ("<IDENTIFIER>".equals(token)
+            || "<QUOTED_IDENTIFIER>".equals(token)
+            || "<BACK_QUOTED_IDENTIFIER>".equals(token)
+            || "<BRACKET_QUOTED_IDENTIFIER>".equals(token)
+            || "<UNICODE_QUOTED_IDENTIFIER>".equals(token)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**

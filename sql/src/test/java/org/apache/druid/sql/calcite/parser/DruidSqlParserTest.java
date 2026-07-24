@@ -155,4 +155,16 @@ public class DruidSqlParserTest
         exception.getMessage()
     );
   }
+
+  @Test
+  public void testParse_reservedKeywordOutsideIdentifierContext()
+  {
+    final DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> DruidSqlParser.parse("SELECT * FROM foo GROUP ORDER BY x", false)
+    );
+
+    Assert.assertTrue(exception.getMessage().contains("Received an unexpected token [ORDER]"));
+    Assert.assertFalse(exception.getMessage().contains("is a reserved keyword"));
+  }
 }
