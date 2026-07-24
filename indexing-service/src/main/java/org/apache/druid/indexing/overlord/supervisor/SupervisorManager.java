@@ -76,6 +76,9 @@ public class SupervisorManager implements SupervisorStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(SupervisorManager.class);
 
+  // Caps the autoscaler simulation's range (we're not aware of workloads higher than 1k partitions)..
+  private static final int MAX_SIMULATION_TASK_COUNT = 1000;
+
   private final MetadataSupervisorManager metadataSupervisorManager;
   private final ConcurrentHashMap<String, Pair<Supervisor, SupervisorSpec>> supervisors = new ConcurrentHashMap<>();
   // SupervisorTaskAutoScaler could be null
@@ -674,6 +677,16 @@ public class SupervisorManager implements SupervisorStatsProvider
         "Value of maxProcessingRatePerTask[%d] must be 100 events per second or more",
         maxProcessingRatePerTask
     );
+    InvalidInput.conditionalException(
+        config.getTaskCountMin() >= 1,
+        "Value of taskCountMin[%d] must be 1 or more",
+        config.getTaskCountMin()
+    );
+    InvalidInput.conditionalException(
+        config.getTaskCountMax() <= MAX_SIMULATION_TASK_COUNT,
+        "Value of taskCountMax[%d] must be [%d] or less",
+        config.getTaskCountMax(), MAX_SIMULATION_TASK_COUNT
+    );
 
     // Simulate from the supervisor's live task count unless the caller pins one.
     final int currentTaskCount = Configs.valueOrDefault(
@@ -704,7 +717,7 @@ public class SupervisorManager implements SupervisorStatsProvider
     final int lagStepSize = criticalLag / 20;
     final CostBasedAutoScaler autoscaleSimulator = CostBasedAutoScaler.createSimulator(config, supervisorId);
     for (int i = 0; i < 40; ++i) {
-      final double observedAggregateLag = lagStepSize * i * 1.0;
+      final double observedAggregateLag = (double) lagStepSize * i;
       final CostMetrics costMetrics = new CostMetrics(
           observedAggregateLag / partitionCount,
           simulationTaskCount,
