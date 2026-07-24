@@ -273,6 +273,9 @@ public class SegmentLoaderConfig
   public SegmentLoaderConfig setLocations(List<StorageLocationConfig> locations)
   {
     this.locations = Lists.newArrayList(locations);
+    // Invalidate the lazily-derived combined size so it is recomputed from the new locations (matters when deriving a
+    // config via the copy constructor, which carries over a previously-cached value).
+    this.combinedMaxSize = 0;
     return this;
   }
 

@@ -45,6 +45,7 @@ public class TaskConfig implements TaskDirectory
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
   private static final boolean DEFAULT_STORE_EMPTY_COLUMNS = true;
   private static final long DEFAULT_TMP_STORAGE_BYTES_PER_TASK = -1;
+  private static final boolean DEFAULT_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_ENABLED = true;
 
   @JsonProperty
   private final String baseDir;
@@ -79,6 +80,9 @@ public class TaskConfig implements TaskDirectory
   @JsonProperty
   private final boolean buildV10;
 
+  @JsonProperty
+  private final boolean virtualStoragePartialDownloadsEnabled;
+
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
@@ -91,7 +95,8 @@ public class TaskConfig implements TaskDirectory
       @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
       @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush,
       @JsonProperty("tmpStorageBytesPerTask") @Nullable Long tmpStorageBytesPerTask,
-      @JsonProperty("buildV10") boolean buildV10
+      @JsonProperty("buildV10") boolean buildV10,
+      @JsonProperty("virtualStoragePartialDownloadsEnabled") @Nullable Boolean virtualStoragePartialDownloadsEnabled
   )
   {
     this.baseDir = Configs.valueOrDefault(baseDir, System.getProperty("java.io.tmpdir"));
@@ -118,6 +123,10 @@ public class TaskConfig implements TaskDirectory
     this.storeEmptyColumns = Configs.valueOrDefault(storeEmptyColumns, DEFAULT_STORE_EMPTY_COLUMNS);
     this.tmpStorageBytesPerTask = Configs.valueOrDefault(tmpStorageBytesPerTask, DEFAULT_TMP_STORAGE_BYTES_PER_TASK);
     this.buildV10 = buildV10;
+    this.virtualStoragePartialDownloadsEnabled = Configs.valueOrDefault(
+        virtualStoragePartialDownloadsEnabled,
+        DEFAULT_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_ENABLED
+    );
   }
 
   private TaskConfig(
@@ -131,7 +140,8 @@ public class TaskConfig implements TaskDirectory
       boolean storeEmptyColumns,
       boolean encapsulatedTask,
       long tmpStorageBytesPerTask,
-      boolean buildV10
+      boolean buildV10,
+      boolean virtualStoragePartialDownloadsEnabled
   )
   {
     this.baseDir = baseDir;
@@ -145,6 +155,7 @@ public class TaskConfig implements TaskDirectory
     this.encapsulatedTask = encapsulatedTask;
     this.tmpStorageBytesPerTask = tmpStorageBytesPerTask;
     this.buildV10 = buildV10;
+    this.virtualStoragePartialDownloadsEnabled = virtualStoragePartialDownloadsEnabled;
   }
 
   @JsonProperty
@@ -243,6 +254,12 @@ public class TaskConfig implements TaskDirectory
     return buildV10;
   }
 
+  @JsonProperty
+  public boolean isVirtualStoragePartialDownloadsEnabled()
+  {
+    return virtualStoragePartialDownloadsEnabled;
+  }
+
   private String defaultDir(@Nullable String configParameter, final String defaultVal)
   {
     if (configParameter == null) {
@@ -265,7 +282,8 @@ public class TaskConfig implements TaskDirectory
         storeEmptyColumns,
         encapsulatedTask,
         tmpStorageBytesPerTask,
-        buildV10
+        buildV10,
+        virtualStoragePartialDownloadsEnabled
     );
   }
 
@@ -282,7 +300,8 @@ public class TaskConfig implements TaskDirectory
         storeEmptyColumns,
         encapsulatedTask,
         tmpStorageBytesPerTask,
-        buildV10
+        buildV10,
+        virtualStoragePartialDownloadsEnabled
     );
   }
 }

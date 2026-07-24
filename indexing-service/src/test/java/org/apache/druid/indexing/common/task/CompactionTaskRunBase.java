@@ -1268,7 +1268,12 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
+        cacheDir,
+        null,
+        false,
+        false
+    );
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -1380,7 +1385,12 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
+        cacheDir,
+        null,
+        false,
+        false
+    );
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -1497,7 +1507,12 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), compactSegment.getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
+        cacheDir,
+        null,
+        false,
+        false
+    );
 
     List<String> rowsFromSegment = new ArrayList<>();
     segmentCacheManager.load(compactSegment);
@@ -1754,7 +1769,12 @@ public abstract class CompactionTaskRunBase
   protected List<String> getCSVFormatRowsFromSegments(List<DataSegment> segments) throws Exception
   {
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
+        cacheDir,
+        null,
+        false,
+        false
+    );
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {

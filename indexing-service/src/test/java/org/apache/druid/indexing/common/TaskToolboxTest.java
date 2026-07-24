@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -109,6 +110,9 @@ public class TaskToolboxTest
     EasyMock.expect(task.getId()).andReturn("task_id").anyTimes();
     EasyMock.expect(task.getDataSource()).andReturn("task_ds").anyTimes();
     EasyMock.expect(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)).andReturn(true).anyTimes();
+    EasyMock.expect(task.getContext())
+            .andReturn(ImmutableMap.of(Tasks.VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_KEY, "false"))
+            .anyTimes();
     IndexMergerV9 indexMergerV9 = EasyMock.createMock(IndexMergerV9.class);
     EasyMock.expect(mockIndexMergerV9.create(true)).andReturn(indexMergerV9).anyTimes();
     EasyMock.replay(task, mockHandoffNotifierFactory, mockIndexMergerV9);
