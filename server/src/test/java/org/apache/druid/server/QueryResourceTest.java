@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
@@ -74,6 +75,7 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -103,6 +105,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -1833,6 +1836,83 @@ public class QueryResourceTest
       }
       return true;
     });
+  }
+
+  @Test
+  public void testBlocklistedQueryReturnsForbidden() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    final QueryResource blockingQueryResource = createQueryResourceWithBlocklist(
+        new DefaultQueryBlocklistRule("block-mmx", ImmutableSet.of("mmx_metrics"), null, null)
+    );
+
+    final Response response = blockingQueryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(Status.FORBIDDEN.getStatusCode(), response.getStatus());
+
+    MatcherAssert.assertThat(
+        ((ErrorResponse) response.getEntity()).getUnderlyingException(),
+        DruidExceptionMatcher.forbidden().expectMessageContains("blocked by rule[block-mmx]")
+    );
+  }
+
+  @Test
+  public void testNonBlocklistedQueryIsNotAffectedByBlocklist() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    final QueryResource blockingQueryResource = createQueryResourceWithBlocklist(
+        new DefaultQueryBlocklistRule("block-other", ImmutableSet.of("some_other_datasource"), null, null)
+    );
+
+    final MockHttpServletResponse response = expectAsyncRequestFlow(
+        testServletRequest,
+        SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8),
+        blockingQueryResource
+    );
+
+    Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+  }
+
+  private QueryResource createQueryResourceWithBlocklist(QueryBlocklistRule... rules)
+  {
+    final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig = Mockito.mock(BrokerViewOfBrokerConfig.class);
+    Mockito.when(brokerViewOfBrokerConfig.getDynamicConfig()).thenReturn(
+        new BrokerDynamicConfig.Builder().withQueryBlocklist(Arrays.asList(rules)).build()
+    );
+
+    return new QueryResource(
+        new QueryLifecycleFactory(
+            CONGLOMERATE,
+            TEST_SEGMENT_WALKER,
+            new DefaultGenericQueryMetricsFactory(),
+            emitter,
+            testRequestLogger,
+            new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            new DefaultQueryConfig(Map.of()),
+            brokerViewOfBrokerConfig
+        ),
+        jsonMapper,
+        queryScheduler,
+        null,
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
+    );
   }
 
   private void expectPermissiveHappyPathAuth()

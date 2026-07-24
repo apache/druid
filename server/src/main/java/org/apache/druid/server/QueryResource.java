@@ -25,8 +25,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -180,6 +182,15 @@ public class QueryResource implements QueryCountStatsProvider
       final AuthorizationResult authResult;
       try {
         authResult = queryLifecycle.authorize(req);
+      }
+      catch (DruidException e) {
+        // Handled separately from QueryException so that the exception's own category (for example FORBIDDEN for a
+        // blocklisted query) determines the status code. Wrapping it below would erase that and report a 500.
+        return QueryResultPusher.handleDruidExceptionBeforeResponseStarted(
+            e,
+            MediaType.valueOf(io.getResponseWriter().getResponseType()),
+            ImmutableMap.of()
+        );
       }
       catch (RuntimeException e) {
         final QueryException qe;

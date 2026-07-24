@@ -23,6 +23,7 @@ import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.TaskBuilder;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.DefaultQueryBlocklistRule;
 import org.apache.druid.server.QueryBlocklistRule;
@@ -43,6 +44,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -125,6 +130,50 @@ public class EmbeddedBrokerDynamicConfigTest extends EmbeddedClusterTestBase
     updateBrokerDynamicConfig(BrokerDynamicConfig.builder().build());
     String finalResult = cluster.callApi().runSql("SELECT COUNT(*) FROM %s", dataSource);
     Assertions.assertFalse(finalResult.isBlank());
+  }
+
+  /**
+   * A blocklisted query must be rejected with 403 on both the native and the SQL endpoint. The native endpoint
+   * previously reported 500 because it wrapped the blocklist {@code DruidException} into a generic
+   * {@code QueryInterruptedException}, discarding the FORBIDDEN category.
+   */
+  @Test
+  @Timeout(30)
+  public void testBlocklistedQueryReturnsForbiddenOnBothEndpoints() throws Exception
+  {
+    updateBrokerDynamicConfig(
+        BrokerDynamicConfig.builder()
+                           .withQueryBlocklist(List.of(
+                               new DefaultQueryBlocklistRule("block-test-datasource", Set.of(dataSource), null, null)
+                           ))
+                           .build()
+    );
+
+    try {
+      final String nativeQuery = StringUtils.format(
+          "{\"queryType\":\"timeseries\",\"dataSource\":\"%s\",\"granularity\":\"all\","
+          + "\"intervals\":[\"2000/3000\"],\"aggregations\":[{\"type\":\"count\",\"name\":\"rows\"}]}",
+          dataSource
+      );
+      Assertions.assertEquals(403, postToBroker("/druid/v2", nativeQuery).statusCode());
+
+      final String sqlQuery = StringUtils.format("{\"query\":\"SELECT COUNT(*) FROM \\\"%s\\\"\"}", dataSource);
+      Assertions.assertEquals(403, postToBroker("/druid/v2/sql", sqlQuery).statusCode());
+    }
+    finally {
+      updateBrokerDynamicConfig(BrokerDynamicConfig.builder().build());
+    }
+  }
+
+  private HttpResponse<String> postToBroker(String path, String body) throws Exception
+  {
+    final HttpRequest request = HttpRequest
+        .newBuilder(URI.create(getServerUrl(broker) + path))
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(body))
+        .build();
+
+    return HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
   }
 
   @Test
