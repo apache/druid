@@ -193,7 +193,8 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
     final ClusteringColumnSelectorFactory wrapperFactory = new ClusteringColumnSelectorFactory(
         ClusteringColumnSelectorFactory.UNINITIALIZED_DELEGATE,
         clusteringColumns,
-        clusteringValuesByGroup.getFirst()
+        clusteringValuesByGroup.getFirst(),
+        spec.getVirtualColumns()
     );
     final ConcatenatingCursor cursor = new ConcatenatingCursor(
         holderSuppliers,

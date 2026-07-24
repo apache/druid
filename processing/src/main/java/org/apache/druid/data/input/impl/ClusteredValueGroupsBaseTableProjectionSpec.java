@@ -317,6 +317,9 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
   /**
    * Rules to keep virtual columns definitions reasonable:
    * <ul>
+   *   <li><b>dot notation</b>: a virtual column that {@link VirtualColumn#usesDotNotation()} is referenced as
+   *   {@code name.subfield} rather than by a fixed output name, so it has no stable identity to materialize or cluster
+   *   on; it is rejected outright.</li>
    *   <li><b>inputs</b>: every input of a virtual column must be a stored column (declared in {@code columns}) or
    *   another virtual column in the spec.</li>
    *   <li><b>outputs</b>: every virtual column must either be materialized (its output declared in {@code columns}) or
@@ -343,6 +346,12 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
     // input rule: every input must be a stored column or another virtual column; an input that is a virtual column
     // makes that virtual column an intermediary, exempt from having to be materialized itself.
     for (VirtualColumn virtualColumn : all) {
+      if (virtualColumn.usesDotNotation()) {
+        throw InvalidInput.exception(
+            "virtual column [%s] uses dot notation, which is not supported for clusteredValueGroups base table specs",
+            virtualColumn.getOutputName()
+        );
+      }
       for (String input : virtualColumn.requiredColumns()) {
         final boolean isStored = columnNames.contains(input);
         final boolean isVirtual = virtualColumns.exists(input);

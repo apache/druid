@@ -405,6 +405,35 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
   }
 
   @Test
+  void testQueryVirtualColumnShadowingClusteringColumnWinsOverConstant()
+  {
+    try (OnheapIncrementalIndex index = standardTwoGroup()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      // A query VC named "tenant" shadows the clustering column of the same name (computed from region instead), and a
+      // retained VC "label" reads it. The superclass resolves virtual columns before physical columns, so "label" must
+      // see the VC's value (upper(region)), NOT the per-group clustering constant. If the clustering-constant
+      // interception fired first, "label" would silently read "acme"/"globex" instead.
+      final CursorBuildSpec spec = CursorBuildSpec.builder()
+          .setVirtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("tenant", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+              new ExpressionVirtualColumn("label", "concat(tenant, '_x')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .build();
+      try (CursorHolder holder = factory.makeCursorHolder(spec)) {
+        final Cursor cursor = holder.asCursor();
+        final DimensionSelector sel =
+            cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("label"));
+        final List<String> out = new ArrayList<>();
+        while (!cursor.isDone()) {
+          out.add(sel.getRow().size() == 0 ? null : sel.lookupName(sel.getRow().get(0)));
+          cursor.advance();
+        }
+        Assertions.assertEquals(List.of("US-EAST-1_x", "US-WEST-2_x", "EU-WEST-1_x"), out);
+      }
+    }
+  }
+
+  @Test
   void testFilterOnVirtualColumnReadingClusteringColumnResolvesViaClusteringConstant()
   {
     try (OnheapIncrementalIndex index = standardTwoGroup()) {

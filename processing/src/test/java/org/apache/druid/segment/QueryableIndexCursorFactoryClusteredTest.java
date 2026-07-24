@@ -245,6 +245,32 @@ class QueryableIndexCursorFactoryClusteredTest
   }
 
   @Test
+  void testQueryVcShadowingClusteringColumnWinsOverConstantViaAsCursor()
+  {
+    // A query VC named "tenant" shadows the clustering column of the same name (computed from region instead). The
+    // concat wrapper must NOT serve the per-group clustering constant for "tenant"; it must defer to the delegate,
+    // which resolves the query VC (virtual columns win over physical columns). Two groups + no time ordering => the
+    // concatenating path. Without the shadow guard, reads of "tenant" would return the clustering constant
+    // ("acme"/"globex") instead of upper(region).
+    segmentIndex = standardTwoGroup();
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        segmentIndex,
+        QueryableIndexTimeBoundaryInspector.create(segmentIndex)
+    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+        .setVirtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("tenant", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .build();
+    try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+      Assertions.assertEquals(
+          List.of("US-EAST-1", "US-WEST-2", "EU-WEST-1"),
+          collectDimension(holder.asCursor(), "tenant")
+      );
+    }
+  }
+
+  @Test
   void testQueryVcEquivalentToClusteringColumnSingleGroupReadsMaterializedColumn()
   {
     // Single surviving group (filter on the equivalent VC prunes to one group), exercising the single-group cursor

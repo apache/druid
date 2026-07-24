@@ -421,13 +421,15 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     final ClusteringColumnSelectorFactory wrapperFactory = new ClusteringColumnSelectorFactory(
         ClusteringColumnSelectorFactory.UNINITIALIZED_DELEGATE,
         clusteringColumns,
-        clusteringValuesByGroup.get(0)
+        clusteringValuesByGroup.get(0),
+        spec.getVirtualColumns()
     );
     final ClusteringVectorColumnSelectorFactory vectorWrapperFactory = new ClusteringVectorColumnSelectorFactory(
         UNINITIALIZED_VECTOR_DELEGATE,
         clusteringColumns,
         clusteringValuesByGroup.get(0),
-        vectorSize
+        vectorSize,
+        spec.getVirtualColumns()
     );
 
     final ConcatenatingCursor cursor = new ConcatenatingCursor(
