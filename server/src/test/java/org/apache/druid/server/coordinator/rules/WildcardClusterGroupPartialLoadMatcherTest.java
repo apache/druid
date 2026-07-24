@@ -484,10 +484,11 @@ class WildcardClusterGroupPartialLoadMatcherTest
   }
 
   @Test
-  void testNoMatchOnAppendedSegmentReturnsNull()
+  void testNoMatchOnAppendedSegmentReturnsEmptyLoad()
   {
-    // Appended segment (partitionNum=2, numCorePartitions=2): not part of the core partition group, so no
-    // empty load. The matcher returns null and the rule's cannot-match handling takes over.
+    // A clustered, compatible segment whose tuples match no pattern resolves to the empty load regardless of whether
+    // it is a core or an appended (partitionNum >= numCorePartitions) partition. The empty result keeps the segment
+    // announceable, so a fully-unmatched shard group can still be placed rather than dropped from every tier.
     final ClusterGroupTuples groups = new ClusterGroupTuples(
         tenantRegion(),
         List.of(List.of("acme", "us-east-1"))
@@ -497,14 +498,17 @@ class WildcardClusterGroupPartialLoadMatcherTest
         List.of(Map.of("tenant", "nobody")),
         null
     );
-    Assertions.assertNull(matcher.match(appended, BASE_LOAD_SPEC));
+    final PartialLoadMatcher.MatchResult result = matcher.match(appended, BASE_LOAD_SPEC);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals("partialClusterGroup", result.wrappedLoadSpec().get("type"));
+    Assertions.assertEquals(List.of(), result.wrappedLoadSpec().get("clusterGroupIndices"));
   }
 
   @Test
-  void testNoMatchOnSegmentWithoutCorePartitionsReturnsNull()
+  void testNoMatchOnSegmentWithoutCorePartitionsReturnsEmptyLoad()
   {
-    // numCorePartitions == 0: append-only ingestion has no core partition group, so no completeness requirement.
-    // The matcher returns null and the rule's cannot-match handling takes over.
+    // numCorePartitions == 0 is treated like any other clustered, compatible segment: an unmatched resolve returns
+    // the empty load so the segment can still be announced, not dropped.
     final ClusterGroupTuples groups = new ClusterGroupTuples(
         tenantRegion(),
         List.of(List.of("acme", "us-east-1"))
@@ -514,7 +518,9 @@ class WildcardClusterGroupPartialLoadMatcherTest
         List.of(Map.of("tenant", "nobody")),
         null
     );
-    Assertions.assertNull(matcher.match(noCore, BASE_LOAD_SPEC));
+    final PartialLoadMatcher.MatchResult result = matcher.match(noCore, BASE_LOAD_SPEC);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(List.of(), result.wrappedLoadSpec().get("clusterGroupIndices"));
   }
 
   @Test
