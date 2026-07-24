@@ -34,8 +34,12 @@ import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTest
 {
@@ -100,10 +104,139 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
   }
 
   @Test
+  public void testApplyUsesRetainedLookupExtractorWhenSupported()
+  {
+    final AtomicReference<Map<String, String>> currentMap =
+        new AtomicReference<>(ImmutableMap.of("foo", "bar-v1"));
+    final AtomicInteger retainedAcquisitions = new AtomicInteger();
+    final AtomicInteger retainedCloses = new AtomicInteger();
+
+    final LookupExtractorFactory factory = new RetainingLookupExtractorFactory(
+        () -> new MapLookupExtractor(ImmutableMap.of("foo", "stale"), true),
+        () -> {
+          retainedAcquisitions.incrementAndGet();
+          return Optional.of(
+              RetainedLookupExtractor.create(
+                  new MapLookupExtractor(currentMap.get(), true),
+                  retainedCloses::incrementAndGet
+              )
+          );
+        }
+    );
+
+    final RegisteredLookupExtractionFn fn = getRegisteredLookupExtractionFn(factory);
+
+    Assert.assertEquals("bar-v1", fn.apply((Object) "foo"));
+    currentMap.set(ImmutableMap.of("foo", "bar-v2"));
+    Assert.assertEquals("bar-v2", fn.apply("foo"));
+    Assert.assertEquals(2, retainedAcquisitions.get());
+    Assert.assertEquals(2, retainedCloses.get());
+  }
+
+  private static RegisteredLookupExtractionFn getRegisteredLookupExtractionFn(LookupExtractorFactory factory)
+  {
+    final LookupExtractorFactoryContainerProvider manager = new LookupExtractorFactoryContainerProvider()
+    {
+      @Override
+      public Set<String> getAllLookupNames()
+      {
+        return Collections.singleton(LOOKUP_NAME);
+      }
+
+      @Override
+      public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+      {
+        return LOOKUP_NAME.equals(lookupName)
+               ? Optional.of(new LookupExtractorFactoryContainer("v0", factory))
+               : Optional.empty();
+      }
+
+      @Override
+      public String getCanonicalLookupName(String lookupName)
+      {
+        return lookupName;
+      }
+    };
+
+    return new RegisteredLookupExtractionFn(
+        manager,
+        LOOKUP_NAME,
+        true,
+        null,
+        false,
+        false
+    );
+  }
+
+  @Test
+  public void testApplyUsesRetainedLookupExtractorWhenFactoryIsNotInitiallyPresent()
+  {
+    final AtomicInteger managerLookups = new AtomicInteger();
+    final AtomicInteger retainedAcquisitions = new AtomicInteger();
+    final AtomicInteger retainedCloses = new AtomicInteger();
+
+    final LookupExtractorFactoryContainerProvider manager = new LookupExtractorFactoryContainerProvider()
+    {
+      @Override
+      public Set<String> getAllLookupNames()
+      {
+        return Collections.singleton(LOOKUP_NAME);
+      }
+
+      @Override
+      public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+      {
+        if (!LOOKUP_NAME.equals(lookupName) || managerLookups.incrementAndGet() == 1) {
+          return Optional.empty();
+        }
+
+        return Optional.of(
+            new LookupExtractorFactoryContainer(
+                "v0",
+                new RetainingLookupExtractorFactory(
+                    () -> LOOKUP_EXTRACTOR,
+                    () -> {
+                      retainedAcquisitions.incrementAndGet();
+                      return Optional.of(
+                          RetainedLookupExtractor.create(
+                              LOOKUP_EXTRACTOR,
+                              retainedCloses::incrementAndGet
+                          )
+                      );
+                    }
+                )
+            )
+        );
+      }
+
+      @Override
+      public String getCanonicalLookupName(String lookupName)
+      {
+        return lookupName;
+      }
+    };
+
+    final RegisteredLookupExtractionFn fn = new RegisteredLookupExtractionFn(
+        manager,
+        LOOKUP_NAME,
+        true,
+        null,
+        false,
+        false
+    );
+
+    Assert.assertEquals("bar", fn.apply("foo"));
+    Assert.assertEquals("bar", fn.apply("foo"));
+    Assert.assertEquals(3, managerLookups.get());
+    Assert.assertEquals(2, retainedAcquisitions.get());
+    Assert.assertEquals(2, retainedCloses.get());
+  }
+
+  @Test
   public void testMissingDelegation()
   {
     final LookupExtractorFactoryContainerProvider manager = EasyMock.createStrictMock(LookupReferencesManager.class);
-    EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(Optional.empty()).once();
+    EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(Optional.empty()).times(2);
     EasyMock.replay(manager);
 
     expectedException.expectMessage("Lookup [some lookup] not found");
@@ -116,6 +249,29 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
           true,
           false
       ).apply("foo");
+    }
+    finally {
+      EasyMock.verify(manager);
+    }
+  }
+
+  @Test
+  public void testMissingLookupCacheKeyFails()
+  {
+    final LookupExtractorFactoryContainerProvider manager = EasyMock.createStrictMock(LookupReferencesManager.class);
+    EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(Optional.empty()).once();
+    EasyMock.replay(manager);
+
+    expectedException.expectMessage("Lookup [some lookup] not found");
+    try {
+      new RegisteredLookupExtractionFn(
+          manager,
+          LOOKUP_NAME,
+          true,
+          "missing",
+          true,
+          false
+      ).getCacheKey();
     }
     finally {
       EasyMock.verify(manager);
