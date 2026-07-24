@@ -21,11 +21,13 @@ package org.apache.druid.client.selector;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.DataSegmentInterner;
 import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -190,14 +192,121 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   }
 
   @Nullable
-  public <T> QueryableDruidServer pick(@Nullable Query<T> query, CloneQueryMode cloneQueryMode)
+  public <T> QueryableDruidServer pick(@Nullable final Query<T> query, final CloneQueryMode cloneQueryMode)
+  {
+    return pick(query, cloneQueryMode, getQueryableHistoricalTiers(query));
+  }
+
+  @Nullable
+  public <T> QueryableDruidServer pick(
+      @Nullable final Query<T> query,
+      final CloneQueryMode cloneQueryMode,
+      @Nullable final Set<String> queryableHistoricalTiers
+  )
   {
     synchronized (this) {
-      if (!historicalServers.isEmpty()) {
-        return historicalTierStrategy.pick(query, filter.getQueryableServers(historicalServers, cloneQueryMode), segment.get());
+      if (queryableHistoricalTiers != null && queryableHistoricalTiers.isEmpty()) {
+        return null;
+      }
+      if (!historicalServers.isEmpty() || queryableHistoricalTiers != null) {
+        final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> queryableHistoricalServers =
+            getQueryableHistoricalServers(
+                filter.getQueryableServers(historicalServers, cloneQueryMode),
+                queryableHistoricalTiers
+            );
+        return historicalTierStrategy.pick(query, queryableHistoricalServers, segment.get());
       }
       return realtimeTierStrategy.pick(query, realtimeServers, segment.get());
     }
+  }
+
+  public <T> boolean hasQueryableServer(@Nullable final Query<T> query, final CloneQueryMode cloneQueryMode)
+  {
+    return hasQueryableServer(getQueryableHistoricalTiers(query), cloneQueryMode);
+  }
+
+  public boolean hasQueryableServer(
+      @Nullable final Set<String> queryableHistoricalTiers,
+      final CloneQueryMode cloneQueryMode
+  )
+  {
+    synchronized (this) {
+      if (queryableHistoricalTiers != null) {
+        return !queryableHistoricalTiers.isEmpty()
+               && !historicalServers.isEmpty()
+               && hasQueryableHistoricalServer(
+                   filter.getQueryableServers(historicalServers, cloneQueryMode),
+                   queryableHistoricalTiers
+               );
+      }
+      if (!historicalServers.isEmpty()) {
+        return hasServers(filter.getQueryableServers(historicalServers, cloneQueryMode));
+      }
+      return hasServers(realtimeServers);
+    }
+  }
+
+  @Nullable
+  private static <T> Set<String> getQueryableHistoricalTiers(@Nullable final Query<T> query)
+  {
+    if (query == null) {
+      return null;
+    }
+
+    final QueryContext queryContext = query.context();
+    return queryContext == null ? null : queryContext.getQueryableHistoricalTiers();
+  }
+
+  private Int2ObjectRBTreeMap<Set<QueryableDruidServer>> getQueryableHistoricalServers(
+      final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> queryableServers,
+      @Nullable final Set<String> queryableHistoricalTiers
+  )
+  {
+    if (queryableHistoricalTiers == null) {
+      return queryableServers;
+    }
+
+    final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> filteredServers =
+        new Int2ObjectRBTreeMap<>(historicalTierStrategy.getComparator());
+    for (final Int2ObjectMap.Entry<Set<QueryableDruidServer>> entry : queryableServers.int2ObjectEntrySet()) {
+      final Set<QueryableDruidServer> priorityServers = new HashSet<>();
+      for (final QueryableDruidServer server : entry.getValue()) {
+        if (queryableHistoricalTiers.contains(server.getServer().getTier())) {
+          priorityServers.add(server);
+        }
+      }
+      if (!priorityServers.isEmpty()) {
+        filteredServers.put(entry.getIntKey(), priorityServers);
+      }
+    }
+
+    return filteredServers;
+  }
+
+  private static boolean hasQueryableHistoricalServer(
+      final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> queryableServers,
+      final Set<String> queryableHistoricalTiers
+  )
+  {
+    for (final Set<QueryableDruidServer> priorityServers : queryableServers.values()) {
+      for (final QueryableDruidServer server : priorityServers) {
+        if (queryableHistoricalTiers.contains(server.getServer().getTier())) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  private static boolean hasServers(final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> servers)
+  {
+    for (final Set<QueryableDruidServer> priorityServers : servers.values()) {
+      if (!priorityServers.isEmpty()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override
