@@ -762,15 +762,26 @@
 
     <dependency>
       <groupId>org.apache.iceberg</groupId>
+      <artifactId>iceberg-data</artifactId>
+      <version>${iceberg.core.version}</version>
+      <exclusions>
+        <!-- iceberg-data pulls orc-core:nohive:1.9.x which collides with druid-orc-extensions orc-core:1.7.x
+             on the embedded-tests classpath. v2 reader only handles Parquet, so the orc transitive is unused. -->
+        <exclusion>
+          <groupId>org.apache.orc</groupId>
+          <artifactId>orc-core</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-parquet</artifactId>
       <version>${iceberg.core.version}</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.parquet</groupId>
       <artifactId>parquet-column</artifactId>
       <version>${parquet.version}</version>
-      <scope>test</scope>
     </dependency>
 
     <dependency>
@@ -810,6 +821,7 @@
               <ignoredUnusedDeclaredDependency>software.amazon.awssdk:sts</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>software.amazon.awssdk:kms</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>org.apache.iceberg:iceberg-gcp</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>org.apache.iceberg:iceberg-data</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>com.google.cloud:google-cloud-storage</ignoredUnusedDeclaredDependency>
             </ignoredUnusedDeclaredDependencies>
           </configuration>
