@@ -154,6 +154,13 @@ class QueryableIndexCursorFactoryClusteredTest
     }
   }
 
+  // VIRTUAL_CLUSTER_SPEC (below) validates its materialized virtual columns' output types at construction, which infers
+  // expression output types and requires ExpressionProcessing. This static field is built at class load, before the
+  // @BeforeAll that initializes the engines, so initialize ExpressionProcessing here first.
+  static {
+    ExpressionProcessing.initializeForTests();
+  }
+
   /**
    * Cluster spec for a segment clustered on {@code tenant_lower := lower(tenant)} (a clustering column produced by a
    * group VC) plus a non-clustering materialized {@code region_upper := upper(region)} column. The raw inputs

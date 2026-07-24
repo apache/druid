@@ -230,6 +230,50 @@ class ClusteredValueGroupsBaseTableProjectionSpecTest extends InitializedNullHan
   }
 
   @Test
+  void testVirtualColumnOutputTypeMismatchIsRejected()
+  {
+    // region_upper := upper(region) produces STRING, but the column it materializes is declared LONG -> rejected.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .virtualColumns(VirtualColumns.create(
+                new ExpressionVirtualColumn("region_upper", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+            ))
+            .columns(
+                new StringDimensionSchema("tenant"),
+                new StringDimensionSchema("region"),
+                new LongDimensionSchema("region_upper"),
+                new LongDimensionSchema("__time")
+            )
+            .clusteringColumns("tenant")
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("[region_upper]"));
+    Assertions.assertTrue(e.getMessage().contains("STRING"));
+    Assertions.assertTrue(e.getMessage().contains("LONG"));
+  }
+
+  @Test
+  void testNumericVirtualColumnMatchingDeclaredTypeIsValid()
+  {
+    // region_len := strlen(region) produces LONG and is declared LONG -> accepted (proves numeric output-type inference
+    // works, not just STRING).
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .virtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("region_len", "strlen(region)", ColumnType.LONG, TestExprMacroTable.INSTANCE)
+        ))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new LongDimensionSchema("region_len"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
+        .build();
+    Assertions.assertNotNull(spec.getVirtualColumns().getVirtualColumn("region_len"));
+  }
+
+  @Test
   void testDotNotationVirtualColumnIsRejected()
   {
     // Dot-notation virtual columns are referenced as "name.subfield" and have no fixed output identity to materialize

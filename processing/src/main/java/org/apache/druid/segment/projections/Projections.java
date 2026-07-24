@@ -710,28 +710,6 @@ public class Projections
    * Build a query-level remap of {@code queryVirtualColumnOutputName -> materializedColumnName} for each query virtual
    * column that has an equivalent materialized column in the clustered base table (a clustering column produced by a
    * group virtual column, or a non-clustering materialized virtual-column output).
-   * <p>
-   * A remap target must be a column the per-group cursor can actually serve, so {@code materializedColumns} restricts
-   * candidates to the summary's stored columns (clustering columns included by construction). Group virtual columns
-   * whose output name is not a stored column are metadata-only carriers; notably the {@code __virtualGranularity}
-   * query-granularity carrier, and are never valid substitution targets; a query VC equivalent to such a carrier is
-   * left in place to recompute (e.g. from {@code __time}) rather than remapped to an unreadable column.
-   * <p>
-   * The substitution is always a pure optimisation: {@code ClusteredValueGroupsBaseTableProjectionSpec} requires every
-   * clustered virtual column's inputs to be stored columns, so a query VC equivalent to one can always be recomputed
-   * from stored columns and reading the materialized column merely skips that recomputation.
-   * <p>
-   * A query VC that {@code queryFilter} references is left unremapped when the filter can't rewrite its required
-   * columns ({@link Filter#supportsRequiredColumnRewrite()} is false, e.g. spatial / javascript / column-comparison
-   * filters): the filter can't have the VC name swapped for the materialized column, and since a remappable VC is
-   * (per the spec) recomputable from stored columns, keeping it lets the filter read the recomputed value instead of
-   * throwing on an unsupported rewrite.
-   * <p>
-   * A substituted (dropped) query virtual column is read from its materialized column and never recomputes, so it
-   * imposes no requirement on its own inputs. A query virtual column must therefore be kept (recomputed, not
-   * substituted) only when it is transitively required by a kept query virtual column (because query VCs are computed
-   * in the per-group cursor, below the concat-level remap, so a dropped input a kept VC still references would
-   * incorrectly resolve to null.)
    */
   private static Map<String, String> buildClusterVirtualColumnRemap(
       VirtualColumns queryVcs,
