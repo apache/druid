@@ -23,11 +23,12 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergFilter;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.iceberg.FileScanTask;
+import org.apache.iceberg.SchemaParser;
+import org.apache.iceberg.Table;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
@@ -39,6 +40,7 @@ import org.joda.time.DateTime;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /*
  * Druid wrapper for an iceberg catalog.
@@ -60,17 +62,48 @@ public abstract class IcebergCatalog
   }
 
   /**
-   * Extract the iceberg data files upto the latest snapshot associated with the table
-   *
-   * @param tableNamespace     The catalog namespace under which the table is defined
-   * @param tableName          The iceberg table name
-   * @param icebergFilter      The iceberg filter that needs to be applied before reading the files
-   * @param snapshotTime       Datetime that will be used to fetch the most recent snapshot as of this time
-   * @param residualFilterMode Controls how residual filters are handled. When filtering on non-partition
-   *                           columns, residual rows may be returned that need row-level filtering.
-   * @return a list of data file paths
+   * Bundles the {@link FileScanTask} list produced by scan planning with the JSON-serialized
+   * Iceberg table schema. The schema is captured once on the coordinator so that worker nodes
+   * can deserialize it without contacting the catalog.
    */
-  public List<String> extractSnapshotDataFiles(
+  public static class FileScanResult
+  {
+    private final List<FileScanTask> tasks;
+    private final String tableSchemaJson;
+
+    public FileScanResult(List<FileScanTask> tasks, String tableSchemaJson)
+    {
+      this.tasks = tasks;
+      this.tableSchemaJson = tableSchemaJson;
+    }
+
+    public List<FileScanTask> getTasks()
+    {
+      return tasks;
+    }
+
+    public String getTableSchemaJson()
+    {
+      return tableSchemaJson;
+    }
+  }
+
+  /**
+   * Extract the iceberg FileScanTasks (data + delete file info) up to the latest snapshot,
+   * together with the JSON-serialized table schema.
+   *
+   * <p>The schema is captured at planning time on the coordinator so that
+   * {@link IcebergNativeRecordReader} on worker nodes can deserialize it without an additional
+   * catalog call.
+   *
+   * @param tableNamespace     The catalog namespace
+   * @param tableName          The iceberg table name
+   * @param icebergFilter      Filter to apply before reading files
+   * @param snapshotTime       Datetime for snapshot-as-of (null = latest)
+   * @param residualFilterMode Controls how residual filters are handled
+   * @return {@link FileScanResult} containing tasks and the serialized table schema
+   */
+  public FileScanResult extractFileScanTasksWithSchema(
       String tableNamespace,
       String tableName,
       IcebergFilter icebergFilter,
@@ -79,40 +112,36 @@ public abstract class IcebergCatalog
   )
   {
     Catalog catalog = retrieveCatalog();
-    Namespace namespace = Namespace.of(tableNamespace);
     String tableIdentifier = tableNamespace + "." + tableName;
-
-    List<String> dataFilePaths = new ArrayList<>();
+    List<FileScanTask> tasks = new ArrayList<>();
+    String tableSchemaJson;
 
     ClassLoader currCtxClassloader = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      TableIdentifier icebergTableIdentifier = catalog.listTables(namespace).stream()
-                                                      .filter(tableId -> tableId.toString().equals(tableIdentifier))
-                                                      .findFirst()
-                                                      .orElseThrow(() -> new IAE(
-                                                          " Couldn't retrieve table identifier for '%s'. Please verify that the table exists in the given catalog",
-                                                          tableIdentifier
-                                                      ));
+
+      TableIdentifier icebergTableIdentifier = TableIdentifier.of(
+          Namespace.of(tableNamespace), tableName
+      );
 
       long start = System.currentTimeMillis();
-      TableScan tableScan = catalog.loadTable(icebergTableIdentifier).newScan();
+      Table table = catalog.loadTable(icebergTableIdentifier);
+      tableSchemaJson = SchemaParser.toJson(table.schema());
 
+      TableScan tableScan = table.newScan();
       if (icebergFilter != null) {
         tableScan = icebergFilter.filter(tableScan);
       }
       if (snapshotTime != null) {
         tableScan = tableScan.asOfTime(snapshotTime.getMillis());
       }
-
       tableScan = tableScan.caseSensitive(isCaseSensitive());
-      CloseableIterable<FileScanTask> tasks = tableScan.planFiles();
+
+      CloseableIterable<FileScanTask> taskIterable = tableScan.planFiles();
 
       Expression detectedResidual = null;
-      for (FileScanTask task : tasks) {
-        dataFilePaths.add(task.file().location());
-
-        // Check for residual filters
+      for (FileScanTask task : taskIterable) {
+        tasks.add(task);
         if (detectedResidual == null) {
           Expression residual = task.residual();
           if (residual != null && !residual.equals(Expressions.alwaysTrue())) {
@@ -121,8 +150,7 @@ public abstract class IcebergCatalog
         }
       }
 
-      // Handle residual filter based on mode
-      if (detectedResidual != null) {
+      if (detectedResidual == null) {
         String message = StringUtils.format(
             "Iceberg filter produced residual expression that requires row-level filtering. "
             + "This typically means the filter is on a non-partition column. "
@@ -140,7 +168,7 @@ public abstract class IcebergCatalog
       }
 
       long duration = System.currentTimeMillis() - start;
-      log.info("Data file scan and fetch took [%d ms] time for [%d] paths", duration, dataFilePaths.size());
+      log.info("Data file scan and fetch took [%d ms] time for [%d] tasks", duration, tasks.size());
     }
     catch (DruidException e) {
       throw e;
@@ -151,6 +179,60 @@ public abstract class IcebergCatalog
     finally {
       Thread.currentThread().setContextClassLoader(currCtxClassloader);
     }
-    return dataFilePaths;
+    return new FileScanResult(tasks, tableSchemaJson);
   }
-}
+
+  /**
+   * Extract the iceberg FileScanTasks (data + delete file info) upto the latest snapshot.
+   * This is a convenience wrapper around {@link #extractFileScanTasksWithSchema} that drops
+   * the schema JSON.
+   *
+   * @param tableNamespace     The catalog namespace
+   * @param tableName          The iceberg table name
+   * @param icebergFilter      Filter to apply before reading files
+   * @param snapshotTime       Datetime for snapshot-as-of
+   * @param residualFilterMode Controls how residual filters are handled
+   * @return list of FileScanTask objects (each carries data file + associated delete files)
+   */
+  public List<FileScanTask> extractFileScanTasks(
+      String tableNamespace,
+      String tableName,
+      IcebergFilter icebergFilter,
+      DateTime snapshotTime,
+      ResidualFilterMode residualFilterMode
+  )
+  {
+    return extractFileScanTasksWithSchema(
+        tableNamespace,
+        tableName,
+        icebergFilter,
+        snapshotTime,
+        residualFilterMode
+    ).getTasks();
+  }
+
+  /**
+   * Extract the iceberg data files upto the latest snapshot associated with the table.
+   * This is a backward-compatible wrapper around {@link #extractFileScanTasks}.
+   *
+   * @param tableNamespace     The catalog namespace under which the table is defined
+   * @param tableName          The iceberg table name
+   * @param icebergFilter      The iceberg filter that needs to be applied before reading the files
+   * @param snapshotTime       Datetime that will be used to fetch the most recent snapshot as of this time
+   * @param residualFilterMode Controls how residual filters are handled. When filtering on non-partition
+   *                           columns, residual rows may be returned that need row-level filtering.
+   * @return a list of data file paths
+   */
+  public List<String> extractSnapshotDataFiles(
+      String tableNamespace,
+      String tableName,
+      IcebergFilter icebergFilter,
+      DateTime snapshotTime,
+      ResidualFilterMode residualFilterMode
+  )
+  {
+    return extractFileScanTasks(tableNamespace, tableName, icebergFilter, snapshotTime, residualFilterMode)
+        .stream()
+        .map(t -> t.file().path().toString())
+        .collect(Collectors.toList());
+  }
