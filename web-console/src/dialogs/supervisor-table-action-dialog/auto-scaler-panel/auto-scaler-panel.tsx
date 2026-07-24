@@ -126,16 +126,19 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
     debounceIdle: 300,
     debounceLoading: 500,
     processQuery: async (params, signal) => {
-      const resp = await Api.instance.get<{ data: AutoScalerRow[] }>(
+      const resp = await Api.instance.post<{ data: AutoScalerRow[] }>(
         `/druid/indexer/v1/supervisor/${Api.encodePath(params.supervisorId)}/autoscaler`,
         {
+          enableTaskAutoScaler: true,
+          taskCountMin: params.taskCountMin,
+          taskCountMax: params.taskCountMax,
+          optimalTaskIdleRatio: params.optimalTaskIdleRatio,
+          lagWeight: params.lagWeight,
+          idleWeight: params.idleWeight,
+        },
+        {
           params: {
-            taskCountMin: params.taskCountMin,
-            taskCountMax: params.taskCountMax,
             maxProcessingRatePerTask: params.maxProcessingRatePerTask,
-            optimalTaskIdleRatio: params.optimalTaskIdleRatio,
-            lagWeight: params.lagWeight,
-            idleWeight: params.idleWeight,
             criticalLag: params.criticalLag,
             currentTaskCount: params.currentTaskCount,
           },

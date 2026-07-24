@@ -36,11 +36,9 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -60,7 +58,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -540,39 +537,20 @@ public class SupervisorResource
     );
   }
 
-  @GET
+  @POST
   @Path("/{id}/autoscaler")
+  @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
   public Response simulateAutoscaling(
       @PathParam("id") String supervisorId,
-      @QueryParam("autoScalerStrategy") @DefaultValue(CostBasedAutoScaler.AUTOSCALER_TYPE_NAME) String autoScalerStrategy,
-      @QueryParam("taskCountMin") int taskCountMin,
-      @QueryParam("taskCountMax") int taskCountMax,
+      CostBasedAutoScalerConfig autoScalerConfig,
       @QueryParam("maxProcessingRatePerTask") int maxProcessingRatePerTask,
-      @QueryParam("optimalTaskIdleRatio") double optimalTaskIdleRatio,
-      @QueryParam("lagWeight") Double lagWeight,
-      @QueryParam("idleWeight") Double idleWeight,
       @QueryParam("criticalLag") int criticalLag,
       @QueryParam("currentTaskCount") Integer currentTaskCount,
       @Context HttpServletRequest request
   )
   {
-    if (!CostBasedAutoScaler.AUTOSCALER_TYPE_NAME.equals(autoScalerStrategy)) {
-      throw InvalidInput.exception(
-          "Cannot simulate autoScalerStrategy[%s]. Only [%s] is supported.",
-          autoScalerStrategy,
-          CostBasedAutoScaler.AUTOSCALER_TYPE_NAME
-      );
-    }
-    final CostBasedAutoScalerConfig autoScalerConfig =
-        CostBasedAutoScalerConfig.forSimulation(
-            taskCountMin,
-            taskCountMax,
-            optimalTaskIdleRatio,
-            lagWeight,
-            idleWeight
-        );
     return asLeaderWithSupervisorManager(
         manager -> Response.ok(
             manager.simulateAutoscaling(
