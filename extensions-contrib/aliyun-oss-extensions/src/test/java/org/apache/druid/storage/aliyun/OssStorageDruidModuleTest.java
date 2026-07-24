@@ -24,6 +24,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
+import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.segment.loading.OmniDataSegmentArchiver;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
@@ -78,6 +79,7 @@ public class OssStorageDruidModuleTest
             new DruidGuiceExtensions(),
             new JacksonModule(),
             new ConfigModule(),
+            new LocalDataStorageDruidModule(),
             new OssStorageDruidModule(),
             binder -> {
               final Properties properties = new Properties();

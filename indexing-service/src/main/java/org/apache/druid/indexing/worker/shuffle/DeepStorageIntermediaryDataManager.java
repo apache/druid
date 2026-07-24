@@ -24,6 +24,8 @@ import com.google.inject.Inject;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.batch.parallel.DeepStoragePartitionStat;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
@@ -38,6 +40,7 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
 {
   public static final String SHUFFLE_DATA_DIR_PREFIX = "shuffle-data";
   private final DataSegmentPusher dataSegmentPusher;
+  private final DataSegmentKiller dataSegmentKiller;
 
   /**
    * Deep storage path to the directory that holds all shuffle intermediate files for {@code supervisorTaskId},
@@ -49,10 +52,22 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
     return SHUFFLE_DATA_DIR_PREFIX + "/" + supervisorTaskId;
   }
 
+  /**
+   * Used by Guice to create an instance of {@link DeepStorageIntermediaryDataManager}.
+   *
+   * @param dataSegmentPusher Always non-null
+   * @param dataSegmentKiller Can be null in certain cases such as on MiddleManagers
+   *                          when using druid.storage.type=s3 since the respective
+   *                          S3DataSegmentKiller uses scheme "s3_zip" instead of "s3"
+   */
   @Inject
-  public DeepStorageIntermediaryDataManager(DataSegmentPusher dataSegmentPusher)
+  public DeepStorageIntermediaryDataManager(
+      DataSegmentPusher dataSegmentPusher,
+      @Nullable DataSegmentKiller dataSegmentKiller
+  )
   {
     this.dataSegmentPusher = dataSegmentPusher;
+    this.dataSegmentKiller = dataSegmentKiller;
   }
 
   @Override
@@ -105,22 +120,13 @@ public class DeepStorageIntermediaryDataManager implements IntermediaryDataManag
     throw new UnsupportedOperationException("Not supported, get partition file using segment loadspec");
   }
 
-  /**
-   * Not implemented for deep storage mode. Unlike {@link LocalIntermediaryDataManager},
-   * which can walk the local filesystem to find and delete files by supervisorTaskId,
-   * this manager has no way to discover what files were pushed: it has no
-   * {@link org.apache.druid.segment.loading.DataSegmentKiller}, does not track pushed
-   * paths, and runs on short-lived peon processes whose state is lost on exit.
-   * <p>
-   * Deep storage shuffle cleanup is handled in {@link org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask#cleanUp}
-   * via {@link org.apache.druid.segment.loading.DataSegmentKiller#killRecursively} on
-   * {@link #retrieveShuffleDataStoragePath(String)} (recursive delete of that directory).
-   */
   @Override
-  public void deletePartitions(String supervisorTaskId)
+  public void deletePartitions(String supervisorTaskId) throws IOException
   {
-    throw new UnsupportedOperationException(
-        "Deep storage shuffle cleanup is handled by ParallelIndexSupervisorTask, not by the data manager"
-    );
+    if (dataSegmentKiller == null) {
+      throw new ISE("No instance was bound for the DataSegmentKiller");
+    } else {
+      dataSegmentKiller.killRecursively(retrieveShuffleDataStoragePath(supervisorTaskId));
+    }
   }
 }
