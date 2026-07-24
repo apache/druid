@@ -37,7 +37,7 @@ public class DefaultColumnFormatConfig
   public static Integer validateNestedFormatVersion(@Nullable Integer formatVersion)
   {
     if (formatVersion != null) {
-      if (formatVersion != 5) {
+      if (formatVersion != NestedDataColumnSchema.DEFAULT_FORMAT_VERSION) {
         LOG.warn("Unsupported nested column format version[%s], using default version instead", formatVersion);
         return null;
       }
