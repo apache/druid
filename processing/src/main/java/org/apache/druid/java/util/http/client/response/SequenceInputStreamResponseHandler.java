@@ -57,15 +57,18 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
     if (response instanceof HttpContent) {
+      final ByteBuf content = ((HttpContent) response).content();
+      // Retain content as ByteBufInputStream will release it on close
+      content.retain();
+      final int readableBytes = content.readableBytes();
+      final ByteBufInputStream channelStream = new ByteBufInputStream(content, true);
       try {
-        ByteBuf content = ((HttpContent) response).content();
-        // Retain content as ByteBufInputStream will release it on close
-        content.retain();
-        ByteBufInputStream channelStream = new ByteBufInputStream(content, true);
         queue.put(channelStream);
-        byteCount.addAndGet(content.readableBytes());
+        byteCount.addAndGet(readableBytes);
       }
       catch (InterruptedException e) {
+        // Close the stream so the retained buffer is released instead of leaking.
+        closeStream(channelStream);
         log.error(e, "Queue appending interrupted");
         Thread.currentThread().interrupt();
         throw new RuntimeException(e);
@@ -112,20 +115,22 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
     final ByteBuf channelBuffer = chunk.content();
     final int bytes = channelBuffer.readableBytes();
     if (bytes > 0) {
+      // Retain content as ByteBufInputStream will release it on close
+      channelBuffer.retain();
+      final ByteBufInputStream channelStream = new ByteBufInputStream(channelBuffer, true);
       try {
-        // Retain content as ByteBufInputStream will release it on close
-        channelBuffer.retain();
-        ByteBufInputStream channelStream = new ByteBufInputStream(channelBuffer, true);
         queue.put(channelStream);
         // Queue.size() can be expensive in some implementations, but LinkedBlockingQueue.size is just an AtomicLong
         log.debug("Added stream. Queue length %d", queue.size());
+        byteCount.addAndGet(bytes);
       }
       catch (InterruptedException e) {
+        // Close the stream so the retained buffer is released instead of leaking.
+        closeStream(channelStream);
         log.warn(e, "Thread interrupted while adding to queue");
         Thread.currentThread().interrupt();
         throw new RuntimeException(e);
       }
-      byteCount.addAndGet(bytes);
     } else {
       log.debug("Skipping zero length chunk");
     }
@@ -190,5 +195,15 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   public final long getByteCount()
   {
     return byteCount.get();
+  }
+
+  private static void closeStream(ByteBufInputStream stream)
+  {
+    try {
+      stream.close();
+    }
+    catch (IOException e) {
+      log.warn(e, "Failed to close stream while releasing buffer");
+    }
   }
 }

@@ -39,9 +39,10 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.timeout.ReadTimeoutException;
-import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.Timeout;
 import io.netty.util.Timer;
+import io.netty.util.TimerTask;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -185,9 +186,14 @@ public class NettyHttpClient extends AbstractHttpClient
     final AtomicBoolean didEncounterException = new AtomicBoolean();
 
     if (readTimeout > 0) {
+      // Netty 4's ReadTimeoutHandler schedules its timeout on the channel's event loop, whose blocking
+      // epoll_wait/select can be interrupted by signals (e.g. a JFR/profiler agent), which resets the wait
+      // and causes scheduled timeouts to be delayed or missed on some JDKs. To match the pre-Netty-4 behavior
+      // (which drove read timeouts off a dedicated HashedWheelTimer thread), we schedule the read timeout on
+      // the shared Timer instead of the event loop.
       channel.pipeline().addLast(
           READ_TIMEOUT_HANDLER_NAME,
-          new ReadTimeoutHandler(readTimeout, TimeUnit.MILLISECONDS)
+          new TimerReadTimeoutHandler(timer, readTimeout)
       );
     }
 
@@ -387,9 +393,12 @@ public class NettyHttpClient extends AbstractHttpClient
 
             if (!retVal.isDone()) {
               if (t instanceof ReadTimeoutException) {
-                // ReadTimeoutException thrown by ReadTimeoutHandler is a singleton with a misleading stack trace.
-                // No point including it: instead, we replace it with a fresh exception.
-                retVal.setException(new ReadTimeoutException(StringUtils.format("[%s] Read timed out", requestDesc)));
+                // ReadTimeoutException is a shared singleton with a misleading (suppressed) stack trace. Report a
+                // fresh instance instead. Note: we must use the no-arg constructor, since ReadTimeoutException(String)
+                // (via ChannelException(String, Throwable, boolean)) trips an `assert shared` and throws AssertionError
+                // when assertions are enabled (e.g. under surefire). See netty ChannelException.
+                log.debug("[%s] Read timed out", requestDesc);
+                retVal.setException(new ReadTimeoutException());
               } else {
                 retVal.setException(t);
               }
@@ -490,6 +499,125 @@ public class NettyHttpClient extends AbstractHttpClient
   {
     return url.getProtocol() + "://" + url.getHost() + ":"
            + (url.getPort() == -1 ? url.getDefaultPort() : url.getPort());
+  }
+
+  /**
+   * A read-timeout handler that fires a {@link ReadTimeoutException} down the pipeline if no inbound message is read
+   * within the configured timeout. It behaves like Netty's {@link io.netty.handler.timeout.ReadTimeoutHandler} but
+   * drives its timer off a shared {@link Timer} (a {@code HashedWheelTimer} dedicated thread) rather than the channel's
+   * event loop.
+   *
+   * This avoids a class of problems where the event loop's blocking {@code epoll_wait}/{@code select} is interrupted by
+   * signals (for example a profiler agent), which can reset the wait and cause event-loop-scheduled timeouts to be
+   * delayed or never fire (see netty/netty#14368 and netty/netty#16244). The pre-Netty-4 Druid client scheduled read
+   * timeouts on a {@code HashedWheelTimer} for the same reason.
+   */
+  private static class TimerReadTimeoutHandler extends ChannelInboundHandlerAdapter
+  {
+    private final Timer timer;
+    private final long timeoutNanos;
+
+    private volatile long lastReadTimeNanos;
+    private volatile Timeout scheduledTimeout;
+    private volatile boolean destroyed;
+    private boolean timedOut;
+
+    TimerReadTimeoutHandler(Timer timer, long timeoutMillis)
+    {
+      this.timer = Preconditions.checkNotNull(timer, "timer");
+      this.timeoutNanos = Math.max(TimeUnit.MILLISECONDS.toNanos(timeoutMillis), 1L);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx)
+    {
+      // The channel is typically already active (taken from the pool) by the time this handler is added.
+      if (ctx.channel().isActive()) {
+        initialize(ctx);
+      }
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx)
+    {
+      initialize(ctx);
+      ctx.fireChannelActive();
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg)
+    {
+      lastReadTimeNanos = System.nanoTime();
+      ctx.fireChannelRead(msg);
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx)
+    {
+      destroy();
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx)
+    {
+      destroy();
+      ctx.fireChannelInactive();
+    }
+
+    private void initialize(ChannelHandlerContext ctx)
+    {
+      if (destroyed) {
+        return;
+      }
+      lastReadTimeNanos = System.nanoTime();
+      schedule(ctx, timeoutNanos);
+    }
+
+    private void schedule(final ChannelHandlerContext ctx, final long delayNanos)
+    {
+      if (destroyed) {
+        return;
+      }
+      scheduledTimeout = timer.newTimeout(
+          new TimerTask()
+          {
+            @Override
+            public void run(Timeout t)
+            {
+              if (t.isCancelled() || destroyed || !ctx.channel().isOpen()) {
+                return;
+              }
+
+              final long nextDelayNanos = timeoutNanos - (System.nanoTime() - lastReadTimeNanos);
+              if (nextDelayNanos <= 0) {
+                // Fire the timeout on the event loop, since pipeline events must run there.
+                ctx.executor().execute(() -> {
+                  if (timedOut || destroyed || !ctx.channel().isOpen()) {
+                    return;
+                  }
+                  timedOut = true;
+                  ctx.fireExceptionCaught(ReadTimeoutException.INSTANCE);
+                });
+              } else {
+                // A read happened since we scheduled: reschedule for the remaining time.
+                schedule(ctx, nextDelayNanos);
+              }
+            }
+          },
+          delayNanos,
+          TimeUnit.NANOSECONDS
+      );
+    }
+
+    private void destroy()
+    {
+      destroyed = true;
+      final Timeout t = scheduledTimeout;
+      if (t != null) {
+        t.cancel();
+        scheduledTimeout = null;
+      }
+    }
   }
 
 }

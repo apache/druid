@@ -44,7 +44,12 @@ public class AsyncHttpClientTest
   @Test
   public void testRequestTimeout() throws Exception
   {
-    final ExecutorService exec = Executors.newSingleThreadExecutor();
+    // Use a daemon thread so a leftover accept loop can never keep the (forked) JVM alive.
+    final ExecutorService exec = Executors.newSingleThreadExecutor(r -> {
+      final Thread t = new Thread(r, "AsyncHttpClientTest-server");
+      t.setDaemon(true);
+      return t;
+    });
     final ServerSocket serverSocket = new ServerSocket(0);
     exec.submit(
         new Runnable()
@@ -52,7 +57,9 @@ public class AsyncHttpClientTest
           @Override
           public void run()
           {
-            while (!Thread.currentThread().isInterrupted()) {
+            // Also exit when the socket is closed: Thread.sleep() below can consume the interrupt (clearing the
+            // interrupt flag) so that accept() on a closed socket would otherwise throw immediately and spin at 100% CPU.
+            while (!Thread.currentThread().isInterrupted() && !serverSocket.isClosed()) {
               try (
                   Socket clientSocket = serverSocket.accept();
                   BufferedReader in = new BufferedReader(

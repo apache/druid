@@ -129,10 +129,9 @@ public class RequestBuilderTest
     Assert.assertTrue(request.hasContent());
 
     // Read and verify content.
-    Assert.assertEquals(
-        json,
-        StringUtils.fromUtf8(ByteStreams.toByteArray(new ByteBufInputStream(request.getContent())))
-    );
+    try (ByteBufInputStream contentStream = new ByteBufInputStream(request.getContent())) {
+      Assert.assertEquals(json, StringUtils.fromUtf8(ByteStreams.toByteArray(contentStream)));
+    }
   }
 
   @Test
@@ -151,10 +150,9 @@ public class RequestBuilderTest
     Assert.assertTrue(request.hasContent());
 
     // Read and verify content.
-    Assert.assertEquals(
-        "{\"foo\":3}",
-        StringUtils.fromUtf8(ByteStreams.toByteArray(new ByteBufInputStream(request.getContent())))
-    );
+    try (ByteBufInputStream contentStream = new ByteBufInputStream(request.getContent())) {
+      Assert.assertEquals("{\"foo\":3}", StringUtils.fromUtf8(ByteStreams.toByteArray(contentStream)));
+    }
   }
 
   @Test

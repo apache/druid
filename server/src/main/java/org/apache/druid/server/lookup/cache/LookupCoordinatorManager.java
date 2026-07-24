@@ -905,8 +905,8 @@ public class LookupCoordinatorManager
         @Override
         public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
         {
-          returnCode.set(response.getStatus().code());
-          reasonString.set(response.getStatus().reasonPhrase());
+          returnCode.set(response.status().code());
+          reasonString.set(response.status().reasonPhrase());
           delegateResponse = delegate.handleResponse(response, trafficCop);
           return toInputStream(delegateResponse);
         }

@@ -35,8 +35,8 @@ public class BytesAccumulatingResponseHandler extends InputStreamResponseHandler
   @Override
   public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    status = response.getStatus().code();
-    description = response.getStatus().reasonPhrase();
+    status = response.status().code();
+    description = response.status().reasonPhrase();
     return ClientResponse.unfinished(super.handleResponse(response, trafficCop).getObj());
   }
 
