@@ -31,10 +31,12 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -220,6 +222,19 @@ public class NettyHttpClient extends AbstractHttpClient
               log.debug("[%s] messageReceived: %s", requestDesc, msg);
             }
             try {
+              // Unlike Netty 3 (which threw during decoding), Netty 4's HTTP decoder does not throw on a malformed
+              // response: it emits a message flagged with a failed DecoderResult. Surface that failure as an
+              // exception so callers see the underlying cause (e.g. "invalid version format") instead of silently
+              // proceeding until the channel disconnects.
+              if (msg instanceof HttpObject) {
+                final DecoderResult decoderResult = ((HttpObject) msg).decoderResult();
+                if (decoderResult.isFailure()) {
+                  ReferenceCountUtil.release(msg);
+                  handleExceptionAndCloseChannel(decoderResult.cause(), false);
+                  return;
+                }
+              }
+
               if (msg instanceof HttpResponse) {
                 if (didEncounterException.get()) {
                   // Don't process HttpResponse after encountering an exception.

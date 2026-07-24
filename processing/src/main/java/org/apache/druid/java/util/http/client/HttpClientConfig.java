@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.http.client;
 
-import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -81,7 +80,7 @@ public class HttpClientConfig
   // This is sufficient for HTTP client parallelism
   private static final int MAX_WORKER_THREADS = 8;
   private static final int DEFAULT_WORKER_COUNT = Math.min(
-      JvmUtils.getRuntimeInfo().getAvailableProcessors() * 2,
+      Runtime.getRuntime().availableProcessors() * 2,
       MAX_WORKER_THREADS
   );
 
