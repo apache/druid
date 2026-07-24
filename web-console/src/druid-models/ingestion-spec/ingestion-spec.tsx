@@ -439,6 +439,7 @@ export function getPossibleSystemFieldsForInputSource(inputSource: InputSource):
     case 'azureStorage':
       return ['__file_uri', '__file_bucket', '__file_path'];
 
+    case 'http':
     case 'hdfs':
     case 'local':
       return ['__file_uri', '__file_path'];
