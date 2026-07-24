@@ -21,6 +21,8 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
+import org.apache.druid.segment.AutoTypeColumnSchema;
+import org.apache.druid.segment.column.ColumnType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -67,6 +69,51 @@ public class DimensionSchemaTest
     Assertions.assertEquals(
         new StringDimensionSchema("foo", DimensionSchema.MultiValueHandling.ARRAY, false),
         OBJECT_MAPPER.readValue(noType, DimensionSchema.class)
+    );
+  }
+
+  @Test
+  public void testGetDefaultSchemaForBuiltInType()
+  {
+    Assertions.assertEquals(
+        new StringDimensionSchema("foo"),
+        DimensionSchema.getDefaultSchemaForBuiltInType("foo", ColumnType.STRING)
+    );
+    Assertions.assertEquals(
+        new LongDimensionSchema("foo"),
+        DimensionSchema.getDefaultSchemaForBuiltInType("foo", ColumnType.LONG)
+    );
+    Assertions.assertEquals(
+        new FloatDimensionSchema("foo"),
+        DimensionSchema.getDefaultSchemaForBuiltInType("foo", ColumnType.FLOAT)
+    );
+    Assertions.assertEquals(
+        new DoubleDimensionSchema("foo"),
+        DimensionSchema.getDefaultSchemaForBuiltInType("foo", ColumnType.DOUBLE)
+    );
+    // Primitive arrays cast an auto column to the given type rather than leaving the physical type to be inferred
+    // from the ingested values (an all-null batch has no values to infer the array type from). The auto schema
+    // stores ARRAY<FLOAT> as ARRAY<DOUBLE>.
+    Assertions.assertEquals(
+        new AutoTypeColumnSchema("foo", ColumnType.STRING_ARRAY, null),
+        DimensionSchema.getDefaultSchemaForBuiltInType("foo", ColumnType.STRING_ARRAY)
+    );
+    Assertions.assertEquals(
+        new AutoTypeColumnSchema("foo", ColumnType.LONG_ARRAY, null),
+        DimensionSchema.getDefaultSchemaForBuiltInType("foo", ColumnType.LONG_ARRAY)
+    );
+    Assertions.assertEquals(
+        new AutoTypeColumnSchema("foo", ColumnType.DOUBLE_ARRAY, null),
+        DimensionSchema.getDefaultSchemaForBuiltInType("foo", ColumnType.FLOAT_ARRAY)
+    );
+    // Complex types remain untyped auto columns.
+    Assertions.assertEquals(
+        AutoTypeColumnSchema.of("foo"),
+        DimensionSchema.getDefaultSchemaForBuiltInType("foo", ColumnType.NESTED_DATA)
+    );
+    Assertions.assertEquals(
+        AutoTypeColumnSchema.of("foo"),
+        DimensionSchema.getDefaultSchemaForBuiltInType("foo", ColumnType.ofComplex("hyperUnique"))
     );
   }
 }

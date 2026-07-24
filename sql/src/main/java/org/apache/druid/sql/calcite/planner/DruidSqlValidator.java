@@ -534,21 +534,12 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       return sourceType;
     }
 
-    // disable sealed mode validation if catalog validation is disabled.
-    final boolean isStrict = tableMetadata.isSealed();
     final List<Map.Entry<String, RelDataType>> fields = new ArrayList<>();
     for (RelDataTypeField sourceField : sourceFields) {
       final String colName = sourceField.getName();
-      final DatasourceFacade.ColumnFacade definedCol = tableMetadata.column(colName);
+      final DatasourceFacade.ColumnFacade definedCol =
+          tableMetadata.insertColumn(colName, insert.getTargetTable().toString());
       if (definedCol == null) {
-        if (isStrict) {
-          throw InvalidSqlInput.exception(
-              "Column [%s] is not defined in the target table [%s] strict schema",
-              colName,
-              insert.getTargetTable()
-          );
-        }
-
         // Table is not strict: add a new column based on the SELECT column.
         fields.add(Pair.of(colName, sourceField.getType()));
         continue;

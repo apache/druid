@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.ModelProperties;
 import org.apache.druid.catalog.model.ModelProperties.GranularityPropertyDefn;
@@ -30,6 +31,7 @@ import org.apache.druid.catalog.model.ModelProperties.StringListPropertyDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.TableSpec;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -64,6 +66,14 @@ public class DatasourceDefn extends TableDefn
   public static final String PROJECTIONS_KEYS_PROPERTY = "projections";
 
   /**
+   * Physical layout of the base table. The layout combines with the declared column list (which remains the source of
+   * truth for column names, types, and order) to derive the physical spec used to generate segments;
+   *
+   * @see DatasourceBaseTableMetadata#createSpec
+   */
+  public static final String BASE_TABLE_PROPERTY = "baseTable";
+
+  /**
    * The set of existing columns to "delete" (actually, just hide) from the
    * SQL layer. Used to "remove" unwanted columns to avoid the need to rewrite
    * existing segments to accomplish the task.
@@ -85,10 +95,35 @@ public class DatasourceDefn extends TableDefn
             new ClusterKeysDefn(),
             new HiddenColumnsDefn(),
             new ModelProperties.BooleanPropertyDefn(SEALED_PROPERTY),
-            new ProjectionsDefn()
+            new ProjectionsDefn(),
+            new BaseTableDefn()
         ),
         null
     );
+  }
+
+  @Override
+  public void validate(ResolvedTable table)
+  {
+    super.validate(table);
+    final DatasourceBaseTableMetadata baseTable = table.decodeProperty(BASE_TABLE_PROPERTY);
+    if (baseTable != null) {
+      // A base table layout derives the physical segment schema from the declared columns, so a column the query
+      // produces but the table does not declare cannot be stored; require 'sealed' so ingestion rejects such columns
+      // instead of silently dropping them. Requiring the flag allows us to someday support non-sealed definitions,
+      // which could work by appending undeclared columns to the derived schema.
+      if (!table.booleanProperty(SEALED_PROPERTY)) {
+        throw InvalidInput.exception(
+            "Datasource with a [%s] layout must also set [%s] to true; the declared columns define the physical"
+            + " segment schema, so columns not declared in the table cannot be ingested",
+            BASE_TABLE_PROPERTY,
+            SEALED_PROPERTY
+        );
+      }
+      // Cross-validate the layout against the declared columns by deriving the physical spec, so that catalog writes
+      // fail fast instead of surfacing layout problems at ingest time.
+      baseTable.createSpec(table.spec().columns());
+    }
   }
 
   @Override
@@ -180,6 +215,16 @@ public class DatasourceDefn extends TableDefn
     public ProjectionsDefn()
     {
       super(PROJECTIONS_KEYS_PROPERTY, "DatasourceProjectionMetadata list", TYPE_REF);
+    }
+  }
+
+  public static class BaseTableDefn extends ModelProperties.TypeRefPropertyDefn<DatasourceBaseTableMetadata>
+  {
+    public static final TypeReference<DatasourceBaseTableMetadata> TYPE_REF = new TypeReference<>() {};
+
+    public BaseTableDefn()
+    {
+      super(BASE_TABLE_PROPERTY, "DatasourceBaseTableMetadata", TYPE_REF);
     }
   }
 }
