@@ -142,21 +142,25 @@ public class NettyHttpClient extends AbstractHttpClient
         request.hasContent() ? request.getContent().retainedDuplicate() : Unpooled.EMPTY_BUFFER
     );
 
-    if (!headers.containsKey(HttpHeaderNames.HOST.toString())) {
+    // Copy caller-supplied headers first, then apply defaults only for ones the caller didn't already provide. Request
+    // stores headers in a case-sensitive Guava Multimap, but HTTP header names are case-insensitive; checking presence
+    // against Netty 4's lowercase HttpHeaderNames constants directly would miss headers set with conventional HTTP
+    // casing and result in duplicate headers on the wire. Netty's HttpHeaders.contains() is case-insensitive, so
+    // applying defaults after the copy is the reliable check.
+    for (Map.Entry<String, Collection<String>> entry : headers.asMap().entrySet()) {
+      String key = entry.getKey();
+      for (String obj : entry.getValue()) {
+        httpRequest.headers().add(key, obj);
+      }
+    }
+
+    if (!httpRequest.headers().contains(HttpHeaderNames.HOST)) {
       httpRequest.headers().add(HttpHeaderNames.HOST, getHost(url));
     }
 
     // If Accept-Encoding is set in the Request, use that. Otherwise use the default from "compressionCodec".
-    if (!headers.containsKey(HttpHeaderNames.ACCEPT_ENCODING.toString())) {
+    if (!httpRequest.headers().contains(HttpHeaderNames.ACCEPT_ENCODING)) {
       httpRequest.headers().set(HttpHeaderNames.ACCEPT_ENCODING, compressionCodec.getEncodingString());
-    }
-
-    for (Map.Entry<String, Collection<String>> entry : headers.asMap().entrySet()) {
-      String key = entry.getKey();
-
-      for (String obj : entry.getValue()) {
-        httpRequest.headers().add(key, obj);
-      }
     }
 
     if (request.hasContent()) {

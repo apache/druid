@@ -505,4 +505,90 @@ public class FriendlyServersTest
       lifecycle.stop();
     }
   }
+
+  /**
+   * Regression test for the case where a caller sets HTTP header names using their conventional
+   * casing (e.g. {@code Host}, {@code Accept-Encoding}) rather than the lowercase form Netty 4's
+   * {@link HttpHeaderNames} constants use. NettyHttpClient must not emit duplicate headers when
+   * these overlap with defaults it would otherwise apply.
+   */
+  @Test
+  public void testCallerHostHeaderDoesNotDuplicate() throws Exception
+  {
+    final ExecutorService exec = Executors.newSingleThreadExecutor();
+    final ServerSocket serverSocket = new ServerSocket(0);
+    final BlockingQueue<java.util.List<String>> receivedHeaders = new LinkedBlockingQueue<>();
+    exec.submit(
+        () -> {
+          while (!Thread.currentThread().isInterrupted()) {
+            try (
+                Socket clientSocket = serverSocket.accept();
+                BufferedReader in = new BufferedReader(
+                    new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
+                );
+                OutputStream out = clientSocket.getOutputStream()
+            ) {
+              in.readLine(); // request line
+              java.util.List<String> hdrs = new java.util.ArrayList<>();
+              String h;
+              while (!(h = in.readLine()).isEmpty()) {
+                hdrs.add(h);
+              }
+              receivedHeaders.put(hdrs);
+              out.write("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok".getBytes(StandardCharsets.UTF_8));
+            }
+            catch (Exception ignored) {
+              // suppress
+            }
+          }
+        }
+    );
+
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClient client = HttpClientInit.createClient(HttpClientConfig.builder().build(), lifecycle);
+      final URL url = new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()));
+
+      // Caller sets Host and Accept-Encoding using conventional (title-case) HTTP header names.
+      // Netty 4's HttpHeaderNames constants are lowercase; a naive case-sensitive presence check
+      // against the caller's Multimap would miss these and cause NettyHttpClient to add duplicates.
+      final Request request = new Request(HttpMethod.GET, url)
+          .setHeader("Host", "override.example.com")
+          .setHeader("Accept-Encoding", "identity");
+
+      Assert.assertEquals(
+          200,
+          client.go(request, StatusResponseHandler.getInstance()).get().getStatus().code()
+      );
+
+      final java.util.List<String> hdrs = receivedHeaders.poll(10, TimeUnit.SECONDS);
+      Assert.assertNotNull("no headers received", hdrs);
+
+      int hostCount = 0;
+      int acceptEncodingCount = 0;
+      for (String hdr : hdrs) {
+        final String name = hdr.substring(0, hdr.indexOf(':')).toLowerCase(Locale.ROOT);
+        if ("host".equals(name)) {
+          hostCount++;
+          Assert.assertTrue(
+              "Host header should reflect caller value, was: " + hdr,
+              hdr.toLowerCase(Locale.ROOT).contains("override.example.com")
+          );
+        } else if ("accept-encoding".equals(name)) {
+          acceptEncodingCount++;
+          Assert.assertTrue(
+              "Accept-Encoding should be caller-supplied identity, was: " + hdr,
+              hdr.toLowerCase(Locale.ROOT).contains("identity")
+          );
+        }
+      }
+      Assert.assertEquals("exactly one Host header on the wire", 1, hostCount);
+      Assert.assertEquals("exactly one Accept-Encoding header on the wire", 1, acceptEncodingCount);
+    }
+    finally {
+      exec.shutdownNow();
+      serverSocket.close();
+      lifecycle.stop();
+    }
+  }
 }
