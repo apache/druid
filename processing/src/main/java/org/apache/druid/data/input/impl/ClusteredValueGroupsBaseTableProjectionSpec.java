@@ -41,6 +41,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -48,9 +49,10 @@ import java.util.Set;
 /**
  * {@link BaseTableProjectionSpec} for the clustered-value-groups base table mode: rows are partitioned into per-tuple
  * "cluster groups" keyed by one or more typed clustering columns, optionally derived from {@link #virtualColumns}.
- * Essentially, each group is stored as its own internal sub-segment..
+ * Essentially, each group is stored as its own internal sub-segment. Logically, a clustered base table spec is a
+ * projection of an (imaginary/unstored) base table into the stored clustered table.
  * <p>
- * The operator declares a single ordered {@link #columns} list — the full set of columns in segment order, plus a
+ * The operator declares a single ordered {@link #columns} list, the full set of columns in segment order, plus a
  * {@link #clusteringColumns} list of NAMES designating the leading prefix of {@link #columns} that rows are
  * clustered by. The time position is an explicit positional entry in {@link #columns} named {@code __time}; clustering
  * by the time column is not yet supported, so {@code __time} must be a non-clustering column. A clustered base table
@@ -94,6 +96,7 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
   {
     validate(columns, clusteringColumns);
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
+    validateVirtualColumns(this.virtualColumns, columns);
     this.columns = Collections.unmodifiableList(new ArrayList<>(columns));
     this.clusteringColumns = Collections.unmodifiableList(new ArrayList<>(clusteringColumns));
     this.clusteringColumnSchemas = this.columns.subList(0, this.clusteringColumns.size());
@@ -308,6 +311,75 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
           "clustering by [%s] is not yet supported; the time column must be a non-clustering column",
           ColumnHolder.TIME_COLUMN_NAME
       );
+    }
+  }
+
+  /**
+   * Rules to keep virtual columns definitions reasonable:
+   * <ul>
+   *   <li><b>dot notation</b>: a virtual column that {@link VirtualColumn#usesDotNotation()} is referenced as
+   *   {@code name.subfield} rather than by a fixed output name, so it has no stable identity to materialize or cluster
+   *   on; it is rejected outright.</li>
+   *   <li><b>inputs</b>: every input of a virtual column must be a stored column (declared in {@code columns}) or
+   *   another virtual column in the spec.</li>
+   *   <li><b>outputs</b>: every virtual column must either be materialized (its output declared in {@code columns}) or
+   *   be an intermediary that feeds another virtual column. A virtual column that is neither materializes nothing and
+   *   is used by nothing and dead metadata and so it is rejected.</li>
+   * </ul>
+   * The query-granularity carrier ({@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME}) is special handled to
+   * capture how __time is computed, so it is exempt from the output rule.
+   */
+  private static void validateVirtualColumns(VirtualColumns virtualColumns, List<DimensionSchema> columns)
+  {
+    final VirtualColumn[] all = virtualColumns.getVirtualColumns();
+    if (all.length == 0) {
+      return;
+    }
+    final Set<String> columnNames = Sets.newHashSetWithExpectedSize(columns.size());
+    for (DimensionSchema column : columns) {
+      columnNames.add(column.getName());
+    }
+    // The output rule below lets a virtual column go unstored when it is exempt: an intermediary that feeds another
+    // virtual column (collected during the input pass), or the metadata-only query-granularity carrier (seeded here).
+    final Set<String> outputExempt = new HashSet<>();
+    outputExempt.add(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    // input rule: every input must be a stored column or another virtual column; an input that is a virtual column
+    // makes that virtual column an intermediary, exempt from having to be materialized itself.
+    for (VirtualColumn virtualColumn : all) {
+      if (virtualColumn.usesDotNotation()) {
+        throw InvalidInput.exception(
+            "virtual column [%s] uses dot notation, which is not supported for clusteredValueGroups base table specs",
+            virtualColumn.getOutputName()
+        );
+      }
+      for (String input : virtualColumn.requiredColumns()) {
+        final boolean isStored = columnNames.contains(input);
+        final boolean isVirtual = virtualColumns.exists(input);
+        if (!isStored && !isVirtual) {
+          throw InvalidInput.exception(
+              "virtual column [%s] reads column [%s], which is neither a stored column nor another virtual column;"
+              + " clustered base table virtual columns must be computable from stored columns (retain [%s] in"
+              + " 'columns', or use a transformSpec for in-place transforms)",
+              virtualColumn.getOutputName(),
+              input,
+              input
+          );
+        }
+        if (isVirtual) {
+          outputExempt.add(input);
+        }
+      }
+    }
+    // output rule: every virtual column must be materialized (stored) or exempt (intermediary / granularity carrier).
+    for (VirtualColumn virtualColumn : all) {
+      final String outputName = virtualColumn.getOutputName();
+      if (!columnNames.contains(outputName) && !outputExempt.contains(outputName)) {
+        throw InvalidInput.exception(
+            "virtual column [%s] is not stored (not declared in 'columns') and does not feed another virtual column;"
+            + " clustered base table virtual columns must materialize a stored column or be an input to one that does",
+            outputName
+        );
+      }
     }
   }
 

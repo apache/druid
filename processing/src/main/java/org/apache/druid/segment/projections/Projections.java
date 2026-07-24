@@ -56,8 +56,12 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -258,6 +262,10 @@ public class Projections
     if (projection.getFilter() != null) {
       final Filter queryFilter = queryCursorBuildSpec.getFilter();
       if (queryFilter != null) {
+        if (!canRemapFilterToProjection(matchBuilder, queryFilter)) {
+          logTrace(queryCursorBuildSpec.getQueryContext(), "matchFilter: projection [%s] rejected — query filter cannot be rewritten to the projection column namespace", projection.getName());
+          return null;
+        }
         // try to rewrite the query filter into a projection filter, if the rewrite is valid, we can proceed
         final Filter projectionFilter = projection.getFilter().toOptimizedFilter(false);
         final Filter remappedQueryFilter = remapFilterToProjection(matchBuilder, queryFilter);
@@ -376,6 +384,10 @@ public class Projections
           if (filteredCombining != null) {
             FilteredAggregatorFactory filteredQueryAgg = (FilteredAggregatorFactory) queryAgg;
             final Filter aggFilter = filteredQueryAgg.getFilter().toFilter();
+            if (!canRemapFilterToProjection(matchBuilder, aggFilter)) {
+              logTrace(queryCursorBuildSpec.getQueryContext(), "matchAggregators: projection [%s] rejected — filtered aggregator [%s] filter cannot be rewritten to the projection column namespace", projection.getName(), queryAgg.getName());
+              return null;
+            }
             final Filter remappedAggFilter = remapFilterToProjection(matchBuilder, aggFilter);
             for (String column : aggFilter.getRequiredColumns()) {
               matchBuilder = matchRequiredColumn(
@@ -652,9 +664,9 @@ public class Projections
   {
     final Filter queryFilter = cursorBuildSpec.getFilter();
     final VirtualColumns queryVcs = cursorBuildSpec.getVirtualColumns();
-    if (groups.isEmpty() || queryFilter == null) {
-      // No filter (or no groups): every group survives, per-group rewrite is a no-op (null filter).
-      return new ClusterGroupQueryPlan(groups, group -> null);
+    if (groups.isEmpty()) {
+      // No groups: nothing to plan, nothing to remap.
+      return new ClusterGroupQueryPlan(groups, group -> null, Map.of());
     }
 
     // Every spec in the list shares one summary by construction (set once in the schema constructor), so
@@ -662,6 +674,16 @@ public class Projections
     final ClusteredValueGroupsBaseTableSchema summary = groups.getFirst().getSummary();
     final RowSignature clusteringColumns = summary.getClusteringColumns();
     final VirtualColumns groupVcs = summary.getVirtualColumns();
+
+    final Set<String> materializedColumns = new HashSet<>(summary.getColumns());
+    final Map<String, String> virtualColumnRemap =
+        buildClusterVirtualColumnRemap(queryVcs, groupVcs, materializedColumns, queryFilter);
+
+    if (queryFilter == null) {
+      // No filter: every group survives, per-group filter rewrite is a no-op (null filter), but the VC remap (if any)
+      // still drives grouping / select substitution at cursor build time.
+      return new ClusterGroupQueryPlan(groups, group -> null, virtualColumnRemap);
+    }
 
     // Single walk per group: produces the rewritten filter, and a top-level FalseFilter means the group prunes.
     // Cache the rewrite for every group (including pruned ones, where it's FalseFilter) so rewriteFor doesn't
@@ -681,13 +703,122 @@ public class Projections
         kept.add(group);
       }
     }
-    return new ClusterGroupQueryPlan(kept, rewriteCache::get);
+    return new ClusterGroupQueryPlan(kept, rewriteCache::get, virtualColumnRemap);
+  }
+
+  /**
+   * Build a query-level remap of {@code queryVirtualColumnOutputName -> materializedColumnName} for each query virtual
+   * column that has an equivalent materialized column in the clustered base table (a clustering column produced by a
+   * group virtual column, or a non-clustering materialized virtual-column output).
+   * <p>
+   * A remap target must be a column the per-group cursor can actually serve, so {@code materializedColumns} restricts
+   * candidates to the summary's stored columns (clustering columns included by construction). Group virtual columns
+   * whose output name is not a stored column are metadata-only carriers; notably the {@code __virtualGranularity}
+   * query-granularity carrier, and are never valid substitution targets; a query VC equivalent to such a carrier is
+   * left in place to recompute (e.g. from {@code __time}) rather than remapped to an unreadable column.
+   * <p>
+   * The substitution is always a pure optimisation: {@code ClusteredValueGroupsBaseTableProjectionSpec} requires every
+   * clustered virtual column's inputs to be stored columns, so a query VC equivalent to one can always be recomputed
+   * from stored columns and reading the materialized column merely skips that recomputation.
+   * <p>
+   * A query VC that {@code queryFilter} references is left unremapped when the filter can't rewrite its required
+   * columns ({@link Filter#supportsRequiredColumnRewrite()} is false, e.g. spatial / javascript / column-comparison
+   * filters): the filter can't have the VC name swapped for the materialized column, and since a remappable VC is
+   * (per the spec) recomputable from stored columns, keeping it lets the filter read the recomputed value instead of
+   * throwing on an unsupported rewrite.
+   * <p>
+   * A substituted (dropped) query virtual column is read from its materialized column and never recomputes, so it
+   * imposes no requirement on its own inputs. A query virtual column must therefore be kept (recomputed, not
+   * substituted) only when it is transitively required by a kept query virtual column (because query VCs are computed
+   * in the per-group cursor, below the concat-level remap, so a dropped input a kept VC still references would
+   * incorrectly resolve to null.)
+   */
+  private static Map<String, String> buildClusterVirtualColumnRemap(
+      VirtualColumns queryVcs,
+      VirtualColumns groupVcs,
+      Set<String> materializedColumns,
+      @Nullable Filter queryFilter
+  )
+  {
+    final VirtualColumn[] all = queryVcs.getVirtualColumns();
+    if (all.length == 0) {
+      return Map.of();
+    }
+    // A filter that can't rewrite its required columns (spatial, javascript, column-comparison, ...) can't have a
+    // remapped VC name swapped for the materialized column in its own required-column set, so any VC it references
+    // must stay in place. ClusteredValueGroupsBaseTableProjectionSpec guarantees every clustered VC is recomputable
+    // from stored columns, so leaving it unremapped simply lets the filter read the recomputed value rather than
+    // throwing.
+    final Set<String> unrewritableFilterColumns =
+        queryFilter != null && !queryFilter.supportsRequiredColumnRewrite()
+        ? queryFilter.getRequiredColumns()
+        : Set.of();
+    // Candidate substitutions: query VCs that have a differently-named equivalent materialized (stored) column.
+    final Map<String, String> candidates = new HashMap<>();
+    final Map<String, VirtualColumn> byName = new HashMap<>();
+    for (VirtualColumn vc : all) {
+      final String outputName = vc.getOutputName();
+      byName.put(outputName, vc);
+      final VirtualColumns.Node queryNode = queryVcs.getNode(outputName);
+      if (queryNode == null) {
+        continue;
+      }
+      final VirtualColumn equivalent = groupVcs.findEquivalent(queryNode);
+      if (equivalent != null
+          && !outputName.equals(equivalent.getOutputName())
+          && materializedColumns.contains(equivalent.getOutputName())
+          // Don't remap to a materialized column whose name is shadowed by another query virtual column: the remapped
+          // read goes through the per-group delegate, which would resolve the target name to that (unrelated) query VC
+          // instead of the stored column. Leaving this VC makes it recompute from its own inputs instead.
+          && queryVcs.getVirtualColumn(equivalent.getOutputName()) == null
+          // Don't remap a VC an unrewritable filter (spatial, javascript, column-comparison, ...) references: the
+          // filter can't have the VC name swapped for the materialized column, so keep the VC in place and let the
+          // filter read its recomputed value. Clustered specs guarantee every VC's inputs are stored (see
+          // ClusteredValueGroupsBaseTableProjectionSpec), so recompute is always a correct fallback.
+          && !unrewritableFilterColumns.contains(outputName)) {
+        candidates.put(outputName, equivalent.getOutputName());
+      }
+    }
+    if (candidates.isEmpty()) {
+      return Map.of();
+    }
+
+    // Transitive "must keep" closure: seed with the non-substituted query VCs (those recompute), then follow
+    // requiredColumns() to every query VC they depend on.
+    final Set<String> keep = new HashSet<>();
+    final Deque<String> toVisit = new ArrayDeque<>();
+    for (VirtualColumn vc : all) {
+      if (!candidates.containsKey(vc.getOutputName())) {
+        toVisit.add(vc.getOutputName());
+      }
+    }
+    while (!toVisit.isEmpty()) {
+      final VirtualColumn vc = byName.get(toVisit.poll());
+      if (vc == null) {
+        continue;
+      }
+      for (String dep : vc.requiredColumns()) {
+        // Only query VCs matter here; a dep that a kept VC recomputes from must itself be kept (and its deps)
+        if (byName.containsKey(dep) && keep.add(dep)) {
+          toVisit.add(dep);
+        }
+      }
+    }
+
+    final Map<String, String> remap = new HashMap<>();
+    for (Map.Entry<String, String> e : candidates.entrySet()) {
+      if (!keep.contains(e.getKey())) {
+        remap.put(e.getKey(), e.getValue());
+      }
+    }
+    return remap;
   }
 
   /**
    * Walk the filter tree against {@code group}'s constant clustering tuple and return a rewritten filter where each
-   * leaf whose column resolves to a clustering column (physical or virtual) is folded to {@link TrueFilter} /
-   * {@link FalseFilter}, with those constants propagated through AND / OR / NOT. All other filters remain unchanged.
+   * recognized equality / in / null leaf whose column resolves to a clustering column (physical or virtual) is folded
+   * to {@link TrueFilter} / {@link FalseFilter}, with those constants propagated through AND / OR / NOT. All other
+   * filters (including other predicate shapes on a clustering column, e.g. range / like) remain unchanged.
    * <p/>
    * Output shape encodes the truth value implicitly: a top-level {@link FalseFilter} means the filter is provably
    * FALSE against this group's clustering tuple (the planner uses this to decide which groups to prune); a top-level
@@ -857,16 +988,47 @@ public class Projections
 
   private static Filter remapFilterToProjection(ProjectionMatchBuilder matchBuilder, Filter aggFilter)
   {
+    return rewriteFilterRequiredColumns(aggFilter, matchBuilder.getRemapColumns());
+  }
+
+  /**
+   * Whether {@code filter} can be remapped into the projection's column namespace via {@link #remapFilterToProjection}:
+   * either it references none of the remapped columns (nothing to rewrite) or it supports required-column rewrite. A
+   * filter that references a remapped column but can't rewrite can't be remapped, so callers must reject the
+   * projection match and fall back to the base table rather than letting {@link Filter#rewriteRequiredColumns} throw.
+   */
+  private static boolean canRemapFilterToProjection(ProjectionMatchBuilder matchBuilder, Filter filter)
+  {
+    return filter.supportsRequiredColumnRewrite()
+           || Collections.disjoint(filter.getRequiredColumns(), matchBuilder.getRemapColumns().keySet());
+  }
+
+  /**
+   * Rewrite {@code filter}'s required columns through {@code remap}, tolerating columns the map doesn't mention.
+   * {@link Filter#rewriteRequiredColumns} throws on any required column missing from the rewrite map, so we seed an
+   * identity mapping over the filter's own required columns and overlay {@code remap} on top: residual leaves (a
+   * predicate on a column with no remap entry, e.g. {@code region = 'us-east-1'}) keep their own column, while matched
+   * columns are redirected to the materialized column. Shared by the aggregate-projection remap
+   * ({@link #remapFilterToProjection}) and the clustered base-table virtual-column remap
+   * ({@link ClusterGroupQueryPlan#rebuildCursorBuildSpec}).
+   * <p>
+   * When the filter references none of the remapped columns, it is returned unchanged without calling
+   * {@link Filter#rewriteRequiredColumns} at all as there is nothing to rewrite.
+   */
+  static Filter rewriteFilterRequiredColumns(Filter filter, Map<String, String> remap)
+  {
+    final Set<String> requiredColumns = filter.getRequiredColumns();
+    if (Collections.disjoint(requiredColumns, remap.keySet())) {
+      return filter;
+    }
     final Map<String, String> filterRewrites = new HashMap<>();
-    // start with identity
-    for (String required : aggFilter.getRequiredColumns()) {
+    // start with identity so residual columns not mentioned in the remap are preserved rather than rejected
+    for (String required : requiredColumns) {
       filterRewrites.put(required, required);
     }
-    // overlay projection rewrites
-    filterRewrites.putAll(matchBuilder.getRemapColumns());
-
-    final Filter remappedAggFilter = aggFilter.rewriteRequiredColumns(filterRewrites);
-    return remappedAggFilter;
+    // overlay the remap so matched columns win over their identity entry
+    filterRewrites.putAll(remap);
+    return filter.rewriteRequiredColumns(filterRewrites);
   }
 
   /**

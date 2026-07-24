@@ -25,6 +25,7 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.projections.ClusteringVectorColumnSelectorFactory;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Vector-cursor counterpart of {@link org.apache.druid.segment.ConcatenatingCursor}. Walks a sequence of per-group
@@ -45,6 +46,7 @@ public final class ConcatenatingVectorCursor implements VectorCursor
   private final List<Supplier<CursorHolder>> holderSuppliers;
   private final List<Object[]> clusteringValuesByGroup;
   private final ClusteringVectorColumnSelectorFactory wrapperFactory;
+  private final VectorColumnSelectorFactory exposedFactory;
 
   private int currentIdx;
   private VectorCursor currentCursor;
@@ -53,7 +55,8 @@ public final class ConcatenatingVectorCursor implements VectorCursor
   public ConcatenatingVectorCursor(
       List<Supplier<CursorHolder>> holderSuppliers,
       List<Object[]> clusteringValuesByGroup,
-      ClusteringVectorColumnSelectorFactory wrapperFactory
+      ClusteringVectorColumnSelectorFactory wrapperFactory,
+      Map<String, String> virtualColumnRemap
   )
   {
     if (holderSuppliers.size() != clusteringValuesByGroup.size()) {
@@ -69,6 +72,9 @@ public final class ConcatenatingVectorCursor implements VectorCursor
     this.holderSuppliers = holderSuppliers;
     this.clusteringValuesByGroup = clusteringValuesByGroup;
     this.wrapperFactory = wrapperFactory;
+    this.exposedFactory = virtualColumnRemap.isEmpty()
+                          ? wrapperFactory
+                          : new RemapVectorColumnSelectorFactory(wrapperFactory, virtualColumnRemap);
     this.currentIdx = -1;
   }
 
@@ -106,7 +112,7 @@ public final class ConcatenatingVectorCursor implements VectorCursor
   public VectorColumnSelectorFactory getColumnSelectorFactory()
   {
     initializeIfNeeded();
-    return wrapperFactory;
+    return exposedFactory;
   }
 
   @Override
