@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.audit.RequestInfo;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.config.JacksonConfigManager;
@@ -87,12 +88,18 @@ public class CoordinatorConfigManager
     return Preconditions.checkNotNull(dynamicConfig, "Got null config from watcher?!");
   }
 
-  public ConfigManager.SetResult setDynamicConfig(CoordinatorDynamicConfig config, AuditInfo auditInfo)
+  public ConfigManager.SetResult setDynamicConfig(
+      CoordinatorDynamicConfig config,
+      AuditInfo auditInfo,
+      @Nullable RequestInfo requestInfo
+  )
   {
     return jacksonConfigManager.set(
         CoordinatorDynamicConfig.CONFIG_KEY,
+        null,
         config,
-        auditInfo
+        auditInfo,
+        requestInfo
     );
   }
 

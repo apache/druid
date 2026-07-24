@@ -26,6 +26,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.Multibinder;
+import org.apache.druid.audit.RequestHeaderContextConfig;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
@@ -51,6 +52,8 @@ import org.apache.druid.sql.calcite.view.DruidViewModule;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.http.SqlHttpModule;
+
+import javax.annotation.Nullable;
 
 import java.util.Properties;
 
@@ -170,7 +173,8 @@ public class SqlModule implements Module
         final ServiceEmitter emitter,
         final RequestLogger requestLogger,
         final QueryScheduler queryScheduler,
-        final SqlLifecycleManager sqlLifecycleManager
+        final SqlLifecycleManager sqlLifecycleManager,
+        @Nullable final RequestHeaderContextConfig requestHeaderContextConfig
     )
     {
       return new SqlToolbox(
@@ -179,7 +183,8 @@ public class SqlModule implements Module
           emitter,
           requestLogger,
           queryScheduler,
-          sqlLifecycleManager
+          sqlLifecycleManager,
+          requestHeaderContextConfig != null ? requestHeaderContextConfig : new RequestHeaderContextConfig()
       );
     }
 

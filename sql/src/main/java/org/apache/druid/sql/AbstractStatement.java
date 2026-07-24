@@ -21,6 +21,7 @@ package org.apache.druid.sql;
 
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.server.audit.RequestHeaderContext;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -87,9 +88,41 @@ public abstract class AbstractStatement implements Closeable
     this.sqlToolbox = sqlToolbox;
     this.reporter = new SqlExecutionReporter(this, remoteAddress);
     this.queryPlus = queryPlus;
-    this.authContextKeys = queryPlus.authContextKeys();
     this.queryContext = new HashMap<>(queryPlus.context());
     sqlToolbox.engine.initContextMap(this.queryContext);
+    // Anti-spoof + propagation for reserved request-header context keys, mirroring
+    // QueryLifecycle.initialize() on the native path. A client must not be able to set a
+    // value for one of these keys via the SQL body context; the only legitimate source is
+    // a filter-captured inbound header (RequestHeaderContext). Unlike the native path,
+    // queryContext here is a fresh mutable map that IS the authoritative context (it is not
+    // re-merged over the request body), so we can simply remove uncaptured keys rather than
+    // overriding them to null. This sanitizes both the SQL request log and the context handed
+    // to the planner; generated native sub-queries are additionally sanitized by
+    // QueryLifecycle.initialize().
+    final Map<String, String> capturedHeaders = RequestHeaderContext.current();
+    for (String reservedKey : sqlToolbox.requestHeaderContextConfig.getHeaderToContextKey().values()) {
+      final String capturedValue = capturedHeaders.get(reservedKey);
+      if (capturedValue != null) {
+        this.queryContext.put(reservedKey, capturedValue);
+      } else {
+        this.queryContext.remove(reservedKey);
+      }
+    }
+    // A value captured from an inbound header is client-influenced (the caller controls the
+    // headers it sends), so it must be authorized like a body-supplied context key. The body's
+    // authContextKeys were computed before the captured values were injected above, so union
+    // the captured keys in here, mirroring QueryLifecycle.initialize() on the native path. This
+    // stops a client from mapping a header to an operational key (priority, lane, cache flags,
+    // ...) to bypass the QUERY_CONTEXT WRITE authorization required for that key in the body.
+    final Set<String> keysToAuthorize = new HashSet<>(queryPlus.authContextKeys());
+    // A body-supplied value for a header-target key was just stripped above and never takes
+    // effect, so it must not count toward context-key authorization (mirrors the removeAll on
+    // QueryLifecycle.initialize()). Without this, a body context key that collides with a
+    // configured header-target key (e.g. traceId) would still require QUERY_CONTEXT WRITE and
+    // could falsely reject the query when authorizeQueryContextParams is enabled.
+    keysToAuthorize.removeAll(sqlToolbox.requestHeaderContextConfig.getHeaderToContextKey().values());
+    keysToAuthorize.addAll(capturedHeaders.keySet());
+    this.authContextKeys = Set.copyOf(keysToAuthorize);
     // "bySegment" results are never valid to use with SQL because the result format is incompatible
     // so, overwrite any user specified context to avoid exceptions down the line
     if (this.queryContext.remove(QueryContexts.BY_SEGMENT_KEY) != null) {

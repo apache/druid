@@ -45,6 +45,7 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.audit.RequestHeaderContext;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -84,6 +85,7 @@ import java.util.concurrent.TimeUnit;
 import static org.apache.druid.sql.calcite.BaseCalciteQueryTest.assertResultsEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -204,6 +206,97 @@ public class SqlStatementTest
     assertFalse(resultSet.runnable());
     resultSet.close();
     stmt.close();
+  }
+
+  @Test
+  public void testDirectStripsForgedReservedContextKeyWhenNoHeader()
+  {
+    // Anti-spoof: a client supplies a value for the reserved "traceId" context key in the
+    // SQL body but no header was captured. The forged value must be stripped from the
+    // statement context (which is what gets logged and handed to the planner).
+    SqlQueryPlus sqlReq = SqlQueryPlus.builder("SELECT COUNT(*) AS cnt FROM druid.foo")
+                                      .queryContext(ImmutableMap.of("traceId", "FORGED", "foo", "bar"))
+                                      .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                      .build();
+    RequestHeaderContext.clear();
+    try {
+      DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+      assertNull("forged traceId must be stripped from SQL context", stmt.context().get("traceId"));
+      assertEquals("bar", stmt.context().get("foo"));
+      stmt.close();
+    }
+    finally {
+      RequestHeaderContext.clear();
+    }
+  }
+
+  @Test
+  public void testDirectInjectsCapturedHeaderOverridingForgedBody()
+  {
+    SqlQueryPlus sqlReq = SqlQueryPlus.builder("SELECT COUNT(*) AS cnt FROM druid.foo")
+                                      .queryContext(ImmutableMap.of("traceId", "FORGED"))
+                                      .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                      .build();
+    RequestHeaderContext.bind(ImmutableMap.of("traceId", "real-trace"));
+    try {
+      DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+      assertEquals("real-trace", stmt.context().get("traceId"));
+      stmt.close();
+    }
+    finally {
+      RequestHeaderContext.clear();
+    }
+  }
+
+  @Test
+  public void testDirectAuthorizesCapturedHeaderContextKey()
+  {
+    // A context key whose value is captured from an inbound header is client-influenced, so it
+    // must be subject to QUERY_CONTEXT authorization like a body key. authContextKeys is frozen
+    // from the body before header injection, so the captured key must be unioned in (mirrors
+    // QueryLifecycle on the native path). Without it, mapping a header to e.g. priority/lane
+    // would reach planning without the WRITE authorization required for the same body key.
+    SqlQueryPlus sqlReq = SqlQueryPlus.builder("SELECT COUNT(*) AS cnt FROM druid.foo")
+                                      .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                      .build();
+    RequestHeaderContext.bind(ImmutableMap.of("traceId", "client-set"));
+    try {
+      DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+      // "traceId" arrived only via the captured header (not the body) yet must be authorized.
+      assertTrue(stmt.authContextKeys.contains("traceId"));
+      stmt.close();
+    }
+    finally {
+      RequestHeaderContext.clear();
+    }
+  }
+
+  @Test
+  public void testDirectDoesNotAuthorizeStrippedBodyReservedContextKey()
+  {
+    // A body-supplied value for a header-target key ("traceId") with no captured header is
+    // stripped from the executed context (anti-spoof) and never takes effect, so it must NOT
+    // count toward context-key authorization. Mirrors QueryLifecycle.initialize() on the native
+    // path; without the removeAll, enabling authorizeQueryContextParams would falsely reject a
+    // query carrying traceId in its body even though the value is discarded.
+    SqlQueryPlus sqlReq = SqlQueryPlus.builder("SELECT COUNT(*) AS cnt FROM druid.foo")
+                                      .queryContext(ImmutableMap.of("traceId", "FORGED", "foo", "bar"))
+                                      .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                      .build();
+    RequestHeaderContext.clear();
+    try {
+      DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+      assertFalse(
+          "stripped body traceId must not require context-key authorization",
+          stmt.authContextKeys.contains("traceId")
+      );
+      // A genuine (non header-target) body context key still requires authorization.
+      assertTrue(stmt.authContextKeys.contains("foo"));
+      stmt.close();
+    }
+    finally {
+      RequestHeaderContext.clear();
+    }
   }
 
   @Test
