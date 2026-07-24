@@ -161,10 +161,11 @@ public interface IndexerMetadataStorageCoordinator
    * @param maxUpdatedTime Returned segments must have a {@code used_status_last_updated}
    *                       which is either null or earlier than this value.
    * @param limit          Maximum number of segments to return.
-   *
    * @return Unsorted list of unused segments that match the given parameters.
+   * The entries in the lost are required to have the {@link DataSegmentPlus#getDataSegment()}
+   * and {@link DataSegmentPlus#getUpgradedFromSegmentId()} fields populated.
    */
-  List<DataSegment> retrieveUnusedSegmentsWithExactInterval(
+  List<DataSegmentPlus> retrieveUnusedSegmentsWithExactInterval(
       String dataSource,
       Interval interval,
       DateTime maxUpdatedTime,

@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -53,7 +54,10 @@ import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorSer
 import org.joda.time.Period;
 import org.junit.rules.ExternalResource;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 public class TaskActionTestKit extends ExternalResource
 {
@@ -73,6 +77,7 @@ public class TaskActionTestKit extends ExternalResource
   private boolean useCentralizedDatasourceSchema = false;
   private boolean batchSegmentAllocation = true;
   private boolean skipSegmentPayloadFetchForAllocation = new TaskLockConfig().isBatchAllocationReduceMetadataIO();
+  private Map<Class<? extends TaskAction<?>>, Supplier<?>> taskActionDelegate;
   private AtomicBoolean configFinalized = new AtomicBoolean();
 
   public TaskActionTestKit setUseSegmentMetadataCache(boolean useSegmentMetadataCache)
@@ -156,6 +161,36 @@ public class TaskActionTestKit extends ExternalResource
     metadataCachePollExec.finishNextPendingTasks(4);
   }
 
+  /**
+   * Creates a {@link LocalTaskActionClient}. The response for a specific task
+   * action type may be overridden by calling {@link #registerDelegateForTaskAction}.
+   */
+  public TaskActionClient createTaskActionClient(Task task)
+  {
+    return new LocalTaskActionClient(task, getTaskActionToolbox())
+    {
+      @Override
+      @SuppressWarnings("unchecked")
+      public <V> V submit(TaskAction<V> taskAction)
+      {
+        final Supplier<?> delegate = taskActionDelegate.get(taskAction.getClass());
+        if (delegate == null) {
+          return super.submit(taskAction);
+        } else {
+          return (V) delegate.get();
+        }
+      }
+    };
+  }
+
+  /**
+   * Registers an override action to be performed for task actions of the given type.
+   */
+  public <V> void registerDelegateForTaskAction(Class<? extends TaskAction<V>> actionType, Supplier<V> function)
+  {
+    taskActionDelegate.put(actionType, function);
+  }
+
   @Override
   public void before()
   {
@@ -234,6 +269,7 @@ public class TaskActionTestKit extends ExternalResource
         supervisorManager,
         objectMapper
     );
+    taskActionDelegate = new HashMap<>();
     testDerbyConnector.createDataSourceTable();
     testDerbyConnector.createUpgradeSegmentsTable();
     testDerbyConnector.createPendingSegmentsTable();

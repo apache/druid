@@ -24,11 +24,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.KillTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.actions.RetrieveUpgradedFromSegmentIdsAction;
+import org.apache.druid.indexing.common.actions.RetrieveUpgradedToSegmentIdsAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.overlord.Segments;
@@ -54,10 +58,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
@@ -66,6 +72,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   private static final String DATA_SOURCE = "wiki";
 
   private TestTaskRunner taskRunner;
+  private Map<Class<? extends TaskAction<?>>, Supplier<Object>> taskActionDelegate;
 
   private DataSegment segment1;
   private DataSegment segment2;
@@ -87,12 +94,32 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   public void setup()
   {
     taskRunner = new TestTaskRunner();
+    taskActionDelegate = new HashMap<>();
 
     final String version = DateTimes.nowUtc().toString();
     segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version).withLoadSpec(ImmutableMap.of("k", 1));
     segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), version).withLoadSpec(ImmutableMap.of("k", 2));
     segment3 = newSegment(Intervals.of("2019-03-01/2019-04-01"), version).withLoadSpec(ImmutableMap.of("k", 3));
     segment4 = newSegment(Intervals.of("2019-04-01/2019-05-01"), version).withLoadSpec(ImmutableMap.of("k", 4));
+  }
+
+  @Override
+  public TestLocalTaskActionClient createActionClient(Task task)
+  {
+    return new TestLocalTaskActionClient(task)
+    {
+      @Override
+      @SuppressWarnings("unchecked")
+      public <V> V submit(TaskAction<V> taskAction)
+      {
+        final Supplier<Object> delegate = taskActionDelegate.get(taskAction.getClass());
+        if (delegate == null) {
+          return super.submit(taskAction);
+        } else {
+          return (V) delegate.get();
+        }
+      }
+    };
   }
 
   @Test
@@ -139,7 +166,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     ).containsExactlyInAnyOrder(segment1, segment4);
 
     Assert.assertEquals(
-        new KillTaskReport.Stats(1, 2),
+        new KillTaskReport.Stats(1, 1),
         getReportedStats()
     );
     Assert.assertEquals(ImmutableSet.of(segment3), getDataSegmentKiller().getKilledSegments());
@@ -178,7 +205,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(Collections.emptyList(), observedUnusedSegments);
 
     Assert.assertEquals(
-        new KillTaskReport.Stats(2, 2),
+        new KillTaskReport.Stats(2, 1),
         getReportedStats()
     );
     Assert.assertEquals(ImmutableSet.of(segment1, segment2), getDataSegmentKiller().getKilledSegments());
@@ -217,7 +244,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(Collections.singletonList(segment2), observedUnusedSegments);
 
     Assert.assertEquals(
-        new KillTaskReport.Stats(0, 2),
+        new KillTaskReport.Stats(0, 1),
         getReportedStats()
     );
     Assert.assertEquals(Collections.emptySet(), getDataSegmentKiller().getKilledSegments());
@@ -262,7 +289,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     ).containsExactlyInAnyOrder(segment1);
 
     Assert.assertEquals(
-        new KillTaskReport.Stats(0, 2),
+        new KillTaskReport.Stats(0, 1),
         getReportedStats()
     );
     Assert.assertEquals(Collections.emptySet(), getDataSegmentKiller().getKilledSegments());
@@ -307,7 +334,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     ).containsExactlyInAnyOrder(segment3);
 
     Assert.assertEquals(
-        new KillTaskReport.Stats(0, 2),
+        new KillTaskReport.Stats(0, 1),
         getReportedStats()
     );
     Assert.assertEquals(Collections.emptySet(), getDataSegmentKiller().getKilledSegments());
@@ -346,10 +373,99 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(ImmutableList.of(), observedUnusedSegments);
 
     Assert.assertEquals(
-        new KillTaskReport.Stats(3, 2),
+        new KillTaskReport.Stats(3, 1),
         getReportedStats()
     );
     Assert.assertEquals(ImmutableSet.of(segment1, segment2, segment3), getDataSegmentKiller().getKilledSegments());
+  }
+
+  @Test
+  public void testTaskFails_andNoSegmentIsDeleted_ifErrorWhileFetchingParentIds()
+  {
+    // Insert some segments and mark them as unused
+    insertUsedSegments(Set.of(segment1, segment2, segment3), Map.of());
+    getMetadataStorageCoordinator().markSegmentAsUnused(segment1.getId());
+    getMetadataStorageCoordinator().markSegmentAsUnused(segment2.getId());
+    getMetadataStorageCoordinator().markSegmentAsUnused(segment3.getId());
+
+    // Make the retrieveUpgradedFromSegmentIds task action fail
+    taskActionDelegate.put(
+        RetrieveUpgradedFromSegmentIdsAction.class,
+        () -> {
+          throw new ISE("Failed to fetch parent IDs");
+        }
+    );
+
+    // Verify that task run fails
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.ETERNITY)
+        .build();
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(Exception.class, () -> taskRunner.run(task).get()),
+        ExceptionMatcher.of(Exception.class).expectMessageContains(
+            "Could not retrieve parent segment ids using task action[retrieveUpgradedFromSegmentIds]."
+            + " Stopping kill task to avoid data loss in case the segment files are shared by other segments."
+        )
+    );
+
+    // Verify that all unused segments are still present in both metadata store and deep store
+    final List<DataSegment> observedUnusedSegments =
+        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
+            DATA_SOURCE,
+            Intervals.ETERNITY,
+            null,
+            null,
+            null
+        );
+    Assert.assertEquals(List.of(segment1, segment2, segment3), observedUnusedSegments);
+    Assert.assertEquals(Set.of(), getDataSegmentKiller().getKilledSegments());
+  }
+
+  @Test
+  public void testTaskFails_andNoSegmentIsDeleted_ifErrorWhileFetchingChildrenIds()
+  {
+    // Insert some segments and mark them as unused
+    insertUsedSegments(Set.of(segment1, segment2, segment3), Map.of());
+    getMetadataStorageCoordinator().markSegmentAsUnused(segment1.getId());
+    getMetadataStorageCoordinator().markSegmentAsUnused(segment2.getId());
+    getMetadataStorageCoordinator().markSegmentAsUnused(segment3.getId());
+
+    // Make the retrieveUpgradedFromSegmentIds task action fail
+    taskActionDelegate.put(
+        RetrieveUpgradedToSegmentIdsAction.class,
+        () -> {
+          throw new ISE("Failed to fetch children IDs");
+        }
+    );
+
+    // Verify that task run fails
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
+        .dataSource(DATA_SOURCE)
+        .interval(Intervals.ETERNITY)
+        .build();
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(Exception.class, () -> taskRunner.run(task).get()),
+        ExceptionMatcher.of(Exception.class).expectMessageContains(
+            "Could not perform task action[retrieveUpgradedToSegmentIds] to retrieve"
+            + " segment IDs which share load specs with segments being killed."
+            + " Stopping kill task to avoid data loss in case the segment files are shared by other segments."
+        )
+    );
+
+    // Verify that all unused segments are still present in both metadata store and deep store
+    final List<DataSegment> observedUnusedSegments =
+        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(
+            DATA_SOURCE,
+            Intervals.ETERNITY,
+            null,
+            null,
+            null
+        );
+    Assert.assertEquals(List.of(segment1, segment2, segment3), observedUnusedSegments);
+    Assert.assertEquals(Set.of(), getDataSegmentKiller().getKilledSegments());
   }
 
   @Test
@@ -386,7 +502,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
     Assert.assertEquals(
-        new KillTaskReport.Stats(4, 3),
+        new KillTaskReport.Stats(4, 2),
         getReportedStats()
     );
 
@@ -435,7 +551,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
     Assert.assertEquals(
-        new KillTaskReport.Stats(0, 1),
+        new KillTaskReport.Stats(0, 0),
         getReportedStats()
     );
 
@@ -535,7 +651,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
     Assert.assertEquals(
-        new KillTaskReport.Stats(0, 1),
+        new KillTaskReport.Stats(0, 0),
         getReportedStats()
     );
 
@@ -741,7 +857,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(ImmutableList.of(), observedUnusedSegments);
     Assert.assertEquals(
-        new KillTaskReport.Stats(3, 4),
+        new KillTaskReport.Stats(3, 3),
         getReportedStats()
     );
   }
@@ -827,7 +943,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(ImmutableList.of(segment3), observedUnusedSegments);
     Assert.assertEquals(
-        new KillTaskReport.Stats(2, 3),
+        new KillTaskReport.Stats(2, 2),
         getReportedStats()
     );
 
@@ -851,7 +967,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(ImmutableList.of(), observedUnusedSegments2);
     Assert.assertEquals(
-        new KillTaskReport.Stats(1, 2),
+        new KillTaskReport.Stats(1, 1),
         getReportedStats()
     );
   }
@@ -927,7 +1043,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(ImmutableList.of(segment2, segment3), observedUnusedSegments1);
     Assert.assertEquals(
-        new KillTaskReport.Stats(2, 3),
+        new KillTaskReport.Stats(2, 2),
         getReportedStats()
     );
 
@@ -951,7 +1067,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(ImmutableList.of(), observedUnusedSegments2);
     Assert.assertEquals(
-        new KillTaskReport.Stats(2, 3),
+        new KillTaskReport.Stats(2, 2),
         getReportedStats()
     );
   }
@@ -1010,7 +1126,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task1).get().getStatusCode());
     Assert.assertEquals(
-        new KillTaskReport.Stats(2, 3),
+        new KillTaskReport.Stats(2, 2),
         getReportedStats()
     );
 
@@ -1035,7 +1151,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task2).get().getStatusCode());
     Assert.assertEquals(
-        new KillTaskReport.Stats(1, 2),
+        new KillTaskReport.Stats(1, 1),
         getReportedStats()
     );
 
@@ -1084,7 +1200,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(Collections.emptyList(), observedUnusedSegments);
     Assert.assertEquals(
-        new KillTaskReport.Stats(4, 3),
+        new KillTaskReport.Stats(4, 2),
         getReportedStats()
     );
   }
