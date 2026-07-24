@@ -31,5 +31,6 @@ package org.apache.druid.math.expr.vector.simd;
 public enum SimdSupportedUnaryOp
 {
   NEG,
-  ABS
+  ABS,
+  SQRT
 }

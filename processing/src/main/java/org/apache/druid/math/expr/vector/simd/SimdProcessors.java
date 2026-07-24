@@ -25,6 +25,7 @@ import org.apache.druid.math.expr.vector.functional.DoubleBivariateDoubleLongFun
 import org.apache.druid.math.expr.vector.functional.DoubleBivariateDoublesFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleBivariateLongDoubleFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleUnivariateDoubleFunction;
+import org.apache.druid.math.expr.vector.functional.DoubleUnivariateLongFunction;
 import org.apache.druid.math.expr.vector.functional.LongBivariateLongsFunction;
 import org.apache.druid.math.expr.vector.functional.LongUnivariateLongFunction;
 
@@ -124,7 +125,20 @@ public final class SimdProcessors
     return switch (op) {
       case NEG -> new SimdDoubleNegProcessor(input, scalarFallback);
       case ABS -> new SimdDoubleAbsProcessor(input, scalarFallback);
+      case SQRT -> new SimdDoubleSqrtProcessor(input, scalarFallback);
       default -> throw DruidException.defensive("Unsupported SIMD unary op[%s]", op);
+    };
+  }
+
+  public static ExprVectorProcessor<double[]> makeLongToDoubleUnary(
+      ExprVectorProcessor<?> input,
+      SimdSupportedUnaryOp op,
+      DoubleUnivariateLongFunction scalarFallback
+  )
+  {
+    return switch (op) {
+      case SQRT -> new SimdLongToDoubleSqrtProcessor(input, scalarFallback);
+      default -> throw DruidException.defensive("Unsupported SIMD unary op[%s] for long->double", op);
     };
   }
 }

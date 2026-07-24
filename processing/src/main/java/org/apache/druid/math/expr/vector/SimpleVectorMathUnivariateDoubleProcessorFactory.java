@@ -20,32 +20,56 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.vector.functional.DoubleUnivariateDoubleFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleUnivariateLongFunction;
+import org.apache.druid.math.expr.vector.simd.SimdProcessors;
+import org.apache.druid.math.expr.vector.simd.SimdSupportedUnaryOp;
+
+import javax.annotation.Nullable;
 
 /**
  * Make a 1 argument math processor with the following type rules
  *    long    -> double
  *    double  -> double
- * using simple scalar functions {@link DoubleUnivariateLongFunction} and {@link DoubleUnivariateDoubleFunction}
+ * using simple scalar functions {@link DoubleUnivariateLongFunction} and {@link DoubleUnivariateDoubleFunction}.
+ *
+ * If a non-null {@link SimdSupportedUnaryOp} is supplied to the constructor and
+ * {@link ExpressionProcessing#useVectorApi()} is true, this factory will return SIMD-specialized processors backed
+ * by the JDK incubator {@code jdk.incubator.vector} API instead of the standard scalar implementations.
  */
 public class SimpleVectorMathUnivariateDoubleProcessorFactory extends VectorMathUnivariateDoubleProcessorFactory
 {
   private final DoubleUnivariateLongFunction longFunction;
   private final DoubleUnivariateDoubleFunction doubleFunction;
+  @Nullable
+  private final SimdSupportedUnaryOp simdOp;
 
   public SimpleVectorMathUnivariateDoubleProcessorFactory(
       DoubleUnivariateLongFunction longFunction,
       DoubleUnivariateDoubleFunction doubleFunction
   )
   {
+    this(longFunction, doubleFunction, null);
+  }
+
+  protected SimpleVectorMathUnivariateDoubleProcessorFactory(
+      DoubleUnivariateLongFunction longFunction,
+      DoubleUnivariateDoubleFunction doubleFunction,
+      @Nullable SimdSupportedUnaryOp simdOp
+  )
+  {
     this.longFunction = longFunction;
     this.doubleFunction = doubleFunction;
+    this.simdOp = simdOp;
   }
 
   @Override
   public final ExprVectorProcessor<double[]> longProcessor(Expr.VectorInputBindingInspector inspector, Expr arg)
   {
+    if (simdOp != null && ExpressionProcessing.useVectorApi()) {
+      return SimdProcessors.makeLongToDoubleUnary(arg.asVectorProcessor(inspector), simdOp, longFunction);
+    }
     return new DoubleUnivariateLongFunctionVectorProcessor(
         arg.asVectorProcessor(inspector),
         longFunction
@@ -55,6 +79,9 @@ public class SimpleVectorMathUnivariateDoubleProcessorFactory extends VectorMath
   @Override
   public final ExprVectorProcessor<double[]> doubleProcessor(Expr.VectorInputBindingInspector inspector, Expr arg)
   {
+    if (simdOp != null && ExpressionProcessing.useVectorApi()) {
+      return SimdProcessors.makeDoubleUnary(arg.asVectorProcessor(inspector), simdOp, doubleFunction);
+    }
     return new DoubleUnivariateDoubleFunctionVectorProcessor(
         arg.asVectorProcessor(inspector),
         doubleFunction

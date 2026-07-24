@@ -779,7 +779,7 @@ public class VectorMathProcessors
 
     public Sqrt()
     {
-      super(Math::sqrt, Math::sqrt);
+      super(Math::sqrt, Math::sqrt, SimdSupportedUnaryOp.SQRT);
     }
   }
 

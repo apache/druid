@@ -176,7 +176,10 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "SELECT SUM(ABS(long4)) FROM expressions",
       "SELECT SUM(ABS(double1)) FROM expressions",
       // 68: unary abs of a binary subtraction (composes SIMD sub with SIMD abs)
-      "SELECT SUM(ABS(long1 - long4)) FROM expressions"
+      "SELECT SUM(ABS(long1 - long4)) FROM expressions",
+      // 69,70: unary sqrt on double and long inputs (long input exercises the SIMD widening path)
+      "SELECT SUM(SQRT(double1)) FROM expressions",
+      "SELECT SUM(SQRT(long1)) FROM expressions"
   );
 
   @Param({
@@ -261,7 +264,9 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "65",
       "66",
       "67",
-      "68"
+      "68",
+      "69",
+      "70"
   })
   private String query;
 
