@@ -28,6 +28,7 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSetOption;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
+import org.apache.calcite.sql.parser.SqlAbstractParserImpl;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -47,6 +48,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -73,13 +75,13 @@ public class DruidSqlParser
 
   public static StatementAndSetContext parse(final String sql, final boolean allowSetStatements)
   {
+    final SqlParser parser = SqlParser.create(new SourceStringReader(sql), PARSER_CONFIG);
     try {
-      SqlParser parser = SqlParser.create(new SourceStringReader(sql), PARSER_CONFIG);
       SqlNode sqlNode = parser.parseStmtList();
       return processStatementList(sqlNode, allowSetStatements);
     }
     catch (SqlParseException e) {
-      throw translateParseException(e);
+      throw translateParseException(e, parser.getMetadata());
     }
   }
 
@@ -176,7 +178,10 @@ public class DruidSqlParser
   /**
    * Constructs a user-friendly {@link DruidException} from a Calcite {@link SqlParseException}.
    */
-  private static DruidException translateParseException(SqlParseException e)
+  private static DruidException translateParseException(
+      SqlParseException e,
+      SqlAbstractParserImpl.Metadata parserMetadata
+  )
   {
     final Throwable cause = e.getCause();
     if (cause instanceof DruidException) {
@@ -198,9 +203,29 @@ public class DruidSqlParser
                              .withContext("sourceType", "sql");
       } else {
         final String theUnexpectedToken = getUnexpectedTokenString(parseException);
-
         final String[] tokenDictionary = e.getTokenImages();
         final int[][] expectedTokenSequences = e.getExpectedTokenSequences();
+
+        if (parserMetadata != null
+            && isIdentifierExpected(tokenDictionary, expectedTokenSequences)
+            && parserMetadata.isReservedWord(theUnexpectedToken.toUpperCase(Locale.ROOT))) {
+          return InvalidSqlInput
+              .exception(
+                  e,
+                  "Token [%s] (line [%s], column [%s]) is a reserved keyword. "
+                  + "To use it as an identifier, quote it as [\"%s\"]",
+                  theUnexpectedToken,
+                  failurePosition.getLineNum(),
+                  failurePosition.getColumnNum(),
+                  theUnexpectedToken
+              )
+              .withContext("line", failurePosition.getLineNum())
+              .withContext("column", failurePosition.getColumnNum())
+              .withContext("endLine", failurePosition.getEndLineNum())
+              .withContext("endColumn", failurePosition.getEndColumnNum())
+              .withContext("token", theUnexpectedToken);
+        }
+
         final ArrayList<String> expectedTokens = new ArrayList<>(expectedTokenSequences.length);
         for (int[] expectedTokenSequence : expectedTokenSequences) {
           String[] strings = new String[expectedTokenSequence.length];
@@ -230,6 +255,23 @@ public class DruidSqlParser
     }
 
     return InvalidSqlInput.exception(e.getMessage());
+  }
+
+  private static boolean isIdentifierExpected(String[] tokenDictionary, int[][] expectedTokenSequences)
+  {
+    for (int[] expectedTokenSequence : expectedTokenSequences) {
+      if (expectedTokenSequence.length > 0) {
+        final String token = tokenDictionary[expectedTokenSequence[0]];
+        if ("<IDENTIFIER>".equals(token)
+            || "<QUOTED_IDENTIFIER>".equals(token)
+            || "<BACK_QUOTED_IDENTIFIER>".equals(token)
+            || "<BRACKET_QUOTED_IDENTIFIER>".equals(token)
+            || "<UNICODE_QUOTED_IDENTIFIER>".equals(token)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**
