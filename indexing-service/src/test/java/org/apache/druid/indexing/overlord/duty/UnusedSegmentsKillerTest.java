@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.overlord.duty;
 
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
+import org.apache.druid.indexing.common.actions.RetrieveUpgradedToSegmentIdsAction;
 import org.apache.druid.indexing.common.actions.TaskActionTestKit;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -29,6 +29,7 @@ import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -53,6 +54,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -94,7 +96,7 @@ public class UnusedSegmentsKillerTest
             SegmentMetadataCache.UsageMode.ALWAYS,
             killerConfig
         ),
-        task -> new LocalTaskActionClient(task, taskActionTestKit.getTaskActionToolbox()),
+        taskActionTestKit::createTaskActionClient,
         storageCoordinator,
         leaderSelector,
         (corePoolSize, nameFormat) -> new WrappingScheduledExecutorService(nameFormat, killExecutor, true),
@@ -365,6 +367,32 @@ public class UnusedSegmentsKillerTest
     finishQueuedKillJobs();
     emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 10L);
     emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 8L);
+  }
+
+  @Test
+  public void test_run_isNoop_ifRetrieveUpgradedToSegmentIdsFails()
+  {
+    storageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_1X10D), null);
+    storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
+
+    // Make the retrieveUpgradedFromSegmentIds task action fail
+    taskActionTestKit.registerDelegateForTaskAction(
+        RetrieveUpgradedToSegmentIdsAction.class,
+        () -> {
+          throw new ISE("Failed to fetch children IDs");
+        }
+    );
+
+    leaderSelector.becomeLeader();
+    killer.run();
+
+    // Verify that no unused segment is deleted from metadata store or deep store
+    finishQueuedKillJobs();
+    emitter.verifyNotEmitted(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE);
+    emitter.verifyNotEmitted(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE);
+
+    // Verify that the task is marked as failed
+    emitter.verifyEmitted("task/run/time", Map.of("taskStatus", "FAILED"), 10);
   }
 
   @Test
