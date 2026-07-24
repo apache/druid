@@ -282,10 +282,6 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
             segmentsNotKilled.size(), getDataSource()
         );
       }
-      if (segmentsToKillFromDeepStore.isEmpty()) {
-        // Do not proceed further as we will always keep getting the same batch of segments
-        break;
-      }
 
       // 3. Nuke all eligible unused segments
       taskActionClient.submit(new SegmentNukeAction(unusedSegments));

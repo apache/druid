@@ -139,7 +139,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     ).containsExactlyInAnyOrder(segment1, segment4);
 
     Assert.assertEquals(
-        new KillTaskReport.Stats(1, 2),
+        new KillTaskReport.Stats(1, 1),
         getReportedStats()
     );
     Assert.assertEquals(ImmutableSet.of(segment3), getDataSegmentKiller().getKilledSegments());
@@ -178,7 +178,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(Collections.emptyList(), observedUnusedSegments);
 
     Assert.assertEquals(
-        new KillTaskReport.Stats(2, 2),
+        new KillTaskReport.Stats(2, 1),
         getReportedStats()
     );
     Assert.assertEquals(ImmutableSet.of(segment1, segment2), getDataSegmentKiller().getKilledSegments());
@@ -217,7 +217,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(Collections.singletonList(segment2), observedUnusedSegments);
 
     Assert.assertEquals(
-        new KillTaskReport.Stats(0, 2),
+        new KillTaskReport.Stats(0, 1),
         getReportedStats()
     );
     Assert.assertEquals(Collections.emptySet(), getDataSegmentKiller().getKilledSegments());
@@ -262,7 +262,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     ).containsExactlyInAnyOrder(segment1);
 
     Assert.assertEquals(
-        new KillTaskReport.Stats(0, 2),
+        new KillTaskReport.Stats(0, 1),
         getReportedStats()
     );
     Assert.assertEquals(Collections.emptySet(), getDataSegmentKiller().getKilledSegments());
@@ -307,7 +307,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     ).containsExactlyInAnyOrder(segment3);
 
     Assert.assertEquals(
-        new KillTaskReport.Stats(0, 2),
+        new KillTaskReport.Stats(0, 1),
         getReportedStats()
     );
     Assert.assertEquals(Collections.emptySet(), getDataSegmentKiller().getKilledSegments());
@@ -346,7 +346,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(ImmutableList.of(), observedUnusedSegments);
 
     Assert.assertEquals(
-        new KillTaskReport.Stats(3, 2),
+        new KillTaskReport.Stats(3, 1),
         getReportedStats()
     );
     Assert.assertEquals(ImmutableSet.of(segment1, segment2, segment3), getDataSegmentKiller().getKilledSegments());
@@ -386,7 +386,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
     Assert.assertEquals(
-        new KillTaskReport.Stats(4, 3),
+        new KillTaskReport.Stats(4, 2),
         getReportedStats()
     );
 
@@ -435,7 +435,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
     Assert.assertEquals(
-        new KillTaskReport.Stats(0, 1),
+        new KillTaskReport.Stats(0, 0),
         getReportedStats()
     );
 
@@ -535,7 +535,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
     Assert.assertEquals(
-        new KillTaskReport.Stats(0, 1),
+        new KillTaskReport.Stats(0, 0),
         getReportedStats()
     );
 
@@ -741,7 +741,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(ImmutableList.of(), observedUnusedSegments);
     Assert.assertEquals(
-        new KillTaskReport.Stats(3, 4),
+        new KillTaskReport.Stats(3, 3),
         getReportedStats()
     );
   }
@@ -827,7 +827,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(ImmutableList.of(segment3), observedUnusedSegments);
     Assert.assertEquals(
-        new KillTaskReport.Stats(2, 3),
+        new KillTaskReport.Stats(2, 2),
         getReportedStats()
     );
 
@@ -851,7 +851,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(ImmutableList.of(), observedUnusedSegments2);
     Assert.assertEquals(
-        new KillTaskReport.Stats(1, 2),
+        new KillTaskReport.Stats(1, 1),
         getReportedStats()
     );
   }
@@ -927,7 +927,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(ImmutableList.of(segment2, segment3), observedUnusedSegments1);
     Assert.assertEquals(
-        new KillTaskReport.Stats(2, 3),
+        new KillTaskReport.Stats(2, 2),
         getReportedStats()
     );
 
@@ -951,7 +951,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(ImmutableList.of(), observedUnusedSegments2);
     Assert.assertEquals(
-        new KillTaskReport.Stats(2, 3),
+        new KillTaskReport.Stats(2, 2),
         getReportedStats()
     );
   }
@@ -1010,7 +1010,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task1).get().getStatusCode());
     Assert.assertEquals(
-        new KillTaskReport.Stats(2, 3),
+        new KillTaskReport.Stats(2, 2),
         getReportedStats()
     );
 
@@ -1035,7 +1035,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task2).get().getStatusCode());
     Assert.assertEquals(
-        new KillTaskReport.Stats(1, 2),
+        new KillTaskReport.Stats(1, 1),
         getReportedStats()
     );
 
@@ -1084,7 +1084,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(Collections.emptyList(), observedUnusedSegments);
     Assert.assertEquals(
-        new KillTaskReport.Stats(4, 3),
+        new KillTaskReport.Stats(4, 2),
         getReportedStats()
     );
   }
