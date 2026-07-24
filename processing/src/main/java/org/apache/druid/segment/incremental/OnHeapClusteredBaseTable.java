@@ -30,6 +30,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionary;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.EncodedKeyComponent;
 import org.apache.druid.segment.SortedDimensionDictionary;
 import org.apache.druid.segment.StringDimensionDictionary;
 import org.apache.druid.segment.VirtualColumn;
@@ -52,6 +53,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 /**
  * Segment-wide root of the clustered base-table machinery for {@link OnheapIncrementalIndex}: holds the per-type
@@ -147,22 +149,33 @@ public final class OnHeapClusteredBaseTable
   }
 
   /**
-   * Resolve the clustering tuple for {@code row}, locate (or create) the matching {@link OnHeapClusterGroup}, and
-   * dispatch the row to it. {@code key} carries the bucketed timestamp from the parent's {@code toIncrementalIndexRow}
-   * pre-processing, its dim slots are ignored here since in clustered mode the non-clustering data lives only on the
-   * per-group facts holders. Returns true when the row created a new fact entry in its group (vs. rolling up into an
-   * existing one).
+   * Derive this row's clustering values eagerly, and (when there are projections) materialize the derived clustering
+   * columns ones into {@code key.dims} so if a projection groups on it, it reads the derived value rather than
+   * a null if it was not eagerly derived. The returned array is handed back to {@link #addToFacts} so the
+   * derivation happens exactly once.
    */
-  boolean addToFacts(
+  Object[] prepareClusteringValues(
       IncrementalIndexRow key,
-      InputRow row,
-      List<String> parseExceptionMessages,
-      AtomicLong totalSizeInBytes
+      Function<String, IncrementalIndex.DimensionDesc> getBaseDimension,
+      boolean materializeForProjections,
+      List<String> parseExceptionMessages
   )
   {
-    final long clusteringDictSizeBefore = clusteringDictionariesSizeInBytes();
+    final Object[] clusteringValues = computeClusteringValues(parseExceptionMessages);
+    if (materializeForProjections) {
+      materializeDerivedClusteringDims(key, clusteringValues, getBaseDimension);
+    }
+    return clusteringValues;
+  }
+
+  /**
+   * Resolve each clustering column's value for the current row (through the virtual-column selector, coerced to the
+   * column's clustering type), without interning or routing. Reads through {@link #virtualSelectorFactory}, which is
+   * backed by the parent's {@code inputRowHolder} (already set to the current row by {@code IncrementalIndex#add}).
+   */
+  private Object[] computeClusteringValues(List<String> parseExceptionMessages)
+  {
     final Object[] clusteringValues = new Object[clusteringColumns.size()];
-    final List<Integer> clusteringValueIds = new ArrayList<>(clusteringColumns.size());
     for (int i = 0; i < clusteringColumns.size(); i++) {
       final String name = clusteringColumns.getColumnName(i);
       final ColumnType type = clusteringColumns.getColumnType(i)
@@ -181,7 +194,69 @@ public final class OnHeapClusteredBaseTable
         coerced = null;
       }
       clusteringValues[i] = coerced;
-      clusteringValueIds.add(internClusteringValue(type, coerced));
+    }
+    return clusteringValues;
+  }
+
+  /**
+   * Write the <em>derived</em> clustering values (those produced by a virtual column, e.g. a value extracted from a
+   * nested column) into the parent row's {@code key.dims}, encoded through the parent's own dimension indexer. Raw
+   * clustering columns are already populated by {@code toIncrementalIndexRow} and are left untouched.
+   * <p>
+   * A derived clustering column is absent from the raw input row and is not computed by the parent, so its
+   * {@code key.dims} slot is null. A projection grouping on that column binds to the base-table dimension (a base
+   * column shadows a same-named projection virtual column) and would otherwise read that null. Populating it here lets
+   * the projection read the same value the clustering path produced. Base-segment output is unaffected: the base facts
+   * holder is empty in clustered mode, so these parent-dimension entries never reach a base segment; only the
+   * projection (which shares the parent's indexer for this column) reads them.
+   */
+  private void materializeDerivedClusteringDims(
+      IncrementalIndexRow key,
+      Object[] clusteringValues,
+      Function<String, IncrementalIndex.DimensionDesc> getBaseDimension
+  )
+  {
+    for (int i = 0; i < clusteringColumns.size(); i++) {
+      final String name = clusteringColumns.getColumnName(i);
+      if (!virtualColumns.exists(name)) {
+        // raw clustering column: already materialized into key.dims by toIncrementalIndexRow
+        continue;
+      }
+      final IncrementalIndex.DimensionDesc desc = getBaseDimension.apply(name);
+      if (desc == null || desc.getIndex() >= key.dims.length) {
+        continue;
+      }
+      final EncodedKeyComponent<?> encoded =
+          desc.getIndexer().processRowValsToUnsortedEncodedKeyComponent(clusteringValues[i], false);
+      key.dims[desc.getIndex()] = encoded.getComponent();
+    }
+  }
+
+  /**
+   * Intern the {@code clusteringValues} (from {@link #computeClusteringValues}) into the per-type clustering
+   * dictionaries, locate (or create) the matching {@link OnHeapClusterGroup}, and dispatch the row to it. {@code key}
+   * carries the bucketed timestamp from the parent's {@code toIncrementalIndexRow} pre-processing, its dim slots are
+   * ignored here since in clustered mode the non-clustering data lives only on the per-group facts holders. Returns
+   * true when the row created a new fact entry in its group (vs. rolling up into an existing one).
+   */
+  boolean addToFacts(
+      IncrementalIndexRow key,
+      InputRow row,
+      Object[] clusteringValues,
+      List<String> parseExceptionMessages,
+      AtomicLong totalSizeInBytes
+  )
+  {
+    final long clusteringDictSizeBefore = clusteringDictionariesSizeInBytes();
+    final List<Integer> clusteringValueIds = new ArrayList<>(clusteringColumns.size());
+    for (int i = 0; i < clusteringColumns.size(); i++) {
+      final String name = clusteringColumns.getColumnName(i);
+      final ColumnType type = clusteringColumns.getColumnType(i)
+                                               .orElseThrow(() -> DruidException.defensive(
+                                                   "clustering column [%s] has no type",
+                                                   name
+                                               ));
+      clusteringValueIds.add(internClusteringValue(type, clusteringValues[i]));
     }
     totalSizeInBytes.addAndGet(clusteringDictionariesSizeInBytes() - clusteringDictSizeBefore);
 

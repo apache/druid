@@ -282,6 +282,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     final List<String> parseExceptionMessages = new ArrayList<>();
     final AtomicLong totalSizeInBytes = getBytesInMemory();
 
+    // In clustered mode, derive the clustering values once, up front, and materialize any derived (virtual-column)
+    // columns into key.dims before projections run. A derived clustering column is absent from the raw row and not
+    // computed by the parent, so its key.dims slot is null; a projection grouping on it binds to that base-table
+    // dimension and would read null. Materializing it here lets such projections read the same value the clustering
+    // path produces, and the computed values are reused by the clustered addToFacts below so the derivation happens
+    // exactly once.
+    final Object[] clusteringValues = clusteredBaseTable == null
+        ? null
+        : clusteredBaseTable.prepareClusteringValues(key, this::getDimension, !projections.isEmpty(), parseExceptionMessages);
+
     // add to projections first so if one is chosen by queries the data will always be ahead of the base table since
     // rows are not added atomically to all facts holders at once
     for (OnHeapAggregateProjection projection : projections.values()) {
@@ -296,6 +306,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       final boolean isNewEntry = clusteredBaseTable.addToFacts(
           key,
           inputRowHolder.getRow(),
+          clusteringValues,
           parseExceptionMessages,
           totalSizeInBytes
       );
