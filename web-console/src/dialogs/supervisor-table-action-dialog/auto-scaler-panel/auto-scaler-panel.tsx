@@ -36,6 +36,36 @@ interface AutoScalerPanelProps {
   supervisorId: string;
 }
 
+export function getAutoScalerValidationError({
+  taskCountMin,
+  taskCountMax,
+  maxProcessingRatePerTask,
+  optimalTaskIdleRatio,
+  criticalLag,
+  currentTaskCount,
+}: {
+  taskCountMin: number;
+  taskCountMax: number;
+  maxProcessingRatePerTask: number;
+  optimalTaskIdleRatio: number;
+  criticalLag: number;
+  currentTaskCount: number | undefined;
+}): string | undefined {
+  if (taskCountMin > taskCountMax) return 'Minimum task count must not exceed maximum task count';
+  if (maxProcessingRatePerTask < 100) return 'Max processing rate / task must be at least 100';
+  if (optimalTaskIdleRatio <= 0 || optimalTaskIdleRatio >= 1) {
+    return 'Optimal task idle ratio must be greater than 0 and less than 1';
+  }
+  if (criticalLag < 1000) return 'Critical lag must be at least 1000';
+  if (
+    currentTaskCount !== undefined &&
+    (currentTaskCount < taskCountMin || currentTaskCount > taskCountMax)
+  ) {
+    return 'Current task count must be within the minimum and maximum task count';
+  }
+  return undefined;
+}
+
 export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoScalerPanelProps) {
   const { supervisorId } = props;
 
@@ -76,6 +106,7 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
       currentTaskCount,
     ],
   );
+  const validationError = getAutoScalerValidationError(query);
 
   const [dataState] = useQueryManager<
     {
@@ -91,7 +122,7 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
     },
     AutoScalerRow[]
   >({
-    query,
+    query: validationError ? undefined : query,
     debounceIdle: 300,
     debounceLoading: 500,
     processQuery: async (params, signal) => {
@@ -177,7 +208,7 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
     myChart.resize();
   }, []);
 
-  const errorMessage = dataState.getErrorMessage();
+  const errorMessage = validationError ?? dataState.getErrorMessage();
 
   return (
     <div className="auto-scaler-panel">
@@ -186,6 +217,7 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
           <NumericInput
             value={taskCountMin}
             min={1}
+            max={taskCountMax}
             onValueChange={v => setTaskCountMin(v)}
             buttonPosition="none"
             fill
@@ -194,7 +226,7 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
         <FormGroup label="Max task count" inline>
           <NumericInput
             value={taskCountMax}
-            min={1}
+            min={taskCountMin}
             onValueChange={v => setTaskCountMax(v)}
             buttonPosition="none"
             fill
@@ -203,7 +235,7 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
         <FormGroup label="Max processing rate / task" inline>
           <NumericInput
             value={maxProcessingRatePerTask}
-            min={1}
+            min={100}
             onValueChange={v => setMaxProcessingRatePerTask(v)}
             buttonPosition="none"
             fill
@@ -212,8 +244,8 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
         <FormGroup label="Optimal task idle ratio" inline>
           <NumericInput
             value={optimalTaskIdleRatio}
-            min={0}
-            max={1}
+            min={0.01}
+            max={0.99}
             stepSize={0.1}
             minorStepSize={0.01}
             onValueChange={v => setOptimalTaskIdleRatio(v)}
@@ -223,7 +255,8 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
         <FormGroup label="Current task count" inline>
           <NumericInput
             value={currentTaskCount ?? ''}
-            min={1}
+            min={taskCountMin}
+            max={taskCountMax}
             placeholder="Supervisor's current"
             onValueChange={v => setCurrentTaskCount(isNaN(v) ? undefined : v)}
             buttonPosition="none"
@@ -233,7 +266,7 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
         <FormGroup label="Critical lag (records)" inline>
           <NumericInput
             value={criticalLag}
-            min={0}
+            min={1000}
             onValueChange={v => setCriticalLag(v)}
             buttonPosition="none"
             fill

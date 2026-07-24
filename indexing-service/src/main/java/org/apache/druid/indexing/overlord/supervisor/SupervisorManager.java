@@ -678,9 +678,14 @@ public class SupervisorManager implements SupervisorStatsProvider
         ((SeekableStreamSupervisor<?, ?, ?>) supervisor).getIoConfig().getTaskCount()
     );
     InvalidInput.conditionalException(
-        currentTaskCount >= config.getTaskCountMin() && currentTaskCount <= config.getTaskCountMax(),
+        requestedTaskCount == null
+        || (currentTaskCount >= config.getTaskCountMin() && currentTaskCount <= config.getTaskCountMax()),
         "Value of currentTaskCount[%d] must be within taskCountMin[%d] and taskCountMax[%d]",
         currentTaskCount, config.getTaskCountMin(), config.getTaskCountMax()
+    );
+    final int simulationTaskCount = Math.max(
+        config.getTaskCountMin(),
+        Math.min(currentTaskCount, config.getTaskCountMax())
     );
 
     // Assumption: enough partitions to reach taskCountMax.
@@ -699,7 +704,7 @@ public class SupervisorManager implements SupervisorStatsProvider
       final double observedAggregateLag = lagStepSize * i * 1.0;
       final CostMetrics costMetrics = new CostMetrics(
           observedAggregateLag / partitionCount,
-          currentTaskCount,
+          simulationTaskCount,
           partitionCount,
           idleRatio,
           taskDurationSeconds,
