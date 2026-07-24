@@ -39,6 +39,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -183,7 +184,9 @@ public class SupervisorResource
     );
   }
 
-  /** Audits supervisor spec submissions that changed or restarted the supervisor. */
+  /**
+   * Audits supervisor spec submissions that changed or restarted the supervisor.
+   */
   private void auditSupervisorUpdate(final SupervisorSpec spec, final HttpServletRequest req)
   {
     final String auditPayload
@@ -534,6 +537,33 @@ public class SupervisorResource
     );
   }
 
+  @POST
+  @Path("/{id}/autoscaler")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response simulateAutoscaling(
+      @PathParam("id") String supervisorId,
+      CostBasedAutoScalerConfig autoScalerConfig,
+      @QueryParam("maxProcessingRatePerTask") int maxProcessingRatePerTask,
+      @QueryParam("criticalLag") int criticalLag,
+      @QueryParam("currentTaskCount") Integer currentTaskCount,
+      @Context HttpServletRequest request
+  )
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> Response.ok(
+            manager.simulateAutoscaling(
+                supervisorId,
+                autoScalerConfig,
+                criticalLag,
+                maxProcessingRatePerTask,
+                currentTaskCount
+            )
+        ).build()
+    );
+  }
+
   @GET
   @Path("/history")
   @Produces(MediaType.APPLICATION_JSON)
@@ -562,7 +592,12 @@ public class SupervisorResource
   {
     if (count != null && count <= 0) {
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.of("error", StringUtils.format("Count must be greater than zero if set (count was %d)", count)))
+                     .entity(ImmutableMap.of("error",
+                                             StringUtils.format(
+                                                 "Count must be greater than zero if set (count was %d)",
+                                                 count
+                                             )
+                     ))
                      .build();
     }
 

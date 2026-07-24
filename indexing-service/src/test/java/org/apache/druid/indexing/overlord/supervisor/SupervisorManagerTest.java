@@ -47,6 +47,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIngestionSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SupervisorIOConfigBuilder;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -626,6 +627,72 @@ public class SupervisorManagerTest extends EasyMockSupport
     final Field field = SupervisorManager.class.getDeclaredField("supervisors");
     field.setAccessible(true);
     return (ConcurrentHashMap<String, Pair<Supervisor, SupervisorSpec>>) field.get(manager);
+  }
+
+  @Test
+  public void testSimulateAutoscalingUsesLiveTaskCountAboveConfiguredMaximum() throws Exception
+  {
+    final String supervisorId = "supervisor";
+    final SeekableStreamSupervisor<Integer, String, ByteEntity> supervisor = EasyMock.createMock(
+        SeekableStreamSupervisor.class
+    );
+    final SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
+    EasyMock.expect(supervisor.getIoConfig()).andReturn(ioConfig);
+    EasyMock.expect(ioConfig.getTaskCount()).andReturn(20);
+    EasyMock.replay(supervisor, ioConfig);
+    getSupervisorsMap().put(supervisorId, Pair.of(supervisor, new TestSupervisorSpec(supervisorId, supervisor)));
+
+    final Map<String, Object> result = manager.simulateAutoscaling(
+        supervisorId,
+        CostBasedAutoScalerConfig.forSimulation(1, 10, 0.1, null, null),
+        1000,
+        100,
+        null
+    );
+
+    final Object[] data = (Object[]) result.get("data");
+    Assert.assertEquals(40, data.length);
+    Assert.assertTrue(data[0] instanceof Map);
+    final Map<?, ?> firstDataPoint = (Map<?, ?>) data[0];
+    Assert.assertTrue(firstDataPoint.containsKey("lag"));
+    Assert.assertTrue(firstDataPoint.containsKey("taskCount"));
+    for (Object dataPoint : data) {
+      Assert.assertTrue(dataPoint instanceof Map);
+      final Number taskCount = (Number) ((Map<?, ?>) dataPoint).get("taskCount");
+      Assert.assertTrue(taskCount.intValue() >= 1 && taskCount.intValue() <= 10);
+    }
+    EasyMock.verify(supervisor, ioConfig);
+  }
+
+  @Test
+  public void testSimulateAutoscalingRejectsExplicitTaskCountAboveConfiguredMaximum() throws Exception
+  {
+    final String supervisorId = "supervisor";
+    final SeekableStreamSupervisor<Integer, String, ByteEntity> supervisor = EasyMock.createMock(
+        SeekableStreamSupervisor.class
+    );
+    final SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
+    EasyMock.expect(supervisor.getIoConfig()).andReturn(ioConfig);
+    EasyMock.expect(ioConfig.getTaskCount()).andReturn(20);
+    EasyMock.replay(supervisor, ioConfig);
+    getSupervisorsMap().put(supervisorId, Pair.of(supervisor, new TestSupervisorSpec(supervisorId, supervisor)));
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> manager.simulateAutoscaling(
+                supervisorId,
+                CostBasedAutoScalerConfig.forSimulation(1, 10, 0.1, null, null),
+                1000,
+                100,
+                11
+            )
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Value of currentTaskCount[11] must be within taskCountMin[1] and taskCountMax[10]"
+        )
+    );
+    EasyMock.verify(supervisor, ioConfig);
   }
 
   @Test

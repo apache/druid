@@ -63,6 +63,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 {
   private static final EmittingLogger log = new EmittingLogger(CostBasedAutoScaler.class);
 
+  public static final String AUTOSCALER_TYPE_NAME = "costBased";
   public static final String LAG_WEIGHT_METRIC = "task/autoScaler/costBased/lagWeight";
   public static final String IDLE_WEIGHT_METRIC = "task/autoScaler/costBased/idleWeight";
   public static final String CURRENT_COST_METRIC = "task/autoScaler/costBased/currentCost";
@@ -98,6 +99,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
   private final ServiceEmitter emitter;
+  private final boolean isSimulator;
   private final SupervisorSpec spec;
   private final CostBasedAutoScalerConfig config;
   private final ScheduledExecutorService autoscalerExecutor;
@@ -123,10 +125,34 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     this.costFunction = new WeightedCostFunction();
     this.autoscalerExecutor = Execs.scheduledSingleThreaded("CostBasedAutoScaler-"
                                                             + StringUtils.encodeForFormat(spec.getId()));
+    this.isSimulator = false;
+  }
+
+  private CostBasedAutoScaler(CostBasedAutoScalerConfig config, String supervisorId)
+  {
+    this.config = config;
+    this.costFunction = new WeightedCostFunction();
+    this.isSimulator = true;
+    this.supervisorId = "simulator__" + supervisorId;
+
+    this.spec = null;
+    this.supervisor = null;
+    this.emitter = null;
+    this.processingRateSamples = null;
+    this.autoscalerExecutor = null;
+  }
+
+  public static CostBasedAutoScaler createSimulator(CostBasedAutoScalerConfig config, String supervisorId)
+  {
+    return new CostBasedAutoScaler(config, supervisorId);
   }
 
   private ServiceMetricEvent.Builder getMetricBuilder()
   {
+    if (isSimulator) {
+      return ServiceMetricEvent.builder();
+    }
+
     return
         ServiceMetricEvent.builder()
                           .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
@@ -219,12 +245,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    * metrics are unusable. Returning the current task count means the current count is already
    * optimal (or no better candidate could be evaluated).
    */
-  int computeOptimalTaskCount(CostMetrics metrics)
+  public int computeOptimalTaskCount(CostMetrics metrics)
   {
     final Either<String, Boolean> result = validateMetricsForScaling(metrics);
     if (result.isError()) {
       log.debug("Valid metrics are not yet available for scaling supervisor[%s]", supervisorId);
-      emitter.emit(
+      emitMetric(
           getMetricBuilder()
               .setDimension(DruidMetrics.DESCRIPTION, result.error())
               .setMetric(INVALID_METRICS_COUNT, 1L)
@@ -304,23 +330,23 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
     }
 
-    emitter.emit(getMetricBuilder().setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
-    emitter.emit(getMetricBuilder().setMetric(LAG_WEIGHT_METRIC, config.getLagWeight()));
-    emitter.emit(getMetricBuilder().setMetric(IDLE_WEIGHT_METRIC, config.getIdleWeight()));
-    emitter.emit(getMetricBuilder().setMetric(CURRENT_LAG_COST_METRIC, currentCost.lagCost()));
-    emitter.emit(getMetricBuilder().setMetric(CURRENT_IDLE_COST_METRIC, currentCost.idleCost()));
-    emitter.emit(getMetricBuilder().setMetric(CURRENT_COST_METRIC, currentCost.totalCost()));
-    emitter.emit(getMetricBuilder().setMetric(OPTIMAL_COST_METRIC, optimalCost.totalCost()));
+    emitMetric(getMetricBuilder().setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
+    emitMetric(getMetricBuilder().setMetric(LAG_WEIGHT_METRIC, config.getLagWeight()));
+    emitMetric(getMetricBuilder().setMetric(IDLE_WEIGHT_METRIC, config.getIdleWeight()));
+    emitMetric(getMetricBuilder().setMetric(CURRENT_LAG_COST_METRIC, currentCost.lagCost()));
+    emitMetric(getMetricBuilder().setMetric(CURRENT_IDLE_COST_METRIC, currentCost.idleCost()));
+    emitMetric(getMetricBuilder().setMetric(CURRENT_COST_METRIC, currentCost.totalCost()));
+    emitMetric(getMetricBuilder().setMetric(OPTIMAL_COST_METRIC, optimalCost.totalCost()));
 
     // Emit avg rate and idle metrics only if they are available
     if (metrics.getAvgProcessingRate() >= 0) {
-      emitter.emit(getMetricBuilder().setMetric(AVG_PROCESSING_RATE_METRIC, metrics.getAvgProcessingRate()));
+      emitMetric(getMetricBuilder().setMetric(AVG_PROCESSING_RATE_METRIC, metrics.getAvgProcessingRate()));
     }
     if (metrics.getPollIdleRatio() >= 0) {
-      emitter.emit(getMetricBuilder().setMetric(AVG_POLL_IDLE_RATIO, metrics.getPollIdleRatio()));
+      emitMetric(getMetricBuilder().setMetric(AVG_POLL_IDLE_RATIO, metrics.getPollIdleRatio()));
     }
     if (idleRatioEstimatedFromRate >= 0) {
-      emitter.emit(getMetricBuilder().setMetric(IDLE_RATIO_ESTIMATED_FROM_RATE, idleRatioEstimatedFromRate));
+      emitMetric(getMetricBuilder().setMetric(IDLE_RATIO_ESTIMATED_FROM_RATE, idleRatioEstimatedFromRate));
     }
 
     if (optimalTaskCount != currentTaskCount) {
@@ -328,8 +354,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
           "Optimal taskCount[%d] for supervisor[%s] has lowest cost[%.4f] out of the following candidates: %n%s",
           optimalTaskCount, supervisorId, optimalCost.totalCost(), constructCostTable(validTaskCounts, costResults)
       );
-      emitter.emit(getMetricBuilder().setMetric(OPTIMAL_LAG_COST_METRIC, optimalCost.lagCost()));
-      emitter.emit(getMetricBuilder().setMetric(OPTIMAL_IDLE_COST_METRIC, optimalCost.idleCost()));
+      emitMetric(getMetricBuilder().setMetric(OPTIMAL_LAG_COST_METRIC, optimalCost.lagCost()));
+      emitMetric(getMetricBuilder().setMetric(OPTIMAL_IDLE_COST_METRIC, optimalCost.idleCost()));
 
       final double costDropPercent
           = 100.0 * (currentCost.totalCost() - optimalCost.totalCost()) / currentCost.totalCost();
@@ -556,4 +582,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
   }
 
+  /**
+   * Emits metric for the given builder if this is not a simulator.
+   */
+  private void emitMetric(ServiceMetricEvent.Builder eventBuilder)
+  {
+    if (!isSimulator) {
+      emitter.emit(eventBuilder);
+    }
+  }
 }
