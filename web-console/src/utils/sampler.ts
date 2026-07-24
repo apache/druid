@@ -37,6 +37,7 @@ import {
   getDimensionNamesFromTransforms,
   getDimensionSpecName,
   getFlattenSpec,
+  getPossibleSystemFieldsForInputSource,
   getSpecType,
   getTimestampSchema,
   isDruidSource,
@@ -221,6 +222,7 @@ function makeSamplerIoConfig(
   if (ioConfig.inputFormat) {
     ioConfig = deepSet(ioConfig, 'inputFormat.keepNullColumns', true);
   }
+
   return ioConfig;
 }
 
@@ -285,6 +287,14 @@ export async function sampleForConnect(
     );
   }
 
+  const addFileUri = Boolean(
+    ioConfig.inputSource &&
+      getPossibleSystemFieldsForInputSource(ioConfig.inputSource).includes('__file_uri'),
+  );
+  if (addFileUri) {
+    ioConfig = deepSet(ioConfig, 'inputSource.systemFields', ['__file_uri']);
+  }
+
   const reingestMode = isDruidSource(spec);
   const sampleSpec: SampleSpec = {
     type: samplerType,
@@ -294,7 +304,10 @@ export async function sampleForConnect(
       dataSchema: {
         dataSource: 'sample',
         timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
-        dimensionsSpec: { useSchemaDiscovery: true },
+        dimensionsSpec: {
+          useSchemaDiscovery: true,
+          dimensions: addFileUri ? ['__file_uri'] : undefined,
+        },
         granularitySpec: {
           rollup: false,
         },
