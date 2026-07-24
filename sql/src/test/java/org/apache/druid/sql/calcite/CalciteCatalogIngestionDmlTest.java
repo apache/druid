@@ -1071,94 +1071,12 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   }
 
   /**
-   * Inserting declared columns into a table with a base table layout succeeds.
+   * Inserting declared columns into a table with a base table layout succeeds. The computed clustering column
+   * 'tenant_lower' is not (and cannot be) supplied by the query: the virtual column populates it at ingest time from
+   * the supplied 'tenant' column.
    */
   @Test
   public void testInsertIntoBaseTableCatalogTable()
-  {
-    ExternalDataSource externalDataSource = new ExternalDataSource(
-        new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
-        RowSignature.builder()
-            .add("a", ColumnType.STRING)
-            .add("b", ColumnType.STRING)
-            .add("c", ColumnType.LONG)
-            .add("d", ColumnType.STRING)
-            .add("e", ColumnType.STRING)
-            .build()
-    );
-    final RowSignature signature = RowSignature.builder()
-        .add("__time", ColumnType.LONG)
-        .add("tenant_lower", ColumnType.STRING)
-        .add("dim1", ColumnType.STRING)
-        .add("cnt", ColumnType.LONG)
-        .build();
-    testIngestionQuery()
-        .sql(StringUtils.format(dmlPrefixPattern, "tableWithBaseTable") + "\n" +
-             "SELECT\n" +
-             "  TIME_PARSE(a) AS __time,\n" +
-             "  LOWER(b) AS tenant_lower,\n" +
-             "  d AS dim1,\n" +
-             "  c AS cnt\n" +
-             "FROM TABLE(inline(\n" +
-             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
-             "  format => 'csv'))\n" +
-             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
-             "PARTITIONED BY ALL TIME")
-        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .expectTarget("tableWithBaseTable", signature)
-        .expectResources(dataSourceWrite("tableWithBaseTable"), Externals.externalRead("EXTERNAL"))
-        .expectQuery(
-            newScanQueryBuilder()
-                .dataSource(externalDataSource)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(
-                    expressionVirtualColumn("v0", "timestamp_parse(\"a\",null,'UTC')", ColumnType.LONG),
-                    expressionVirtualColumn("v1", "lower(\"b\")", ColumnType.STRING)
-                )
-                .columns("v0", "v1", "d", "c")
-                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
-                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
-                .build()
-        )
-        .verify();
-  }
-
-  /**
-   * A base table layout derives the physical segment schema from the declared columns, so a column that is not
-   * declared cannot be stored: base table layouts require the sealed property, which rejects undeclared columns.
-   */
-  @Test
-  public void testInsertAddNonDefinedColumnIntoBaseTableCatalogTable()
-  {
-    testIngestionQuery()
-        .sql(StringUtils.format(dmlPrefixPattern, "tableWithBaseTable") + "\n" +
-             "SELECT\n" +
-             "  TIME_PARSE(a) AS __time,\n" +
-             "  LOWER(b) AS tenant_lower,\n" +
-             "  d AS dim1,\n" +
-             "  c AS cnt,\n" +
-             "  e AS extra\n" +
-             "FROM TABLE(inline(\n" +
-             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
-             "  format => 'csv'))\n" +
-             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
-             "PARTITIONED BY ALL TIME")
-        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .expectValidationError(
-            DruidException.class,
-            "Column [extra] is not defined in the target table [druid.tableWithBaseTable] strict schema"
-        )
-        .verify();
-  }
-
-  /**
-   * Base table virtual column inputs are themselves stored (declared) columns, so a query can supply just the input
-   * column (here 'tenant' feeding lower("tenant") -> 'tenant_lower') and the computed clustering column is populated
-   * by the virtual column at ingest time.
-   */
-  @Test
-  public void testInsertVirtualColumnInputIntoBaseTableCatalogTable()
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
@@ -1203,6 +1121,63 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
+        )
+        .verify();
+  }
+
+  /**
+   * A base table layout derives the physical segment schema from the declared columns, so a column that is not
+   * declared cannot be stored: base table layouts require the sealed property, which rejects undeclared columns.
+   */
+  @Test
+  public void testInsertAddNonDefinedColumnIntoBaseTableCatalogTable()
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "tableWithBaseTable") + "\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS tenant,\n" +
+             "  d AS dim1,\n" +
+             "  c AS cnt,\n" +
+             "  e AS extra\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidException.class,
+            "Column [extra] is not defined in the target table [druid.tableWithBaseTable] strict schema"
+        )
+        .verify();
+  }
+
+  /**
+   * Columns computed by the base table layout's ingest-time virtual columns always store the computed value, so a
+   * query output with that name would never be read; writing to them directly is rejected rather than silently
+   * discarding the supplied values.
+   */
+  @Test
+  public void testInsertComputedColumnIntoBaseTableCatalogTable()
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "tableWithBaseTable") + "\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  LOWER(b) AS tenant_lower,\n" +
+             "  d AS dim1,\n" +
+             "  c AS cnt\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidException.class,
+            "Column [tenant_lower] of target table [druid.tableWithBaseTable] is computed by a virtual column at"
+            + " ingest time and cannot be written directly; supply the virtual column's input columns instead"
         )
         .verify();
   }

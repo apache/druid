@@ -262,6 +262,24 @@ public class DatasourceTableTest
     table.validate();
     DatasourceFacade facade = new DatasourceFacade(table);
     assertEquals(baseTable, facade.baseTableMetadata());
+
+    // insertColumn enforces the catalog write rules: declared columns resolve, undeclared columns are rejected by
+    // the sealed schema, and columns computed by a virtual column at ingest time cannot be written directly.
+    assertSame(facade.column("tenant"), facade.insertColumn("tenant", "druid.tbl"));
+    DruidException sealedError =
+        assertThrows(DruidException.class, () -> facade.insertColumn("no_such_column", "druid.tbl"));
+    assertTrue(sealedError.getMessage().contains("not defined in the target table [druid.tbl] strict schema"));
+    DruidException computedError =
+        assertThrows(DruidException.class, () -> facade.insertColumn("tenant_lower", "druid.tbl"));
+    assertTrue(computedError.getMessage().contains("computed by a virtual column at ingest time"));
+
+    // An undeclared column of a non-sealed table resolves to null: the caller adds it from the query type.
+    DatasourceFacade unsealed = new DatasourceFacade(registryWithInjectables.resolve(new TableSpec(
+        DatasourceDefn.TABLE_TYPE,
+        ImmutableMap.of(),
+        Collections.singletonList(new ColumnSpec(Columns.TIME_COLUMN, null, null))
+    )));
+    assertNull(unsealed.insertColumn("anything", "druid.tbl"));
   }
 
   @Test

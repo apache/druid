@@ -78,6 +78,7 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
     return clusteringColumns;
   }
 
+  @Override
   @JsonProperty("virtualColumns")
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public VirtualColumns getVirtualColumns()
