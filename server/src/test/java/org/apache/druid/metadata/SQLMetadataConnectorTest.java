@@ -24,6 +24,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.io.BaseEncoding;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -37,6 +38,10 @@ import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientConnectionException;
@@ -467,6 +472,219 @@ public class SQLMetadataConnectorTest
         actualIndices,
         expectedIndices
     );
+  }
+
+  @Test
+  public void testExportTable() throws IOException
+  {
+    final String tableName = "test_export";
+    connector.getDBI().withHandle(
+        handle -> {
+          handle.execute(
+              StringUtils.format(
+                  "CREATE TABLE %s (name VARCHAR(255) NOT NULL, payload BLOB NOT NULL, active BOOLEAN NOT NULL, PRIMARY KEY(name))",
+                  tableName
+              )
+          );
+          handle.execute(
+              StringUtils.format("INSERT INTO %s VALUES (?, ?, ?)", tableName),
+              "key1",
+              StringUtils.toUtf8("{\"type\":\"test\"}"),
+              true
+          );
+          handle.execute(
+              StringUtils.format("INSERT INTO %s VALUES (?, ?, ?)", tableName),
+              "key2",
+              StringUtils.toUtf8("{\"value\":42}"),
+              false
+          );
+          return null;
+        }
+    );
+
+    final File outputFile = Files.createTempFile("export_test", ".csv").toFile();
+    outputFile.deleteOnExit();
+
+    // Call the base class exportTable (the generic JDBC path used by PostgreSQL)
+    // rather than DerbyConnector's native SYSCS_EXPORT_TABLE override
+    connector.exportTableGeneric(
+        StringUtils.toUpperCase(tableName),
+        outputFile.getAbsolutePath()
+    );
+
+    final List<String> lines = Files.readAllLines(outputFile.toPath(), StandardCharsets.UTF_8);
+    Assert.assertEquals(2, lines.size());
+    Collections.sort(lines);
+
+    // Verify rows (sorted by name): hex-encoded payload, boolean as string
+    final String expectedHex1 = BaseEncoding.base16().encode(StringUtils.toUtf8("{\"type\":\"test\"}"));
+    Assert.assertEquals("key1," + expectedHex1 + ",true", lines.get(0));
+
+    final String expectedHex2 = BaseEncoding.base16().encode(StringUtils.toUtf8("{\"value\":42}"));
+    Assert.assertEquals("key2," + expectedHex2 + ",false", lines.get(1));
+
+    dropTable(tableName);
+  }
+
+  @Test
+  public void testExportTableWithSpecialCharacters() throws IOException
+  {
+    final String tableName = "test_export_special";
+    connector.getDBI().withHandle(
+        handle -> {
+          handle.execute(
+              StringUtils.format(
+                  "CREATE TABLE %s (name VARCHAR(255) NOT NULL, description VARCHAR(1024), PRIMARY KEY(name))",
+                  tableName
+              )
+          );
+          handle.execute(
+              StringUtils.format("INSERT INTO %s VALUES (?, ?)", tableName),
+              "commas",
+              "value,with,commas"
+          );
+          handle.execute(
+              StringUtils.format("INSERT INTO %s VALUES (?, ?)", tableName),
+              "quotes",
+              "value\"with\"quotes"
+          );
+          handle.execute(
+              StringUtils.format("INSERT INTO %s VALUES (?, ?)", tableName),
+              "simple",
+              "plain_value"
+          );
+          return null;
+        }
+    );
+
+    final File outputFile = Files.createTempFile("export_special_test", ".csv").toFile();
+    outputFile.deleteOnExit();
+
+    connector.exportTableGeneric(
+        StringUtils.toUpperCase(tableName),
+        outputFile.getAbsolutePath()
+    );
+
+    final List<String> lines = Files.readAllLines(outputFile.toPath(), StandardCharsets.UTF_8);
+    Assert.assertEquals(3, lines.size());
+    Collections.sort(lines);
+
+    // Values with commas should be quoted (sorted order: commas, quotes, simple)
+    Assert.assertEquals("commas,\"value,with,commas\"", lines.get(0));
+    // Values with quotes should be quoted and quotes doubled
+    Assert.assertEquals("quotes,\"value\"\"with\"\"quotes\"", lines.get(1));
+    // Simple values should not be quoted
+    Assert.assertEquals("simple,plain_value", lines.get(2));
+
+    dropTable(tableName);
+  }
+
+  @Test
+  public void testExportTableWithNullValues() throws IOException
+  {
+    final String tableName = "test_export_nulls";
+    connector.getDBI().withHandle(
+        handle -> {
+          handle.execute(
+              StringUtils.format(
+                  "CREATE TABLE %s (name VARCHAR(255) NOT NULL, payload BLOB, description VARCHAR(255), PRIMARY KEY(name))",
+                  tableName
+              )
+          );
+          handle.execute(
+              StringUtils.format("INSERT INTO %s VALUES (?, ?, ?)", tableName),
+              "with_values",
+              StringUtils.toUtf8("{\"key\":1}"),
+              "has_desc"
+          );
+          handle.execute(
+              StringUtils.format("INSERT INTO %s (name) VALUES (?)", tableName),
+              "null_cols"
+          );
+          return null;
+        }
+    );
+
+    final File outputFile = Files.createTempFile("export_nulls_test", ".csv").toFile();
+    outputFile.deleteOnExit();
+
+    connector.exportTableGeneric(
+        StringUtils.toUpperCase(tableName),
+        outputFile.getAbsolutePath()
+    );
+
+    final List<String> lines = Files.readAllLines(outputFile.toPath(), StandardCharsets.UTF_8);
+    Assert.assertEquals(2, lines.size());
+    Collections.sort(lines);
+
+    // Row with NULL payload and NULL description should have empty fields
+    Assert.assertEquals("null_cols,,", lines.get(0));
+
+    // Row with values
+    final String expectedHex = BaseEncoding.base16().encode(StringUtils.toUtf8("{\"key\":1}"));
+    Assert.assertEquals("with_values," + expectedHex + ",has_desc", lines.get(1));
+
+    dropTable(tableName);
+  }
+
+  @Test
+  public void testExportTablePreservesAllColumns() throws IOException
+  {
+    final String tableName = "test_export_allcols";
+    connector.getDBI().withHandle(
+        handle -> {
+          // Simulate segments table structure with columns after payload
+          handle.execute(
+              StringUtils.format(
+                  "CREATE TABLE %s ("
+                  + "id VARCHAR(255) NOT NULL, "
+                  + "used BOOLEAN NOT NULL, "
+                  + "payload BLOB NOT NULL, "
+                  + "used_status_last_updated VARCHAR(255), "
+                  + "fingerprint VARCHAR(255), "
+                  + "PRIMARY KEY(id))",
+                  tableName
+              )
+          );
+          handle.execute(
+              StringUtils.format("INSERT INTO %s VALUES (?, ?, ?, ?, ?)", tableName),
+              "seg1",
+              true,
+              StringUtils.toUtf8("{\"v\":1}"),
+              "2024-01-01",
+              "fp_abc"
+          );
+          handle.execute(
+              StringUtils.format("INSERT INTO %s (id, used, payload) VALUES (?, ?, ?)", tableName),
+              "seg2",
+              false,
+              StringUtils.toUtf8("{\"v\":2}")
+          );
+          return null;
+        }
+    );
+
+    final File outputFile = Files.createTempFile("export_allcols_test", ".csv").toFile();
+    outputFile.deleteOnExit();
+
+    connector.exportTableGeneric(
+        StringUtils.toUpperCase(tableName),
+        outputFile.getAbsolutePath()
+    );
+
+    final List<String> lines = Files.readAllLines(outputFile.toPath(), StandardCharsets.UTF_8);
+    Assert.assertEquals(2, lines.size());
+    Collections.sort(lines);
+
+    // All 5 columns should be present, including those after payload
+    final String hex1 = BaseEncoding.base16().encode(StringUtils.toUtf8("{\"v\":1}"));
+    Assert.assertEquals("seg1,true," + hex1 + ",2024-01-01,fp_abc", lines.get(0));
+
+    // NULL trailing columns should produce empty fields
+    final String hex2 = BaseEncoding.base16().encode(StringUtils.toUtf8("{\"v\":2}"));
+    Assert.assertEquals("seg2,false," + hex2 + ",,", lines.get(1));
+
+    dropTable(tableName);
   }
 
   static class TestSQLMetadataConnector extends SQLMetadataConnector
