@@ -29,17 +29,17 @@ class TaskConfigTest
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
-  void testVirtualStoragePartialDownloadsEnabledDefaultsToFalse() throws Exception
+  void testVirtualStoragePartialDownloadsEnabledDefaultsToTrue() throws Exception
   {
     final TaskConfig config = jsonMapper.readValue("{}", TaskConfig.class);
-    Assertions.assertFalse(config.isVirtualStoragePartialDownloadsEnabled());
+    Assertions.assertTrue(config.isVirtualStoragePartialDownloadsEnabled());
   }
 
   @Test
   void testVirtualStoragePartialDownloadsEnabledFromJson() throws Exception
   {
     final TaskConfig config =
-        jsonMapper.readValue("{\"virtualStoragePartialDownloadsEnabled\": true}", TaskConfig.class);
-    Assertions.assertTrue(config.isVirtualStoragePartialDownloadsEnabled());
+        jsonMapper.readValue("{\"virtualStoragePartialDownloadsEnabled\": false}", TaskConfig.class);
+    Assertions.assertFalse(config.isVirtualStoragePartialDownloadsEnabled());
   }
 }

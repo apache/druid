@@ -45,7 +45,7 @@ public class TaskConfig implements TaskDirectory
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
   private static final boolean DEFAULT_STORE_EMPTY_COLUMNS = true;
   private static final long DEFAULT_TMP_STORAGE_BYTES_PER_TASK = -1;
-  private static final boolean DEFAULT_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_ENABLED = false;
+  private static final boolean DEFAULT_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_ENABLED = true;
 
   @JsonProperty
   private final String baseDir;

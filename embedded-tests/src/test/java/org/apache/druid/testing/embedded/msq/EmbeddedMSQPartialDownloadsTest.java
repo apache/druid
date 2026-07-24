@@ -50,10 +50,10 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * End-to-end wiring test for on-demand partial segment downloads on MSQ worker tasks. Verifies both configuration
- * avenues added for tasks: the {@code druid.indexer.task.virtualStoragePartialDownloadsEnabled} runtime property (node
- * default, set to true here) and the per-query {@link MultiStageQueryContext#CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS}
- * override.
+ * End-to-end wiring test for on-demand partial segment downloads on MSQ worker tasks. Partial downloads default to
+ * enabled for tasks (the {@code druid.indexer.task.virtualStoragePartialDownloadsEnabled} {@code TaskConfig} default is
+ * true), so run 1 sets no property or context and verifies the default engages the partial path. Run 2 verifies the
+ * per-query {@link MultiStageQueryContext#CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS} override can turn it back off.
  * <p>
  * The observable signal is the indexer's {@link StorageMonitor#VSF_READ_COUNT} metric: the partial path performs
  * on-demand deep-storage range reads (so the count is positive), while the full-download path does not (the count
@@ -81,10 +81,7 @@ class EmbeddedMSQPartialDownloadsTest extends EmbeddedClusterTestBase
   {
     indexer.setServerMemory(400_000_000)
            .addProperty("druid.worker.capacity", "4")
-           .addProperty("druid.processing.numThreads", "3")
-           // Enable partial downloads by default for this indexer's per-task segment caches. Individual queries can
-           // still override this via the MSQ query context (exercised below).
-           .addProperty("druid.indexer.task.virtualStoragePartialDownloadsEnabled", "true");
+           .addProperty("druid.processing.numThreads", "3");
 
     broker.setServerMemory(200_000_000);
 
