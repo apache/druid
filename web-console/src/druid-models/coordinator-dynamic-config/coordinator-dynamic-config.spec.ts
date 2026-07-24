@@ -16,17 +16,26 @@
  * limitations under the License.
  */
 
-import { Capabilities } from '../../helpers';
-import { shallow } from '../../utils/shallow-renderer';
+import { serverCountSummary } from './coordinator-dynamic-config';
 
-import { CoordinatorDynamicConfigDialog } from './coordinator-dynamic-config-dialog';
+describe('serverCountSummary', () => {
+  it('returns None for undefined', () => {
+    expect(serverCountSummary(undefined)).toBe('None');
+  });
 
-describe('CoordinatorDynamicConfigDialog', () => {
-  it('matches snapshot', () => {
-    const coordinatorDynamicConfig = shallow(
-      <CoordinatorDynamicConfigDialog capabilities={Capabilities.FULL} onClose={() => {}} />,
-    );
+  it('returns None for empty array', () => {
+    expect(serverCountSummary([])).toBe('None');
+  });
 
-    expect(coordinatorDynamicConfig).toMatchSnapshot();
+  it('returns None for non-array', () => {
+    expect(serverCountSummary('not an array')).toBe('None');
+  });
+
+  it('returns singular for one server', () => {
+    expect(serverCountSummary(['server1'])).toBe('1 server');
+  });
+
+  it('returns plural for multiple servers', () => {
+    expect(serverCountSummary(['server1', 'server2', 'server3'])).toBe('3 servers');
   });
 });
