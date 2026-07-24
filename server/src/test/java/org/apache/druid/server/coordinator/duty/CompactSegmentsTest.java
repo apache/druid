@@ -1053,6 +1053,7 @@ public class CompactSegmentsTest
             dataSource,
             engine,
             new Period("PT0H"),
+            null,
             0,
             null,
             500L,

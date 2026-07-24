@@ -59,6 +59,7 @@ public interface DataSourceCompactionConfig
   // Approx. 100TB. Chosen instead of Long.MAX_VALUE to avoid overflow on web-console and other clients
   long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 100_000_000_000_000L;
   Period DEFAULT_SKIP_OFFSET_FROM_LATEST = new Period("P1D");
+  Period DEFAULT_SKIP_OFFSET_FROM_EARLIEST = Period.ZERO;
 
   String getDataSource();
 
@@ -79,6 +80,8 @@ public interface DataSourceCompactionConfig
   Integer getMaxRowsPerSegment();
 
   Period getSkipOffsetFromLatest();
+
+  Period getSkipOffsetFromEarliest();
 
   @Nullable
   UserCompactionTaskQueryTuningConfig getTuningConfig();
