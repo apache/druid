@@ -58,6 +58,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 public class QueryableIndexCursorFactory implements ResidentCursorFactory
 {
@@ -292,12 +293,14 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       return makeTimeMergedClusteredCursorHolder(
           holderSuppliers,
           closer,
-          Cursors.getTimeOrdering(spec.getPreferredOrdering())
+          Cursors.getTimeOrdering(spec.getPreferredOrdering()),
+          plan.virtualColumnRemap()
       );
     }
 
     return makeConcatenatedClusteredCursorHolder(
         spec,
+        plan,
         this,
         clusteringColumns,
         clusteringValuesByGroup,
@@ -403,6 +406,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
    */
   private static CursorHolder makeConcatenatedClusteredCursorHolder(
       CursorBuildSpec spec,
+      ClusterGroupQueryPlan plan,
       ColumnInspector inspector,
       RowSignature clusteringColumns,
       List<Object[]> clusteringValuesByGroup,
@@ -489,16 +493,19 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
   /**
    * Builds a {@link CursorHolder} whose non-vectorized cursor is a globally {@code __time}-ordered {@link
    * MergingClusterGroupCursor} k-way-merging the per-group cursors. Only invoked when the query requested {@code
-   * __time} ordering and each group is individually {@code __time}-sorted (see caller).
+   * __time} ordering and each group is individually {@code __time}-sorted (see caller). The {@code virtualColumnRemap}
+   * (of query virtual columns equivalent to a materialized column) is applied on top of the merge, mirroring
+   * {@link #makeConcatenatedClusteredCursorHolder}.
    */
   private static CursorHolder makeTimeMergedClusteredCursorHolder(
       List<Supplier<CursorHolder>> holderSuppliers,
       Closer closer,
-      Order timeOrder
+      Order timeOrder,
+      Map<String, String> virtualColumnRemap
   )
   {
     final boolean descending = timeOrder == Order.DESCENDING;
-    final MergingClusterGroupCursor cursor = new MergingClusterGroupCursor(holderSuppliers, descending);
+    final MergingClusterGroupCursor cursor = new MergingClusterGroupCursor(holderSuppliers, descending, virtualColumnRemap);
     final List<OrderBy> ordering = descending ? Cursors.descendingTimeOrder() : Cursors.ascendingTimeOrder();
     return new CursorHolder()
     {
