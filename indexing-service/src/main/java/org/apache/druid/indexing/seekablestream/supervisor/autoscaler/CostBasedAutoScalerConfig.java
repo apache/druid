@@ -65,6 +65,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final Duration minScaleDownDelay;
   private final boolean scaleDownDuringTaskRolloverOnly;
   private final boolean usePollIdleRatio;
+  private final int minCostDropPercentForScaling;
 
   /**
    * Creates a new CostBasedAutoScalerConfig instance.
@@ -85,7 +86,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("minScaleUpDelay") Duration minScaleUpDelay,
       @Nullable @JsonProperty("minScaleDownDelay") Duration minScaleDownDelay,
       @Nullable @JsonProperty("scaleDownDuringTaskRolloverOnly") Boolean scaleDownDuringTaskRolloverOnly,
-      @Nullable @JsonProperty("usePollIdleRatio") Boolean usePollIdleRatio
+      @Nullable @JsonProperty("usePollIdleRatio") Boolean usePollIdleRatio,
+      @Nullable @JsonProperty("minCostDropPercentForScaling") Integer minCostDropPercentForScaling
   )
   {
     this.enableTaskAutoScaler = Configs.valueOrDefault(enableTaskAutoScaler, false);
@@ -103,6 +105,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, DEFAULT_MIN_SCALE_DOWN_DELAY);
     this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, false);
     this.usePollIdleRatio = Configs.valueOrDefault(usePollIdleRatio, true);
+    this.minCostDropPercentForScaling = Configs.valueOrDefault(minCostDropPercentForScaling, 0);
 
     if (this.enableTaskAutoScaler) {
       Preconditions.checkNotNull(taskCountMax, "taskCountMax is required when enableTaskAutoScaler is true");
@@ -310,6 +313,16 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     return usePollIdleRatio;
   }
 
+  /**
+   * Minimum percentage drop from current cost that is required by the auto-scaler
+   * to choose a new task count.
+   */
+  @JsonProperty
+  public int getMinCostDropPercentForScaling()
+  {
+    return minCostDropPercentForScaling;
+  }
+
   @Override
   public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter)
   {
@@ -341,6 +354,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && Objects.equals(minScaleDownDelay, that.minScaleDownDelay)
            && scaleDownDuringTaskRolloverOnly == that.scaleDownDuringTaskRolloverOnly
            && usePollIdleRatio == that.usePollIdleRatio
+           && minCostDropPercentForScaling == that.minCostDropPercentForScaling
            && Objects.equals(taskCountStart, that.taskCountStart)
            && Objects.equals(stopTaskCountRatio, that.stopTaskCountRatio);
   }
@@ -363,7 +377,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         minScaleUpDelay,
         minScaleDownDelay,
         scaleDownDuringTaskRolloverOnly,
-        usePollIdleRatio
+        usePollIdleRatio,
+        minCostDropPercentForScaling
     );
   }
 
@@ -386,6 +401,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", minScaleDownDelay=" + minScaleDownDelay +
            ", scaleDownDuringTaskRolloverOnly=" + scaleDownDuringTaskRolloverOnly +
            ", usePollIdleRatio=" + usePollIdleRatio +
+           ", minCostDropPercentForScaling=" + minCostDropPercentForScaling +
            '}';
   }
 
@@ -410,6 +426,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Duration minScaleDownDelay;
     private Boolean scaleDownDuringTaskRolloverOnly;
     private Boolean usePollIdleRatio;
+    private Integer minCostDropPercentForScaling;
 
     private Builder()
     {
@@ -505,6 +522,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
+    public Builder minCostDropPercentForScaling(int minCostDropPercentForScaling)
+    {
+      this.minCostDropPercentForScaling = minCostDropPercentForScaling;
+      return this;
+    }
+
     public CostBasedAutoScalerConfig build()
     {
       return new CostBasedAutoScalerConfig(
@@ -522,7 +545,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           minScaleUpDelay,
           minScaleDownDelay,
           scaleDownDuringTaskRolloverOnly,
-          usePollIdleRatio
+          usePollIdleRatio,
+          minCostDropPercentForScaling
       );
     }
   }

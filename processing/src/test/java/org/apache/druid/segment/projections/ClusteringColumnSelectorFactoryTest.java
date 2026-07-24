@@ -201,6 +201,136 @@ class ClusteringColumnSelectorFactoryTest
   }
 
   @Test
+  void testRowIdSupplierFollowsCurrentDelegate()
+  {
+    // getRowIdSupplier() must return a supplier that reflects the current delegate, even for a reference grabbed
+    // before a group transition. A multi-group ConcatenatingCursor swaps the delegate on each group, and a consumer
+    // that cached the supplier must observe the active group's row id (not the group current when it first asked).
+    RecordingDelegate first = new RecordingDelegate();
+    first.rowId = 7;
+    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(first, SIGNATURE, new Object[]{"acme"});
+
+    RowIdSupplier supplier = f.getRowIdSupplier();
+    Assertions.assertNotNull(supplier);
+    long firstId = supplier.getRowId();
+
+    // Simulate a group transition; the second group's offset restarts its row id at 0.
+    RecordingDelegate second = new RecordingDelegate();
+    second.rowId = 0;
+    f.setDelegate(second, new Object[]{"globex"});
+
+    // The previously-acquired supplier now reads the second delegate, and its remapped id differs despite the reset.
+    Assertions.assertNotEquals(firstId, supplier.getRowId());
+  }
+
+  @Test
+  void testGetRowIdUniqueAcrossSingleRowGroups()
+  {
+    // A group whose offset restarts at 0, followed by another such group, must not report the same row id across the
+    // transition, or a single-slot row-id cache would hand back the previous group's stale row.
+    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+        new RecordingDelegate(),   // rowId 0
+        SIGNATURE,
+        new Object[]{"a"}
+    );
+    RowIdSupplier supplier = f.getRowIdSupplier();
+    long idA = supplier.getRowId();
+
+    f.setDelegate(new RecordingDelegate(), new Object[]{"b"});   // rowId 0
+    long idB = supplier.getRowId();
+
+    f.setDelegate(new RecordingDelegate(), new Object[]{"c"});   // rowId 0
+    long idC = supplier.getRowId();
+
+    Assertions.assertNotEquals(idA, idB);
+    Assertions.assertNotEquals(idB, idC);
+    Assertions.assertNotEquals(idA, idC);
+  }
+
+  @Test
+  void testGetRowIdAdvancesWithinGroupAndStaysAheadAcrossTransition()
+  {
+    // Within a group, row ids track the delegate offset as it advances. Across a transition, the next group's first
+    // row id must be strictly greater than the last id the previous group handed out.
+    RecordingDelegate d = new RecordingDelegate();
+    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(d, SIGNATURE, new Object[]{"a"});
+    RowIdSupplier supplier = f.getRowIdSupplier();
+    d.rowId = 0;
+    long id0 = supplier.getRowId();
+    d.rowId = 5;
+    long id1 = supplier.getRowId();
+    d.rowId = 9;
+    long id2 = supplier.getRowId();
+    Assertions.assertTrue(id0 < id1 && id1 < id2, "row ids must increase as the group advances");
+
+    f.setDelegate(new RecordingDelegate(), new Object[]{"b"});   // rowId 0
+    Assertions.assertTrue(supplier.getRowId() > id2, "new group's first row id must exceed the previous group's last");
+  }
+
+  @Test
+  void testGetRowIdMintsMonotonicIdsRegardlessOfDelegateIdOrder()
+  {
+    // The RowIdSupplier contract does not require monotonic (or meaningful) delegate ids. We mint our own
+    // strictly-increasing ids purely from change detection, so a non-monotonic sequence within a group and an id that
+    // overlaps across a group boundary both still yield clean, collision-free ids.
+    RecordingDelegate d = new RecordingDelegate();
+    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(d, SIGNATURE, new Object[]{"a"});
+    RowIdSupplier supplier = f.getRowIdSupplier();
+
+    d.rowId = 100;
+    long a = supplier.getRowId();
+    d.rowId = 5;                       // non-monotonic within the group
+    long b = supplier.getRowId();
+
+    RecordingDelegate second = new RecordingDelegate();
+    second.rowId = 100;                // reuse an id the first group already handed out
+    f.setDelegate(second, new Object[]{"b"});
+    long c = supplier.getRowId();
+
+    Assertions.assertTrue(a < b && b < c, "minted row ids must be strictly increasing regardless of delegate id order");
+  }
+
+  @Test
+  void testGetRowIdSupplierNullWhenDelegateHasNone()
+  {
+    // A delegate that doesn't support row-id caching (null supplier) must surface as a null supplier on the wrapper,
+    // so callers take the no-caching path rather than caching against a fabricated id.
+    RecordingDelegate d = new RecordingDelegate();
+    d.supportsRowId = false;
+    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(d, SIGNATURE, new Object[]{"a"});
+    Assertions.assertNull(f.getRowIdSupplier());
+  }
+
+  @Test
+  void testGetRowIdStableWhenPositionUnchanged()
+  {
+    // The caching contract: reading twice without the cursor moving (same delegate, same raw id) must return the SAME
+    // minted id, so a downstream row-id-keyed cache hits instead of recomputing. Guards against an always-tick regression.
+    RecordingDelegate d = new RecordingDelegate();
+    d.rowId = 3;
+    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(d, SIGNATURE, new Object[]{"a"});
+    RowIdSupplier supplier = f.getRowIdSupplier();
+    long first = supplier.getRowId();
+    Assertions.assertEquals(first, supplier.getRowId());
+    Assertions.assertEquals(first, supplier.getRowId());
+  }
+
+  @Test
+  void testGetRowIdReturnsSentinelWhenDelegateUnpositioned()
+  {
+    // When the delegate reports the unpositioned sentinel (INIT), the wrapper must pass it through unchanged and not
+    // advance its minted counter, so a later real row still mints a fresh id starting at 0.
+    RecordingDelegate d = new RecordingDelegate();
+    d.rowId = RowIdSupplier.INIT;
+    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(d, SIGNATURE, new Object[]{"a"});
+    RowIdSupplier supplier = f.getRowIdSupplier();
+    Assertions.assertEquals(RowIdSupplier.INIT, supplier.getRowId());
+
+    d.rowId = 0;
+    Assertions.assertEquals(0L, supplier.getRowId());
+  }
+
+  @Test
   void testGetColumnCapabilitiesForClusteringColumns()
   {
     ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
@@ -389,6 +519,14 @@ class ClusteringColumnSelectorFactoryTest
     String lastDimSelectorName;
     String lastValueSelectorName;
     String lastCapabilitiesColumn;
+    // Row id handed out by this delegate's supplier; per-group offsets restart at 0, so the default mirrors a fresh
+    // group cursor. supportsRowId=false models a delegate with no row-id caching (getRowIdSupplier() == null).
+    long rowId;
+    boolean supportsRowId = true;
+    // A single stable supplier instance (reads the mutable rowId each call), mirroring a real factory that returns
+    // `this` from getRowIdSupplier(). A fresh lambda per call would make the wrapper's delegate-identity check tick on
+    // every read, hiding whether the raw-id-change branch works.
+    private final RowIdSupplier stableRowIdSupplier = () -> rowId;
 
     @Override
     public DimensionSelector makeDimensionSelector(org.apache.druid.query.dimension.DimensionSpec dimensionSpec)
@@ -416,7 +554,7 @@ class ClusteringColumnSelectorFactoryTest
     @Override
     public RowIdSupplier getRowIdSupplier()
     {
-      return null;
+      return supportsRowId ? stableRowIdSupplier : null;
     }
   }
 }

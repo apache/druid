@@ -1677,14 +1677,15 @@ public class SupervisorManagerTest extends EasyMockSupport
     }
 
     /**
-     * Lets a test model either a no-restart change (default) or a restart-requiring change. Invoked on the
-     * running spec, so this models whether the running supervisor requires a restart. (The default
-     * {@link SupervisorSpec#requireRestart} is conservative and returns true.)
+     * Lets a test model either a no-restart change (default) or a restart-requiring change.
+     * Invoked on therunning spec, so this models whether the running supervisor requires a restart.
+     * The default {@link SupervisorSpec#getActionOnUpdateTo} is conservative and
+     * returns {@link SupervisorSpecUpdateAction#RESTART_SUPERVISOR_AND_TASKS}.
      */
     @Override
-    public boolean requireRestart(SupervisorSpec proposedSpec)
+    public SupervisorSpecUpdateAction getActionOnUpdateTo(SupervisorSpec proposedSpec)
     {
-      return requireRestart;
+      return requireRestart ? SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS : SupervisorSpecUpdateAction.NONE;
     }
   }
 

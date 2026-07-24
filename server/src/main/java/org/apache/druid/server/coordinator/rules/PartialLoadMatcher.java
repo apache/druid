@@ -44,11 +44,11 @@ public interface PartialLoadMatcher
 {
   /**
    * Universal fingerprint sentinel for an "empty match" — a matcher decision to partial-load a segment with no
-   * scheme-specific content. Used by matchers that handle asymmetric resolution across siblings of a shard group:
-   * when the matcher applies to a segment but resolves to no positive content (e.g., a cluster-group matcher on a
-   * clustered segment whose tuples don't intersect any configured pattern), it returns a {@link MatchResult} with
-   * this fingerprint so the coordinator's {@code RunRules} duty can defer the empty-load dispatch and only flush it
-   * when at least one sibling in the same shard group produced a positive match.
+   * scheme-specific content. A matcher that applies to a segment but resolves to no positive content (e.g., a
+   * cluster-group matcher on a clustered segment whose tuples don't intersect any configured pattern) returns a
+   * {@link MatchResult} with this fingerprint. The empty load is dispatched like any other partial load onto the
+   * rule's tiered replicants, so the segment stays announced (and thus in the broker's timeline); the historical
+   * downloads no scheme-specific content for it.
    *
    * <p>All matchers share this fingerprint for empty loads — different matchers' empty wire forms are equivalent
    * from a "what's on the historical" perspective (no scheme-specific extras downloaded), and at most one rule
@@ -72,14 +72,5 @@ public interface PartialLoadMatcher
    */
   record MatchResult(Map<String, Object> wrappedLoadSpec, String fingerprint)
   {
-    /**
-     * Whether this is an "empty match" — the matcher applies to the segment but resolves to no positive content.
-     * Recognized via {@link #EMPTY_LOAD_FINGERPRINT}. Empty loads are dispatched only when at least one sibling in
-     * the same shard group produced a positive match; otherwise they're discarded by {@code RunRules}.
-     */
-    public boolean isEmpty()
-    {
-      return EMPTY_LOAD_FINGERPRINT.equals(fingerprint);
-    }
   }
 }

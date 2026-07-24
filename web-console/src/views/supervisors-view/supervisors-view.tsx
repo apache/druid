@@ -48,6 +48,7 @@ import {
   TaskGroupHandoffDialog,
 } from '../../dialogs';
 import type {
+  CompactionConfig,
   ConsoleViewId,
   IngestionSpec,
   QueryWithContext,
@@ -56,7 +57,11 @@ import type {
   SupervisorStatus,
   SupervisorStatusTask,
 } from '../../druid-models';
-import { getConsoleViewIcon, getTotalSupervisorStats } from '../../druid-models';
+import {
+  formatCompactionInfo,
+  getConsoleViewIcon,
+  getTotalSupervisorStats,
+} from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import {
   SMALL_TABLE_PAGE_SIZE,
@@ -358,7 +363,10 @@ export class SupervisorsView extends React.PureComponent<
               return {
                 supervisor_id: deepGet(sup, 'id'),
                 datasource: deepGet(sup, 'dataSource'),
-                type: deepGet(sup, 'spec.tuningConfig.type'),
+                type:
+                  deepGet(sup, 'spec.type') ||
+                  deepGet(sup, 'spec.ioConfig.type') ||
+                  deepGet(sup, 'spec.tuningConfig.type'),
                 source:
                   deepGet(sup, 'spec.ioConfig.topic') ||
                   deepGet(sup, 'spec.ioConfig.stream') ||
@@ -1062,6 +1070,13 @@ export class SupervisorsView extends React.PureComponent<
                   aggregateLag,
                 )}`}</span>
               ) : null;
+            } else if (original.type === 'autocompact') {
+              const compactionConfig: CompactionConfig | undefined = original.spec?.spec;
+              if (!supervisorStatusPayload || !compactionConfig) return null;
+              return formatCompactionInfo({
+                status: supervisorStatusPayload,
+                config: compactionConfig,
+              });
             } else {
               return null;
             }

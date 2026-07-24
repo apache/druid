@@ -1456,12 +1456,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // from actively reading to pending completion, etc.
       // This is a potential silent-loss window where data will not be queryable until handoff.
       log.info(
-          "Could not find any task matching taskAllocatorId[%s] in supervisor[%s] for upgraded pending segment[%s]"
-          + " (upgradedFrom[%s]); it will not be re-announced until handoff.",
-          taskAllocatorId,
-          supervisorId,
-          pendingSegmentRecord.getId(),
-          pendingSegmentRecord.getUpgradedFromSegmentId()
+              "Could not find any task matching taskAllocatorId[%s] in supervisor[%s] for upgraded pending segment[%s]"
+                      + " (upgradedFrom[%s]); it will not be re-announced until handoff.",
+              taskAllocatorId,
+              supervisorId,
+              pendingSegmentRecord.getId(),
+              pendingSegmentRecord.getUpgradedFromSegmentId()
       );
       emitter.emit(
           IndexTaskUtils.setPendingSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
