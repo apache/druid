@@ -110,7 +110,7 @@
         <log4j.version>2.26.0</log4j.version>
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
-        <netty4.version>4.1.135.Final</netty4.version>
+        <netty4.version>4.1.136.Final</netty4.version>
         <postgresql.version>42.7.11</postgresql.version>
         <protobuf.version>3.25.8</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
@@ -1881,6 +1881,19 @@
                                 </bannedDependencies>
                                 <requireUpperBoundDeps>
                                     <excludes>
+                                       <!--
+                                         Netty is deliberately pinned to 4.1.x (via netty-bom) while we migrate off
+                                         Netty 3; migration to Netty 4.2 is handled separately. A few test-scoped
+                                         transitive deps (notably com.github.docker-java:docker-java-transport-netty)
+                                         request Netty 4.2.x for the artifacts below, which trips the upper-bound check.
+                                         The netty-bom already converges every io.netty artifact to a single version,
+                                         so the check is redundant here. Remove these once we upgrade to Netty 4.2.
+                                       -->
+                                       <exclude>io.netty:netty-codec-http</exclude>
+                                       <exclude>io.netty:netty-handler</exclude>
+                                       <exclude>io.netty:netty-handler-proxy</exclude>
+                                       <exclude>io.netty:netty-transport-native-epoll</exclude>
+                                       <exclude>io.netty:netty-transport-native-kqueue</exclude>
                                        <!-- upgrading these later -->
                                        <exclude>org.apache.zookeeper:zookeeper</exclude>
                                        <exclude>com.google.guava:guava</exclude>
