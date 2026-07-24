@@ -249,7 +249,15 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   public void close()
   {
     perQueryStats.dictionarySize(getDictionarySizeEstimate());
-    perQueryStats.maxMergeBufferUsedBytes(getMaxMergeBufferUsedBytes());
+    final long sliceUsedBytes = getMaxMergeBufferUsedBytes();
+    perQueryStats.addMergeBufferUsedBytes(sliceUsedBytes);
+    if (grouper.isInitialized()) {
+      // Report this slice's peak fill ratio (bucket-count based, tracked by the underlying hash table across the
+      // grouper's lifetime and preserved across reset()). 1.0 means the grouper actually hit its spill trigger; a
+      // lightly-filled slice reports <1.0 exactly. Only recorded when the grouper was initialized, so an untouched
+      // slice contributes nothing.
+      perQueryStats.sliceUsage(grouper.getMaxSpillProximity());
+    }
     // Record spilled bytes before deleteFiles() decrements bytesUsed in temporaryStorage.
     long spilledBytes = 0;
     for (final File file : files) {

@@ -165,6 +165,37 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testMaxSpillProximityStaysBelowOneOnHeapTrimSwaps()
+  {
+    // A LimitedBufferHashGrouper's Alternating hash table swaps sub-buffers on every "full" event and trims to `limit`
+    // entries — this is a heap trim for limit push-down, NOT a disk spill. size hits regrowthThreshold on every swap
+    // (see testMinBufferSize: size == getMaxSize() == 101 at steady state after 899 swaps). A raw
+    // "tableStart == 0" pin in the base class would falsely mark this as a spill; the isTerminalTableLevel() override
+    // in AlternatingByteBufferHashTable returns false to prevent that. This test locks in that invariant: a Limited
+    // grouper that trims but never spills must report strictly < 1.0.
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final LimitedBufferHashGrouper<IntKey> grouper = makeGrouper(columnSelectorFactory, 12120);
+
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
+    for (int i = 0; i < NUM_ROWS; i++) {
+      Assert.assertTrue(String.valueOf(i + KEY_BASE), grouper.aggregate(new IntKey(i + KEY_BASE)).isOk());
+    }
+
+    // Confirms this exercised the heap-trim swap path (matches testMinBufferSize's observations).
+    Assert.assertTrue("expected multiple heap-trim swaps: " + grouper.getGrowthCount(), grouper.getGrowthCount() > 100);
+    Assert.assertEquals(101, grouper.getMaxSize());
+    Assert.assertEquals(101, grouper.getSize());
+
+    // Proximity must be < 1.0 despite size == regrowthThreshold at every swap. The upper bound is (T-1)/T = 100/101
+    // ≈ 0.9901 (heap trims land at numCopied == limit == 100, then the next new bucket brings size to 101 which is
+    // regrowthThreshold — but that hit is NOT recorded because isTerminalTableLevel() is false for Alternating).
+    Assert.assertTrue(
+        "heap-trim swap must not report 1.0: " + grouper.getMaxSpillProximity(),
+        grouper.getMaxSpillProximity() < 1.0
+    );
+  }
+
+  @Test
   public void testAggregateAfterIterated()
   {
     expectedException.expect(IllegalStateException.class);

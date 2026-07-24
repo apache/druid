@@ -372,6 +372,116 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  public void testSpillProximityReflectsSliceFillOnClose() throws IOException
+  {
+    // Fill a grouper part-way (no spill) and confirm close() records a proximity strictly in (0, 1). The proximity is
+    // the underlying hash table's peak size/regrowthThreshold, so a lightly-filled slice is well below 1.0.
+    final GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
+    final int bufferSize = 100_000;
+    final SpillingGrouper<IntKey> grouper = makeGrouper(
+        bufferSize,
+        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024, 100, new GroupByStatsProvider.PerQueryStats()),
+        1024 * 1024L,
+        stats,
+        true
+    );
+
+    // A handful of distinct keys: some buckets used, well short of the spill threshold.
+    for (int i = 0; i < 10; i++) {
+      Assert.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+    }
+    grouper.close();
+
+    final double proximity = stats.getSpillProximity();
+    Assert.assertTrue("proximity should be positive after aggregating: " + proximity, proximity > 0.0);
+    Assert.assertTrue("a lightly-filled slice should be well below the spill point: " + proximity, proximity < 1.0);
+  }
+
+  @Test
+  public void testSpillProximityNotRecordedWhenGrouperNeverInitialized() throws IOException
+  {
+    // A grouper that never initialized (never touched the merge buffer) must not contribute to spill proximity, per the
+    // isInitialized() gate in close(). Otherwise idle slices would report a spurious 0-of-threshold data point.
+    final GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
+    final SpillingGrouper<IntKey> grouper = makeGrouper(
+        100_000,
+        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024, 100, new GroupByStatsProvider.PerQueryStats()),
+        1024 * 1024L,
+        stats,
+        false // do not init
+    );
+    grouper.close();
+
+    // No sliceUsage() call was made, so proximity stays at its initial 0.0.
+    Assert.assertEquals(0.0, stats.getSpillProximity(), 1e-9);
+  }
+
+  @Test
+  public void testSpillProximityStaysOneAfterSpillThenLightRefill() throws IOException
+  {
+    // Case #4: force a real spill, then aggregate a few more keys that don't refill the table, then close. The
+    // underlying hash table gets reset() by spill() (size returns to 0, regrowthThreshold shrinks to its initial small
+    // value), so the ratio in isolation at close time would be tiny. What must save us is peak preservation: the 1.0
+    // pinned inside findBucketWithAutoGrowth (or at the terminal threshold) before the reset survives it. Assert the
+    // reported proximity is exactly 1.0 despite the low post-spill fill.
+    final GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
+    final int bufferSize = 50;
+    final SpillingGrouper<IntKey> grouper = makeGrouper(
+        bufferSize,
+        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024, 100, new GroupByStatsProvider.PerQueryStats()),
+        1024 * 1024L,
+        stats,
+        true
+    );
+
+    // Enough keys to trigger multiple spills.
+    for (int i = 0; i < 50; i++) {
+      Assert.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+    }
+    // Just a couple more keys — table has been reset() by the last spill so it's lightly filled at close.
+    Assert.assertTrue(grouper.aggregate(new IntKey(9001)).isOk());
+    Assert.assertTrue(grouper.aggregate(new IntKey(9002)).isOk());
+    grouper.close();
+
+    Assert.assertEquals(
+        "spilled slice with post-spill light refill must still report 1.0 (peak preserved across reset)",
+        1.0,
+        stats.getSpillProximity(),
+        0.0
+    );
+  }
+
+  @Test
+  public void testSpillProximityExactlyOneWhenSliceSpills() throws IOException
+  {
+    // A tiny 50-byte buffer with 100 unique keys forces the underlying BufferHashGrouper to reject a bucket allocation
+    // (findBucketWithAutoGrowth returns -1), which is the real spill trigger. SpillingGrouper.aggregate then invokes
+    // spill(); the peak size/regrowthThreshold at that instant is pinned to exactly 1.0 and preserved across the
+    // subsequent grouper.reset(). This is the "1.0 <=> actually spilled" invariant.
+    final GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
+    final int bufferSize = 50;
+    final SpillingGrouper<IntKey> grouper = makeGrouper(
+        bufferSize,
+        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024, 100, new GroupByStatsProvider.PerQueryStats()),
+        1024 * 1024L,
+        stats,
+        true
+    );
+
+    for (int i = 0; i < 100; i++) {
+      Assert.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+    }
+    grouper.close();
+
+    Assert.assertEquals(
+        "a slice that reached its spill trigger must report proximity == 1.0 exactly",
+        1.0,
+        stats.getSpillProximity(),
+        0.0
+    );
+  }
+
   private SpillingGrouper<IntKey> makeGrouper(
       int bufferSize,
       File storageDir,
@@ -411,6 +521,17 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
       long minSpillFileSize
   )
   {
+    return makeGrouper(bufferSize, temporaryStorage, minSpillFileSize, new GroupByStatsProvider.PerQueryStats(), true);
+  }
+
+  private SpillingGrouper<IntKey> makeGrouper(
+      int bufferSize,
+      LimitedTemporaryStorage temporaryStorage,
+      long minSpillFileSize,
+      GroupByStatsProvider.PerQueryStats perQueryStats,
+      boolean init
+  )
+  {
     final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 1L)));
 
@@ -429,9 +550,11 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
         false,
         bufferSize,
         minSpillFileSize,
-        new GroupByStatsProvider.PerQueryStats()
+        perQueryStats
     );
-    grouper.init();
+    if (init) {
+      grouper.init();
+    }
     return grouper;
   }
 
