@@ -22,6 +22,8 @@ package org.apache.druid.k8s.overlord.taskadapter;
 import com.google.common.base.Optional;
 import org.apache.druid.indexing.common.task.Task;
 
+import java.util.List;
+
 /**
  * Interface for selecting a Pod template based on a given task.
  * Implementations of this interface are responsible for determining the appropriate
@@ -37,4 +39,10 @@ public interface PodTemplateSelector
    *         is available for the given task.
    */
   Optional<PodTemplateWithName> getPodTemplateForTask(Task task);
+
+  /**
+   * Returns the names of all currently configured pod templates.
+   * @return the configured template names.
+   */
+  List<String> getPodTemplateNames();
 }

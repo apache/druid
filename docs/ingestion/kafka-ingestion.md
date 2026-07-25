@@ -267,6 +267,8 @@ When you set `streamingPartitionsSpec.partitionDimensions` in the tuning config,
 
 This enables segment pruning for streaming-ingested data without waiting for compaction to produce hash or range-partitioned segments. The `partitionDimensions` should be kept in sync with the compaction config's `partitionDimensions` for the same datasource.
 
+`streamingPartitionsSpec` is a typed object. The default and currently only type is `dim_value_set`, which records the distinct values observed for each tracked dimension. The `type` may be omitted, in which case it defaults to `dim_value_set`; you can set it explicitly (`"streamingPartitionsSpec": {"type": "dim_value_set", "partitionDimensions": [...]}`) to be forward-compatible with future strategies.
+
 **Usage guidelines:**
 
 - Only string-typed dimensions are currently supported.
@@ -484,7 +486,7 @@ For configuration properties shared across all streaming ingestion methods, refe
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
 |`numPersistThreads`|Integer|The number of threads to use to create and persist incremental segments on the disk. Higher ingestion data throughput results in a larger number of incremental segments, causing significant CPU time to be spent on the creation of the incremental segments on the disk. For datasources with number of columns running into hundreds or thousands, creation of the incremental segments may take up significant time, in the order of multiple seconds. In both of these scenarios, ingestion can stall or pause frequently, causing it to fall behind. You can use additional threads to parallelize the segment creation without blocking ingestion as long as there are sufficient CPU resources available.|No|1|
-|`streamingPartitionsSpec`|Object|Configures query-time segment pruning for streaming-ingested segments. Contains `partitionDimensions` (List of String), the dimensions whose observed values each segment records so the broker can skip segments that can't match a query filter, and an optional `maxValuesPerDimension` (Integer) cap on the distinct values recorded per dimension per segment. See [Streaming partitions spec](#streaming-partitions-spec) for details.|No|null|
+|`streamingPartitionsSpec`|Object|Configures query-time segment pruning for streaming-ingested segments. A typed object with an optional `type` (defaults to `dim_value_set`), `partitionDimensions` (List of String), the dimensions whose observed values each segment records so the broker can skip segments that can't match a query filter, and an optional `maxValuesPerDimension` (Integer) cap on the distinct values recorded per dimension per segment. See [Streaming partitions spec](#streaming-partitions-spec) for details.|No|null|
 
 ## Deployment notes on Kafka partitions and Druid segments
 

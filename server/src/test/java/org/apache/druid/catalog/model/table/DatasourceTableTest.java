@@ -19,23 +19,30 @@
 
 package org.apache.druid.catalog.model.table;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.catalog.CatalogTest;
+import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.facade.DatasourceFacade.ColumnFacade;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -137,6 +144,142 @@ public class DatasourceTableTest
       );
       expectValidationSucceeds(spec);
     }
+  }
+
+  @Test
+  public void testSpecWithBaseTableProp()
+  {
+    // The declared column order is the physical segment order: the clustering columns must lead.
+    final List<ColumnSpec> columns = Arrays.asList(
+        new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
+        new ColumnSpec(Columns.TIME_COLUMN, null, null),
+        new ColumnSpec("region", Columns.SQL_VARCHAR, null)
+    );
+
+    {
+      TableSpec spec = new TableSpec(
+          DatasourceDefn.TABLE_TYPE,
+          ImmutableMap.of(
+              DatasourceDefn.SEALED_PROPERTY, true,
+              DatasourceDefn.BASE_TABLE_PROPERTY,
+              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("tenant"), null)
+          ),
+          columns
+      );
+      expectValidationSucceeds(spec);
+    }
+
+    {
+      // A base table layout requires 'sealed': the declared columns define the physical segment schema, so
+      // undeclared columns cannot be ingested.
+      TableSpec spec = new TableSpec(
+          DatasourceDefn.TABLE_TYPE,
+          ImmutableMap.of(
+              DatasourceDefn.BASE_TABLE_PROPERTY,
+              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("tenant"), null)
+          ),
+          columns
+      );
+      ResolvedTable table = registry.resolve(spec);
+      DruidException e = assertThrows(DruidException.class, table::validate);
+      assertTrue(e.getMessage().contains("must also set [sealed] to true"));
+    }
+
+    {
+      // Validation is cross-checked against the declared columns: an undeclared clustering column fails at
+      // catalog write time.
+      TableSpec spec = new TableSpec(
+          DatasourceDefn.TABLE_TYPE,
+          ImmutableMap.of(
+              DatasourceDefn.SEALED_PROPERTY, true,
+              DatasourceDefn.BASE_TABLE_PROPERTY,
+              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("no_such_column"), null)
+          ),
+          columns
+      );
+      ResolvedTable table = registry.resolve(spec);
+      assertThrows(DruidException.class, table::validate);
+    }
+
+    {
+      // The clustering columns must be declared as the leading prefix of the column list; declared-but-not-first
+      // is an error, not a silent reorder.
+      TableSpec spec = new TableSpec(
+          DatasourceDefn.TABLE_TYPE,
+          ImmutableMap.of(
+              DatasourceDefn.SEALED_PROPERTY, true,
+              DatasourceDefn.BASE_TABLE_PROPERTY,
+              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("region"), null)
+          ),
+          columns
+      );
+      ResolvedTable table = registry.resolve(spec);
+      assertThrows(DruidException.class, table::validate);
+    }
+
+    {
+      // __time must be declared in the column list.
+      TableSpec spec = new TableSpec(
+          DatasourceDefn.TABLE_TYPE,
+          ImmutableMap.of(
+              DatasourceDefn.SEALED_PROPERTY, true,
+              DatasourceDefn.BASE_TABLE_PROPERTY,
+              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("tenant"), null)
+          ),
+          Collections.singletonList(new ColumnSpec("tenant", Columns.SQL_VARCHAR, null))
+      );
+      ResolvedTable table = registry.resolve(spec);
+      assertThrows(DruidException.class, table::validate);
+    }
+  }
+
+  @Test
+  public void testBaseTableFacade()
+  {
+    final ObjectMapper mapperWithInjectables = new DefaultObjectMapper().setInjectableValues(
+        new InjectableValues.Std().addValue(ExprMacroTable.class, ExprMacroTable.nil())
+    );
+    final TableDefnRegistry registryWithInjectables = new TableDefnRegistry(mapperWithInjectables);
+    final DatasourceBaseTableMetadata baseTable = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant_lower"),
+        VirtualColumns.create(
+            new ExpressionVirtualColumn("tenant_lower", "lower(\"tenant\")", ColumnType.STRING, ExprMacroTable.nil())
+        )
+    );
+    TableSpec spec = new TableSpec(
+        DatasourceDefn.TABLE_TYPE,
+        ImmutableMap.of(
+            DatasourceDefn.SEALED_PROPERTY, true,
+            DatasourceDefn.BASE_TABLE_PROPERTY, baseTable
+        ),
+        Arrays.asList(
+            new ColumnSpec("tenant_lower", Columns.SQL_VARCHAR, null),
+            new ColumnSpec(Columns.TIME_COLUMN, null, null),
+            new ColumnSpec("tenant", Columns.SQL_VARCHAR, null)
+        )
+    );
+    ResolvedTable table = registryWithInjectables.resolve(spec);
+    table.validate();
+    DatasourceFacade facade = new DatasourceFacade(table);
+    assertEquals(baseTable, facade.baseTableMetadata());
+
+    // insertColumn enforces the catalog write rules: declared columns resolve, undeclared columns are rejected by
+    // the sealed schema, and columns computed by a virtual column at ingest time cannot be written directly.
+    assertSame(facade.column("tenant"), facade.insertColumn("tenant", "druid.tbl"));
+    DruidException sealedError =
+        assertThrows(DruidException.class, () -> facade.insertColumn("no_such_column", "druid.tbl"));
+    assertTrue(sealedError.getMessage().contains("not defined in the target table [druid.tbl] strict schema"));
+    DruidException computedError =
+        assertThrows(DruidException.class, () -> facade.insertColumn("tenant_lower", "druid.tbl"));
+    assertTrue(computedError.getMessage().contains("computed by a virtual column at ingest time"));
+
+    // An undeclared column of a non-sealed table resolves to null: the caller adds it from the query type.
+    DatasourceFacade unsealed = new DatasourceFacade(registryWithInjectables.resolve(new TableSpec(
+        DatasourceDefn.TABLE_TYPE,
+        ImmutableMap.of(),
+        Collections.singletonList(new ColumnSpec(Columns.TIME_COLUMN, null, null))
+    )));
+    assertNull(unsealed.insertColumn("anything", "druid.tbl"));
   }
 
   @Test

@@ -22,9 +22,40 @@ package org.apache.druid.segment.loading;
 import org.apache.druid.error.DruidException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 class StorageLoadingThreadPoolTest
 {
+  private static SegmentLoaderConfig oneVirtualThreadConfig()
+  {
+    return new SegmentLoaderConfig()
+    {
+      @Override
+      public int getVirtualStorageLoadThreads()
+      {
+        return 1;
+      }
+    }.setVirtualStorage(true);
+  }
+
+  private static SegmentLoaderConfig fixedThreadConfig()
+  {
+    return new SegmentLoaderConfig()
+    {
+      @Override
+      public int getVirtualStorageLoadThreads()
+      {
+        return 2;
+      }
+
+      @Override
+      public boolean isVirtualStorageUseVirtualThreads()
+      {
+        return false;
+      }
+    }.setVirtualStorage(true);
+  }
+
   @Test
   void testCreateFromConfigIsUnavailableWhenNotVirtualStorage()
   {
@@ -58,5 +89,59 @@ class StorageLoadingThreadPoolTest
       }
     }.setVirtualStorage(true);
     Assertions.assertThrows(DruidException.class, () -> StorageLoadingThreadPool.createFromConfig(config));
+  }
+
+  @Test
+  @Timeout(30)
+  void testAcquireLoadPermitReleasesOnCloseForReuse()
+  {
+    final StorageLoadingThreadPool pool = StorageLoadingThreadPool.createFromConfig(oneVirtualThreadConfig());
+    try {
+      final StorageLoadingThreadPool.LoadPermit first = pool.acquireLoadPermit();
+      first.close();
+      first.close(); // idempotent: a double close must not over-release the single permit
+      // The permit is available again, so this returns immediately (it would hang under @Timeout if close() had not
+      // released it, or the extra release above had inflated the count).
+      pool.acquireLoadPermit().close();
+    }
+    finally {
+      pool.stop();
+    }
+  }
+
+  @Test
+  @Timeout(30)
+  void testAcquireLoadPermitIsNoOpWithoutSemaphore()
+  {
+    // Fixed-thread mode has no semaphore (the thread count is the bound), so acquiring repeatedly without releasing
+    // must never block.
+    final StorageLoadingThreadPool pool = StorageLoadingThreadPool.createFromConfig(fixedThreadConfig());
+    try {
+      pool.acquireLoadPermit();
+      pool.acquireLoadPermit();
+      pool.acquireLoadPermit().close();
+    }
+    finally {
+      pool.stop();
+    }
+  }
+
+  @Test
+  @Timeout(30)
+  void testAcquireLoadPermitIsInterruptibleAndDoesNotConsumeAPermit()
+  {
+    // A load interrupted while acquiring must abort (throw) and take no permit - this is the cancel-before-I/O
+    // guarantee that lets a cancelled query stop permit-blocked downloads before they touch deep storage.
+    final StorageLoadingThreadPool pool = StorageLoadingThreadPool.createFromConfig(oneVirtualThreadConfig());
+    try {
+      Thread.currentThread().interrupt();
+      Assertions.assertThrows(RuntimeException.class, pool::acquireLoadPermit);
+      Assertions.assertTrue(Thread.interrupted(), "interrupt flag should be restored (and is cleared here)");
+      // The aborted acquire consumed no permit, so this succeeds (would hang under @Timeout had it leaked one).
+      pool.acquireLoadPermit().close();
+    }
+    finally {
+      pool.stop();
+    }
   }
 }

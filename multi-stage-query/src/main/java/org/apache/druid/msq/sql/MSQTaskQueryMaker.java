@@ -26,12 +26,14 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.catalog.MetadataCatalog;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.Intervals;
@@ -510,7 +512,9 @@ public class MSQTaskQueryMaker implements QueryMaker
     );
 
 
-    final List<AggregateProjectionSpec> projectionSpecs = getProjections(targetDataSource, plannerContext);
+    final ResolvedTable tableMetadata = getTableMetadata(targetDataSource, plannerContext);
+    final BaseTableProjectionSpec baseTable = getBaseTable(tableMetadata);
+    final List<AggregateProjectionSpec> projectionSpecs = getProjections(tableMetadata);
 
     final DataSourceMSQDestination dataSourceDestination = new DataSourceMSQDestination(
         targetDataSource.getDestinationName(),
@@ -518,6 +522,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         segmentSortOrder,
         replaceTimeChunks,
         null,
+        baseTable,
         projectionSpecs,
         terminalStageSpecFactory.createTerminalStageSpec(
             plannerContext
@@ -550,16 +555,19 @@ public class MSQTaskQueryMaker implements QueryMaker
     return tuningConfig;
   }
 
-  private static List<AggregateProjectionSpec> getProjections(
-      IngestDestination targetDataSource,
-      PlannerContext plannerContext
-  )
+  @Nullable
+  private static ResolvedTable getTableMetadata(IngestDestination targetDataSource, PlannerContext plannerContext)
   {
-    final List<AggregateProjectionSpec> projectionSpecs;
     final MetadataCatalog metadataCatalog = plannerContext.getPlannerToolbox().catalogResolver().getMetadataCatalog();
-    final ResolvedTable tableMetadata = metadataCatalog.resolveTable(
+    return metadataCatalog.resolveTable(
         TableId.datasource(targetDataSource.getDestinationName())
     );
+  }
+
+  @Nullable
+  private static List<AggregateProjectionSpec> getProjections(@Nullable ResolvedTable tableMetadata)
+  {
+    final List<AggregateProjectionSpec> projectionSpecs;
     if (tableMetadata != null) {
       final List<DatasourceProjectionMetadata> projectionMetadata = tableMetadata.decodeProperty(
           DatasourceDefn.PROJECTIONS_KEYS_PROPERTY
@@ -575,5 +583,25 @@ public class MSQTaskQueryMaker implements QueryMaker
       projectionSpecs = null;
     }
     return projectionSpecs;
+  }
+
+  /**
+   * Derives the physical base table spec for the target datasource from the catalog, if the table declares a
+   * {@link DatasourceDefn#BASE_TABLE_PROPERTY} layout; combines the layout with the declared catalog columns via
+   * {@link DatasourceBaseTableMetadata#createSpec}.
+   */
+  @Nullable
+  private static BaseTableProjectionSpec getBaseTable(@Nullable ResolvedTable tableMetadata)
+  {
+    if (tableMetadata == null) {
+      return null;
+    }
+    final DatasourceBaseTableMetadata baseTableMetadata = tableMetadata.decodeProperty(
+        DatasourceDefn.BASE_TABLE_PROPERTY
+    );
+    if (baseTableMetadata == null) {
+      return null;
+    }
+    return baseTableMetadata.createSpec(tableMetadata.spec().columns());
   }
 }

@@ -29,6 +29,8 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -36,6 +38,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
@@ -135,6 +138,51 @@ class IndexMergerV10ClusteredTest extends InitializedNullHandlingTest
         out.add(Arrays.asList(tenant, region));
         cursor.advance();
       }
+    }
+    return out;
+  }
+
+  private static ClusteredValueGroupsBaseTableProjectionSpec timeOrderedClusterSpec()
+  {
+    // __time declared as the first non-clustering column, so the segment ordering is [tenant, __time, region] and each
+    // cluster group is individually __time-sorted -- the precondition for the time-ordered merge cursor.
+    return ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time"),
+            new StringDimensionSchema("region")
+        )
+        .clusteringColumns("tenant")
+        .build();
+  }
+
+  private QueryableIndex buildTimeOrderedSegment(String dirName, List<InputRow> rows)
+  {
+    return IndexBuilder.create()
+                       .useV10()
+                       .tmpDir(new File(tempDir, dirName))
+                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                       .schema(clusteredSchema(timeOrderedClusterSpec()))
+                       .rows(rows)
+                       .buildMMappedIndex();
+  }
+
+  /**
+   * Walk (@code __time}, {@code region}) pairs from a holder's scalar cursor, in whatever order the holder produces.
+   */
+  private static List<List<Object>> scanTimeRegion(CursorHolder holder)
+  {
+    final Cursor cursor = holder.asCursor();
+    final ColumnValueSelector timeSelector =
+        cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
+    final DimensionSelector regionSelector =
+        cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("region"));
+    final List<List<Object>> out = new ArrayList<>();
+    while (!cursor.isDone()) {
+      final String region =
+          regionSelector.getRow().size() == 0 ? null : regionSelector.lookupName(regionSelector.getRow().get(0));
+      out.add(Arrays.asList(timeSelector.getLong(), region));
+      cursor.advance();
     }
     return out;
   }
@@ -451,6 +499,86 @@ class IndexMergerV10ClusteredTest extends InitializedNullHandlingTest
         ),
         tuples.tuples()
     );
+  }
+
+  @Test
+  void testTimeOrderedMergeAcrossGroups()
+  {
+    // Two tenants (=> two cluster groups) with interleaved timestamps, ingested out of order.
+    final QueryableIndex index = buildTimeOrderedSegment(
+        "time-merge",
+        List.of(
+            row(T0 + 4, "acme", "a4"),
+            row(T0 + 1, "acme", "a1"),
+            row(T0 + 3, "globex", "g3"),
+            row(T0 + 2, "globex", "g2")
+        )
+    );
+
+    // Layout precondition: __time is the first non-clustering column, so each group is individually __time-sorted.
+    final ClusteredValueGroupsBaseTableSchema summary = index.getClusteredBaseSummary();
+    Assertions.assertEquals(
+        ColumnHolder.TIME_COLUMN_NAME,
+        summary.getGroupOrdering().get(0).getColumnName()
+    );
+
+    final QueryableIndexCursorFactory factory = new QueryableIndexCursorFactory(
+        index,
+        QueryableIndexTimeBoundaryInspector.create(index)
+    );
+
+    // No preferred ordering => concatenation: clustering-first ordering, NOT globally __time-ordered (each group's
+    // rows are contiguous: acme's two rows, then globex's two rows).
+    try (CursorHolder holder = factory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Assertions.assertEquals("tenant", holder.getOrdering().get(0).getColumnName());
+      Assertions.assertEquals(
+          List.of(
+              Arrays.asList(T0 + 1, "a1"),
+              Arrays.asList(T0 + 4, "a4"),
+              Arrays.asList(T0 + 2, "g2"),
+              Arrays.asList(T0 + 3, "g3")
+          ),
+          scanTimeRegion(holder)
+      );
+    }
+
+    // Ascending __time preferred => the time-ordered merge cursor: holder advertises __time ASC and rows are globally
+    // time-ordered across groups.
+    final CursorBuildSpec ascending = CursorBuildSpec.builder(CursorBuildSpec.FULL_SCAN)
+        .setPreferredOrdering(List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)))
+        .build();
+    try (CursorHolder holder = factory.makeCursorHolder(ascending)) {
+      Assertions.assertEquals(Cursors.ascendingTimeOrder(), holder.getOrdering());
+      Assertions.assertEquals(Order.ASCENDING, holder.getTimeOrder());
+      Assertions.assertFalse(holder.canVectorize(), "scalar-first: the merge holder is not vectorizable");
+      Assertions.assertEquals(
+          List.of(
+              Arrays.asList(T0 + 1, "a1"),
+              Arrays.asList(T0 + 2, "g2"),
+              Arrays.asList(T0 + 3, "g3"),
+              Arrays.asList(T0 + 4, "a4")
+          ),
+          scanTimeRegion(holder)
+      );
+    }
+
+    // Descending __time preferred => descending merge (each per-group cursor reverses, merged with a max-heap).
+    final CursorBuildSpec descending = CursorBuildSpec.builder(CursorBuildSpec.FULL_SCAN)
+        .setPreferredOrdering(List.of(OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)))
+        .build();
+    try (CursorHolder holder = factory.makeCursorHolder(descending)) {
+      Assertions.assertEquals(Cursors.descendingTimeOrder(), holder.getOrdering());
+      Assertions.assertEquals(Order.DESCENDING, holder.getTimeOrder());
+      Assertions.assertEquals(
+          List.of(
+              Arrays.asList(T0 + 4, "a4"),
+              Arrays.asList(T0 + 3, "g3"),
+              Arrays.asList(T0 + 2, "g2"),
+              Arrays.asList(T0 + 1, "a1")
+          ),
+          scanTimeRegion(holder)
+      );
+    }
   }
 
   @Test

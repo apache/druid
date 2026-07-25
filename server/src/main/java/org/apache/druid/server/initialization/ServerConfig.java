@@ -47,6 +47,7 @@ import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 
@@ -439,6 +440,17 @@ public class ServerConfig
   public static int getDefaultNumThreads()
   {
     return Math.max(10, (JvmUtils.getRuntimeInfo().getAvailableProcessors() * 17) / 16 + 2) + 30;
+  }
+
+  public static int getNumThreadsFromProperties(Properties properties)
+  {
+    final String value = properties.getProperty("druid.server.http.numThreads");
+    return value == null ? getDefaultNumThreads() : Integer.parseInt(value);
+  }
+
+  public static int getDefaultMaxConcurrentRequests(int numThreads)
+  {
+    return Math.max(1, Math.max(numThreads - 4, (int) (numThreads * 0.8)));
   }
 
   public static class UriComplianceDeserializer extends JsonDeserializer<UriCompliance>

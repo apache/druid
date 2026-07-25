@@ -739,7 +739,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.kill.bufferPeriod`|The amount of time that a segment must be unused before it is able to be permanently removed from metadata and deep storage. This can serve as a buffer period to prevent data loss if data ends up being needed after being marked unused.|`P30D`|
 |`druid.coordinator.kill.maxSegments`|The number of unused segments to kill per kill task. This number must be greater than 0. This only applies when `druid.coordinator.kill.on=true`.|100|
 |`druid.coordinator.kill.maxInterval`|The largest interval, as an [ISO 8601 duration](https://en.wikipedia.org/wiki/ISO_8601#Durations), of segments to delete per kill task. Set to zero, e.g. `PT0S`, for unlimited. This only applies when `druid.coordinator.kill.on=true`.|`P30D`|
-
+|`druid.coordinator.server.maxConcurrentRequests`|Maximum number of requests to non-exempt Coordinator API paths processed concurrently. Requests beyond this are queued briefly and rejected with HTTP 503 if no slot frees. Leadership endpoints (`/leader`, `/isLeader`) and non-matching paths such as `/status/*` are never throttled. This bounds Jetty thread-pool exhaustion from heavy or excessive calls (for example large `/loadstatus`, `/metadata/segments`, or `/intervals` scans). Note: this path also carries recurring internal control-plane traffic (segment handoff checks, historical bootstrap, lookup and rule sync), so setting this too low can throttle that traffic and degrade the cluster; lowering the default is discouraged. Set to any value `<= 0` (for example `-1`) to disable QoS filtering entirely.|`max(1, max(serverHttpNumThreads - 4, serverHttpNumThreads * 0.8))`|
 ##### Metadata management
 
 |Property|Description|Required|Default|
@@ -1315,7 +1315,7 @@ Middle Managers pass their configurations down to their child peons. The Middle 
 |--------|-----------|-------|
 |`druid.indexer.runner.allowedPrefixes`|Whitelist of prefixes for configs that can be passed down to child peons.|`com.metamx`, `druid`, `org.apache.druid`, `user.timezone`, `file.encoding`, `java.io.tmpdir`, `hadoop`|
 |`druid.indexer.runner.classpath`|Java classpath for the peon.|`System.getProperty("java.class.path")`|
-|`druid.indexer.runner.javaCommand`|Command required to execute java.|java|
+|`druid.indexer.runner.javaCommand`| Command required to execute java. If not specified, Druid uses the bundled `bin/run-java` script when it is present in the working directory (it honors the `DRUID_JAVA_HOME`/`JAVA_HOME` environment variables), otherwise it falls back to `java` on the `PATH`.|`bin/run-java` if present, else `java`|
 |`druid.indexer.runner.javaOpts`|_DEPRECATED_ A string of -X Java options to pass to the peon's JVM. Quotable parameters or parameters with spaces are encouraged to use javaOptsArray|`''`|
 |`druid.indexer.runner.javaOptsArray`|A JSON array of strings to be passed in as options to the peon's JVM. This is additive to `druid.indexer.runner.javaOpts` and is recommended for properly handling arguments which contain quotes or spaces like `["-XX:OnOutOfMemoryError=kill -9 %p"]`|`[]`|
 |`druid.indexer.runner.startPort`|Starting port used for Peon services, should be greater than 1023 and less than 65536.|8100|

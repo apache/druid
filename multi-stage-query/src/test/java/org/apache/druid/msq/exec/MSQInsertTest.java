@@ -26,6 +26,8 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.catalog.MapMetadataCatalog;
+import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
+import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
@@ -76,6 +78,7 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
@@ -225,6 +228,45 @@ public class MSQInsertTest extends MSQTestBase
                                                        )
                                                        .aggregators(
                                                            new LongSumAggregatorFactory("sum_delta", "delta")
+                                                       )
+                                                       .build()
+                            )
+                        )
+                    )
+                    .buildSpec()
+    );
+    metadataCatalog.addSpec(
+        TableId.datasource("fooClustered"),
+        TableBuilder.datasource("fooClustered", Granularities.DAY.toString())
+                    // declared order is the physical segment order: the clustering column leads
+                    .column("channel", Columns.SQL_VARCHAR)
+                    .timeColumn()
+                    .column("page", Columns.SQL_VARCHAR)
+                    .column("user", Columns.SQL_VARCHAR)
+                    .column("added", Columns.SQL_BIGINT)
+                    .column("deleted", Columns.SQL_BIGINT)
+                    .column("delta", Columns.SQL_BIGINT)
+                    .sealed(true)
+                    .baseTable(
+                        new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("channel"), null)
+                    )
+                    .property(
+                        DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,
+                        ImmutableList.of(
+                            new DatasourceProjectionMetadata(
+                                AggregateProjectionSpec.builder("channel_added_hourly")
+                                                       .virtualColumns(
+                                                           Granularities.toVirtualColumn(
+                                                               Granularities.HOUR,
+                                                               Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                                           )
+                                                       )
+                                                       .groupingColumns(
+                                                           new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+                                                           new StringDimensionSchema("channel")
+                                                       )
+                                                       .aggregators(
+                                                           new LongSumAggregatorFactory("sum_added", "added")
                                                        )
                                                        .build()
                             )
@@ -707,6 +749,127 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .verifyExecutionError();
 
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnExternalDataSourceWithCatalogClusteredBaseTable(
+      String contextName,
+      Map<String, Object> context
+  ) throws IOException
+  {
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    // The physical spec uses the declared catalog columns verbatim: the declared order is the segment order, with
+    // the clustering prefix leading and __time an explicit positional column.
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("channel", ColumnType.STRING)
+                                            .add("__time", ColumnType.LONG)
+                                            .add("page", ColumnType.STRING)
+                                            .add("user", ColumnType.STRING)
+                                            .add("added", ColumnType.LONG)
+                                            .add("deleted", ColumnType.LONG)
+                                            .add("delta", ColumnType.LONG)
+                                            .build();
+
+    // The catalog also declares a projection: aggregate projections are segment-wide views that coexist with the
+    // per-group clustered layout.
+    AggregateProjectionMetadata expectedProjection = new AggregateProjectionMetadata(
+        AggregateProjectionSchema.schemaBuilder("channel_added_hourly")
+                                 .timeColumnName(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+                                 .virtualColumns(
+                                       Granularities.toVirtualColumn(
+                                           Granularities.HOUR,
+                                           Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                       )
+                                   )
+                                 .groupAndOrder(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel")
+                                 .aggregators(new LongSumAggregatorFactory("sum_added", "added"))
+                                 .build(),
+        16
+    );
+
+    testIngestQuery().setSql(" insert into fooClustered SELECT\n"
+                             + "  floor(TIME_PARSE(\"timestamp\") to minute) AS __time,\n"
+                             + "  channel,\n"
+                             + "  page,\n"
+                             + "  user,\n"
+                             + "  added,\n"
+                             + "  deleted,\n"
+                             + "  delta\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}, {\"name\": \"added\", \"type\": \"long\"}, {\"name\": \"deleted\", \"type\": \"long\"}, {\"name\": \"delta\", \"type\": \"long\"}]'\n"
+                             + "  )\n"
+                             + ") PARTITIONED by day ")
+                     .setExpectedDataSource("fooClustered")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
+                         "fooClustered",
+                         Intervals.of("2016-06-27/P1D"),
+                         "test",
+                         0
+                     )))
+                     .setExpectedProjections(List.of(expectedProjection))
+                     .setExpectedClusterGroups(
+                         new ClusterGroupTuples(
+                             RowSignature.builder().add("channel", ColumnType.STRING).build(),
+                             ImmutableList.of(
+                                 ImmutableList.of("#ceb.wikipedia"),
+                                 ImmutableList.of("#de.wikipedia"),
+                                 ImmutableList.of("#en.wikipedia"),
+                                 ImmutableList.of("#es.wikipedia"),
+                                 ImmutableList.of("#id.wikipedia"),
+                                 ImmutableList.of("#pl.wikipedia"),
+                                 ImmutableList.of("#pt.wikipedia"),
+                                 ImmutableList.of("#ru.wikipedia"),
+                                 ImmutableList.of("#sh.wikipedia"),
+                                 ImmutableList.of("#sv.wikipedia"),
+                                 ImmutableList.of("#zh.wikipedia")
+                             )
+                         )
+                     )
+                     // Rows are read back in segment order: cluster groups in clustering-value order, each group
+                     // internally ordered by the derived column order (channel, __time, page, ...).
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{"#ceb.wikipedia", 1466985660000L, "Neqerssuaq", "Lsjbot", 4150L, 0L, 4150L},
+                             new Object[]{"#de.wikipedia", 1466992920000L, "Benutzer Diskussion:Squasher/Archiv/2016", "TaxonBot", 2560L, 0L, 2560L},
+                             new Object[]{"#de.wikipedia", 1466992980000L, "Benutzer Diskussion:HerrSonderbar", "GiftBot", 364L, 0L, 364L},
+                             new Object[]{"#en.wikipedia", 1466985600000L, "Bailando 2015", "181.230.118.178", 2L, 0L, 2L},
+                             new Object[]{"#en.wikipedia", 1466985600000L, "Richie Rich's Christmas Wish", "JasonAQuest", 0L, 2L, -2L},
+                             new Object[]{"#en.wikipedia", 1466985660000L, "Panama Canal", "Mariordo", 496L, 0L, 496L},
+                             new Object[]{"#en.wikipedia", 1466992980000L, "File:Paint.net 4.0.6 screenshot.png", "Calvin Hogg", 0L, 463L, -463L},
+                             new Object[]{"#es.wikipedia", 1466985660000L, "Sumo (banda)", "181.110.165.189", 0L, 173L, -173L},
+                             new Object[]{"#es.wikipedia", 1466989320000L, "Clasificación para la Eurocopa Sub-21 de 2017", "Guly600", 4L, 0L, 4L},
+                             new Object[]{"#id.wikipedia", 1466989320000L, "Ibnu Sina", "Ftihikam", 106L, 0L, 106L},
+                             new Object[]{"#pl.wikipedia", 1466985600000L, "Kategoria:Dyskusje nad usunięciem artykułu zakończone bez konsensusu − lipiec 2016", "Beau.bot", 270L, 0L, 270L},
+                             new Object[]{"#pt.wikipedia", 1466992920000L, "Dobromir Zhechev", "Ceresta", 1926L, 0L, 1926L},
+                             new Object[]{"#ru.wikipedia", 1466985720000L, "Википедия:Опросы/Унификация шаблонов «Не переведено»", "Wanderer777", 196L, 0L, 196L},
+                             new Object[]{"#sh.wikipedia", 1466985660000L, "El Terco, Bachíniva", "Kolega2357", 0L, 1L, -1L},
+                             new Object[]{"#sh.wikipedia", 1466985720000L, "Hermanos Díaz, Ascensión", "Kolega2357", 0L, 1L, -1L},
+                             new Object[]{"#sh.wikipedia", 1466989320000L, "El Sicomoro, Ascensión", "Kolega2357", 0L, 1L, -1L},
+                             new Object[]{"#sh.wikipedia", 1466992920000L, "Trinidad Jiménez G., Benemérito de las Américas", "Kolega2357", 0L, 1L, -1L},
+                             new Object[]{"#sv.wikipedia", 1466985600000L, "Salo Toraut", "Lsjbot", 31L, 0L, 31L},
+                             new Object[]{"#zh.wikipedia", 1466989320000L, "中共十八大以来的反腐败工作", "2001:DA8:207:E132:94DC:BA03:DFDF:8F9F", 18L, 0L, 18L},
+                             new Object[]{"#zh.wikipedia", 1466992920000L, "Wikipedia:頁面存廢討論/記錄/2016/06/27", "Tigerzeng", 1986L, 0L, 1986L}
+                         )
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
+                         0, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(20),
+                         1, 0
+                     )
+                     .verifyResults();
   }
 
   @MethodSource("data")
