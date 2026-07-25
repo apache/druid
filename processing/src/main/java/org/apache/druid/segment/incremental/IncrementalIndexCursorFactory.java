@@ -154,19 +154,37 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
     final List<Supplier<CursorHolder>> holderSuppliers = new ArrayList<>(surviving.size());
     final Closer closer = Closer.create();
     for (TableClusterGroupSpec valueGroup : surviving) {
-      final OnHeapClusterGroup group = clusteredBaseTable.getGroupForClusteringValues(
-          valueGroup.lookupClusteringValues()
-      );
+      final Object[] groupClusteringValues = valueGroup.lookupClusteringValues();
+      final OnHeapClusterGroup group = clusteredBaseTable.getGroupForClusteringValues(groupClusteringValues);
       if (group == null) {
         throw DruidException.defensive(
             "No cluster group for clustering values [%s]",
-            Arrays.toString(valueGroup.lookupClusteringValues())
+            Arrays.toString(groupClusteringValues)
         );
       }
-      clusteringValuesByGroup.add(valueGroup.lookupClusteringValues());
+      clusteringValuesByGroup.add(groupClusteringValues);
       final CursorBuildSpec groupSpec = plan.rebuildCursorBuildSpec(spec, valueGroup);
       holderSuppliers.add(
-          Suppliers.memoize(() -> closer.register(new IncrementalIndexCursorHolder(group, groupSpec)))
+          Suppliers.memoize(() -> closer.register(
+              new IncrementalIndexCursorHolder(group, groupSpec)
+              {
+                @Override
+                public ColumnSelectorFactory makeSelectorFactory(
+                    CursorBuildSpec buildSpec,
+                    IncrementalIndexRowHolder currEntry
+                )
+                {
+                  return new ClusteringAwareIncrementalIndexColumnSelectorFactory(
+                      group,
+                      currEntry,
+                      buildSpec,
+                      getTimeOrder(),
+                      clusteringColumns,
+                      groupClusteringValues
+                  );
+                }
+              }
+          ))
       );
     }
 
@@ -175,9 +193,15 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
     final ClusteringColumnSelectorFactory wrapperFactory = new ClusteringColumnSelectorFactory(
         ClusteringColumnSelectorFactory.UNINITIALIZED_DELEGATE,
         clusteringColumns,
-        clusteringValuesByGroup.get(0)
+        clusteringValuesByGroup.getFirst(),
+        spec.getVirtualColumns()
     );
-    final ConcatenatingCursor cursor = new ConcatenatingCursor(holderSuppliers, clusteringValuesByGroup, wrapperFactory);
+    final ConcatenatingCursor cursor = new ConcatenatingCursor(
+        holderSuppliers,
+        clusteringValuesByGroup,
+        wrapperFactory,
+        plan.virtualColumnRemap()
+    );
 
     return new CursorHolder()
     {

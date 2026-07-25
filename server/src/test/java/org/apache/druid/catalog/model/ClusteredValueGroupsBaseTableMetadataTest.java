@@ -35,6 +35,7 @@ import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -43,7 +44,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class ClusteredValueGroupsBaseTableMetadataTest
+public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHandlingTest
 {
   private final ObjectMapper mapper = new DefaultObjectMapper().setInjectableValues(
       new InjectableValues.Std().addValue(ExprMacroTable.class, ExprMacroTable.nil())

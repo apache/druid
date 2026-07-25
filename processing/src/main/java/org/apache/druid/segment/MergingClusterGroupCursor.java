@@ -26,6 +26,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.projections.MergingColumnSelectorFactory;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * {@link Cursor} that presents a set of individually {@code __time}-sorted per-cluster-group cursors as a single
@@ -38,7 +39,11 @@ import java.util.List;
  * <em>all</em> surviving group cursors up front (so unlike the concatenating path it does not benefit from early-exit
  * laziness) and, on each {@link #advance()}, emits the row with the smallest (or largest, when descending)
  * {@code __time} across the groups. Each per-group sub-index already exposes the clustering columns as constants, so
- * the {@link MergingColumnSelectorFactory} simply dispatches every column to the winning group.
+ * the {@link MergingColumnSelectorFactory} simply dispatches every column to the winning group. When the plan carries a
+ * query-virtual-column-to-materialized-column remap, the merging factory is wrapped in a
+ * {@link RemapColumnSelectorFactory} so reads of a remapped query virtual column's output name resolve to its
+ * materialized column (mirroring {@link ConcatenatingCursor}); the per-group specs already dropped those virtual
+ * columns and added their materialized targets as physical columns.
  * <p>
  * An {@link IntHeapPriorityQueue} of group indices, keyed on each group's current {@code __time} via
  * {@link #compareGroups}, drives the merge: the queue head is the winning group, {@link IntHeapPriorityQueue#changed()}
@@ -50,6 +55,7 @@ public final class MergingClusterGroupCursor implements Cursor
 {
   private final List<Supplier<CursorHolder>> holderSuppliers;
   private final boolean descending;
+  private final Map<String, String> virtualColumnRemap;
 
   private boolean initialized;
   // Indexed by group. groupCursors[i] is null if that group's holder produced no cursor.
@@ -62,11 +68,14 @@ public final class MergingClusterGroupCursor implements Cursor
   private int currentGroup;
   // Monotonically increasing output-row id, one per emitted row; the merge emits exactly one row per advance.
   private long outputRowId;
-  private MergingColumnSelectorFactory factory;
+  // The factory exposed to callers: the MergingColumnSelectorFactory, wrapped in a RemapColumnSelectorFactory when
+  // virtualColumnRemap is non-empty.
+  private ColumnSelectorFactory exposedFactory;
 
   public MergingClusterGroupCursor(
       List<Supplier<CursorHolder>> holderSuppliers,
-      boolean descending
+      boolean descending,
+      Map<String, String> virtualColumnRemap
   )
   {
     if (holderSuppliers.isEmpty()) {
@@ -74,6 +83,7 @@ public final class MergingClusterGroupCursor implements Cursor
     }
     this.holderSuppliers = holderSuppliers;
     this.descending = descending;
+    this.virtualColumnRemap = virtualColumnRemap;
   }
 
   private void initializeIfNeeded()
@@ -106,14 +116,18 @@ public final class MergingClusterGroupCursor implements Cursor
       }
     }
     currentGroup = heap.isEmpty() ? 0 : heap.firstInt();
-    factory = new MergingColumnSelectorFactory(groupFactories, () -> currentGroup, () -> outputRowId);
+    final MergingColumnSelectorFactory mergingFactory =
+        new MergingColumnSelectorFactory(groupFactories, () -> currentGroup, () -> outputRowId);
+    exposedFactory = virtualColumnRemap.isEmpty()
+                     ? mergingFactory
+                     : new RemapColumnSelectorFactory(mergingFactory, virtualColumnRemap);
   }
 
   @Override
   public ColumnSelectorFactory getColumnSelectorFactory()
   {
     initializeIfNeeded();
-    return factory;
+    return exposedFactory;
   }
 
   @Override
