@@ -1878,7 +1878,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     private SegmentLazyLoadFailCallback lazyLoadCallback = SegmentLazyLoadFailCallback.NOOP;
     private StorageLocation location;
     private File storageDir;
-    private ReferenceCountedSegmentProvider referenceProvider;
+    // volatile so isMounted() can read it without blocking behind a concurrent mount()/unmount() holding entryLock.
+    private volatile ReferenceCountedSegmentProvider referenceProvider;
     private final AtomicReference<Runnable> onUnmount = new AtomicReference<>();
     // switched from synchronized to use a ReentrantLock to avoid pinning virtual threads to platform threads until
     // https://openjdk.org/jeps/491, we could consider switching back after java 24+ is the minimum version
@@ -1906,13 +1907,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     @Override
     public boolean isMounted()
     {
-      entryLock.lock();
-      try {
-        return referenceProvider != null;
-      }
-      finally {
-        entryLock.unlock();
-      }
+      return referenceProvider != null;
     }
 
     @Override
