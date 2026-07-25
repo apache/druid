@@ -177,11 +177,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   @Override
   public int computeTaskCountForRollover()
   {
-    if (config.isScaleDownOnTaskRolloverOnly()) {
-      return computeOptimalTaskCount(lastKnownMetrics);
-    } else {
-      return CANNOT_COMPUTE;
-    }
+    // Always allow scaling on task rollover.
+    // If a scaling has happened recently, the caller may not invoke this method
+    // at all or simply reject the task count returned.
+    return computeOptimalTaskCount(lastKnownMetrics);
   }
 
   public int computeTaskCountForScaleAction()
