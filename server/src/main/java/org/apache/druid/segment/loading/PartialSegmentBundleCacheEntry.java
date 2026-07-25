@@ -175,8 +175,10 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
   // metadata + parents safe from drop-time unmap even if the dependency is statically reserved.
   @GuardedBy("entryLock")
   private final List<Closeable> dependencyReferences = new ArrayList<>();
-  @GuardedBy("entryLock")
-  private boolean mounted;
+  // volatile so isMounted() can read it without blocking behind a concurrent doActualUnmount() holding entryLock
+  // across container eviction. Other reads of this field still go through entryLock since they're paired with other
+  // guarded state (e.g. doMount's mounted + location check).
+  private volatile boolean mounted;
 
   // Reference-counted gate over the actual cleanup work (evict containers, release parent holds, unregister from
   // metadata). Set on successful mount; unmount() closes the wrapper which defers running cleanup until all outstanding
@@ -217,13 +219,7 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
   @Override
   public boolean isMounted()
   {
-    entryLock.lock();
-    try {
-      return mounted;
-    }
-    finally {
-      entryLock.unlock();
-    }
+    return mounted;
   }
 
   public SegmentId getSegmentId()

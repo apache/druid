@@ -118,9 +118,11 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   @GuardedBy("entryLock")
   @Nullable
   private StorageLocation location;
-  @GuardedBy("entryLock")
+  // volatile so isMounted() can read it without blocking behind a concurrent doActualUnmount() holding entryLock
+  // across fileMapper.close() + deleteHeaderFiles() (real file I/O). Other reads of this field still go through
+  // entryLock because they do more than a single null-check (e.g. isFullyDownloaded() also calls a method on it).
   @Nullable
-  private PartialSegmentFileMapperV10 fileMapper;
+  private volatile PartialSegmentFileMapperV10 fileMapper;
   // Cached PartialQueryableIndex for the mounted file mapper. Built lazily on first {@code acquireReference} call
   // so concurrent acquireReference calls share the same memoized column-holder suppliers. first read of a column
   // deserializes once and the ColumnHolder stays cached for subsequent queries against the same entry. Cleared
@@ -666,13 +668,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   @Override
   public boolean isMounted()
   {
-    entryLock.lock();
-    try {
-      return fileMapper != null;
-    }
-    finally {
-      entryLock.unlock();
-    }
+    return fileMapper != null;
   }
 
   @Override
