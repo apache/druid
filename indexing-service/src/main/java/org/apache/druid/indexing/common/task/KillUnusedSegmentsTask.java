@@ -52,6 +52,7 @@ import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -66,6 +67,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -249,8 +251,13 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
               = getNonRevokedTaskLockMap(toolbox.getTaskActionClient());
 
       final Set<DataSegment> unusedSegments = unusedSegmentsPlus.stream()
-                                                                 .map(DataSegmentPlus::getDataSegment)
-                                                                 .collect(Collectors.toSet());
+                                                                .map(DataSegmentPlus::getDataSegment)
+                                                                .collect(Collectors.toSet());
+      final Map<String, DataSegmentPlus> unusedIdToSegmentPlus = CollectionUtils.toMap(
+          unusedSegmentsPlus,
+          segment -> segment.getDataSegment().getId().toString(),
+          Function.identity()
+      );
 
       if (!TaskLocks.isLockCoversSegments(taskLockMap, unusedSegments)) {
         throw new ISE(
@@ -265,11 +272,11 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       // 1. Determine parent segment ids of killable unused segments
       final Map<String, String> upgradedFromSegmentIds
-          = fetchParentIdsForSegments(toolbox, unusedSegmentsPlus);
+          = fetchParentIdsForSegments(toolbox, unusedIdToSegmentPlus);
 
       // 2. Identify killable segments whose load specs are not shared with any other segment
       final List<DataSegment> segmentsToKillFromDeepStore = getKillableSegments(
-          unusedSegments,
+          unusedIdToSegmentPlus,
           upgradedFromSegmentIds,
           usedSegmentLoadSpecs,
           taskActionClient
@@ -288,7 +295,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       // 3. Nuke all eligible unused segments
       taskActionClient.submit(new SegmentNukeAction(unusedSegments));
-      emitMetric(toolbox.getEmitter(), TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, unusedSegments.size());
+      emitMetric(toolbox.getEmitter(), TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, unusedIdToSegmentPlus.size());
 
       // 4. Delete deep store files only for segments which do not share load specs with other segments
       toolbox.getDataSegmentKiller().kill(segmentsToKillFromDeepStore);
@@ -355,23 +362,20 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   /**
    * Fetches the parent IDs (if any) for the given unused segments.
    *
-   * @param unusedSegments Unused segments whose parent IDs need to be fetched
+   * @param unusedIdToSegmentPlus Map containing unused segments whose parent IDs
+   *                              need to be fetched
    * @return Map from segment ID to the segment ID from which
    * it was upgraded. If an input segment was not upgraded from any other segment,
    * it does not have an entry in the map.
    */
   protected Map<String, String> fetchParentIdsForSegments(
       TaskToolbox toolbox,
-      List<DataSegmentPlus> unusedSegments
+      Map<String, DataSegmentPlus> unusedIdToSegmentPlus
   )
   {
     try {
-      final Set<String> segmentIds = unusedSegments.stream().map(
-          s -> s.getDataSegment().getId().toString()
-      ).collect(Collectors.toSet());
-
       return toolbox.getTaskActionClient().submit(
-          new RetrieveUpgradedFromSegmentIdsAction(getDataSource(), segmentIds)
+          new RetrieveUpgradedFromSegmentIdsAction(getDataSource(), unusedIdToSegmentPlus.keySet())
       ).getUpgradedFromSegmentIds();
     }
     catch (Exception e) {
@@ -421,25 +425,20 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
    * @return list of segments to kill from deep storage
    */
   private List<DataSegment> getKillableSegments(
-      Set<DataSegment> unusedSegments,
+      Map<String, DataSegmentPlus> unusedSegments,
       Map<String, String> upgradedFromSegmentIds,
       Set<Map<String, Object>> usedSegmentLoadSpecs,
       TaskActionClient taskActionClient
   )
   {
-    // Unused segment IDs being killed
-    final Set<String> segmentIdsBeingKilled = unusedSegments.stream()
-                                                            .map(s -> s.getId().toString())
-                                                            .collect(Collectors.toSet());
-
     // Determine parentId (or self, if no parent) for each unused segment
     final Map<String, Set<DataSegment>> parentIdToUnusedSegments = new HashMap<>();
-    for (DataSegment segment : unusedSegments) {
-      final String segmentId = segment.getId().toString();
+    for (Map.Entry<String, DataSegmentPlus> entry : unusedSegments.entrySet()) {
+      final String segmentId = entry.getKey();
       parentIdToUnusedSegments.computeIfAbsent(
           upgradedFromSegmentIds.getOrDefault(segmentId, segmentId),
           k -> new HashSet<>()
-      ).add(segment);
+      ).add(entry.getValue().getDataSegment());
     }
 
     // Check if the parent or any of its children exist in metadata store
@@ -449,7 +448,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       );
       if (response != null && response.getUpgradedToSegmentIds() != null) {
         response.getUpgradedToSegmentIds().forEach((parent, children) -> {
-          if (!segmentIdsBeingKilled.containsAll(children)) {
+          if (!unusedSegments.keySet().containsAll(children)) {
             // Do not kill segment if its load spec is shared by another segment
             // which is not being killed.
             LOG.info(

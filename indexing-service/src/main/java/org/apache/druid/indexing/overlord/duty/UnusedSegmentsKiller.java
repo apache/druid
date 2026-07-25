@@ -467,12 +467,15 @@ public class UnusedSegmentsKiller implements OverlordDuty
     }
 
     @Override
-    protected Map<String, String> fetchParentIdsForSegments(TaskToolbox toolbox, List<DataSegmentPlus> unusedSegments)
+    protected Map<String, String> fetchParentIdsForSegments(
+        TaskToolbox toolbox,
+        Map<String, DataSegmentPlus> unusedIdToSegmentPlus
+    )
     {
       // No need to make another DB call, the parent IDs have already been fetched
       // in fetchNextBatchOfUnusedSegments
       final Map<String, String> unusedSegmentIdToParentId = new HashMap<>();
-      for (DataSegmentPlus segment : unusedSegments) {
+      for (DataSegmentPlus segment : unusedIdToSegmentPlus.values()) {
         if (segment.getUpgradedFromSegmentId() != null) {
           unusedSegmentIdToParentId.put(
               segment.getDataSegment().getId().toString(),
