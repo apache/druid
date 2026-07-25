@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.OrderBy;
@@ -68,6 +67,7 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -90,7 +90,7 @@ import java.util.Set;
  * segments directly via {@link IndexBuilder} (ingesting flat rows that the writer partitions into cluster groups by
  * clustering value) and runs the full per-group cursor pipeline against the actual on-disk clustered segment data.
  */
-class QueryableIndexCursorFactoryClusteredTest
+class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTest
 {
   private static final Interval INTERVAL = Intervals.of("2025-01-01/2025-01-02");
 
@@ -112,9 +112,6 @@ class QueryableIndexCursorFactoryClusteredTest
   @BeforeAll
   static void setUpEngines()
   {
-    // Some tests build segments with ExpressionVirtualColumn clustering / materialized columns, which require the
-    // expression processing module to be initialized.
-    ExpressionProcessing.initializeForTests();
     engineCloser = Closer.create();
     nonBlockingPool = engineCloser.register(
         new CloseableStupidPool<>("ClusteredCursorFactoryTest-bufferPool", () -> ByteBuffer.allocate(50000))
@@ -152,13 +149,6 @@ class QueryableIndexCursorFactoryClusteredTest
     if (segmentIndex != null) {
       segmentIndex.close();
     }
-  }
-
-  // VIRTUAL_CLUSTER_SPEC (below) validates its materialized virtual columns' output types at construction, which infers
-  // expression output types and requires ExpressionProcessing. This static field is built at class load, before the
-  // @BeforeAll that initializes the engines, so initialize ExpressionProcessing here first.
-  static {
-    ExpressionProcessing.initializeForTests();
   }
 
   /**
