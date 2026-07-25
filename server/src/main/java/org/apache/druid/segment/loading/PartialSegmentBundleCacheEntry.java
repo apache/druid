@@ -419,8 +419,11 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
         location = mountLocation;
         holds.addAll(acquired);
         dependencyReferences.addAll(acquiredRefs);
-        mounted = true;
+        // Must be set before `mounted` is published below: `mounted` is volatile and isMounted() reads it without
+        // entryLock, so a lock-free caller must never be able to observe isMounted() == true before the reference
+        // gate exists.
         references.set(new ReferenceCountingCloseableObject<Closeable>(this::doActualUnmount) {});
+        mounted = true;
       }
       finally {
         entryLock.unlock();

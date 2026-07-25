@@ -813,11 +813,13 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
         entryLock.lock();
         try {
           location = mountLocation;
-          fileMapper = mapper;
           // Install (or re-install, after a previous mount/unmount cycle terminated the prior Phaser) the
           // reference-counted gate over cleanup. Future acquireMetadataReference() / unmount() calls operate on this
-          // instance.
+          // instance. Must be set before fileMapper is published below: fileMapper is volatile and isMounted() reads
+          // it without entryLock, so a lock-free caller must never be able to observe isMounted() == true before the
+          // reference gate exists.
           references.set(new ReferenceCountingCloseableObject<Closeable>(this::doActualUnmount) {});
+          fileMapper = mapper;
         }
         finally {
           entryLock.unlock();
@@ -1168,13 +1170,10 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   @Override
   public boolean isFullyDownloaded()
   {
-    entryLock.lock();
-    try {
-      return fileMapper != null && fileMapper.isFullyDownloaded();
-    }
-    finally {
-      entryLock.unlock();
-    }
+    // Lock-free like isMounted(): fileMapper is volatile, and its isFullyDownloaded() shares no mutable state with
+    // close(), so it's safe to call on a mapper that's concurrently unmounting.
+    final PartialSegmentFileMapperV10 mapper = fileMapper;
+    return mapper != null && mapper.isFullyDownloaded();
   }
 
   /**
