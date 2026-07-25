@@ -410,6 +410,16 @@
                 <version>${aws.sdk.v2.version}</version>
             </dependency>
             <dependency>
+              <groupId>io.netty</groupId>
+              <artifactId>netty-buffer</artifactId>
+              <version>4.1.136.Final</version>
+            </dependency>
+            <dependency>
+              <groupId>io.netty</groupId>
+              <artifactId>netty-codec-http</artifactId>
+              <version>4.1.136.Final</version>
+            </dependency>
+            <dependency>
                 <groupId>com.ning</groupId>
                 <artifactId>compress-lzf</artifactId>
                 <version>1.0.4</version>
