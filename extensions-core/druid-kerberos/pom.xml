@@ -267,6 +267,12 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
+      <artifactId>netty-buffer</artifactId>
+      <version>${netty4.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
       <artifactId>netty-codec-http</artifactId>
       <version>${netty4.version}</version>
       <scope>provided</scope>
