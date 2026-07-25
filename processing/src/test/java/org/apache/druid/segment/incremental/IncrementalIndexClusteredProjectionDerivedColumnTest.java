@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.AutoTypeColumnSchema;
-import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
@@ -37,24 +36,16 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Covers an aggregate projection that groups on a <em>derived</em> clustering column of a clustered base table — one
- * produced by a virtual column rather than present on the raw input row (here {@code region} extracted from a
- * {@code COMPLEX<json>} {@code extra_attrs} column).
- * <p>
- * A derived clustering column is absent from the raw row, and in clustered mode the parent incremental index does not
- * compute it (the clustered base table resolves it into its per-group clustering dictionaries), so the parent's
- * {@code key.dims} slot for it stays null. A projection grouping on it binds to the base-table dimension of the same
- * name (a base column shadows a same-named projection virtual column) and therefore reads null, storing a null value
- * for every row and collapsing all groups. This asserts the projection instead sees the same derived value the
- * clustering path produced.
+ * A clustered base table whose {@code region} clustering column is <em>derived</em> from a nested {@code extra_attrs}
+ * column (absent from the raw row), carrying an aggregate projection that groups on that same {@code region}. Asserts
+ * the projection groups on the derived value the clustering path produced, rather than a null that would collapse the
+ * distinct (tenant, region) groups into one.
  */
 class IncrementalIndexClusteredProjectionDerivedColumnTest extends InitializedNullHandlingTest
 {
@@ -119,26 +110,6 @@ class IncrementalIndexClusteredProjectionDerivedColumnTest extends InitializedNu
     return index;
   }
 
-  /**
-   * Decodes the distinct grouping-column tuples stored in a projection's facts holder back to their actual values.
-   */
-  @SuppressWarnings({"rawtypes", "unchecked"})
-  private static Set<List<Object>> projectionGroupingTuples(OnheapIncrementalIndex index, String projectionName)
-  {
-    final IncrementalIndexRowSelector projection = index.getProjection(projectionName);
-    final List<IncrementalIndex.DimensionDesc> dimensions = projection.getDimensions();
-    final Set<List<Object>> tuples = new HashSet<>();
-    for (IncrementalIndexRow row : projection.getFacts().keySet()) {
-      final List<Object> tuple = new ArrayList<>(dimensions.size());
-      for (int i = 0; i < dimensions.size(); i++) {
-        final DimensionIndexer indexer = dimensions.get(i).getIndexer();
-        tuple.add(indexer.convertUnsortedEncodedKeyComponentToActualList(row.getDims()[i]));
-      }
-      tuples.add(tuple);
-    }
-    return tuples;
-  }
-
   @Test
   void testProjectionGroupsOnDerivedClusteringColumn()
   {
@@ -151,7 +122,7 @@ class IncrementalIndexClusteredProjectionDerivedColumnTest extends InitializedNu
               List.of("acme", "us-west-2"),
               List.of("globex", "eu-west-1")
           ),
-          projectionGroupingTuples(index, "proj")
+          ClusteredProjectionTestUtils.projectionGroupingTuples(index, "proj")
       );
     }
   }
