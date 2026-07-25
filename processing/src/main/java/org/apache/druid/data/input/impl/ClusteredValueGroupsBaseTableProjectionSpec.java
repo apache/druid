@@ -341,15 +341,13 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
     if (all.length == 0) {
       return;
     }
-    final Set<String> columnNames = Sets.newHashSetWithExpectedSize(columns.size());
     // Declared column types, doubling as the ColumnInspector used to infer each materialized virtual column's output
     // type (an expression's output type can depend on its input column types).
     final RowSignature.Builder signatureBuilder = RowSignature.builder();
     for (DimensionSchema column : columns) {
-      columnNames.add(column.getName());
       signatureBuilder.add(column.getName(), column.getColumnType());
     }
-    final RowSignature columnSignature = signatureBuilder.build();
+    final RowSignature rowSignature = signatureBuilder.build();
     // The output rule below lets a virtual column go unstored when it is exempt: an intermediary that feeds another
     // virtual column (collected during the input pass), or the metadata-only query-granularity carrier (seeded here).
     final Set<String> outputExempt = new HashSet<>();
@@ -364,7 +362,7 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
         );
       }
       for (String input : virtualColumn.requiredColumns()) {
-        final boolean isStored = columnNames.contains(input);
+        final boolean isStored = rowSignature.contains(input);
         final boolean isVirtual = virtualColumns.exists(input);
         if (!isStored && !isVirtual) {
           throw InvalidInput.exception(
@@ -385,7 +383,7 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
     // a materialized virtual column must additionally produce the declared type of the column it fills.
     for (VirtualColumn virtualColumn : all) {
       final String outputName = virtualColumn.getOutputName();
-      final boolean stored = columnNames.contains(outputName);
+      final boolean stored = rowSignature.contains(outputName);
       if (!stored && !outputExempt.contains(outputName)) {
         throw InvalidInput.exception(
             "virtual column [%s] is not stored (not declared in 'columns') and does not feed another virtual column;"
@@ -395,9 +393,9 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
       }
       if (stored) {
         final ColumnCapabilities outputCapabilities =
-            virtualColumns.getColumnCapabilitiesWithFallback(columnSignature, outputName);
+            virtualColumns.getColumnCapabilitiesWithFallback(rowSignature, outputName);
         final ColumnType outputType = ColumnType.fromCapabilities(outputCapabilities);
-        final ColumnType declaredType = columnSignature.getColumnType(outputName).orElse(null);
+        final ColumnType declaredType = rowSignature.getColumnType(outputName).orElse(null);
         if (outputType != null && !outputType.equals(declaredType)) {
           throw InvalidInput.exception(
               "virtual column [%s] produces type [%s] but the column it materializes is declared as [%s] in 'columns';"
