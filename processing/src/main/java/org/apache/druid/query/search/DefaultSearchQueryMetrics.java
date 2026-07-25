@@ -122,6 +122,30 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public void lane(SearchQuery query)
+  {
+    throw new ISE("Unsupported method in default query metrics implementation.");
+  }
+
+  @Override
+  public void lane(String lane)
+  {
+    delegateQueryMetrics.lane(lane);
+  }
+
+  @Override
+  public void priority(SearchQuery query)
+  {
+    throw new ISE("Unsupported method in default query metrics implementation.");
+  }
+
+  @Override
+  public void priority(int priority)
+  {
+    delegateQueryMetrics.priority(priority);
+  }
+
+  @Override
   public void server(String host)
   {
     delegateQueryMetrics.server(host);

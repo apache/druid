@@ -44,6 +44,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -175,6 +176,9 @@ public class QueryDriver
     }
 
     final org.apache.druid.server.QueryResponse queryResponse;
+    // Read in the finally block to report the scheduler-assigned lane and priority; stays null if execute() is never
+    // reached.
+    ResponseContext responseContext = null;
     final String currThreadName = Thread.currentThread().getName();
     Throwable caught = null;
     try {
@@ -184,6 +188,7 @@ public class QueryDriver
         throw new ForbiddenException(Access.DEFAULT_ERROR_MESSAGE);
       }
       queryResponse = queryLifecycle.execute();
+      responseContext = queryResponse.getResponseContext();
 
       QueryToolChest queryToolChest = queryLifecycle.getToolChest();
 
@@ -213,7 +218,7 @@ public class QueryDriver
                           .build();
     }
     finally {
-      queryLifecycle.emitLogsAndMetrics(caught, null, -1);
+      queryLifecycle.emitLogsAndMetrics(caught, null, -1, responseContext);
       Thread.currentThread().setName(currThreadName);
     }
   }

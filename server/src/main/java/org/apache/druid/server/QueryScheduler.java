@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryPlus;
@@ -176,7 +177,7 @@ public class QueryScheduler implements QueryWatcher
         priority.orElse(0)
     );
     final ServiceMetricEvent.Builder builderUsr = ServiceMetricEvent.builder().setFeed("metrics")
-                                                                    .setDimension("lane", lane.orElse(DEFAULT))
+                                                                    .setDimension(DruidMetrics.LANE, lane.orElse(DEFAULT))
                                                                     .setDimension("dataSource", query.getDataSource().getTableNames())
                                                                     .setDimension("type", query.getType());
     emitter.emit(builderUsr.setMetric("query/priority", priority.orElse(Integer.valueOf(0))));

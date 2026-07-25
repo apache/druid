@@ -3053,6 +3053,118 @@ public class CachingClusteredClientTest
     Assert.assertEquals("RsQmZHYstvXNeGf86z3pgpk+Wsg=", responseContext.getEntityTag());
   }
 
+  /**
+   * The lane and priority the scheduler assigns must be reported back through the response context, since the query
+   * lifecycle captured the query before the scheduler ran and cannot see the assignment otherwise.
+   */
+  @Test
+  public void testAssignedLaneAndPriorityReportedInResponseContext()
+  {
+    prepareTimeBoundaryTimeline();
+
+    final TimeBoundaryQuery query = Druids
+        .newTimeBoundaryQueryBuilder()
+        .dataSource(DATA_SOURCE)
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2016-01-01/2016-01-02"))))
+        .context(ImmutableMap.of(QueryContexts.LANE_KEY, "low", QueryContexts.PRIORITY_KEY, -5))
+        .randomQueryId()
+        .build();
+
+    final ResponseContext responseContext = initializeResponseContext();
+    getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
+
+    Assert.assertEquals("low", responseContext.getAssignedLane());
+    Assert.assertEquals(Long.valueOf(-5), responseContext.getAssignedPriority());
+  }
+
+  /**
+   * An unlaned query has no lane to report, so nothing is written; the metric then omits the lane dimension rather
+   * than inventing one. Priority always has a value.
+   */
+  @Test
+  public void testUnlanedQueryReportsNoLaneInResponseContext()
+  {
+    prepareTimeBoundaryTimeline();
+
+    final TimeBoundaryQuery query = Druids
+        .newTimeBoundaryQueryBuilder()
+        .dataSource(DATA_SOURCE)
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2016-01-01/2016-01-02"))))
+        .randomQueryId()
+        .build();
+
+    final ResponseContext responseContext = initializeResponseContext();
+    getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
+
+    Assert.assertNull(responseContext.getAssignedLane());
+    Assert.assertEquals(
+        Long.valueOf(QueryContexts.DEFAULT_PRIORITY),
+        responseContext.getAssignedPriority()
+    );
+  }
+
+  /**
+   * A union datasource or an inline subquery drives more than one cluster query through the same response context, and
+   * those can be assigned different lanes. The first assignment must win, so that the single pair of reported
+   * dimensions always describes one cluster query instead of being spliced together from several -- writing on every
+   * call would let the second query below overwrite the priority while leaving the first query's lane behind.
+   */
+  @Test
+  public void testFirstAssignedLaneAndPriorityWinsAcrossClusterQueries()
+  {
+    prepareTimeBoundaryTimeline();
+
+    final ResponseContext responseContext = initializeResponseContext();
+
+    getDefaultQueryRunner().run(
+        QueryPlus.wrap(
+            Druids.newTimeBoundaryQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2016-01-01/2016-01-02"))))
+                  .context(ImmutableMap.of(QueryContexts.LANE_KEY, "low", QueryContexts.PRIORITY_KEY, -5))
+                  .randomQueryId()
+                  .build()
+        ),
+        responseContext
+    );
+    // A second, unlaned cluster query with a different priority must not disturb the first assignment.
+    getDefaultQueryRunner().run(
+        QueryPlus.wrap(
+            Druids.newTimeBoundaryQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2016-01-01/2016-01-02"))))
+                  .context(ImmutableMap.of(QueryContexts.PRIORITY_KEY, 10))
+                  .randomQueryId()
+                  .build()
+        ),
+        responseContext
+    );
+
+    Assert.assertEquals("low", responseContext.getAssignedLane());
+    Assert.assertEquals(Long.valueOf(-5), responseContext.getAssignedPriority());
+  }
+
+  private void prepareTimeBoundaryTimeline()
+  {
+    final Interval interval = Intervals.of("2016-01-01/2016-01-02");
+    final DataSegment dataSegment =
+        DataSegment.builder(SegmentId.of("dataSource", interval, "ver", NoneShardSpec.instance()))
+                   .loadSpec(ImmutableMap.of("type", "hdfs", "path", "/tmp"))
+                   .dimensions(ImmutableList.of("product"))
+                   .metrics(ImmutableList.of("visited_sum"))
+                   .shardSpec(NoneShardSpec.instance())
+                   .binaryVersion(9)
+                   .size(12334)
+                   .build();
+    final ServerSelector selector = new ServerSelector(
+        dataSegment,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
+    );
+    selector.addServerAndUpdateSegment(new QueryableDruidServer(servers[0], null), dataSegment);
+    timeline.add(interval, "ver", new SingleElementPartitionChunk<>(selector));
+  }
+
   @Test
   public void testEtagforDifferentQueryInterval()
   {

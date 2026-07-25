@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.guice.annotations.PublicApi;
@@ -38,6 +39,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -462,6 +464,27 @@ public abstract class ResponseContext
     );
 
     /**
+     * Lane assigned to the query by the laning strategy on the Broker. The assignment happens after the query
+     * lifecycle has captured the query, so it is passed back through the response context purely so that the query
+     * metrics can report the lane that was actually used. Broker-local; never sent to the client or to data servers,
+     * and never expected back from a data server.
+     */
+    public static final Key ASSIGNED_LANE = new StringKey(
+        "assignedLane",
+        false, false
+    );
+
+    /**
+     * Priority assigned to the query by the prioritization strategy on the Broker. See {@link #ASSIGNED_LANE}. Held
+     * as a long because that is the narrowest numeric key type available here, but the value is always an
+     * {@code int}.
+     */
+    public static final Key ASSIGNED_PRIORITY = new LongKey(
+        "assignedPriority",
+        false
+    );
+
+    /**
      * One and only global list of keys. This is a semi-constant: it is mutable
      * at start-up time, but then is not thread-safe, and must remain unchanged
      * for the duration of the server run.
@@ -488,7 +511,9 @@ public abstract class ResponseContext
               TIMEOUT_AT,
               NUM_SCANNED_ROWS,
               CPU_CONSUMED_NANOS,
-              TRUNCATED
+              TRUNCATED,
+              ASSIGNED_LANE,
+              ASSIGNED_PRIORITY
           }
       );
     }
@@ -631,6 +656,20 @@ public abstract class ResponseContext
     putValue(Keys.ETAG, eTag);
   }
 
+  /**
+   * @throws NullPointerException if {@code lane} is null. There is no way to unset a key, so callers that may not have
+   *                              a lane must simply not call this.
+   */
+  public void putAssignedLane(@Nonnull String lane)
+  {
+    putValue(Keys.ASSIGNED_LANE, Preconditions.checkNotNull(lane, "lane"));
+  }
+
+  public void putAssignedPriority(int priority)
+  {
+    putValue(Keys.ASSIGNED_PRIORITY, (long) priority);
+  }
+
   public void putTimeoutTime(long time)
   {
     putValue(Keys.TIMEOUT_AT, time);
@@ -676,6 +715,18 @@ public abstract class ResponseContext
   public String getEntityTag()
   {
     return (String) get(Keys.ETAG);
+  }
+
+  @Nullable
+  public String getAssignedLane()
+  {
+    return (String) get(Keys.ASSIGNED_LANE);
+  }
+
+  @Nullable
+  public Long getAssignedPriority()
+  {
+    return (Long) get(Keys.ASSIGNED_PRIORITY);
   }
 
   public AtomicLong getTotalBytes()

@@ -72,7 +72,7 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
     queryMetrics.queryId("dummy");
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
-    Assertions.assertEquals(13, actualEvent.size());
+    Assertions.assertEquals(14, actualEvent.size());
     Assertions.assertTrue(actualEvent.containsKey("feed"));
     Assertions.assertTrue(actualEvent.containsKey("timestamp"));
     Assertions.assertEquals("localhost", actualEvent.get("host"));
@@ -89,6 +89,8 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
     Assertions.assertEquals("query/time", actualEvent.get("metric"));
     Assertions.assertEquals(0L, actualEvent.get("value"));
     Assertions.assertEquals(ImmutableMap.of("testKey", "testValue"), actualEvent.get("context"));
+    Assertions.assertFalse(actualEvent.containsKey(DruidMetrics.LANE));
+    Assertions.assertEquals(QueryContexts.DEFAULT_PRIORITY, actualEvent.get(DruidMetrics.PRIORITY));
   }
 
   @Test
@@ -139,6 +141,94 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
     // and the total number of emitted metrics remains unchanged
     queryMetrics.reportQueriedSegmentCount(25).emit(serviceEmitter);
     Assertions.assertEquals(10, serviceEmitter.getNumEmittedEvents());
+  }
+
+  @Test
+  public void testLaneAndPriorityReadFromQueryContext()
+  {
+    final StubServiceEmitter serviceEmitter = StubServiceEmitter.createStarted();
+    final DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>();
+
+    queryMetrics.query(
+        makeQueryWithContext(ImmutableMap.of(QueryContexts.LANE_KEY, "low", QueryContexts.PRIORITY_KEY, -5))
+    );
+    queryMetrics.reportQueryTime(0).emit(serviceEmitter);
+
+    final Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
+    Assertions.assertEquals("low", actualEvent.get(DruidMetrics.LANE));
+    Assertions.assertEquals(-5, actualEvent.get(DruidMetrics.PRIORITY));
+  }
+
+  /**
+   * An unlaned query is in no lane at all -- the scheduler gives it no lane bulkhead -- so no lane dimension is
+   * emitted rather than a fabricated one. Priority always has a value, so it is always emitted.
+   */
+  @Test
+  public void testUnlanedQueryOmitsLaneAndReportsDefaultPriority()
+  {
+    final StubServiceEmitter serviceEmitter = StubServiceEmitter.createStarted();
+    final DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>();
+
+    queryMetrics.query(makeQueryWithContext(ImmutableMap.of()));
+    queryMetrics.reportQueryTime(0).emit(serviceEmitter);
+
+    final Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
+    Assertions.assertFalse(actualEvent.containsKey(DruidMetrics.LANE));
+    Assertions.assertEquals(QueryContexts.DEFAULT_PRIORITY, actualEvent.get(DruidMetrics.PRIORITY));
+  }
+
+  /**
+   * The direct setters are what the Broker uses to report the lane/priority the scheduler actually assigned, which can
+   * differ from whatever the caller put in the context.
+   */
+  @Test
+  public void testDirectLaneAndPriorityOverrideQueryContext()
+  {
+    final StubServiceEmitter serviceEmitter = StubServiceEmitter.createStarted();
+    final DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>();
+
+    queryMetrics.query(
+        makeQueryWithContext(ImmutableMap.of(QueryContexts.LANE_KEY, "low", QueryContexts.PRIORITY_KEY, -5))
+    );
+    queryMetrics.lane("high");
+    queryMetrics.priority(10);
+    queryMetrics.reportQueryTime(0).emit(serviceEmitter);
+
+    final Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
+    Assertions.assertEquals("high", actualEvent.get(DruidMetrics.LANE));
+    Assertions.assertEquals(10, actualEvent.get(DruidMetrics.PRIORITY));
+  }
+
+  /**
+   * Dimensions live on a shared builder, so lane/priority ride along on every metric emitted by the same instance.
+   */
+  @Test
+  public void testLaneAndPriorityPresentOnOtherQueryMetrics()
+  {
+    final StubServiceEmitter serviceEmitter = StubServiceEmitter.createStarted();
+    final DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>();
+
+    queryMetrics.query(makeQueryWithContext(ImmutableMap.of(QueryContexts.LANE_KEY, "low")));
+    queryMetrics.reportQueryBytes(42).emit(serviceEmitter);
+
+    final Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
+    Assertions.assertEquals("query/bytes", actualEvent.get("metric"));
+    Assertions.assertEquals("low", actualEvent.get(DruidMetrics.LANE));
+    Assertions.assertEquals(QueryContexts.DEFAULT_PRIORITY, actualEvent.get(DruidMetrics.PRIORITY));
+  }
+
+  private static TopNQuery makeQueryWithContext(Map<String, Object> context)
+  {
+    return new TopNQueryBuilder()
+        .dataSource("xx")
+        .granularity(Granularities.ALL)
+        .dimension(new DefaultDimensionSpec("tags", "tags"))
+        .metric("count")
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .aggregators(new CountAggregatorFactory("count"))
+        .threshold(5)
+        .context(context)
+        .build();
   }
 
   @Test

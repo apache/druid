@@ -25,20 +25,25 @@ import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-public class QueryLaningTest extends QueryTestBase
+/**
+ * Covers the case the {@code manual} strategy in {@link QueryLaningTest} cannot: the {@code hilo} strategy derives the
+ * lane from the priority, so a negative-priority query is assigned to the {@code low} lane even though its context
+ * never carried a lane. The lane therefore only reaches {@code query/time} if the scheduler's assignment is reported
+ * back to the query lifecycle, which captured the query before the scheduler ran.
+ */
+public class QueryLaningHiLoTest extends QueryTestBase
 {
-  private static final String LANE_1 = "lane1";
+  private static final String LOW_LANE = "low";
 
   @Override
   protected EmbeddedDruidCluster createCluster()
   {
-    broker.addProperty("druid.query.scheduler.laning.strategy", "manual")
-          .addProperty("druid.query.scheduler.laning.lanes." + LANE_1, "1");
+    broker.addProperty("druid.query.scheduler.laning.strategy", "hilo")
+          .addProperty("druid.query.scheduler.laning.maxLowPercent", "50");
 
     return super.createCluster().useDefaultTimeoutForLatchableEmitter(100);
   }
@@ -50,44 +55,27 @@ public class QueryLaningTest extends QueryTestBase
   }
 
   @Test
-  public void test_queryUsesLaneInQueryContext_inManualStrategy()
+  public void test_queryTimeReportsStrategyAssignedLane_inHiLoStrategy()
   {
     final String testDatasource = ingestBasicData();
     final String result = cluster.callApi().onAnyBroker(
-        b -> b.submitSqlQuery(createQuery("SELECT SUM(\"value\") FROM %s", testDatasource, LANE_1))
+        b -> b.submitSqlQuery(createNegativePriorityQuery("SELECT SUM(\"value\") FROM %s", testDatasource))
     ).trim();
     Assertions.assertEquals("3003.0", result);
 
     broker.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("query/priority").hasDimension("lane", LANE_1)
+        event -> event.hasMetricName("query/priority").hasDimension("lane", LOW_LANE)
     );
 
-    // The manual strategy echoes back the context lane, so this only covers the context-derived dimension. See
-    // QueryLaningHiLoTest for the case where the strategy assigns a lane the context never carried.
+    // The lane was never in the query context; only the laning strategy knows it.
     broker.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("query/time").hasDimension("lane", LANE_1)
+        event -> event.hasMetricName("query/time")
+                      .hasDimension("lane", LOW_LANE)
+                      .hasDimension("priority", -1)
     );
   }
 
-  @Test
-  @Disabled("sleep() function does not seem to keep the lane occupied")
-  public void test_queryFails_ifLaneIsFull()
-  {
-    final String testDatasource = ingestBasicData();
-
-    // Fire a slow query which keeps the lane occupied
-    executeQueryAsync(
-        routerEndpoint,
-        createQuery("SELECT sleep(10), SUM(\"value\") FROM %s", testDatasource, LANE_1)
-    );
-
-    // Fire another query and ensure that we get a capacity exceeded exception
-    cluster.callApi().onAnyBroker(
-        b -> b.submitSqlQuery(createQuery("SELECT SUM(\"value\") FROM %s", testDatasource, LANE_1))
-    );
-  }
-
-  private ClientSqlQuery createQuery(String sql, String dataSource, String lane)
+  private ClientSqlQuery createNegativePriorityQuery(String sql, String dataSource)
   {
     return new ClientSqlQuery(
         StringUtils.format(sql, dataSource),
@@ -95,7 +83,7 @@ public class QueryLaningTest extends QueryTestBase
         false,
         false,
         false,
-        Map.of(QueryContexts.LANE_KEY, lane),
+        Map.of(QueryContexts.PRIORITY_KEY, -1),
         null
     );
   }

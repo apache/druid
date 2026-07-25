@@ -195,7 +195,7 @@ public class QueryLifecycle
               @Override
               public void after(final boolean isDone, final Throwable thrown)
               {
-                emitLogsAndMetrics(thrown, null, -1);
+                emitLogsAndMetrics(thrown, null, -1, queryResponse.getResponseContext());
               }
             }
         ),
@@ -446,11 +446,31 @@ public class QueryLifecycle
    * @param remoteAddress remote address, for logging; or null if unknown
    * @param bytesWritten  number of bytes written; will become a query/bytes metric if >= 0
    */
-  @SuppressWarnings("unchecked")
   public void emitLogsAndMetrics(
       @Nullable final Throwable e,
       @Nullable final String remoteAddress,
       final long bytesWritten
+  )
+  {
+    emitLogsAndMetrics(e, remoteAddress, bytesWritten, null);
+  }
+
+  /**
+   * Emits logs and metrics for this query, reporting the lane and priority that the scheduler assigned.
+   *
+   * @param e               exception that occurred while processing this query
+   * @param remoteAddress   remote address, for logging; or null if unknown
+   * @param bytesWritten    number of bytes written; will become a query/bytes metric if >= 0
+   * @param responseContext response context of the executed query, as returned by {@link #execute()}; or null if the
+   *                        query never got far enough to have one, in which case the lane and priority dimensions fall
+   *                        back to whatever the query context carried
+   */
+  @SuppressWarnings("unchecked")
+  public void emitLogsAndMetrics(
+      @Nullable final Throwable e,
+      @Nullable final String remoteAddress,
+      final long bytesWritten,
+      @Nullable final ResponseContext responseContext
   )
   {
     if (baseQuery == null) {
@@ -476,6 +496,22 @@ public class QueryLifecycle
           StringUtils.nullToEmptyNonDruidDataString(remoteAddress)
       );
       queryMetrics.success(success);
+
+      // The scheduler assigns lane/priority after this lifecycle captured the query, so prefer what it reported.
+      if (responseContext != null) {
+        final String assignedLane = responseContext.getAssignedLane();
+        if (assignedLane != null) {
+          queryMetrics.lane(assignedLane);
+        }
+        final Long assignedPriority = responseContext.getAssignedPriority();
+        // Priority is an int everywhere it is set, so an out of range value can only mean the key was populated by
+        // something other than this Broker's scheduler. Keep the context-derived dimension rather than truncating.
+        if (assignedPriority != null
+            && assignedPriority >= Integer.MIN_VALUE
+            && assignedPriority <= Integer.MAX_VALUE) {
+          queryMetrics.priority(assignedPriority.intValue());
+        }
+      }
 
       final int statusCode = DruidMetrics.computeStatusCode(e);
       queryMetrics.statusCode(statusCode);

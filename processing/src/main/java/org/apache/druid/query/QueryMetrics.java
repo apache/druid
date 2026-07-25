@@ -27,6 +27,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterBundle;
 import org.apache.druid.query.search.SearchQueryMetricsFactory;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -232,6 +233,57 @@ public interface QueryMetrics<QueryType extends Query<?>>
    */
   @PublicApi
   void context(QueryType query);
+
+  /**
+   * Sets the query lane as dimension, read from the query context. Emits no dimension when the query is not laned,
+   * since an unlaned query is genuinely in no lane.
+   *
+   * <p>On a Broker the lane may instead be assigned by the laning strategy after this is called; see
+   * {@link #lane(String)}.
+   *
+   * <p>Defaults to emitting nothing, so that implementations outside this repository keep compiling.
+   */
+  @PublicApi
+  default void lane(@SuppressWarnings("UnusedParameters") QueryType query)
+  {
+    // Emit nothing by default.
+  }
+
+  /**
+   * Sets the given lane as dimension, overriding any value derived from the query context. Used on the Broker to
+   * report the lane that the laning strategy actually assigned. A null lane emits no dimension.
+   *
+   * <p>Defaults to emitting nothing, so that implementations outside this repository keep compiling.
+   */
+  @PublicApi
+  default void lane(@SuppressWarnings("UnusedParameters") @Nullable String lane)
+  {
+    // Emit nothing by default.
+  }
+
+  /**
+   * Sets the query priority as dimension, read from the query context. Reports
+   * {@link QueryContexts#DEFAULT_PRIORITY} when the query has no explicit priority.
+   *
+   * <p>Defaults to emitting nothing, so that implementations outside this repository keep compiling.
+   */
+  @PublicApi
+  default void priority(@SuppressWarnings("UnusedParameters") QueryType query)
+  {
+    // Emit nothing by default.
+  }
+
+  /**
+   * Sets the given priority as dimension, overriding any value derived from the query context. Used on the Broker to
+   * report the priority that the prioritization strategy actually assigned.
+   *
+   * <p>Defaults to emitting nothing, so that implementations outside this repository keep compiling.
+   */
+  @PublicApi
+  default void priority(@SuppressWarnings("UnusedParameters") int priority)
+  {
+    // Emit nothing by default.
+  }
 
   void server(String host);
 

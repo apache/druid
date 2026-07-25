@@ -27,6 +27,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.query.context.ResponseContext;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -129,12 +130,21 @@ public class QueryResourceQueryResultPusherFactory
           final String prevEtag = getPreviousEtag(req);
 
           if (prevEtag != null && prevEtag.equals(responseContext.getEntityTag())) {
-            queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
+            queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1, responseContext);
             counter.incrementSuccess();
             return Response.status(Response.Status.NOT_MODIFIED);
           }
 
           return null;
+        }
+
+        /**
+         * Null when {@link #start()} failed before the query was executed.
+         */
+        @Nullable
+        private ResponseContext getResponseContextOrNull()
+        {
+          return queryResponse == null ? null : queryResponse.getResponseContext();
         }
 
         @Override
@@ -152,13 +162,13 @@ public class QueryResourceQueryResultPusherFactory
         @Override
         public void recordSuccess(long numBytes)
         {
-          queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), numBytes);
+          queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), numBytes, getResponseContextOrNull());
         }
 
         @Override
         public void recordFailure(Exception e, long bytesWritten)
         {
-          queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), bytesWritten);
+          queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), bytesWritten, getResponseContextOrNull());
         }
 
         @Override
