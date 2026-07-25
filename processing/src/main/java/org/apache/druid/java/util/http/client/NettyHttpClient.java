@@ -527,7 +527,7 @@ public class NettyHttpClient extends AbstractHttpClient
    * delayed or never fire (see netty/netty#14368 and netty/netty#16244). The pre-Netty-4 Druid client scheduled read
    * timeouts on a {@code HashedWheelTimer} for the same reason.
    */
-  private static class TimerReadTimeoutHandler extends ChannelInboundHandlerAdapter
+  static class TimerReadTimeoutHandler extends ChannelInboundHandlerAdapter
   {
     private final Timer timer;
     private final long timeoutNanos;
