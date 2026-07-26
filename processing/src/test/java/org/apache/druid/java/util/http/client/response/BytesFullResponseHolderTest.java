@@ -23,12 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -52,9 +52,10 @@ public class BytesFullResponseHolderTest
     final BytesFullResponseHolder target = spy(new BytesFullResponseHolder(response));
     target.addChunk(objectMapper.writeValueAsBytes(payload));
 
-    final ResponseObject deserialize = target.deserialize(objectMapper, new TypeReference<>() {});
+    final ResponseObject deserialize = target.deserialize(objectMapper, new TypeReference<ResponseObject>() {
+    });
 
-    Assertions.assertEquals(payload, deserialize);
+    Assert.assertEquals(payload, deserialize);
     Mockito.verify(target, Mockito.times(1)).deserialize(ArgumentMatchers.any(), ArgumentMatchers.any());
   }
 
@@ -66,7 +67,7 @@ public class BytesFullResponseHolderTest
     final BytesFullResponseHolder target = spy(new BytesFullResponseHolder(response));
     Mockito.doThrow(IOException.class).when(objectMapper).readValue(isA(byte[].class), isA(TypeReference.class));
 
-    Assertions.assertThrows(RuntimeException.class, () -> target.deserialize(objectMapper, new TypeReference<ResponseObject>() {}));
+    Assert.assertThrows(RuntimeException.class, () -> target.deserialize(objectMapper, new TypeReference<ResponseObject>() {}));
     Mockito.verify(target, Mockito.times(1)).deserialize(ArgumentMatchers.any(), ArgumentMatchers.any());
   }
 

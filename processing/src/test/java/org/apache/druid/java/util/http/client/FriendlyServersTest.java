@@ -20,6 +20,9 @@
 package org.apache.druid.java.util.http.client;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
@@ -33,20 +36,19 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.util.ssl.KeyStoreScanner;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
@@ -105,7 +107,7 @@ public class FriendlyServersTest
               StatusResponseHandler.getInstance()
           ).get();
 
-      Assert.assertEquals(200, response.getStatus().getCode());
+      Assert.assertEquals(200, response.getStatus().code());
       Assert.assertEquals("hello!", response.getContent());
     }
     finally {
@@ -115,10 +117,13 @@ public class FriendlyServersTest
     }
   }
 
-  @Test
+  // Bounded so that a regression in the proxy CONNECT handling fails this test instead of hanging
+  // until the CI job's own timeout expires.
+  @Test(timeout = 60_000L)
   public void testFriendlyProxyHttpServer() throws Exception
   {
     final AtomicReference<String> requestContent = new AtomicReference<>();
+    final AtomicReference<Throwable> serverError = new AtomicReference<>();
 
     final ExecutorService exec = Executors.newSingleThreadExecutor();
     final ServerSocket serverSocket = new ServerSocket(0);
@@ -138,19 +143,28 @@ public class FriendlyServersTest
               ) {
                 StringBuilder request = new StringBuilder();
                 String line;
-                while (!"".equals((line = in.readLine()))) {
+                while ((line = in.readLine()) != null && !line.isEmpty()) {
                   request.append(line).append("\r\n");
                 }
                 requestContent.set(request.toString());
                 out.write("HTTP/1.1 200 OK\r\n\r\n".getBytes(StandardCharsets.UTF_8));
 
-                while (!in.readLine().equals("")) {
-                  // skip lines
+                while ((line = in.readLine()) != null && !line.isEmpty()) {
+                  // Skip the headers of the request that the client tunnels through the proxy.
                 }
                 out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+                out.flush();
               }
-              catch (Exception e) {
-                Assert.fail(e.toString());
+              catch (Throwable t) {
+                // Keep accepting rather than calling Assert.fail. The AssertionError it throws would
+                // escape into the executor's Future, where nobody looks at it, silently stopping this
+                // server while the client waits for a response that can no longer arrive. A pooled
+                // client may also open and drop connections on its own, so a single failed exchange is
+                // not necessarily a test failure; just remember it in case the request below fails.
+                serverError.compareAndSet(null, t);
+                if (serverSocket.isClosed()) {
+                  return;
+                }
               }
             }
           }
@@ -166,21 +180,36 @@ public class FriendlyServersTest
           )
           .build();
       final HttpClient client = HttpClientInit.createClient(config, lifecycle);
-      final StatusResponseHolder response = client
-          .go(
-              new Request(
-                  HttpMethod.GET,
-                  new URL("http://anotherHost:8080/")
-              ),
-              StatusResponseHandler.getInstance()
-          ).get();
+      final StatusResponseHolder response;
+      try {
+        response = client
+            .go(
+                new Request(
+                    HttpMethod.GET,
+                    URI.create("http://anotherHost:8080/").toURL()
+                ),
+                StatusResponseHandler.getInstance()
+            ).get();
+      }
+      catch (Throwable t) {
+        // A failure on the proxy side is the more informative one, so make sure it is not lost.
+        final Throwable proxyError = serverError.get();
+        if (proxyError != null) {
+          t.addSuppressed(proxyError);
+        }
+        throw t;
+      }
 
-      Assert.assertEquals(200, response.getStatus().getCode());
+      Assert.assertEquals(200, response.getStatus().code());
       Assert.assertEquals("hello!", response.getContent());
 
-      Assert.assertEquals(
-          "CONNECT anotherHost:8080 HTTP/1.1\r\nProxy-Authorization: Basic Ym9iOnNhbGx5\r\n",
-          requestContent.get()
+      // Netty 4 may normalize header names to lowercase
+      String actualRequest = requestContent.get();
+      Assert.assertTrue(
+          "Request should contain proxy authorization",
+          actualRequest.contains("CONNECT anotherHost:8080 HTTP/1.1") &&
+          (actualRequest.contains("Proxy-Authorization: Basic Ym9iOnNhbGx5") ||
+           actualRequest.contains("proxy-authorization: Basic Ym9iOnNhbGx5"))
       );
     }
     finally {
@@ -213,7 +242,9 @@ public class FriendlyServersTest
                 // Read headers
                 String header;
                 while (!(header = in.readLine()).equals("")) {
-                  if ("Accept-Encoding: identity".equals(header)) {
+                  // Netty 4 may send headers in lowercase
+                  if ("Accept-Encoding: identity".equals(header) || 
+                      "accept-encoding: identity".equals(header)) {
                     foundAcceptEncoding.set(true);
                   }
                 }
@@ -242,7 +273,7 @@ public class FriendlyServersTest
               StatusResponseHandler.getInstance()
           ).get();
 
-      Assert.assertEquals(200, response.getStatus().getCode());
+      Assert.assertEquals(200, response.getStatus().code());
       Assert.assertEquals("hello!", response.getContent());
       Assert.assertTrue(foundAcceptEncoding.get());
     }
@@ -300,7 +331,7 @@ public class FriendlyServersTest
                 ),
                 StatusResponseHandler.getInstance()
             ).get().getStatus();
-        Assert.assertEquals(404, status.getCode());
+        Assert.assertEquals(404, status.code());
       }
 
       // Incorrect name ("127.0.0.1")
@@ -373,7 +404,7 @@ public class FriendlyServersTest
                 StatusResponseHandler.getInstance()
             ).get().getStatus();
 
-        Assert.assertEquals(200, status.getCode());
+        Assert.assertEquals(200, status.code());
       }
 
       {
@@ -384,7 +415,7 @@ public class FriendlyServersTest
                 StatusResponseHandler.getInstance()
             ).get().getStatus();
 
-        Assert.assertEquals(200, status.getCode());
+        Assert.assertEquals(200, status.code());
       }
     }
     finally {

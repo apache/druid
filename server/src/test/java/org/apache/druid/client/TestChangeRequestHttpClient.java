@@ -24,6 +24,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.java.util.common.ISE;
@@ -31,11 +36,6 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
 
 import java.io.ByteArrayInputStream;
@@ -110,8 +110,11 @@ public class TestChangeRequestHttpClient<R> implements HttpClient
       httpResponseHandler.handleResponse(errorResponse, null);
       return (ListenableFuture<Final>) Futures.immediateFuture(new ByteArrayInputStream(new byte[0]));
     } else {
-      HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-      httpResponse.setContent(ChannelBuffers.buffer(0));
+      HttpResponse httpResponse = new DefaultFullHttpResponse(
+          HttpVersion.HTTP_1_1,
+          HttpResponseStatus.OK,
+          Unpooled.EMPTY_BUFFER
+      );
       httpResponseHandler.handleResponse(httpResponse, null);
     }
 
@@ -128,16 +131,13 @@ public class TestChangeRequestHttpClient<R> implements HttpClient
 
   private HttpResponse buildErrorResponse(DruidException druidException)
   {
-    HttpResponse httpResponse = new DefaultHttpResponse(
-        HttpVersion.HTTP_1_1,
-        HttpResponseStatus.valueOf(druidException.getStatusCode())
-    );
-    httpResponse.setContent(ChannelBuffers.buffer(0));
-
-    ErrorResponse errorResponse = druidException.toErrorResponse();
     try {
-      httpResponse.setContent(ChannelBuffers.copiedBuffer(mapper.writeValueAsBytes(errorResponse)));
-      return httpResponse;
+      ErrorResponse errorResponse = druidException.toErrorResponse();
+      return new DefaultFullHttpResponse(
+          HttpVersion.HTTP_1_1,
+          HttpResponseStatus.valueOf(druidException.getStatusCode()),
+          Unpooled.wrappedBuffer(mapper.writeValueAsBytes(errorResponse))
+      );
     }
     catch (JsonProcessingException e) {
       throw new ISE("Error while serializing given response");

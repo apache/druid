@@ -20,13 +20,13 @@
 package org.apache.druid.java.util.http.client;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.timeout.ReadTimeoutException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.joda.time.Duration;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -36,12 +36,14 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.net.ssl.SSLContext;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.URI;
 import java.net.URL;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -200,6 +202,43 @@ public class JankyServersTest
       }
 
       Assert.assertTrue("ReadTimeoutException thrown by 'get'", e instanceof ReadTimeoutException);
+    }
+    finally {
+      lifecycle.stop();
+    }
+  }
+
+  /**
+   * A proxy that accepts the connection but never answers the CONNECT request must not wedge the
+   * caller. The CONNECT handshake is bounded in
+   * {@link org.apache.druid.java.util.http.client.pool.ChannelResourceFactory}, so the request fails
+   * rather than blocking forever in {@link NettyHttpClient#go}.
+   */
+  @Test(timeout = 60_000L)
+  public void testSilentProxyServer() throws Throwable
+  {
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClientConfig config = HttpClientConfig
+          .builder()
+          .withHttpProxyConfig(
+              new HttpClientProxyConfig("localhost", silentServerSocket.getLocalPort(), "bob", "sally")
+          )
+          .build();
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle);
+
+      Throwable e = null;
+      try {
+        client.go(
+            new Request(HttpMethod.GET, URI.create("http://anotherHost:8080/").toURL()),
+            StatusResponseHandler.getInstance()
+        ).get();
+      }
+      catch (ExecutionException e1) {
+        e = e1.getCause();
+      }
+
+      Assert.assertTrue("ChannelException thrown by 'get'", e instanceof ChannelException);
     }
     finally {
       lifecycle.stop();
@@ -413,7 +452,7 @@ public class JankyServersTest
           );
 
       expectedException.expect(ExecutionException.class);
-      expectedException.expectMessage("org.jboss.netty.channel.ChannelException: Faulty channel in resource pool");
+      expectedException.expectMessage("io.netty.channel.ChannelException: Faulty channel in resource pool");
 
       response.get();
     }

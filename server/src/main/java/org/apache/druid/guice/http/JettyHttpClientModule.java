@@ -24,6 +24,7 @@ import com.google.inject.Binder;
 import com.google.inject.Binding;
 import com.google.inject.Inject;
 import com.google.inject.Module;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Global;
@@ -37,7 +38,6 @@ import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.io.ClientConnector;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import javax.net.ssl.SSLContext;
 
@@ -109,7 +109,7 @@ public class JettyHttpClientModule implements Module
       pool.setName(JettyHttpClientModule.class.getSimpleName() + "-threadPool-" + pool.hashCode());
       httpClient.setExecutor(pool);
       httpClient.setUserAgentField(new HttpField(
-          HttpHeaders.Names.USER_AGENT,
+          HttpHeaderNames.USER_AGENT.toString(),
           StringUtils.format("%s/%s", node.getServiceName(), node.getVersion())
       ));
 

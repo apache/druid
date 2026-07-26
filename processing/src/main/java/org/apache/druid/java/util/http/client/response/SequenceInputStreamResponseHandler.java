@@ -20,11 +20,11 @@
 package org.apache.druid.java.util.http.client.response;
 
 import com.google.common.io.ByteSource;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferInputStream;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -56,18 +56,24 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   @Override
   public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    try (ChannelBufferInputStream channelStream = new ChannelBufferInputStream(response.getContent())) {
-      queue.put(channelStream);
+    if (response instanceof HttpContent) {
+      final ByteBuf content = ((HttpContent) response).content();
+      // Retain content as ByteBufInputStream will release it on close
+      content.retain();
+      final int readableBytes = content.readableBytes();
+      final ByteBufInputStream channelStream = new ByteBufInputStream(content, true);
+      try {
+        queue.put(channelStream);
+        byteCount.addAndGet(readableBytes);
+      }
+      catch (InterruptedException e) {
+        // Close the stream so the retained buffer is released instead of leaking.
+        closeStream(channelStream);
+        log.error(e, "Queue appending interrupted");
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
     }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    catch (InterruptedException e) {
-      log.error(e, "Queue appending interrupted");
-      Thread.currentThread().interrupt();
-      throw new RuntimeException(e);
-    }
-    byteCount.addAndGet(response.getContent().readableBytes());
     return ClientResponse.finished(
         new SequenceInputStream(
             new Enumeration<>()
@@ -102,27 +108,29 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   @Override
   public ClientResponse<InputStream> handleChunk(
       ClientResponse<InputStream> clientResponse,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   )
   {
-    final ChannelBuffer channelBuffer = chunk.getContent();
+    final ByteBuf channelBuffer = chunk.content();
     final int bytes = channelBuffer.readableBytes();
     if (bytes > 0) {
-      try (ChannelBufferInputStream channelStream = new ChannelBufferInputStream(channelBuffer)) {
+      // Retain content as ByteBufInputStream will release it on close
+      channelBuffer.retain();
+      final ByteBufInputStream channelStream = new ByteBufInputStream(channelBuffer, true);
+      try {
         queue.put(channelStream);
         // Queue.size() can be expensive in some implementations, but LinkedBlockingQueue.size is just an AtomicLong
         log.debug("Added stream. Queue length %d", queue.size());
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
+        byteCount.addAndGet(bytes);
       }
       catch (InterruptedException e) {
+        // Close the stream so the retained buffer is released instead of leaking.
+        closeStream(channelStream);
         log.warn(e, "Thread interrupted while adding to queue");
         Thread.currentThread().interrupt();
         throw new RuntimeException(e);
       }
-      byteCount.addAndGet(bytes);
     } else {
       log.debug("Skipping zero length chunk");
     }
@@ -187,5 +195,15 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   public final long getByteCount()
   {
     return byteCount.get();
+  }
+
+  private static void closeStream(ByteBufInputStream stream)
+  {
+    try {
+      stream.close();
+    }
+    catch (IOException e) {
+      log.warn(e, "Failed to close stream while releasing buffer");
+    }
   }
 }

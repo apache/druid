@@ -78,7 +78,7 @@ public class AppendableByteArrayInputStream extends InputStream
     if (scanThroughBytesAndDoSomething(1, singleByteReaderDoer) == 0) {
       return -1;
     }
-    return singleByteReaderDoer.getRetVal();
+    return singleByteReaderDoer.getRetVal() & 0xff;
   }
 
   @Override

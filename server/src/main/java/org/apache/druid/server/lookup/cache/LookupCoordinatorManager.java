@@ -36,6 +36,9 @@ import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.concurrent.LifecycleLock;
@@ -51,17 +54,17 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.apache.druid.java.util.http.client.response.SequenceInputStreamResponseHandler;
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.http.HostAndPortWithScheme;
 import org.apache.druid.server.listener.resource.ListenerResource;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import javax.annotation.Nullable;
+
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -793,8 +796,8 @@ public class LookupCoordinatorManager
 
       try (final InputStream result = httpClient.go(
           new Request(HttpMethod.POST, url)
-              .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
-              .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+              .addHeader("Accept", SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+              .addHeader("Content-Type", SmileMediaTypes.APPLICATION_JACKSON_SMILE)
               .setContent(smileMapper.writeValueAsBytes(lookupsUpdate)),
           makeResponseHandler(returnCode, reasonString),
           lookupCoordinatorManagerConfig.getHostTimeout()
@@ -846,7 +849,7 @@ public class LookupCoordinatorManager
 
       try (final InputStream result = httpClient.go(
           new Request(HttpMethod.GET, url)
-              .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
+              .addHeader("Accept", SmileMediaTypes.APPLICATION_JACKSON_SMILE),
           makeResponseHandler(returnCode, reasonString),
           lookupCoordinatorManagerConfig.getHostTimeout()
       ).get()) {
@@ -894,14 +897,56 @@ public class LookupCoordinatorManager
         final AtomicReference<String> reasonString
     )
     {
-      return new SequenceInputStreamResponseHandler()
+      return new HttpResponseHandler<InputStream, InputStream>()
       {
+        private final BytesFullResponseHandler delegate = new BytesFullResponseHandler();
+        private ClientResponse<BytesFullResponseHolder> delegateResponse;
+
         @Override
         public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
         {
-          returnCode.set(response.getStatus().getCode());
-          reasonString.set(response.getStatus().getReasonPhrase());
-          return super.handleResponse(response, trafficCop);
+          returnCode.set(response.status().code());
+          reasonString.set(response.status().reasonPhrase());
+          delegateResponse = delegate.handleResponse(response, trafficCop);
+          return toInputStream(delegateResponse);
+        }
+
+        @Override
+        public ClientResponse<InputStream> handleChunk(
+            ClientResponse<InputStream> response,
+            HttpContent chunk,
+            long chunkNum
+        )
+        {
+          delegateResponse = delegate.handleChunk(delegateResponse, chunk, chunkNum);
+          return toInputStream(delegateResponse);
+        }
+
+        @Override
+        public ClientResponse<InputStream> done(ClientResponse<InputStream> response)
+        {
+          delegateResponse = delegate.done(delegateResponse);
+          return toInputStream(delegateResponse);
+        }
+
+        @Override
+        public void exceptionCaught(ClientResponse<InputStream> clientResponse, Throwable e)
+        {
+          delegate.exceptionCaught(null, e);
+        }
+
+        private ClientResponse<InputStream> toInputStream(ClientResponse<BytesFullResponseHolder> delegateResponse)
+        {
+          if (delegateResponse == null) {
+            return null;
+          }
+          BytesFullResponseHolder holder = delegateResponse.getObj();
+          InputStream stream = holder == null ? null : new ByteArrayInputStream(holder.getContent());
+          return new ClientResponse<>(
+              delegateResponse.isFinished(),
+              delegateResponse.isContinueReading(),
+              stream
+          );
         }
       };
     }

@@ -21,15 +21,19 @@ package org.apache.druid.rpc;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.DefaultLastHttpContent;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.client.TestHttpClient;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 
 import java.util.ArrayDeque;
@@ -60,8 +64,20 @@ public class MockServiceClient implements ServiceClient
     );
 
     if (expectation.response.isValue()) {
-      final ClientResponse<FinalType> response =
-          handler.done(handler.handleResponse(expectation.response.valueOrThrow(), TestHttpClient.NOOP_TRAFFIC_COP));
+      final HttpResponse fullResponse = expectation.response.valueOrThrow();
+
+      // Mimic the real Netty pipeline (HttpClientCodec with no aggregator): headers arrive via handleResponse
+      // as a plain HttpResponse, and the body arrives separately as content chunks. Delivering the body only
+      // through handleChunk avoids double-counting for handlers that also read content in handleResponse.
+      final HttpResponse headerResponse = new DefaultHttpResponse(fullResponse.protocolVersion(), fullResponse.status());
+      headerResponse.headers().set(fullResponse.headers());
+
+      ClientResponse<IntermediateType> intermediate = handler.handleResponse(headerResponse, TestHttpClient.NOOP_TRAFFIC_COP);
+      final ByteBuf content =
+          fullResponse instanceof HttpContent ? ((HttpContent) fullResponse).content() : Unpooled.EMPTY_BUFFER;
+      intermediate = handler.handleChunk(intermediate, new DefaultLastHttpContent(content), 0);
+
+      final ClientResponse<FinalType> response = handler.done(intermediate);
       return Futures.immediateFuture(response.getObj());
     } else {
       return Futures.immediateFailedFuture(expectation.response.error());
@@ -87,12 +103,13 @@ public class MockServiceClient implements ServiceClient
       final byte[] content
   )
   {
-    final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+    final HttpResponse response = new DefaultFullHttpResponse(
+        HttpVersion.HTTP_1_1,
+        status,
+        content == null ? Unpooled.EMPTY_BUFFER : Unpooled.wrappedBuffer(content)
+    );
     for (Map.Entry<String, String> headerEntry : headers.entrySet()) {
       response.headers().set(headerEntry.getKey(), headerEntry.getValue());
-    }
-    if (content != null) {
-      response.setContent(ChannelBuffers.wrappedBuffer(content));
     }
     return expectAndRespond(request, response);
   }

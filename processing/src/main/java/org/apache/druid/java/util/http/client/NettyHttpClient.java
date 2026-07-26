@@ -24,6 +24,27 @@ import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.DecoderResult;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpObject;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.timeout.ReadTimeoutException;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.Timeout;
+import io.netty.util.Timer;
+import io.netty.util.TimerTask;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -34,25 +55,6 @@ import org.apache.druid.java.util.http.client.pool.ResourceContainer;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.timeout.ReadTimeoutException;
-import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
-import org.jboss.netty.util.Timer;
 import org.joda.time.Duration;
 
 import java.net.URL;
@@ -102,6 +104,8 @@ public class NettyHttpClient extends AbstractHttpClient
   @LifecycleStop
   public void stop()
   {
+    // Mark as closed but let in-flight requests complete
+    // Don't wait - this allows shutdown to proceed without interrupting active requests
     pool.close();
   }
 
@@ -125,35 +129,46 @@ public class NettyHttpClient extends AbstractHttpClient
     final Channel channel;
     final String hostKey = getPoolKey(url);
     final ResourceContainer<ChannelFuture> channelResourceContainer = pool.take(hostKey);
+
+    // Handle pool exhaustion - take() returns null if pool is exhausted or timed out
+    if (channelResourceContainer == null) {
+      return Futures.immediateFailedFuture(
+          new ChannelException(
+              "Connection pool exhausted or timed out for host: " + hostKey
+          )
+      );
+    }
+
     final ChannelFuture channelFuture = channelResourceContainer.get().awaitUninterruptibly();
     if (!channelFuture.isSuccess()) {
       channelResourceContainer.returnResource(); // Some other poor sap will have to deal with it...
       return Futures.immediateFailedFuture(
           new ChannelException(
               "Faulty channel in resource pool",
-              channelFuture.getCause()
+              channelFuture.cause()
           )
       );
     } else {
-      channel = channelFuture.getChannel();
+      channel = channelFuture.channel();
 
       // In case we get a channel that never had its readability turned back on.
-      channel.setReadable(true);
+      channel.config().setAutoRead(true);
     }
     final String urlFile = StringUtils.nullToEmptyNonDruidDataString(url.getFile());
-    final HttpRequest httpRequest = new DefaultHttpRequest(
+    final DefaultFullHttpRequest httpRequest = new DefaultFullHttpRequest(
         HttpVersion.HTTP_1_1,
         method,
-        urlFile.isEmpty() ? "/" : urlFile
+        urlFile.isEmpty() ? "/" : urlFile,
+        request.hasContent() ? request.getContent() : Unpooled.EMPTY_BUFFER
     );
 
-    if (!headers.containsKey(HttpHeaders.Names.HOST)) {
-      httpRequest.headers().add(HttpHeaders.Names.HOST, getHost(url));
+    if (!headers.containsKey(HttpHeaderNames.HOST.toString())) {
+      httpRequest.headers().add(HttpHeaderNames.HOST, getHost(url));
     }
 
     // If Accept-Encoding is set in the Request, use that. Otherwise use the default from "compressionCodec".
-    if (!headers.containsKey(HttpHeaders.Names.ACCEPT_ENCODING)) {
-      httpRequest.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, compressionCodec.getEncodingString());
+    if (!headers.containsKey(HttpHeaderNames.ACCEPT_ENCODING.toString())) {
+      httpRequest.headers().set(HttpHeaderNames.ACCEPT_ENCODING, compressionCodec.getEncodingString());
     }
 
     for (Map.Entry<String, Collection<String>> entry : headers.asMap().entrySet()) {
@@ -162,10 +177,6 @@ public class NettyHttpClient extends AbstractHttpClient
       for (String obj : entry.getValue()) {
         httpRequest.headers().add(key, obj);
       }
-    }
-
-    if (request.hasContent()) {
-      httpRequest.setContent(request.getContent());
     }
 
     final long readTimeout = getReadTimeout(requestReadTimeout);
@@ -177,15 +188,20 @@ public class NettyHttpClient extends AbstractHttpClient
     final AtomicBoolean didEncounterException = new AtomicBoolean();
 
     if (readTimeout > 0) {
-      channel.getPipeline().addLast(
+      // Netty 4's ReadTimeoutHandler schedules its timeout on the channel's event loop, whose blocking
+      // epoll_wait/select can be interrupted by signals (e.g. a JFR/profiler agent), which resets the wait
+      // and causes scheduled timeouts to be delayed or missed on some JDKs. To match the pre-Netty-4 behavior
+      // (which drove read timeouts off a dedicated HashedWheelTimer thread), we schedule the read timeout on
+      // the shared Timer instead of the event loop.
+      channel.pipeline().addLast(
           READ_TIMEOUT_HANDLER_NAME,
-          new ReadTimeoutHandler(timer, readTimeout, TimeUnit.MILLISECONDS)
+          new TimerReadTimeoutHandler(timer, readTimeout)
       );
     }
 
-    channel.getPipeline().addLast(
+    channel.pipeline().addLast(
         LAST_HANDLER_NAME,
-        new SimpleChannelUpstreamHandler()
+        new ChannelInboundHandlerAdapter()
         {
           private volatile ClientResponse<Intermediate> response = null;
 
@@ -200,23 +216,35 @@ public class NettyHttpClient extends AbstractHttpClient
           private long resumeWatermark = -1;
 
           @Override
-          public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+          public void channelRead(ChannelHandlerContext ctx, Object msg)
           {
             if (log.isDebugEnabled()) {
-              log.debug("[%s] messageReceived: %s", requestDesc, e.getMessage());
+              log.debug("[%s] messageReceived: %s", requestDesc, msg);
             }
             try {
-              Object msg = e.getMessage();
+              // Unlike Netty 3 (which threw during decoding), Netty 4's HTTP decoder does not throw on a malformed
+              // response: it emits a message flagged with a failed DecoderResult. Surface that failure as an
+              // exception so callers see the underlying cause (e.g. "invalid version format") instead of silently
+              // proceeding until the channel disconnects.
+              if (msg instanceof HttpObject) {
+                final DecoderResult decoderResult = ((HttpObject) msg).decoderResult();
+                if (decoderResult.isFailure()) {
+                  ReferenceCountUtil.release(msg);
+                  handleExceptionAndCloseChannel(decoderResult.cause(), false);
+                  return;
+                }
+              }
 
               if (msg instanceof HttpResponse) {
                 if (didEncounterException.get()) {
                   // Don't process HttpResponse after encountering an exception.
+                  ReferenceCountUtil.release(msg);
                   return;
                 }
 
                 HttpResponse httpResponse = (HttpResponse) msg;
                 if (log.isDebugEnabled()) {
-                  log.debug("[%s] Got response: %s", requestDesc, httpResponse.getStatus());
+                  log.debug("[%s] Got response: %s", requestDesc, httpResponse.status());
                 }
 
                 HttpResponseHandler.TrafficCop trafficCop = new HttpResponseHandler.TrafficCop()
@@ -229,7 +257,7 @@ public class NettyHttpClient extends AbstractHttpClient
 
                       if (suspendWatermark >= 0 && resumeWatermark >= suspendWatermark) {
                         suspendWatermark = -1;
-                        channel.setReadable(true);
+                        channel.config().setAutoRead(true);
                         long backPressureDuration = System.nanoTime() - backPressureStartTimeNs;
                         log.debug("[%s] Resumed reads from channel (chunkNum = %,d).", requestDesc, resumeChunkNum);
                         return backPressureDuration;
@@ -246,7 +274,6 @@ public class NettyHttpClient extends AbstractHttpClient
                     channel.close();
                   }
                 };
-
                 response = handler.handleResponse(httpResponse, trafficCop);
                 if (response.isFinished()) {
                   retVal.set((Final) response.getObj());
@@ -255,35 +282,45 @@ public class NettyHttpClient extends AbstractHttpClient
                 assert currentChunkNum == 0;
                 possiblySuspendReads(response);
 
-                if (!httpResponse.isChunked()) {
+                if (msg instanceof LastHttpContent) {
                   finishRequest();
                 }
-              } else if (msg instanceof HttpChunk) {
+                
+                // In Netty 4, we must release inbound messages after processing
+                // The handler has copied any data it needs
+                ReferenceCountUtil.release(msg);
+              } else if (msg instanceof HttpContent) {
                 if (didEncounterException.get()) {
                   // Don't process HttpChunk after encountering an exception.
+                  ReferenceCountUtil.release(msg);
                   return;
                 }
 
-                HttpChunk httpChunk = (HttpChunk) msg;
+                HttpContent httpChunk = (HttpContent) msg;
                 if (log.isDebugEnabled()) {
                   log.debug(
                       "[%s] Got chunk: %sB, last=%s",
                       requestDesc,
-                      httpChunk.getContent().readableBytes(),
-                      httpChunk.isLast()
+                      httpChunk.content().readableBytes(),
+                      msg instanceof LastHttpContent
                   );
                 }
 
-                if (httpChunk.isLast()) {
-                  finishRequest();
-                } else {
-                  response = handler.handleChunk(response, httpChunk, ++currentChunkNum);
-                  if (response.isFinished() && !retVal.isDone()) {
-                    retVal.set((Final) response.getObj());
-                  }
-                  possiblySuspendReads(response);
+                response = handler.handleChunk(response, httpChunk, ++currentChunkNum);
+                if (response.isFinished() && !retVal.isDone()) {
+                  retVal.set((Final) response.getObj());
                 }
+                possiblySuspendReads(response);
+
+                if (msg instanceof LastHttpContent) {
+                  finishRequest();
+                }
+                
+                // In Netty 4, we must release inbound messages after processing
+                // The handler has copied any data it needs
+                ReferenceCountUtil.release(msg);
               } else {
+                ReferenceCountUtil.release(msg);
                 throw new ISE("Unknown message type[%s]", msg.getClass());
               }
             }
@@ -306,7 +343,7 @@ public class NettyHttpClient extends AbstractHttpClient
               synchronized (watermarkLock) {
                 suspendWatermark = Math.max(suspendWatermark, currentChunkNum);
                 if (suspendWatermark > resumeWatermark) {
-                  channel.setReadable(false);
+                  channel.config().setAutoRead(false);
                   backPressureStartTimeNs = System.nanoTime();
                   log.debug("[%s] Suspended reads from channel (chunkNum = %,d).", requestDesc, currentChunkNum);
                 }
@@ -331,18 +368,18 @@ public class NettyHttpClient extends AbstractHttpClient
               retVal.set(finalResponse.getObj());
             }
             removeHandlers();
-            channel.setReadable(true);
+            channel.config().setAutoRead(true);
             channelResourceContainer.returnResource();
           }
 
           @Override
-          public void exceptionCaught(ChannelHandlerContext context, ExceptionEvent event)
+          public void exceptionCaught(ChannelHandlerContext context, Throwable cause)
           {
-            handleExceptionAndCloseChannel(event.getCause(), false);
+            handleExceptionAndCloseChannel(cause, false);
           }
 
           @Override
-          public void channelDisconnected(ChannelHandlerContext context, ChannelStateEvent event)
+          public void channelInactive(ChannelHandlerContext context)
           {
             handleExceptionAndCloseChannel(new ChannelException("Channel disconnected"), true);
           }
@@ -371,9 +408,12 @@ public class NettyHttpClient extends AbstractHttpClient
 
             if (!retVal.isDone()) {
               if (t instanceof ReadTimeoutException) {
-                // ReadTimeoutException thrown by ReadTimeoutHandler is a singleton with a misleading stack trace.
-                // No point including it: instead, we replace it with a fresh exception.
-                retVal.setException(new ReadTimeoutException(StringUtils.format("[%s] Read timed out", requestDesc)));
+                // ReadTimeoutException is a shared singleton with a misleading (suppressed) stack trace. Report a
+                // fresh instance instead. Note: we must use the no-arg constructor, since ReadTimeoutException(String)
+                // (via ChannelException(String, Throwable, boolean)) trips an `assert shared` and throws AssertionError
+                // when assertions are enabled (e.g. under surefire). See netty ChannelException.
+                log.debug("[%s] Read timed out", requestDesc);
+                retVal.setException(new ReadTimeoutException());
               } else {
                 retVal.setException(t);
               }
@@ -399,14 +439,14 @@ public class NettyHttpClient extends AbstractHttpClient
           private void removeHandlers()
           {
             if (readTimeout > 0) {
-              channel.getPipeline().remove(READ_TIMEOUT_HANDLER_NAME);
+              channel.pipeline().remove(READ_TIMEOUT_HANDLER_NAME);
             }
-            channel.getPipeline().remove(LAST_HANDLER_NAME);
+            channel.pipeline().remove(LAST_HANDLER_NAME);
           }
         }
     );
 
-    channel.write(httpRequest).addListener(
+    channel.writeAndFlush(httpRequest).addListener(
         new ChannelFutureListener()
         {
           @Override
@@ -419,10 +459,11 @@ public class NettyHttpClient extends AbstractHttpClient
                 retVal.setException(
                     new ChannelException(
                         StringUtils.format("[%s] Failed to write request to channel", requestDesc),
-                        future.getCause()
+                        future.cause()
                     )
                 );
               }
+              // Note: Netty automatically releases the httpRequest after write attempt (success or failure)
             }
           }
         }
@@ -474,4 +515,124 @@ public class NettyHttpClient extends AbstractHttpClient
     return url.getProtocol() + "://" + url.getHost() + ":"
            + (url.getPort() == -1 ? url.getDefaultPort() : url.getPort());
   }
+
+  /**
+   * A read-timeout handler that fires a {@link ReadTimeoutException} down the pipeline if no inbound message is read
+   * within the configured timeout. It behaves like Netty's {@link io.netty.handler.timeout.ReadTimeoutHandler} but
+   * drives its timer off a shared {@link Timer} (a {@code HashedWheelTimer} dedicated thread) rather than the channel's
+   * event loop.
+   *
+   * This avoids a class of problems where the event loop's blocking {@code epoll_wait}/{@code select} is interrupted by
+   * signals (for example a profiler agent), which can reset the wait and cause event-loop-scheduled timeouts to be
+   * delayed or never fire (see netty/netty#14368 and netty/netty#16244). The pre-Netty-4 Druid client scheduled read
+   * timeouts on a {@code HashedWheelTimer} for the same reason.
+   */
+  static class TimerReadTimeoutHandler extends ChannelInboundHandlerAdapter
+  {
+    private final Timer timer;
+    private final long timeoutNanos;
+
+    private volatile long lastReadTimeNanos;
+    private volatile Timeout scheduledTimeout;
+    private volatile boolean destroyed;
+    private boolean timedOut;
+
+    TimerReadTimeoutHandler(Timer timer, long timeoutMillis)
+    {
+      this.timer = Preconditions.checkNotNull(timer, "timer");
+      this.timeoutNanos = Math.max(TimeUnit.MILLISECONDS.toNanos(timeoutMillis), 1L);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx)
+    {
+      // The channel is typically already active (taken from the pool) by the time this handler is added.
+      if (ctx.channel().isActive()) {
+        initialize(ctx);
+      }
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx)
+    {
+      initialize(ctx);
+      ctx.fireChannelActive();
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg)
+    {
+      lastReadTimeNanos = System.nanoTime();
+      ctx.fireChannelRead(msg);
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx)
+    {
+      destroy();
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx)
+    {
+      destroy();
+      ctx.fireChannelInactive();
+    }
+
+    private void initialize(ChannelHandlerContext ctx)
+    {
+      if (destroyed) {
+        return;
+      }
+      lastReadTimeNanos = System.nanoTime();
+      schedule(ctx, timeoutNanos);
+    }
+
+    private void schedule(final ChannelHandlerContext ctx, final long delayNanos)
+    {
+      if (destroyed) {
+        return;
+      }
+      scheduledTimeout = timer.newTimeout(
+          new TimerTask()
+          {
+            @Override
+            public void run(Timeout t)
+            {
+              if (t.isCancelled() || destroyed || !ctx.channel().isOpen()) {
+                return;
+              }
+
+              final long nextDelayNanos = timeoutNanos - (System.nanoTime() - lastReadTimeNanos);
+              if (nextDelayNanos <= 0) {
+                // Fire the timeout on the event loop, since pipeline events must run there.
+                ctx.executor().execute(() -> {
+                  if (timedOut || destroyed || !ctx.channel().isOpen()) {
+                    return;
+                  }
+                  timedOut = true;
+                  ctx.fireExceptionCaught(ReadTimeoutException.INSTANCE);
+                });
+              } else {
+                // A read happened since we scheduled: reschedule for the remaining time.
+                schedule(ctx, nextDelayNanos);
+              }
+            }
+          },
+          delayNanos,
+          TimeUnit.NANOSECONDS
+      );
+    }
+
+    private void destroy()
+    {
+      destroyed = true;
+      final Timeout t = scheduledTimeout;
+      if (t != null) {
+        t.cancel();
+        scheduledTimeout = null;
+      }
+    }
+  }
+
 }
