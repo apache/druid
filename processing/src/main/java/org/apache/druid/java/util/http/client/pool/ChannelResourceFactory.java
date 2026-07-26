@@ -37,6 +37,7 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.util.Timeout;
 import io.netty.util.Timer;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -63,6 +64,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
   private static final Logger log = new Logger(ChannelResourceFactory.class);
 
   private static final long DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(10);
+  private static final long PROXY_HANDSHAKE_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(10);
   private static final String PROXY_HANDLER_NAME = "druid-proxy";
   private static final String ERROR_HANDLER_NAME = "druid-connection-error";
 
@@ -121,6 +123,35 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
           HttpMethod.CONNECT,
           proxyUri
       );
+
+      // The CONNECT exchange below is an ordinary application-level request/response, so nothing in
+      // Netty bounds how long it may take. A proxy that accepts the TCP connection but never sends a
+      // reply would leave proxyConnectPromise uncompleted forever, and callers block on it
+      // uninterruptibly in NettyHttpClient#go, so the hang would be permanent. Bound it explicitly,
+      // mirroring the SSL handshake timeout applied further down. The deadline is tracked on the
+      // shared HashedWheelTimer rather than the channel's event loop so that it still fires if that
+      // event loop is itself stalled.
+      if (timer != null) {
+        final Timeout connectTimeout = timer.newTimeout(
+            t -> {
+              final boolean failed = proxyConnectPromise.tryFailure(
+                  new ChannelException(
+                      StringUtils.format(
+                          "Timed out after [%,d] ms waiting for a CONNECT response from proxy[%s]",
+                          PROXY_HANDSHAKE_TIMEOUT_MILLIS,
+                          proxyUri
+                      )
+                  )
+              );
+              if (failed) {
+                proxyFuture.channel().close();
+              }
+            },
+            PROXY_HANDSHAKE_TIMEOUT_MILLIS,
+            TimeUnit.MILLISECONDS
+        );
+        proxyConnectPromise.addListener((ChannelFutureListener) f -> connectTimeout.cancel());
+      }
 
       if (proxyConfig.getUser() != null) {
         connectRequest.headers().add(

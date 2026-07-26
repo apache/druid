@@ -116,10 +116,13 @@ public class FriendlyServersTest
     }
   }
 
-  @Test
+  // Bounded so that a regression in the proxy CONNECT handling fails this test instead of hanging
+  // until the CI job's own timeout expires.
+  @Test(timeout = 60_000L)
   public void testFriendlyProxyHttpServer() throws Exception
   {
     final AtomicReference<String> requestContent = new AtomicReference<>();
+    final AtomicReference<Throwable> serverError = new AtomicReference<>();
 
     final ExecutorService exec = Executors.newSingleThreadExecutor();
     final ServerSocket serverSocket = new ServerSocket(0);
@@ -139,19 +142,28 @@ public class FriendlyServersTest
               ) {
                 StringBuilder request = new StringBuilder();
                 String line;
-                while (!"".equals((line = in.readLine()))) {
+                while ((line = in.readLine()) != null && !"".equals(line)) {
                   request.append(line).append("\r\n");
                 }
                 requestContent.set(request.toString());
                 out.write("HTTP/1.1 200 OK\r\n\r\n".getBytes(StandardCharsets.UTF_8));
 
-                while (!in.readLine().equals("")) {
-                  // skip lines
+                while ((line = in.readLine()) != null && !"".equals(line)) {
+                  // Skip the headers of the request that the client tunnels through the proxy.
                 }
                 out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+                out.flush();
               }
-              catch (Exception e) {
-                Assert.fail(e.toString());
+              catch (Throwable t) {
+                // Keep accepting rather than calling Assert.fail. The AssertionError it throws would
+                // escape into the executor's Future, where nobody looks at it, silently stopping this
+                // server while the client waits for a response that can no longer arrive. A pooled
+                // client may also open and drop connections on its own, so a single failed exchange is
+                // not necessarily a test failure; just remember it in case the request below fails.
+                serverError.compareAndSet(null, t);
+                if (serverSocket.isClosed()) {
+                  return;
+                }
               }
             }
           }
@@ -167,14 +179,25 @@ public class FriendlyServersTest
           )
           .build();
       final HttpClient client = HttpClientInit.createClient(config, lifecycle);
-      final StatusResponseHolder response = client
-          .go(
-              new Request(
-                  HttpMethod.GET,
-                  new URL("http://anotherHost:8080/")
-              ),
-              StatusResponseHandler.getInstance()
-          ).get();
+      final StatusResponseHolder response;
+      try {
+        response = client
+            .go(
+                new Request(
+                    HttpMethod.GET,
+                    new URL("http://anotherHost:8080/")
+                ),
+                StatusResponseHandler.getInstance()
+            ).get();
+      }
+      catch (Throwable t) {
+        // A failure on the proxy side is the more informative one, so make sure it is not lost.
+        final Throwable proxyError = serverError.get();
+        if (proxyError != null) {
+          t.addSuppressed(proxyError);
+        }
+        throw t;
+      }
 
       Assert.assertEquals(200, response.getStatus().code());
       Assert.assertEquals("hello!", response.getContent());

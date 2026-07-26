@@ -207,6 +207,43 @@ public class JankyServersTest
     }
   }
 
+  /**
+   * A proxy that accepts the connection but never answers the CONNECT request must not wedge the
+   * caller. The CONNECT handshake is bounded in
+   * {@link org.apache.druid.java.util.http.client.pool.ChannelResourceFactory}, so the request fails
+   * rather than blocking forever in {@link NettyHttpClient#go}.
+   */
+  @Test(timeout = 60_000L)
+  public void testSilentProxyServer() throws Throwable
+  {
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClientConfig config = HttpClientConfig
+          .builder()
+          .withHttpProxyConfig(
+              new HttpClientProxyConfig("localhost", silentServerSocket.getLocalPort(), "bob", "sally")
+          )
+          .build();
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle);
+
+      Throwable e = null;
+      try {
+        client.go(
+            new Request(HttpMethod.GET, new URL("http://anotherHost:8080/")),
+            StatusResponseHandler.getInstance()
+        ).get();
+      }
+      catch (ExecutionException e1) {
+        e = e1.getCause();
+      }
+
+      Assert.assertTrue("ChannelException thrown by 'get'", e instanceof ChannelException);
+    }
+    finally {
+      lifecycle.stop();
+    }
+  }
+
   @Test
   public void testHttpsSilentServer() throws Throwable
   {
