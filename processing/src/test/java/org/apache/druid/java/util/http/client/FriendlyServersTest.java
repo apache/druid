@@ -143,13 +143,13 @@ public class FriendlyServersTest
               ) {
                 StringBuilder request = new StringBuilder();
                 String line;
-                while ((line = in.readLine()) != null && !"".equals(line)) {
+                while ((line = in.readLine()) != null && !line.isEmpty()) {
                   request.append(line).append("\r\n");
                 }
                 requestContent.set(request.toString());
                 out.write("HTTP/1.1 200 OK\r\n\r\n".getBytes(StandardCharsets.UTF_8));
 
-                while ((line = in.readLine()) != null && !"".equals(line)) {
+                while ((line = in.readLine()) != null && !line.isEmpty()) {
                   // Skip the headers of the request that the client tunnels through the proxy.
                 }
                 out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
