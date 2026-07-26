@@ -286,24 +286,40 @@ public class SegmentLoaderConfig
   }
 
   /**
-   * Sets {@link #virtualStorage}.
+   * Sets {@link #virtualStorage}. When enabling it, settings that only apply to classic on-disk historical caches are
+   * reset to values safe for on-demand virtual-storage caches, so that a per-task config derived from a node's
+   * {@code druid.segmentCache} config (via {@link #withVirtualStorage}) does not inherit historical-only behavior. This
+   * runs only for programmatic enabling; a config with {@code virtualStorage} deserialized straight from JSON is left
+   * as the operator specified it.
    */
   public SegmentLoaderConfig setVirtualStorage(boolean virtualStorage)
   {
     this.virtualStorage = virtualStorage;
+    if (virtualStorage) {
+      // On-demand virtual-storage caches never bootstrap or lazy-load at startup, never warm the OS page cache, must
+      // not share a persistent info directory (each task cache has its own ephemeral location), and must delete files
+      // as soon as all holds are released.
+      this.lazyLoadOnStart = false;
+      this.infoDir = null;
+      this.numThreadsToLoadSegmentsIntoPageCacheOnDownload = 0;
+      this.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap = null;
+      this.deleteOnRemove = true;
+    }
     return this;
   }
 
   /**
-   * Returns a copy of this config with {@link #virtualStorage} set to {@code virtualStorage}. All other settings
-   * (notably {@link #getVirtualStorageLoadThreads()} and {@link #isVirtualStorageUseVirtualThreads()}) are preserved.
-   * Used to derive an always-virtual config for the shared ephemeral on-demand loading pool from a node config that
-   * may not itself run in virtual-storage mode.
+   * Returns a copy of this config with {@link #virtualStorage} set to {@code virtualStorage}. Virtual-storage tuning
+   * (e.g. {@link #getVirtualStorageLoadThreads()}, {@link #isVirtualStorageUseVirtualThreads()},
+   * {@link #getVirtualStorageMetadataReservationEstimate()}, the coalescing/fetch-run limits) is preserved so a
+   * per-task cache derived from a node's {@code druid.segmentCache} config keeps operator tuning; enabling virtual
+   * storage additionally clears the settings that only apply to classic on-disk historical caches (see
+   * {@link #setVirtualStorage}).
    */
   public SegmentLoaderConfig withVirtualStorage(boolean virtualStorage)
   {
     final SegmentLoaderConfig copy = new SegmentLoaderConfig(this);
-    copy.virtualStorage = virtualStorage;
+    copy.setVirtualStorage(virtualStorage);
     return copy;
   }
 

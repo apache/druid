@@ -98,4 +98,42 @@ class SegmentLoaderConfigTest
     Assertions.assertNotSame(original, copy);
     Assertions.assertFalse(original.isVirtualStorage());
   }
+
+  @Test
+  void testEnablingVirtualStorageClearsIncompatibleSettingsButKeepsTuning() throws Exception
+  {
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(RuntimeInfo.class, new RuntimeInfo()));
+    final SegmentLoaderConfig node = jsonMapper.readValue(
+        "{\"lazyLoadOnStart\": true,"
+        + " \"deleteOnRemove\": false,"
+        + " \"infoDir\": \"/var/druid/segment-cache/info_dir\","
+        + " \"numThreadsToLoadSegmentsIntoPageCacheOnDownload\": 4,"
+        + " \"numThreadsToLoadSegmentsIntoPageCacheOnBootstrap\": 2,"
+        + " \"virtualStorageMetadataReservationEstimate\": 99999999,"
+        + " \"virtualStorageCoalesceGapBytes\": 65536}",
+        SegmentLoaderConfig.class
+    );
+
+    final SegmentLoaderConfig virtual = node.withVirtualStorage(true);
+
+    // Classic on-disk-cache settings are reset to virtual-storage-safe values...
+    Assertions.assertFalse(virtual.isLazyLoadOnStart());
+    Assertions.assertTrue(virtual.isDeleteOnRemove());
+    Assertions.assertNull(virtual.getInfoDir());
+    Assertions.assertEquals(0, virtual.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload());
+    Assertions.assertEquals(0, virtual.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap());
+    // ...while virtual-storage tuning is preserved.
+    Assertions.assertTrue(virtual.isVirtualStorage());
+    Assertions.assertEquals(99999999L, virtual.getVirtualStorageMetadataReservationEstimate());
+    Assertions.assertEquals(65536L, virtual.getVirtualStorageCoalesceGapBytes());
+
+    // The original node config is untouched, and a non-virtual derive preserves everything.
+    Assertions.assertTrue(node.isLazyLoadOnStart());
+    Assertions.assertEquals(4, node.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload());
+    final SegmentLoaderConfig nonVirtual = node.withVirtualStorage(false);
+    Assertions.assertTrue(nonVirtual.isLazyLoadOnStart());
+    Assertions.assertFalse(nonVirtual.isDeleteOnRemove());
+    Assertions.assertEquals(4, nonVirtual.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload());
+  }
 }

@@ -103,7 +103,9 @@ class SegmentCacheManagerFactoryTest
     final SegmentLoaderConfig injected = mapper.readValue(
         "{\"virtualStorageMetadataReservationEstimate\": 99999999,"
         + " \"virtualStorageCoalesceGapBytes\": 65536,"
-        + " \"virtualStorageMaxFetchRunBytes\": 8388608}",
+        + " \"virtualStorageMaxFetchRunBytes\": 8388608,"
+        + " \"infoDir\": \"/var/druid/segment-cache/info_dir\","
+        + " \"numThreadsToLoadSegmentsIntoPageCacheOnDownload\": 4}",
         SegmentLoaderConfig.class
     );
 
@@ -126,6 +128,9 @@ class SegmentCacheManagerFactoryTest
       Assertions.assertTrue(derived.isVirtualStoragePartialDownloadsEnabled());
       Assertions.assertEquals(1, derived.getLocations().size());
       Assertions.assertEquals(new File(tempDir, "task"), derived.getLocations().get(0).getPath());
+      // ...and settings incompatible with virtual storage are cleared (no shared info dir, no page-cache warming).
+      Assertions.assertNull(derived.getInfoDir());
+      Assertions.assertEquals(0, derived.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload());
 
       // The shared injected config is not mutated by the derive.
       Assertions.assertFalse(injected.isVirtualStorage());
