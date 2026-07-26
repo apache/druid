@@ -43,6 +43,7 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.URI;
 import java.net.URL;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -229,7 +230,7 @@ public class JankyServersTest
       Throwable e = null;
       try {
         client.go(
-            new Request(HttpMethod.GET, new URL("http://anotherHost:8080/")),
+            new Request(HttpMethod.GET, URI.create("http://anotherHost:8080/").toURL()),
             StatusResponseHandler.getInstance()
         ).get();
       }

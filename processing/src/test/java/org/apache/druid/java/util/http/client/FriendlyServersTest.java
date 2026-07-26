@@ -48,6 +48,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
@@ -185,7 +186,7 @@ public class FriendlyServersTest
             .go(
                 new Request(
                     HttpMethod.GET,
-                    new URL("http://anotherHost:8080/")
+                    URI.create("http://anotherHost:8080/").toURL()
                 ),
                 StatusResponseHandler.getInstance()
             ).get();
