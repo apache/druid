@@ -354,6 +354,17 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   }
 
   @Test
+  public void testCreateSpecNullColumnSchemaEntryFails() throws Exception
+  {
+    final DatasourceBaseTableMetadata metadata = mapper.readValue(
+        "{\"type\":\"clusteredValueGroups\",\"clusteringColumns\":[\"tenant\"],\"columnSchemas\":[null]}",
+        DatasourceBaseTableMetadata.class
+    );
+    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assert.assertTrue(e.getMessage().contains("columnSchemas must not contain null entries"));
+  }
+
+  @Test
   public void testCreateSpecDuplicateColumnSchemasFails()
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(

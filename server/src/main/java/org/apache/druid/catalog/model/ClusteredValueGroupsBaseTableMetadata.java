@@ -169,6 +169,9 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
   {
     final Map<String, DimensionSchema> customSchemas = new HashMap<>();
     for (DimensionSchema schema : columnSchemas) {
+      if (schema == null) {
+        throw InvalidInput.exception("columnSchemas must not contain null entries");
+      }
       if (customSchemas.put(schema.getName(), schema) != null) {
         throw InvalidInput.exception("columnSchemas contains duplicate entries for column [%s]", schema.getName());
       }
