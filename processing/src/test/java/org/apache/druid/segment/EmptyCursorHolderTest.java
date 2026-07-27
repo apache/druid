@@ -19,41 +19,73 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 class EmptyCursorHolderTest
 {
+  private static final CursorBuildSpec ASC = CursorBuildSpec.builder()
+                                                            .setPreferredOrdering(Cursors.ascendingTimeOrder())
+                                                            .build();
+  private static final CursorBuildSpec DESC = CursorBuildSpec.builder()
+                                                             .setPreferredOrdering(Cursors.descendingTimeOrder())
+                                                             .build();
+
   @Test
   void testForTimeOrderAscendingAdvertisesAscendingTime()
   {
+    CursorHolder holder = EmptyCursorHolder.forSpec(ASC);
     Assertions.assertEquals(
         Cursors.ascendingTimeOrder(),
-        EmptyCursorHolder.forTimeOrder(Order.ASCENDING).getOrdering()
+        holder.getOrdering()
     );
-    Assertions.assertSame(EmptyCursorHolder.forTimeOrder(Order.ASCENDING), EmptyCursorHolder.forTimeOrder(Order.ASCENDING));
+    Assertions.assertSame(EmptyCursorHolder.forSpec(ASC), holder);
   }
 
   @Test
   void testForTimeOrderDescendingAdvertisesDescendingTime()
   {
+    CursorHolder holder = EmptyCursorHolder.forSpec(DESC);
     Assertions.assertEquals(
         Cursors.descendingTimeOrder(),
-        EmptyCursorHolder.forTimeOrder(Order.DESCENDING).getOrdering()
+        holder.getOrdering()
     );
-    Assertions.assertSame(EmptyCursorHolder.forTimeOrder(Order.DESCENDING), EmptyCursorHolder.forTimeOrder(Order.DESCENDING));
+    Assertions.assertSame(EmptyCursorHolder.forSpec(DESC), holder);
   }
 
   @Test
   void testForTimeOrderNoneReturnsUnorderedInstance()
   {
-    Assertions.assertSame(EmptyCursorHolder.forTimeOrder(Order.NONE), EmptyCursorHolder.forTimeOrder(Order.NONE));
+    CursorHolder holder = EmptyCursorHolder.forSpec(CursorBuildSpec.FULL_SCAN);
+    Assertions.assertEquals(
+        List.of(),
+        holder.getOrdering()
+    );
+    Assertions.assertSame(EmptyCursorHolder.forSpec(CursorBuildSpec.FULL_SCAN), holder);
+  }
+
+  @Test
+  void testForSpecNonTimeOrderingAdvertisedVerbatim()
+  {
+    // preferredOrdering decouples from assumed __time ordering; an empty cursor trivially satisfies any ordering, so
+    // forSpec advertises a non-__time preferred ordering verbatim via a fresh, uncached instance.
+    final List<OrderBy> ordering = List.of(OrderBy.ascending("dim"));
+    final CursorBuildSpec spec = CursorBuildSpec.builder().setPreferredOrdering(ordering).build();
+    final CursorHolder holder = EmptyCursorHolder.forSpec(spec);
+    Assertions.assertEquals(ordering, holder.getOrdering());
+    // Not the unordered singleton, and arbitrary orderings are not cached (a fresh instance each call).
+    Assertions.assertNotSame(holder, EmptyCursorHolder.forSpec(CursorBuildSpec.FULL_SCAN));
+    Assertions.assertNotSame(holder, EmptyCursorHolder.forSpec(spec));
   }
 
   @Test
   void testCursorIsAlwaysDone()
   {
-    Assertions.assertTrue(EmptyCursorHolder.forTimeOrder(Order.ASCENDING).asCursor().isDone());
+    Assertions.assertTrue(EmptyCursorHolder.forSpec(ASC).asCursor().isDone());
+    Assertions.assertTrue(EmptyCursorHolder.forSpec(DESC).asCursor().isDone());
+    Assertions.assertTrue(EmptyCursorHolder.forSpec(CursorBuildSpec.FULL_SCAN).asCursor().isDone());
   }
 }

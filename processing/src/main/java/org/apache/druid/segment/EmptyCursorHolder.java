@@ -43,39 +43,32 @@ import java.util.List;
  * A {@link CursorHolder} that yields no rows. Its cursors are always done, but its selector factories hand out harmless
  * nil selectors and {@link #canVectorize()} reports true.
  * <p>
- * Useful wherever a segment can be proven to match no rows without scanning it. Use {@link #getDefault()} when no
- * ordering needs to be advertised, or {@link #forTimeOrder(Order)} when the caller must satisfy a requested
- * {@code __time} ordering.
+ * Useful wherever a segment can be proven to match no rows without scanning it. Use {@link #forSpec(CursorBuildSpec)}
+ * to produce an empty cursor matching the preferred ordering of the {@link CursorBuildSpec}.
  */
 public final class EmptyCursorHolder implements CursorHolder
 {
-  private static final EmptyCursorHolder INSTANCE = new EmptyCursorHolder(Collections.emptyList());
+  private static final EmptyCursorHolder NO_ORDER = new EmptyCursorHolder(Collections.emptyList());
   private static final EmptyCursorHolder TIME_ASCENDING = new EmptyCursorHolder(Cursors.ascendingTimeOrder());
   private static final EmptyCursorHolder TIME_DESCENDING = new EmptyCursorHolder(Cursors.descendingTimeOrder());
 
   private static final ColumnSelectorFactory NIL_SELECTOR_FACTORY = new AllNullColumnSelectorFactory();
 
-  public static EmptyCursorHolder getDefault()
-  {
-    return INSTANCE;
-  }
-
   /**
-   * An empty holder that advertises the given {@code __time} ordering, so a time-ordered query engine that hard-checks
-   * cursor ordering (e.g. scan) accepts the empty result instead of failing. An empty cursor is trivially ordered in
-   * any direction, so it can honestly claim whichever direction the query asked for. {@link Order#NONE} yields the
-   * unordered {@link #getDefault()}.
+   * An empty holder that advertises the spec's preferred ordering. A cursor with no rows trivially satisfies any
+   * ordering, so it can honestly claim whatever the query asked for. The two {@code __time} directions reuse cached
+   * singletons (the common case); any other non-empty preferred ordering gets a fresh instance, and an empty preferred
+   * ordering yields the unordered shared instance.
    */
-  public static EmptyCursorHolder forTimeOrder(Order timeOrder)
+  public static EmptyCursorHolder forSpec(CursorBuildSpec spec)
   {
-    switch (timeOrder) {
-      case ASCENDING:
-        return TIME_ASCENDING;
-      case DESCENDING:
-        return TIME_DESCENDING;
-      default:
-        return INSTANCE;
-    }
+    final List<OrderBy> preferredOrdering = spec.getPreferredOrdering();
+    final Order timeOrder = Cursors.getTimeOrdering(preferredOrdering);
+    return switch (timeOrder) {
+      case ASCENDING -> TIME_ASCENDING;
+      case DESCENDING -> TIME_DESCENDING;
+      default -> preferredOrdering.isEmpty() ? NO_ORDER : new EmptyCursorHolder(preferredOrdering);
+    };
   }
 
   private final List<OrderBy> ordering;
