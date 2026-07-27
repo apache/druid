@@ -149,7 +149,7 @@ public class IncrementalIndexCursorFactory implements ResidentCursorFactory
     final List<TableClusterGroupSpec> surviving = plan.survivingGroups();
 
     if (surviving.isEmpty()) {
-      return EmptyCursorHolder.INSTANCE;
+      return EmptyCursorHolder.forTimeOrder(Cursors.getTimeOrdering(spec.getPreferredOrdering()));
     }
 
     final RowSignature clusteringColumns = summary.getClusteringColumns();

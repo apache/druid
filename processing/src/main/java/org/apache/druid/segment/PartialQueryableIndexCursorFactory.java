@@ -110,7 +110,9 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     if (plan.clusterGroupPlan() != null) {
       if (plan.bundles().isEmpty()) {
         // Filter rules out every cluster group: no bundle to acquire, nothing to download.
-        return AsyncCursorHolder.completed(EmptyCursorHolder.INSTANCE);
+        return AsyncCursorHolder.completed(
+            EmptyCursorHolder.forTimeOrder(Cursors.getTimeOrdering(spec.getPreferredOrdering()))
+        );
       }
       // reuse the plan's cluster resolution
       return buildAsyncCursorHolder(
