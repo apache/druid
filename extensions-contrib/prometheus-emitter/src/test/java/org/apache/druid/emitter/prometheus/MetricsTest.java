@@ -41,7 +41,9 @@ public class MetricsTest
     Assert.assertEquals("dataSource", dimensions[0]);
     Assert.assertEquals("druid_service", dimensions[1]);
     Assert.assertEquals("host_name", dimensions[2]);
-    Assert.assertEquals("type", dimensions[3]);
+    Assert.assertEquals("lane", dimensions[3]);
+    Assert.assertEquals("priority", dimensions[4]);
+    Assert.assertEquals("type", dimensions[5]);
     Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
     double[] defaultHistogramBuckets = {0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0, 30.0, 60.0, 120.0, 300.0};
     Assert.assertArrayEquals(defaultHistogramBuckets, dimensionsAndCollector.getHistogramBuckets(), 0.0);
@@ -70,7 +72,9 @@ public class MetricsTest
     Assert.assertEquals("druid_service", dimensions[1]);
     Assert.assertEquals("extra_label", dimensions[2]);
     Assert.assertEquals("host_name", dimensions[3]);
-    Assert.assertEquals("type", dimensions[4]);
+    Assert.assertEquals("lane", dimensions[4]);
+    Assert.assertEquals("priority", dimensions[5]);
+    Assert.assertEquals("type", dimensions[6]);
     Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
     double[] defaultHistogramBuckets = {0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0, 30.0, 60.0, 120.0, 300.0};
     Assert.assertArrayEquals(defaultHistogramBuckets, dimensionsAndCollector.getHistogramBuckets(), 0.0);
