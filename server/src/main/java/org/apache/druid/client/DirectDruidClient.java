@@ -187,6 +187,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         private final AtomicBoolean nodeMetricsEmitted = new AtomicBoolean(false);
         private final AtomicReference<String> fail = new AtomicReference<>();
         private final AtomicReference<TrafficCop> trafficCopRef = new AtomicReference<>();
+        // The stream most recently handed to the SequenceInputStream below. It owns a retained buffer that
+        // SequenceInputStream releases only when it advances to the following stream, so a consumer that
+        // abandons the response partway has to close this one explicitly.
+        private final AtomicReference<InputStream> currentStream = new AtomicReference<>();
 
         private QueryMetrics<? super Query<T>> queryMetrics;
         private long responseStartTimeNs;
@@ -217,6 +221,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           final long currentQueuedByteCount = queuedByteCount.addAndGet(holder.getLength());
           queue.put(holder);
 
+          // close() can set discard after the check above, once this chunk is past it. Drain again so that
+          // a chunk queued during that window is released rather than stranded.
+          if (discard.get()) {
+            discardQueuedChunks();
+          }
+
           // True if we should keep reading.
           return !usingBackpressure || currentQueuedByteCount < maxQueuedBytes;
         }
@@ -236,6 +246,42 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
 
           return holder.getStream();
+        }
+
+        /**
+         * Drop everything currently buffered, closing each stream as it goes. {@link InputStreamHolder#fromByteBuf}
+         * hands over a retained Netty buffer that is only released when its stream is closed, so clearing the
+         * queue without closing would strand those retains and leak pooled direct memory on every query that is
+         * cancelled or fails.
+         */
+        private void discardQueuedChunks()
+        {
+          InputStreamHolder holder;
+          while ((holder = queue.poll()) != null) {
+            closeChunk(holder.getStream());
+          }
+        }
+
+        /**
+         * Close the stream the consumer was reading when it gave up. Only safe to call from the consumer's own
+         * thread (i.e. from close()), since another thread may still be reading it.
+         */
+        private void discardCurrentChunk()
+        {
+          final InputStream stream = currentStream.getAndSet(null);
+          if (stream != null) {
+            closeChunk(stream);
+          }
+        }
+
+        private void closeChunk(InputStream stream)
+        {
+          try {
+            stream.close();
+          }
+          catch (IOException e) {
+            log.debug(e, "Could not close abandoned response chunk from url[%s]", url);
+          }
         }
 
         @Override
@@ -319,7 +365,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                       }
 
                       try {
-                        return dequeue();
+                        final InputStream stream = dequeue();
+                        currentStream.set(stream);
+                        return stream;
                       }
                       catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -339,13 +387,16 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 {
                   final TrafficCop trafficCop;
                   synchronized (done) {
+                    // Release whatever the consumer never read, whether or not the response finished: these
+                    // chunks hold retained Netty buffers (see enqueue()), so dropping the references without
+                    // closing them would leak. Stop buffering anything further, too.
+                    discard.set(true);
+                    discardQueuedChunks();
+                    discardCurrentChunk();
                     if (done.get()) {
+                      // Response already fully received, so there is no connection left to abort.
                       return;
                     }
-                    // Stop buffering further chunks (see enqueue()) and drop anything already buffered so the
-                    // underlying Netty ChannelBuffers can be released.
-                    discard.set(true);
-                    queue.clear();
                     trafficCop = trafficCopRef.get();
                   }
                   if (trafficCop == null) {
@@ -438,7 +489,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           emitNodeMetrics(System.nanoTime() - requestStartTimeNs);
           fail.set(msg);
-          queue.clear();
+          discardQueuedChunks();
           queue.offer(
               InputStreamHolder.fromStream(
                   new InputStream()

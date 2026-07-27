@@ -24,6 +24,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -155,11 +156,22 @@ public class NettyHttpClient extends AbstractHttpClient
       channel.config().setAutoRead(true);
     }
     final String urlFile = StringUtils.nullToEmptyNonDruidDataString(url.getFile());
+
+    // Give Netty its own view of the body rather than the caller's buffer. Netty's HttpObjectEncoder
+    // releases whatever it encodes, and writing to the socket advances the reader index, so passing
+    // request.getContent() directly would leave the caller holding a released, fully consumed buffer.
+    // Callers do reuse a Request: KerberosHttpClient resends request.copy() after a 401, and
+    // ClientUtils copies a request's content to retarget it at another server. A retained duplicate
+    // shares the bytes but has its own indices, so Netty's release balances our retain and the
+    // original is left untouched.
+    final ByteBuf content = request.hasContent()
+                            ? request.getContent().retainedDuplicate()
+                            : Unpooled.EMPTY_BUFFER;
     final DefaultFullHttpRequest httpRequest = new DefaultFullHttpRequest(
         HttpVersion.HTTP_1_1,
         method,
         urlFile.isEmpty() ? "/" : urlFile,
-        request.hasContent() ? request.getContent() : Unpooled.EMPTY_BUFFER
+        content
     );
 
     if (!headers.containsKey(HttpHeaderNames.HOST.toString())) {

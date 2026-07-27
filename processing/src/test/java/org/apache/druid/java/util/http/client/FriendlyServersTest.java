@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.http.client;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpMethod;
@@ -51,6 +52,8 @@ import java.net.Socket;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -109,6 +112,92 @@ public class FriendlyServersTest
 
       Assert.assertEquals(200, response.getStatus().code());
       Assert.assertEquals("hello!", response.getContent());
+    }
+    finally {
+      exec.shutdownNow();
+      serverSocket.close();
+      lifecycle.stop();
+    }
+  }
+
+  /**
+   * A {@link Request} may legitimately be sent more than once: KerberosHttpClient resends
+   * {@code request.copy()} after a 401, and ClientUtils copies a request's content to retarget it at
+   * another server. Writing a request must therefore leave the caller's body buffer intact, rather
+   * than handing ownership of it to Netty's encoder (which releases what it encodes) or letting the
+   * socket write consume its reader index.
+   */
+  @Test(timeout = 60_000L)
+  public void testRequestBodySurvivesBeingSent() throws Exception
+  {
+    final List<String> receivedBodies = new CopyOnWriteArrayList<>();
+    final ExecutorService exec = Executors.newSingleThreadExecutor();
+    final ServerSocket serverSocket = new ServerSocket(0);
+    exec.submit(
+        () -> {
+          while (!Thread.currentThread().isInterrupted()) {
+            try (
+                Socket clientSocket = serverSocket.accept();
+                BufferedReader in = new BufferedReader(
+                    new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
+                );
+                OutputStream out = clientSocket.getOutputStream()
+            ) {
+              // Serve every request on this connection, since the client pools connections.
+              while (in.readLine() != null) {
+                int contentLength = 0;
+                String line;
+                while ((line = in.readLine()) != null && !line.isEmpty()) {
+                  if (StringUtils.toLowerCase(line).startsWith("content-length:")) {
+                    contentLength = Integer.parseInt(line.substring(line.indexOf(':') + 1).trim());
+                  }
+                }
+
+                final char[] body = new char[contentLength];
+                int read = 0;
+                while (read < contentLength) {
+                  final int count = in.read(body, read, contentLength - read);
+                  if (count < 0) {
+                    break;
+                  }
+                  read += count;
+                }
+
+                receivedBodies.add(new String(body, 0, read));
+                out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+                out.flush();
+              }
+            }
+            catch (Exception e) {
+              if (serverSocket.isClosed()) {
+                return;
+              }
+            }
+          }
+        }
+    );
+
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClient client = HttpClientInit.createClient(HttpClientConfig.builder().build(), lifecycle);
+      final URL url = URI.create(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort())).toURL();
+      final byte[] body = "body!".getBytes(StandardCharsets.UTF_8);
+      final Request request = new Request(HttpMethod.POST, url).setContent("text/plain", body);
+
+      final StatusResponseHolder first =
+          client.go(request, StatusResponseHandler.getInstance()).get();
+      Assert.assertEquals(200, first.getStatus().code());
+
+      // The buffer must still be readable and unreleased, or a retry cannot resend it.
+      Assert.assertEquals("refCnt after sending", 1, request.getContent().refCnt());
+      Assert.assertEquals("readableBytes after sending", body.length, request.getContent().readableBytes());
+
+      // This is what KerberosHttpClient does when it retries an unauthorized request.
+      final StatusResponseHolder second =
+          client.go(request.copy(), StatusResponseHandler.getInstance()).get();
+      Assert.assertEquals(200, second.getStatus().code());
+
+      Assert.assertEquals(ImmutableList.of("body!", "body!"), receivedBodies);
     }
     finally {
       exec.shutdownNow();
