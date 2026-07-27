@@ -174,7 +174,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public void start()
   {
     autoscalerExecutor.scheduleAtFixedRate(
-        supervisor.buildDynamicAllocationTask(this::computeTaskCountForScaleAction, () -> {}, emitter),
+        supervisor.buildDynamicAllocationTask(
+            this::computeTaskCountForScaleAction, () -> {
+            }, emitter
+        ),
         config.getScaleActionPeriodMillis(),
         config.getScaleActionPeriodMillis(),
         TimeUnit.MILLISECONDS
@@ -247,6 +250,18 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    */
   public int computeOptimalTaskCount(CostMetrics metrics)
   {
+    return computeOptimalTaskCountInternal(metrics, false);
+  }
+
+  /**
+   * Returns the lowest-cost task count given {@code metrics}, or {@link #CANNOT_COMPUTE} when
+   * metrics are unusable. Returning the current task count means the current count is already
+   * optimal (or no better candidate could be evaluated).
+   *
+   * @param isSimulation enables or disables task count computation logs and metrics
+   */
+  public int computeOptimalTaskCountInternal(CostMetrics metrics, boolean isSimulation)
+  {
     final Either<String, Boolean> result = validateMetricsForScaling(metrics);
     if (result.isError()) {
       log.debug("Valid metrics are not yet available for scaling supervisor[%s]", supervisorId);
@@ -282,20 +297,22 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     CostResult optimalCost = currentCost;
     final double idleRatioEstimatedFromRate = metrics.estimateIdleRatioFromProcessingRate();
 
-    log.info(
-        "Computing optimal taskCount for supervisor[%s] with metrics:"
-        + " currentTaskCount[%d], avgPartitionLag[%.1f], avgProcessingRate[%.1f], maxProcessingRate[%.1f]"
-        + " idleRatio[%.1f], pollIdleRatio[%.1f], lagWeight[%.2f], idleWeight[%.2f].",
-        supervisorId,
-        currentTaskCount,
-        metrics.getAvgPartitionLag(),
-        metrics.getAvgProcessingRate(),
-        metrics.getMaxObservedRate(),
-        idleRatioEstimatedFromRate,
-        metrics.getPollIdleRatio(),
-        config.getLagWeight(),
-        config.getIdleWeight()
-    );
+    if (!isSimulation) {
+      log.info(
+          "Computing optimal taskCount for supervisor[%s] with metrics:"
+          + " currentTaskCount[%d], avgPartitionLag[%.1f], avgProcessingRate[%.1f], maxProcessingRate[%.1f]"
+          + " idleRatio[%.1f], pollIdleRatio[%.1f], lagWeight[%.2f], idleWeight[%.2f].",
+          supervisorId,
+          currentTaskCount,
+          metrics.getAvgPartitionLag(),
+          metrics.getAvgProcessingRate(),
+          metrics.getMaxObservedRate(),
+          idleRatioEstimatedFromRate,
+          metrics.getPollIdleRatio(),
+          config.getLagWeight(),
+          config.getIdleWeight()
+      );
+    }
 
     // Find the evaluated task count with the lowest cost.
     final CostResult[] costResults = new CostResult[validTaskCounts.length];
@@ -330,42 +347,44 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
     }
 
-    emitMetric(getMetricBuilder().setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
-    emitMetric(getMetricBuilder().setMetric(LAG_WEIGHT_METRIC, config.getLagWeight()));
-    emitMetric(getMetricBuilder().setMetric(IDLE_WEIGHT_METRIC, config.getIdleWeight()));
-    emitMetric(getMetricBuilder().setMetric(CURRENT_LAG_COST_METRIC, currentCost.lagCost()));
-    emitMetric(getMetricBuilder().setMetric(CURRENT_IDLE_COST_METRIC, currentCost.idleCost()));
-    emitMetric(getMetricBuilder().setMetric(CURRENT_COST_METRIC, currentCost.totalCost()));
-    emitMetric(getMetricBuilder().setMetric(OPTIMAL_COST_METRIC, optimalCost.totalCost()));
+    if (!isSimulation) {
+      emitMetric(getMetricBuilder().setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
+      emitMetric(getMetricBuilder().setMetric(LAG_WEIGHT_METRIC, config.getLagWeight()));
+      emitMetric(getMetricBuilder().setMetric(IDLE_WEIGHT_METRIC, config.getIdleWeight()));
+      emitMetric(getMetricBuilder().setMetric(CURRENT_LAG_COST_METRIC, currentCost.lagCost()));
+      emitMetric(getMetricBuilder().setMetric(CURRENT_IDLE_COST_METRIC, currentCost.idleCost()));
+      emitMetric(getMetricBuilder().setMetric(CURRENT_COST_METRIC, currentCost.totalCost()));
+      emitMetric(getMetricBuilder().setMetric(OPTIMAL_COST_METRIC, optimalCost.totalCost()));
 
-    // Emit avg rate and idle metrics only if they are available
-    if (metrics.getAvgProcessingRate() >= 0) {
-      emitMetric(getMetricBuilder().setMetric(AVG_PROCESSING_RATE_METRIC, metrics.getAvgProcessingRate()));
-    }
-    if (metrics.getPollIdleRatio() >= 0) {
-      emitMetric(getMetricBuilder().setMetric(AVG_POLL_IDLE_RATIO, metrics.getPollIdleRatio()));
-    }
-    if (idleRatioEstimatedFromRate >= 0) {
-      emitMetric(getMetricBuilder().setMetric(IDLE_RATIO_ESTIMATED_FROM_RATE, idleRatioEstimatedFromRate));
-    }
-
-    if (optimalTaskCount != currentTaskCount) {
-      log.info(
-          "Optimal taskCount[%d] for supervisor[%s] has lowest cost[%.4f] out of the following candidates: %n%s",
-          optimalTaskCount, supervisorId, optimalCost.totalCost(), constructCostTable(validTaskCounts, costResults)
-      );
-      emitMetric(getMetricBuilder().setMetric(OPTIMAL_LAG_COST_METRIC, optimalCost.lagCost()));
-      emitMetric(getMetricBuilder().setMetric(OPTIMAL_IDLE_COST_METRIC, optimalCost.idleCost()));
-
-      final double costDropPercent
-          = 100.0 * (currentCost.totalCost() - optimalCost.totalCost()) / currentCost.totalCost();
-      if (costDropPercent < config.getMinCostDropPercentForScaling()) {
-        log.info(
-            "Skipping scaling since cost drop percent[%.2f] is less than required minCostDropPercentForScaling[%d]",
-            costDropPercent, config.getMinCostDropPercentForScaling()
-        );
-        return currentTaskCount;
+      // Emit avg rate and idle metrics only if they are available
+      if (metrics.getAvgProcessingRate() >= 0) {
+        emitMetric(getMetricBuilder().setMetric(AVG_PROCESSING_RATE_METRIC, metrics.getAvgProcessingRate()));
       }
+      if (metrics.getPollIdleRatio() >= 0) {
+        emitMetric(getMetricBuilder().setMetric(AVG_POLL_IDLE_RATIO, metrics.getPollIdleRatio()));
+      }
+      if (idleRatioEstimatedFromRate >= 0) {
+        emitMetric(getMetricBuilder().setMetric(IDLE_RATIO_ESTIMATED_FROM_RATE, idleRatioEstimatedFromRate));
+      }
+
+      if (optimalTaskCount != currentTaskCount) {
+        log.info(
+            "Optimal taskCount[%d] for supervisor[%s] has lowest cost[%.4f] out of the following candidates: %n%s",
+            optimalTaskCount, supervisorId, optimalCost.totalCost(), constructCostTable(validTaskCounts, costResults)
+        );
+        emitMetric(getMetricBuilder().setMetric(OPTIMAL_LAG_COST_METRIC, optimalCost.lagCost()));
+        emitMetric(getMetricBuilder().setMetric(OPTIMAL_IDLE_COST_METRIC, optimalCost.idleCost()));
+      }
+    }
+
+    final double costDropPercent
+        = 100.0 * (currentCost.totalCost() - optimalCost.totalCost()) / currentCost.totalCost();
+    if (costDropPercent < config.getMinCostDropPercentForScaling()) {
+      log.info(
+          "Skipping scaling since cost drop percent[%.2f] is less than required minCostDropPercentForScaling[%d]",
+          costDropPercent, config.getMinCostDropPercentForScaling()
+      );
+      return currentTaskCount;
     }
 
     // Scale-up is applied eagerly; scale-down may be deferred by computeTaskCountForScaleAction().

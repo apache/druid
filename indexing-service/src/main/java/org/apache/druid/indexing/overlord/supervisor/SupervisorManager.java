@@ -727,7 +727,7 @@ public class SupervisorManager implements SupervisorStatsProvider
           avgProcessingRatePerTask,
           maxProcessingRatePerTask * 1.0
       );
-      final int optimalTaskCount = autoscaleSimulator.computeOptimalTaskCount(costMetrics);
+      final int optimalTaskCount = autoscaleSimulator.computeOptimalTaskCountInternal(costMetrics, true);
       rows[i] = Map.of("lag", observedAggregateLag, "taskCount", optimalTaskCount);
     }
 
