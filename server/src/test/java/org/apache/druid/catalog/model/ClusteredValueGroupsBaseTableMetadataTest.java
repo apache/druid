@@ -202,7 +202,10 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         new ColumnSpec("tags", Columns.SQL_VARCHAR_ARRAY, null),
         new ColumnSpec("vals", Columns.SQL_BIGINT_ARRAY, null),
         new ColumnSpec("ratios", Columns.SQL_FLOAT_ARRAY, null),
-        new ColumnSpec("attrs", ColumnType.NESTED_DATA.asTypeString(), null)
+        new ColumnSpec("attrs", ColumnType.NESTED_DATA.asTypeString(), null),
+        // type prefixes match case-insensitively; these must not silently fall back to STRING
+        new ColumnSpec("attrs2", "complex<json>", null),
+        new ColumnSpec("vals2", "array<long>", null)
     );
     // Declared types are retained in the ingestion schema rather than left to inference: arrays cast an auto column
     // to the declared type (an all-null batch has no values to infer from; FLOAT ARRAY is stored as DOUBLE ARRAY by
@@ -215,7 +218,9 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
                                                        new AutoTypeColumnSchema("tags", ColumnType.STRING_ARRAY, null),
                                                        new AutoTypeColumnSchema("vals", ColumnType.LONG_ARRAY, null),
                                                        new AutoTypeColumnSchema("ratios", ColumnType.DOUBLE_ARRAY, null),
-                                                       new NestedDataColumnSchema("attrs", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION)
+                                                       new NestedDataColumnSchema("attrs", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION),
+                                                       new NestedDataColumnSchema("attrs2", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION),
+                                                       new AutoTypeColumnSchema("vals2", ColumnType.LONG_ARRAY, null)
                                                    )
                                                    .clusteringColumns("tenant")
                                                    .build(),

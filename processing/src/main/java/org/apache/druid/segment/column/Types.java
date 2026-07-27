@@ -39,7 +39,8 @@ public class Types
     if (typeString == null) {
       return null;
     }
-    switch (StringUtils.toUpperCase(typeString)) {
+    final String upperTypeString = StringUtils.toUpperCase(typeString);
+    switch (upperTypeString) {
       case "STRING":
         return typeFactory.ofString();
       case "LONG":
@@ -57,14 +58,16 @@ public class Types
       case "COMPLEX":
         return typeFactory.ofComplex(null);
       default:
-        // we do not convert to uppercase here, because complex type name must be preserved in original casing
-        // array could be converted, but are not for no particular reason other than less spooky magic
-        if (typeString.startsWith(ARRAY_PREFIX)) {
+        // Prefix matching is case-insensitive, consistent with the scalar handling above, but the type parameter is
+        // taken from the original string: complex type names are case-sensitive registry keys which must be preserved
+        // in their original casing (array element types recurse through this method, so any casing works for them).
+        // A parameterized type without the closing bracket is malformed, not a truncated parameter name.
+        if (upperTypeString.startsWith(ARRAY_PREFIX) && upperTypeString.endsWith(">")) {
           T elementType = fromString(typeFactory, typeString.substring(ARRAY_PREFIX.length(), typeString.length() - 1));
           Preconditions.checkNotNull(elementType, "Array element type must not be null");
           return typeFactory.ofArray(elementType);
         }
-        if (typeString.startsWith(COMPLEX_PREFIX)) {
+        if (upperTypeString.startsWith(COMPLEX_PREFIX) && upperTypeString.endsWith(">")) {
           return typeFactory.ofComplex(typeString.substring(COMPLEX_PREFIX.length(), typeString.length() - 1));
         }
     }
