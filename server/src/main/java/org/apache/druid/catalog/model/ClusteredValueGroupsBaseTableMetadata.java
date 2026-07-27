@@ -129,6 +129,20 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
   {
     ColumnType druidType = Columns.druidType(column);
     if (druidType == null) {
+      // A column declared without a type defaults to STRING (mirroring Columns.convertSignature), but a declared
+      // type that does not parse must be rejected rather than silently defaulted: the declared type is the physical
+      // segment schema here.
+      if (column.dataType() != null) {
+        throw InvalidInput.exception(
+            "column [%s] has an unrecognized type [%s]; declare a SQL type (such as [%s]) or a Druid type string"
+            + " (such as [%s] or [%s])",
+            column.name(),
+            column.dataType(),
+            Columns.SQL_BIGINT,
+            ColumnType.LONG_ARRAY.asTypeString(),
+            ColumnType.NESTED_DATA.asTypeString()
+        );
+      }
       druidType = ColumnType.STRING;
     }
     if (druidType.isPrimitive() || druidType.isPrimitiveArray()) {

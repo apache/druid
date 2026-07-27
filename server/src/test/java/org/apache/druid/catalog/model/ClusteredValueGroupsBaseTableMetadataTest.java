@@ -245,6 +245,30 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   }
 
   @Test
+  public void testCreateSpecUnparseableTypeFails()
+  {
+    // A column declared WITHOUT a type defaults to STRING, but a declared type that does not parse must be rejected
+    // rather than silently defaulted: the declared type is the physical segment schema here. (A malformed
+    // parameterized type such as a missing closing bracket parses to null.)
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null
+    );
+    for (String badType : new String[]{"COMPLEX<json", "ARRAY<LONG", "FOO"}) {
+      final List<ColumnSpec> columns = Arrays.asList(
+          new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
+          new ColumnSpec(Columns.TIME_COLUMN, null, null),
+          new ColumnSpec("busted", badType, null)
+      );
+      final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
+      Assert.assertTrue(
+          "expected unrecognized-type error for [" + badType + "] but got: " + e.getMessage(),
+          e.getMessage().contains("column [busted] has an unrecognized type [" + badType + "]")
+      );
+    }
+  }
+
+  @Test
   public void testCreateSpecClusteringColumnsNotLeadingPrefixFails()
   {
     // 'region' is declared, but not as part of the leading prefix of the column list; the declared order is the

@@ -146,6 +146,14 @@ public class CatalogResourceTest
     resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
+    // Invalid column type: table-level validation failures (which raise DruidException rather than IAE) must also
+    // surface as a bad request, not an internal error.
+    TableSpec badTypeSpec = TableBuilder.datasource("badType", "P1D")
+        .column("foo", "FOO")
+        .buildSpec();
+    resp = resource.postTable(TableId.DRUID_SCHEMA, "badType", badTypeSpec, 0, false, postBy(CatalogTests.SUPER_USER));
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
+
     // Inline input source
     TableSpec inputSpec = TableBuilder.external("inline")
         .inputSource(toMap(new InlineInputSource("a,b,1\nc,d,2\n")))
