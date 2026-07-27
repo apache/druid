@@ -25,6 +25,10 @@ export type SqlJoinAlgorithm = 'broadcast' | 'sortMerge';
 export interface QueryContext {
   useCache?: boolean;
   populateCache?: boolean;
+  useResultLevelCache?: boolean;
+  populateResultLevelCache?: boolean;
+  useForwardedResultLevelCache?: boolean;
+  populateForwardedResultLevelCache?: boolean;
   useApproximateCountDistinct?: boolean;
   useApproximateTopN?: boolean;
   sqlTimeZone?: string;
