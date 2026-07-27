@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -48,6 +49,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DatasourceInterval;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.utils.CloseableUtils;
@@ -1116,6 +1118,48 @@ public class SqlSegmentsMetadataQuery
     return intervals.stream().filter(Objects::nonNull).collect(Collectors.toList());
   }
 
+  public Map<DatasourceInterval, Integer> retrieveSomeUnusedSegmentIntervals(
+      DateTime maxUpdatedTime,
+      int maxResultSize,
+      int maxSegmentsToScan
+  )
+  {
+    final String sql = StringUtils.format(
+        // Disable checkstyle to avoid argumentLineBreaking rule from getting triggered
+        //CHECKSTYLE.OFF: Regexp
+        """
+            SELECT dataSource, start, %2$send%2$s, COUNT(*) AS totalCount
+            FROM (
+              SELECT dataSource, start, %2$send%2$s
+              FROM %1$s
+              WHERE used = false
+              AND (used_status_last_updated IS NULL OR used_status_last_updated <= :maxUpdatedTime)
+              %3$s
+            ) AS unused
+            GROUP BY dataSource, %2$send%2$s, start
+            %4$s
+            """,
+        //CHECKSTYLE.ON: Regexp
+        dbTables.getSegmentsTable(),
+        connector.getQuoteString(),
+        connector.limitClause(maxSegmentsToScan),
+        connector.limitClause(maxResultSize)
+    );
+
+    final List<Pair<DatasourceInterval, Integer>> unusedSegmentIntervals = connector.inReadOnlyTransaction(
+        (handle, status) ->
+            handle.createQuery(sql)
+                  .setFetchSize(connector.getStreamingFetchSize())
+                  .bind("maxUpdatedTime", maxUpdatedTime.toString())
+                  .map((index, r, ctx) -> mapToUnusedSegmentInterval(r))
+                  .list()
+    );
+
+    return unusedSegmentIntervals.stream().filter(Objects::nonNull).collect(
+        Collectors.toMap(pair -> pair.lhs, pair -> pair.rhs)
+    );
+  }
+
   /**
    * Retrieves unused segments that exactly match the given interval.
    *
@@ -1691,6 +1735,9 @@ public class SqlSegmentsMetadataQuery
     return sql;
   }
 
+  /**
+   * Reads the fields {@code start} and {@code end} from the given result set.
+   */
   @Nullable
   private Interval mapToInterval(ResultSet resultSet, String dataSource)
   {
@@ -1702,6 +1749,26 @@ public class SqlSegmentsMetadataQuery
     }
     catch (Throwable t) {
       log.error(t, "Could not read an interval of datasource[%s]", dataSource);
+      return null;
+    }
+  }
+
+  /**
+   * Reads the fields {@code dataSource}, {@code start}, {@code end} and
+   * {@code totalCount} from the given result set.
+   */
+  @Nullable
+  private Pair<DatasourceInterval, Integer> mapToUnusedSegmentInterval(ResultSet resultSet)
+  {
+    try {
+      final String dataSource = resultSet.getString("dataSource");
+      final Interval interval = mapToInterval(resultSet, "");
+      final int totalCount = resultSet.getInt("totalCount");
+
+      return Pair.of(new DatasourceInterval(dataSource, interval), totalCount);
+    }
+    catch (Throwable t) {
+      log.error(t, "Could not read unused segment interval record");
       return null;
     }
   }

@@ -200,37 +200,31 @@ public class UnusedSegmentsKillerTest
     );
   }
 
-  @Test
-  public void test_maxSegmentsKilledInAnInterval_is_1k()
+  @Test(timeout = 30_000L)
+  public void test_maxSegmentsKilledInRun_is_200k()
   {
     leaderSelector.becomeLeader();
 
     final List<DataSegment> segments =
         CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                           .forIntervals(1, Granularities.DAY)
-                          .withNumPartitions(2000)
+                          .withNumPartitions(200_010)
                           .eachOfSizeInMb(50);
 
     storageCoordinator.commitSegments(Set.copyOf(segments), null);
     storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
 
     Assert.assertEquals(
-        2000,
+        200_010,
         retrieveUnusedSegments(segments.get(0).getInterval()).size()
     );
 
-    // Reset the kill queue and execute kill tasks
+    // Reset the kill queue
     killer.run();
-    finishQueuedKillJobs();
+    killExecutor.finishNextPendingTask();
 
-    // Verify that a single kill task has run which killed 1k segments
-    emitter.verifyEmitted(TaskMetrics.RUN_DURATION, 1);
-    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 1000L);
-
-    Assert.assertEquals(
-        1000,
-        retrieveUnusedSegments(segments.get(0).getInterval()).size()
-    );
+    // Verify that a total of 200k segments were identified for kill
+    emitter.verifySum(UnusedSegmentsKiller.Metric.ELIGIBLE_UNUSED_SEGMENTS, 200_000L);
   }
 
   @Test(timeout = 20_000L)
@@ -408,13 +402,12 @@ public class UnusedSegmentsKillerTest
     killer.run();
     finishQueuedKillJobs();
 
-    // Verify that tasks are launched but no segment is killed
-    emitter.verifyValue(UnusedSegmentsKiller.Metric.UNUSED_SEGMENT_INTERVALS, 10L);
-    emitter.verifyEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 10);
-    emitter.verifyEmitted(TaskMetrics.RUN_DURATION, 10);
+    // Verify that no tasks are launched
+    emitter.verifyNotEmitted(UnusedSegmentsKiller.Metric.UNUSED_SEGMENT_INTERVALS);
+    emitter.verifyNotEmitted(UnusedSegmentsKiller.Metric.ELIGIBLE_UNUSED_SEGMENTS);
 
-    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 0L);
-    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 0L);
+    emitter.verifyNotEmitted(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE);
+    emitter.verifyNotEmitted(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE);
   }
 
   @Test

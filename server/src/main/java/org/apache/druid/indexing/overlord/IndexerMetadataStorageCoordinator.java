@@ -28,6 +28,7 @@ import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DatasourceInterval;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
@@ -617,6 +618,34 @@ public interface IndexerMetadataStorageCoordinator
    * upto a maximum of {@code limit} entries.
    */
   List<Interval> retrieveSomeUnusedSegmentIntervals(String dataSource, int limit);
+
+  /**
+   * Scans upto {@code maxSegmentsToScan} unused segments which are eligible for
+   * kill and returns the unique datasource-interval for the segments scanned.
+   * <p>
+   * This method ensures that if there is any unused segment in any datasource
+   * which was updated earlier than {@code maxUpdatedTime}, then the returned
+   * map is not empty. However, it does NOT guarantee that:
+   * <ul>
+   * <li>the candidates in the returned map would be ordered by datasource or interval</li>
+   * <li>the result would contain {@code limit} entries when there are more distinct
+   * intervals with eligible unused segments in the metadata store.</li>
+   * </ul>
+   *
+   * @param maxUpdatedTime    Unused segments are considered eligible for kill
+   *                          if they were last updated before this time.
+   * @param maxResultSize     Maximum number of candidate intervals to return
+   *                          across all datasources.
+   * @param maxSegmentsToScan Maximum number of eligible unused segments to scan
+   *                          in the metadata store.
+   * @return Map from {@link DatasourceInterval} to the number of unused segments
+   * eligible for kill.
+   */
+  Map<DatasourceInterval, Integer> retrieveSomeUnusedSegmentIntervals(
+      DateTime maxUpdatedTime,
+      int maxResultSize,
+      int maxSegmentsToScan
+  );
 
   /**
    * Returns the number of segment entries in the database whose state was changed as the result of this call (that is,
