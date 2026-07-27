@@ -192,6 +192,9 @@ public class ExpressionFilter implements Filter
   @Override
   public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
+    if (bindingDetails.get().isNonDeterministic()) {
+      return null;
+    }
     return expr.get().asBitmapColumnIndex(selector);
   }
 

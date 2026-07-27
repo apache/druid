@@ -384,7 +384,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_createCompactionJobs_withSkipOffsetFromLatest_skipsIntervalsExtendingPastOffset()
+  public void test_createCompactionJobs_withSkipOffsetFromLatest_truncatesIntervalsExtendingPastSkipOffset()
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
@@ -399,9 +399,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(15), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -411,7 +413,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(3), Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -422,9 +424,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(25), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -451,7 +455,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_createCompactionJobs_withSkipOffsetFromNow_skipsIntervalsExtendingPastOffset()
+  public void test_createCompactionJobs_withSkipOffsetFromNow_truncatesIntervalThatExtendsPastSkipOffset()
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
@@ -466,9 +470,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(20), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -478,7 +484,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(3), Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -489,9 +495,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(20), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -719,7 +727,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
 
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-8d", null, Period.days(8), null, new AggregatorFactory[0], null, null, null),
+            new ReindexingDataSchemaRule("metrics-8d", null, Period.days(8), null, new AggregatorFactory[0], null, null, null, null),
             createReindexingDataSchemaRule("metrics-8d", Period.days(8)),
             createReindexingDataSchemaRule("metrics-14d", Period.days(14)),
             createReindexingDataSchemaRule("metrics-45d", Period.days(45))
@@ -816,9 +824,9 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .partitioningRules(List.of(monthRule, dayRule))
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null),
-            new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
-            new ReindexingDataSchemaRule("metrics-21d", null, Period.days(21), null, new AggregatorFactory[0], null, null, null)
+            new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null, null),
+            new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null, null),
+            new ReindexingDataSchemaRule("metrics-21d", null, Period.days(21), null, new AggregatorFactory[0], null, null, null, null)
         ))
         .build();
 
@@ -924,9 +932,9 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             .builder()
             .partitioningRules(List.of(yearRule, monthRule, dayRule))
             .dataSchemaRules(List.of(
-                new ReindexingDataSchemaRule("metrics-1d", null, Period.days(1), null, new AggregatorFactory[0], null, null, null),
-                new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
-                new ReindexingDataSchemaRule("metrics-45d", null, Period.days(45), null, new AggregatorFactory[0], null, null, null)
+                new ReindexingDataSchemaRule("metrics-1d", null, Period.days(1), null, new AggregatorFactory[0], null, null, null, null),
+                new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null, null),
+                new ReindexingDataSchemaRule("metrics-45d", null, Period.days(45), null, new AggregatorFactory[0], null, null, null, null)
             ))
             .build();
 
@@ -1064,7 +1072,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .partitioningRules(List.of(monthRule))
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-1m", null, Period.months(1), null, new AggregatorFactory[0], null, null, null)
+            new ReindexingDataSchemaRule("metrics-1m", null, Period.months(1), null, new AggregatorFactory[0], null, null, null, null)
         ))
         .build();
 
@@ -1132,7 +1140,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .partitioningRules(List.of(dayRule))
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-12h", null, Period.hours(12), null, new AggregatorFactory[0], null, null, null)
+            new ReindexingDataSchemaRule("metrics-12h", null, Period.hours(12), null, new AggregatorFactory[0], null, null, null, null)
         ))
         .build();
 
@@ -1203,8 +1211,8 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .partitioningRules(List.of(dayRule))
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-33d-6h", null, Period.hours(33 * 24 + 6), null, new AggregatorFactory[0], null, null, null),
-            new ReindexingDataSchemaRule("metrics-33d-18h", null, Period.hours(33 * 24 + 18), null, new AggregatorFactory[0], null, null, null)
+            new ReindexingDataSchemaRule("metrics-33d-6h", null, Period.hours(33 * 24 + 6), null, new AggregatorFactory[0], null, null, null, null),
+            new ReindexingDataSchemaRule("metrics-33d-18h", null, Period.hours(33 * 24 + 18), null, new AggregatorFactory[0], null, null, null, null)
         ))
         .build();
 
@@ -1499,7 +1507,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
                 new ReindexingPartitioningRule("day-rule", null, Period.days(90), Granularities.DAY, new DynamicPartitionsSpec(5000000, null), null)
             ))
             .dataSchemaRules(List.of(
-                new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null)
+                new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null, null)
             ))
             .build();
 
@@ -2005,6 +2013,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         period,
         null,
         new AggregatorFactory[0],
+        null,
         null,
         null,
         null

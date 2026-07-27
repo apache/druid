@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import it.unimi.dsi.fastutil.ints.IntComparator;
 import it.unimi.dsi.fastutil.ints.IntComparators;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -40,11 +40,11 @@ public class TournamentTreeTest
     final IntComparator intComparator = IntComparators.NATURAL_COMPARATOR;
     final TournamentTree tree = new TournamentTree(1, intComparator);
 
-    Assert.assertEquals(0, tree.getMin());
-    Assert.assertArrayEquals(
-        "construction",
+    Assertions.assertEquals(0, tree.getMin());
+    Assertions.assertArrayEquals(
         new int[]{0},
-        tree.backingArray()
+        tree.backingArray(),
+        "construction"
     );
   }
 
@@ -54,11 +54,11 @@ public class TournamentTreeTest
     final IntComparator intComparator = IntComparators.NATURAL_COMPARATOR;
     final TournamentTree tree = new TournamentTree(10, intComparator);
 
-    Assert.assertEquals(0, tree.getMin());
-    Assert.assertArrayEquals(
-        "construction",
+    Assertions.assertEquals(0, tree.getMin());
+    Assertions.assertArrayEquals(
         new int[]{0, 8, 4, 12, 2, 6, 10, 14, 1, 3, 5, 7, 9, 11, 13, 15},
-        tree.backingArray()
+        tree.backingArray(),
+        "construction"
     );
   }
 
@@ -68,11 +68,11 @@ public class TournamentTreeTest
     final IntComparator intComparator = IntComparators.OPPOSITE_COMPARATOR;
     final TournamentTree tree = new TournamentTree(10, intComparator);
 
-    Assert.assertEquals(9, tree.getMin());
-    Assert.assertArrayEquals(
-        "construction",
+    Assertions.assertEquals(9, tree.getMin());
+    Assertions.assertArrayEquals(
         new int[]{9, 7, 3, 12, 1, 5, 10, 14, 0, 2, 4, 6, 8, 11, 13, 15},
-        tree.backingArray()
+        tree.backingArray(),
+        "construction"
     );
   }
 
@@ -82,11 +82,11 @@ public class TournamentTreeTest
     final IntComparator intComparator = IntComparators.OPPOSITE_COMPARATOR;
     final TournamentTree tree = new TournamentTree(16, intComparator);
 
-    Assert.assertEquals(15, tree.getMin());
-    Assert.assertArrayEquals(
-        "construction",
+    Assertions.assertEquals(15, tree.getMin());
+    Assertions.assertArrayEquals(
         new int[]{15, 7, 3, 11, 1, 5, 9, 13, 0, 2, 4, 6, 8, 10, 12, 14},
-        tree.backingArray()
+        tree.backingArray(),
+        "construction"
     );
   }
 
@@ -138,7 +138,7 @@ public class TournamentTreeTest
     expected.addAll(Arrays.asList(8, 8));
     expected.addAll(Arrays.asList(9, 9));
 
-    Assert.assertEquals(expected, intsRead);
+    Assertions.assertEquals(expected, intsRead);
   }
 
   @Test
@@ -191,6 +191,6 @@ public class TournamentTreeTest
     expected.addAll(Arrays.asList(8, 8));
     expected.addAll(Arrays.asList(9, 9));
 
-    Assert.assertEquals(expected, intsRead);
+    Assertions.assertEquals(expected, intsRead);
   }
 }

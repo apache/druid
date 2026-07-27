@@ -90,7 +90,7 @@ public class WorkerHolderTest
 
     ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> syncListener = workerHolder.createSyncListener();
 
-    Assert.assertTrue(workerHolder.disabled.get());
+    Assert.assertFalse(workerHolder.isEnabled());
     Assert.assertFalse(workerHolder.isInitialized());
 
     syncListener.fullSync(
@@ -114,7 +114,7 @@ public class WorkerHolderTest
         )
     );
 
-    Assert.assertFalse(workerHolder.disabled.get());
+    Assert.assertTrue(workerHolder.isEnabled());
 
     Assert.assertEquals(4, updates.size());
 
@@ -153,7 +153,7 @@ public class WorkerHolderTest
         )
     );
 
-    Assert.assertFalse(workerHolder.disabled.get());
+    Assert.assertTrue(workerHolder.isEnabled());
     Assert.assertEquals(2, updates.size());
 
     Assert.assertEquals(task2.getId(), updates.get(0).getTaskId());
@@ -191,7 +191,7 @@ public class WorkerHolderTest
         )
     );
 
-    Assert.assertTrue(workerHolder.disabled.get());
+    Assert.assertFalse(workerHolder.isEnabled());
 
     Assert.assertEquals(3, updates.size());
 

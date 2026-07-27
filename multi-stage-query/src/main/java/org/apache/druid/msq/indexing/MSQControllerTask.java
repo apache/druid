@@ -317,7 +317,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   {
     final ControllerHolder holder = controllerHolder;
     if (holder != null) {
-      holder.cancel(CancellationReason.TASK_SHUTDOWN);
+      holder.cancel(CancellationReason.TASK_SHUTDOWN, null);
     }
   }
 

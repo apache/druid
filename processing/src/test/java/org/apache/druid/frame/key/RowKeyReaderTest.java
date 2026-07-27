@@ -26,9 +26,9 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -81,17 +81,17 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
       final Object keyPart = keyReader.read(key, i);
 
       if (objects.get(i) instanceof Object[]) {
-        MatcherAssert.assertThat(keyPart, CoreMatchers.instanceOf(Object[].class));
-        Assert.assertArrayEquals(
-            "read: " + signature.getColumnName(i),
+        Assertions.assertInstanceOf(Object[].class, keyPart);
+        Assertions.assertArrayEquals(
             (Object[]) objects.get(i),
-            (Object[]) keyPart
+            (Object[]) keyPart,
+            "read: " + signature.getColumnName(i)
         );
       } else {
-        Assert.assertEquals(
-            "read: " + signature.getColumnName(i),
+        Assertions.assertEquals(
             objects.get(i),
-            keyPart
+            keyPart,
+            "read: " + signature.getColumnName(i)
         );
       }
     }
@@ -101,10 +101,10 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
   public void test_hasMultipleValues()
   {
     for (int i = 0; i < signature.size(); i++) {
-      Assert.assertEquals(
-          "hasMultipleValues: " + signature.getColumnName(i),
+      Assertions.assertEquals(
           objects.get(i) instanceof List || objects.get(i) instanceof Object[],
-          keyReader.hasMultipleValues(key, i)
+          keyReader.hasMultipleValues(key, i),
+          "hasMultipleValues: " + signature.getColumnName(i)
       );
     }
   }
@@ -112,13 +112,13 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
   @Test
   public void test_trim_zero()
   {
-    Assert.assertEquals(RowKey.empty(), keyReader.trim(key, 0));
+    Assertions.assertEquals(RowKey.empty(), keyReader.trim(key, 0));
   }
 
   @Test
   public void test_trim_one()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         KeyTestUtils.createKey(
             RowSignature.builder().add(signature.getColumnName(0), signature.getColumnType(0).get()).build(),
             FrameType.latestRowBased(),
@@ -136,7 +136,7 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
     IntStream.range(0, numFields)
              .forEach(i -> trimmedSignature.add(signature.getColumnName(i), signature.getColumnType(i).get()));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         KeyTestUtils.createKey(
             trimmedSignature.build(),
             FrameType.latestRowBased(),
@@ -149,13 +149,13 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
   @Test
   public void test_trim_fullLength()
   {
-    Assert.assertEquals(key, keyReader.trim(key, signature.size()));
+    Assertions.assertEquals(key, keyReader.trim(key, signature.size()));
   }
 
   @Test
   public void test_trim_beyondFullLength()
   {
-    final IllegalArgumentException e = Assert.assertThrows(
+    final IllegalArgumentException e = Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> keyReader.trim(key, signature.size() + 1)
     );
@@ -169,7 +169,7 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
     RowKey trimmedKey = keyReader.trim(key, 0);
     RowKeyReader trimmedKeyReader = keyReader.trimmedKeyReader(0);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.emptyList(),
         trimmedKeyReader.read(trimmedKey)
     );
@@ -181,7 +181,7 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
     RowKey trimmedKey = keyReader.trim(key, 1);
     RowKeyReader trimmedKeyReader = keyReader.trimmedKeyReader(1);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         objects.subList(0, 1),
         trimmedKeyReader.read(trimmedKey)
     );
@@ -194,7 +194,7 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
     RowKey trimmedKey = keyReader.trim(key, numFields);
     RowKeyReader trimmedKeyReader = keyReader.trimmedKeyReader(numFields);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         objects.subList(0, numFields),
         trimmedKeyReader.read(trimmedKey)
     );

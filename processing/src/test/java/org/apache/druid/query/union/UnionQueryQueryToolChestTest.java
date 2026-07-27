@@ -41,7 +41,7 @@ import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -95,7 +95,7 @@ public class UnionQueryQueryToolChestTest
     UnionQuery query = new UnionQuery(queries);
 
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         sig,
         query.getResultRowSignature()
     );

@@ -23,7 +23,7 @@ title: "Realtime Process"
   ~ under the License.
   -->
 
-Older versions of Apache Druid supported a standalone 'Realtime' process to query and index 'stream pull'
+Older versions of Apache&circledR; Druid supported a standalone 'Realtime' process to query and index 'stream pull'
 modes of real-time ingestion. These processes would periodically build segments for the data they had collected over
 some span of time and then set up hand-off to [Historical](../design/historical.md) servers.
 

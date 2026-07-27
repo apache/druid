@@ -11662,6 +11662,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ColumnType.STRING
                             ),
                             expressionVirtualColumn(
+                                "v1",
+                                "'dummy'",
+                                ColumnType.STRING
+                            ),
+                            expressionVirtualColumn(
                                 "v2",
                                 "timestamp_floor(\"__time\",'P1M',null,'UTC')",
                                 ColumnType.LONG
@@ -11670,15 +11675,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("v0", "d0"),
+                                new DefaultDimensionSpec("v1", "d1", ColumnType.STRING),
                                 new DefaultDimensionSpec("v2", "d2", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setSubtotalsSpec(
                             ImmutableList.of(
-                                ImmutableList.of("d0", "d2"),
+                                ImmutableList.of("d0", "d1", "d2"),
                                 ImmutableList.of("d0"),
-                                ImmutableList.of(),
+                                ImmutableList.of("d1"),
                                 ImmutableList.of("d2")
                             )
                         )
@@ -11954,6 +11960,84 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"abc", null, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupingSetsWithSingleValueFilter()
+  {
+    msqIncompatible();
+    testQuery(
+        "SELECT dim1, dim2, SUM(cnt)\n"
+        + "FROM druid.foo\n"
+        + "WHERE dim2 = 'a'\n"
+        + "GROUP BY GROUPING SETS ( (dim1, dim2), (dim1) )",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING),
+                                new DefaultDimensionSpec("dim2", "d1", ColumnType.STRING)
+                            )
+                        )
+                        .setDimFilter(equality("dim2", "a", ColumnType.STRING))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("d0", "d1"),
+                                ImmutableList.of("d0")
+                            )
+                        )
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "a", 1L},
+            new Object[]{"1", "a", 1L},
+            new Object[]{"", null, 1L},
+            new Object[]{"1", null, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupingSetsWithSingleValueFilterUsingIn()
+  {
+    msqIncompatible();
+    testQuery(
+        "SELECT dim1, dim2, SUM(cnt)\n"
+        + "FROM druid.foo\n"
+        + "WHERE dim2 IN ('a')\n"
+        + "GROUP BY GROUPING SETS ( (dim1, dim2), (dim1) )",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING),
+                                new DefaultDimensionSpec("dim2", "d1", ColumnType.STRING)
+                            )
+                        )
+                        .setDimFilter(equality("dim2", "a", ColumnType.STRING))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setSubtotalsSpec(
+                            ImmutableList.of(
+                                ImmutableList.of("d0", "d1"),
+                                ImmutableList.of("d0")
+                            )
+                        )
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "a", 1L},
+            new Object[]{"1", "a", 1L},
+            new Object[]{"", null, 1L},
+            new Object[]{"1", null, 1L}
         )
     );
   }

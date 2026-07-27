@@ -34,7 +34,7 @@ import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.joda.time.Interval;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -54,7 +54,7 @@ public class VersionedIntervalTimelineTestBase
       List<TimelineObjectHolder<String, OvershadowableInteger>> actual
   )
   {
-    Assert.assertEquals("Sizes did not match.", expected.size(), actual.size());
+    Assertions.assertEquals(expected.size(), actual.size(), "Sizes did not match.");
 
     Iterator<Pair<Interval, Pair<String, PartitionHolder<OvershadowableInteger>>>> expectedIter = expected.iterator();
     Iterator<TimelineObjectHolder<String, OvershadowableInteger>> actualIter = actual.iterator();
@@ -63,19 +63,19 @@ public class VersionedIntervalTimelineTestBase
       Pair<Interval, Pair<String, PartitionHolder<OvershadowableInteger>>> pair = expectedIter.next();
       TimelineObjectHolder<String, OvershadowableInteger> holder = actualIter.next();
 
-      Assert.assertEquals(pair.lhs, holder.getInterval());
-      Assert.assertEquals(pair.rhs.lhs, holder.getVersion());
+      Assertions.assertEquals(pair.lhs, holder.getInterval());
+      Assertions.assertEquals(pair.rhs.lhs, holder.getVersion());
 
       final List<PartitionChunk<OvershadowableInteger>> expectedChunks = Lists.newArrayList(pair.rhs.rhs);
       final List<PartitionChunk<OvershadowableInteger>> actualChunks = Lists.newArrayList(holder.getObject());
 
-      Assert.assertEquals(expectedChunks.size(), actualChunks.size());
+      Assertions.assertEquals(expectedChunks.size(), actualChunks.size());
       for (int i = 0; i < expectedChunks.size(); i++) {
         // Check partitionNumber first
-        Assert.assertEquals(expectedChunks.get(i), actualChunks.get(i));
+        Assertions.assertEquals(expectedChunks.get(i), actualChunks.get(i));
         final OvershadowableInteger expectedInteger = expectedChunks.get(i).getObject();
         final OvershadowableInteger actualInteger = actualChunks.get(i).getObject();
-        Assert.assertEquals(expectedInteger, actualInteger);
+        Assertions.assertEquals(expectedInteger, actualInteger);
       }
     }
   }
@@ -85,7 +85,7 @@ public class VersionedIntervalTimelineTestBase
       Set<TimelineObjectHolder<String, OvershadowableInteger>> actual
   )
   {
-    Assert.assertEquals("Sizes did not match.", expected.size(), actual.size());
+    Assertions.assertEquals(expected.size(), actual.size(), "Sizes did not match.");
 
     Set<Pair<Interval, Pair<String, PartitionHolder<OvershadowableInteger>>>> actualSet =
         Sets.newHashSet(
@@ -95,7 +95,7 @@ public class VersionedIntervalTimelineTestBase
             )
         );
 
-    Assert.assertEquals(expected, actualSet);
+    Assertions.assertEquals(expected, actualSet);
   }
 
   static void assertSingleElementChunks(
@@ -105,7 +105,7 @@ public class VersionedIntervalTimelineTestBase
   {
     SingleElementPartitionChunk<OvershadowableInteger> expectedSingle = (SingleElementPartitionChunk<OvershadowableInteger>) expected;
     SingleElementPartitionChunk<OvershadowableInteger> actualSingle = (SingleElementPartitionChunk<OvershadowableInteger>) actual;
-    Assert.assertEquals(expectedSingle.getObject(), actualSingle.getObject());
+    Assertions.assertEquals(expectedSingle.getObject(), actualSingle.getObject());
   }
 
   static VersionedIntervalTimeline<String, OvershadowableInteger> makeStringIntegerTimeline()
@@ -126,7 +126,7 @@ public class VersionedIntervalTimelineTestBase
       }
     }
 
-    Assert.assertTrue(timeline.findFullyOvershadowed().isEmpty());
+    Assertions.assertTrue(timeline.findFullyOvershadowed().isEmpty());
   }
 
   TimelineObjectHolder<String, OvershadowableInteger> makeTimelineObjectHolder(

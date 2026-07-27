@@ -29,6 +29,7 @@ import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.file.SegmentFileBuilderV10;
 import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 
@@ -249,7 +250,7 @@ public class IndexSpec
     } else if (defaultSpec.metadataCompression != null) {
       bob.withMetadataCompression(defaultSpec.metadataCompression);
     } else {
-      bob.withMetadataCompression(CompressionStrategy.NONE);
+      bob.withMetadataCompression(SegmentFileBuilderV10.DEFAULT_METADATA_COMPRESSION);
     }
 
     if (dimensionCompression != null) {

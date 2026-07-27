@@ -160,7 +160,7 @@ public class DruidStatementTest extends CalciteTestBase
                     .buildJdbc();
     try (final DruidJdbcStatement statement = jdbcStatement()) {
       // First frame, ask for all rows.
-      statement.execute(queryPlus, -1);
+      statement.execute(queryPlus, -1, null);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           subQueryWithOrderByResults(),
@@ -180,7 +180,7 @@ public class DruidStatementTest extends CalciteTestBase
                     .buildJdbc();
     try (final DruidJdbcStatement statement = jdbcStatement()) {
       // First frame, ask for all rows.
-      statement.execute(queryPlus, -1);
+      statement.execute(queryPlus, -1, null);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           subQueryWithOrderByResults(),
@@ -227,7 +227,7 @@ public class DruidStatementTest extends CalciteTestBase
                     .buildJdbc();
     try (final DruidJdbcStatement statement = jdbcStatement()) {
       // First frame, ask for all rows.
-      statement.execute(queryPlus, -1);
+      statement.execute(queryPlus, -1, null);
       statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       statement.closeResultSet();
       statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
@@ -247,7 +247,7 @@ public class DruidStatementTest extends CalciteTestBase
                     .auth(AllowAllAuthenticator.ALLOW_ALL_RESULT)
                     .buildJdbc();
     try (final DruidJdbcStatement statement = jdbcStatement()) {
-      statement.execute(queryPlus, -1);
+      statement.execute(queryPlus, -1, null);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           subQueryWithOrderByResults(),
@@ -256,7 +256,7 @@ public class DruidStatementTest extends CalciteTestBase
 
       // Do it again. JDBC says we can reuse statements sequentially.
       Assert.assertTrue(statement.isDone());
-      statement.execute(queryPlus, -1);
+      statement.execute(queryPlus, -1, null);
       frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           subQueryWithOrderByResults(),
@@ -292,7 +292,7 @@ public class DruidStatementTest extends CalciteTestBase
                     .buildJdbc();
     try (final DruidJdbcStatement statement = jdbcStatement()) {
       // First frame, ask for all rows.
-      statement.execute(queryPlus, -1);
+      statement.execute(queryPlus, -1, null);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           Meta.Frame.create(
@@ -334,7 +334,7 @@ public class DruidStatementTest extends CalciteTestBase
     try (final DruidJdbcStatement statement = jdbcStatement()) {
 
       // First frame, ask for 2 rows.
-      statement.execute(queryPlus, -1);
+      statement.execute(queryPlus, -1, null);
       Assert.assertEquals(0, statement.getCurrentOffset());
       Assert.assertFalse(statement.isDone());
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 2);
@@ -369,7 +369,7 @@ public class DruidStatementTest extends CalciteTestBase
                     .buildJdbc();
     try (final DruidJdbcStatement statement = jdbcStatement()) {
       // First frame, ask for 2 rows.
-      statement.execute(queryPlus, -1);
+      statement.execute(queryPlus, -1, null);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 2);
       Assert.assertEquals(
           firstFrameResults(),
@@ -378,7 +378,7 @@ public class DruidStatementTest extends CalciteTestBase
       Assert.assertFalse(statement.isDone());
 
       // Do it again. Closes the prior result set.
-      statement.execute(queryPlus, -1);
+      statement.execute(queryPlus, -1, null);
       frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 2);
       Assert.assertEquals(
           firstFrameResults(),
@@ -410,7 +410,7 @@ public class DruidStatementTest extends CalciteTestBase
                     .buildJdbc();
     try (final DruidJdbcStatement statement = jdbcStatement()) {
       // First frame, ask for 2 rows.
-      statement.execute(queryPlus, -1);
+      statement.execute(queryPlus, -1, null);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 2);
       Assert.assertEquals(
           firstFrameResults(),
@@ -464,7 +464,7 @@ public class DruidStatementTest extends CalciteTestBase
                     .buildJdbc();
     try (final DruidJdbcStatement statement = jdbcStatement()) {
       // Check signature.
-      statement.execute(queryPlus, -1);
+      statement.execute(queryPlus, -1, null);
       verifySignature(statement.getSignature());
     }
   }
@@ -533,7 +533,7 @@ public class DruidStatementTest extends CalciteTestBase
     try (final DruidJdbcPreparedStatement statement = jdbcPreparedStatement(queryPlus)) {
       statement.prepare();
       // First frame, ask for all rows.
-      statement.execute(Collections.emptyList());
+      statement.execute(Collections.emptyList(), null);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           subQueryWithOrderByResults(),
@@ -554,7 +554,7 @@ public class DruidStatementTest extends CalciteTestBase
                     .buildJdbc();
     try (final DruidJdbcPreparedStatement statement = jdbcPreparedStatement(queryPlus)) {
       statement.prepare();
-      statement.execute(Collections.emptyList());
+      statement.execute(Collections.emptyList(), null);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           subQueryWithOrderByResults(),
@@ -563,7 +563,7 @@ public class DruidStatementTest extends CalciteTestBase
 
       // Do it again. JDBC says we can reuse prepared statements sequentially.
       Assert.assertTrue(statement.isDone());
-      statement.execute(Collections.emptyList());
+      statement.execute(Collections.emptyList(), null);
       frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           subQueryWithOrderByResults(),
@@ -603,7 +603,7 @@ public class DruidStatementTest extends CalciteTestBase
       statement.prepare();
 
       // Execute many times. First time.
-      statement.execute(matchingParams);
+      statement.execute(matchingParams, null);
       Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           expected,
@@ -611,7 +611,7 @@ public class DruidStatementTest extends CalciteTestBase
       );
 
       // Again, same value.
-      statement.execute(matchingParams);
+      statement.execute(matchingParams, null);
       frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           expected,
@@ -621,7 +621,7 @@ public class DruidStatementTest extends CalciteTestBase
       // Again, no matches.
       statement.execute(
           Collections.singletonList(
-              TypedValue.ofLocal(ColumnMetaData.Rep.STRING, "foo")));
+              TypedValue.ofLocal(ColumnMetaData.Rep.STRING, "foo")), null);
       frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 6);
       Assert.assertEquals(
           Meta.Frame.create(0, true, Collections.emptyList()),

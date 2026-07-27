@@ -44,6 +44,14 @@ public class BroadcastDatasourceLoadingSpecTest
   }
 
   @Test
+  public void testModeNeedsBroadcastSegments()
+  {
+    Assert.assertTrue(BroadcastDatasourceLoadingSpec.Mode.ALL.needsBroadcastSegments());
+    Assert.assertFalse(BroadcastDatasourceLoadingSpec.Mode.NONE.needsBroadcastSegments());
+    Assert.assertTrue(BroadcastDatasourceLoadingSpec.Mode.ONLY_REQUIRED.needsBroadcastSegments());
+  }
+
+  @Test
   public void testLoadingNoLookups()
   {
     final BroadcastDatasourceLoadingSpec spec = BroadcastDatasourceLoadingSpec.NONE;

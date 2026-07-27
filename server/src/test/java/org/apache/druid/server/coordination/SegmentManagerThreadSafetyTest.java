@@ -31,7 +31,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestIndex;
@@ -43,6 +43,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentizerFactory;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
@@ -119,6 +120,7 @@ public class SegmentManagerThreadSafetyTest
     segmentCacheManager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         objectMapper
@@ -245,7 +247,7 @@ public class SegmentManagerThreadSafetyTest
     {
       return new Segment()
       {
-        PhysicalSegmentInspector rowCountInspector = Mockito.mock(PhysicalSegmentInspector.class);
+        RowCountInspector rowCountInspector = Mockito.mock(RowCountInspector.class);
 
         @Override
         public SegmentId getId()
@@ -262,7 +264,7 @@ public class SegmentManagerThreadSafetyTest
         @Override
         public <T> T as(Class<T> clazz)
         {
-          if (PhysicalSegmentInspector.class.equals(clazz)) {
+          if (RowCountInspector.class.equals(clazz)) {
             Mockito.when(rowCountInspector.getNumRows()).thenReturn(1);
             return (T) rowCountInspector;
           }

@@ -37,6 +37,7 @@ import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
+import org.apache.druid.data.input.InputFilePointer;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
@@ -288,6 +289,15 @@ public class LocalInputSource
         SystemFieldDecoratorFactory.fromInputSource(this),
         temporaryDirectory
     );
+  }
+
+  @Nullable
+  @Override
+  public List<InputFilePointer> asFilePointers()
+  {
+    // Intentionally not implemented, because this method is used for fetching external files to a local
+    // cache, and there is no point in copying local files from one place to another.
+    return null;
   }
 
   @Override

@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -35,6 +36,8 @@ public class CostMetrics
   private final long taskDurationSeconds;
   private final double avgProcessingRate;
   private final double aggregateLag;
+  @Nullable
+  private final Double maxObservedRate;
 
   public CostMetrics(
       double avgPartitionLag,
@@ -42,7 +45,8 @@ public class CostMetrics
       int partitionCount,
       double pollIdleRatio,
       long taskDurationSeconds,
-      double avgProcessingRate
+      double avgProcessingRate,
+      @Nullable Double maxObservedRate
   )
   {
     this.avgPartitionLag = avgPartitionLag;
@@ -52,6 +56,7 @@ public class CostMetrics
     this.taskDurationSeconds = taskDurationSeconds;
     this.avgProcessingRate = avgProcessingRate;
     this.aggregateLag = avgPartitionLag * partitionCount;
+    this.maxObservedRate = maxObservedRate;
   }
 
   /**
@@ -105,6 +110,27 @@ public class CostMetrics
     return avgProcessingRate;
   }
 
+  @Nullable
+  public Double getMaxObservedRate()
+  {
+    return maxObservedRate;
+  }
+
+
+  /**
+   * Derives the current idle ratio from the processing rate relative to the max observed rate
+   * ({@code avgProcessingRate / maxObservedRate}). Returns a negative value when no rate baseline
+   * is available yet (no observed rate samples, or a zero watermark), signalling an unknown idle ratio.
+   */
+  double estimateIdleRatioFromProcessingRate()
+  {
+    if (maxObservedRate == null || maxObservedRate <= 0) {
+      return -1.0;
+    }
+    final double ratio = Math.min(1.0, avgProcessingRate / maxObservedRate);
+    return 1.0 - ratio;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -120,7 +146,8 @@ public class CostMetrics
            && partitionCount == that.partitionCount
            && Double.compare(that.pollIdleRatio, pollIdleRatio) == 0
            && taskDurationSeconds == that.taskDurationSeconds
-           && Double.compare(that.avgProcessingRate, avgProcessingRate) == 0;
+           && Double.compare(that.avgProcessingRate, avgProcessingRate) == 0
+           && Objects.equals(that.maxObservedRate, maxObservedRate);
   }
 
   @Override
@@ -132,7 +159,8 @@ public class CostMetrics
         partitionCount,
         pollIdleRatio,
         taskDurationSeconds,
-        avgProcessingRate
+        avgProcessingRate,
+        maxObservedRate
     );
   }
 
@@ -146,6 +174,7 @@ public class CostMetrics
            ", pollIdleRatio=" + pollIdleRatio +
            ", taskDurationSeconds=" + taskDurationSeconds +
            ", avgProcessingRate=" + avgProcessingRate +
+           ", maxObservedRate=" + maxObservedRate +
            '}';
   }
 }

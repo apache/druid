@@ -28,10 +28,10 @@ import org.apache.druid.java.util.emitter.service.UnitEvent;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
 import org.asynchttpclient.Response;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -47,13 +47,13 @@ public class ParametrizedUriEmitterTest
   private MockHttpClient httpClient;
   private Lifecycle lifecycle;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     httpClient = new MockHttpClient();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     if (lifecycle != null) {
@@ -72,7 +72,7 @@ public class ParametrizedUriEmitterTest
     );
     lifecycle = new Lifecycle();
     Emitter emitter = Emitters.create(props, httpClient, lifecycle);
-    Assert.assertEquals(ParametrizedUriEmitter.class, emitter.getClass());
+    Assertions.assertEquals(ParametrizedUriEmitter.class, emitter.getClass());
     lifecycle.start();
     return emitter;
   }
@@ -98,8 +98,8 @@ public class ParametrizedUriEmitterTest
           @Override
           public ListenableFuture<Response> go(Request request) throws JsonProcessingException
           {
-            Assert.assertEquals("http://example.com/test", request.getUrl());
-            Assert.assertEquals(
+            Assertions.assertEquals("http://example.com/test", request.getUrl());
+            Assertions.assertEquals(
                 StringUtils.format(
                     "[%s,%s]\n",
                     JSON_MAPPER.writeValueAsString(events.get(0)),
@@ -117,7 +117,7 @@ public class ParametrizedUriEmitterTest
       emitter.emit(event);
     }
     emitter.flush();
-    Assert.assertTrue(httpClient.succeeded());
+    Assertions.assertTrue(httpClient.succeeded());
   }
 
   @Test
@@ -150,13 +150,13 @@ public class ParametrizedUriEmitterTest
       emitter.emit(event);
     }
     emitter.flush();
-    Assert.assertTrue(httpClient.succeeded());
+    Assertions.assertTrue(httpClient.succeeded());
     Map<String, String> expected = ImmutableMap.of(
         "http://example.com/test1", StringUtils.format("[%s]\n", JSON_MAPPER.writeValueAsString(events.get(0))),
         "http://example.com/test2", StringUtils.format("[%s]\n", JSON_MAPPER.writeValueAsString(events.get(1)))
     );
     for (Map.Entry<String, String> entry : expected.entrySet()) {
-      Assert.assertEquals(JSON_MAPPER.readTree(expected.get(entry.getKey())), JSON_MAPPER.readTree(results.get(entry.getKey())));
+      Assertions.assertEquals(JSON_MAPPER.readTree(expected.get(entry.getKey())), JSON_MAPPER.readTree(results.get(entry.getKey())));
     }
   }
 
@@ -175,8 +175,8 @@ public class ParametrizedUriEmitterTest
           @Override
           protected ListenableFuture<Response> go(Request request) throws JsonProcessingException
           {
-            Assert.assertEquals("http://example.com/val1/val2", request.getUrl());
-            Assert.assertEquals(
+            Assertions.assertEquals("http://example.com/val1/val2", request.getUrl());
+            Assertions.assertEquals(
                 StringUtils.format(
                     "[%s,%s]\n",
                     JSON_MAPPER.writeValueAsString(events.get(0)),
@@ -194,7 +194,7 @@ public class ParametrizedUriEmitterTest
       emitter.emit(event);
     }
     emitter.flush();
-    Assert.assertTrue(httpClient.succeeded());
+    Assertions.assertTrue(httpClient.succeeded());
   }
 
   @Test
@@ -210,7 +210,7 @@ public class ParametrizedUriEmitterTest
       emitter.flush();
     }
     catch (IllegalArgumentException e) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           e.getMessage(),
           StringUtils.format(
               "ParametrizedUriExtractor with pattern http://example.com/{keyNotSetInEvents} requires keyNotSetInEvents to be set in event, but found %s",

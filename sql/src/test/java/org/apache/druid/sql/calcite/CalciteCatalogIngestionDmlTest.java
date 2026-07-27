@@ -19,9 +19,11 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.ResolvedTable;
@@ -36,6 +38,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
@@ -43,8 +46,10 @@ import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFacto
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.CalciteCatalogIngestionDmlTest.CatalogIngestionDmlComponentSupplier;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.Externals;
@@ -92,7 +97,9 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
       super(tempFolderProducer);
     }
 
-    private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+    private static final ObjectMapper MAPPER = new DefaultObjectMapper().setInjectableValues(
+        new InjectableValues.Std().addValue(ExprMacroTable.class, ExprMacroTable.nil())
+    );
     public static ImmutableMap<String, DatasourceTable> RESOLVED_TABLES = ImmutableMap.of(
         "hourDs", new DatasourceTable(
             RowSignature.builder().addTimeColumn().build(),
@@ -348,6 +355,73 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                     .addTimeColumn()
                     .add("dim1", ColumnType.STRING)
                     .add("dim2", ColumnType.STRING)
+                    .add("cnt", ColumnType.LONG)
+                    .build()),
+                false
+            )
+        ),
+        "tableWithBaseTable", new DatasourceTable(
+            RowSignature.builder()
+                .add("tenant_lower", ColumnType.STRING)
+                .addTimeColumn()
+                .add("tenant", ColumnType.STRING)
+                .add("dim1", ColumnType.STRING)
+                .add("cnt", ColumnType.LONG)
+                .build(),
+            new DatasourceTable.PhysicalDatasourceMetadata(
+                new TableDataSource("tableWithBaseTable"),
+                RowSignature.builder()
+                    .add("tenant_lower", ColumnType.STRING)
+                    .addTimeColumn()
+                    .add("tenant", ColumnType.STRING)
+                    .add("dim1", ColumnType.STRING)
+                    .add("cnt", ColumnType.LONG)
+                    .build(),
+                false,
+                false
+            ),
+            new DatasourceTable.EffectiveMetadata(
+                new DatasourceFacade(new ResolvedTable(
+                    new TableDefn(
+                        "tableWithBaseTable",
+                        DatasourceDefn.TABLE_TYPE,
+                        null,
+                        null
+                    ),
+                    new TableSpec(
+                        DatasourceDefn.TABLE_TYPE,
+                        ImmutableMap.of(
+                            DatasourceDefn.SEALED_PROPERTY, true,
+                            DatasourceDefn.BASE_TABLE_PROPERTY,
+                            new ClusteredValueGroupsBaseTableMetadata(
+                                ImmutableList.of("tenant_lower"),
+                                VirtualColumns.create(
+                                    new ExpressionVirtualColumn(
+                                        "tenant_lower",
+                                        "lower(\"tenant\")",
+                                        ColumnType.STRING,
+                                        ExprMacroTable.nil()
+                                    )
+                                )
+                            )
+                        ),
+                        // declared order is the physical segment order: the clustering column leads. 'tenant' is
+                        // declared because virtual column inputs must themselves be stored columns.
+                        ImmutableList.of(
+                            new ColumnSpec("tenant_lower", Columns.STRING, null),
+                            new ColumnSpec("__time", Columns.TIME_COLUMN, null),
+                            new ColumnSpec("tenant", Columns.STRING, null),
+                            new ColumnSpec("dim1", Columns.STRING, null),
+                            new ColumnSpec("cnt", Columns.LONG, null)
+                        )
+                    ),
+                    MAPPER
+                )),
+                DatasourceTable.EffectiveMetadata.toEffectiveColumns(RowSignature.builder()
+                    .add("tenant_lower", ColumnType.STRING)
+                    .addTimeColumn()
+                    .add("tenant", ColumnType.STRING)
+                    .add("dim1", ColumnType.STRING)
                     .add("cnt", ColumnType.LONG)
                     .build()),
                 false
@@ -996,6 +1070,117 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
         .verify();
   }
 
+  /**
+   * Inserting declared columns into a table with a base table layout succeeds. The computed clustering column
+   * 'tenant_lower' is not (and cannot be) supplied by the query: the virtual column populates it at ingest time from
+   * the supplied 'tenant' column.
+   */
+  @Test
+  public void testInsertIntoBaseTableCatalogTable()
+  {
+    ExternalDataSource externalDataSource = new ExternalDataSource(
+        new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
+        RowSignature.builder()
+            .add("a", ColumnType.STRING)
+            .add("b", ColumnType.STRING)
+            .add("c", ColumnType.LONG)
+            .add("d", ColumnType.STRING)
+            .add("e", ColumnType.STRING)
+            .build()
+    );
+    final RowSignature signature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .add("tenant", ColumnType.STRING)
+        .add("dim1", ColumnType.STRING)
+        .add("cnt", ColumnType.LONG)
+        .build();
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "tableWithBaseTable") + "\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS tenant,\n" +
+             "  d AS dim1,\n" +
+             "  c AS cnt\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("tableWithBaseTable", signature)
+        .expectResources(dataSourceWrite("tableWithBaseTable"), Externals.externalRead("EXTERNAL"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(externalDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "timestamp_parse(\"a\",null,'UTC')", ColumnType.LONG)
+                )
+                .columns("v0", "b", "d", "c")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .verify();
+  }
+
+  /**
+   * A base table layout derives the physical segment schema from the declared columns, so a column that is not
+   * declared cannot be stored: base table layouts require the sealed property, which rejects undeclared columns.
+   */
+  @Test
+  public void testInsertAddNonDefinedColumnIntoBaseTableCatalogTable()
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "tableWithBaseTable") + "\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS tenant,\n" +
+             "  d AS dim1,\n" +
+             "  c AS cnt,\n" +
+             "  e AS extra\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidException.class,
+            "Column [extra] is not defined in the target table [druid.tableWithBaseTable] strict schema"
+        )
+        .verify();
+  }
+
+  /**
+   * Columns computed by the base table layout's ingest-time virtual columns always store the computed value, so a
+   * query output with that name would never be read; writing to them directly is rejected rather than silently
+   * discarding the supplied values.
+   */
+  @Test
+  public void testInsertComputedColumnIntoBaseTableCatalogTable()
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "tableWithBaseTable") + "\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  LOWER(b) AS tenant_lower,\n" +
+             "  d AS dim1,\n" +
+             "  c AS cnt\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidException.class,
+            "Column [tenant_lower] of target table [druid.tableWithBaseTable] is computed by a virtual column at"
+            + " ingest time and cannot be written directly; supply the virtual column's input columns instead"
+        )
+        .verify();
+  }
 
   /**
    * Inserting into a catalog table with a WITH source succeeds

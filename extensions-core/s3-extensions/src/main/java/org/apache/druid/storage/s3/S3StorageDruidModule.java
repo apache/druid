@@ -39,17 +39,9 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.http.apache.ApacheHttpClient;
-import software.amazon.awssdk.http.apache.ProxyConfiguration;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
-import software.amazon.awssdk.services.s3.S3Configuration;
 
 import javax.annotation.Nullable;
 import java.net.URI;
@@ -150,75 +142,15 @@ public class S3StorageDruidModule implements DruidModule
               : ""
       );
     }
-
-    final boolean useHttps = S3Utils.useHttps(clientConfig, endpointConfig);
-    final URI endpointOverride = buildEndpointOverride(endpointConfig, useHttps);
-    final Region region = StringUtils.isNotEmpty(endpointConfig.getSigningRegion())
-        ? Region.of(endpointConfig.getSigningRegion())
-        : null;
-
-    final Supplier<S3Client> s3ClientSupplier = () -> {
-      // Build HTTP client with proxy configuration
-      ApacheHttpClient.Builder httpClientBuilder = ApacheHttpClient.builder()
-          .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeoutMillis()))
-          .socketTimeout(Duration.ofMillis(clientConfig.getSocketTimeoutMillis()))
-          .maxConnections(clientConfig.getMaxConnections());
-
-      ProxyConfiguration proxyConfiguration = S3Utils.buildProxyConfiguration(proxyConfig);
-      if (proxyConfiguration != null) {
-        httpClientBuilder.proxyConfiguration(proxyConfiguration);
-      }
-
-      // Build S3 configuration
-      // Note: forcePathStyle is configured on the S3ClientBuilder, not in S3Configuration
-      S3Configuration s3Configuration = S3Configuration.builder()
-          .chunkedEncodingEnabled(!clientConfig.isDisableChunkedEncoding())
-          .build();
-
-      S3ClientBuilder s3ClientBuilder = S3Client.builder()
-          .credentialsProvider(provider)
-          .httpClientBuilder(httpClientBuilder)
-          .serviceConfiguration(s3Configuration)
-          .forcePathStyle(clientConfig.isEnablePathStyleAccess())
-          .crossRegionAccessEnabled(clientConfig.isCrossRegionAccessEnabled());
-
-      if (endpointOverride != null) {
-        s3ClientBuilder.endpointOverride(endpointOverride);
-      }
-
-      if (region != null) {
-        s3ClientBuilder.region(region);
-      }
-
-      return s3ClientBuilder.build();
-    };
-
-    // Create async client supplier for S3TransferManager
-    final AsyncHttpClientType asyncHttpClientType =
-        AsyncHttpClientType.fromString(storageConfig.getS3TransferConfig().getAsyncHttpClientType());
-    final Supplier<S3AsyncClient> s3AsyncClientSupplier = () -> {
-      S3AsyncClientBuilder s3AsyncClientBuilder = S3AsyncClient.builder()
-          .credentialsProvider(provider)
-          .httpClientBuilder(asyncHttpClientType.buildBuilder(clientConfig))
-          .forcePathStyle(clientConfig.isEnablePathStyleAccess())
-          .crossRegionAccessEnabled(clientConfig.isCrossRegionAccessEnabled())
-          .multipartEnabled(true);
-
-      if (endpointOverride != null) {
-        s3AsyncClientBuilder.endpointOverride(endpointOverride);
-      }
-
-      if (region != null) {
-        s3AsyncClientBuilder.region(region);
-      }
-
-      return s3AsyncClientBuilder.build();
-    };
-
-    return ServerSideEncryptingAmazonS3.builder()
-                                       .setS3ClientSupplier(s3ClientSupplier)
-                                       .setS3AsyncClientSupplier(s3AsyncClientSupplier)
-                                       .setS3StorageConfig(storageConfig);
+    return ServerSideEncryptingAmazonS3.builder(
+        provider,
+        storageConfig,
+        proxyConfig,
+        endpointConfig,
+        clientConfig,
+        null,
+        null
+    );
   }
 
   public enum AsyncHttpClientType

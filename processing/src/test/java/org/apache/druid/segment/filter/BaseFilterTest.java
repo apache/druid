@@ -618,22 +618,17 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                       // remove variant type columns from row frames since they aren't currently supported
                       input.mapSchema(
                           schema ->
-                              new IncrementalIndexSchema(
-                                  schema.getMinTimestamp(),
-                                  schema.getTimestampSpec(),
-                                  schema.getQueryGranularity(),
-                                  schema.getVirtualColumns(),
-                                  schema.getDimensionsSpec().withDimensions(
-                                      schema.getDimensionsSpec()
-                                            .getDimensions()
-                                            .stream()
-                                            .filter(dimensionSchema -> !dimensionSchema.getName().equals("variant"))
-                                            .collect(Collectors.toList())
-                                  ),
-                                  schema.getMetrics(),
-                                  schema.isRollup(),
-                                  schema.getProjections()
-                              )
+                              IncrementalIndexSchema.builder(schema)
+                                                    .withDimensionsSpec(
+                                                        schema.getDimensionsSpec().withDimensions(
+                                                            schema.getDimensionsSpec()
+                                                                  .getDimensions()
+                                                                  .stream()
+                                                                  .filter(d -> !d.getName().equals("variant"))
+                                                                  .collect(Collectors.toList())
+                                                        )
+                                                    )
+                                                    .build()
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.latestRowBased());
                       return Pair.of(segment.as(CursorFactory.class), segment);
@@ -642,22 +637,17 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                       // remove array type columns from columnar frames since they aren't currently supported
                       input.mapSchema(
                           schema ->
-                              new IncrementalIndexSchema(
-                                  schema.getMinTimestamp(),
-                                  schema.getTimestampSpec(),
-                                  schema.getQueryGranularity(),
-                                  schema.getVirtualColumns(),
-                                  schema.getDimensionsSpec().withDimensions(
-                                      schema.getDimensionsSpec()
-                                            .getDimensions()
-                                            .stream()
-                                            .filter(dimensionSchema -> !(dimensionSchema instanceof AutoTypeColumnSchema))
-                                            .collect(Collectors.toList())
-                                  ),
-                                  schema.getMetrics(),
-                                  schema.isRollup(),
-                                  schema.getProjections()
-                              )
+                              IncrementalIndexSchema.builder(schema)
+                                                    .withDimensionsSpec(
+                                                        schema.getDimensionsSpec().withDimensions(
+                                                            schema.getDimensionsSpec()
+                                                                  .getDimensions()
+                                                                  .stream()
+                                                                  .filter(d -> !(d instanceof AutoTypeColumnSchema))
+                                                                  .collect(Collectors.toList())
+                                                        )
+                                                    )
+                                                    .build()
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.latestColumnar());
                       return Pair.of(segment.as(CursorFactory.class), segment);
@@ -743,25 +733,17 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
    */
   private static IncrementalIndexSchema mapToAutoSchema(IncrementalIndexSchema schema)
   {
-    return new IncrementalIndexSchema(
-        schema.getMinTimestamp(),
-        schema.getTimestampSpec(),
-        schema.getQueryGranularity(),
-        schema.getVirtualColumns(),
-        schema.getDimensionsSpec().withDimensions(
-            schema.getDimensionsSpec()
-                  .getDimensions()
-                  .stream()
-                  .map(
-                      dimensionSchema ->
-                          AutoTypeColumnSchema.of(dimensionSchema.getName())
-                  )
-                  .collect(Collectors.toList())
-        ),
-        schema.getMetrics(),
-        schema.isRollup(),
-        schema.getProjections()
-    );
+    return IncrementalIndexSchema.builder(schema)
+                                 .withDimensionsSpec(
+                                     schema.getDimensionsSpec().withDimensions(
+                                         schema.getDimensionsSpec()
+                                               .getDimensions()
+                                               .stream()
+                                               .map(d -> AutoTypeColumnSchema.of(d.getName()))
+                                               .collect(Collectors.toList())
+                                     )
+                                 )
+                                 .build();
   }
 
   protected boolean isAutoSchema()

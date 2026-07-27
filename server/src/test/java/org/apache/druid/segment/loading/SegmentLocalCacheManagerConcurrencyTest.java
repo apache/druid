@@ -34,7 +34,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -175,6 +175,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     manager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         jsonMapper
@@ -182,6 +183,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     virtualStorageManager = new SegmentLocalCacheManager(
         storageLocations,
         vsfLoaderConfig,
+        StorageLoadingThreadPool.createFromConfig(vsfLoaderConfig),
         new RoundRobinStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         jsonMapper
@@ -604,16 +606,16 @@ class SegmentLocalCacheManagerConcurrencyTest
         totalFailures += result.exceptions.size();
         Assertions.assertEquals(
             totalSuccess,
-            location.getWeakStats().getLoadCount() +
+            location.getWeakStats().getLoadBeginCount() +
             location.getWeakStats().getHitCount() +
-            location2.getWeakStats().getLoadCount() +
+            location2.getWeakStats().getLoadBeginCount() +
             location2.getWeakStats().getHitCount(),
             StringUtils.format(
                 "iteration[%s] - loc1: loads[%s] hits[%s] loc2: loads[%s] hits[%s]",
                 i,
-                location.getWeakStats().getLoadCount(),
+                location.getWeakStats().getLoadBeginCount(),
                 location.getWeakStats().getHitCount(),
-                location2.getWeakStats().getLoadCount(),
+                location2.getWeakStats().getLoadBeginCount(),
                 location2.getWeakStats().getHitCount()
             )
         );
@@ -631,9 +633,9 @@ class SegmentLocalCacheManagerConcurrencyTest
     Assertions.assertEquals(iterations, totalSuccess + totalFailures);
     Assertions.assertEquals(
         totalSuccess,
-        location.getWeakStats().getLoadCount()
+        location.getWeakStats().getLoadBeginCount()
         + location.getWeakStats().getHitCount()
-        + location2.getWeakStats().getLoadCount()
+        + location2.getWeakStats().getLoadBeginCount()
         + location2.getWeakStats().getHitCount()
     );
     Assertions.assertTrue(totalFailures <= location.getWeakStats().getRejectCount() + location2.getWeakStats()
@@ -805,14 +807,14 @@ class SegmentLocalCacheManagerConcurrencyTest
     // 5 because __drop path
     Assertions.assertTrue(5 >= location.getPath().listFiles().length);
     Assertions.assertTrue(5 >= location2.getPath().listFiles().length);
-    Assertions.assertTrue(location.getWeakStats().getLoadCount() >= 4);
-    Assertions.assertTrue(location2.getWeakStats().getLoadCount() >= 4);
+    Assertions.assertTrue(location.getWeakStats().getLoadBeginCount() >= 4);
+    Assertions.assertTrue(location2.getWeakStats().getLoadBeginCount() >= 4);
     Assertions.assertEquals(location.getWeakStats().getEvictionCount(), location.getWeakStats().getUnmountCount());
     Assertions.assertEquals(location2.getWeakStats().getEvictionCount(), location2.getWeakStats().getUnmountCount());
-    Assertions.assertEquals(location.getWeakStats().getLoadCount() - 4, location.getWeakStats().getEvictionCount());
-    Assertions.assertEquals(location2.getWeakStats().getLoadCount() - 4, location2.getWeakStats().getEvictionCount());
-    Assertions.assertEquals(location.getWeakStats().getLoadCount() - 4, location.getWeakStats().getUnmountCount());
-    Assertions.assertEquals(location2.getWeakStats().getLoadCount() - 4, location2.getWeakStats().getUnmountCount());
+    Assertions.assertEquals(location.getWeakStats().getLoadBeginCount() - 4, location.getWeakStats().getEvictionCount());
+    Assertions.assertEquals(location2.getWeakStats().getLoadBeginCount() - 4, location2.getWeakStats().getEvictionCount());
+    Assertions.assertEquals(location.getWeakStats().getLoadBeginCount() - 4, location.getWeakStats().getUnmountCount());
+    Assertions.assertEquals(location2.getWeakStats().getLoadBeginCount() - 4, location2.getWeakStats().getUnmountCount());
   }
 
   private void makeSegmentsToLoad(
@@ -938,7 +940,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     {
       final Closer closer = Closer.create();
       final AcquireSegmentAction action = closer.register(
-          segmentManager.acquireSegment(segment)
+          segmentManager.acquireSegment(segment, AcquireMode.FULL)
       );
       try {
         final AcquireSegmentResult result =
@@ -948,7 +950,7 @@ class SegmentLocalCacheManagerConcurrencyTest
         }
         final Optional<Segment> segment = result.getReferenceProvider().acquireReference().map(closer::register);
         if (segment.isPresent()) {
-          PhysicalSegmentInspector gadget = segment.get().as(PhysicalSegmentInspector.class);
+          RowCountInspector gadget = segment.get().as(RowCountInspector.class);
           if (delayMin >= 0 && delayMax > 0) {
             Thread.sleep(ThreadLocalRandom.current().nextInt(delayMin, delayMax));
           }
@@ -993,9 +995,9 @@ class SegmentLocalCacheManagerConcurrencyTest
         if (maxDelayBefore > 0) {
           Thread.sleep(ThreadLocalRandom.current().nextInt(maxDelayBefore));
         }
-        final Optional<Segment> segmentReference = segmentManager.acquireCachedSegment(segment.getId()).map(closer::register);
+        final Optional<Segment> segmentReference = segmentManager.acquireCachedSegment(segment.getId(), AcquireMode.FULL).map(closer::register);
         if (segmentReference.isPresent()) {
-          PhysicalSegmentInspector gadget = segmentReference.get().as(PhysicalSegmentInspector.class);
+          RowCountInspector gadget = segmentReference.get().as(RowCountInspector.class);
           if (maxDelayAfter > 0) {
             Thread.sleep(ThreadLocalRandom.current().nextInt(maxDelayAfter));
           }
@@ -1031,7 +1033,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     {
       final Closer closer = Closer.create();
       final AcquireSegmentAction action = closer.register(
-          segmentManager.acquireSegment(segment)
+          segmentManager.acquireSegment(segment, AcquireMode.FULL)
       );
       try {
         final Future<AcquireSegmentResult> result = action.getSegmentFuture();

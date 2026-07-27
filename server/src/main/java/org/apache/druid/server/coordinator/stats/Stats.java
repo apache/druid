@@ -71,6 +71,14 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("cloneLoad", "segment/clone/assigned/count");
     public static final CoordinatorStat DROPPED_FROM_CLONE
         = CoordinatorStat.toDebugAndEmit("cloneDrop", "segment/clone/dropped/count");
+
+    // Partial-load reconciliation in a run
+    public static final CoordinatorStat PARTIAL_ASSIGNED
+        = CoordinatorStat.toDebugAndEmit("partialAssigned", "segment/partial/assigned/count");
+    public static final CoordinatorStat PARTIAL_STALE_DROPPED
+        = CoordinatorStat.toDebugAndEmit("partialStaleDropped", "segment/partial/staleDropped/count");
+    public static final CoordinatorStat PARTIAL_STALE_CANCELLED
+        = CoordinatorStat.toDebugAndEmit("partialStaleCancelled", "segment/partial/staleCancelled/count");
   }
 
   public static class SegmentQueue

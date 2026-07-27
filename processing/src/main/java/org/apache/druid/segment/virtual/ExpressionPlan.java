@@ -121,11 +121,13 @@ public class ExpressionPlan
   }
 
   /**
-   * An expression with no inputs is a constant
+   * Returns true if this expression is a compile-time constant: it has no input bindings and contains no
+   * non-deterministic sub-expressions (e.g. {@code now()}). Non-deterministic expressions are excluded because they
+   * must be re-evaluated per query/row rather than folded to a single value at selector/index construction time.
    */
   public boolean isConstant()
   {
-    return analysis.getRequiredBindings().isEmpty();
+    return analysis.getRequiredBindings().isEmpty() && !analysis.isNonDeterministic();
   }
 
   /**

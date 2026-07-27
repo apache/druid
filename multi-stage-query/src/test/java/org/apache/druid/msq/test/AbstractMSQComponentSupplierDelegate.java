@@ -49,7 +49,6 @@ public class AbstractMSQComponentSupplierDelegate extends QueryComponentSupplier
   {
     return DruidModuleCollection.of(
         super.getCoreModule(),
-        new MSQTestModule(),
         new IndexingServiceTuningConfigModule(),
         new JoinableFactoryModule(),
         new MSQExternalDataSourceModule(),
@@ -57,6 +56,12 @@ public class AbstractMSQComponentSupplierDelegate extends QueryComponentSupplier
         new TestMSQSqlModule(),
         new CompressedBigDecimalModule()
     );
+  }
+
+  @Override
+  public DruidModule getOverrideModule()
+  {
+    return DruidModuleCollection.of(super.getOverrideModule(), new MSQTestModule());
   }
 
   @Override

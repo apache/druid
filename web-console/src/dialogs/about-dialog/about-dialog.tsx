@@ -57,7 +57,12 @@ export const AboutDialog = React.memo(function AboutDialog(props: AboutDialogPro
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           <Button onClick={onClose}>Close</Button>
-          <AnchorButton intent={Intent.PRIMARY} href={getLink('WEBSITE')} target="_blank">
+          <AnchorButton
+            intent={Intent.PRIMARY}
+            href={getLink('WEBSITE')}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Visit Druid
           </AnchorButton>
         </div>

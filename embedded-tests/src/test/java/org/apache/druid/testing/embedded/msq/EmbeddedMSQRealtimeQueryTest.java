@@ -38,7 +38,6 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -189,9 +188,18 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         payload.getResults().getResults()
     );
 
-    // Verify that realtime queries were issued and no files were read (all data is realtime).
-    MatcherAssert.assertThat(msqApis.getQueriesSum(payload), Matchers.greaterThan(0L));
-    Assertions.assertEquals(0, msqApis.getFilesSum(payload));
+    // Verify that for the first stage, realtime queries were issued and no files were read (all data is realtime).
+    final EmbeddedMSQApis.ChannelSums channelSums = msqApis.getInputChannelSums(payload, 0);
+
+    // 2 realtime tasks running on an Indexer => 1 query that gets data from both.
+    Assertions.assertEquals(1, channelSums.queries());
+    Assertions.assertEquals(1, channelSums.totalQueries());
+    Assertions.assertEquals(0, channelSums.files());
+    Assertions.assertEquals(0, channelSums.totalFiles());
+
+    // We get 1 row back with the COUNT from both tasks.
+    Assertions.assertEquals(1, channelSums.rows());
+    Assertions.assertEquals(0, channelSums.bytes()); // Realtime queries do not report bytes
   }
 
   @Test
@@ -432,6 +440,19 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         ),
         payload.getResults().getResults()
     );
+
+    // Verify that for the first stage, realtime queries were issued and no files were read (all data is realtime).
+    final EmbeddedMSQApis.ChannelSums channelSums = msqApis.getInputChannelSums(payload, 0);
+
+    // 2 realtime tasks running on an Indexer => 1 query that gets data from both.
+    Assertions.assertEquals(1, channelSums.queries());
+    Assertions.assertEquals(1, channelSums.totalQueries());
+    Assertions.assertEquals(0, channelSums.files());
+    Assertions.assertEquals(0, channelSums.totalFiles());
+
+    // We get 3 rows back.
+    Assertions.assertEquals(3, channelSums.rows());
+    Assertions.assertEquals(0, channelSums.bytes()); // Realtime queries do not report bytes
   }
 
   @Test
@@ -487,7 +508,6 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         payload.getResults().getResults()
     );
   }
-
 
   @Test
   @Timeout(60)

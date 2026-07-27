@@ -686,23 +686,16 @@ public class InFilterTests
       RangeSet<String> range = filter.getDimensionRangeSet("x");
       Assert.assertTrue(range.contains("b"));
 
-      filter = inFilter("x", ColumnType.LONG, Arrays.asList(null, 1L, 2L, 3L));
-      filter2 = inFilter("x", ColumnType.LONG, Arrays.asList(3L, 1L, null, 2L));
-      Assert.assertEquals(filter.getDimensionRangeSet("x"), filter2.getDimensionRangeSet("x"));
-      range = filter.getDimensionRangeSet("x");
-      Assert.assertTrue(range.contains("2"));
-
-      filter = inFilter("x", ColumnType.DOUBLE, Arrays.asList(null, 1.1, 2.2, 3.3));
-      filter2 = inFilter("x", ColumnType.DOUBLE, Arrays.asList(3.3, 1.1, null, 2.2));
-      range = filter.getDimensionRangeSet("x");
-      Assert.assertEquals(filter.getDimensionRangeSet("x"), filter2.getDimensionRangeSet("x"));
-      Assert.assertTrue(range.contains("2.2"));
-
-      filter = inFilter("x", ColumnType.FLOAT, Arrays.asList(null, 1.1f, 2.2f, 3.3f));
-      filter2 = inFilter("x", ColumnType.FLOAT, Arrays.asList(3.3f, 1.1f, null, 2.2f));
-      range = filter.getDimensionRangeSet("x");
-      Assert.assertEquals(filter.getDimensionRangeSet("x"), filter2.getDimensionRangeSet("x"));
-      Assert.assertTrue(range.contains("2.2"));
+      // Non-STRING match value types must not return a RangeSet.
+      Assert.assertNull(
+          inFilter("x", ColumnType.LONG, Arrays.asList(null, 1L, 2L, 3L)).getDimensionRangeSet("x")
+      );
+      Assert.assertNull(
+          inFilter("x", ColumnType.DOUBLE, Arrays.asList(null, 1.1, 2.2, 3.3)).getDimensionRangeSet("x")
+      );
+      Assert.assertNull(
+          inFilter("x", ColumnType.FLOAT, Arrays.asList(null, 1.1f, 2.2f, 3.3f)).getDimensionRangeSet("x")
+      );
     }
 
     @Test

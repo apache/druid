@@ -26,7 +26,7 @@ description: Introduces multi-stage query architecture and its task engine
 
 This page describes SQL-based batch ingestion using the [multi-stage query (MSQ) task engine](../multi-stage-query/index.md). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
 
-Apache® Druid supports SQL-based ingestion using MSQ task engine that allows running SQL
+Apache&circledR; Druid supports SQL-based ingestion using MSQ task engine that allows running SQL
 [INSERT](concepts.md#load-data-with-insert) and [REPLACE](concepts.md#overwrite-data-with-replace) statements as batch tasks. As an experimental feature,
 the task engine also supports running `SELECT` queries as batch tasks.
 

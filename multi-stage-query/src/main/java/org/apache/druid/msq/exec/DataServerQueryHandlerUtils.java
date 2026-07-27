@@ -35,6 +35,8 @@ import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.Collections;
@@ -130,7 +132,15 @@ public class DataServerQueryHandlerUtils
     return Yielders.each(
         mappingFunction.apply(sequence)
                        .map(row -> {
-                         channelCounters.incrementRowCount();
+                         if (row instanceof RowsAndColumns rac) {
+                           channelCounters.addRAC(rac, ChannelCounters.NO_PARTITION);
+                         } else if (row instanceof ScanResultValue scanResult
+                                    && scanResult.getEvents() instanceof List<?> eventsList) {
+                           // Special handling for ScanQuery
+                           channelCounters.add(ChannelCounters.NO_PARTITION, eventsList.size(), 0, 0, 0);
+                         } else {
+                           channelCounters.incrementRowCount();
+                         }
                          return row;
                        })
     );

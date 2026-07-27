@@ -165,26 +165,37 @@ public class SupervisorResource
                            .build();
           }
 
-          if (Boolean.TRUE.equals(skipRestartIfUnmodified) && !manager.shouldUpdateSupervisor(spec)) {
-            return Response.ok(ImmutableMap.of("id", spec.getId())).build();
+          final SupervisorSpecUpdateResult updateResult =
+              manager.createOrUpdateAndStartSupervisor(spec, Boolean.TRUE.equals(skipRestartIfUnmodified));
+
+          if (updateResult.isModified() || updateResult.isRestarted()) {
+            auditSupervisorUpdate(spec, req);
           }
 
-          manager.createOrUpdateAndStartSupervisor(spec);
-
-          final String auditPayload
-              = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
-          auditManager.doAudit(
-              AuditEntry.builder()
-                        .key(spec.getId())
-                        .type("supervisor")
-                        .auditInfo(AuthorizationUtils.buildAuditInfo(req))
-                        .request(AuthorizationUtils.buildRequestInfo("overlord", req))
-                        .payload(auditPayload)
-                        .build()
-          );
-
-          return Response.ok(ImmutableMap.of("id", spec.getId())).build();
+          return Response.ok(
+              Map.of(
+                  "id", spec.getId(),
+                  "modified", updateResult.isModified(),
+                  "restarted", updateResult.isRestarted()
+              )
+          ).build();
         }
+    );
+  }
+
+  /** Audits supervisor spec submissions that changed or restarted the supervisor. */
+  private void auditSupervisorUpdate(final SupervisorSpec spec, final HttpServletRequest req)
+  {
+    final String auditPayload
+        = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
+    auditManager.doAudit(
+        AuditEntry.builder()
+                  .key(spec.getId())
+                  .type("supervisor")
+                  .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                  .request(AuthorizationUtils.buildRequestInfo("overlord", req))
+                  .payload(auditPayload)
+                  .build()
     );
   }
 
@@ -214,7 +225,8 @@ public class SupervisorResource
           Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
               req,
               manager,
-              manager.getSupervisorIds()
+              manager.getSupervisorIds(),
+              AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
           );
           final boolean includeFull = full != null;
           final boolean includeState = state != null && state;
@@ -509,7 +521,8 @@ public class SupervisorResource
           Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
               req,
               manager,
-              manager.getSupervisorIds()
+              manager.getSupervisorIds(),
+              AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
           );
 
           for (final String supervisorId : authorizedSupervisorIds) {
@@ -638,6 +651,50 @@ public class SupervisorResource
     );
   }
 
+  @POST
+  @Path("/{id}/resetToLatestAndBackfill")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response resetToLatestAndBackfill(
+      @PathParam("id") final String id,
+      @QueryParam("backfillTaskCount") @Nullable final Integer backfillTaskCount
+  )
+  {
+    return handleResetToLatestAndBackfill(id, backfillTaskCount);
+  }
+
+  private Response handleResetToLatestAndBackfill(final String id, @Nullable final Integer backfillTaskCount)
+  {
+    if (backfillTaskCount != null && backfillTaskCount < 1) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.of("error", "backfillTaskCount must be a positive integer"))
+                     .build();
+    }
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          if (!manager.getSupervisorIds().contains(id)) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
+                           .build();
+          }
+          try {
+            Map<String, Object> result = manager.resetToLatestAndBackfill(id, backfillTaskCount);
+            return Response.ok(result).build();
+          }
+          catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity(ImmutableMap.of("error", e.getMessage()))
+                           .build();
+          }
+          catch (Exception e) {
+            return Response.serverError()
+                           .entity(ImmutableMap.of("error", e.getMessage()))
+                           .build();
+          }
+        }
+    );
+  }
+
   private Response asLeaderWithSupervisorManager(Function<SupervisorManager, Response> f)
   {
     Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();
@@ -652,7 +709,8 @@ public class SupervisorResource
   private Set<String> filterAuthorizedSupervisorIds(
       final HttpServletRequest req,
       SupervisorManager manager,
-      Collection<String> supervisorIds
+      Collection<String> supervisorIds,
+      Function<String, ResourceAction> authorizationFn
   )
   {
     Function<String, Iterable<ResourceAction>> raGenerator = supervisorId -> {
@@ -660,7 +718,7 @@ public class SupervisorResource
       if (supervisorSpecOptional.isPresent()) {
         return Iterables.transform(
             supervisorSpecOptional.get().getDataSources(),
-            AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
+            authorizationFn
         );
       } else {
         return null;
@@ -710,7 +768,8 @@ public class SupervisorResource
           Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
               req,
               manager,
-              manager.getSupervisorIds()
+              manager.getSupervisorIds(),
+              AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
           );
 
           for (final String supervisorId : authorizedSupervisorIds) {

@@ -190,7 +190,8 @@ public class RollupTableProjectionSchema implements BaseTableProjectionSchema
         effectiveGranularity,
         true,
         ordering,
-        projections
+        projections,
+        null
     );
   }
 

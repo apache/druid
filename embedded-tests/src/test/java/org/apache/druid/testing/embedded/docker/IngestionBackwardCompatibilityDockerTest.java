@@ -36,6 +36,9 @@ import org.apache.druid.testing.embedded.indexing.IngestionSmokeTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+
+import java.util.Map;
 
 /**
  * Runs some basic ingestion tests using Coordinator and Overlord at version
@@ -109,6 +112,20 @@ public class IngestionBackwardCompatibilityDockerTest extends IngestionSmokeTest
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  protected void validateSupervisorUpdateResponse(Map<String, String> startSupervisorResult, String supervisorId)
+  {
+    // Older Overlord versions did not include "restarted" in the API response.
+    Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
+  }
+
+  @Override
+  @Disabled("modified/restarted response semantics and skipRestartIfUnmodified are not supported by the old Overlord")
+  public void test_kafkaSupervisor_modifiedAndRestartedCombinations()
+  {
+    // No-op: the older Overlord returns only {id} and always restarts on submission.
   }
 
   @Override

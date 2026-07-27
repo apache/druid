@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class LoggingEmitter implements Emitter
 {
   private static final Logger LOGGER = new Logger(LoggingEmitter.class);
-  private static final String DEFAULT_ALLOWED_METRICS_RESOURCE = "defaultMetrics.json";
+  private static final String DEFAULT_ALLOWED_METRICS_RESOURCE = "loggingEmitterAllowedMetrics.json";
 
   private final Logger log;
   private final Level level;
@@ -92,9 +92,9 @@ public class LoggingEmitter implements Emitter
 
   /**
    * Loads the allowed metric names from a JSON file. If the path is null or empty,
-   * loads from the bundled classpath resource (defaultMetrics.json). If a custom
-   * path is provided but the file is missing, logs a warning and falls back to
-   * the default classpath resource.
+   * loads from the bundled classpath resource (loggingEmitterAllowedMetrics.json).
+   * If a custom path is provided but the file is missing, logs a warning and falls
+   * back to the default classpath resource.
    */
   private static Set<String> loadAllowedMetrics(@Nullable String path, ObjectMapper jsonMapper)
   {
@@ -112,9 +112,10 @@ public class LoggingEmitter implements Emitter
   }
 
   /**
-   * Opens the allowed metrics configuration stream. Uses classpath resource when
-   * path is null/empty. When a custom path is specified but the file is missing,
-   * logs a warning and falls back to the default classpath resource.
+   * Opens the allowed metrics configuration stream. Uses the bundled
+   * loggingEmitterAllowedMetrics.json classpath resource when path is null/empty.
+   * When a custom path is specified but the file is missing, logs a warning and
+   * falls back to the default classpath resource.
    */
   private static InputStream openAllowedMetricsStream(@Nullable String path)
   {

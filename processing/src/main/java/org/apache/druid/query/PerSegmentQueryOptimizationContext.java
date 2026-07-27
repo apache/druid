@@ -25,19 +25,6 @@ package org.apache.druid.query;
  *
  * @see PerSegmentOptimizingQueryRunner
  */
-public class PerSegmentQueryOptimizationContext
+public record PerSegmentQueryOptimizationContext(SegmentDescriptor segmentDescriptor)
 {
-  private final SegmentDescriptor segmentDescriptor;
-
-  public PerSegmentQueryOptimizationContext(
-      SegmentDescriptor segmentDescriptor
-  )
-  {
-    this.segmentDescriptor = segmentDescriptor;
-  }
-
-  public SegmentDescriptor getSegmentDescriptor()
-  {
-    return segmentDescriptor;
-  }
 }

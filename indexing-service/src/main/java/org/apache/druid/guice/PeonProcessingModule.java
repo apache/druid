@@ -84,12 +84,12 @@ public class PeonProcessingModule implements Module
       Lifecycle lifecycle
   )
   {
-    if (task.supportsQueries()) {
+    if (task.getPeonProcessingModuleConfig().hasProcessingThreads()) {
       return DruidProcessingModule.createProcessingExecutorPool(config, executorServiceMonitor, lifecycle);
     } else {
       if (config.isNumThreadsConfigured()) {
         log.warn(
-            "Ignoring the configured numThreads[%d] because task[%s] of type[%s] does not support queries",
+            "Ignoring the configured numThreads[%d] because task[%s] of type[%s] does not need processing threads",
             config.getNumThreads(),
             task.getId(),
             task.getType()
@@ -108,7 +108,7 @@ public class PeonProcessingModule implements Module
       RuntimeInfo runtimeInfo
   )
   {
-    if (task.supportsQueries()) {
+    if (task.getPeonProcessingModuleConfig().hasProcessingBuffers()) {
       return DruidProcessingModule.createIntermediateResultsPool(config, runtimeInfo);
     } else {
       return DummyNonBlockingPool.instance();
@@ -120,13 +120,13 @@ public class PeonProcessingModule implements Module
   @Merging
   public BlockingPool<ByteBuffer> getMergeBufferPool(Task task, DruidProcessingConfig config, RuntimeInfo runtimeInfo)
   {
-    if (task.supportsQueries()) {
+    if (task.getPeonProcessingModuleConfig().hasMergeBuffers()) {
       return DruidProcessingModule.createMergeBufferPool(config, runtimeInfo);
     } else {
       if (config.isNumMergeBuffersConfigured()) {
         log.warn(
-            "Ignoring the configured numMergeBuffers[%d] because task[%s] of type[%s] does not support queries",
-            config.getNumThreads(),
+            "Ignoring the configured numMergeBuffers[%d] because task[%s] of type[%s] does not need merge buffers",
+            config.getNumMergeBuffers(),
             task.getId(),
             task.getType()
         );
@@ -144,5 +144,48 @@ public class PeonProcessingModule implements Module
   )
   {
     return new GroupByResourcesReservationPool(mergeBufferPool, groupByQueryConfig);
+  }
+
+  /**
+   * Returned by {@link Task#getPeonProcessingModuleConfig()} to declare which resources the task actually needs.
+   */
+  public static class Config
+  {
+    private boolean processingBuffers;
+    private boolean processingThreads;
+    private boolean mergeBuffers;
+
+    public Config withProcessingBuffers()
+    {
+      this.processingBuffers = true;
+      return this;
+    }
+
+    public Config withProcessingThreads()
+    {
+      this.processingThreads = true;
+      return this;
+    }
+
+    public Config withMergeBuffers()
+    {
+      this.mergeBuffers = true;
+      return this;
+    }
+
+    public boolean hasProcessingBuffers()
+    {
+      return processingBuffers;
+    }
+
+    public boolean hasProcessingThreads()
+    {
+      return processingThreads;
+    }
+
+    public boolean hasMergeBuffers()
+    {
+      return mergeBuffers;
+    }
   }
 }

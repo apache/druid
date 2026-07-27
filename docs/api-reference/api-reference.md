@@ -24,7 +24,7 @@ sidebar_label: Overview
   -->
 
 
-This topic is an index to the Apache Druid API documentation.
+This topic is an index to the Apache&circledR; Druid API documentation.
 
 ## HTTP APIs
 * [Druid SQL queries](./sql-api.md) to submit SQL queries using the Druid SQL API.

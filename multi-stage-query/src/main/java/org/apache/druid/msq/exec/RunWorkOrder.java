@@ -21,7 +21,6 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -43,10 +42,12 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.indexing.StorageCountingOutputChannelFactory;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
+import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.input.MapInputSliceReader;
 import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.NilInputSliceReader;
@@ -70,6 +71,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
@@ -390,6 +392,7 @@ public class RunWorkOrder
         frameContext,
         counterTracker,
         workerContext.threadCount(),
+        workerContext.segmentLoadAheadCount(workOrder),
         cancellationId,
         listener
     );
@@ -398,16 +401,28 @@ public class RunWorkOrder
   private InputSliceReader makeInputSliceReader()
   {
     final boolean reindex = MultiStageQueryContext.isReindex(workOrder.getWorkerContext());
-    return new MapInputSliceReader(
-        ImmutableMap.<Class<? extends InputSlice>, InputSliceReader>builder()
-                    .put(NilInputSlice.class, NilInputSliceReader.INSTANCE)
-                    .put(StageInputSlice.class, StageInputSliceReader.INSTANCE)
-                    .put(ExternalInputSlice.class, new ExternalInputSliceReader(frameContext.tempDir("external")))
-                    .put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()))
-                    .put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()))
-                    .put(SegmentsInputSlice.class, new SegmentsInputSliceReader(frameContext, reindex))
-                    .build()
+    LinkedHashMap<Class<? extends InputSlice>, InputSliceReader> readers = new LinkedHashMap<>();
+    readers.put(NilInputSlice.class, NilInputSliceReader.INSTANCE);
+    readers.put(StageInputSlice.class, StageInputSliceReader.INSTANCE);
+    readers.put(
+        ExternalInputSlice.class,
+        new ExternalInputSliceReader(
+            frameContext.virtualStorageManager(),
+            frameContext.tempDir("external"),
+            MultiStageQueryContext.isBackgroundFetchExternalFiles(workOrder.getWorkerContext())
+        )
     );
+    readers.put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()));
+    readers.put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()));
+    readers.put(SegmentsInputSlice.class, new SegmentsInputSliceReader(frameContext, reindex));
+
+    // Context-supplied providers override the default ones, so they get added last.
+    for (final InputSliceReaderProvider readerProvider : workerContext.inputSliceReaderProviders()) {
+      final InputSliceReader reader = readerProvider.createReader(frameContext, workOrder.getWorkerContext());
+      readers.put(readerProvider.sliceClass(), reader);
+    }
+
+    return new MapInputSliceReader(readers);
   }
 
   private OutputChannelFactory makeStageOutputChannelFactory()
@@ -431,20 +446,28 @@ public class RunWorkOrder
       case LOCAL_STORAGE:
         final File fileChannelDirectory =
             frameContext.tempDir(StringUtils.format("output_stage_%06d", workOrder.getStageNumber()));
-        outputChannelFactory = new FileOutputChannelFactory(
-            fileChannelDirectory,
-            frameSize,
-            null,
-            frameContext.wireTransferableContext()
+        outputChannelFactory = new StorageCountingOutputChannelFactory(
+            new FileOutputChannelFactory(
+                fileChannelDirectory,
+                frameSize,
+                null,
+                frameContext.wireTransferableContext()
+            ),
+            counterTracker.storage(intermediateByteTracker),
+            false
         );
         break;
 
       case DURABLE_STORAGE_INTERMEDIATE:
       case DURABLE_STORAGE_QUERY_RESULTS:
-        outputChannelFactory = makeDurableStorageOutputChannelFactory(
-            frameContext.tempDir("durable"),
-            frameSize,
-            outputChannelMode == OutputChannelMode.DURABLE_STORAGE_QUERY_RESULTS
+        outputChannelFactory = new StorageCountingOutputChannelFactory(
+            makeDurableStorageOutputChannelFactory(
+                frameContext.tempDir("durable"),
+                frameSize,
+                outputChannelMode == OutputChannelMode.DURABLE_STORAGE_QUERY_RESULTS
+            ),
+            counterTracker.storage(intermediateByteTracker),
+            true
         );
         break;
 
@@ -469,11 +492,15 @@ public class RunWorkOrder
     final int frameSize = frameContext.memoryParameters().getFrameSize();
     final File fileChannelDirectory =
         new File(tempDir, StringUtils.format("intermediate-stage-%06d", workOrder.getStageNumber()));
-    final FileOutputChannelFactory fileOutputChannelFactory = new FileOutputChannelFactory(
-        fileChannelDirectory,
-        frameSize,
-        intermediateByteTracker,
-        frameContext.wireTransferableContext()
+    final OutputChannelFactory fileOutputChannelFactory = new StorageCountingOutputChannelFactory(
+        new FileOutputChannelFactory(
+            fileChannelDirectory,
+            frameSize,
+            intermediateByteTracker,
+            frameContext.wireTransferableContext()
+        ),
+        counterTracker.storage(intermediateByteTracker),
+        false
     );
 
     if (workOrder.getOutputChannelMode().isDurable()
@@ -483,7 +510,11 @@ public class RunWorkOrder
       return new ComposingOutputChannelFactory(
           ImmutableList.of(
               fileOutputChannelFactory,
-              makeDurableStorageOutputChannelFactory(tempDir, frameSize, isQueryResults)
+              new StorageCountingOutputChannelFactory(
+                  makeDurableStorageOutputChannelFactory(tempDir, frameSize, isQueryResults),
+                  counterTracker.storage(intermediateByteTracker),
+                  true
+              )
           ),
           frameSize
       );

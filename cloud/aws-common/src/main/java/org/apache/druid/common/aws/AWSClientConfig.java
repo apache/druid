@@ -19,7 +19,9 @@
 
 package org.apache.druid.common.aws;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.utils.RuntimeInfo;
 
 import javax.annotation.Nullable;
 
@@ -31,7 +33,17 @@ public class AWSClientConfig
 
   private static final int DEFAULT_CONNECTION_TIMEOUT_MILLIS = 10_000;
   private static final int DEFAULT_SOCKET_TIMEOUT_MILLIS = 50_000;
-  private static final int DEFAULT_MAX_CONNECTIONS = 50;
+  /** AWS SDK v2's own default. */
+  private static final int DEFAULT_MAX_CONNECTIONS_FLOOR = 50;
+
+  /**
+   * Used by {@link #getMaxConnections} to scale the default connection pool with host size so hosts large enough to
+   * do a lot of concurrent deep-storage I/O (e.g. virtual-storage historicals fanning out on-demand loads to S3)
+   * aren't bottlenecked at the SDK's connection pool. The field initializer covers direct construction (no Jackson);
+   * Jackson overwrites with the injected {@link RuntimeInfo} during deserialization.
+   */
+  @JacksonInject
+  private final RuntimeInfo runtimeInfo = new RuntimeInfo();
 
   @JsonProperty
   private String protocol = "https"; // The default of aws-java-sdk
@@ -60,8 +72,13 @@ public class AWSClientConfig
   @JsonProperty
   private int socketTimeout = DEFAULT_SOCKET_TIMEOUT_MILLIS;
 
+  /**
+   * Null means use the dynamic default in {@link #getMaxConnections} ({@code max(50, 4 × availableProcessors)});
+   * any explicit value set in JSON wins.
+   */
   @JsonProperty
-  private int maxConnections = DEFAULT_MAX_CONNECTIONS;
+  @Nullable
+  private Integer maxConnections = null;
 
   public String getProtocol()
   {
@@ -123,7 +140,10 @@ public class AWSClientConfig
 
   public int getMaxConnections()
   {
-    return maxConnections;
+    if (maxConnections != null) {
+      return maxConnections;
+    }
+    return Math.max(DEFAULT_MAX_CONNECTIONS_FLOOR, 4 * runtimeInfo.getAvailableProcessors());
   }
 
   @Override
@@ -136,7 +156,7 @@ public class AWSClientConfig
            ", crossRegionAccessEnabled=" + isCrossRegionAccessEnabled() +
            ", connectionTimeout=" + connectionTimeout +
            ", socketTimeout=" + socketTimeout +
-           ", maxConnections=" + maxConnections +
+           ", maxConnections=" + getMaxConnections() +
            '}';
   }
 }

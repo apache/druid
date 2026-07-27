@@ -41,6 +41,7 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.TestSegmentUtils;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
@@ -49,6 +50,7 @@ import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager.DataSourceState;
@@ -165,6 +167,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     cacheManager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         objectMapper
@@ -175,6 +178,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     virtualCacheManager = new SegmentLocalCacheManager(
         virtualStorageLocations,
         virtualLoaderConfig,
+        StorageLoadingThreadPool.createFromConfig(virtualLoaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(virtualStorageLocations),
         TestIndex.INDEX_IO,
         objectMapper
@@ -486,7 +490,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
         )
     );
 
-    final AcquireSegmentAction action = virtualSegmentManager.acquireSegment(toLoad);
+    final AcquireSegmentAction action = virtualSegmentManager.acquireSegment(toLoad, AcquireMode.FULL);
     AcquireSegmentResult result = action.getSegmentFuture().get();
     Assert.assertNotNull(result);
     Assert.assertEquals(1L, result.getLoadSizeBytes());

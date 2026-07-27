@@ -171,6 +171,9 @@ public class MultiStageQueryContext
   public static final String CTX_REMOVE_NULL_BYTES = "removeNullBytes";
   public static final boolean DEFAULT_REMOVE_NULL_BYTES = false;
 
+  public static final String CTX_BACKGROUND_FETCH_EXTERNAL_FILES = "backgroundFetchExternalFiles";
+  public static final boolean DEFAULT_BACKGROUND_FETCH_EXTERNAL_FILES = true;
+
   /**
    * Hint to {@link StageProcessor} implementations about whether they should attempt to use
    * {@link FrameCombiner} when doing sort-based aggregations.
@@ -275,7 +278,10 @@ public class MultiStageQueryContext
   public static final String CTX_MAX_THREADS = "maxThreads";
 
   /**
-   * Maximum number of segments to load ahead of them being needed. Used when setting up {@link ReadableInputQueue}.
+   * Number of segments to load ahead of them being needed. Used when setting up {@link ReadableInputQueue}.
+   * <p>
+   * A worker may be configured with a local default for this value. When this context value is set, it always wins;
+   * the worker-local default applies only when this context value is absent.
    */
   public static final String CTX_SEGMENT_LOAD_AHEAD_COUNT = "segmentLoadAheadCount";
 
@@ -471,6 +477,11 @@ public class MultiStageQueryContext
   public static boolean removeNullBytes(final QueryContext queryContext)
   {
     return queryContext.getBoolean(CTX_REMOVE_NULL_BYTES, DEFAULT_REMOVE_NULL_BYTES);
+  }
+
+  public static boolean isBackgroundFetchExternalFiles(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(CTX_BACKGROUND_FETCH_EXTERNAL_FILES, DEFAULT_BACKGROUND_FETCH_EXTERNAL_FILES);
   }
 
   public static boolean isUseCombiner(final QueryContext queryContext)

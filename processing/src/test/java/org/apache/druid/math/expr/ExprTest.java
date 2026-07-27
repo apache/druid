@@ -21,10 +21,11 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -222,6 +223,22 @@ public class ExprTest
   }
 
   @Test
+  public void testNowExprCacheKeyIsNotStable()
+  {
+    Expr now = Parser.parse("now()", ExprMacroTable.nil());
+    byte[] k1 = now.getCacheKey();
+    byte[] k2 = now.getCacheKey();
+    Assertions.assertFalse(Arrays.equals(k1, k2), "bare now() cache key must change across calls");
+
+    // Verify the same instability propagates when now() is nested in a parent expression.
+    Expr nested = Parser.parse("now() > 0", ExprMacroTable.nil());
+    Assertions.assertFalse(
+        Arrays.equals(nested.getCacheKey(), nested.getCacheKey()),
+        "Expr containing now() must produce an unstable cache key"
+    );
+  }
+
+  @Test
   public void testShuttleVisitAll()
   {
     final List<Expr> visitedExprs = new ArrayList<>();
@@ -232,12 +249,12 @@ public class ExprTest
     };
 
     shuttle.visitAll(Collections.emptyList());
-    Assert.assertEquals("Visiting an empty list", Collections.emptyList(), visitedExprs);
+    Assertions.assertEquals(Collections.emptyList(), visitedExprs, "Visiting an empty list");
 
     final List<Expr> oneIdentifier = Collections.singletonList(new IdentifierExpr("ident"));
     visitedExprs.clear();
     shuttle.visitAll(oneIdentifier);
-    Assert.assertEquals("One identifier", oneIdentifier, visitedExprs);
+    Assertions.assertEquals(oneIdentifier, visitedExprs, "One identifier");
 
     final List<Expr> twoIdentifiers = ImmutableList.of(
         new IdentifierExpr("ident1"),
@@ -245,6 +262,6 @@ public class ExprTest
     );
     visitedExprs.clear();
     shuttle.visitAll(twoIdentifiers);
-    Assert.assertEquals("Two identifiers", twoIdentifiers, visitedExprs);
+    Assertions.assertEquals(twoIdentifiers, visitedExprs, "Two identifiers");
   }
 }

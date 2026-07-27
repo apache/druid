@@ -55,6 +55,7 @@ import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.ServerManager;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -225,7 +226,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
             missingSegments.add(segment.getDescriptor());
             continue;
           }
-          Optional<Segment> ref = segmentManager.acquireCachedSegment(dataSegment);
+          Optional<Segment> ref = segmentManager.acquireCachedSegment(dataSegment, AcquireMode.FULL);
           if (ref.isPresent()) {
             segmentReferences.add(
                 new SegmentReference(

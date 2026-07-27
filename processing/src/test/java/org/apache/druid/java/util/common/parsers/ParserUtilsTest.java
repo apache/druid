@@ -22,15 +22,15 @@ package org.apache.druid.java.util.common.parsers;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
 
 import static org.apache.druid.java.util.common.parsers.ParserUtils.findDuplicates;
 import static org.apache.druid.java.util.common.parsers.ParserUtils.getTransformationFunction;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class ParserUtilsTest
 {

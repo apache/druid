@@ -25,7 +25,6 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provider;
-import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.DruidService;
@@ -121,9 +120,6 @@ public abstract class ServerRunnable extends GuiceRunnable
     private DruidNodeAnnouncer announcer;
 
     @Inject
-    private ServiceAnnouncer legacyAnnouncer;
-
-    @Inject
     private Lifecycle lifecycle;
 
     @Inject
@@ -139,21 +135,13 @@ public abstract class ServerRunnable extends GuiceRunnable
     @Inject
     private ServiceAnnouncementState serviceAnnouncementState;
 
-    private final boolean useLegacyAnnouncer;
-
     public static DiscoverySideEffectsProvider create()
     {
-      return new DiscoverySideEffectsProvider(false);
+      return new DiscoverySideEffectsProvider();
     }
 
-    public static DiscoverySideEffectsProvider withLegacyAnnouncer()
+    private DiscoverySideEffectsProvider()
     {
-      return new DiscoverySideEffectsProvider(true);
-    }
-
-    private DiscoverySideEffectsProvider(final boolean useLegacyAnnouncer)
-    {
-      this.useLegacyAnnouncer = useLegacyAnnouncer;
     }
 
     @Override
@@ -181,11 +169,6 @@ public abstract class ServerRunnable extends GuiceRunnable
               public void start()
               {
                 announcer.announce(discoveryDruidNode);
-
-                if (useLegacyAnnouncer) {
-                  legacyAnnouncer.announce(discoveryDruidNode.getDruidNode());
-                }
-
                 serviceAnnouncementState.markReady();
               }
 
@@ -193,13 +176,6 @@ public abstract class ServerRunnable extends GuiceRunnable
               public void stop()
               {
                 serviceAnnouncementState.markNotReady();
-
-                // Reverse order vs. start().
-
-                if (useLegacyAnnouncer) {
-                  legacyAnnouncer.unannounce(discoveryDruidNode.getDruidNode());
-                }
-
                 announcer.unannounce(discoveryDruidNode);
               }
             },

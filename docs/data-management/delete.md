@@ -24,7 +24,7 @@ title: "Data deletion"
 
 ## Delete data for a time range manually
 
-Apache Druid stores data [partitioned by time chunk](../design/storage.md) and supports
+Apache&circledR; Druid stores data [partitioned by time chunk](../design/storage.md) and supports
 deleting data for time chunks by dropping segments. This is a fast, metadata-only operation.
 
 Deletion by time range happens in two steps:
@@ -112,9 +112,13 @@ Some of the parameters used in the task payload are further explained below:
 | `limit`     | null (no limit) | Maximum number of segments for the kill task to delete.|
 | `maxUsedStatusLastUpdatedTime` | null (no cutoff) | Maximum timestamp used as a cutoff to include unused segments. The kill task only considers segments which lie in the specified `interval` and were marked as unused no later than this time. The default behavior is to kill all unused segments in the `interval` regardless of when they where marked as unused.|
 
-
-**WARNING:** The `kill` task permanently removes all information about the affected segments from the metadata store and
+:::warning
+- The `kill` task permanently removes all information about the affected segments from the metadata store and
 deep storage. This operation cannot be undone.
+- When using [concurrent locks](../ingestion/concurrent-append-replace.md) to run a `kill` task, ensure to keep a large
+enough buffer period before killing segments after they have been marked as unused. Otherwise, there may be a potential
+data loss if a concurrent append job upgrades one of the segments that are being killed.
+:::
 
 ### Auto-kill data using Coordinator duties
 

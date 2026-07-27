@@ -21,12 +21,15 @@ package org.apache.druid.indexing.rabbitstream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.indexing.IOConfig;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.Map;
 
 public class RabbitStreamIndexTaskIOConfigTest
 {
@@ -75,6 +78,31 @@ public class RabbitStreamIndexTaskIOConfigTest
     Assert.assertNull("minimumMessageTime", config.getMinimumMessageTime());
     Assert.assertEquals(config.getUri(), "rabbitmq-stream://localhost:5552");
     Assert.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
+  }
+
+  @Test
+  public void testRabbitStreamDataSourceMetadataWithBoundedConfig()
+  {
+    Map<String, Long> startOffsets = ImmutableMap.of("q0", 0L);
+    Map<String, Long> endOffsets = ImmutableMap.of("q0", 100L);
+    BoundedStreamConfig boundedConfig = new BoundedStreamConfig(startOffsets, endOffsets);
+
+    SeekableStreamStartSequenceNumbers<String, Long> partitions =
+        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of("q0", 10L), Collections.emptySet());
+
+    RabbitStreamDataSourceMetadata metadata = new RabbitStreamDataSourceMetadata(partitions, boundedConfig);
+    Assert.assertNotNull(metadata.getBoundedStreamConfig());
+    Assert.assertEquals(boundedConfig, metadata.getBoundedStreamConfig());
+  }
+
+  @Test
+  public void testRabbitStreamDataSourceMetadataWithoutBoundedConfig()
+  {
+    SeekableStreamStartSequenceNumbers<String, Long> partitions =
+        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of("q0", 10L), Collections.emptySet());
+
+    RabbitStreamDataSourceMetadata metadata = new RabbitStreamDataSourceMetadata(partitions);
+    Assert.assertNull(metadata.getBoundedStreamConfig());
   }
 
 }

@@ -257,6 +257,62 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void test_unnest_factory_async_awaits_base_then_produces_unnest_cursor()
+  {
+    // base produces its holder asynchronously (mimics a partial segment downloading its columns). The unnest async
+    // holder must stay not-ready until the base completes, then yield the same unnested rows as the sync path.
+    final DeferredCursorFactory base = new DeferredCursorFactory(INCREMENTAL_INDEX_CURSOR_FACTORY);
+    final UnnestCursorFactory unnest = new UnnestCursorFactory(
+        base,
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + INPUT_COLUMN_NAME + "\"", null, ExprMacroTable.nil()),
+        null
+    );
+
+    final AsyncCursorHolder asyncHolder = unnest.makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
+    try {
+      Assert.assertFalse("unnest holder must wait for the base to complete", asyncHolder.isReady());
+
+      base.complete();
+      Assert.assertTrue("unnest holder becomes ready once the base completes", asyncHolder.isReady());
+
+      try (final CursorHolder cursorHolder = asyncHolder.release()) {
+        final Cursor cursor = cursorHolder.asCursor();
+        final DimensionSelector dimSelector =
+            cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
+        final List<Object> rows = new ArrayList<>();
+        while (!cursor.isDone()) {
+          rows.add(dimSelector.getObject());
+          cursor.advance();
+        }
+        Assert.assertEquals(
+            Arrays.asList("0", "1", "2", "3", "4", "5", "6", "7", "10", "11", "12", "13", "14", "15", "8", "9"),
+            rows
+        );
+      }
+    }
+    finally {
+      // no-op after release(); cancels the base load if an assertion above bailed before release()
+      asyncHolder.close();
+    }
+  }
+
+  @Test
+  public void test_unnest_factory_async_close_before_ready_cancels_base()
+  {
+    final DeferredCursorFactory base = new DeferredCursorFactory(INCREMENTAL_INDEX_CURSOR_FACTORY);
+    final UnnestCursorFactory unnest = new UnnestCursorFactory(
+        base,
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + INPUT_COLUMN_NAME + "\"", null, ExprMacroTable.nil()),
+        null
+    );
+
+    final AsyncCursorHolder asyncHolder = unnest.makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
+    Assert.assertFalse(asyncHolder.isReady());
+    asyncHolder.close();
+    Assert.assertTrue("closing the unnest holder before it's ready cancels the base load", base.canceled.get());
+  }
+
+  @Test
   public void test_unnest_factory_basic_array_column()
   {
     try (final CursorHolder cursorHolder = UNNEST_ARRAYS.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
@@ -836,7 +892,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
         cursor.advance();
         count++;
       }
-      Assert.assertEquals(count, 618);
+      Assert.assertEquals(count, 569);
     }
   }
 

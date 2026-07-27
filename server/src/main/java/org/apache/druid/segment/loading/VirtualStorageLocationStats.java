@@ -50,12 +50,25 @@ public interface VirtualStorageLocationStats
   long getHitBytes();
 
   /**
-   * Number of operations for which an entry was missing and was loaded into the cache during the measurement period
+   * Number of operations for which an entry was missing and a load was started (space reserved) during the measurement
+   * period. This is incremented when the load begins, regardless of whether it ultimately completes.
+   */
+  long getLoadBeginCount();
+
+  /**
+   * Number of bytes for entries missing from the cache for which a load was started (space reserved) during the
+   * measurement period. This is incremented when the load begins, regardless of whether it ultimately completes.
+   */
+  long getLoadBeginBytes();
+
+  /**
+   * Number of cache entries that finished loading (segment downloaded, deserialized, and made queryable) during the
+   * measurement period. This may be lower than {@link #getLoadBeginCount()} when mounts fail or are aborted.
    */
   long getLoadCount();
 
   /**
-   * Number of bytes loaded for entries missing from the cache during the measurement period
+   * Number of bytes for cache entries that finished loading during the measurement period.
    */
   long getLoadBytes();
 
@@ -73,4 +86,44 @@ public interface VirtualStorageLocationStats
    * Number of operations which could not be loaded due to insufficient space during the measurement period
    */
   long getRejectCount();
+
+  /**
+   * Number of deep-storage range reads issued during the measurement period (on-demand partial downloads). One read
+   * may cover several internal files, so this is the actual request count, distinct from {@link #getLoadCount()}.
+   */
+  long getReadCount();
+
+  /**
+   * Total bytes pulled from deep storage by range reads during the measurement period. May exceed
+   * {@link #getLoadBytes()} when a partially-present container is re-fetched in full.
+   */
+  long getReadBytes();
+
+  /**
+   * Total wall-clock time spent in deep-storage range reads during the measurement period, in nanoseconds. Divide by
+   * {@link #getReadCount()} for the average per-read latency.
+   */
+  long getReadTimeNanos();
+
+  /**
+   * Whether any stats are nonzero.
+   */
+  default boolean hasStats()
+  {
+    return getUsedBytes() != 0
+           || getHoldCount() != 0
+           || getHoldBytes() != 0
+           || getHitCount() != 0
+           || getHitBytes() != 0
+           || getLoadBeginCount() != 0
+           || getLoadBeginBytes() != 0
+           || getLoadCount() != 0
+           || getLoadBytes() != 0
+           || getEvictionCount() != 0
+           || getEvictionBytes() != 0
+           || getRejectCount() != 0
+           || getReadCount() != 0
+           || getReadBytes() != 0
+           || getReadTimeNanos() != 0;
+  }
 }

@@ -26,11 +26,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import java.util.List;
 import java.util.Objects;
@@ -57,6 +59,15 @@ public class ExpressionTransform implements Transform
     this.parsedExpression = Suppliers.memoize(
         () -> Parser.parse(expression, Preconditions.checkNotNull(this.macroTable, "macroTable"))
     )::get;
+
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(name) && parsedExpression.get().analyzeInputs().isNonDeterministic()) {
+      throw InvalidInput.exception(
+          "Cannot use non-deterministic expression[%s] to set column name[%s]."
+          + " Non-deterministic expressions such as now() are not supported as __time transforms.",
+          expression,
+          ColumnHolder.TIME_COLUMN_NAME
+      );
+    }
   }
 
   @JsonProperty

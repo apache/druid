@@ -20,8 +20,11 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableRangeSet;
+import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -320,6 +323,134 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
     assertMatch("%xy%yz", "xyyz", DruidPredicateMatch.TRUE);
     assertMatch("%1 _ 5%6", "1 2 3 1 4 5 6", DruidPredicateMatch.TRUE);
     assertMatch("1 _ 5%6", "1 2 3 1 4 5 6", DruidPredicateMatch.FALSE);
+  }
+
+  @Test
+  public void testGetDimensionRangeSet_literalPattern()
+  {
+    final LikeDimFilter filter = new LikeDimFilter("foo", "bar", null, null);
+    Assert.assertEquals(
+        ImmutableRangeSet.of(Range.singleton("bar")),
+        filter.getDimensionRangeSet("foo")
+    );
+  }
+
+  @Test
+  public void testGetDimensionRangeSet_prefixPattern()
+  {
+    final LikeDimFilter filter = new LikeDimFilter("foo", "bar%", null, null);
+    Assert.assertEquals(
+        ImmutableRangeSet.of(Range.closedOpen("bar", "bas")),
+        filter.getDimensionRangeSet("foo")
+    );
+  }
+
+  @Test
+  public void testGetDimensionRangeSet_midPatternWildcard_returnsNull()
+  {
+    final LikeDimFilter filter = new LikeDimFilter("foo", "bar%baz", null, null);
+    Assert.assertNull(filter.getDimensionRangeSet("foo"));
+  }
+
+  @Test
+  public void testGetDimensionRangeSet_suffixPattern_returnsNull()
+  {
+    final LikeDimFilter filter = new LikeDimFilter("foo", "%bar", null, null);
+    Assert.assertNull(filter.getDimensionRangeSet("foo"));
+  }
+
+  @Test
+  public void testGetDimensionRangeSet_singleWildcard_returnsAll()
+  {
+    final LikeDimFilter filter = new LikeDimFilter("foo", "%", null, null);
+    Assert.assertEquals(
+        ImmutableRangeSet.of(Range.all()),
+        filter.getDimensionRangeSet("foo")
+    );
+  }
+
+  @Test
+  public void testGetDimensionRangeSet_otherDimension_returnsNull()
+  {
+    final LikeDimFilter filter = new LikeDimFilter("foo", "bar%", null, null);
+    Assert.assertNull(filter.getDimensionRangeSet("other"));
+  }
+
+  @Test
+  public void testGetDimensionRangeSet_withExtractionFn_returnsNull()
+  {
+    final LikeDimFilter filter = new LikeDimFilter("foo", "bar%", null, new SubstringDimExtractionFn(0, 3));
+    Assert.assertNull(filter.getDimensionRangeSet("foo"));
+  }
+
+  @Test
+  public void testPrefixRange_singleLowercaseChar()
+  {
+    Assert.assertEquals(Range.closedOpen("foo", "fop"), LikeDimFilter.prefixRange("foo"));
+  }
+
+  @Test
+  public void testPrefixRange_uppercaseCarryStaysWithinAscii()
+  {
+    Assert.assertEquals(Range.closedOpen("foZ", "fo["), LikeDimFilter.prefixRange("foZ"));
+  }
+
+  @Test
+  public void testPrefixRange_trailingMaxValue_carriesPastIt()
+  {
+    Assert.assertEquals(
+        Range.closedOpen("foo￿", "fop"),
+        LikeDimFilter.prefixRange("foo￿")
+    );
+  }
+
+  @Test
+  public void testPrefixRange_allMaxValue_fallsBackToAtLeast()
+  {
+    Assert.assertEquals(Range.atLeast("￿￿"), LikeDimFilter.prefixRange("￿￿"));
+  }
+
+  @Test
+  public void testPrefixRange_empty_throws()
+  {
+    Assert.assertThrows(DruidException.class, () -> LikeDimFilter.prefixRange(""));
+  }
+
+  @Test
+  public void testPrefixRange_enclosesAllPrefixedStrings()
+  {
+    final Range<String> range = LikeDimFilter.prefixRange("foo");
+    Assert.assertTrue(range.contains("foo"));
+    Assert.assertTrue(range.contains("foo0"));
+    Assert.assertTrue(range.contains("foobar"));
+    Assert.assertTrue(range.contains("foozzz"));
+    Assert.assertFalse(range.contains("fo"));
+    Assert.assertFalse(range.contains("fop"));
+    Assert.assertFalse(range.contains("fox"));
+  }
+
+  @Test
+  public void testLexicographicSuccessor_basic()
+  {
+    Assert.assertEquals("fop", LikeDimFilter.lexicographicSuccessor("foo"));
+  }
+
+  @Test
+  public void testLexicographicSuccessor_empty_returnsNullChar()
+  {
+    Assert.assertEquals("\u0000", LikeDimFilter.lexicographicSuccessor(""));
+  }
+
+  @Test
+  public void testLexicographicSuccessor_singleMaxValue_returnsNull()
+  {
+    Assert.assertNull(LikeDimFilter.lexicographicSuccessor("￿"));
+  }
+
+  @Test
+  public void testLexicographicSuccessor_trailingMaxValues_truncatedAndCarried()
+  {
+    Assert.assertEquals("fop", LikeDimFilter.lexicographicSuccessor("foo￿￿"));
   }
 
   private void assertCompilation(String pattern, String expected)

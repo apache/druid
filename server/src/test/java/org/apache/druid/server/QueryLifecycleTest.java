@@ -830,7 +830,7 @@ public class QueryLifecycleTest
   public void testRunSimple_queryBlocklisted()
   {
     // Create a blocklist rule that matches our test query
-    QueryBlocklistRule rule = new QueryBlocklistRule(
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule(
         "test-rule",
         ImmutableSet.of(DATASOURCE),
         null,
@@ -880,7 +880,7 @@ public class QueryLifecycleTest
   public void testRunSimple_queryNotBlocklisted()
   {
     // Create a blocklist rule that does NOT match our test query
-    QueryBlocklistRule rule = new QueryBlocklistRule(
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule(
         "test-rule",
         ImmutableSet.of("other_datasource"),
         null,

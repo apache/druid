@@ -22,9 +22,9 @@ title: "Streaming ingestion"
   ~ under the License.
   -->
 
-Apache Druid can consume data streams from the following external streaming sources:
+Apache&circledR; Druid can consume data streams from the following external streaming sources:
 
-* Apache Kafka through the bundled [Kafka indexing service](kafka-ingestion.md) extension.
+* Apache Kafka&circledR; through the bundled [Kafka indexing service](kafka-ingestion.md) extension.
 * Amazon Kinesis through the bundled [Kinesis indexing service](kinesis-ingestion.md) extension.
 
 Each indexing service provides real-time data ingestion with exactly-once stream processing guarantee.

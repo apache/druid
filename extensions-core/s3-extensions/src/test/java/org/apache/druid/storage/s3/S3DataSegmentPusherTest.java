@@ -33,10 +33,8 @@ import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.TemporaryFolder;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
-import software.amazon.awssdk.services.s3.model.GetBucketAclResponse;
 import software.amazon.awssdk.services.s3.model.Grant;
 import software.amazon.awssdk.services.s3.model.Grantee;
-import software.amazon.awssdk.services.s3.model.Owner;
 import software.amazon.awssdk.services.s3.model.Permission;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.Type;
@@ -96,23 +94,11 @@ public class S3DataSegmentPusherTest
   {
     ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
-    Owner owner = Owner.builder()
-        .id("ownerId")
-        .displayName("owner")
-        .build();
-    Grantee grantee = Grantee.builder()
-        .id(owner.id())
-        .type(Type.CANONICAL_USER)
-        .build();
     Grant grant = Grant.builder()
-        .grantee(grantee)
+        .grantee(Grantee.builder().id("ownerId").type(Type.CANONICAL_USER).build())
         .permission(Permission.FULL_CONTROL)
         .build();
-    final GetBucketAclResponse aclResponse = GetBucketAclResponse.builder()
-        .owner(owner)
-        .grants(grant)
-        .build();
-    EasyMock.expect(s3Client.getBucketAcl(EasyMock.eq("bucket"))).andReturn(aclResponse).once();
+    EasyMock.expect(s3Client.getBucketOwnerGrant(EasyMock.eq("bucket"))).andReturn(grant).once();
 
     s3Client.upload(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.anyObject(Grant.class));
     EasyMock.expectLastCall().once();
@@ -129,30 +115,91 @@ public class S3DataSegmentPusherTest
     };
     config.setBucket("bucket");
     config.setBaseKey("key");
-    validate(false, "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/", s3Client, config);
+    DataSegment segment = validate(
+        false,
+        "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/",
+        s3Client,
+        config,
+        new byte[]{0x0, 0x0, 0x0, 0x1}
+    );
+    // V1 (test fixture) → not V10 → rangeable stamped as false (skips legacy HEAD probe).
+    Assert.assertEquals(Boolean.FALSE, segment.getLoadSpec().get("rangeable"));
+  }
+
+  @Test
+  public void testPushNoZipV10StampsRangeableTrue() throws Exception
+  {
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
+
+    Grant grant = Grant.builder()
+        .grantee(Grantee.builder().id("ownerId").type(Type.CANONICAL_USER).build())
+        .permission(Permission.FULL_CONTROL)
+        .build();
+    EasyMock.expect(s3Client.getBucketOwnerGrant(EasyMock.eq("bucket"))).andReturn(grant).once();
+
+    s3Client.upload(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.anyObject(Grant.class));
+    EasyMock.expectLastCall().once();
+
+    EasyMock.replay(s3Client);
+
+    S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig()
+    {
+      @Override
+      public boolean isZip()
+      {
+        return false;
+      }
+    };
+    config.setBucket("bucket");
+    config.setBaseKey("key");
+
+    // version.bin = [0, 0, 0, 0x0A] → IndexIO.V10_VERSION
+    DataSegment segment = validate(
+        false,
+        "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/",
+        s3Client,
+        config,
+        new byte[]{0x0, 0x0, 0x0, 0x0A}
+    );
+    Assert.assertEquals(10, (int) segment.getBinaryVersion());
+    Assert.assertEquals(Boolean.TRUE, segment.getLoadSpec().get("rangeable"));
+  }
+
+  @Test
+  public void testPushZipDoesNotStampRangeable() throws Exception
+  {
+    // Zip path uses the no-flag makeLoadSpec overload; openRangeReader returns null on the zip-key short circuit
+    // regardless, but we keep the loadSpec JSON compact for zipped segments by omitting the field entirely.
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
+
+    Grant grant = Grant.builder()
+        .grantee(Grantee.builder().id("ownerId").type(Type.CANONICAL_USER).build())
+        .permission(Permission.FULL_CONTROL)
+        .build();
+    EasyMock.expect(s3Client.getBucketOwnerGrant(EasyMock.eq("bucket"))).andReturn(grant).once();
+
+    s3Client.upload(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.anyObject(Grant.class));
+    EasyMock.expectLastCall().once();
+
+    EasyMock.replay(s3Client);
+
+    DataSegment segment = validate(
+        false,
+        "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/index\\.zip",
+        s3Client
+    );
+    Assert.assertFalse(segment.getLoadSpec().containsKey("rangeable"));
   }
 
   private void testPushInternal(boolean useUniquePath, String matcher) throws Exception
   {
     ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
-    Owner owner = Owner.builder()
-        .id("ownerId")
-        .displayName("owner")
-        .build();
-    Grantee grantee = Grantee.builder()
-        .id(owner.id())
-        .type(Type.CANONICAL_USER)
-        .build();
     Grant grant = Grant.builder()
-        .grantee(grantee)
+        .grantee(Grantee.builder().id("ownerId").type(Type.CANONICAL_USER).build())
         .permission(Permission.FULL_CONTROL)
         .build();
-    final GetBucketAclResponse aclResponse = GetBucketAclResponse.builder()
-        .owner(owner)
-        .grants(grant)
-        .build();
-    EasyMock.expect(s3Client.getBucketAcl(EasyMock.eq("bucket"))).andReturn(aclResponse).once();
+    EasyMock.expect(s3Client.getBucketOwnerGrant(EasyMock.eq("bucket"))).andReturn(grant).once();
 
     s3Client.upload(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.anyObject(Grant.class));
     EasyMock.expectLastCall().once();
@@ -174,23 +221,11 @@ public class S3DataSegmentPusherTest
         .statusCode(400)
         .build();
 
-    Owner owner = Owner.builder()
-        .id("ownerId")
-        .displayName("owner")
-        .build();
-    Grantee grantee = Grantee.builder()
-        .id(owner.id())
-        .type(Type.CANONICAL_USER)
-        .build();
     Grant grant = Grant.builder()
-        .grantee(grantee)
+        .grantee(Grantee.builder().id("ownerId").type(Type.CANONICAL_USER).build())
         .permission(Permission.FULL_CONTROL)
         .build();
-    final GetBucketAclResponse aclResponse = GetBucketAclResponse.builder()
-        .owner(owner)
-        .grants(grant)
-        .build();
-    EasyMock.expect(s3Client.getBucketAcl(EasyMock.eq("bucket"))).andReturn(aclResponse).once();
+    EasyMock.expect(s3Client.getBucketOwnerGrant(EasyMock.eq("bucket"))).andReturn(grant).once();
 
     s3Client.upload(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.anyObject(Grant.class));
     EasyMock.expectLastCall().andThrow(e).once();
@@ -200,24 +235,32 @@ public class S3DataSegmentPusherTest
     validate(useUniquePath, matcher, s3Client);
   }
 
-  private void validate(boolean useUniquePath, String matcher, ServerSideEncryptingAmazonS3 s3Client) throws IOException
+  private DataSegment validate(boolean useUniquePath, String matcher, ServerSideEncryptingAmazonS3 s3Client) throws IOException
   {
     S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
     config.setBucket("bucket");
     config.setBaseKey("key");
-    validate(useUniquePath, matcher, s3Client, config);
+    // Default version.bin is V1 for historical reasons.
+    DataSegment segment = validate(useUniquePath, matcher, s3Client, config, new byte[]{0x0, 0x0, 0x0, 0x1});
+    Assert.assertEquals(1, (int) segment.getBinaryVersion());
+    return segment;
   }
 
-  private void validate(boolean useUniquePath, String matcher, ServerSideEncryptingAmazonS3 s3Client, S3DataSegmentPusherConfig config) throws IOException
+  private DataSegment validate(
+      boolean useUniquePath,
+      String matcher,
+      ServerSideEncryptingAmazonS3 s3Client,
+      S3DataSegmentPusherConfig config,
+      byte[] versionBytes
+  ) throws IOException
   {
     S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config);
 
     // Create a mock segment on disk
     File tmp = tempFolder.newFile("version.bin");
 
-    final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
-    Files.write(data, tmp);
-    final long size = data.length;
+    Files.write(versionBytes, tmp);
+    final long size = versionBytes.length;
 
     DataSegment segmentToPush = new DataSegment(
             "foo",
@@ -234,7 +277,6 @@ public class S3DataSegmentPusherTest
     DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush, useUniquePath);
 
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
-    Assert.assertEquals(1, (int) segment.getBinaryVersion());
     Assert.assertEquals("bucket", segment.getLoadSpec().get("bucket"));
     Assert.assertTrue(
             segment.getLoadSpec().get("key").toString(),
@@ -243,5 +285,6 @@ public class S3DataSegmentPusherTest
     Assert.assertEquals("s3_zip", segment.getLoadSpec().get("type"));
 
     EasyMock.verify(s3Client);
+    return segment;
   }
 }

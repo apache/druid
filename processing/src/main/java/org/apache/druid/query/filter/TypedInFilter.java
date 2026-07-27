@@ -258,6 +258,11 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     if (!Objects.equals(getColumn(), dimension)) {
       return null;
     }
+    // The RangeSet returned here is compared lexicographically against shard boundaries (see DimensionRangeShardSpec),
+    // so it is only OK to return one for STRING comparison.
+    if (!matchValueType.is(ValueType.STRING)) {
+      return null;
+    }
     RangeSet<String> retSet = TreeRangeSet.create();
     for (Object value : sortedMatchValues.get()) {
       String valueEquivalent = Evals.asString(value);

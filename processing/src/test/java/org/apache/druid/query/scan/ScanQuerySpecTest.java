@@ -29,8 +29,8 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -68,9 +68,9 @@ public class ScanQuerySpecTest
     );
 
     String actual = JSON_MAPPER.writeValueAsString(query);
-    Assert.assertEquals(current, actual);
-    Assert.assertEquals(query, JSON_MAPPER.readValue(actual, ScanQuery.class));
-    Assert.assertEquals(query, JSON_MAPPER.readValue(legacy, ScanQuery.class));
+    Assertions.assertEquals(current, actual);
+    Assertions.assertEquals(query, JSON_MAPPER.readValue(actual, ScanQuery.class));
+    Assertions.assertEquals(query, JSON_MAPPER.readValue(legacy, ScanQuery.class));
   }
 
   @Test
@@ -96,10 +96,10 @@ public class ScanQuerySpecTest
     );
 
     String serializedJson = JSON_MAPPER.writeValueAsString(expectedQuery);
-    Assert.assertEquals(originalJson, serializedJson);
-    Assert.assertEquals(expectedQuery, JSON_MAPPER.readValue(originalJson, ScanQuery.class));
-    Assert.assertEquals(Order.ASCENDING, expectedQuery.getTimeOrder());
-    Assert.assertEquals(
+    Assertions.assertEquals(originalJson, serializedJson);
+    Assertions.assertEquals(expectedQuery, JSON_MAPPER.readValue(originalJson, ScanQuery.class));
+    Assertions.assertEquals(Order.ASCENDING, expectedQuery.getTimeOrder());
+    Assertions.assertEquals(
         Collections.singletonList(OrderBy.ascending("__time")),
         expectedQuery.getOrderBys()
     );
@@ -128,10 +128,10 @@ public class ScanQuerySpecTest
     );
 
     String serializedJson = JSON_MAPPER.writeValueAsString(expectedQuery);
-    Assert.assertEquals(originalJson, serializedJson);
-    Assert.assertEquals(expectedQuery, JSON_MAPPER.readValue(originalJson, ScanQuery.class));
-    Assert.assertEquals(Order.NONE, expectedQuery.getTimeOrder());
-    Assert.assertEquals(
+    Assertions.assertEquals(originalJson, serializedJson);
+    Assertions.assertEquals(expectedQuery, JSON_MAPPER.readValue(originalJson, ScanQuery.class));
+    Assertions.assertEquals(Order.NONE, expectedQuery.getTimeOrder());
+    Assertions.assertEquals(
         Collections.singletonList(OrderBy.ascending("quality")),
         expectedQuery.getOrderBys()
     );
@@ -158,6 +158,6 @@ public class ScanQuerySpecTest
 
     final String serialized = JSON_MAPPER.writeValueAsString(query);
     final ScanQuery deserialized = (ScanQuery) JSON_MAPPER.readValue(serialized, Query.class);
-    Assert.assertEquals(query, deserialized);
+    Assertions.assertEquals(query, deserialized);
   }
 }

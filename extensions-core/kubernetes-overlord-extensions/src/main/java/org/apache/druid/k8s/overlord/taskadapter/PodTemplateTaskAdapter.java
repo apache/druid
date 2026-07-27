@@ -103,6 +103,11 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     return TYPE;
   }
 
+  public PodTemplateSelector getPodTemplateSelector()
+  {
+    return podTemplateSelector;
+  }
+
   /**
    * Create a {@link Job} from a {@link Task}
    *
@@ -234,7 +239,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
             .build(),
         new EnvVarBuilder()
             .withName(DruidK8sConstants.LOAD_BROADCAST_SEGMENTS_ENV)
-            .withValue(Boolean.toString(task.supportsQueries()))
+            .withValue(Boolean.toString(task.getBroadcastDatasourceLoadingSpec().getMode().needsBroadcastSegments()))
             .build()
     );
     if (!shouldUseDeepStorageForTaskPayload(task)) {

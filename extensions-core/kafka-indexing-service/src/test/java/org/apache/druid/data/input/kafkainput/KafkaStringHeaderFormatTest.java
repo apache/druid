@@ -36,6 +36,7 @@ import org.junit.Test;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 
 public class KafkaStringHeaderFormatTest
@@ -100,10 +101,10 @@ public class KafkaStringHeaderFormatTest
   {
     String headerLabelPrefix = "test.kafka.header.";
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
-    inputEntity = new KafkaRecordEntity(new ConsumerRecord<>(
+    inputEntity = new KafkaRecordEntity(new ConsumerRecord<byte[], byte[]>(
         "sample", 0, 0, timestamp,
-        null, null, 0, 0,
-        null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers
+        null, 0, 0,
+        null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers, Optional.empty()
     ));
     List<Pair<String, Object>> expectedResults = Arrays.asList(
         Pair.of("test.kafka.header.encoding", "application/json"),
@@ -151,10 +152,10 @@ public class KafkaStringHeaderFormatTest
 
     String headerLabelPrefix = "test.kafka.header.";
     Headers headers = new RecordHeaders(header);
-    inputEntity = new KafkaRecordEntity(new ConsumerRecord<>(
+    inputEntity = new KafkaRecordEntity(new ConsumerRecord<byte[], byte[]>(
         "sample", 0, 0, timestamp,
-        null, null, 0, 0,
-        null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers
+        null, 0, 0,
+        null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers, Optional.empty()
     ));
     List<Pair<String, Object>> expectedResults = Arrays.asList(
         Pair.of("test.kafka.header.encoding", "application/json"),
@@ -203,10 +204,10 @@ public class KafkaStringHeaderFormatTest
 
     String headerLabelPrefix = "test.kafka.header.";
     Headers headers = new RecordHeaders(header);
-    inputEntity = new KafkaRecordEntity(new ConsumerRecord<>(
+    inputEntity = new KafkaRecordEntity(new ConsumerRecord<byte[], byte[]>(
         "sample", 0, 0, timestamp,
-        null, null, 0, 0,
-        null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers
+        null, 0, 0,
+        null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers, Optional.empty()
     ));
     List<Pair<String, Object>> expectedResults = Arrays.asList(
         Pair.of("test.kafka.header.encoding", "?pplic?tion/json"),

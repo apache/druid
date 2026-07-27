@@ -76,6 +76,9 @@ public class ServiceMetricEventTest
         builderEvent.toMap()
     );
 
+    Assert.assertEquals("test", builderEvent.getServiceDims().get("service"));
+    Assert.assertEquals("localhost", builderEvent.getServiceDims().get("host"));
+
     ServiceMetricEvent constructorEvent = ServiceMetricEvent
         .builder()
         .setDimension("user1", "a")
@@ -333,6 +336,8 @@ public class ServiceMetricEventTest
     final ServiceMetricEvent event1 = eventBuilder.build("coordinator", "localhost");
 
     Assert.assertEquals(Map.of("dim1", "v1"), event1.getUserDims());
+    Assert.assertEquals("coordinator", event1.getServiceDims().get("service"));
+    Assert.assertEquals("localhost", event1.getServiceDims().get("host"));
 
     final ServiceMetricEvent event2 = eventBuilder
         .setDimension("dim2", "v2")
@@ -342,6 +347,8 @@ public class ServiceMetricEventTest
     // Verify that the original event gets changed dimensions
     Assert.assertEquals(Map.of("dim1", "v1", "dim2", "v2"), event2.getUserDims());
     Assert.assertEquals(Map.of("dim1", "v1"), event1.getUserDims());
+    Assert.assertEquals("coordinator", event2.getServiceDims().get("service"));
+    Assert.assertEquals("localhost", event2.getServiceDims().get("host"));
   }
 
   @Test
@@ -379,5 +386,16 @@ public class ServiceMetricEventTest
         "{\"feed\":\"test_feed\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"metric\":\"m1\",\"value\":42,\"service\":\"broker\",\"host\":\"hostA\",\"dim1\":\"xyz\",\"dim2\":\"xyz\"}",
         new DefaultObjectMapper().writeValueAsString(event.toMap())
     );
+  }
+
+  @Test
+  public void testGetServiceDims()
+  {
+    final ServiceMetricEvent event = ServiceMetricEvent.builder()
+                                                       .setMetric("test-metric", 100)
+                                                       .setDimension("userDim", "value")
+                                                       .build(ImmutableMap.of("serviceDim1", "dim1", "serviceDim2", "dim2"));
+
+    Assert.assertEquals(ImmutableMap.of("serviceDim1", "dim1", "serviceDim2", "dim2"), event.getServiceDims());
   }
 }

@@ -24,6 +24,7 @@ import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.server.DefaultQueryBlocklistRule;
 import org.apache.druid.server.QueryBlocklistRule;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.http.BrokerDynamicConfigSyncer;
@@ -102,7 +103,7 @@ public class EmbeddedBrokerDynamicConfigTest extends EmbeddedClusterTestBase
     Assertions.assertFalse(initialResult.isBlank());
 
     // Apply blocklist rule that matches all queries on this datasource
-    QueryBlocklistRule blockRule = new QueryBlocklistRule(
+    QueryBlocklistRule blockRule = new DefaultQueryBlocklistRule(
         "block-test-datasource",
         Set.of(dataSource),
         null,

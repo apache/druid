@@ -20,12 +20,19 @@
 package org.apache.druid.query.metadata;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -418,10 +425,80 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testAnalysisClusteredSegmentReportsCorrectTypesNoErrors() throws IOException
+  {
+    // A clustered segment has empty top-level columns (data lives in per-group sub-indexes). SegmentAnalyzer must
+    // still report the correct logical column types and NOT mark every column as error("unknown_type"), otherwise
+    // the broker's SQL schema for a clustered datasource would be broken.
+    final QueryableIndex clusteredIndex = buildClusteredSegment();
+    final Segment segment = new QueryableIndexSegment(clusteredIndex, SegmentId.dummy("clustered"));
+
+    // Request the full stat set to also exercise the cursor-based STRING path + clustered-aware inspector.
+    final SegmentAnalyzer analyzer = new SegmentAnalyzer(
+        EnumSet.of(
+            SegmentMetadataQuery.AnalysisType.SIZE,
+            SegmentMetadataQuery.AnalysisType.CARDINALITY,
+            SegmentMetadataQuery.AnalysisType.MINMAX
+        )
+    );
+    final Map<String, ColumnAnalysis> analysis = analyzer.analyze(segment);
+
+    // Clustering column (constant per group) + non-clustering dim + __time all present with right types.
+    Assert.assertEquals(ColumnType.STRING, analysis.get("tenant").getTypeSignature());
+    Assert.assertFalse("tenant should not be an error", analysis.get("tenant").isError());
+    Assert.assertEquals(ColumnType.STRING, analysis.get("region").getTypeSignature());
+    Assert.assertFalse("region should not be an error", analysis.get("region").isError());
+    Assert.assertEquals(ColumnType.LONG, analysis.get(ColumnHolder.TIME_COLUMN_NAME).getTypeSignature());
+  }
+
+  private QueryableIndex buildClusteredSegment() throws IOException
+  {
+    final TimestampSpec timestampSpec = new TimestampSpec("ts", "millis", null);
+    final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .columns(
+                new StringDimensionSchema("tenant"),
+                new StringDimensionSchema("region"),
+                new LongDimensionSchema("__time")
+            )
+            .clusteringColumns("tenant")
+            .build();
+    final IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
+        .withMinTimestamp(DateTimes.of("2011-01-01").getMillis())
+        .withTimestampSpec(timestampSpec)
+        .withQueryGranularity(Granularities.NONE)
+        .withDimensionsSpec(clusterSpec.getDimensionsSpec())
+        .withRollup(false)
+        .withClusterSpec(clusterSpec)
+        .build();
+    final long t = DateTimes.of("2011-01-01").getMillis();
+    final IndexBuilder bob = IndexBuilder.create()
+                                         .useV10()
+                                         .tmpDir(temporaryFolder.newFolder())
+                                         .schema(schema)
+                                         .rows(List.of(
+                                             clusterRow(t, "acme", "us-east-1"),
+                                             clusterRow(t + 1, "acme", "us-west-2"),
+                                             clusterRow(t + 2, "globex", "eu-west-1")
+                                         ));
+    return bob.buildMMappedIndex(Intervals.of("2011/2012"));
+  }
+
+  private static InputRow clusterRow(long ts, String tenant, String region)
+  {
+    final Map<String, Object> event = new java.util.HashMap<>();
+    event.put("ts", ts);
+    event.put("tenant", tenant);
+    event.put("region", region);
+    return new MapBasedInputRow(ts, List.of("tenant", "region"), event);
+  }
+
+  @Test
   public void testAnalysisImproperComplex() throws IOException
   {
     QueryableIndex mockIndex = EasyMock.createMock(QueryableIndex.class);
     EasyMock.expect(mockIndex.getNumRows()).andReturn(100).atLeastOnce();
+    EasyMock.expect(mockIndex.getClusteredBaseSummary()).andReturn(null).anyTimes();
     EasyMock.expect(mockIndex.getColumnNames()).andReturn(Collections.singletonList("x")).atLeastOnce();
     EasyMock.expect(mockIndex.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME))
             .andReturn(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG))

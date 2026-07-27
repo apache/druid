@@ -113,7 +113,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -320,7 +319,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ImmutableMap.of(SHARD_ID1, "2"),
         ImmutableMap.of(SHARD_ID1, "4")
     );
-    Assert.assertTrue(task.supportsQueries());
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
@@ -878,7 +876,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyAll();
 
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSize(RECORDS, 0, 5))
-                                     .thrownAwayByReason(InputRowFilterResult.NULL_OR_EMPTY_RECORD, 4).totalProcessed(1));
+                                     .thrownAwayByReason(InputRowFilterResult.CUSTOM_FILTER, 4).totalProcessed(1));
 
     // Check published metadata
     assertEqualsExceptVersion(ImmutableList.of(sdd("2009/P1D", 0)), publishedDescriptors());
@@ -2087,7 +2085,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     task.getRunner().setToolbox(toolboxFactory.build(task));
     task.getRunner().initializeSequences();
-    final CopyOnWriteArrayList<SequenceMetadata<String, String>> sequences = task.getRunner().getSequences();
+    final List<SequenceMetadata<String, String>> sequences = task.getRunner().getSequences();
 
     Assert.assertEquals(3, sequences.size());
 

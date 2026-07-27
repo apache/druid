@@ -40,17 +40,15 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.spec.LegacySegmentSpec;
-import org.apache.druid.segment.CloserRule;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -61,13 +59,12 @@ import java.util.List;
  */
 public class GroupByQueryRunnerFactoryTest
 {
-  @Rule
-  public CloserRule closerRule = new CloserRule(true);
+  private final Closer closerRule = Closer.create();
 
   private GroupByQueryRunnerFactory factory;
   private Closer resourceCloser;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     this.resourceCloser = Closer.create();
@@ -75,11 +72,12 @@ public class GroupByQueryRunnerFactoryTest
     this.factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig(), buffers);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     factory = null;
     resourceCloser.close();
+    closerRule.close();
   }
 
   @Test
@@ -178,7 +176,7 @@ public class GroupByQueryRunnerFactoryTest
       }
     }
 
-    closerRule.closeLater(incrementalIndex);
+    closerRule.register(incrementalIndex);
 
     return new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("test"));
   }

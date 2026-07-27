@@ -194,7 +194,7 @@ public class SegmentTransactionalInsertActionTest
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     final NoopSupervisorSpec supervisorSpec = new NoopSupervisorSpec(SUPERVISOR_ID, List.of(DATA_SOURCE));
-    actionTestKit.getSupervisorManager().createOrUpdateAndStartSupervisor(supervisorSpec);
+    actionTestKit.getSupervisorManager().createOrUpdateAndStartSupervisor(supervisorSpec, false);
 
     SegmentPublishResult result = SegmentTransactionalInsertAction.appendAction(
         ImmutableSet.of(SEGMENT1),
