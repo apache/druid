@@ -80,15 +80,15 @@ public class UnusedSegmentsKiller implements OverlordDuty
   private static final int MAX_SEGMENTS_TO_KILL_IN_BATCH = 1000;
 
   /**
-   * Maximum number of segments that typically allows query to finish within ~5s.
-   */
-  private static final int MAX_SEGMENTS_TO_SCAN = 200_000;
-
-  /**
    * Keep max segments to kill in a single kill task small so that the EXCLUSIVE
    * lock on the underlying interval is not held for too long.
    */
-  private static final int MAX_SEGMENTS_TO_KILL_IN_TASK = 10_000;
+  private static final int MAX_SEGMENTS_TO_KILL_IN_TASK = 10 * MAX_SEGMENTS_TO_KILL_IN_BATCH;
+
+  /**
+   * Maximum number of segments that typically allows query to finish within ~5s.
+   */
+  private static final int MAX_SEGMENTS_TO_SCAN = 200_000;
 
   /**
    * Period after which the queue is reset even if there are existing jobs in queue.
@@ -276,10 +276,17 @@ public class UnusedSegmentsKiller implements OverlordDuty
         while (remainingSegmentsToKill > 0) {
           int numSegmentsToKill
               = Math.min(remainingSegmentsToKill, MAX_SEGMENTS_TO_KILL_IN_TASK);
+          remainingSegmentsToKill -= numSegmentsToKill;
+
+          // If only a few segments remain, add them to the same candidate
+          if (remainingSegmentsToKill < MAX_SEGMENTS_TO_KILL_IN_BATCH) {
+            numSegmentsToKill += remainingSegmentsToKill;
+            remainingSegmentsToKill = 0;
+          }
+
           killQueue.offer(
               new KillCandidate(entry.dataSource(), entry.interval(), numSegmentsToKill)
           );
-          remainingSegmentsToKill -= numSegmentsToKill;
         }
 
         emitMetric(
@@ -524,6 +531,6 @@ public class UnusedSegmentsKiller implements OverlordDuty
 
     public static final String SKIPPED_INTERVALS = "segment/kill/skippedIntervals/count";
     public static final String UNUSED_SEGMENT_INTERVALS = "segment/kill/unusedIntervals/count";
-    public static final String ELIGIBLE_UNUSED_SEGMENTS = "segment/kill/eligibleSegment/count";
+    public static final String ELIGIBLE_UNUSED_SEGMENTS = "segment/kill/eligibleSegments/count";
   }
 }
