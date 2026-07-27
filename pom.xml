@@ -449,7 +449,7 @@
             <dependency>
                 <groupId>org.jetbrains</groupId>
                 <artifactId>annotations</artifactId>
-                <version>26.0.2</version>
+                <version>26.1.0</version>
             </dependency>
             <!-- Transitive dependency of kubernetes-client-java in kubernetes-extension,
             schema-repo in avro-extensions, and com.google.caliper:caliper in druid-server

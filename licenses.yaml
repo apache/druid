@@ -1315,7 +1315,7 @@ name: Jetbrains Annotations
 license_category: binary
 module: extensions/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 26.0.2
+version: 26.1.0
 libraries:
   - org.jetbrains: annotations
 
