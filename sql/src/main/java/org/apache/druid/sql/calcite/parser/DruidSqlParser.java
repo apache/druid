@@ -203,27 +203,29 @@ public class DruidSqlParser
                              .withContext("sourceType", "sql");
       } else {
         final String theUnexpectedToken = getUnexpectedTokenString(parseException);
+        final String firstUnexpectedToken = getUnexpectedTokenString(parseException, 1);
         final String[] tokenDictionary = e.getTokenImages();
         final int[][] expectedTokenSequences = e.getExpectedTokenSequences();
 
         if (parserMetadata != null
             && isIdentifierExpected(tokenDictionary, expectedTokenSequences)
-            && parserMetadata.isReservedWord(theUnexpectedToken.toUpperCase(Locale.ROOT))) {
+            && !isFunctionCall(parseException)
+            && parserMetadata.isReservedWord(firstUnexpectedToken.toUpperCase(Locale.ROOT))) {
           return InvalidSqlInput
               .exception(
                   e,
                   "Token [%s] (line [%s], column [%s]) is a reserved keyword. "
                   + "To use it as an identifier, quote it as [\"%s\"]",
-                  theUnexpectedToken,
+                  firstUnexpectedToken,
                   failurePosition.getLineNum(),
                   failurePosition.getColumnNum(),
-                  theUnexpectedToken
+                  firstUnexpectedToken
               )
               .withContext("line", failurePosition.getLineNum())
               .withContext("column", failurePosition.getColumnNum())
               .withContext("endLine", failurePosition.getEndLineNum())
               .withContext("endColumn", failurePosition.getEndColumnNum())
-              .withContext("token", theUnexpectedToken);
+              .withContext("token", firstUnexpectedToken);
         }
 
         final ArrayList<String> expectedTokens = new ArrayList<>(expectedTokenSequences.length);
@@ -274,6 +276,12 @@ public class DruidSqlParser
     return false;
   }
 
+  private static boolean isFunctionCall(ParseException parseException)
+  {
+    final Token nextToken = parseException.currentToken.next;
+    return nextToken.next != null && "(".equals(nextToken.next.image);
+  }
+
   /**
    * Grabs the unexpected token string.  This code is borrowed with minimal adjustments from
    * {@link ParseException#getMessage()}.  It is possible that if that code changes, we need to also
@@ -291,6 +299,12 @@ public class DruidSqlParser
         maxSize = ints.length;
       }
     }
+
+    return getUnexpectedTokenString(parseException, maxSize);
+  }
+
+  private static String getUnexpectedTokenString(ParseException parseException, int maxSize)
+  {
 
     StringBuilder bob = new StringBuilder();
     Token tok = parseException.currentToken.next;

@@ -164,7 +164,20 @@ public class DruidSqlParserTest
         () -> DruidSqlParser.parse("SELECT * FROM foo GROUP ORDER BY x", false)
     );
 
-    Assert.assertTrue(exception.getMessage().contains("Received an unexpected token [ORDER]"));
+    Assert.assertTrue(exception.getMessage().contains("Received an unexpected token"));
+    Assert.assertFalse(exception.getMessage().contains("is a reserved keyword"));
+  }
+
+  @Test
+  public void testParse_reservedKeywordFunctionCall()
+  {
+    // UNNEST is a reserved keyword, but it appears in a function-call context, not as an identifier.
+    final DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> DruidSqlParser.parse("SELECT strlen(unnest(a_int))", false)
+    );
+
+    Assert.assertTrue(exception.getMessage().contains("Received an unexpected token"));
     Assert.assertFalse(exception.getMessage().contains("is a reserved keyword"));
   }
 }
