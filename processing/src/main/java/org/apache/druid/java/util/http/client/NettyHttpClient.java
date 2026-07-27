@@ -241,7 +241,6 @@ public class NettyHttpClient extends AbstractHttpClient
               if (msg instanceof HttpObject) {
                 final DecoderResult decoderResult = ((HttpObject) msg).decoderResult();
                 if (decoderResult.isFailure()) {
-                  ReferenceCountUtil.release(msg);
                   handleExceptionAndCloseChannel(decoderResult.cause(), false);
                   return;
                 }
@@ -250,7 +249,6 @@ public class NettyHttpClient extends AbstractHttpClient
               if (msg instanceof HttpResponse) {
                 if (didEncounterException.get()) {
                   // Don't process HttpResponse after encountering an exception.
-                  ReferenceCountUtil.release(msg);
                   return;
                 }
 
@@ -297,14 +295,9 @@ public class NettyHttpClient extends AbstractHttpClient
                 if (msg instanceof LastHttpContent) {
                   finishRequest();
                 }
-                
-                // In Netty 4, we must release inbound messages after processing
-                // The handler has copied any data it needs
-                ReferenceCountUtil.release(msg);
               } else if (msg instanceof HttpContent) {
                 if (didEncounterException.get()) {
                   // Don't process HttpChunk after encountering an exception.
-                  ReferenceCountUtil.release(msg);
                   return;
                 }
 
@@ -327,12 +320,7 @@ public class NettyHttpClient extends AbstractHttpClient
                 if (msg instanceof LastHttpContent) {
                   finishRequest();
                 }
-                
-                // In Netty 4, we must release inbound messages after processing
-                // The handler has copied any data it needs
-                ReferenceCountUtil.release(msg);
               } else {
-                ReferenceCountUtil.release(msg);
                 throw new ISE("Unknown message type[%s]", msg.getClass());
               }
             }
@@ -346,6 +334,14 @@ public class NettyHttpClient extends AbstractHttpClient
               channelResourceContainer.returnResource();
 
               throw ex;
+            }
+            finally {
+              // Netty 4 requires inbound messages to be released once handled, and
+              // ChannelInboundHandlerAdapter (unlike SimpleChannelInboundHandler) does not do it for us. Release
+              // here rather than per branch so that the message is freed even when a handler throws: a response
+              // that trips a limit or a timeout inside handleResponse/handleChunk would otherwise leak its
+              // pooled buffer. Handlers are expected to have copied or retained whatever they still need.
+              ReferenceCountUtil.release(msg);
             }
           }
 
