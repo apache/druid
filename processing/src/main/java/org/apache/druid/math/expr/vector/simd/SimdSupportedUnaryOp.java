@@ -25,12 +25,79 @@ package org.apache.druid.math.expr.vector.simd;
  * their operation can be dispatched to a SIMD variant when the user enables
  * {@link org.apache.druid.math.expr.ExpressionProcessingConfig#USE_VECTOR_API}.
  *
- * Deliberately does not reference any {@code jdk.incubator.vector} types so that callers wiring the enum into
+ * <p>Deliberately does not reference any {@code jdk.incubator.vector} types so that callers wiring the enum into
  * factories do not need the incubator module visible.
+ *
+ * <p>Ops annotated as <em>VO_MATHLIB code path</em> below are backed by a vectorized math library (Intel SVML on
+ * x86, SLEEF on Arm) via {@code VectorOperators.<OP>}, not a direct hardware intrinsic. Performance is
+ * JVM/build/hardware dependent, typically 1.5x-4x faster than the scalar {@link Math} equivalent on JVMs with
+ * SVML/SLEEF wired up, but can fall back to a scalar-loop implementation on builds without that wiring. The
+ * remaining ops (NEG, ABS, SQRT) dispatch to direct hardware FP intrinsics and are consistently faster than
+ * scalar across every JVM/hardware combo.
  */
 public enum SimdSupportedUnaryOp
 {
   NEG,
   ABS,
-  SQRT
+  SQRT,
+  /**
+   * Natural log. VO_MATHLIB code path.
+   */
+  LOG,
+  /**
+   * Natural exponentiation. VO_MATHLIB code path.
+   */
+  EXP,
+  /**
+   * Base-10 logarithm. VO_MATHLIB code path.
+   */
+  LOG10,
+  /**
+   * {@code log(1+x)}. VO_MATHLIB code path.
+   */
+  LOG1P,
+  /**
+   * {@code exp(x)-1}. VO_MATHLIB code path.
+   */
+  EXPM1,
+  /**
+   * Cube root. VO_MATHLIB code path.
+   */
+  CBRT,
+  /**
+   * Sine. VO_MATHLIB code path.
+   */
+  SIN,
+  /**
+   * Cosine. VO_MATHLIB code path.
+   */
+  COS,
+  /**
+   * Tangent. VO_MATHLIB code path.
+   */
+  TAN,
+  /**
+   * Arc sine. VO_MATHLIB code path.
+   */
+  ASIN,
+  /**
+   * Arc cosine. VO_MATHLIB code path.
+   */
+  ACOS,
+  /**
+   * Arc tangent. VO_MATHLIB code path.
+   */
+  ATAN,
+  /**
+   * Hyperbolic sine. VO_MATHLIB code path.
+   */
+  SINH,
+  /**
+   * Hyperbolic cosine. VO_MATHLIB code path.
+   */
+  COSH,
+  /**
+   * Hyperbolic tangent. VO_MATHLIB code path.
+   */
+  TANH
 }
