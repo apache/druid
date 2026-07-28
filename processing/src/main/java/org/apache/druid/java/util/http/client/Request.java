@@ -22,14 +22,13 @@ package org.apache.druid.java.util.http.client;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,6 +37,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * An HTTP request, which may be sent more than once.
+ *
+ * The body is held as a plain byte array rather than a Netty {@link io.netty.buffer.ByteBuf} so that a Request has no
+ * reference-counted state and therefore needs no release step. Sending does not consume or modify it: the client wraps
+ * a fresh outbound buffer around these bytes for each attempt. That is what allows a Request to be resent, as
+ * KerberosHttpClient does after a 401.
  */
 public class Request
 {
@@ -55,7 +60,7 @@ public class Request
       }
   );
 
-  private ByteBuf content;
+  private byte[] content;
 
   public Request(
       HttpMethod method,
@@ -86,7 +91,10 @@ public class Request
     return content != null;
   }
 
-  public ByteBuf getContent()
+  /**
+   * The request body, or null if there is none. Not copied, and never modified by sending the request.
+   */
+  public byte[] getContent()
   {
     return content;
   }
@@ -95,9 +103,8 @@ public class Request
   {
     Request retVal = new Request(method, url);
     retVal.headers.putAll(this.headers);
-    // ByteBuf.copy() creates a new buffer with copied data and independent reference count
-    // Both the original and the copy need to be released separately
-    retVal.content = content == null ? null : content.copy();
+    // Shares the body with the original rather than duplicating it, since nothing writes to it in place.
+    retVal.content = content;
     return retVal;
   }
 
@@ -132,11 +139,6 @@ public class Request
     return setContent(null, bytes);
   }
 
-  public Request setContent(ByteBuf content)
-  {
-    return setContent(null, content);
-  }
-
   public Request setContent(String contentType, byte[] bytes)
   {
     return setContent(contentType, bytes, 0, bytes.length);
@@ -144,20 +146,16 @@ public class Request
 
   public Request setContent(String contentType, byte[] bytes, int offset, int length)
   {
-    // Use wrappedBuffer for efficiency - doesn't copy the array
-    // The ByteBuf will be released after the HTTP request is written
-    return setContent(contentType, Unpooled.wrappedBuffer(bytes, offset, length));
-  }
-
-  public Request setContent(String contentType, ByteBuf content)
-  {
     if (contentType != null) {
       setHeader(HttpHeaderNames.CONTENT_TYPE.toString(), contentType);
     }
 
-    this.content = content;
+    // The whole array is kept as-is; only a partial view has to be extracted.
+    this.content = offset == 0 && length == bytes.length
+                   ? bytes
+                   : Arrays.copyOfRange(bytes, offset, offset + length);
 
-    setHeader(HttpHeaderNames.CONTENT_LENGTH.toString(), String.valueOf(content.readableBytes()));
+    setHeader(HttpHeaderNames.CONTENT_LENGTH.toString(), String.valueOf(length));
 
     return this;
   }

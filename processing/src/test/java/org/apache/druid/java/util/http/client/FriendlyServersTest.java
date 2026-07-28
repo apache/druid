@@ -208,10 +208,9 @@ public class FriendlyServersTest
 
   /**
    * A {@link Request} may legitimately be sent more than once: KerberosHttpClient resends
-   * {@code request.copy()} after a 401, and ClientUtils copies a request's content to retarget it at
-   * another server. Writing a request must therefore leave the caller's body buffer intact, rather
-   * than handing ownership of it to Netty's encoder (which releases what it encodes) or letting the
-   * socket write consume its reader index.
+   * {@code request.copy()} after a 401, and ClientUtils retargets a request at another server. Sending must
+   * therefore leave the body intact, rather than handing it to Netty's encoder (which releases the buffer it
+   * encodes) or letting the socket write consume it.
    */
   @Test(timeout = 60_000L)
   public void testRequestBodySurvivesBeingSent() throws Exception
@@ -274,9 +273,8 @@ public class FriendlyServersTest
           client.go(request, StatusResponseHandler.getInstance()).get();
       Assert.assertEquals(200, first.getStatus().code());
 
-      // The buffer must still be readable and unreleased, or a retry cannot resend it.
-      Assert.assertEquals("refCnt after sending", 1, request.getContent().refCnt());
-      Assert.assertEquals("readableBytes after sending", body.length, request.getContent().readableBytes());
+      // Sending must leave the body intact, or a retry cannot resend it.
+      Assert.assertArrayEquals("content after sending", body, request.getContent());
 
       // This is what KerberosHttpClient does when it retries an unauthorized request.
       final StatusResponseHolder second =

@@ -137,7 +137,7 @@ public class TestSegmentLoadingHttpClient implements HttpClient
   ) throws IOException
   {
     final List<DataSegmentChangeRequest> changeRequests = objectMapper.readValue(
-        request.getContent().array(),
+        request.getContent(),
         new TypeReference<>() {}
     );
 

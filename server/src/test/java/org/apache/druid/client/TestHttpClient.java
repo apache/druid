@@ -155,7 +155,7 @@ public class TestHttpClient implements HttpClient
   )
   {
     try {
-      final Query query = objectMapper.readValue(request.getContent().array(), Query.class);
+      final Query query = objectMapper.readValue(request.getContent(), Query.class);
       final QueryRunner queryRunner = servers.get(request.getUrl()).getQueryRunner();
       if (queryRunner == null) {
         throw new ISE("Can't find queryRunner for url[%s]", request.getUrl());
