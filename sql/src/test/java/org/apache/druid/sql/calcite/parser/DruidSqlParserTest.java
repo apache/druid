@@ -168,6 +168,17 @@ public class DruidSqlParserTest
   }
 
   @Test
+  public void testParse_expectedReservedKeyword()
+  {
+    final DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> DruidSqlParser.parse("SELECT a FROM", false)
+    );
+
+    Assert.assertFalse(exception.getMessage().contains("is a reserved keyword"));
+  }
+
+  @Test
   public void testParse_reservedKeywordFunctionCall()
   {
     // UNNEST is a reserved keyword, but it appears in a function-call context, not as an identifier.

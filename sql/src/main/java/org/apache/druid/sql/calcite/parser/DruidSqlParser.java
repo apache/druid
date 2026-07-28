@@ -32,6 +32,7 @@ import org.apache.calcite.sql.parser.SqlAbstractParserImpl;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.parser.SqlParserUtil;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.SourceStringReader;
@@ -210,6 +211,7 @@ public class DruidSqlParser
 
         if (parserMetadata != null
             && isIdentifierExpected(tokenDictionary, expectedTokenSequences)
+            && !isKeywordExpected(firstUnexpectedToken, tokenDictionary, expectedTokenSequences)
             && !isFunctionCall(sql, failurePosition, parseException.currentToken.next.image)
             && parserMetadata.isReservedWord(firstUnexpectedToken.toUpperCase(Locale.ROOT))) {
           return InvalidSqlInput
@@ -272,6 +274,23 @@ public class DruidSqlParser
             || "<UNICODE_QUOTED_IDENTIFIER>".equals(token)) {
           return true;
         }
+      }
+    }
+    return false;
+  }
+
+  private static boolean isKeywordExpected(
+      String unexpectedToken,
+      String[] tokenDictionary,
+      int[][] expectedTokenSequences
+  )
+  {
+    for (int[] expectedTokenSequence : expectedTokenSequences) {
+      if (expectedTokenSequence.length > 0
+          && unexpectedToken.equalsIgnoreCase(
+              SqlParserUtil.getTokenVal(tokenDictionary[expectedTokenSequence[0]])
+          )) {
+        return true;
       }
     }
     return false;
