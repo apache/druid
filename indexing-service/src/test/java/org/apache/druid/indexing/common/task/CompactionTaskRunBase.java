@@ -1710,26 +1710,11 @@ public abstract class CompactionTaskRunBase
 
   private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, TaskActionClient taskActionClient) throws IOException
   {
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return ImmutableList.of(new StorageLocationConfig(localDeepStorage, null, null));
-      }
-
-      @Override
-      public boolean isVirtualStorage()
-      {
-        return true;
-      }
-
-      @Override
-      public boolean isVirtualStorageEphemeral()
-      {
-        return true;
-      }
-    };
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(localDeepStorage, null, null))
+        .virtualStorage(true)
+        .virtualStorageIsEphemeral(true)
+        .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     final SegmentCacheManager cacheManager = new SegmentLocalCacheManager(
         storageLocations,

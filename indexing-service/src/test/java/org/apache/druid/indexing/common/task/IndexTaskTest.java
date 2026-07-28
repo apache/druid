@@ -206,16 +206,9 @@ public class IndexTaskTest extends IngestionTestBase
   {
     final File cacheDir = temporaryFolder.newFolder();
     tmpDir = temporaryFolder.newFolder();
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.singletonList(
-            new StorageLocationConfig(cacheDir, null, null)
-        );
-      }
-    };
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(cacheDir, null, null))
+        .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     segmentCacheManager = new SegmentLocalCacheManager(
         storageLocations,

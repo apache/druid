@@ -63,10 +63,15 @@ class SegmentCacheManagerFactoryTest
   void testVirtualStorageManagersShareTheInjectedPool()
   {
     final StorageLoadingThreadPool shared =
-        StorageLoadingThreadPool.createFromConfig(new SegmentLoaderConfig().withVirtualStorage(true));
+        StorageLoadingThreadPool.createFromConfig(SegmentLoaderConfig.builder().build().toEphemeralVirtualStorage());
     try {
       final SegmentCacheManagerFactory factory =
-          new SegmentCacheManagerFactory(TestIndex.INDEX_IO, jsonMapper, new SegmentLoaderConfig(), Providers.of(shared));
+          new SegmentCacheManagerFactory(
+              TestIndex.INDEX_IO,
+              jsonMapper,
+              SegmentLoaderConfig.builder().build(),
+              Providers.of(shared)
+          );
       final SegmentCacheManager m1 = factory.manufacturate(new File(tempDir, "a"), null, true, false);
       final SegmentCacheManager m2 = factory.manufacturate(new File(tempDir, "b"), null, true, false);
 
@@ -87,7 +92,12 @@ class SegmentCacheManagerFactoryTest
       throw new AssertionError("ephemeral loading pool must not be resolved for virtualStorage=false");
     };
     final SegmentCacheManagerFactory factory =
-        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, jsonMapper, new SegmentLoaderConfig(), throwingProvider);
+        new SegmentCacheManagerFactory(
+            TestIndex.INDEX_IO,
+            jsonMapper,
+            SegmentLoaderConfig.builder().build(),
+            throwingProvider
+        );
 
     final SegmentCacheManager m = factory.manufacturate(new File(tempDir, "c"), null, false, false);
     Assertions.assertFalse(m.getLoadingThreadPool().isAvailable());
@@ -110,7 +120,7 @@ class SegmentCacheManagerFactoryTest
     );
 
     final StorageLoadingThreadPool shared =
-        StorageLoadingThreadPool.createFromConfig(new SegmentLoaderConfig().withVirtualStorage(true));
+        StorageLoadingThreadPool.createFromConfig(SegmentLoaderConfig.builder().build().toEphemeralVirtualStorage());
     try {
       final SegmentCacheManagerFactory factory =
           new SegmentCacheManagerFactory(TestIndex.INDEX_IO, jsonMapper, injected, Providers.of(shared));

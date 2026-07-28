@@ -40,7 +40,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -65,34 +64,12 @@ public class SegmentCacheBootstrapperTest
     final File segmentCacheDir = temporaryFolder.newFolder();
 
     segmentAnnouncer = new TestDataSegmentAnnouncer();
-    segmentLoaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public File getInfoDir()
-      {
-        return segmentCacheDir;
-      }
-
-      @Override
-      public int getNumLoadingThreads()
-      {
-        return 5;
-      }
-
-      @Override
-      public int getAnnounceIntervalMillis()
-      {
-        return 50;
-      }
-
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.singletonList(
-            new StorageLocationConfig(segmentCacheDir, null, null)
-        );
-      }
-    };
+    segmentLoaderConfig = SegmentLoaderConfig.builder()
+        .infoDir(segmentCacheDir)
+        .numLoadingThreads(5)
+        .announceIntervalMillis(50)
+        .locations(new StorageLocationConfig(segmentCacheDir, null, null))
+        .build();
 
     coordinatorClient = new TestCoordinatorClient();
     serviceEmitter = new StubServiceEmitter();

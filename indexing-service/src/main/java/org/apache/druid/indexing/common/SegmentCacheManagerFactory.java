@@ -37,7 +37,6 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -82,12 +81,12 @@ public class SegmentCacheManagerFactory
    */
   public static SegmentCacheManagerFactory createWithOwnedPool(IndexIO indexIO, ObjectMapper mapper)
   {
-    final SegmentLoaderConfig defaults = new SegmentLoaderConfig();
+    final SegmentLoaderConfig defaults = SegmentLoaderConfig.builder().build();
     return new SegmentCacheManagerFactory(
         indexIO,
         mapper,
         defaults,
-        Providers.of(StorageLoadingThreadPool.createFromConfig(defaults.withVirtualStorage(true)))
+        Providers.of(StorageLoadingThreadPool.createFromConfig(defaults.toEphemeralVirtualStorage()))
     );
   }
 
@@ -119,11 +118,17 @@ public class SegmentCacheManagerFactory
         maxSize != null ? maxSize : Long.MAX_VALUE,
         null
     );
+    // For virtual storage, derive an ephemeral virtual-storage cache config from the injected node config: this keeps
+    // its virtual-storage tuning while dropping the classic on-disk-cache settings that don't apply to a per-task
+    // cache. Otherwise, start from the node config as-is. Then set the per-task location and mode flags.
     final SegmentLoaderConfig loaderConfig =
-        segmentLoaderConfig.withVirtualStorage(virtualStorage)
-            .setLocations(Collections.singletonList(locationConfig))
-            .setVirtualStorageIsEphemeral(virtualStorage)
-            .setVirtualStoragePartialDownloadsEnabled(partialDownloadsEnabled);
+        (virtualStorage ? segmentLoaderConfig.toEphemeralVirtualStorage() : segmentLoaderConfig)
+            .toBuilder()
+            .locations(locationConfig)
+            .virtualStorage(virtualStorage)
+            .virtualStorageIsEphemeral(virtualStorage)
+            .virtualStoragePartialDownloadsEnabled(partialDownloadsEnabled)
+            .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     return new SegmentLocalCacheManager(
         storageLocations,
