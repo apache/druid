@@ -157,15 +157,12 @@ public class NettyHttpClient extends AbstractHttpClient
     }
     final String urlFile = StringUtils.nullToEmptyNonDruidDataString(url.getFile());
 
-    // Give Netty its own view of the body rather than the caller's buffer. Netty's HttpObjectEncoder
-    // releases whatever it encodes, and writing to the socket advances the reader index, so passing
-    // request.getContent() directly would leave the caller holding a released, fully consumed buffer.
-    // Callers do reuse a Request: KerberosHttpClient resends request.copy() after a 401, and
-    // ClientUtils copies a request's content to retarget it at another server. A retained duplicate
-    // shares the bytes but has its own indices, so Netty's release balances our retain and the
-    // original is left untouched.
+    // Netty's HttpObjectEncoder releases whatever buffer it encodes, and writing to the socket advances that
+    // buffer's reader index, so each attempt gets its own wrapper around the request's bytes. The Request keeps
+    // the bytes themselves, which is what lets callers resend it: KerberosHttpClient retries request.copy()
+    // after a 401, and ClientUtils retargets a request at another server.
     final ByteBuf content = request.hasContent()
-                            ? request.getContent().retainedDuplicate()
+                            ? Unpooled.wrappedBuffer(request.getContent())
                             : Unpooled.EMPTY_BUFFER;
     final DefaultFullHttpRequest httpRequest = new DefaultFullHttpRequest(
         HttpVersion.HTTP_1_1,

@@ -388,7 +388,7 @@ public class HttpLoadQueuePeonTest
         }
 
         List<DataSegmentChangeRequest> changeRequests = MAPPER.readValue(
-            request.getContent().array(),
+            request.getContent(),
             HttpLoadQueuePeon.REQUEST_ENTITY_TYPE_REF
         );
 
