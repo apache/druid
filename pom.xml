@@ -103,7 +103,7 @@
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>2.2</hamcrest.version>
         <iceberg.core.version>1.10.0</iceberg.core.version>
-        <jetty.version>12.1.10</jetty.version>
+        <jetty.version>12.1.11</jetty.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.21.4</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
