@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
@@ -259,6 +260,9 @@ public class QueryResource implements QueryCountStatsProvider
     final Query<?> baseQuery;
     try {
       baseQuery = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
+    }
+    catch (ValueInstantiationException e) {
+      throw new BadJsonQueryException(e);
     }
     catch (JsonParseException e) {
       throw new BadJsonQueryException(e);
