@@ -264,10 +264,32 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
     }
   }
 
+  /**
+   * Close every queued chunk, releasing the buffer each one retains. {@link InputStreamHolder#fromByteBuf} retains
+   * the Netty buffer and hands it to a {@link io.netty.buffer.ByteBufInputStream} that releases it only on close, so
+   * dropping the holders without closing them (as {@code queue.clear()} does) strands those retains and leaks pooled
+   * direct memory on every query that times out or fails.
+   *
+   * <p>Only the queued chunks are closed, never the one the consumer has already dequeued: that one may still be
+   * being read on another thread.
+   */
+  private void discardQueuedChunks()
+  {
+    InputStreamHolder holder;
+    while ((holder = queue.poll()) != null) {
+      try {
+        holder.getStream().close();
+      }
+      catch (IOException e) {
+        log.debug(e, "Could not close abandoned response chunk for queryId[%s]", query.getId());
+      }
+    }
+  }
+
   private void setupResponseReadFailure(String msg, Throwable th)
   {
     fail.set(msg);
-    queue.clear();
+    discardQueuedChunks();
     queue.offer(
         InputStreamHolder.fromStream(
             new InputStream()
