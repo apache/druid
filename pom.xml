@@ -719,7 +719,7 @@
             <dependency>
                 <groupId>jakarta.validation</groupId>
                 <artifactId>jakarta.validation-api</artifactId>
-                <version>2.0.2</version>
+                <version>3.1.1</version>
             </dependency>
             <dependency>
                 <groupId>jakarta.inject</groupId>
