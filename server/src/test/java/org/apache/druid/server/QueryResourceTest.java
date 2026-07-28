@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -1041,6 +1042,23 @@ public class QueryResourceTest
     QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
     Assert.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
     Assert.assertEquals(BadJsonQueryException.ERROR_CLASS, e.getErrorClass());
+  }
+
+  @Test
+  public void testIncompleteQuery() throws IOException
+  {
+    final Response response = queryResource.doPost(
+        new ByteArrayInputStream("{\"queryType\":\"scan\"}".getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assert.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
+    Assert.assertEquals(ValueInstantiationException.class.getName(), e.getErrorClass());
+    Assert.assertEquals("Invalid native query: dataSource can't be null", e.getMessage());
   }
 
   @Test
