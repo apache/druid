@@ -1287,7 +1287,7 @@
             <dependency>
                 <groupId>net.hydromatic</groupId>
                 <artifactId>quidem</artifactId>
-                <version>0.11</version>
+                <version>0.12</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
