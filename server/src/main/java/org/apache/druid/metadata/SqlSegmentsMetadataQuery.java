@@ -1784,10 +1784,14 @@ public class SqlSegmentsMetadataQuery
   {
     try {
       final String dataSource = resultSet.getString("dataSource");
-      final Interval interval = mapToInterval(resultSet, "");
       final int totalCount = resultSet.getInt("totalCount");
 
-      return Pair.of(new DatasourceInterval(dataSource, interval), totalCount);
+      final Interval interval = mapToInterval(resultSet, "");
+      if (interval == null) {
+        return null;
+      } else {
+        return Pair.of(new DatasourceInterval(dataSource, interval), totalCount);
+      }
     }
     catch (Throwable t) {
       log.error(t, "Could not read unused segment interval record");
