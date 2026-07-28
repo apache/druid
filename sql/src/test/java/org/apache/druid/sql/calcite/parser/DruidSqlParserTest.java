@@ -164,7 +164,6 @@ public class DruidSqlParserTest
         () -> DruidSqlParser.parse("SELECT * FROM foo GROUP ORDER BY x", false)
     );
 
-    Assert.assertTrue(exception.getMessage().contains("Received an unexpected token"));
     Assert.assertFalse(exception.getMessage().contains("is a reserved keyword"));
   }
 

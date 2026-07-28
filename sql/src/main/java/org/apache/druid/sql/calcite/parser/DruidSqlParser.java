@@ -81,7 +81,7 @@ public class DruidSqlParser
       return processStatementList(sqlNode, allowSetStatements);
     }
     catch (SqlParseException e) {
-      throw translateParseException(e, parser.getMetadata());
+      throw translateParseException(e, parser.getMetadata(), sql);
     }
   }
 
@@ -180,7 +180,8 @@ public class DruidSqlParser
    */
   private static DruidException translateParseException(
       SqlParseException e,
-      SqlAbstractParserImpl.Metadata parserMetadata
+      SqlAbstractParserImpl.Metadata parserMetadata,
+      String sql
   )
   {
     final Throwable cause = e.getCause();
@@ -209,7 +210,7 @@ public class DruidSqlParser
 
         if (parserMetadata != null
             && isIdentifierExpected(tokenDictionary, expectedTokenSequences)
-            && !isFunctionCall(parseException)
+            && !isFunctionCall(sql, failurePosition, parseException.currentToken.next.image)
             && parserMetadata.isReservedWord(firstUnexpectedToken.toUpperCase(Locale.ROOT))) {
           return InvalidSqlInput
               .exception(
@@ -276,10 +277,21 @@ public class DruidSqlParser
     return false;
   }
 
-  private static boolean isFunctionCall(ParseException parseException)
+  private static boolean isFunctionCall(String sql, SqlParserPos failurePosition, String token)
   {
-    final Token nextToken = parseException.currentToken.next;
-    return nextToken.next != null && "(".equals(nextToken.next.image);
+    int tokenEndOffset = 0;
+    for (int line = 1; line < failurePosition.getLineNum(); line++) {
+      tokenEndOffset = sql.indexOf('\n', tokenEndOffset) + 1;
+      if (tokenEndOffset == 0) {
+        return false;
+      }
+    }
+
+    tokenEndOffset += failurePosition.getColumnNum() - 1 + token.length();
+    while (tokenEndOffset < sql.length() && Character.isWhitespace(sql.charAt(tokenEndOffset))) {
+      tokenEndOffset++;
+    }
+    return tokenEndOffset < sql.length() && sql.charAt(tokenEndOffset) == '(';
   }
 
   /**
