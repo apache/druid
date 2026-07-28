@@ -465,6 +465,14 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
       assertTrue(e.getMessage().contains("Column [foo] has an unrecognized type [COMPLEX<json]"));
     }
     {
+      // An unrecognized array element type is an invalid input, not an internal error.
+      TableSpec spec = builder.copy()
+          .column("foo", "ARRAY<FOO>")
+          .buildSpec();
+      DruidException e = assertThrows(DruidException.class, () -> registry.resolve(spec).validate());
+      assertTrue(e.getMessage().contains("Column [foo] has an unrecognized type [ARRAY<FOO>]"));
+    }
+    {
       // Parse-level validation only: any well-formed complex type is accepted at the logical layer, whether or not
       // its serde is registered on this server.
       TableSpec spec = builder.copy()

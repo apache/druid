@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.column;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -60,12 +59,12 @@ public class Types
       default:
         // Prefix matching is case-insensitive, consistent with the scalar handling above, but the type parameter is
         // taken from the original string: complex type names are case-sensitive registry keys which must be preserved
-        // in their original casing (array element types recurse through this method, so any casing works for them).
-        // A parameterized type without the closing bracket is malformed, not a truncated parameter name.
+        // in their original casing.
         if (upperTypeString.startsWith(ARRAY_PREFIX) && upperTypeString.endsWith(">")) {
           T elementType = fromString(typeFactory, typeString.substring(ARRAY_PREFIX.length(), typeString.length() - 1));
-          Preconditions.checkNotNull(elementType, "Array element type must not be null");
-          return typeFactory.ofArray(elementType);
+          if (elementType != null) {
+            return typeFactory.ofArray(elementType);
+          }
         }
         if (upperTypeString.startsWith(COMPLEX_PREFIX) && upperTypeString.endsWith(">")) {
           return typeFactory.ofComplex(typeString.substring(COMPLEX_PREFIX.length(), typeString.length() - 1));

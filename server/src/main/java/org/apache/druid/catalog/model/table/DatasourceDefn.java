@@ -21,7 +21,6 @@ package org.apache.druid.catalog.model.table;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
@@ -34,7 +33,6 @@ import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Arrays;
 import java.util.List;
@@ -124,28 +122,6 @@ public class DatasourceDefn extends TableDefn
       // Cross-validate the layout against the declared columns by deriving the physical spec, so that catalog writes
       // fail fast instead of surfacing layout problems at ingest time.
       baseTable.createSpec(table.spec().columns());
-    }
-  }
-
-  @Override
-  protected void validateColumn(ColumnSpec spec)
-  {
-    super.validateColumn(spec);
-    // A column declared without a type is legal (the type is resolved from the physical schema or the ingestion
-    // query), but a declared type must parse to a Druid type. This runs at catalog write time only: reads never
-    // validate, so tables stored before this rule keep resolving (though editing them surfaces the invalid type).
-    // Columns.druidType maps __time to LONG regardless of the declared type, which ColumnSpec.validate already
-    // restricts to LONG or untyped.
-    if (spec.dataType() != null && Columns.druidType(spec) == null) {
-      throw InvalidInput.exception(
-          "Column [%s] has an unrecognized type [%s]; declare a SQL type (such as [%s]) or a Druid type string"
-          + " (such as [%s] or [%s])",
-          spec.name(),
-          spec.dataType(),
-          Columns.SQL_BIGINT,
-          ColumnType.LONG_ARRAY.asTypeString(),
-          ColumnType.NESTED_DATA.asTypeString()
-      );
     }
   }
 

@@ -76,6 +76,9 @@ public class ExpressionTypeTest
     Assertions.assertNotEquals(SOME_COMPLEX, MAPPER.readValue("\"COMPLEX<FOO>\"", ExpressionType.class));
     // a parameterized type missing its closing bracket is malformed, not a truncated type parameter
     Assertions.assertNull(MAPPER.readValue("\"COMPLEX<foo\"", ExpressionType.class));
+    // an unrecognized array element type makes the whole array type unrecognized, rather than an error
+    Assertions.assertNull(MAPPER.readValue("\"ARRAY<FOO>\"", ExpressionType.class));
+    Assertions.assertNull(MAPPER.readValue("\"ARRAY<ARRAY<FOO>>\"", ExpressionType.class));
   }
 
   @Test

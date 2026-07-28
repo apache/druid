@@ -78,6 +78,9 @@ public class ColumnTypeTest
     Assertions.assertNotEquals(SOME_COMPLEX, MAPPER.readValue("\"COMPLEX<FOO>\"", ColumnType.class));
     // a parameterized type missing its closing bracket is malformed, not a truncated type parameter
     Assertions.assertNull(MAPPER.readValue("\"COMPLEX<foo\"", ColumnType.class));
+    // an unrecognized array element type makes the whole array type unrecognized, rather than an error
+    Assertions.assertNull(MAPPER.readValue("\"ARRAY<FOO>\"", ColumnType.class));
+    Assertions.assertNull(MAPPER.readValue("\"ARRAY<ARRAY<FOO>>\"", ColumnType.class));
   }
 
   @Test

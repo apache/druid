@@ -254,7 +254,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         Collections.singletonList("tenant"),
         null
     );
-    for (String badType : new String[]{"COMPLEX<json", "ARRAY<LONG", "FOO"}) {
+    for (String badType : new String[]{"COMPLEX<json", "ARRAY<LONG", "ARRAY<FOO>", "FOO"}) {
       final List<ColumnSpec> columns = Arrays.asList(
           new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
           new ColumnSpec(Columns.TIME_COLUMN, null, null),
