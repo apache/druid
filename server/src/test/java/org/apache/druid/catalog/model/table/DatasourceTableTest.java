@@ -162,7 +162,7 @@ public class DatasourceTableTest
           ImmutableMap.of(
               DatasourceDefn.SEALED_PROPERTY, true,
               DatasourceDefn.BASE_TABLE_PROPERTY,
-              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("tenant"), null)
+              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("tenant"), null, null)
           ),
           columns
       );
@@ -176,7 +176,7 @@ public class DatasourceTableTest
           DatasourceDefn.TABLE_TYPE,
           ImmutableMap.of(
               DatasourceDefn.BASE_TABLE_PROPERTY,
-              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("tenant"), null)
+              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("tenant"), null, null)
           ),
           columns
       );
@@ -193,7 +193,7 @@ public class DatasourceTableTest
           ImmutableMap.of(
               DatasourceDefn.SEALED_PROPERTY, true,
               DatasourceDefn.BASE_TABLE_PROPERTY,
-              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("no_such_column"), null)
+              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("no_such_column"), null, null)
           ),
           columns
       );
@@ -209,7 +209,7 @@ public class DatasourceTableTest
           ImmutableMap.of(
               DatasourceDefn.SEALED_PROPERTY, true,
               DatasourceDefn.BASE_TABLE_PROPERTY,
-              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("region"), null)
+              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("region"), null, null)
           ),
           columns
       );
@@ -224,7 +224,7 @@ public class DatasourceTableTest
           ImmutableMap.of(
               DatasourceDefn.SEALED_PROPERTY, true,
               DatasourceDefn.BASE_TABLE_PROPERTY,
-              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("tenant"), null)
+              new ClusteredValueGroupsBaseTableMetadata(Collections.singletonList("tenant"), null, null)
           ),
           Collections.singletonList(new ColumnSpec("tenant", Columns.SQL_VARCHAR, null))
       );
@@ -244,7 +244,8 @@ public class DatasourceTableTest
         Collections.singletonList("tenant_lower"),
         VirtualColumns.create(
             new ExpressionVirtualColumn("tenant_lower", "lower(\"tenant\")", ColumnType.STRING, ExprMacroTable.nil())
-        )
+        ),
+        null
     );
     TableSpec spec = new TableSpec(
         DatasourceDefn.TABLE_TYPE,
