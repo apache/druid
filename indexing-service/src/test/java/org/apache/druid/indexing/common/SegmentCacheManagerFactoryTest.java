@@ -152,6 +152,45 @@ class SegmentCacheManagerFactoryTest
   }
 
   @Test
+  void testNonVirtualManufacturateUsesFreshDefaultsNotInjectedConfig() throws Exception
+  {
+    // A non-virtual (eager) per-task cache must NOT inherit the node's transient settings: a positive
+    // numThreadsToLoadSegmentsIntoPageCacheOnDownload would leak a per-reader executor (input entities drop segments
+    // but never shut the manager down), and deleteOnRemove=false would leave downloaded segments behind. It starts
+    // from fresh defaults instead.
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    mapper.setInjectableValues(new InjectableValues.Std().addValue(RuntimeInfo.class, new RuntimeInfo()));
+    final SegmentLoaderConfig injected = mapper.readValue(
+        "{\"numThreadsToLoadSegmentsIntoPageCacheOnDownload\": 4,"
+        + " \"deleteOnRemove\": false,"
+        + " \"lazyLoadOnStart\": true,"
+        + " \"infoDir\": \"/var/druid/segment-cache/info_dir\"}",
+        SegmentLoaderConfig.class
+    );
+
+    // The ephemeral loading pool must not even be resolved for a non-virtual cache.
+    final Provider<StorageLoadingThreadPool> throwingProvider = () -> {
+      throw new AssertionError("ephemeral loading pool must not be resolved for virtualStorage=false");
+    };
+    final SegmentCacheManagerFactory factory =
+        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, jsonMapper, injected, throwingProvider);
+
+    final SegmentLocalCacheManager m =
+        (SegmentLocalCacheManager) factory.manufacturate(new File(tempDir, "eager"), null, false, false);
+    final SegmentLoaderConfig derived = m.getConfig();
+
+    // Transient settings are the safe defaults, not the injected node's values.
+    Assertions.assertFalse(derived.isVirtualStorage());
+    Assertions.assertEquals(0, derived.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload());
+    Assertions.assertTrue(derived.isDeleteOnRemove());
+    Assertions.assertNull(derived.getInfoDir());
+    Assertions.assertFalse(derived.isLazyLoadOnStart());
+    // The per-task location is still applied.
+    Assertions.assertEquals(1, derived.getLocations().size());
+    Assertions.assertEquals(new File(tempDir, "eager"), derived.getLocations().get(0).getPath());
+  }
+
+  @Test
   void testCreateWithOwnedPoolBuildsOneAvailablePoolPerFactory()
   {
     final SegmentCacheManagerFactory factory =

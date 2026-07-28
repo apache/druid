@@ -119,11 +119,13 @@ public class SegmentCacheManagerFactory
         null
     );
     // For virtual storage, derive an ephemeral virtual-storage cache config from the injected node config: this keeps
-    // its virtual-storage tuning while dropping the classic on-disk-cache settings that don't apply to a per-task
-    // cache. Otherwise, start from the node config as-is. Then set the per-task location and mode flags.
+    // its virtual-storage tuning while dropping the classic on-disk-cache settings that don't apply. A non-virtual
+    // (eager) per-task cache needs none of that tuning and must NOT inherit the node's transient settings, so it
+    // starts from fresh defaults instead. Both then get the per-task location and mode flags.
+    final SegmentLoaderConfig.Builder loaderConfigBuilder =
+        virtualStorage ? segmentLoaderConfig.toEphemeralVirtualStorage().toBuilder() : SegmentLoaderConfig.builder();
     final SegmentLoaderConfig loaderConfig =
-        (virtualStorage ? segmentLoaderConfig.toEphemeralVirtualStorage() : segmentLoaderConfig)
-            .toBuilder()
+        loaderConfigBuilder
             .locations(locationConfig)
             .virtualStorage(virtualStorage)
             .virtualStorageIsEphemeral(virtualStorage)
