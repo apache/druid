@@ -52,7 +52,9 @@ import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -225,6 +227,64 @@ class ClusteredSegmentTimeOrderedQueryTest extends InitializedNullHandlingTest
     Assertions.assertEquals(expected, runScanWithLowerTenantVc(clustered, Order.ASCENDING));
   }
 
+  @Test
+  void testAscendingScanWithQueryVcShadowingClusteringColumn()
+  {
+    // A query VC whose OUTPUT name shadows the clustering column `tenant` but computes a different value (from `m`, not
+    // equivalent to any materialized column, so it is NOT remapped away). On the __time merge path the merge factory
+    // must dispatch reads of `tenant` to the winning group (which resolves the VC) rather than serve the raw clustering
+    // constant. Without the shadowing guard this returned the group constant ("acme"/"globex") instead of the computed
+    // value, diverging from the concatenating path.
+    final List<List<Object>> expected = List.of(
+        Arrays.asList(T0, "t_1", 1L),
+        Arrays.asList(T0 + MINUTE, "t_2", 2L),
+        Arrays.asList(T0 + 2 * MINUTE, "t_4", 4L),
+        Arrays.asList(T0 + 3 * MINUTE, "t_8", 8L)
+    );
+    Assertions.assertEquals(expected, runScanWithShadowingTenantVc(clusteredSegment, Order.ASCENDING));
+  }
+
+  @Test
+  void testTimeOrderedQueriesOverIncrementalClusteredSegment()
+  {
+    // The realtime path (IncrementalIndexCursorFactory) must also k-way-merge groups for a __time-ordered query.
+    // Incremental per-group cursors do not carry clustering columns, so this also exercises the merge factory
+    // injecting the winning group's clustering value (tenant). Results must match the non-clustered baseline.
+    final Segment incremental = buildClusteredIncremental(ROWS);
+
+    Assertions.assertEquals(
+        List.of(
+            List.of(T0, 1L),
+            List.of(T0 + MINUTE, 2L),
+            List.of(T0 + 2 * MINUTE, 4L),
+            List.of(T0 + 3 * MINUTE, 8L)
+        ),
+        runTimeseries(incremental)
+    );
+    Assertions.assertEquals(runTimeseries(nonClusteredSegment), runTimeseries(incremental));
+
+    Assertions.assertEquals(
+        List.of(
+            Arrays.asList(T0, "acme", 1L),
+            Arrays.asList(T0 + MINUTE, "globex", 2L),
+            Arrays.asList(T0 + 2 * MINUTE, "acme", 4L),
+            Arrays.asList(T0 + 3 * MINUTE, "globex", 8L)
+        ),
+        runScanRows(incremental, Order.ASCENDING)
+    );
+    Assertions.assertEquals(runScanRows(nonClusteredSegment, Order.ASCENDING), runScanRows(incremental, Order.ASCENDING));
+
+    Assertions.assertEquals(
+        List.of(
+            Arrays.asList(T0 + 3 * MINUTE, "globex", 8L),
+            Arrays.asList(T0 + 2 * MINUTE, "acme", 4L),
+            Arrays.asList(T0 + MINUTE, "globex", 2L),
+            Arrays.asList(T0, "acme", 1L)
+        ),
+        runScanRows(incremental, Order.DESCENDING)
+    );
+  }
+
   private static List<List<Long>> runTimeseries(Segment segment)
   {
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
@@ -321,6 +381,48 @@ class ClusteredSegmentTimeOrderedQueryTest extends InitializedNullHandlingTest
     return rows;
   }
 
+  /**
+   * Time-ordered scan projecting a query virtual column {@code tenant := concat('t_', m)} whose output name shadows the
+   * clustering column {@code tenant} (plus {@code __time} and {@code m}), extracting {@code [__time, tenant, m]} rows.
+   * Exercises the shadowing-VC guard on the {@code __time} merge path: reads of {@code tenant} must resolve to the
+   * computed VC value, not the group's clustering constant.
+   */
+  private static List<List<Object>> runScanWithShadowingTenantVc(Segment segment, Order order)
+  {
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                  .dataSource(DATA_SOURCE)
+                                  .intervals(new MultipleIntervalSegmentSpec(List.of(INTERVAL)))
+                                  .virtualColumns(new ExpressionVirtualColumn(
+                                      "tenant",
+                                      "concat('t_', m)",
+                                      ColumnType.STRING,
+                                      TestExprMacroTable.INSTANCE
+                                  ))
+                                  .columns(ColumnHolder.TIME_COLUMN_NAME, "tenant", "m")
+                                  .order(order)
+                                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+                                  .build();
+    final ScanQueryRunnerFactory factory = new ScanQueryRunnerFactory(
+        new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
+        new ScanQueryEngine(),
+        new ScanQueryConfig()
+    );
+    final List<ScanResultValue> results = factory.createRunner(segment).run(QueryPlus.wrap(query)).toList();
+    final List<List<Object>> rows = new ArrayList<>();
+    for (ScanResultValue result : results) {
+      for (Object event : (List<?>) result.getEvents()) {
+        @SuppressWarnings("unchecked")
+        final Map<String, Object> row = (Map<String, Object>) event;
+        rows.add(Arrays.asList(
+            DimensionHandlerUtils.convertObjectToLong(row.get(ColumnHolder.TIME_COLUMN_NAME)),
+            row.get("tenant"),
+            DimensionHandlerUtils.convertObjectToLong(row.get("m"))
+        ));
+      }
+    }
+    return rows;
+  }
+
   private QueryableIndex buildClusteredWithMaterializedVc(String dirName)
   {
     // Cluster on the group VC tenant_lower := lower(tenant); declare __time immediately after the clustering column so
@@ -410,6 +512,38 @@ class ClusteredSegmentTimeOrderedQueryTest extends InitializedNullHandlingTest
                        .schema(schema)
                        .rows(rows)
                        .buildMMappedIndex();
+  }
+
+  private static Segment buildClusteredIncremental(List<InputRow> rows)
+  {
+    // Realtime counterpart of buildClustered: an OnheapIncrementalIndex clustered by tenant with __time as the first
+    // non-clustering column, served through IncrementalIndexCursorFactory (via IncrementalIndexSegment).
+    final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .columns(
+                new StringDimensionSchema("tenant"),
+                new LongDimensionSchema("__time"),
+                new LongDimensionSchema("m")
+            )
+            .clusteringColumns("tenant")
+            .build();
+    final IncrementalIndexSchema schema =
+        IncrementalIndexSchema.builder()
+                              .withMinTimestamp(T0)
+                              .withTimestampSpec(TIMESTAMP_SPEC)
+                              .withQueryGranularity(Granularities.NONE)
+                              .withDimensionsSpec(clusterSpec.getDimensionsSpec())
+                              .withRollup(false)
+                              .withClusterSpec(clusterSpec)
+                              .build();
+    final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(10_000)
+        .build();
+    for (final InputRow row : rows) {
+      index.add(row);
+    }
+    return new IncrementalIndexSegment(index, SegmentId.dummy(DATA_SOURCE));
   }
 
   private static InputRow row(long ts, String tenant, long m)
