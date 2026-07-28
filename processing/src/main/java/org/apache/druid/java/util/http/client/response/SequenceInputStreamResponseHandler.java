@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
@@ -49,6 +50,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class SequenceInputStreamResponseHandler implements HttpResponseHandler<InputStream, InputStream>
 {
   private static final Logger log = new Logger(SequenceInputStreamResponseHandler.class);
+  private static final byte[] EMPTY_BYTES = new byte[0];
   private final AtomicLong byteCount = new AtomicLong(0);
   private final BlockingQueue<InputStream> queue = new LinkedBlockingQueue<>();
   private final AtomicBoolean done = new AtomicBoolean(false);
@@ -56,24 +58,36 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   @Override
   public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
+    // Netty 4 delivers headers and body separately, so a plain HttpResponse carries no content; only a
+    // FullHttpResponse does. Either way something must be queued before the SequenceInputStream below is built,
+    // because its constructor eagerly pulls the first element and nextElement() blocks until one is available.
+    // Blocking there would stall the caller, which is the same Netty I/O thread that has to deliver the chunks that
+    // would unblock it. Netty 3 could not reach this state: getContent() always returned a buffer, empty or not.
+    final InputStream firstStream;
+    final int readableBytes;
     if (response instanceof HttpContent) {
       final ByteBuf content = ((HttpContent) response).content();
       // Retain content as ByteBufInputStream will release it on close
       content.retain();
-      final int readableBytes = content.readableBytes();
-      final ByteBufInputStream channelStream = new ByteBufInputStream(content, true);
-      try {
-        queue.put(channelStream);
-        byteCount.addAndGet(readableBytes);
-      }
-      catch (InterruptedException e) {
-        // Close the stream so the retained buffer is released instead of leaking.
-        closeStream(channelStream);
-        log.error(e, "Queue appending interrupted");
-        Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
-      }
+      readableBytes = content.readableBytes();
+      firstStream = new ByteBufInputStream(content, true);
+    } else {
+      readableBytes = 0;
+      firstStream = new ByteArrayInputStream(EMPTY_BYTES);
     }
+
+    try {
+      queue.put(firstStream);
+      byteCount.addAndGet(readableBytes);
+    }
+    catch (InterruptedException e) {
+      // Close the stream so the retained buffer is released instead of leaking.
+      closeStream(firstStream);
+      log.error(e, "Queue appending interrupted");
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+
     return ClientResponse.finished(
         new SequenceInputStream(
             new Enumeration<>()
@@ -197,7 +211,7 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
     return byteCount.get();
   }
 
-  private static void closeStream(ByteBufInputStream stream)
+  private static void closeStream(InputStream stream)
   {
     try {
       stream.close();
