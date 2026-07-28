@@ -2661,7 +2661,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.10.2
+version: 1.11.1
 libraries:
   - at.yawk.lz4: lz4-java
 
