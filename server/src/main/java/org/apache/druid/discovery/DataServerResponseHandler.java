@@ -89,7 +89,7 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
   {
     trafficCopRef.set(trafficCop);
     checkQueryTimeout();
-    log.debug("Received response status[%s] for queryId[%s]", response.getStatus(), query.getId());
+    log.debug("Received response status[%s] for queryId[%s]", response.status(), query.getId());
 
     final boolean continueReading;
     try {

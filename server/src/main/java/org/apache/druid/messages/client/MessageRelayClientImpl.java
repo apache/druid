@@ -76,7 +76,7 @@ public class MessageRelayClientImpl<MessageType> implements MessageRelayClient<M
     return FutureUtils.transform(
         asyncRequest,
         holder -> {
-          if (holder.getResponse().getStatus().code() == HttpStatus.NO_CONTENT_204) {
+          if (holder.getResponse().status().code() == HttpStatus.NO_CONTENT_204) {
             return new MessageBatch<>(Collections.emptyList(), epoch, startWatermark);
           } else {
             return JacksonUtils.readValue(smileMapper, holder.getContent(), inMessageBatchType);
