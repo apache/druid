@@ -1062,6 +1062,20 @@ public class QueryResourceTest
   }
 
   @Test
+  public void testBadJsonQueryExceptionUsesDeepestCauseMessage()
+  {
+    final ValueInstantiationException valueInstantiationException = ValueInstantiationException.from(
+        null,
+        "Jackson wrapper",
+        jsonMapper.constructType(Query.class),
+        new RuntimeException("intermediate wrapper", new IllegalArgumentException("actionable validation message"))
+    );
+
+    final BadJsonQueryException e = new BadJsonQueryException(valueInstantiationException);
+    Assert.assertEquals("Invalid native query: actionable validation message", e.getMessage());
+  }
+
+  @Test
   public void testResourceLimitExceeded() throws IOException
   {
     Response response = queryResource.doPost(

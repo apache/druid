@@ -61,10 +61,18 @@ public class BadJsonQueryException extends BadQueryException
 
   private static String getErrorMessage(ValueInstantiationException e)
   {
-    final Throwable cause = e.getCause();
-    if (cause == null || Strings.isNullOrEmpty(cause.getMessage())) {
+    Throwable cause = e.getCause();
+    String errorMessage = null;
+    while (cause != null) {
+      if (!Strings.isNullOrEmpty(cause.getMessage())) {
+        errorMessage = cause.getMessage();
+      }
+      cause = cause.getCause();
+    }
+
+    if (errorMessage == null) {
       return "Invalid native query: the request contains invalid or missing fields";
     }
-    return "Invalid native query: " + cause.getMessage();
+    return "Invalid native query: " + errorMessage;
   }
 }
