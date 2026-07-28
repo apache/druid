@@ -86,19 +86,16 @@ public class UnusedSegmentsKiller implements OverlordDuty
   private static final int MAX_SEGMENTS_TO_KILL_IN_TASK = 10 * MAX_SEGMENTS_TO_KILL_IN_BATCH;
 
   /**
-   * Maximum number of segments that typically allows query to finish within ~5s.
-   */
-  private static final int MAX_SEGMENTS_TO_SCAN = 200_000;
-
-  /**
    * Period after which the queue is reset even if there are existing jobs in queue.
    */
   private static final Duration QUEUE_RESET_PERIOD = Duration.standardDays(1);
 
   /**
-   * Duration for which a kill task is allowed to run.
+   * Duration for which a kill task is allowed to run. Assuming that processing
+   * each batch of segments takes around 30s, each kill task (upto 10 batches)
+   * should normally finish in 5 minutes.
    */
-  private static final Duration MAX_TASK_DURATION = Duration.standardMinutes(10);
+  private static final Duration MAX_TASK_DURATION = Duration.standardMinutes(30);
 
   private final ServiceEmitter emitter;
   private final GlobalTaskLockbox taskLockbox;
@@ -204,7 +201,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
       // Schedule the first run after some delay since the segment metadata cache
       // might take time for the sync to finish if this Overlord has just started.
       final long periodMillis = killConfig.getDutyPeriod().toStandardDuration().getMillis();
-      final long initialDelayMillis = periodMillis / 4;
+      final long initialDelayMillis = periodMillis / 2;
 
       log.info(
           "Unused segment killer is enabled and will start after [%d] millis."
@@ -259,15 +256,15 @@ public class UnusedSegmentsKiller implements OverlordDuty
       final Map<String, Integer> dataSourceToIntervalCounts = new HashMap<>();
 
       // Identify intervals with unused segments which are eligible for kill
-      final Map<DatasourceInterval, Integer> killCandidates =
+      final Map<DatasourceInterval, Integer> eligibleIntervals =
           storageCoordinator.retrieveSomeUnusedSegmentIntervals(
               DateTimes.nowUtc().minus(killConfig.getBufferPeriod()),
               MAX_INTERVALS_TO_KILL,
-              MAX_SEGMENTS_TO_SCAN
+              killConfig.getMaxSegmentsToKill()
           );
 
       // Add kill candidates to the queue
-      killCandidates.forEach((entry, numEligibleSegments) -> {
+      eligibleIntervals.forEach((entry, numEligibleSegments) -> {
         dataSourceToIntervalCounts.merge(entry.dataSource(), 1, Integer::sum);
 
         // Queue multiple candidates for the same datasource-interval if the
@@ -485,12 +482,11 @@ public class UnusedSegmentsKiller implements OverlordDuty
     @Override
     protected List<DataSegmentPlus> fetchNextBatchOfUnusedSegments(TaskToolbox toolbox, int nextBatchSize)
     {
-      // Kill only 1000 segments in the batch so that locks are not held for very long
       return storageCoordinator.retrieveUnusedSegmentsWithExactInterval(
           getDataSource(),
           getInterval(),
           getMaxUsedStatusLastUpdatedTime(),
-          MAX_SEGMENTS_TO_KILL_IN_BATCH
+          nextBatchSize
       );
     }
 
