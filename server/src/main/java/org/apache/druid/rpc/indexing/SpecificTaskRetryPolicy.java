@@ -92,8 +92,8 @@ public class SpecificTaskRetryPolicy implements ServiceRetryPolicy
   private boolean isTaskMismatch(final HttpResponse response)
   {
     // See class-level javadocs for details on why we do this.
-    if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)
-        || response.getStatus().equals(HttpResponseStatus.BAD_REQUEST)) {
+    if (response.status().equals(HttpResponseStatus.NOT_FOUND)
+        || response.status().equals(HttpResponseStatus.BAD_REQUEST)) {
       final String headerTaskId = StringUtils.urlDecode(response.headers().get(ChatHandlerResource.TASK_ID_HEADER));
       return headerTaskId != null && !headerTaskId.equals(taskId);
     } else {
