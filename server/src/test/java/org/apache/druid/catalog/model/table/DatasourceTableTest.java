@@ -521,9 +521,19 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
       assertSame(ColumnType.LONG, col.druidType());
     }
 
-    {
+    // Any spelling that resolves to a LONG is accepted: TIMESTAMP is how SQL names the time column, BIGINT is its
+    // SQL storage type, and LONG is the native name.
+    for (String timeType : new String[]{Columns.SQL_TIMESTAMP, Columns.SQL_BIGINT, Columns.LONG, "long"}) {
       TableSpec spec = builder.copy()
-          .column(Columns.TIME_COLUMN, Columns.STRING)
+          .column(Columns.TIME_COLUMN, timeType)
+          .buildSpec();
+      registry.resolve(spec).validate();
+    }
+
+    // Types that do not resolve to a LONG are rejected, as are types that do not resolve at all.
+    for (String badType : new String[]{Columns.STRING, Columns.SQL_VARCHAR, Columns.SQL_DOUBLE, "NOT_A_TYPE"}) {
+      TableSpec spec = builder.copy()
+          .column(Columns.TIME_COLUMN, badType)
           .buildSpec();
       expectValidationFails(spec);
     }

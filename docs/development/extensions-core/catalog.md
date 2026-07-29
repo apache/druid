@@ -43,6 +43,74 @@ allowing queries to be more concise, and simpler to write. This also allows the 
 written into a defined column of the table is consistent with that columns definition, minimizing errors where unexpected
 data is written into a particular column of the table.
 
+### SQL DDL
+
+Tables can be defined with SQL instead of by posting a table specification. `CREATE TABLE` and `ALTER TABLE` are
+submitted to the Broker like any other SQL statement, and write the same catalog metadata the REST API does. They
+return no rows.
+
+These statements change catalog metadata only. They never create, modify, or delete segments: defining a table does
+not ingest anything, and altering a column does not rewrite existing data. Column changes take effect for subsequent
+ingestion.
+
+These statements are disabled by default. Set `druid.sql.planner.enableCatalogDdl` to `true` on the Broker to enable
+them. They require `WRITE` permission on the datasource, the same permission the catalog API requires, so enabling
+them lets anyone who can ingest into a datasource also change its catalog definition; leave them disabled if you
+manage catalog entries with your own tooling. The setting cannot be overridden per query.
+
+The `druid-catalog` extension must be loaded on both the Broker and the Coordinator; without it, these statements
+report that the extension is not available.
+
+```sql
+CREATE [OR REPLACE] TABLE [IF NOT EXISTS] <table>
+  [ ( <column> <type> [, ...] ) ]
+  [ PARTITIONED BY <granularity> ]
+  [ CLUSTERED BY <column> [, ...] ]
+```
+
+`OR REPLACE` replaces the specification of an existing table; `IF NOT EXISTS` leaves an existing table unchanged.
+The two cannot be combined. `PARTITIONED BY` sets [`segmentGranularity`](#table-properties) and `CLUSTERED BY` sets
+`clusterKeys`, both of which a later `INSERT` or `REPLACE` inherits unless it states its own.
+
+Column types are written as SQL types, such as `VARCHAR`, `BIGINT`, `DOUBLE`, or `VARCHAR ARRAY`. The `__time` column
+is written as `TIMESTAMP`. Types that have no SQL spelling, such as complex types, use `TYPE('...')` with the Druid
+native type string:
+
+```sql
+CREATE TABLE "druid"."visits" (
+  __time TIMESTAMP,
+  user_id VARCHAR,
+  pages_visited BIGINT,
+  sketch TYPE('COMPLEX<thetaSketch>')
+)
+PARTITIONED BY DAY
+CLUSTERED BY user_id
+```
+
+`ALTER TABLE` supports one change per statement, so that each statement is a single atomic catalog operation:
+
+```sql
+ALTER TABLE <table> ADD COLUMN <column> <type>
+ALTER TABLE <table> DROP COLUMN <column>
+ALTER TABLE <table> ALTER COLUMN <column> SET DATA TYPE <type>
+ALTER TABLE <table> SET PROPERTIES ( <property> = <value> [, ...] )
+```
+
+`SET PROPERTIES` merges the given [table properties](#table-properties) into the table. A value of `NULL` removes a
+property. Values must be literals:
+
+```sql
+ALTER TABLE "druid"."visits" SET PROPERTIES (targetSegmentRows = 3000000, sealed = TRUE)
+ALTER TABLE "druid"."visits" SET PROPERTIES (sealed = NULL)
+```
+
+Both statements require the `WRITE` permission on the datasource, the same permission the REST API checks. Table
+names may be unqualified or qualified with the `druid` schema; other schemas are rejected. Names are case-sensitive.
+
+There is no `DROP TABLE`. Deleting a table's catalog entry without deleting its data would be a surprising meaning
+for the statement, so removing a specification is left to the [delete API](#delete-a-table) until the semantics are
+settled.
+
 ### API Objects
 
 #### TableSpec
@@ -90,10 +158,11 @@ The endpoint supports a set of optional query parameters to enforce optimistic l
 is meant to update a table rather than create a new one. In the default case, with no query parameters set, this request
 will return an error if a table of the same name already exists in the schema specified.
 
-| Parameter   | Type    | Description                                                                                                                   |
-|-------------|---------|-------------------------------------------------------------------------------------------------------------------------------|
-| `version`   | Long    | the expected version of an existing table. The version must match. If not (or if the table does not exist), returns an error. |
-| `overwrite` | boolean | if true, then overwrites any existing table. Otherwise, the operation fails if the table already exists.                      |
+| Parameter     | Type    | Description                                                                                                                   |
+|---------------|---------|-------------------------------------------------------------------------------------------------------------------------------|
+| `version`     | Long    | the expected version of an existing table. The version must match. If not (or if the table does not exist), returns an error. |
+| `overwrite`   | boolean | if true, then overwrites any existing table. Otherwise, the operation fails if the table already exists.                      |
+| `ifNotExists` | boolean | if true, then leaves an existing table unchanged and reports a version of 0. Otherwise, the operation fails if the table already exists. |
 
 ##### Responses
 

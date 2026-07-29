@@ -102,48 +102,48 @@ public class CatalogResourceTest
     TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
 
     // Blank schema name: infer the schema.
-    Response resp = resource.postTable("", tableName, dsSpec, 0, false, postBy(CatalogTests.SUPER_USER));
+    Response resp = resource.postTable("", tableName, dsSpec, 0, false, false, postBy(CatalogTests.SUPER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // Missing table name
-    resp = resource.postTable(TableId.DRUID_SCHEMA, "", dsSpec, 0, false, postBy(CatalogTests.SUPER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, "", dsSpec, 0, false, false, postBy(CatalogTests.SUPER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // Invalid table name
-    resp = resource.postTable(TableId.DRUID_SCHEMA, " bogus ", dsSpec, 0, false, postBy(CatalogTests.SUPER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, " bogus ", dsSpec, 0, false, false, postBy(CatalogTests.SUPER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // Unknown schema
-    resp = resource.postTable("bogus", tableName, dsSpec, 0, false, postBy(CatalogTests.SUPER_USER));
+    resp = resource.postTable("bogus", tableName, dsSpec, 0, false, false, postBy(CatalogTests.SUPER_USER));
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
 
     // Immutable schema
-    resp = resource.postTable(TableId.CATALOG_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.SUPER_USER));
+    resp = resource.postTable(TableId.CATALOG_SCHEMA, tableName, dsSpec, 0, false, false, postBy(CatalogTests.SUPER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // Wrong definition type.
-    resp = resource.postTable(TableId.EXTERNAL_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.SUPER_USER));
+    resp = resource.postTable(TableId.EXTERNAL_SCHEMA, tableName, dsSpec, 0, false, false, postBy(CatalogTests.SUPER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // No permissions
     assertThrows(
         ForbiddenException.class,
-        () -> resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.DENY_USER))
+        () -> resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, false, postBy(CatalogTests.DENY_USER))
     );
 
     // Read permission
     assertThrows(
         ForbiddenException.class,
-        () -> resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.READER_USER))
+        () -> resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, false, postBy(CatalogTests.READER_USER))
     );
 
     // Write permission
-    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     assertTrue(getVersion(resp) > 0);
 
     // Duplicate
-    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // Invalid column type: table-level validation failures (which raise DruidException rather than IAE) must also
@@ -151,7 +151,7 @@ public class CatalogResourceTest
     TableSpec badTypeSpec = TableBuilder.datasource("badType", "P1D")
         .column("foo", "FOO")
         .buildSpec();
-    resp = resource.postTable(TableId.DRUID_SCHEMA, "badType", badTypeSpec, 0, false, postBy(CatalogTests.SUPER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, "badType", badTypeSpec, 0, false, false, postBy(CatalogTests.SUPER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // Inline input source
@@ -162,11 +162,11 @@ public class CatalogResourceTest
         .column("b", Columns.STRING)
         .column("c", Columns.LONG)
         .buildSpec();
-    resp = resource.postTable(TableId.EXTERNAL_SCHEMA, "inline", inputSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    resp = resource.postTable(TableId.EXTERNAL_SCHEMA, "inline", inputSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
     // Wrong spec type
-    resp = resource.postTable(TableId.DRUID_SCHEMA, "invalid", inputSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, "invalid", inputSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
   }
 
@@ -187,34 +187,55 @@ public class CatalogResourceTest
     TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
 
     // Does not exist
-    Response resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 10, false, postBy(CatalogTests.SUPER_USER));
+    Response resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 10, false, false, postBy(CatalogTests.SUPER_USER));
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
 
     // Create the table
-    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     long version = getVersion(resp);
 
     // No update permission
     assertThrows(
         ForbiddenException.class,
-        () -> resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.READER_USER))
+        () -> resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, false, postBy(CatalogTests.READER_USER))
     );
 
     // Out-of-date version
-    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 10, false, postBy(CatalogTests.WRITER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 10, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
 
     // Valid version
-    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, version, false, postBy(CatalogTests.WRITER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, version, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     assertTrue(getVersion(resp) > version);
     version = getVersion(resp);
 
     // Overwrite
-    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, true, postBy(CatalogTests.WRITER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, true, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     assertTrue(getVersion(resp) > version);
+  }
+
+  @Test
+  public void testCreateIfNotExists()
+  {
+    final String tableName = "ifNotExists";
+    TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
+
+    Response resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, true, postBy(CatalogTests.WRITER_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+    final long version = getVersion(resp);
+    assertTrue(version > 0);
+
+    // Creating again reports no change rather than failing, and leaves the existing spec in place.
+    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, true, postBy(CatalogTests.WRITER_USER));
+    assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+    assertEquals(0, getVersion(resp));
+
+    // Without the flag, a duplicate is still an error.
+    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
   }
 
   @Test
@@ -240,7 +261,7 @@ public class CatalogResourceTest
     assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
 
     // Create the table
-    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     long version = getVersion(resp);
 
@@ -323,7 +344,7 @@ public class CatalogResourceTest
     // Create a table
     final String tableName = "list";
     TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
-    resp = resource.postTable(TableId.DRUID_SCHEMA, "list", dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, "list", dsSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
     // Table paths - no read access
@@ -370,7 +391,7 @@ public class CatalogResourceTest
     // Create a table
     final String tableName = "list";
     TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
-    resp = resource.postTable(TableId.DRUID_SCHEMA, "list", dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, "list", dsSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
     // No read access - name
@@ -416,7 +437,7 @@ public class CatalogResourceTest
   {
     final String tableName = "sync";
     TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
-    Response resp = resource.postTable(TableId.DRUID_SCHEMA, "list", dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    Response resp = resource.postTable(TableId.DRUID_SCHEMA, "list", dsSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
     // Internal sync schema API
@@ -456,7 +477,7 @@ public class CatalogResourceTest
 
     // Create the table
     TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D").buildSpec();
-    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
 
     // No write permission
@@ -479,7 +500,7 @@ public class CatalogResourceTest
     // Operations for one table - create
     String table1Name = "lifecycle1";
     TableSpec dsSpec = TableBuilder.datasource(table1Name, "P1D").buildSpec();
-    Response resp = resource.postTable(TableId.DRUID_SCHEMA, table1Name, dsSpec, 0, true, postBy(CatalogTests.WRITER_USER));
+    Response resp = resource.postTable(TableId.DRUID_SCHEMA, table1Name, dsSpec, 0, true, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     long version = getVersion(resp);
 
@@ -507,7 +528,7 @@ public class CatalogResourceTest
 
     // update
     TableSpec table2Spec = TableBuilder.datasource(table1Name, "PT1H").buildSpec();
-    resp = resource.postTable(TableId.DRUID_SCHEMA, table1Name, table2Spec, version, false, postBy(CatalogTests.WRITER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, table1Name, table2Spec, version, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     assertTrue(getVersion(resp) > version);
     version = getVersion(resp);
@@ -522,7 +543,7 @@ public class CatalogResourceTest
 
     // add second table
     String table2Name = "lifecycle2";
-    resp = resource.postTable(TableId.DRUID_SCHEMA, table2Name, dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    resp = resource.postTable(TableId.DRUID_SCHEMA, table2Name, dsSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     TableId id2 = TableId.of(TableId.DRUID_SCHEMA, table2Name);
 
@@ -568,7 +589,7 @@ public class CatalogResourceTest
         .column("b", "BIGINT")
         .column("c", "FLOAT")
         .buildSpec();
-    Response resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    Response resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     long version = getVersion(resp);
 
@@ -612,7 +633,7 @@ public class CatalogResourceTest
     String tableName = "hide";
     TableSpec dsSpec = TableBuilder.datasource(tableName, "P1D")
          .buildSpec();
-    Response resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    Response resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     long version = getVersion(resp);
 
@@ -673,7 +694,7 @@ public class CatalogResourceTest
         .column("c", "FLOAT")
         .buildSpec();
 
-    Response resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    Response resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     long version = getVersion(resp);
 

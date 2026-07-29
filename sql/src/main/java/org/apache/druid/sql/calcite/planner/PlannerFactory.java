@@ -59,7 +59,9 @@ import java.util.Set;
 
 public class PlannerFactory extends PlannerToolbox
 {
-  @Inject
+  /**
+   * Convenience for callers that never execute catalog DDL, such as tests and benchmarks.
+   */
   public PlannerFactory(
       final DruidSchemaCatalog rootSchema,
       final DruidOperatorTable operatorTable,
@@ -76,6 +78,42 @@ public class PlannerFactory extends PlannerToolbox
       final DruidHookDispatcher hookDispatcher
   )
   {
+    this(
+        rootSchema,
+        operatorTable,
+        macroTable,
+        plannerConfig,
+        authorizerMapper,
+        jsonMapper,
+        druidSchemaName,
+        calciteRuleManager,
+        joinableFactoryWrapper,
+        catalog,
+        CatalogTableWriter.NOT_AVAILABLE,
+        authConfig,
+        policyEnforcer,
+        hookDispatcher
+    );
+  }
+
+  @Inject
+  public PlannerFactory(
+      final DruidSchemaCatalog rootSchema,
+      final DruidOperatorTable operatorTable,
+      final ExprMacroTable macroTable,
+      final PlannerConfig plannerConfig,
+      final AuthorizerMapper authorizerMapper,
+      final @Json ObjectMapper jsonMapper,
+      final @DruidSchemaName String druidSchemaName,
+      final CalciteRulesManager calciteRuleManager,
+      final JoinableFactoryWrapper joinableFactoryWrapper,
+      final CatalogResolver catalog,
+      final CatalogTableWriter catalogTableWriter,
+      final AuthConfig authConfig,
+      final PolicyEnforcer policyEnforcer,
+      final DruidHookDispatcher hookDispatcher
+  )
+  {
     super(
         operatorTable,
         macroTable,
@@ -84,6 +122,7 @@ public class PlannerFactory extends PlannerToolbox
         rootSchema,
         joinableFactoryWrapper,
         catalog,
+        catalogTableWriter,
         druidSchemaName,
         calciteRuleManager,
         authorizerMapper,

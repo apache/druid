@@ -140,6 +140,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
           binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
           binder.bind(JoinableFactoryWrapper.class).toInstance(joinableFactoryWrapper);
           binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
+          binder.bind(CatalogTableWriter.class).toInstance(CatalogTableWriter.NOT_AVAILABLE);
         },
         target,
         binder -> {
