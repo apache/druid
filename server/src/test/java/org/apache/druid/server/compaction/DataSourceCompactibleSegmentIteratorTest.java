@@ -98,7 +98,7 @@ public class DataSourceCompactibleSegmentIteratorTest
 
     // Expected: Total interval is 2018-01-01T00:00:00/2018-01-01T12:00:00
     // Skip interval: 2018-01-01T08:00:00/2018-01-01T12:00:00 (computed from 4h offset)
-    // Search interval should be: [2018-01-01T00:00:00/2018-01-01T10:00:00]
+    // Search interval should be: [2018-01-01T00:00:00/2018-01-01T08:00:00]
     Assert.assertEquals(1, searchIntervals.size());
     Assert.assertEquals(Intervals.of("2018-01-01T00:00:00/2018-01-01T08:00:00"), searchIntervals.get(0));
   }

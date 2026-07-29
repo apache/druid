@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.compact;
 
-import org.apache.druid.catalog.MapMetadataCatalog;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -136,16 +135,7 @@ public class AutoCompactionUpgradeTest extends EmbeddedClusterTestBase
   private void insertMinimalCompactionConfig(TestDerbyConnector sqlConnector)
   {
     DataSourceCompactionConfig dataSourceCompactionConfig =
-        new CatalogDataSourceCompactionConfig(
-            dataSource,
-            null,
-            Period.ZERO,
-            null,
-            null,
-            null,
-            null,
-            new MapMetadataCatalog(new DefaultObjectMapper())
-        );
+        new CatalogDataSourceCompactionConfig(dataSource, null, Period.ZERO, null, null, null, null, null);
     DruidCompactionConfig config = DruidCompactionConfig.legacy().withDatasourceConfig(dataSourceCompactionConfig);
     sqlConnector.retryWithHandle(
         handle -> handle.insert(
