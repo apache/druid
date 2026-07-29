@@ -125,7 +125,13 @@ public class BrokerViewOfCoordinatorConfigTest
     Assert.assertTrue("host2 is unrelated, should remain", hosts.contains("host2"));
   }
 
-  /** Creates a priority-to-servers map with all servers at priority 0, keyed by host name. */
+  /**
+   * Creates a priority-to-servers map with all servers at priority 0.
+   *
+   * @param hosts host names to create historical servers for
+   * @return map of priority to queryable server set, matching the structure used by
+   *         {@link BrokerViewOfCoordinatorConfig#getQueryableServers}
+   */
   private static Int2ObjectRBTreeMap<Set<QueryableDruidServer>> makeServers(String... hosts)
   {
     Int2ObjectRBTreeMap<Set<QueryableDruidServer>> map = new Int2ObjectRBTreeMap<>();
@@ -138,7 +144,13 @@ public class BrokerViewOfCoordinatorConfigTest
     return map;
   }
 
-  /** Flattens the priority-to-servers map into a set of host names for easy assertion. */
+  /**
+   * Flattens the priority-to-servers map into a set of host names for easy assertion.
+   *
+   * @param servers priority-to-servers map returned by {@link BrokerViewOfCoordinatorConfig#getQueryabl
+  eServers}
+   * @return set of host names across all priority levels
+   */
   private static Set<String> extractHosts(Int2ObjectRBTreeMap<Set<QueryableDruidServer>> servers)
   {
     Set<String> hosts = new HashSet<>();
