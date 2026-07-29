@@ -472,6 +472,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
     // parameterized type such as a missing closing bracket parses to null.)
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Collections.singletonList("tenant"),
+        null,
         null
     );
     for (String badType : new String[]{"COMPLEX<json", "ARRAY<LONG", "ARRAY<FOO>", "FOO"}) {
