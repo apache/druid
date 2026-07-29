@@ -136,7 +136,7 @@ public class TaskQueueScaleTest
     taskQueue = new TaskQueue(
         new TaskLockConfig(),
         new TaskQueueConfig(null, Period.millis(1), null, null, null, null),
-        new DefaultTaskConfig(),
+        new DefaultTaskConfig(null),
         taskStorage,
         taskRunner,
         unsupportedTaskActionFactory, // Not used for anything serious

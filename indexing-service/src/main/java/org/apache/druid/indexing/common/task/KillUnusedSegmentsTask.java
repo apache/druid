@@ -511,14 +511,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    final boolean useConcurrentLocks = Boolean.TRUE.equals(
-        getContextValue(
-            Tasks.USE_CONCURRENT_LOCKS,
-            Tasks.DEFAULT_USE_CONCURRENT_LOCKS
-        )
-    );
-
-    TaskLockType actualLockType = determineLockType(useConcurrentLocks);
+    final TaskLockType actualLockType = determineLockType();
 
     final TaskLock lock = taskActionClient.submit(
         new TimeChunkLockTryAcquireAction(
@@ -533,15 +526,20 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     return true;
   }
 
-  private TaskLockType determineLockType(boolean useConcurrentLocks)
+  public TaskLockType determineLockType()
   {
-    TaskLockType actualLockType;
+    final boolean useConcurrentLocks = Boolean.TRUE.equals(
+        getContextValue(
+            Tasks.USE_CONCURRENT_LOCKS,
+            Tasks.DEFAULT_USE_CONCURRENT_LOCKS
+        )
+    );
+
     if (useConcurrentLocks) {
-      actualLockType = TaskLockType.REPLACE;
+      return TaskLockType.REPLACE;
     } else {
-      actualLockType = getContextValue(Tasks.TASK_LOCK_TYPE, TaskLockType.EXCLUSIVE);
+      return getContextValue(Tasks.TASK_LOCK_TYPE, TaskLockType.EXCLUSIVE);
     }
-    return actualLockType;
   }
 
 }

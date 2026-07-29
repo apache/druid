@@ -124,7 +124,7 @@ public class TaskQueueTest extends IngestionTestBase
     taskQueue = new TaskQueue(
         new TaskLockConfig(),
         new TaskQueueConfig(3, null, null, null, null, null),
-        new DefaultTaskConfig()
+        new DefaultTaskConfig(null)
         {
           @Override
           public Map<String, Object> getContext()
@@ -267,7 +267,7 @@ public class TaskQueueTest extends IngestionTestBase
     TaskQueue maxPayloadTaskQueue = new TaskQueue(
         new TaskLockConfig(),
         new TaskQueueConfig(3, null, null, null, null, maxPayloadSize10Mib),
-        new DefaultTaskConfig()
+        new DefaultTaskConfig(null)
         {
           @Override
           public Map<String, Object> getContext()
@@ -458,7 +458,7 @@ public class TaskQueueTest extends IngestionTestBase
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
         new TaskQueueConfig(null, null, null, null, null, null),
-        new DefaultTaskConfig(),
+        new DefaultTaskConfig(null),
         getTaskStorage(),
         taskRunner,
         actionClientFactory,
@@ -578,7 +578,7 @@ public class TaskQueueTest extends IngestionTestBase
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
         new TaskQueueConfig(null, null, null, null, null, null),
-        new DefaultTaskConfig(),
+        new DefaultTaskConfig(null),
         taskStorage,
         EasyMock.createMock(HttpRemoteTaskRunner.class),
         createActionClientFactory(),
@@ -757,7 +757,7 @@ public class TaskQueueTest extends IngestionTestBase
     final TaskQueue priorityQueue = new TaskQueue(
         new TaskLockConfig(),
         new TaskQueueConfig(10, null, null, null, null, null),
-        new DefaultTaskConfig(),
+        new DefaultTaskConfig(null),
         getTaskStorage(),
         recordingRunner,
         actionClientFactory,

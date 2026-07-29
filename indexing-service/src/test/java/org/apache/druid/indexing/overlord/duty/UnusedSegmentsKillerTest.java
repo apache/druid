@@ -25,9 +25,11 @@ import org.apache.druid.indexing.common.actions.TaskActionTestKit;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskMetrics;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
+import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -70,6 +72,7 @@ public class UnusedSegmentsKillerTest
 
   private StubServiceEmitter emitter;
   private UnusedSegmentsKiller killer;
+  private DefaultTaskConfig defaultTaskConfig;
   private BlockingExecutorService killExecutor;
   private UnusedSegmentKillerConfig killerConfig;
   private TestDruidLeaderSelector leaderSelector;
@@ -83,6 +86,7 @@ public class UnusedSegmentsKillerTest
     leaderSelector = new TestDruidLeaderSelector();
     dataSegmentKiller = new TestDataSegmentKiller();
     killerConfig = new UnusedSegmentKillerConfig(true, Period.ZERO, null, null);
+    defaultTaskConfig = new DefaultTaskConfig(null);
     killExecutor = new BlockingExecutorService("UnusedSegmentsKillerTest-%s");
     storageCoordinator = taskActionTestKit.getMetadataStorageCoordinator();
     initKiller();
@@ -96,6 +100,7 @@ public class UnusedSegmentsKillerTest
             SegmentMetadataCache.UsageMode.ALWAYS,
             killerConfig
         ),
+        defaultTaskConfig,
         taskActionTestKit::createTaskActionClient,
         storageCoordinator,
         leaderSelector,
@@ -206,6 +211,40 @@ public class UnusedSegmentsKillerTest
     Assert.assertTrue(
         retrieveUnusedSegments(Intervals.ETERNITY).isEmpty()
     );
+  }
+
+  @Test
+  public void test_embeddedKillTask_usesConcurrentLocks_byDefault()
+  {
+    verifyEmbeddedTasksUseLockType("REPLACE");
+  }
+
+  @Test
+  public void test_embeddedKillTask_usesExclusiveLock_ifUseConcurrentLocksIsDisabled()
+  {
+    defaultTaskConfig = new DefaultTaskConfig(Map.of(Tasks.USE_CONCURRENT_LOCKS, false));
+    initKiller();
+
+    verifyEmbeddedTasksUseLockType("EXCLUSIVE");
+  }
+
+  private void verifyEmbeddedTasksUseLockType(String expectedLockType)
+  {
+    leaderSelector.becomeLeader();
+
+    storageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_1X10D), null);
+    storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
+
+    resetKillQueue();
+    finishQueuedKillJobs();
+
+    final List<String> taskLockTypes = emitter
+        .getMetricEvents(TaskMetrics.RUN_DURATION)
+        .stream()
+        .map(event -> event.getUserDims().get("taskLockType").toString())
+        .toList();
+    Assert.assertEquals(10, taskLockTypes.size());
+    Assert.assertTrue(taskLockTypes.stream().allMatch(expectedLockType::equals));
   }
 
   @Test(timeout = 30_000L)

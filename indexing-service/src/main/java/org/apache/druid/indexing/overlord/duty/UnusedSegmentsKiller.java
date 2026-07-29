@@ -25,6 +25,7 @@ import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -34,6 +35,7 @@ import org.apache.druid.indexing.common.task.TaskMetrics;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -62,8 +64,8 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * {@link OverlordDuty} to delete unused segments from metadata store and the
  * deep storage. Launches {@link EmbeddedKillTask}s to clean unused segments
- * of a single datasource-interval. These tasks use EXCLUSIVE locks by default
- * unless {@code useConcurrentLocks} is set to true at the cluster level.
+ * of a single datasource-interval. These tasks use REPLACE locks by default
+ * unless {@code useConcurrentLocks} is set to false at the cluster level.
  *
  * @see SegmentsMetadataManagerConfig to enable the cleanup
  * @see org.apache.druid.server.coordinator.duty.KillUnusedSegments for legacy
@@ -74,6 +76,12 @@ public class UnusedSegmentsKiller implements OverlordDuty
   private static final EmittingLogger log = new EmittingLogger(UnusedSegmentsKiller.class);
 
   private static final String TASK_ID_PREFIX = "overlord-issued";
+
+  /**
+   * The default for embedded kill tasks may differ from the cluster-level default
+   * {@link Tasks#DEFAULT_USE_CONCURRENT_LOCKS}.
+   */
+  private static final boolean DEFAULT_USE_CONCURRENT_LOCKS = true;
 
   private static final int INITIAL_KILL_QUEUE_SIZE = 1000;
   private static final int MAX_INTERVALS_TO_KILL = 10_000;
@@ -102,6 +110,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
   private final DruidLeaderSelector leaderSelector;
   private final DataSegmentKiller dataSegmentKiller;
 
+  private final boolean useConcurrentLocks;
   private final UnusedSegmentKillerConfig killConfig;
   private final TaskActionClientFactory taskActionClientFactory;
   private final IndexerMetadataStorageCoordinator storageCoordinator;
@@ -124,6 +133,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
   @Inject
   public UnusedSegmentsKiller(
       SegmentsMetadataManagerConfig config,
+      DefaultTaskConfig defaultTaskConfig,
       TaskActionClientFactory taskActionClientFactory,
       IndexerMetadataStorageCoordinator storageCoordinator,
       @IndexingService DruidLeaderSelector leaderSelector,
@@ -141,6 +151,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
     this.taskActionClientFactory = taskActionClientFactory;
 
     this.killConfig = config.getKillUnused();
+    this.useConcurrentLocks = shouldUseConcurrentLocks(defaultTaskConfig.getContext());
 
     if (isEnabled()) {
       this.exec = executorFactory.create(1, "UnusedSegmentsKiller-%s");
@@ -379,6 +390,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, killTask);
     metricBuilder.setDimension(DruidMetrics.INTERVAL, candidate.interval());
+    metricBuilder.setDimension("taskLockType", killTask.determineLockType());
 
     try {
       taskLockbox.add(killTask);
@@ -402,6 +414,26 @@ public class UnusedSegmentsKiller implements OverlordDuty
     finally {
       cleanupLocksSilently(killTask);
       emitMetric(Metric.PROCESSED_KILL_JOBS, 1L, Map.of(DruidMetrics.DATASOURCE, candidate.dataSource()));
+    }
+  }
+
+  private boolean shouldUseConcurrentLocks(Map<String, Object> context)
+  {
+    if (context == null) {
+      return DEFAULT_USE_CONCURRENT_LOCKS;
+    }
+
+    final Boolean useConcurrentLocksOverride = (Boolean) context.get(Tasks.USE_CONCURRENT_LOCKS);
+    if (useConcurrentLocksOverride != null) {
+      return useConcurrentLocksOverride;
+    }
+
+    final String taskLockTypeOverride = (String) context.get(Tasks.TASK_LOCK_TYPE);
+    if (taskLockTypeOverride != null
+        && !TaskLockType.REPLACE.equals(TaskLockType.valueOf(taskLockTypeOverride))) {
+      return false;
+    } else {
+      return DEFAULT_USE_CONCURRENT_LOCKS;
     }
   }
 
@@ -472,7 +504,10 @@ public class UnusedSegmentsKiller implements OverlordDuty
           candidate.dataSource(),
           candidate.interval(),
           null,
-          Map.of(Tasks.PRIORITY_KEY, Tasks.DEFAULT_EMBEDDED_KILL_TASK_PRIORITY),
+          Map.of(
+              Tasks.PRIORITY_KEY, Tasks.DEFAULT_EMBEDDED_KILL_TASK_PRIORITY,
+              Tasks.USE_CONCURRENT_LOCKS, useConcurrentLocks
+          ),
           MAX_SEGMENTS_TO_KILL_IN_BATCH,
           candidate.numSegmentsToKill(),
           maxUpdatedTimeOfEligibleSegment

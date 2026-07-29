@@ -244,7 +244,7 @@ public class OverlordTest
         taskMaster,
         new TaskLockConfig(),
         new TaskQueueConfig(null, new Period(1), null, new Period(10), null, null),
-        new DefaultTaskConfig(),
+        new DefaultTaskConfig(null),
         taskLockbox,
         taskStorage,
         taskActionClientFactory,
