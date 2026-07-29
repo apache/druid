@@ -64,8 +64,15 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * {@link OverlordDuty} to delete unused segments from metadata store and the
  * deep storage. Launches {@link EmbeddedKillTask}s to clean unused segments
- * of a single datasource-interval. These tasks use REPLACE locks by default
- * unless {@code useConcurrentLocks} is set to false at the cluster level.
+ * of a single datasource-interval. These tasks use REPLACE locks by default.
+ * The kill task is affected by other tasks in the following manner:
+ * <ul>
+ * <li>Not affected by tasks using EXCLUSIVE, SHARED or another REPLACE lock
+ * since they are mutually exclusive with this REPLACE lock.</li>
+ * <li>Not affected by APPEND tasks as long as no unused segment is marked as
+ * used and subsequently upgraded while a kill task on that interval is in
+ * progress.</li>
+ * </ul>
  *
  * @see SegmentsMetadataManagerConfig to enable the cleanup
  * @see org.apache.druid.server.coordinator.duty.KillUnusedSegments for legacy
