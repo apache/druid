@@ -46,8 +46,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
 {
   static final double DEFAULT_LAG_WEIGHT = 0.4;
   static final double DEFAULT_IDLE_WEIGHT = 0.6;
-  static final Duration DEFAULT_MIN_SCALE_UP_DELAY = Duration.standardMinutes(10);
+  static final Duration DEFAULT_MIN_SCALE_UP_DELAY = Duration.standardMinutes(15);
   static final Duration DEFAULT_MIN_SCALE_DOWN_DELAY = Duration.standardMinutes(30);
+  static final Duration DEFAULT_SCALE_ACTION_PERIOD = Duration.standardMinutes(2);
 
   private final boolean enableTaskAutoScaler;
   private final int taskCountMax;
@@ -65,7 +66,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final Duration minScaleDownDelay;
   private final boolean scaleDownDuringTaskRolloverOnly;
   private final boolean usePollIdleRatio;
+  private final Long criticalLagThreshold;
   private final int minCostDropPercentForScaling;
+  private final double highLagCostFactor;
 
   /**
    * Creates a new CostBasedAutoScalerConfig instance.
@@ -87,11 +90,13 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("minScaleDownDelay") Duration minScaleDownDelay,
       @Nullable @JsonProperty("scaleDownDuringTaskRolloverOnly") Boolean scaleDownDuringTaskRolloverOnly,
       @Nullable @JsonProperty("usePollIdleRatio") Boolean usePollIdleRatio,
-      @Nullable @JsonProperty("minCostDropPercentForScaling") Integer minCostDropPercentForScaling
+      @Nullable @JsonProperty("criticalLagThreshold") Long criticalLagThreshold,
+      @Nullable @JsonProperty("minCostDropPercentForScaling") Integer minCostDropPercentForScaling,
+      @Nullable @JsonProperty("highLagCostFactor") Double highLagCostFactor
   )
   {
     this.enableTaskAutoScaler = Configs.valueOrDefault(enableTaskAutoScaler, false);
-    this.scaleActionPeriodMillis = Configs.valueOrDefault(scaleActionPeriodMillis, DEFAULT_MIN_SCALE_UP_DELAY.getMillis());
+    this.scaleActionPeriodMillis = Configs.valueOrDefault(scaleActionPeriodMillis, DEFAULT_SCALE_ACTION_PERIOD.getMillis());
 
     this.lagWeight = Configs.valueOrDefault(lagWeight, DEFAULT_LAG_WEIGHT);
     this.idleWeight = Configs.valueOrDefault(idleWeight, DEFAULT_IDLE_WEIGHT);
@@ -105,7 +110,25 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, DEFAULT_MIN_SCALE_DOWN_DELAY);
     this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, false);
     this.usePollIdleRatio = Configs.valueOrDefault(usePollIdleRatio, true);
+    this.criticalLagThreshold = criticalLagThreshold;
+
+    Preconditions.checkArgument(
+        criticalLagThreshold == null || criticalLagThreshold > 0,
+        "criticalLagThreshold must be > 0"
+    );
     this.minCostDropPercentForScaling = Configs.valueOrDefault(minCostDropPercentForScaling, 0);
+    Preconditions.checkArgument(
+        this.minCostDropPercentForScaling >= 0 && this.minCostDropPercentForScaling <= 100,
+        "minCostDropPercentForScaling must be between 0 and 100"
+    );
+    this.highLagCostFactor = Configs.valueOrDefault(
+        highLagCostFactor,
+        WeightedCostFunction.DEFAULT_HIGH_LAG_COST_FACTOR
+    );
+    Preconditions.checkArgument(
+        this.highLagCostFactor >= 0,
+        "highLagCostFactor must be >= 0"
+    );
 
     if (this.enableTaskAutoScaler) {
       Preconditions.checkNotNull(taskCountMax, "taskCountMax is required when enableTaskAutoScaler is true");
@@ -289,13 +312,37 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   /**
-   * Minimum percentage drop from current cost that is required by the auto-scaler
+   * Aggregate (sum-across-partitions) lag threshold driving a two-tier fast path,
+   * relative to {@link CostMetrics#getAggregateLag()}:
+   * <ul>
+   *   <li>At 75% of this value, the high-lag cost factor maxes out at 6.0 (instead of
+   *   unamplified normal recovery), and the scale-up candidate search bypasses
+   *   {@link #isUseTaskCountBoundariesOnScaleUp()}.</li>
+   *   <li>At 100% of this value, cost minimization is skipped entirely and the task count jumps
+   *   straight to the maximum.</li>
+   * </ul>
+   * {@code null} disables the feature.
+   */
+  @JsonProperty
+  @Nullable
+  public Long getCriticalLagThreshold()
+  {
+    return criticalLagThreshold;
+  }
+
+  /* Minimum percentage drop from current cost that is required by the auto-scaler
    * to choose a new task count.
    */
   @JsonProperty
   public int getMinCostDropPercentForScaling()
   {
     return minCostDropPercentForScaling;
+  }
+
+  @JsonProperty
+  public double getHighLagCostFactor()
+  {
+    return highLagCostFactor;
   }
 
   @Override
@@ -330,8 +377,10 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && scaleDownDuringTaskRolloverOnly == that.scaleDownDuringTaskRolloverOnly
            && usePollIdleRatio == that.usePollIdleRatio
            && minCostDropPercentForScaling == that.minCostDropPercentForScaling
+           && Double.compare(that.highLagCostFactor, highLagCostFactor) == 0
            && Objects.equals(taskCountStart, that.taskCountStart)
-           && Objects.equals(stopTaskCountRatio, that.stopTaskCountRatio);
+           && Objects.equals(stopTaskCountRatio, that.stopTaskCountRatio)
+           && Objects.equals(criticalLagThreshold, that.criticalLagThreshold);
   }
 
   @Override
@@ -353,7 +402,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         minScaleDownDelay,
         scaleDownDuringTaskRolloverOnly,
         usePollIdleRatio,
-        minCostDropPercentForScaling
+        criticalLagThreshold,
+        minCostDropPercentForScaling,
+        highLagCostFactor
     );
   }
 
@@ -376,7 +427,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", minScaleDownDelay=" + minScaleDownDelay +
            ", scaleDownDuringTaskRolloverOnly=" + scaleDownDuringTaskRolloverOnly +
            ", usePollIdleRatio=" + usePollIdleRatio +
+           ", criticalLagThreshold=" + criticalLagThreshold +
            ", minCostDropPercentForScaling=" + minCostDropPercentForScaling +
+           ", highLagCostFactor=" + highLagCostFactor +
            '}';
   }
 
@@ -401,7 +454,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Duration minScaleDownDelay;
     private Boolean scaleDownDuringTaskRolloverOnly;
     private Boolean usePollIdleRatio;
+    private Long criticalLagThreshold;
     private Integer minCostDropPercentForScaling;
+    private Double highLagCostFactor;
 
     private Builder()
     {
@@ -485,6 +540,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
+    public Builder criticalLagThreshold(Long criticalLagThreshold)
+    {
+      this.criticalLagThreshold = criticalLagThreshold;
+      return this;
+    }
+
     public Builder useTaskCountBoundariesOnScaleUp(boolean useTaskCountBoundariesOnScaleUp)
     {
       this.useTaskCountBoundariesOnScaleUp = useTaskCountBoundariesOnScaleUp;
@@ -500,6 +561,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     public Builder minCostDropPercentForScaling(int minCostDropPercentForScaling)
     {
       this.minCostDropPercentForScaling = minCostDropPercentForScaling;
+      return this;
+    }
+
+    public Builder highLagCostFactor(double highLagCostFactor)
+    {
+      this.highLagCostFactor = highLagCostFactor;
       return this;
     }
 
@@ -521,7 +588,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           minScaleDownDelay,
           scaleDownDuringTaskRolloverOnly,
           usePollIdleRatio,
-          minCostDropPercentForScaling
+          criticalLagThreshold,
+          minCostDropPercentForScaling,
+          highLagCostFactor
       );
     }
   }
