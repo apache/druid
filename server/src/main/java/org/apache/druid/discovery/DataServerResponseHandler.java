@@ -231,6 +231,15 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
     final long currentQueuedByteCount = queuedByteCount.addAndGet(holder.getLength());
     queue.put(holder);
 
+    // A failure can be set between the timeout check that let this chunk through and the put above, in which case
+    // the drain in setupResponseReadFailure ran too early to see it. Nothing dequeues once fail is set, so this
+    // chunk would keep its buffer retained forever. Remove just this holder rather than draining again, to leave
+    // the error stream that setupResponseReadFailure queued in place for a consumer already parked in dequeue().
+    // If that drain got here first, remove() finds nothing and the chunk has already been closed.
+    if (fail.get() != null && queue.remove(holder)) {
+      closeChunk(holder);
+    }
+
     // True if we should keep reading.
     return !usingBackpressure || currentQueuedByteCount < maxQueuedBytes;
   }
@@ -277,12 +286,17 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
   {
     InputStreamHolder holder;
     while ((holder = queue.poll()) != null) {
-      try {
-        holder.getStream().close();
-      }
-      catch (IOException e) {
-        log.debug(e, "Could not close abandoned response chunk for queryId[%s]", query.getId());
-      }
+      closeChunk(holder);
+    }
+  }
+
+  private void closeChunk(InputStreamHolder holder)
+  {
+    try {
+      holder.getStream().close();
+    }
+    catch (IOException e) {
+      log.debug(e, "Could not close abandoned response chunk for queryId[%s]", query.getId());
     }
   }
 

@@ -225,6 +225,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           // a chunk queued during that window is released rather than stranded.
           if (discard.get()) {
             discardQueuedChunks();
+          } else if (fail.get() != null && queue.remove(holder)) {
+            // setupResponseReadFailure has the same window: it may have drained the queue after this chunk passed
+            // the check above but before it was queued. Nothing dequeues once fail is set, so release this chunk
+            // here. Only this holder is removed, so the error stream that teardown queued stays available to a
+            // consumer already parked in dequeue().
+            closeChunk(holder.getStream());
           }
 
           // True if we should keep reading.

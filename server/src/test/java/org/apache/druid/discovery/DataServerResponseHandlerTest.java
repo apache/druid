@@ -117,6 +117,32 @@ public class DataServerResponseHandlerTest
   }
 
   /**
+   * A chunk can reach the queue after the failure teardown has already drained it: handleChunk clears its timeout
+   * check on the Netty thread, the consumer thread then fails the query and drains, and only afterwards is the chunk
+   * queued. Nothing dequeues once the query has failed, so the handler itself has to release that late chunk.
+   */
+  @Test
+  public void testChunkQueuedAfterFailureIsReleased()
+  {
+    final DataServerResponseHandler handler = makeHandler(60_000L);
+
+    final ClientResponse<InputStream> clientResponse = handler.handleResponse(
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK),
+        NOOP_TRAFFIC_COP
+    );
+
+    handler.exceptionCaught(clientResponse, new RuntimeException("transport failure"));
+
+    final ByteBuf chunk = Unpooled.wrappedBuffer(StringUtils.toUtf8("[{\"timestamp\":\"2014-01-01T01:02:03Z\"}]"));
+    Assert.assertEquals(1, chunk.refCnt());
+
+    handler.handleChunk(clientResponse, new DefaultHttpContent(chunk), 1);
+
+    Assert.assertEquals("released even though it arrived after teardown", 1, chunk.refCnt());
+    chunk.release();
+  }
+
+  /**
    * A FullHttpResponse arrives as both response and content, so its body has to be picked up from handleResponse
    * rather than waiting for a handleChunk that will never come.
    */

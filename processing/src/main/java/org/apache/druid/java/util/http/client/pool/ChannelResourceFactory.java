@@ -304,7 +304,12 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
   @Override
   public boolean isGood(ChannelFuture resource)
   {
-    Channel channel = resource.channel();
+    // Wait for the connect (and any proxy or TLS handshake chained onto it) to settle before judging it, as the
+    // pre-Netty-4 code did. ResourcePool calls this the moment it takes a resource, so a future that is merely
+    // still in flight would report isSuccess() == false and the pool would close a perfectly good channel and
+    // open a replacement. This adds no blocking that callers do not already do: NettyHttpClient#go awaits the
+    // very same future immediately afterwards.
+    Channel channel = resource.awaitUninterruptibly().channel();
 
     boolean isSuccess = resource.isSuccess();
     boolean isActive = channel.isActive();
