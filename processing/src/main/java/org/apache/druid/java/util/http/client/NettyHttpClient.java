@@ -615,6 +615,15 @@ public class NettyHttpClient extends AbstractHttpClient
                   if (timedOut || destroyed || !ctx.channel().isOpen()) {
                     return;
                   }
+                  // A read can land between the deadline check on the timer thread and this task running, either
+                  // because it was already queued ahead of us or because the event loop was busy. Check again here,
+                  // where channelRead cannot interleave, so that a response arriving right on the deadline is not
+                  // failed.
+                  final long remainingNanos = timeoutNanos - (System.nanoTime() - lastReadTimeNanos);
+                  if (remainingNanos > 0) {
+                    schedule(ctx, remainingNanos);
+                    return;
+                  }
                   timedOut = true;
                   ctx.fireExceptionCaught(ReadTimeoutException.INSTANCE);
                 });

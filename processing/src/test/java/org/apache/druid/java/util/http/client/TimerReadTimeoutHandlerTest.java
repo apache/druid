@@ -123,6 +123,43 @@ public class TimerReadTimeoutHandlerTest
     }
   }
 
+  /**
+   * The timer thread observes the deadline and then hands the actual firing to the event loop, so a read can land in
+   * between. {@link EmbeddedChannel#writeInbound} reproduces exactly that order: it delivers the read first and only
+   * afterwards runs the tasks queued for the loop. The queued task has to notice the read rather than failing a
+   * response that has just arrived.
+   */
+  @Test(timeout = 30_000L)
+  public void testReadArrivingBeforeQueuedTimeoutPreventsIt() throws Exception
+  {
+    final Timer timer = new HashedWheelTimer();
+    try {
+      final ExceptionCapturingHandler capture = new ExceptionCapturingHandler();
+      final EmbeddedChannel channel = new EmbeddedChannel(
+          new NettyHttpClient.TimerReadTimeoutHandler(timer, 50L),
+          capture
+      );
+
+      // Let the timer pass the deadline and queue its task on the event loop, without running that task yet.
+      Thread.sleep(500L);
+
+      // Delivers the read, then runs the task the timer queued.
+      channel.writeInbound(Unpooled.wrappedBuffer(new byte[]{1}));
+      Assert.assertNull("the read landed first, so nothing should have timed out", capture.caught.get());
+
+      // The timeout still applies, measured from that read.
+      final Throwable caught = awaitException(channel, capture);
+      Assert.assertTrue(
+          "expected a ReadTimeoutException, got " + caught,
+          caught instanceof ReadTimeoutException
+      );
+      channel.finishAndReleaseAll();
+    }
+    finally {
+      timer.stop();
+    }
+  }
+
   @Test(timeout = 30_000L)
   public void testReadReschedulesTimeoutThenFires() throws Exception
   {
