@@ -3631,7 +3631,7 @@ name: SLF4J API
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.0.17
+version: 2.0.18
 copyright: QOS.ch
 license_file_path: licenses/bin/slf4j.MIT
 libraries:
