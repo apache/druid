@@ -297,7 +297,7 @@ Keep the following in mind when using the task API to view reports:
 
 - The task report for an entire job is associated with the `query_controller` task. The `query_worker` tasks don't have their own reports; their information is incorporated into the controller report.
 - The task report API may report `404 Not Found` temporarily while the task is in the process of starting up.
-- As an experimental feature, the MSQ task engine supports running SELECT queries. SELECT query results are written into
+- The MSQ task engine supports running SELECT queries. SELECT query results are written into
 the `multiStageQuery.payload.results.results` task report key as an array of arrays. The behavior and result format of plain
 SELECT queries (without INSERT or REPLACE) is subject to change.
 - `multiStageQuery.payload.results.resultsTruncated` denotes whether the results of the report have been truncated to prevent the reports from blowing up.
