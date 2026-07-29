@@ -297,7 +297,7 @@ public class CostBasedAutoScalerTest
   @Test
   public void testEmergencyLagJumpsStraightToMaxTaskCount()
   {
-    // aggregateLag = 100_000 * 500 = 50,000,000. With threshold=10,000,000: tier2=9,500,000 is
+    // aggregateLag = 100_000 * 500 = 50,000,000. With threshold=10,000,000: tier2=10,000,000 is
     // comfortably crossed, so the argmin search is skipped entirely in favor of the maximum task count.
     final CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig
         .builder()
@@ -339,6 +339,33 @@ public class CostBasedAutoScalerTest
         "Emergency lag should jump to the maximum task count even if it costs more than the current count",
         500,
         scaler.computeOptimalTaskCount(createMetrics(100_000.0, 10, 500, 0.9))
+    );
+  }
+
+  @Test
+  public void testEmergencyLagRequiresFullCriticalLagThreshold()
+  {
+    final CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig
+        .builder()
+        .taskCountMax(500)
+        .taskCountMin(1)
+        .enableTaskAutoScaler(true)
+        .lagWeight(0.0)
+        .idleWeight(1.0)
+        .useTaskCountBoundariesOnScaleDown(false)
+        .criticalLagThreshold(10_000_000L)
+        .build();
+    final CostBasedAutoScaler scaler = createAutoScaler(config);
+
+    Assert.assertNotEquals(
+        "Tier 2 should not trigger below the full critical lag threshold",
+        500,
+        scaler.computeOptimalTaskCount(createMetrics(20_000.0, 9_999_999.0, 10, 500, 0.9))
+    );
+    Assert.assertEquals(
+        "Tier 2 should trigger at the full critical lag threshold",
+        500,
+        scaler.computeOptimalTaskCount(createMetrics(20_000.0, 10_000_000.0, 10, 500, 0.9))
     );
   }
 
@@ -699,7 +726,7 @@ public class CostBasedAutoScalerTest
     when(ioConfig.getStream()).thenReturn("test-stream");
     when(ioConfig.getTaskDuration()).thenReturn(Duration.standardHours(1));
     when(supervisor.getPartitionCount()).thenReturn(1);
-    when(supervisor.computeLagStats()).thenReturn(new LagStats(0, 0, 0));
+    when(supervisor.computeLagStats()).thenReturn(new LagStats(1, 1, 0));
 
     // usePollIdleRatio defaults to true, which disables rate-watermark tracking entirely.
     CostBasedAutoScalerConfig defaultConfig = CostBasedAutoScalerConfig.builder()
@@ -730,9 +757,19 @@ public class CostBasedAutoScalerTest
     CostBasedAutoScaler autoScalerWithoutPollIdleRatio =
         new CostBasedAutoScaler(supervisor, configWithoutPollIdleRatio, spec, emitter);
 
+    when(supervisor.computeLagStats()).thenReturn(
+        new LagStats(0, 0, 0),
+        new LagStats(1, 1, 0),
+        new LagStats(1, 1, 0)
+    );
+
+    Assert.assertNull(
+        "A rate sample without lag must not establish the watermark",
+        autoScalerWithoutPollIdleRatio.collectMetrics().getMaxObservedRate()
+    );
     Assert.assertEquals(
-        "First sample becomes the watermark",
-        500.0,
+        "First positive-lag sample becomes the watermark",
+        9000.0,
         autoScalerWithoutPollIdleRatio.collectMetrics().getMaxObservedRate(),
         0.0001
     );

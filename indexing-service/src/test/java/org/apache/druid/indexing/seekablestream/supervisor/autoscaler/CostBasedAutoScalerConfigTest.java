@@ -277,6 +277,28 @@ public class CostBasedAutoScalerConfigTest
                              .build();
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void testValidation_NegativeMinCostDropPercentForScaling()
+  {
+    CostBasedAutoScalerConfig.builder()
+                             .taskCountMax(100)
+                             .taskCountMin(5)
+                             .minCostDropPercentForScaling(-1)
+                             .enableTaskAutoScaler(true)
+                             .build();
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testValidation_MinCostDropPercentForScalingAbove100()
+  {
+    CostBasedAutoScalerConfig.builder()
+                             .taskCountMax(100)
+                             .taskCountMin(5)
+                             .minCostDropPercentForScaling(101)
+                             .enableTaskAutoScaler(true)
+                             .build();
+  }
+
   @Test
   public void testScaleDelayDefaults() throws Exception
   {

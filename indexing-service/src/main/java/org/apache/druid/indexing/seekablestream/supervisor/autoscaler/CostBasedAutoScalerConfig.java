@@ -117,6 +117,10 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         "criticalLagThreshold must be > 0"
     );
     this.minCostDropPercentForScaling = Configs.valueOrDefault(minCostDropPercentForScaling, 0);
+    Preconditions.checkArgument(
+        this.minCostDropPercentForScaling >= 0 && this.minCostDropPercentForScaling <= 100,
+        "minCostDropPercentForScaling must be between 0 and 100"
+    );
     this.criticalLagAmplificationMultiplier = Configs.valueOrDefault(
         criticalLagAmplificationMultiplier,
         WeightedCostFunction.CRITICAL_LAG_AMPLIFICATION_MULTIPLIER
@@ -314,7 +318,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
    *   <li>At 75% of this value, the lag-amplification multiplier maxes out at 6.0 (instead of
    *   unamplified normal recovery), and the scale-up candidate search bypasses
    *   {@link #isUseTaskCountBoundariesOnScaleUp()}.</li>
-   *   <li>At 95% of this value, cost minimization is skipped entirely and the task count jumps
+   *   <li>At 100% of this value, cost minimization is skipped entirely and the task count jumps
    *   straight to the maximum.</li>
    * </ul>
    * {@code null} disables the feature.

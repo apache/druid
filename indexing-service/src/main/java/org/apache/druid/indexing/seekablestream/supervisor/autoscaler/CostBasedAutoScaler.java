@@ -539,7 +539,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final double movingAvgRate = extractMovingAverage(taskStats);
     final double pollIdleRatio = extractPollIdleRatio(taskStats);
 
-    if (!config.isUsePollIdleRatio() && movingAvgRate > 0) {
+    if (!config.isUsePollIdleRatio() && aggregateLag > 0 && movingAvgRate > 0) {
       processingRateSamples.add(movingAvgRate);
     }
 
