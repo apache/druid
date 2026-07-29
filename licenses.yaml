@@ -2256,7 +2256,7 @@ name: AsyncHttpClient asynchttpclient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.0.10
+version: 3.0.11
 libraries:
   - org.asynchttpclient: async-http-client
 
@@ -3631,7 +3631,7 @@ name: SLF4J API
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.0.17
+version: 2.0.18
 copyright: QOS.ch
 license_file_path: licenses/bin/slf4j.MIT
 libraries:
