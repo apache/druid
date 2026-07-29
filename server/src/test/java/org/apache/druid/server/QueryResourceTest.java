@@ -41,6 +41,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -61,6 +62,7 @@ import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
@@ -71,6 +73,7 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TruncatedResponseContextException;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
@@ -99,6 +102,7 @@ import org.eclipse.jetty.http.HttpHeader;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -260,6 +264,32 @@ public class QueryResourceTest
     testRequestLogger = new TestRequestLogger();
     emitter = StubServiceEmitter.createStarted();
     queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
+  }
+
+  /**
+   * Every {@code query/time} emission must carry a priority dimension, whatever the outcome of the query was — success,
+   * timeout, capacity rejection, or a failure raised anywhere in the lifecycle. Lane is only emitted when the query is
+   * actually laned, but when present it must be a String. Runs after each test so that no outcome covered by this class
+   * can silently drop or corrupt them.
+   */
+  @After
+  public void verifyLaneAndPriorityDimensions()
+  {
+    for (ServiceMetricEvent event : emitter.getMetricEvents("query/time")) {
+      final Map<String, Object> map = event.toMap();
+      MatcherAssert.assertThat(
+          StringUtils.format("priority dimension on event %s", map),
+          map.get(DruidMetrics.PRIORITY),
+          CoreMatchers.instanceOf(Integer.class)
+      );
+      if (map.containsKey(DruidMetrics.LANE)) {
+        MatcherAssert.assertThat(
+            StringUtils.format("lane dimension on event %s", map),
+            map.get(DruidMetrics.LANE),
+            CoreMatchers.instanceOf(String.class)
+        );
+      }
+    }
   }
 
   private QueryResource createQueryResource(ResponseContextConfig responseContextConfig)
@@ -428,6 +458,9 @@ public class QueryResourceTest
     Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
     emitter.verifyEmitted("query/time", 1);
     Assert.assertEquals(500, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+    Assert.assertFalse(emitter.getMetricEvents("query/time").get(0).toMap().containsKey(DruidMetrics.LANE));
+    // server-side DefaultQueryConfig supplies priority=678 here
+    Assert.assertEquals(678, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.PRIORITY));
 
     final ErrorResponse entity = (ErrorResponse) response.getEntity();
     MatcherAssert.assertThat(
@@ -539,6 +572,8 @@ public class QueryResourceTest
 
     emitter.verifyEmitted("query/time", 1);
     Assert.assertEquals(504, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+    Assert.assertFalse(emitter.getMetricEvents("query/time").get(0).toMap().containsKey(DruidMetrics.LANE));
+    Assert.assertEquals(QueryContexts.DEFAULT_PRIORITY, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.PRIORITY));
   }
 
   @Test
@@ -622,6 +657,8 @@ public class QueryResourceTest
     );
     emitter.verifyEmitted("query/time", 1);
     Assert.assertEquals(400, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+    Assert.assertFalse(emitter.getMetricEvents("query/time").get(0).toMap().containsKey(DruidMetrics.LANE));
+    Assert.assertEquals(QueryContexts.DEFAULT_PRIORITY, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.PRIORITY));
   }
 
   @Test
@@ -727,6 +764,8 @@ public class QueryResourceTest
 
     emitter.verifyEmitted("query/time", 1);
     Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+    Assert.assertFalse(emitter.getMetricEvents("query/time").get(0).toMap().containsKey(DruidMetrics.LANE));
+    Assert.assertEquals(QueryContexts.DEFAULT_PRIORITY, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.PRIORITY));
   }
 
 
@@ -783,9 +822,14 @@ public class QueryResourceTest
             )
             {
               @Override
-              public void emitLogsAndMetrics(@Nullable Throwable e, @Nullable String remoteAddress, long bytesWritten)
+              public void emitLogsAndMetrics(
+                  @Nullable Throwable e,
+                  @Nullable String remoteAddress,
+                  long bytesWritten,
+                  @Nullable ResponseContext responseContext
+              )
               {
-                super.emitLogsAndMetrics(e, remoteAddress, bytesWritten);
+                super.emitLogsAndMetrics(e, remoteAddress, bytesWritten, responseContext);
                 Assert.assertTrue(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
               }
             };
@@ -821,6 +865,9 @@ public class QueryResourceTest
     );
     emitter.verifyEmitted("query/time", 1);
     Assert.assertEquals(500, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+    Assert.assertFalse(emitter.getMetricEvents("query/time").get(0).toMap().containsKey(DruidMetrics.LANE));
+    // server-side DefaultQueryConfig supplies priority=678 here
+    Assert.assertEquals(678, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.PRIORITY));
   }
 
   @Test
@@ -884,6 +931,9 @@ public class QueryResourceTest
     );
     emitter.verifyEmitted("query/time", 1);
     Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+    Assert.assertFalse(emitter.getMetricEvents("query/time").get(0).toMap().containsKey(DruidMetrics.LANE));
+    // query context priority=-1 wins over the server default here
+    Assert.assertEquals(-1, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.PRIORITY));
   }
 
   @Test
@@ -910,6 +960,8 @@ public class QueryResourceTest
     );
     emitter.verifyEmitted("query/time", 1);
     Assert.assertEquals(500, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+    Assert.assertFalse(emitter.getMetricEvents("query/time").get(0).toMap().containsKey(DruidMetrics.LANE));
+    Assert.assertEquals(QueryContexts.DEFAULT_PRIORITY, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.PRIORITY));
   }
 
   @Test
@@ -928,6 +980,8 @@ public class QueryResourceTest
     emitter.verifyEmitted("query/time", 1);
     Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
     Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+    Assert.assertFalse(emitter.getMetricEvents("query/time").get(0).toMap().containsKey(DruidMetrics.LANE));
+    Assert.assertEquals(QueryContexts.DEFAULT_PRIORITY, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.PRIORITY));
   }
 
   @Test
@@ -944,6 +998,8 @@ public class QueryResourceTest
     emitter.verifyEmitted("query/time", 1);
     Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
     Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+    Assert.assertFalse(emitter.getMetricEvents("query/time").get(0).toMap().containsKey(DruidMetrics.LANE));
+    Assert.assertEquals(QueryContexts.DEFAULT_PRIORITY, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.PRIORITY));
   }
 
   @Test
@@ -961,6 +1017,8 @@ public class QueryResourceTest
     emitter.verifyEmitted("query/time", 1);
     Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
     Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+    Assert.assertFalse(emitter.getMetricEvents("query/time").get(0).toMap().containsKey(DruidMetrics.LANE));
+    Assert.assertEquals(QueryContexts.DEFAULT_PRIORITY, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.PRIORITY));
   }
 
   @Test
@@ -980,6 +1038,8 @@ public class QueryResourceTest
     emitter.verifyEmitted("query/time", 1);
     Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
     Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+    Assert.assertFalse(emitter.getMetricEvents("query/time").get(0).toMap().containsKey(DruidMetrics.LANE));
+    Assert.assertEquals(QueryContexts.DEFAULT_PRIORITY, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.PRIORITY));
   }
 
   @Test
@@ -1004,6 +1064,8 @@ public class QueryResourceTest
     emitter.verifyEmitted("query/time", 1);
     Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
     Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+    Assert.assertFalse(emitter.getMetricEvents("query/time").get(0).toMap().containsKey(DruidMetrics.LANE));
+    Assert.assertEquals(QueryContexts.DEFAULT_PRIORITY, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.PRIORITY));
   }
 
   @Test
@@ -1027,6 +1089,8 @@ public class QueryResourceTest
     emitter.verifyEmitted("query/time", 1);
     Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
     Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+    Assert.assertFalse(emitter.getMetricEvents("query/time").get(0).toMap().containsKey(DruidMetrics.LANE));
+    Assert.assertEquals(QueryContexts.DEFAULT_PRIORITY, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.PRIORITY));
   }
 
   @Test
@@ -1257,6 +1321,8 @@ public class QueryResourceTest
 
     emitter.verifyEmitted("query/time", 1);
     Assert.assertEquals(504, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+    Assert.assertFalse(emitter.getMetricEvents("query/time").get(0).toMap().containsKey(DruidMetrics.LANE));
+    Assert.assertEquals(QueryContexts.DEFAULT_PRIORITY, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.PRIORITY));
   }
 
   @Test(timeout = 60_000L)

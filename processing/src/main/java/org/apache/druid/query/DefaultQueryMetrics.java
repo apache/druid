@@ -28,6 +28,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -110,6 +111,8 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     subQueryId(query);
     sqlQueryId(query);
     context(query);
+    lane(query);
+    priority(query);
   }
 
   @Override
@@ -180,6 +183,34 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public void context(QueryType query)
   {
     setDimension("context", query.getContext() == null ? ImmutableMap.of() : query.getContext());
+  }
+
+  @Override
+  public void lane(QueryType query)
+  {
+    lane(query.context().getLane());
+  }
+
+  @Override
+  public void lane(@Nullable String lane)
+  {
+    // An unlaned query is not in any lane -- the scheduler gives it no lane bulkhead, only the 'total' one -- so emit
+    // no dimension at all rather than inventing a lane name for it.
+    if (lane != null) {
+      setDimension(DruidMetrics.LANE, lane);
+    }
+  }
+
+  @Override
+  public void priority(QueryType query)
+  {
+    priority(query.context().getPriority());
+  }
+
+  @Override
+  public void priority(int priority)
+  {
+    setDimension(DruidMetrics.PRIORITY, priority);
   }
 
   @Override

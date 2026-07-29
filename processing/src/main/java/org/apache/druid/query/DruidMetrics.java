@@ -42,6 +42,8 @@ public class DruidMetrics
   public static final String ENGINE = "engine";
   public static final String DURATION = "duration";
   public static final String SUCCESS = "success";
+  public static final String LANE = "lane";
+  public static final String PRIORITY = "priority";
 
   // Task dimensions
   public static final String TASK_ID = "taskId";

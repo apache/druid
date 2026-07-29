@@ -365,6 +365,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           pruneSegmentsWithCachedResults(queryCacheKey, segmentServers);
 
       query = scheduler.prioritizeAndLaneQuery(queryPlus, segmentServers);
+      reportLaningAssignmentToQueryLifecycle(query);
       queryPlus = queryPlus.withQuery(query);
       queryPlus = queryPlus.withQueryMetrics(toolChest);
       queryPlus.getQueryMetrics().reportQueriedSegmentCount(segmentServers.size()).emit(emitter);
@@ -381,6 +382,37 @@ public class CachingClusteredClient implements QuerySegmentWalker
       });
 
       return new ClusterQueryResult<>(scheduler.run(query, mergedResultSequence), segmentsByServer.size());
+    }
+
+    /**
+     * Reports the lane and priority the scheduler just assigned back to {@code QueryLifecycle}, which captured the
+     * query before the scheduler ran and would otherwise emit only whatever the caller happened to set in the context.
+     * <p>
+     * A single request can reach here more than once -- a union datasource fans out into one cluster query per table,
+     * and an inline subquery runs its inner query here before the outer query is merged locally. Those can be assigned
+     * different lanes, and there is only one pair of dimensions to report. The first assignment wins, so that the
+     * reported lane and priority always describe the same cluster query rather than being spliced together from
+     * several: writing on every call would let a later unlaned subquery leave an earlier subquery's lane in place while
+     * overwriting its priority. First also happens to be the most useful one, since for an inline subquery the inner
+     * cluster query is the one that actually consumed lane capacity.
+     * <p>
+     * Synchronized on the response context because those fan-outs are not guaranteed to be sequential, and a bare
+     * check-then-write would let two of them interleave into the mismatched pair this method exists to avoid. Costs one
+     * uncontended lock per cluster query.
+     */
+    private void reportLaningAssignmentToQueryLifecycle(Query<T> assignedQuery)
+    {
+      synchronized (responseContext) {
+        if (responseContext.getAssignedPriority() != null) {
+          return;
+        }
+        final String assignedLane = assignedQuery.context().getLane();
+        if (assignedLane != null) {
+          responseContext.putAssignedLane(assignedLane);
+        }
+        // Written last so that it is a valid "already reported" marker for the check above.
+        responseContext.putAssignedPriority(assignedQuery.context().getPriority());
+      }
     }
 
     private Sequence<T> merge(List<Sequence<T>> sequencesByInterval)

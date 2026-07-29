@@ -49,6 +49,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -932,6 +933,72 @@ public class QueryLifecycleTest
             .andReturn(null).anyTimes();
     EasyMock.replay(request);
     return request;
+  }
+
+  /**
+   * The laning strategy assigns lane/priority inside {@link org.apache.druid.client.CachingClusteredClient}, after this
+   * lifecycle already captured the query, and reports them back through the response context. Verify the metrics use
+   * that assignment rather than whatever the caller happened to put in the context.
+   */
+  @Test
+  public void testRunSimple_reportsSchedulerAssignedLaneAndPriority()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).anyTimes();
+    EasyMock.expect(texasRanger.getQueryRunnerForIntervals(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(runner)
+            .once();
+    // Stand in for the scheduler: record an assignment that differs from the query context.
+    EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andAnswer(() -> {
+      final ResponseContext responseContext = (ResponseContext) EasyMock.getCurrentArguments()[1];
+      responseContext.putAssignedLane("low");
+      responseContext.putAssignedPriority(-5);
+      return Sequences.empty();
+    }).once();
+
+    metrics.lane("low");
+    EasyMock.expectLastCall().once();
+    metrics.priority(-5);
+    EasyMock.expectLastCall().once();
+
+    replayAll();
+
+    QueryLifecycle lifecycle = createLifecycle();
+    lifecycle.runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION)
+             .getResults()
+             .toList();
+  }
+
+  /**
+   * When the query never reaches the scheduler there is nothing to override with, so the metrics keep the values
+   * {@code DefaultQueryMetrics.query()} already derived from the query context.
+   */
+  @Test
+  public void testRunSimple_noSchedulerAssignmentLeavesLaneAndPriorityAlone()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
+    EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).anyTimes();
+    EasyMock.expect(texasRanger.getQueryRunnerForIntervals(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(runner)
+            .once();
+    EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).once();
+
+    // No lane(String)/priority(int) override is expected on a strict-count basis.
+    metrics.lane(EasyMock.anyString());
+    EasyMock.expectLastCall().andThrow(new AssertionError("lane must not be overridden")).anyTimes();
+    metrics.priority(EasyMock.anyInt());
+    EasyMock.expectLastCall().andThrow(new AssertionError("priority must not be overridden")).anyTimes();
+
+    replayAll();
+
+    QueryLifecycle lifecycle = createLifecycle();
+    lifecycle.runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION)
+             .getResults()
+             .toList();
   }
 
   private void replayAll()

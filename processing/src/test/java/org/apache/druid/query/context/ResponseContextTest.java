@@ -88,6 +88,36 @@ public class ResponseContextTest
     Assert.assertEquals("new-dummy-etag", ctx.getEntityTag());
   }
 
+  @Test
+  public void assignedLaneAndPriorityTest()
+  {
+    final ResponseContext ctx = ResponseContext.createEmpty();
+    Assert.assertNull(ctx.getAssignedLane());
+    Assert.assertNull(ctx.getAssignedPriority());
+
+    ctx.putAssignedLane("low");
+    ctx.putAssignedPriority(-5);
+    Assert.assertEquals("low", ctx.getAssignedLane());
+    Assert.assertEquals(Long.valueOf(-5), ctx.getAssignedPriority());
+
+    // Latest assignment wins
+    ctx.putAssignedLane("high");
+    ctx.putAssignedPriority(10);
+    Assert.assertEquals("high", ctx.getAssignedLane());
+    Assert.assertEquals(Long.valueOf(10), ctx.getAssignedPriority());
+  }
+
+  /**
+   * These keys are Broker-local: they exist only to carry the scheduler's assignment back to the query lifecycle, and
+   * must never be serialized into the response header sent to callers.
+   */
+  @Test
+  public void assignedLaneAndPriorityAreNotInHeaderTest()
+  {
+    Assert.assertFalse(Keys.ASSIGNED_LANE.includeInHeader());
+    Assert.assertFalse(Keys.ASSIGNED_PRIORITY.includeInHeader());
+  }
+
   private static final Interval INTERVAL_01 = Intervals.of("2019-01-01/P1D");
   private static final Interval INTERVAL_12 = Intervals.of("2019-01-02/P1D");
   private static final Interval INTERVAL_23 = Intervals.of("2019-01-03/P1D");

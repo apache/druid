@@ -67,7 +67,7 @@ public class DefaultSearchQueryMetricsTest extends InitializedNullHandlingTest
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
-    Assertions.assertEquals(13, actualEvent.size());
+    Assertions.assertEquals(14, actualEvent.size());
     Assertions.assertTrue(actualEvent.containsKey("feed"));
     Assertions.assertTrue(actualEvent.containsKey("timestamp"));
     Assertions.assertEquals("localhost", actualEvent.get("host"));
@@ -88,6 +88,35 @@ public class DefaultSearchQueryMetricsTest extends InitializedNullHandlingTest
     Assertions.assertEquals(0L, actualEvent.get("value"));
 
     Assertions.assertThrows(ISE.class, () -> queryMetrics.sqlQueryId("dummy"));
+  }
+
+  /**
+   * The query-derived variants are unsupported here (the delegate already applied them), but the direct setters must
+   * delegate, since the Broker uses them to report the lane/priority the scheduler assigned.
+   */
+  @Test
+  public void testLaneAndPriorityDelegation()
+  {
+    final StubServiceEmitter serviceEmitter = StubServiceEmitter.createStarted();
+    SearchQuery query = Druids
+        .newSearchQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.DAY_GRAN)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .build();
+
+    SearchQueryMetrics queryMetrics = DefaultSearchQueryMetricsFactory.instance().makeMetrics(query);
+
+    Assertions.assertThrows(ISE.class, () -> queryMetrics.lane(query));
+    Assertions.assertThrows(ISE.class, () -> queryMetrics.priority(query));
+
+    queryMetrics.lane("high");
+    queryMetrics.priority(10);
+    queryMetrics.reportQueryTime(0).emit(serviceEmitter);
+
+    Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
+    Assertions.assertEquals("high", actualEvent.get(DruidMetrics.LANE));
+    Assertions.assertEquals(10, actualEvent.get(DruidMetrics.PRIORITY));
   }
 
   @Test
