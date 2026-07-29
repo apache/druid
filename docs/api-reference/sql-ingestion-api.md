@@ -48,7 +48,7 @@ The `/druid/v2/sql/task` endpoint accepts the following:
 - [SQL requests in the JSON-over-HTTP form](sql-api.md#request-body) using the
 `query`, `context`, and `parameters` fields. The endpoint ignores the `resultFormat`, `header`, `typesHeader`, and `sqlTypesHeader` fields.
 - [INSERT](../multi-stage-query/reference.md#insert) and [REPLACE](../multi-stage-query/reference.md#replace) statements.
-- SELECT queries (experimental feature). SELECT query results are collected from workers by the controller, and written into the [task report](#get-the-report-for-a-query-task) as an array of arrays. The behavior and result format of plain SELECT queries (without INSERT or REPLACE) is subject to change.
+- SELECT queries as batch tasks. SELECT query results are collected from workers by the controller and written into the [task report](#get-the-report-for-a-query-task) as an array of arrays.
 
 ### URL
 
