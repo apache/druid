@@ -348,6 +348,60 @@ public class DirectDruidClientTest
   @Test
   public void testAbandonedResponseReleasesBufferedChunks() throws Exception
   {
+    final HttpResponseHandler<InputStream, InputStream> handler = captureResponseHandler();
+
+    final ClientResponse<InputStream> clientResponse = handler.handleResponse(
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK),
+        NOOP_TRAFFIC_COP
+    );
+
+    // Stands in for an inbound chunk owned by NettyHttpClient, which releases its own reference after
+    // handleChunk returns.
+    final ByteBuf chunk = Unpooled.wrappedBuffer(StringUtils.toUtf8("[{\"timestamp\":\"2014-01-01T01:02:03Z\"}]"));
+    Assert.assertEquals(1, chunk.refCnt());
+
+    handler.handleChunk(clientResponse, new DefaultHttpContent(chunk), 1);
+    Assert.assertEquals("retained while buffered", 2, chunk.refCnt());
+
+    // The consumer gives up without ever reading the chunk.
+    clientResponse.getObj().close();
+
+    Assert.assertEquals("released once abandoned", 1, chunk.refCnt());
+    chunk.release();
+  }
+
+  /**
+   * A chunk can reach the queue after the failure teardown has already drained it: handleChunk clears its timeout
+   * check on the Netty thread, the consumer thread then fails the query and drains, and only afterwards is the chunk
+   * queued. Nothing dequeues once the query has failed, so the handler itself has to release that late chunk.
+   */
+  @Test
+  public void testChunkQueuedAfterFailureIsReleased()
+  {
+    final HttpResponseHandler<InputStream, InputStream> handler = captureResponseHandler();
+
+    final ClientResponse<InputStream> clientResponse = handler.handleResponse(
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK),
+        NOOP_TRAFFIC_COP
+    );
+
+    handler.exceptionCaught(clientResponse, new RuntimeException("transport failure"));
+
+    final ByteBuf chunk = Unpooled.wrappedBuffer(StringUtils.toUtf8("[{\"timestamp\":\"2014-01-01T01:02:03Z\"}]"));
+    Assert.assertEquals(1, chunk.refCnt());
+
+    handler.handleChunk(clientResponse, new DefaultHttpContent(chunk), 1);
+
+    Assert.assertEquals("released even though it arrived after teardown", 1, chunk.refCnt());
+    chunk.release();
+  }
+
+  /**
+   * Runs a query against an HTTP client that never completes the future, and hands back the response handler it was
+   * given, so a test can drive the handler's callbacks directly.
+   */
+  private HttpResponseHandler<InputStream, InputStream> captureResponseHandler()
+  {
     final AtomicReference<HttpResponseHandler<InputStream, InputStream>> handlerRef = new AtomicReference<>();
     final DirectDruidClient client = makeDirectDruidClient(
         new HttpClient()
@@ -378,25 +432,7 @@ public class DirectDruidClientTest
     client.run(getQueryPlus(), responseContext);
     final HttpResponseHandler<InputStream, InputStream> handler = handlerRef.get();
     Assert.assertNotNull("handler was passed to the http client", handler);
-
-    final ClientResponse<InputStream> clientResponse = handler.handleResponse(
-        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK),
-        NOOP_TRAFFIC_COP
-    );
-
-    // Stands in for an inbound chunk owned by NettyHttpClient, which releases its own reference after
-    // handleChunk returns.
-    final ByteBuf chunk = Unpooled.wrappedBuffer(StringUtils.toUtf8("[{\"timestamp\":\"2014-01-01T01:02:03Z\"}]"));
-    Assert.assertEquals(1, chunk.refCnt());
-
-    handler.handleChunk(clientResponse, new DefaultHttpContent(chunk), 1);
-    Assert.assertEquals("retained while buffered", 2, chunk.refCnt());
-
-    // The consumer gives up without ever reading the chunk.
-    clientResponse.getObj().close();
-
-    Assert.assertEquals("released once abandoned", 1, chunk.refCnt());
-    chunk.release();
+    return handler;
   }
 
   @Test
