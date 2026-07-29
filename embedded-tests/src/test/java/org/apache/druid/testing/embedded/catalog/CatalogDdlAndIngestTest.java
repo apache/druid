@@ -19,7 +19,9 @@
 
 package org.apache.druid.testing.embedded.catalog;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
@@ -27,6 +29,7 @@ import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
 import org.junit.jupiter.api.BeforeAll;
@@ -238,6 +241,104 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
         () -> cluster.callApi().runSql("CREATE TABLE \"%s\" (__time TIMESTAMP, a VARCHAR)", tableName)
     );
     assertTrue(e.getMessage().contains("duplicate table"), e.getMessage());
+  }
+
+  /**
+   * A projection defined in SQL must actually be used at query time, which is the whole point of storing one: the
+   * specification the translator produces has to match what the planner generates for the equivalent query.
+   */
+  @Test
+  public void testCreateTableWithProjectionThenQuery()
+  {
+    final String tableName = dataSource;
+
+    cluster.callApi().runSql(
+        "CREATE TABLE \"%s\" (\n"
+        + "  __time TIMESTAMP,\n"
+        + "  varchar_col1 VARCHAR,\n"
+        + "  bigint_col1 BIGINT,\n"
+        + "  PROJECTION by_varchar AS (\n"
+        + "    SELECT varchar_col1, SUM(bigint_col1) AS sum_bigint_col1\n"
+        + "    GROUP BY varchar_col1\n"
+        + "  )\n"
+        + ")\n"
+        + "PARTITIONED BY DAY",
+        tableName
+    );
+
+    ingest(
+        "INSERT INTO \"%s\"\n"
+        + "SELECT TIME_PARSE(a) AS __time, b AS varchar_col1, c AS bigint_col1\n"
+        + "FROM TABLE(\n"
+        + "  EXTERN(\n"
+        + "    '{\"type\":\"inline\",\"data\":\"2022-12-26T12:34:56,foo,10\\n2022-12-26T12:34:56,foo,9"
+        + "\\n2022-12-26T12:34:56,bar,8\"}',\n"
+        + "    '{\"type\":\"csv\",\"findColumnsFromHeader\":false,\"columns\":[\"a\",\"b\",\"c\"]}'\n"
+        + "  )\n"
+        + ") EXTEND (a VARCHAR, b VARCHAR, c BIGINT)\n",
+        tableName
+    );
+
+    final LatchableEmitter emitter = historical.latchableEmitter();
+    emitter.flush();
+
+    cluster.callApi().verifySqlQuery(
+        "SELECT varchar_col1, SUM(bigint_col1) FROM %s GROUP BY 1 ORDER BY 1",
+        tableName,
+        "bar,8\nfoo,19"
+    );
+
+    // The segment-scan metrics name the projection that served the query.
+    emitter.waitForEvent(
+        event -> event.hasMetricName("query/segment/time").hasDimension("projection", "by_varchar")
+    );
+  }
+
+  @Test
+  public void testAlterTableAddAndDropProjection()
+  {
+    final String tableName = dataSource;
+
+    cluster.callApi().runSql(
+        "CREATE TABLE \"%s\" (__time TIMESTAMP, a VARCHAR, b BIGINT) PARTITIONED BY DAY",
+        tableName
+    );
+    cluster.callApi().runSql(
+        "ALTER TABLE \"%s\" ADD PROJECTION p AS (SELECT a, SUM(b) AS sum_b GROUP BY a)",
+        tableName
+    );
+    assertEquals(1, projectionsOf(tableName).size());
+    assertEquals("p", projectionsOf(tableName).get(0).getSpec().getName());
+
+    // Adding it again is an error, but IF NOT EXISTS tolerates it.
+    assertThrows(
+        Exception.class,
+        () -> cluster.callApi().runSql(
+            "ALTER TABLE \"%s\" ADD PROJECTION p AS (SELECT a, SUM(b) AS sum_b GROUP BY a)",
+            tableName
+        )
+    );
+    cluster.callApi().runSql(
+        "ALTER TABLE \"%s\" ADD IF NOT EXISTS PROJECTION p AS (SELECT a, SUM(b) AS sum_b GROUP BY a)",
+        tableName
+    );
+    assertEquals(1, projectionsOf(tableName).size());
+
+    cluster.callApi().runSql("ALTER TABLE \"%s\" DROP PROJECTION p", tableName);
+    assertNull(
+        client.readTable(TableId.datasource(tableName))
+              .spec().properties().get(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY)
+    );
+    cluster.callApi().runSql("ALTER TABLE \"%s\" DROP PROJECTION IF EXISTS p", tableName);
+  }
+
+  private List<DatasourceProjectionMetadata> projectionsOf(String tableName)
+  {
+    return TestHelper.JSON_MAPPER.convertValue(
+        client.readTable(TableId.datasource(tableName))
+              .spec().properties().get(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY),
+        new TypeReference<List<DatasourceProjectionMetadata>>() {}
+    );
   }
 
   private void ingest(String sqlPattern, String tableName)

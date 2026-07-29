@@ -53,6 +53,9 @@ data: {
       "org.apache.calcite.sql.SqlCreate"
       "org.apache.calcite.sql.SqlInsert"
       "org.apache.calcite.sql.SqlNodeList"
+      "org.apache.calcite.sql.SqlSelect"
+      "org.apache.calcite.sql.SqlLiteral"
+      "org.apache.calcite.sql.parser.SqlParserPos"
       "org.apache.calcite.sql.SqlBasicCall"
       "org.apache.druid.java.util.common.granularity.Granularity"
       "org.apache.druid.java.util.common.granularity.GranularityType"
@@ -65,6 +68,7 @@ data: {
       "org.apache.druid.sql.calcite.parser.DruidSqlPropertyAssignment"
       "org.apache.druid.sql.calcite.external.ExtendOperator"
       "org.apache.druid.sql.calcite.external.ParameterizeOperator"
+      "org.apache.druid.sql.calcite.parser.SqlProjectionSpec"
       "org.apache.druid.sql.calcite.parser.ExternalDestinationSqlIdentifier"
       "java.util.HashMap"
     ]
@@ -78,6 +82,7 @@ data: {
       "EXTERN"
       "IF"
       "PROPERTIES"
+      "PROJECTION"
     ]
 
     nonReservedKeywordsToAdd: [
@@ -85,6 +90,7 @@ data: {
       "EXTERN"
       "IF"
       "PROPERTIES"
+      "PROJECTION"
     ]
 
     # List of methods for parsing custom SQL statements.

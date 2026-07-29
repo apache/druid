@@ -99,6 +99,7 @@ public class DruidPlanner implements Closeable
   private final PlannerContext plannerContext;
   private final SqlEngine engine;
   private final PlannerHook hook;
+  private final PlannerFactory plannerFactory;
   private State state = State.START;
   private SqlStatementHandler handler;
   private boolean authorized;
@@ -107,9 +108,11 @@ public class DruidPlanner implements Closeable
       final FrameworkConfig frameworkConfig,
       final PlannerContext plannerContext,
       final SqlEngine engine,
-      final PlannerHook hook
+      final PlannerHook hook,
+      final PlannerFactory plannerFactory
   )
   {
+    this.plannerFactory = plannerFactory;
     this.frameworkConfig = frameworkConfig;
     this.planner = new CalcitePlanner(frameworkConfig);
     this.plannerContext = plannerContext;
@@ -189,6 +192,12 @@ public class DruidPlanner implements Closeable
     }
     if (query instanceof DruidSqlAlterTable.AlterColumn) {
       return new CatalogDdlHandler.AlterColumnHandler(handlerContext, (DruidSqlAlterTable.AlterColumn) query);
+    }
+    if (query instanceof DruidSqlAlterTable.AddProjection) {
+      return new CatalogDdlHandler.AddProjectionHandler(handlerContext, (DruidSqlAlterTable.AddProjection) query);
+    }
+    if (query instanceof DruidSqlAlterTable.DropProjection) {
+      return new CatalogDdlHandler.DropProjectionHandler(handlerContext, (DruidSqlAlterTable.DropProjection) query);
     }
     if (query instanceof DruidSqlAlterTable.SetProperties) {
       return new CatalogDdlHandler.SetPropertiesHandler(handlerContext, (DruidSqlAlterTable.SetProperties) query);
@@ -353,6 +362,12 @@ public class DruidPlanner implements Closeable
     public PlannerHook hook()
     {
       return hook;
+    }
+
+    @Override
+    public PlannerFactory plannerFactory()
+    {
+      return plannerFactory;
     }
   }
 

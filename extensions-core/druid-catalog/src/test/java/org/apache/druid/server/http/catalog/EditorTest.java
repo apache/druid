@@ -24,7 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.http.TableEditRequest;
+import org.apache.druid.catalog.http.TableEditRequest.AddProjection;
 import org.apache.druid.catalog.http.TableEditRequest.DropColumns;
+import org.apache.druid.catalog.http.TableEditRequest.DropProjection;
 import org.apache.druid.catalog.http.TableEditRequest.HideColumns;
 import org.apache.druid.catalog.http.TableEditRequest.MoveColumn;
 import org.apache.druid.catalog.http.TableEditRequest.UnhideColumns;
@@ -34,6 +36,7 @@ import org.apache.druid.catalog.http.TableEditor;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
@@ -41,8 +44,11 @@ import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.CatalogTests;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -57,6 +63,7 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 public class EditorTest
 {
@@ -486,4 +493,55 @@ public class EditorTest
         CatalogUtils.columnNames(revised.spec().columns())
     );
   }
+
+  @Test
+  public void testAddAndDropProjection() throws CatalogException
+  {
+    final String tableName = "projections";
+    final TableMetadata table = TableBuilder.datasource(tableName, "P1D")
+        .timeColumn()
+        .column("dim", "VARCHAR")
+        .column("met", "BIGINT")
+        .build();
+    catalog.tables().create(table);
+
+    final DatasourceProjectionMetadata daily = new DatasourceProjectionMetadata(
+        AggregateProjectionSpec.builder("daily")
+                               .groupingColumns(new StringDimensionSchema("dim"))
+                               .aggregators(new LongSumAggregatorFactory("sum_met", "met"))
+                               .build()
+    );
+
+    assertTrue(new TableEditor(catalog, table.id(), new AddProjection(daily, false)).go() > 0);
+    assertEquals(List.of(daily), projectionsOf(tableName));
+
+    // Adding the same name again is an error, unless the caller said to leave it alone.
+    assertThrows(
+        CatalogException.class,
+        () -> new TableEditor(catalog, table.id(), new AddProjection(daily, false)).go()
+    );
+    assertEquals(0, new TableEditor(catalog, table.id(), new AddProjection(daily, true)).go());
+    assertEquals(List.of(daily), projectionsOf(tableName));
+
+    // Dropping a projection that is not there is likewise an error unless tolerated.
+    assertThrows(
+        CatalogException.class,
+        () -> new TableEditor(catalog, table.id(), new DropProjection("nope", false)).go()
+    );
+    assertEquals(0, new TableEditor(catalog, table.id(), new DropProjection("nope", true)).go());
+
+    assertTrue(new TableEditor(catalog, table.id(), new DropProjection("daily", false)).go() > 0);
+    assertNull(
+        catalog.tables().read(TableId.datasource(tableName))
+               .spec().properties().get(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY)
+    );
+  }
+
+  private List<DatasourceProjectionMetadata> projectionsOf(String tableName) throws CatalogException
+  {
+    return catalog.tableRegistry()
+                  .resolve(catalog.tables().read(TableId.datasource(tableName)).spec())
+                  .decodeProperty(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY);
+  }
+
 }

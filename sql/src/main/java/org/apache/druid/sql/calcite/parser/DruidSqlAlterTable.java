@@ -240,6 +240,167 @@ public abstract class DruidSqlAlterTable extends SqlCall
   }
 
   /**
+   * {@code ALTER TABLE <name> ADD [IF NOT EXISTS] PROJECTION <name> AS ( ... )}.
+   */
+  public static class AddProjection extends DruidSqlAlterTable
+  {
+    public static final SqlOperator OPERATOR = new Operator("ALTER TABLE ADD PROJECTION");
+
+    private final SqlProjectionSpec projection;
+    private final boolean ifNotExists;
+
+    public AddProjection(
+        SqlParserPos pos,
+        SqlIdentifier name,
+        SqlProjectionSpec projection,
+        boolean ifNotExists
+    )
+    {
+      super(pos, name);
+      this.projection = projection;
+      this.ifNotExists = ifNotExists;
+    }
+
+    public SqlProjectionSpec getProjection()
+    {
+      return projection;
+    }
+
+    public boolean isIfNotExists()
+    {
+      return ifNotExists;
+    }
+
+    @Nonnull
+    @Override
+    public SqlOperator getOperator()
+    {
+      return OPERATOR;
+    }
+
+    @Nonnull
+    @Override
+    public List<SqlNode> getOperandList()
+    {
+      return ImmutableNullableList.of(
+          getName(),
+          projection,
+          SqlLiteral.createBoolean(ifNotExists, SqlParserPos.ZERO)
+      );
+    }
+
+    @Override
+    protected void unparseOperation(SqlWriter writer, int leftPrec, int rightPrec)
+    {
+      writer.keyword("ADD");
+      if (ifNotExists) {
+        writer.keyword("IF NOT EXISTS");
+      }
+      projection.unparse(writer, 0, 0);
+    }
+
+    private static class Operator extends SqlSpecialOperator
+    {
+      Operator(String name)
+      {
+        super(name, SqlKind.ALTER_TABLE);
+      }
+
+      @Override
+      public SqlCall createCall(SqlLiteral functionQualifier, SqlParserPos pos, SqlNode... operands)
+      {
+        return new AddProjection(
+            pos,
+            (SqlIdentifier) operands[0],
+            (SqlProjectionSpec) operands[1],
+            ((SqlLiteral) operands[2]).booleanValue()
+        );
+      }
+    }
+  }
+
+  /**
+   * {@code ALTER TABLE <name> DROP PROJECTION [IF EXISTS] <name>}. Existing segments keep whatever projections they
+   * were built with; this only stops future ingestion from building it.
+   */
+  public static class DropProjection extends DruidSqlAlterTable
+  {
+    public static final SqlOperator OPERATOR = new Operator("ALTER TABLE DROP PROJECTION");
+
+    private final SqlIdentifier projectionName;
+    private final boolean ifExists;
+
+    public DropProjection(
+        SqlParserPos pos,
+        SqlIdentifier name,
+        SqlIdentifier projectionName,
+        boolean ifExists
+    )
+    {
+      super(pos, name);
+      this.projectionName = projectionName;
+      this.ifExists = ifExists;
+    }
+
+    public SqlIdentifier getProjectionName()
+    {
+      return projectionName;
+    }
+
+    public boolean isIfExists()
+    {
+      return ifExists;
+    }
+
+    @Nonnull
+    @Override
+    public SqlOperator getOperator()
+    {
+      return OPERATOR;
+    }
+
+    @Nonnull
+    @Override
+    public List<SqlNode> getOperandList()
+    {
+      return ImmutableNullableList.of(
+          getName(),
+          projectionName,
+          SqlLiteral.createBoolean(ifExists, SqlParserPos.ZERO)
+      );
+    }
+
+    @Override
+    protected void unparseOperation(SqlWriter writer, int leftPrec, int rightPrec)
+    {
+      writer.keyword("DROP PROJECTION");
+      if (ifExists) {
+        writer.keyword("IF EXISTS");
+      }
+      projectionName.unparse(writer, 0, 0);
+    }
+
+    private static class Operator extends SqlSpecialOperator
+    {
+      Operator(String name)
+      {
+        super(name, SqlKind.ALTER_TABLE);
+      }
+
+      @Override
+      public SqlCall createCall(SqlLiteral functionQualifier, SqlParserPos pos, SqlNode... operands)
+      {
+        return new DropProjection(
+            pos,
+            (SqlIdentifier) operands[0],
+            (SqlIdentifier) operands[1],
+            ((SqlLiteral) operands[2]).booleanValue()
+        );
+      }
+    }
+  }
+
+  /**
    * {@code ALTER TABLE <name> SET PROPERTIES (<key> = <value>, ...)}. A {@code NULL} value removes the property.
    */
   public static class SetProperties extends DruidSqlAlterTable

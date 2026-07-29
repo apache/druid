@@ -22,12 +22,15 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.Resource;
@@ -52,6 +55,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -345,6 +349,207 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     assertEquals(ImmutableList.of(), WRITER.calls);
   }
 
+  /**
+   * The stored specification must be the one the planner would produce for the equivalent query, since that is what
+   * makes a projection match at query time. Pinned as JSON so a change in planner output is visible here.
+   */
+  @Test
+  public void testCreateTableWithProjection() throws Exception
+  {
+    execute(
+        "CREATE TABLE tbl (__time TIMESTAMP, page VARCHAR, cnt BIGINT,"
+        + " PROJECTION daily AS (SELECT TIME_FLOOR(__time, 'P1D'), page, SUM(cnt) AS total GROUP BY 1, 2))"
+    );
+
+    assertEquals(
+        "[{\"spec\":{\"type\":\"aggregate\",\"name\":\"daily\","
+        + "\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\","
+        + "\"expression\":\"timestamp_floor(\\\"__time\\\",'P1D',null,'UTC')\",\"outputType\":\"LONG\"}],"
+        + "\"groupingColumns\":[{\"type\":\"long\",\"name\":\"v0\",\"multiValueHandling\":\"SORTED_ARRAY\","
+        + "\"createBitmapIndex\":false},{\"type\":\"string\",\"name\":\"page\","
+        + "\"multiValueHandling\":\"SORTED_ARRAY\",\"createBitmapIndex\":true}],"
+        + "\"aggregators\":[{\"type\":\"longSum\",\"name\":\"total\",\"fieldName\":\"cnt\"}],"
+        + "\"ordering\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},"
+        + "{\"columnName\":\"page\",\"order\":\"ascending\"}]}}]",
+        projectionsJson()
+    );
+  }
+
+  /**
+   * A projection defined with TIME_FLOOR must carry a granularity the segment layer can recover, which is how the
+   * projection gets matched to time-grouped queries.
+   */
+  @Test
+  public void testProjectionGranularityIsRecoverable()
+  {
+    execute(
+        "CREATE TABLE tbl (__time TIMESTAMP, page VARCHAR, cnt BIGINT,"
+        + " PROJECTION hourly AS (SELECT TIME_FLOOR(__time, 'PT1H'), page, SUM(cnt) AS total GROUP BY 1, 2))"
+    );
+
+    final AggregateProjectionSpec spec = projection(0).getSpec();
+    final String timeColumn = spec.toMetadataSchema().getTimeColumnName();
+    assertEquals("v0", timeColumn);
+    assertEquals(
+        Granularities.HOUR,
+        Granularities.fromVirtualColumn(spec.getVirtualColumns().getVirtualColumn(timeColumn))
+    );
+  }
+
+  @Test
+  public void testProjectionWithFilter()
+  {
+    execute(
+        "CREATE TABLE tbl (__time TIMESTAMP, page VARCHAR, cnt BIGINT,"
+        + " PROJECTION filtered AS (SELECT page, SUM(cnt) AS total WHERE page <> 'skip' GROUP BY page))"
+    );
+    assertEquals("!page = skip", projection(0).getSpec().getFilter().toString());
+  }
+
+  /**
+   * A time bound written in the body is moved into the query's intervals during planning, and has to be put back:
+   * a projection stores a filter, not an interval.
+   */
+  @Test
+  public void testProjectionWithTimeFilter()
+  {
+    execute(
+        "CREATE TABLE tbl (__time TIMESTAMP, page VARCHAR, cnt BIGINT,"
+        + " PROJECTION recent AS (SELECT page, SUM(cnt) AS total"
+        + " WHERE __time >= TIMESTAMP '2020-01-01 00:00:00' GROUP BY page))"
+    );
+    assertNotNull(projection(0).getSpec().getFilter(), "time filter must survive as a filter");
+    assertTrue(projection(0).getSpec().getFilter().getRequiredColumns().contains("__time"));
+  }
+
+  @Test
+  public void testProjectionSelectDistinct()
+  {
+    execute("CREATE TABLE tbl (a VARCHAR, PROJECTION d AS (SELECT DISTINCT a))");
+    final AggregateProjectionSpec spec = projection(0).getSpec();
+    assertEquals(1, spec.getGroupingColumns().size());
+    assertEquals("a", spec.getGroupingColumns().get(0).getName());
+    assertEquals(0, spec.getAggregators().length);
+  }
+
+  @Test
+  public void testMultipleProjections()
+  {
+    execute(
+        "CREATE TABLE tbl (a VARCHAR, b BIGINT,"
+        + " PROJECTION p1 AS (SELECT a, SUM(b) AS s GROUP BY a),"
+        + " PROJECTION p2 AS (SELECT b, COUNT(*) AS c GROUP BY b))"
+    );
+    assertEquals(List.of("p1", "p2"), List.of(projection(0).getSpec().getName(), projection(1).getSpec().getName()));
+  }
+
+  @Test
+  public void testAlterTableAddProjection()
+  {
+    WRITER.existing.put(TableId.datasource("tbl"), tableWithColumns("a"));
+    execute("ALTER TABLE tbl ADD PROJECTION p AS (SELECT a, COUNT(*) AS c GROUP BY a)");
+
+    final RecordingCatalogTableWriter.Call call = WRITER.lastCall("addProjection");
+    assertEquals("p", call.projection.getSpec().getName());
+    assertFalse(call.ifNotExists);
+  }
+
+  @Test
+  public void testAlterTableAddProjectionIfNotExists()
+  {
+    WRITER.existing.put(TableId.datasource("tbl"), tableWithColumns("a"));
+    execute("ALTER TABLE tbl ADD IF NOT EXISTS PROJECTION p AS (SELECT a GROUP BY a)");
+    assertTrue(WRITER.lastCall("addProjection").ifNotExists);
+  }
+
+  @Test
+  public void testAlterTableDropProjection()
+  {
+    execute("ALTER TABLE tbl DROP PROJECTION p");
+    final RecordingCatalogTableWriter.Call call = WRITER.lastCall("dropProjection");
+    assertEquals("p", call.projectionName);
+    assertFalse(call.ifExists);
+
+    WRITER.reset();
+    execute("ALTER TABLE tbl DROP PROJECTION IF EXISTS p");
+    assertTrue(WRITER.lastCall("dropProjection").ifExists);
+  }
+
+  @Test
+  public void testProjectionRejectsUnaliasedAggregate()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute("CREATE TABLE tbl (a VARCHAR, b BIGINT, PROJECTION p AS (SELECT a, SUM(b) GROUP BY a))")
+    );
+    assertTrue(e.getMessage().contains("no name"), e.getMessage());
+  }
+
+  @Test
+  public void testProjectionRejectsPostAggregation()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute("CREATE TABLE tbl (a VARCHAR, b BIGINT, PROJECTION p AS (SELECT a, AVG(b) AS m GROUP BY a))")
+    );
+    assertTrue(e.getMessage().contains("expression over aggregates"), e.getMessage());
+  }
+
+  @Test
+  public void testProjectionRejectsUnknownColumn()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute("CREATE TABLE tbl (a VARCHAR, PROJECTION p AS (SELECT nope GROUP BY nope))")
+    );
+    assertTrue(e.getMessage().contains("nope"), e.getMessage());
+  }
+
+  @Test
+  public void testProjectionRejectsNonAggregatingBody()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute("CREATE TABLE tbl (a VARCHAR, PROJECTION p AS (SELECT a))")
+    );
+    assertTrue(e.getMessage().contains("does not aggregate"), e.getMessage());
+  }
+
+  @Test
+  public void testProjectionRejectsReservedBaseName()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute("CREATE TABLE tbl (a VARCHAR, PROJECTION __base AS (SELECT a GROUP BY a))")
+    );
+    assertTrue(e.getMessage().contains("base table layout"), e.getMessage());
+  }
+
+  @Test
+  public void testProjectionRejectsDuplicateName()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (a VARCHAR, PROJECTION p AS (SELECT a GROUP BY a),"
+            + " PROJECTION p AS (SELECT a GROUP BY a))"
+        )
+    );
+    assertTrue(e.getMessage().contains("declared more than once"), e.getMessage());
+  }
+
+  @SuppressWarnings("unchecked")
+  private DatasourceProjectionMetadata projection(int index)
+  {
+    return ((List<DatasourceProjectionMetadata>) WRITER.calls.get(0).spec.properties().get("projections")).get(index);
+  }
+
+  private String projectionsJson() throws Exception
+  {
+    return queryFramework().queryJsonMapper()
+                           .writeValueAsString(WRITER.calls.get(0).spec.properties().get("projections"));
+  }
+
   private void execute(String sql)
   {
     statement(sql).execute();
@@ -386,6 +591,9 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
       List<ColumnSpec> columns;
       List<String> droppedColumns;
       Map<String, Object> properties;
+      DatasourceProjectionMetadata projection;
+      String projectionName;
+      boolean ifExists;
     }
 
     final List<Call> calls = new ArrayList<>();
@@ -432,6 +640,22 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     public void updateProperties(TableId tableId, Map<String, Object> properties)
     {
       record("updateProperties", tableId).properties = properties;
+    }
+
+    @Override
+    public void addProjection(TableId tableId, DatasourceProjectionMetadata projection, boolean ifNotExists)
+    {
+      final Call call = record("addProjection", tableId);
+      call.projection = projection;
+      call.ifNotExists = ifNotExists;
+    }
+
+    @Override
+    public void dropProjection(TableId tableId, String projectionName, boolean ifExists)
+    {
+      final Call call = record("dropProjection", tableId);
+      call.projectionName = projectionName;
+      call.ifExists = ifExists;
     }
 
     @Nullable

@@ -33,6 +33,7 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
@@ -48,6 +49,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -59,6 +61,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlCreateTable;
 import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 import org.apache.druid.sql.calcite.parser.DruidSqlPropertyAssignment;
 import org.apache.druid.sql.calcite.parser.SqlGranularityLiteral;
+import org.apache.druid.sql.calcite.parser.SqlProjectionSpec;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -101,6 +104,12 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
    * so that a user cannot turn the feature on for their own statement.
    */
   public static final String ENABLE_CATALOG_DDL_PROPERTY = "druid.sql.planner.enableCatalogDdl";
+
+  /**
+   * The reserved name of the base-table projection, which describes the physical layout of the table itself. Handled
+   * as a separate catalog property, not as one of the aggregate projections.
+   */
+  public static final String BASE_PROJECTION_NAME = "__base";
 
   @Override
   public void validate()
@@ -220,6 +229,39 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
     return new ColumnSpec(name, type, null);
   }
 
+  /**
+   * Translate one projection definition into the catalog form.
+   * <p>
+   * {@code __base} is reserved for the base-table projection, which is a different catalog entity: it describes the
+   * physical layout of the table itself rather than an additional aggregate. It is rejected here rather than being
+   * translated as an ordinary projection.
+   */
+  protected static DatasourceProjectionMetadata translateProjection(
+      final SqlStatementHandler.HandlerContext handlerContext,
+      final String tableName,
+      final List<ColumnSpec> columns,
+      final SqlProjectionSpec projection
+  )
+  {
+    final String name = simpleName(projection.getName(), "Projection");
+    if (BASE_PROJECTION_NAME.equals(name)) {
+      throw InvalidSqlInput.exception(
+          "Projection [%s] names the base table layout, which is not supported yet",
+          BASE_PROJECTION_NAME
+      );
+    }
+    try {
+      Projections.validateProjectionName(name);
+    }
+    catch (DruidException e) {
+      throw InvalidSqlInput.exception(e, "%s", e.getMessage());
+    }
+    return new DatasourceProjectionMetadata(
+        new ProjectionSpecTranslator(handlerContext.plannerFactory())
+            .translate(tableName, columns, name, projection.getBody())
+    );
+  }
+
   protected static String simpleName(SqlIdentifier identifier, String what)
   {
     if (!identifier.isSimple()) {
@@ -312,6 +354,20 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
       }
       if (createTable.getClusteredBy() != null) {
         properties.put(DatasourceDefn.CLUSTER_KEYS_PROPERTY, toClusterKeys(createTable.getClusteredBy()));
+      }
+      if (!createTable.getProjectionList().isEmpty()) {
+        final List<DatasourceProjectionMetadata> projections =
+            new ArrayList<>(createTable.getProjectionList().size());
+        final Set<String> seenProjections = new HashSet<>();
+        for (SqlNode node : createTable.getProjectionList()) {
+          final SqlProjectionSpec projection = (SqlProjectionSpec) node;
+          final String name = simpleName(projection.getName(), "Projection");
+          if (!seenProjections.add(name)) {
+            throw InvalidSqlInput.exception("Projection [%s] is declared more than once", name);
+          }
+          projections.add(translateProjection(handlerContext, tableId.name(), columns, projection));
+        }
+        properties.put(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY, projections);
       }
 
       tableSpec = new TableSpec(DatasourceDefn.TABLE_TYPE, properties, columns);
@@ -446,6 +502,90 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
     protected String operationName()
     {
       return "ALTER TABLE ALTER COLUMN";
+    }
+  }
+
+  /**
+   * {@code ALTER TABLE ... ADD PROJECTION}. The body is translated against the table's current declared columns, so
+   * the table must already have a catalog entry.
+   */
+  public static class AddProjectionHandler extends CatalogDdlHandler
+  {
+    private final DruidSqlAlterTable.AddProjection alterTable;
+    private String projectionName;
+
+    public AddProjectionHandler(
+        SqlStatementHandler.HandlerContext handlerContext,
+        DruidSqlAlterTable.AddProjection alterTable
+    )
+    {
+      super(handlerContext, alterTable.getName());
+      this.alterTable = alterTable;
+    }
+
+    @Override
+    protected void validateStatement()
+    {
+      projectionName = simpleName(alterTable.getProjection().getName(), "Projection");
+    }
+
+    @Override
+    protected void execute(CatalogTableWriter writer)
+    {
+      final TableMetadata existing = writer.readTable(tableId);
+      if (existing == null) {
+        throw InvalidSqlInput.exception("Table [%s] does not have a catalog entry", tableId.name());
+      }
+      final List<ColumnSpec> columns =
+          existing.spec().columns() == null ? Collections.emptyList() : existing.spec().columns();
+      writer.addProjection(
+          tableId,
+          translateProjection(handlerContext, tableId.name(), columns, alterTable.getProjection()),
+          alterTable.isIfNotExists()
+      );
+    }
+
+    @Override
+    protected String operationName()
+    {
+      return "ALTER TABLE ADD PROJECTION";
+    }
+  }
+
+  /**
+   * {@code ALTER TABLE ... DROP PROJECTION}. Segments already built keep whatever projections they were built with;
+   * this only stops future ingestion from building it.
+   */
+  public static class DropProjectionHandler extends CatalogDdlHandler
+  {
+    private final DruidSqlAlterTable.DropProjection alterTable;
+    private String projectionName;
+
+    public DropProjectionHandler(
+        SqlStatementHandler.HandlerContext handlerContext,
+        DruidSqlAlterTable.DropProjection alterTable
+    )
+    {
+      super(handlerContext, alterTable.getName());
+      this.alterTable = alterTable;
+    }
+
+    @Override
+    protected void validateStatement()
+    {
+      projectionName = simpleName(alterTable.getProjectionName(), "Projection");
+    }
+
+    @Override
+    protected void execute(CatalogTableWriter writer)
+    {
+      writer.dropProjection(tableId, projectionName, alterTable.isIfExists());
+    }
+
+    @Override
+    protected String operationName()
+    {
+      return "ALTER TABLE DROP PROJECTION";
     }
   }
 

@@ -29,17 +29,22 @@ import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.facade.DatasourceFacade.ColumnFacade;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -481,6 +486,73 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
           .buildSpec();
       expectValidationSucceeds(spec);
     }
+  }
+
+  /**
+   * Projections hold polymorphic aggregators and dimension schemas, so validating them needs a mapper that knows
+   * those subtypes; the shared mapper in this class does not register them.
+   */
+  @Test
+  public void testProjectionValidation()
+  {
+    final TableDefnRegistry projectionRegistry = new TableDefnRegistry(TestHelper.makeJsonMapper());
+    final TableBuilder builder = TableBuilder.datasource("foo", "P1D")
+                                             .timeColumn()
+                                             .column("dim", Columns.SQL_VARCHAR)
+                                             .column("met", Columns.SQL_BIGINT);
+
+    final AggregateProjectionSpec good = AggregateProjectionSpec
+        .builder("daily")
+        .groupingColumns(new StringDimensionSchema("dim"))
+        .aggregators(new LongSumAggregatorFactory("sum_met", "met"))
+        .build();
+
+    projectionRegistry.resolve(
+        builder.copy()
+               .property(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY, List.of(new DatasourceProjectionMetadata(good)))
+               .buildSpec()
+    ).validate();
+
+    // Two projections cannot share a name.
+    final TableSpec duplicateNames =
+        builder.copy()
+               .property(
+                   DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,
+                   List.of(new DatasourceProjectionMetadata(good), new DatasourceProjectionMetadata(good))
+               )
+               .buildSpec();
+    assertThrows(DruidException.class, () -> projectionRegistry.resolve(duplicateNames).validate());
+
+    // A sealed table declares its whole schema, so a projection over an undeclared column can never be built.
+    final AggregateProjectionSpec undeclared = AggregateProjectionSpec
+        .builder("bad")
+        .groupingColumns(new StringDimensionSchema("nope"))
+        .aggregators(new LongSumAggregatorFactory("sum_met", "met"))
+        .build();
+
+    final TableSpec sealedWithUndeclared =
+        builder.copy()
+               .sealed(true)
+               .property(
+                   DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,
+                   List.of(new DatasourceProjectionMetadata(undeclared))
+               )
+               .buildSpec();
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> projectionRegistry.resolve(sealedWithUndeclared).validate()
+    );
+    assertTrue(e.getMessage().contains("references column [nope]"));
+
+    // Ingestion may add columns to a table that is not sealed, so the same projection is allowed there.
+    projectionRegistry.resolve(
+        builder.copy()
+               .property(
+                   DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,
+                   List.of(new DatasourceProjectionMetadata(undeclared))
+               )
+               .buildSpec()
+    ).validate();
   }
 
   @Test

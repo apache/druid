@@ -49,6 +49,7 @@ public class DruidSqlCreateTable extends SqlCreate
 
   private final SqlIdentifier name;
   private final SqlNodeList columnList;
+  private final SqlNodeList projectionList;
   @Nullable
   private final SqlGranularityLiteral partitionedBy;
   @Nullable
@@ -60,6 +61,7 @@ public class DruidSqlCreateTable extends SqlCreate
       boolean ifNotExists,
       SqlIdentifier name,
       SqlNodeList columnList,
+      SqlNodeList projectionList,
       @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy
   )
@@ -67,6 +69,7 @@ public class DruidSqlCreateTable extends SqlCreate
     super(OPERATOR, pos, replace, ifNotExists);
     this.name = name;
     this.columnList = columnList;
+    this.projectionList = projectionList;
     this.partitionedBy = partitionedBy;
     this.clusteredBy = clusteredBy;
   }
@@ -83,6 +86,14 @@ public class DruidSqlCreateTable extends SqlCreate
   public SqlNodeList getColumnList()
   {
     return columnList;
+  }
+
+  /**
+   * The declared projections, each a {@link SqlProjectionSpec}.
+   */
+  public SqlNodeList getProjectionList()
+  {
+    return projectionList;
   }
 
   @Nullable
@@ -110,6 +121,7 @@ public class DruidSqlCreateTable extends SqlCreate
     return ImmutableNullableList.of(
         name,
         columnList,
+        projectionList,
         partitionedBy,
         clusteredBy,
         SqlLiteral.createBoolean(getReplace(), SqlParserPos.ZERO),
@@ -134,6 +146,10 @@ public class DruidSqlCreateTable extends SqlCreate
     for (SqlNode column : columnList) {
       writer.sep(",");
       column.unparse(writer, 0, 0);
+    }
+    for (SqlNode projection : projectionList) {
+      writer.sep(",");
+      projection.unparse(writer, 0, 0);
     }
     writer.endList(frame);
 
@@ -169,12 +185,13 @@ public class DruidSqlCreateTable extends SqlCreate
     {
       return new DruidSqlCreateTable(
           pos,
-          ((SqlLiteral) operands[4]).booleanValue(),
           ((SqlLiteral) operands[5]).booleanValue(),
+          ((SqlLiteral) operands[6]).booleanValue(),
           (SqlIdentifier) operands[0],
           (SqlNodeList) operands[1],
-          (SqlGranularityLiteral) operands[2],
-          (SqlNodeList) operands[3]
+          (SqlNodeList) operands[2],
+          (SqlGranularityLiteral) operands[3],
+          (SqlNodeList) operands[4]
       );
     }
   }

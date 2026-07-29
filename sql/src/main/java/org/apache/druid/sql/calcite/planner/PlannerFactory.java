@@ -21,15 +21,20 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.config.CalciteConnectionProperty;
+import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.volcano.DruidVolcanoCost;
 import org.apache.calcite.rel.RelCollationTraitDef;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
@@ -50,9 +55,11 @@ import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
+import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.hook.DruidHook;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -166,7 +173,7 @@ public class PlannerFactory extends PlannerToolbox
     );
     context.dispatchHook(DruidHook.SQL, sql);
 
-    return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook);
+    return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook, this);
   }
 
   /**
@@ -198,12 +205,70 @@ public class PlannerFactory extends PlannerToolbox
     return thePlanner;
   }
 
+  /**
+   * Create a planner for a statement that refers to a table which may not be in the schema, or which should be seen
+   * with a different definition than the one the schema holds. Used to plan the body of a projection definition
+   * against the columns its {@code CREATE TABLE} or {@code ALTER TABLE} statement declares, before those columns
+   * have been written to the catalog.
+   * <p>
+   * The schema holds only that table. Resource typing still consults the real schema, so authorization is
+   * unaffected; callers are expected to have authorized the enclosing statement already.
+   */
+  public DruidPlanner createPlannerForTable(
+      final SqlEngine engine,
+      final String sql,
+      final SqlNode sqlNode,
+      final Map<String, Object> queryContext,
+      final String tableName,
+      final DruidTable table
+  )
+  {
+    final PlannerContext context = PlannerContext.create(
+        this,
+        sql,
+        sqlNode,
+        engine,
+        Collections.emptySet(),
+        queryContext,
+        null
+    );
+    final SchemaPlus defaultSchema = CalciteSchema.createRootSchema(false, false)
+                                                  .plus()
+                                                  .add(druidSchemaName, new SingleTableSchema(tableName, table));
+    return new DruidPlanner(buildFrameworkConfig(context, defaultSchema), context, engine, null, this);
+  }
+
+  /**
+   * A schema holding exactly the table being defined. The body of a projection has no FROM clause, so the table it
+   * belongs to is the only one it can name; anything else is a mistake worth reporting as an unknown table.
+   */
+  private static class SingleTableSchema extends AbstractSchema
+  {
+    private final Map<String, Table> tables;
+
+    SingleTableSchema(String tableName, Table table)
+    {
+      this.tables = ImmutableMap.of(tableName, table);
+    }
+
+    @Override
+    protected Map<String, Table> getTableMap()
+    {
+      return tables;
+    }
+  }
+
   public AuthorizerMapper getAuthorizerMapper()
   {
     return authorizerMapper;
   }
 
   private FrameworkConfig buildFrameworkConfig(PlannerContext plannerContext)
+  {
+    return buildFrameworkConfig(plannerContext, rootSchema.getSubSchema(druidSchemaName));
+  }
+
+  private FrameworkConfig buildFrameworkConfig(PlannerContext plannerContext, SchemaPlus defaultSchema)
   {
     final SqlToRelConverter.Config sqlToRelConverterConfig = SqlToRelConverter
         .config()
@@ -223,7 +288,7 @@ public class PlannerFactory extends PlannerToolbox
         .programs(calciteRuleManager.programs(plannerContext))
         .executor(new DruidRexExecutor(plannerContext))
         .typeSystem(DruidTypeSystem.INSTANCE)
-        .defaultSchema(rootSchema.getSubSchema(druidSchemaName))
+        .defaultSchema(defaultSchema)
         .sqlToRelConverterConfig(sqlToRelConverterConfig)
         .context(new Context()
         {

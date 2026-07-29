@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.planner;
 
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
@@ -68,6 +69,20 @@ public interface CatalogTableWriter
   void updateProperties(TableId tableId, Map<String, Object> properties);
 
   /**
+   * Append a projection to the table's projections.
+   *
+   * @param ifNotExists if a projection of the same name exists, do nothing rather than failing
+   */
+  void addProjection(TableId tableId, DatasourceProjectionMetadata projection, boolean ifNotExists);
+
+  /**
+   * Remove the named projection from the table's projections.
+   *
+   * @param ifExists if no projection of that name exists, do nothing rather than failing
+   */
+  void dropProjection(TableId tableId, String projectionName, boolean ifExists);
+
+  /**
    * Read a table's current metadata directly from the Coordinator, bypassing any local cache, or null if the table
    * has no catalog entry. Used for pre-checks that must not race against a stale cache.
    */
@@ -100,6 +115,18 @@ public interface CatalogTableWriter
 
     @Override
     public void updateProperties(TableId tableId, Map<String, Object> properties)
+    {
+      throw notAvailable();
+    }
+
+    @Override
+    public void addProjection(TableId tableId, DatasourceProjectionMetadata projection, boolean ifNotExists)
+    {
+      throw notAvailable();
+    }
+
+    @Override
+    public void dropProjection(TableId tableId, String projectionName, boolean ifExists)
     {
       throw notAvailable();
     }

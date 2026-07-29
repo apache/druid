@@ -63,7 +63,7 @@ report that the extension is not available.
 
 ```sql
 CREATE [OR REPLACE] TABLE [IF NOT EXISTS] <table>
-  [ ( <column> <type> [, ...] ) ]
+  [ ( { <column> <type> | PROJECTION <name> AS ( <select> ) } [, ...] ) ]
   [ PARTITIONED BY <granularity> ]
   [ CLUSTERED BY <column> [, ...] ]
 ```
@@ -93,8 +93,55 @@ CLUSTERED BY user_id
 ALTER TABLE <table> ADD COLUMN <column> <type>
 ALTER TABLE <table> DROP COLUMN <column>
 ALTER TABLE <table> ALTER COLUMN <column> SET DATA TYPE <type>
+ALTER TABLE <table> ADD [IF NOT EXISTS] PROJECTION <name> AS ( <select> )
+ALTER TABLE <table> DROP PROJECTION [IF EXISTS] <name>
 ALTER TABLE <table> SET PROPERTIES ( <property> = <value> [, ...] )
 ```
+
+#### Projections
+
+A table may declare [projections](../../querying/projections.md), which are pre-aggregated views stored inside each
+segment. A projection is written as a `SELECT` over the table's own columns, with no `FROM` clause:
+
+```sql
+CREATE TABLE "druid"."visits" (
+  __time TIMESTAMP,
+  user_id VARCHAR,
+  user_agent VARCHAR,
+  pages_visited BIGINT,
+  PROJECTION daily_by_agent AS (
+    SELECT TIME_FLOOR(__time, 'P1D'), user_agent, SUM(pages_visited) AS total_pages
+    WHERE user_agent IS NOT NULL
+    GROUP BY 1, 2
+  )
+)
+PARTITIONED BY DAY
+```
+
+The body is planned exactly as the equivalent query would be, so a projection matches the queries it was written to
+serve. Every aggregate needs an alias, which becomes the name of the stored column. Time granularity is expressed
+with `TIME_FLOOR`, as it would be in a query.
+
+A projection body accepts a select list, an optional `WHERE` and an optional `GROUP BY`. It cannot use `ORDER BY`,
+`LIMIT` or `HAVING`: a projection's ordering follows its grouping columns and is not something you choose. It also
+cannot use joins, subqueries, or expressions computed over aggregates. Store the aggregates instead: `SUM(x)` and
+`COUNT(x)` rather than `AVG(x)`.
+
+Projections may also be added to and removed from an existing table:
+
+```sql
+ALTER TABLE "druid"."visits" ADD [IF NOT EXISTS] PROJECTION by_agent AS (
+  SELECT user_agent, SUM(pages_visited) AS total_pages GROUP BY user_agent
+)
+ALTER TABLE "druid"."visits" DROP PROJECTION [IF EXISTS] by_agent
+```
+
+Both take effect for subsequent ingestion. Segments already built keep whatever projections they were built with, so
+dropping a projection does not rewrite data.
+
+The name `__base` is reserved for the projection describing the table's own physical layout, and is not accepted yet.
+
+#### Setting table properties
 
 `SET PROPERTIES` merges the given [table properties](#table-properties) into the table. A value of `NULL` removes a
 property. Values must be literals:

@@ -21,7 +21,9 @@ package org.apache.druid.catalog.http;
 
 import com.google.common.base.Strings;
 import org.apache.druid.catalog.CatalogException;
+import org.apache.druid.catalog.http.TableEditRequest.AddProjection;
 import org.apache.druid.catalog.http.TableEditRequest.DropColumns;
+import org.apache.druid.catalog.http.TableEditRequest.DropProjection;
 import org.apache.druid.catalog.http.TableEditRequest.HideColumns;
 import org.apache.druid.catalog.http.TableEditRequest.MoveColumn;
 import org.apache.druid.catalog.http.TableEditRequest.MoveColumn.Position;
@@ -30,6 +32,8 @@ import org.apache.druid.catalog.http.TableEditRequest.UpdateColumns;
 import org.apache.druid.catalog.http.TableEditRequest.UpdateProperties;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
+import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
@@ -41,7 +45,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.ws.rs.core.Response;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -99,6 +102,12 @@ public class TableEditor
       return updateProperties(((UpdateProperties) editRequest).properties);
     } else if (editRequest instanceof UpdateColumns) {
       return updateColumns(((UpdateColumns) editRequest).columns);
+    } else if (editRequest instanceof AddProjection) {
+      final AddProjection addProjection = (AddProjection) editRequest;
+      return addProjection(addProjection.projection, addProjection.ifNotExists);
+    } else if (editRequest instanceof DropProjection) {
+      final DropProjection dropProjection = (DropProjection) editRequest;
+      return dropProjection(dropProjection.projection, dropProjection.ifExists);
     } else if (editRequest instanceof MoveColumn) {
       return moveColumn(((MoveColumn) editRequest));
     } else {
@@ -379,4 +388,90 @@ public class TableEditor
 
     return existingSpec.withColumns(revised);
   }
+
+  /**
+   * Projections are stored as a table property, so adding one is a read-modify-write of that property performed
+   * inside the update transaction rather than by the caller.
+   */
+  private long addProjection(DatasourceProjectionMetadata projection, boolean ifNotExists) throws CatalogException
+  {
+    if (projection == null || projection.getSpec() == null) {
+      throw CatalogException.badRequest("A projection is required");
+    }
+    final String name = projection.getSpec().getName();
+    return catalog.tables().updateProperties(id, table -> {
+      final List<DatasourceProjectionMetadata> existing = projectionsOf(table);
+      for (DatasourceProjectionMetadata current : existing) {
+        if (name.equals(current.getSpec().getName())) {
+          if (ifNotExists) {
+            return null;
+          }
+          throw CatalogException.badRequest(
+              "Projection [%s] already exists in table %s",
+              name,
+              id.sqlName()
+          );
+        }
+      }
+      final List<DatasourceProjectionMetadata> revised = new ArrayList<>(existing);
+      revised.add(projection);
+      return withProjections(table, revised);
+    });
+  }
+
+  private long dropProjection(String name, boolean ifExists) throws CatalogException
+  {
+    if (Strings.isNullOrEmpty(name)) {
+      throw CatalogException.badRequest("A projection name is required");
+    }
+    return catalog.tables().updateProperties(id, table -> {
+      final List<DatasourceProjectionMetadata> existing = projectionsOf(table);
+      final List<DatasourceProjectionMetadata> revised = new ArrayList<>(existing.size());
+      for (DatasourceProjectionMetadata current : existing) {
+        if (!name.equals(current.getSpec().getName())) {
+          revised.add(current);
+        }
+      }
+      if (revised.size() == existing.size()) {
+        if (ifExists) {
+          return null;
+        }
+        throw CatalogException.badRequest(
+            "Projection [%s] does not exist in table %s",
+            name,
+            id.sqlName()
+        );
+      }
+      return withProjections(table, revised);
+    });
+  }
+
+  private List<DatasourceProjectionMetadata> projectionsOf(TableMetadata table) throws CatalogException
+  {
+    final ResolvedTable resolved = catalog.tableRegistry().resolve(table.spec());
+    final List<DatasourceProjectionMetadata> projections =
+        resolved.decodeProperty(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY);
+    return projections == null ? Collections.emptyList() : projections;
+  }
+
+  private TableSpec withProjections(TableMetadata table, List<DatasourceProjectionMetadata> projections)
+      throws CatalogException
+  {
+    final TableSpec existingSpec = table.spec();
+    final Map<String, Object> revised = new HashMap<>(existingSpec.properties());
+    if (projections.isEmpty()) {
+      revised.remove(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY);
+    } else {
+      revised.put(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY, projections);
+    }
+    final TableSpec revisedSpec = existingSpec.withProperties(revised);
+    try {
+      catalog.tableRegistry().resolve(revisedSpec).validate();
+    }
+    catch (IAE | DruidException e) {
+      throw CatalogException.badRequest(e.getMessage());
+    }
+    return revisedSpec;
+  }
+
 }

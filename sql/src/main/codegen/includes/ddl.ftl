@@ -28,7 +28,9 @@ SqlCreate DruidSqlCreateTable(Span s, boolean replace) :
 {
   boolean ifNotExists = false;
   final SqlIdentifier id;
-  SqlNodeList columnList = SqlNodeList.EMPTY;
+  final List<SqlNode> columns = new ArrayList<SqlNode>();
+  final List<SqlNode> projections = new ArrayList<SqlNode>();
+  Span elementSpan = null;
   SqlGranularityLiteral partitionedBy = null;
   SqlNodeList clusteredBy = null;
 }
@@ -36,7 +38,14 @@ SqlCreate DruidSqlCreateTable(Span s, boolean replace) :
   <TABLE>
   [ <IF> <NOT> <EXISTS> { ifNotExists = true; } ]
   id = CompoundTableIdentifier()
-  [ columnList = DruidColumnDeclarationList() ]
+  [
+    <LPAREN> { elementSpan = span(); }
+    AddDruidTableElement(columns, projections)
+    (
+      <COMMA> AddDruidTableElement(columns, projections)
+    )*
+    <RPAREN>
+  ]
   [
     <PARTITIONED> <BY>
     partitionedBy = PartitionGranularity()
@@ -45,35 +54,90 @@ SqlCreate DruidSqlCreateTable(Span s, boolean replace) :
     clusteredBy = ClusteredBy()
   ]
   {
-    return new DruidSqlCreateTable(s.end(this), replace, ifNotExists, id, columnList, partitionedBy, clusteredBy);
+    final SqlParserPos elementPos = elementSpan == null ? s.pos() : elementSpan.end(this);
+    return new DruidSqlCreateTable(
+        s.end(this),
+        replace,
+        ifNotExists,
+        id,
+        new SqlNodeList(columns, elementPos),
+        new SqlNodeList(projections, elementPos),
+        partitionedBy,
+        clusteredBy
+    );
   }
 }
 
-SqlNodeList DruidColumnDeclarationList() :
-{
-  final Span s;
-  final List<SqlNode> list = new ArrayList<SqlNode>();
-}
-{
-  <LPAREN> { s = span(); }
-  AddDruidColumnDeclaration(list)
-  (
-    <COMMA> AddDruidColumnDeclaration(list)
-  )*
-  <RPAREN>
-  {
-    return new SqlNodeList(list, s.end(this));
-  }
-}
-
-void AddDruidColumnDeclaration(List<SqlNode> list) :
+// A table element is either a column declaration or a projection definition. A column may legitimately be named
+// "projection" (the keyword is non-reserved) and may have a bare-identifier type, so two tokens are not enough to
+// tell the two apart: a projection definition is distinguished by its third token, which is always '(' or AS.
+void AddDruidTableElement(List<SqlNode> columns, List<SqlNode> projections) :
 {
   final DruidSqlColumnDeclaration column;
+  final SqlProjectionSpec projection;
 }
 {
+  LOOKAHEAD(3)
+  projection = DruidProjectionDefinition()
+  {
+    projections.add(projection);
+  }
+|
   column = DruidColumnDeclaration()
   {
-    list.add(column);
+    columns.add(column);
+  }
+}
+
+// The body is a SELECT with no FROM: the table the projection belongs to is implicit. Only a select list, WHERE and
+// GROUP BY are admitted; a projection has no way to express ordering, limits or having.
+SqlProjectionSpec DruidProjectionDefinition() :
+{
+  final Span s;
+  final Span bodySpan;
+  final SqlIdentifier name;
+  final List<SqlLiteral> keywords = new ArrayList<SqlLiteral>();
+  final SqlNodeList keywordList;
+  final List<SqlNode> selectList = new ArrayList<SqlNode>();
+  SqlLiteral keyword = null;
+  final SqlNode where;
+  final SqlNodeList groupBy;
+}
+{
+  <PROJECTION> { s = span(); }
+  name = SimpleIdentifier()
+  [ <AS> ]
+  <LPAREN>
+  <SELECT> { bodySpan = span(); }
+  [ keyword = AllOrDistinct() { keywords.add(keyword); } ]
+  { keywordList = new SqlNodeList(keywords, bodySpan.addAll(keywords).pos()); }
+  AddSelectItem(selectList)
+  (
+    <COMMA> AddSelectItem(selectList)
+  )*
+  ( where = Where() | { where = null; } )
+  ( groupBy = GroupBy() | { groupBy = null; } )
+  <RPAREN>
+  {
+    return new SqlProjectionSpec(
+        s.end(this),
+        name,
+        new SqlSelect(
+            bodySpan.end(this),
+            keywordList,
+            new SqlNodeList(selectList, Span.of(selectList).pos()),
+            null,
+            where,
+            groupBy,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+    );
   }
 }
 
@@ -104,19 +168,39 @@ SqlNode DruidSqlAlterTable() :
   final SqlDataTypeSpec dataType;
   final DruidSqlColumnDeclaration column;
   final SqlNodeList properties;
+  final SqlProjectionSpec projection;
+  final SqlIdentifier projectionName;
+  boolean ifNotExists = false;
+  boolean ifExists = false;
 }
 {
   <ALTER> { s = span(); } <TABLE> id = CompoundTableIdentifier()
   (
-    <ADD> <COLUMN> column = DruidColumnDeclaration()
-    {
-      return new DruidSqlAlterTable.AddColumn(s.end(this), id, column);
-    }
+    <ADD>
+    (
+      <COLUMN> column = DruidColumnDeclaration()
+      {
+        return new DruidSqlAlterTable.AddColumn(s.end(this), id, column);
+      }
+    |
+      [ <IF> <NOT> <EXISTS> { ifNotExists = true; } ] projection = DruidProjectionDefinition()
+      {
+        return new DruidSqlAlterTable.AddProjection(s.end(this), id, projection, ifNotExists);
+      }
+    )
   |
-    <DROP> <COLUMN> columnName = SimpleIdentifier()
-    {
-      return new DruidSqlAlterTable.DropColumn(s.end(this), id, columnName);
-    }
+    <DROP>
+    (
+      <COLUMN> columnName = SimpleIdentifier()
+      {
+        return new DruidSqlAlterTable.DropColumn(s.end(this), id, columnName);
+      }
+    |
+      <PROJECTION> [ <IF> <EXISTS> { ifExists = true; } ] projectionName = SimpleIdentifier()
+      {
+        return new DruidSqlAlterTable.DropProjection(s.end(this), id, projectionName, ifExists);
+      }
+    )
   |
     <ALTER> <COLUMN> columnName = SimpleIdentifier() <SET> <DATA> <TYPE> dataType = DataType()
     {

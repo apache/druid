@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -175,6 +176,139 @@ public class DruidSqlDdlParserTest
              })
              .collect(Collectors.joining(", "))
     );
+  }
+
+  @Test
+  public void testCreateTableWithProjection()
+  {
+    final DruidSqlCreateTable create = parseCreate(
+        "CREATE TABLE events (\n"
+        + "  __time TIMESTAMP,\n"
+        + "  user_id VARCHAR,\n"
+        + "  pages_visited BIGINT,\n"
+        + "  PROJECTION daily_visits AS (\n"
+        + "    SELECT TIME_FLOOR(__time, 'P1D'), user_id, SUM(pages_visited) AS total\n"
+        + "    WHERE user_id IS NOT NULL\n"
+        + "    GROUP BY 1, 2\n"
+        + "  )\n"
+        + ")"
+    );
+
+    assertEquals("__time TIMESTAMP, user_id VARCHAR, pages_visited BIGINT", columnsOf(create));
+    assertEquals(1, create.getProjectionList().size());
+
+    final SqlProjectionSpec projection = (SqlProjectionSpec) create.getProjectionList().get(0);
+    assertEquals("daily_visits", projection.getName().toString());
+    assertNull(projection.getBody().getFrom(), "projection body must have no FROM clause");
+    assertEquals(3, projection.getBody().getSelectList().size());
+    assertNotNull(projection.getBody().getWhere());
+    assertEquals(2, projection.getBody().getGroup().size());
+  }
+
+  @Test
+  public void testCreateTableProjectionWithoutAs()
+  {
+    // ClickHouse spells this without AS; both are accepted.
+    final DruidSqlCreateTable create = parseCreate(
+        "CREATE TABLE t (a VARCHAR, PROJECTION p (SELECT a, COUNT(*) AS c GROUP BY a))"
+    );
+    assertEquals(1, create.getProjectionList().size());
+    assertEquals("a VARCHAR", columnsOf(create));
+  }
+
+  @Test
+  public void testCreateTableMultipleProjections()
+  {
+    final DruidSqlCreateTable create = parseCreate(
+        "CREATE TABLE t (a VARCHAR, b BIGINT,"
+        + " PROJECTION p1 AS (SELECT a, SUM(b) AS s GROUP BY a),"
+        + " PROJECTION p2 AS (SELECT b, COUNT(*) AS c GROUP BY b))"
+    );
+    assertEquals(2, create.getProjectionList().size());
+    assertEquals("a VARCHAR, b BIGINT", columnsOf(create));
+  }
+
+  /**
+   * A column may be named "projection": the keyword is non-reserved, and a projection definition is told apart by
+   * its third token, which is always '(' or AS.
+   */
+  @Test
+  public void testColumnNamedProjection()
+  {
+    assertEquals("projection VARCHAR", columnsOf(parseCreate("CREATE TABLE t (projection VARCHAR)")));
+    // A bare-identifier type is the case two tokens of lookahead could not resolve. Calcite renders such a type as
+    // a quoted identifier.
+    assertEquals("projection `LONG`", columnsOf(parseCreate("CREATE TABLE t (projection LONG)")));
+    assertEquals(
+        "a VARCHAR, projection `LONG`",
+        columnsOf(parseCreate("CREATE TABLE t (a VARCHAR, projection LONG)"))
+    );
+
+    final DruidSqlCreateTable both = parseCreate(
+        "CREATE TABLE t (projection LONG, PROJECTION projection AS (SELECT projection GROUP BY projection))"
+    );
+    assertEquals("projection `LONG`", columnsOf(both));
+    assertEquals(1, both.getProjectionList().size());
+  }
+
+  @Test
+  public void testAlterTableAddProjection()
+  {
+    final DruidSqlAlterTable.AddProjection alter = parseAlter(
+        "ALTER TABLE t ADD PROJECTION p AS (SELECT a, SUM(b) AS s GROUP BY a)",
+        DruidSqlAlterTable.AddProjection.class
+    );
+    assertEquals("t", alter.getName().toString());
+    assertEquals("p", alter.getProjection().getName().toString());
+    assertFalse(alter.isIfNotExists());
+  }
+
+  @Test
+  public void testAlterTableAddProjectionIfNotExists()
+  {
+    final DruidSqlAlterTable.AddProjection alter = parseAlter(
+        "ALTER TABLE t ADD IF NOT EXISTS PROJECTION p AS (SELECT a GROUP BY a)",
+        DruidSqlAlterTable.AddProjection.class
+    );
+    assertTrue(alter.isIfNotExists());
+  }
+
+  @Test
+  public void testAlterTableDropProjection()
+  {
+    final DruidSqlAlterTable.DropProjection alter = parseAlter(
+        "ALTER TABLE t DROP PROJECTION p",
+        DruidSqlAlterTable.DropProjection.class
+    );
+    assertEquals("p", alter.getProjectionName().toString());
+    assertFalse(alter.isIfExists());
+
+    assertTrue(
+        parseAlter("ALTER TABLE t DROP PROJECTION IF EXISTS p", DruidSqlAlterTable.DropProjection.class)
+            .isIfExists()
+    );
+  }
+
+  /**
+   * A projection has no way to express ordering or limits, so the grammar excludes them rather than validating them
+   * away later.
+   */
+  @Test
+  public void testProjectionBodyRejectsUnsupportedClauses()
+  {
+    for (String body : new String[]{
+        "SELECT a GROUP BY a ORDER BY a",
+        "SELECT a GROUP BY a LIMIT 10",
+        "SELECT a GROUP BY a HAVING COUNT(*) > 1",
+        "SELECT a FROM other GROUP BY a",
+        "SELECT a GROUP BY a UNION ALL SELECT b GROUP BY b"
+    }) {
+      assertThrows(
+          DruidException.class,
+          () -> parse("CREATE TABLE t (a VARCHAR, PROJECTION p AS (" + body + "))"),
+          body
+      );
+    }
   }
 
   /**
