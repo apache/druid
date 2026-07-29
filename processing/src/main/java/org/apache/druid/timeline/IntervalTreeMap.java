@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.joda.time.Interval;
+import org.joda.time.base.BaseInterval;
 
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -77,18 +78,33 @@ public class IntervalTreeMap<T> extends AbstractMap<Interval, T> implements Navi
   private Node<T> root;
   private int size;
 
-  // Deviation allowed from ideal height for the maximum height on either side of the tree, expressed as a
-  // percentage of ideal height
-  private int imbalanceTolerance = 50;
+  private int imbalanceTolerance;
 
   private final EntrySet entrySet = new EntrySet();
 
+  public IntervalTreeMap()
+  {
+    this(Comparator.comparingLong(BaseInterval::getStartMillis),
+            Comparator.comparingLong(BaseInterval::getEndMillis));
+  }
+
   public IntervalTreeMap(Comparator<Interval> startComparator, Comparator<Interval> endComparator)
+  {
+    this(startComparator, endComparator, 50);
+  }
+
+  public IntervalTreeMap(Comparator<Interval> startComparator, Comparator<Interval> endComparator, int imbalanceTolerance)
   {
     this.startComparator = startComparator;
     this.endComparator = endComparator;
+    this.imbalanceTolerance = imbalanceTolerance;
   }
 
+  /**
+   * Returns the allowed tolerance between the right and left branches of the tree before triggering a rebalance.
+   * The tolerance is expressed as a percentage deviation from ideal tree height.
+   * @return The imbalance tolerance
+   */
   public int getImbalanceTolerance()
   {
     return imbalanceTolerance;
