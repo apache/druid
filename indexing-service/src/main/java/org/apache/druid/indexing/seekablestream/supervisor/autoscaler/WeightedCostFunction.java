@@ -58,9 +58,10 @@ public class WeightedCostFunction
   /**
    * Fraction of {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()} at which tier 2 of the
    * critical-lag fast path engages: the cost-minimization search is skipped entirely and the task
-   * count jumps straight to the maximum.
+   * count jumps straight to the maximum. Tier 2 engages once aggregate lag reaches the full
+   * critical threshold.
    */
-  static final double CRITICAL_LAG_TIER2_FRACTION = 0.95;
+  static final double CRITICAL_LAG_TIER2_FRACTION = 1.0;
 
   /**
    * Exponent (< 1) for sublinear busy redistribution in the idle projection:
@@ -138,7 +139,7 @@ public class WeightedCostFunction
       final boolean criticalLag = criticalLagThreshold != null
           && metrics.getAggregateLag() >= criticalLagThreshold * CRITICAL_LAG_TIER1_FRACTION;
 
-      final double amplificationMultiplier = criticalLag ? CRITICAL_LAG_AMPLIFICATION_MULTIPLIER : LAG_AMPLIFICATION_MULTIPLIER;
+      final double amplificationMultiplier = criticalLag ? config.getCriticalLagAmplificationMultiplier() : LAG_AMPLIFICATION_MULTIPLIER;
       final double amplification = Math.max(1.0, 1.0 + amplificationMultiplier * Math.log(lagPerPartition));
       final double adjustedProcessingRate = Math.max(avgProcessingRate, MIN_PROCESSING_RATE);
       lagRecoveryTime = metrics.getAggregateLag() * amplification / (proposedTaskCount * adjustedProcessingRate);

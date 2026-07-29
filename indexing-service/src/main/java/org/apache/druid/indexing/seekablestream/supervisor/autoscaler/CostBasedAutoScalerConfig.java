@@ -68,6 +68,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final boolean usePollIdleRatio;
   private final Long criticalLagThreshold;
   private final int minCostDropPercentForScaling;
+  private final double criticalLagAmplificationMultiplier;
 
   /**
    * Creates a new CostBasedAutoScalerConfig instance.
@@ -90,7 +91,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("scaleDownDuringTaskRolloverOnly") Boolean scaleDownDuringTaskRolloverOnly,
       @Nullable @JsonProperty("usePollIdleRatio") Boolean usePollIdleRatio,
       @Nullable @JsonProperty("criticalLagThreshold") Long criticalLagThreshold,
-      @Nullable @JsonProperty("minCostDropPercentForScaling") Integer minCostDropPercentForScaling
+      @Nullable @JsonProperty("minCostDropPercentForScaling") Integer minCostDropPercentForScaling,
+      @Nullable @JsonProperty("criticalLagAmplificationMultiplier") Double criticalLagAmplificationMultiplier
   )
   {
     this.enableTaskAutoScaler = Configs.valueOrDefault(enableTaskAutoScaler, false);
@@ -115,6 +117,14 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         "criticalLagThreshold must be > 0"
     );
     this.minCostDropPercentForScaling = Configs.valueOrDefault(minCostDropPercentForScaling, 0);
+    this.criticalLagAmplificationMultiplier = Configs.valueOrDefault(
+        criticalLagAmplificationMultiplier,
+        WeightedCostFunction.CRITICAL_LAG_AMPLIFICATION_MULTIPLIER
+    );
+    Preconditions.checkArgument(
+        this.criticalLagAmplificationMultiplier >= 0,
+        "criticalLagAmplificationMultiplier must be >= 0"
+    );
 
     if (this.enableTaskAutoScaler) {
       Preconditions.checkNotNull(taskCountMax, "taskCountMax is required when enableTaskAutoScaler is true");
@@ -325,6 +335,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     return minCostDropPercentForScaling;
   }
 
+  @JsonProperty
+  public double getCriticalLagAmplificationMultiplier()
+  {
+    return criticalLagAmplificationMultiplier;
+  }
+
   @Override
   public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter)
   {
@@ -357,6 +373,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && scaleDownDuringTaskRolloverOnly == that.scaleDownDuringTaskRolloverOnly
            && usePollIdleRatio == that.usePollIdleRatio
            && minCostDropPercentForScaling == that.minCostDropPercentForScaling
+           && Double.compare(that.criticalLagAmplificationMultiplier, criticalLagAmplificationMultiplier) == 0
            && Objects.equals(taskCountStart, that.taskCountStart)
            && Objects.equals(stopTaskCountRatio, that.stopTaskCountRatio)
            && Objects.equals(criticalLagThreshold, that.criticalLagThreshold);
@@ -382,7 +399,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         scaleDownDuringTaskRolloverOnly,
         usePollIdleRatio,
         criticalLagThreshold,
-        minCostDropPercentForScaling
+        minCostDropPercentForScaling,
+        criticalLagAmplificationMultiplier
     );
   }
 
@@ -407,6 +425,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", usePollIdleRatio=" + usePollIdleRatio +
            ", criticalLagThreshold=" + criticalLagThreshold +
            ", minCostDropPercentForScaling=" + minCostDropPercentForScaling +
+           ", criticalLagAmplificationMultiplier=" + criticalLagAmplificationMultiplier +
            '}';
   }
 
@@ -433,6 +452,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Boolean usePollIdleRatio;
     private Long criticalLagThreshold;
     private Integer minCostDropPercentForScaling;
+    private Double criticalLagAmplificationMultiplier;
 
     private Builder()
     {
@@ -540,6 +560,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
+    public Builder criticalLagAmplificationMultiplier(double criticalLagAmplificationMultiplier)
+    {
+      this.criticalLagAmplificationMultiplier = criticalLagAmplificationMultiplier;
+      return this;
+    }
+
     public CostBasedAutoScalerConfig build()
     {
       return new CostBasedAutoScalerConfig(
@@ -559,7 +585,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           scaleDownDuringTaskRolloverOnly,
           usePollIdleRatio,
           criticalLagThreshold,
-          minCostDropPercentForScaling
+          minCostDropPercentForScaling,
+          criticalLagAmplificationMultiplier
       );
     }
   }

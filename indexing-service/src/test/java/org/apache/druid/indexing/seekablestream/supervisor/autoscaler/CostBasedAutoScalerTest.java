@@ -319,6 +319,30 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
+  public void testEmergencyLagJumpsToMaxEvenWhenMaxCostsMore()
+  {
+    // lagWeight=0 means the max candidate's cost is driven entirely by idle cost, which is higher
+    // at 500 tasks than at the current 10 tasks. Emergency lag must still jump to the maximum
+    // instead of leaving the current (cheaper-looking) task count in place.
+    final CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig
+        .builder()
+        .taskCountMax(500)
+        .taskCountMin(1)
+        .enableTaskAutoScaler(true)
+        .lagWeight(0.0)
+        .idleWeight(1.0)
+        .criticalLagThreshold(10_000_000L)
+        .build();
+    final CostBasedAutoScaler scaler = createAutoScaler(config);
+
+    Assert.assertEquals(
+        "Emergency lag should jump to the maximum task count even if it costs more than the current count",
+        500,
+        scaler.computeOptimalTaskCount(createMetrics(100_000.0, 10, 500, 0.9))
+    );
+  }
+
+  @Test
   public void testExtractPollIdleRatio()
   {
     // Null and empty return -1 (no data)
