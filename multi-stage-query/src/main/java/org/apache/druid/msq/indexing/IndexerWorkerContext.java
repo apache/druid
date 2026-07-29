@@ -174,6 +174,11 @@ public class IndexerWorkerContext implements WorkerContext
   {
     final IndexIO indexIO = injector.getInstance(IndexIO.class);
     final TaskConfig taskConfig = injector.getInstance(TaskConfig.class);
+    // Opt into on-demand partial downloads via the MSQ query context (falls back to the node's TaskConfig default).
+    final boolean partialDownloadsEnabled = MultiStageQueryContext.getVirtualStoragePartialDownloadsEnabled(
+        QueryContext.of(task.getContext()),
+        taskConfig.isVirtualStoragePartialDownloadsEnabled()
+    );
     final SegmentCacheManager cacheManager =
         injector.getInstance(SegmentCacheManagerFactory.class)
                 .manufacturate(
@@ -181,7 +186,8 @@ public class IndexerWorkerContext implements WorkerContext
                     // Divide tmpStorageBytesPerTask by 3 so the local cache never takes up the majority of space.
                     // In a typical leaf stage run, we may need some disk space for inputs and some for outputs.
                     taskConfig.getTmpStorageBytesPerTask() > 0 ? taskConfig.getTmpStorageBytesPerTask() / 3 : null,
-                    true
+                    true,
+                    partialDownloadsEnabled
                 );
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
     final VirtualStorageManager virtualStorageManager =

@@ -20,63 +20,74 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Lists;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.utils.RuntimeInfo;
 
+import javax.annotation.Nullable;
 import java.io.File;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
- *
+ * Configuration for a local segment cache, bound from {@code druid.segmentCache}.
  */
 public class SegmentLoaderConfig
 {
-  @JacksonInject
-  private final RuntimeInfo runtimeInfo = new RuntimeInfo();
+  private static final boolean DEFAULT_LAZY_LOAD_ON_START = false;
+  private static final boolean DEFAULT_DELETE_ON_REMOVE = true;
+  private static final int DEFAULT_DROP_SEGMENT_DELAY_MILLIS = (int) TimeUnit.SECONDS.toMillis(30);
+  private static final int DEFAULT_ANNOUNCE_INTERVAL_MILLIS = 0; // do not background announce
+  private static final int DEFAULT_NUM_THREADS_TO_LOAD_INTO_PAGE_CACHE_ON_DOWNLOAD = 0;
+  private static final int DEFAULT_STATUS_QUEUE_MAX_SIZE = 100;
+  private static final boolean DEFAULT_VIRTUAL_STORAGE = false;
+  private static final boolean DEFAULT_VIRTUAL_STORAGE_USE_VIRTUAL_THREADS = true;
+  private static final boolean DEFAULT_VIRTUAL_STORAGE_IS_EPHEMERAL = false;
+  private static final long DEFAULT_VIRTUAL_STORAGE_METADATA_RESERVATION_ESTIMATE = 16L * 1024L * 1024L;
+  private static final boolean DEFAULT_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_ENABLED = false;
 
-  @JsonProperty
-  private List<StorageLocationConfig> locations = Collections.emptyList();
+  private final RuntimeInfo runtimeInfo;
 
+  @JsonProperty("locations")
+  private final List<StorageLocationConfig> locations;
   @JsonProperty("lazyLoadOnStart")
-  private boolean lazyLoadOnStart = false;
-
+  private final boolean lazyLoadOnStart;
   @JsonProperty("deleteOnRemove")
-  private boolean deleteOnRemove = true;
-
+  private final boolean deleteOnRemove;
   @JsonProperty("dropSegmentDelayMillis")
-  private int dropSegmentDelayMillis = (int) TimeUnit.SECONDS.toMillis(30);
-
+  private final int dropSegmentDelayMillis;
   @JsonProperty("announceIntervalMillis")
-  private int announceIntervalMillis = 0; // do not background announce
-
+  private final int announceIntervalMillis;
   @JsonProperty("numLoadingThreads")
-  private int numLoadingThreads = Math.max(1, runtimeInfo.getAvailableProcessors() / 6);
-
+  private final int numLoadingThreads;
+  /**
+   * Nullable so {@link #getNumBootstrapThreads()} can fall back to {@link #numLoadingThreads} when unset.
+   */
   @JsonProperty("numBootstrapThreads")
-  private Integer numBootstrapThreads = null;
-
+  @Nullable
+  private final Integer numBootstrapThreads;
   @JsonProperty("numThreadsToLoadSegmentsIntoPageCacheOnDownload")
-  private int numThreadsToLoadSegmentsIntoPageCacheOnDownload = 0;
-
+  private final int numThreadsToLoadSegmentsIntoPageCacheOnDownload;
+  /**
+   * Nullable so {@link #getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap()} can fall back to the on-download value.
+   */
   @JsonProperty("numThreadsToLoadSegmentsIntoPageCacheOnBootstrap")
-  private Integer numThreadsToLoadSegmentsIntoPageCacheOnBootstrap = null;
-
-  @JsonProperty
-  private File infoDir = null;
-
-  @JsonProperty
-  private int statusQueueMaxSize = 100;
-
+  @Nullable
+  private final Integer numThreadsToLoadSegmentsIntoPageCacheOnBootstrap;
+  @JsonProperty("infoDir")
+  @Nullable
+  private final File infoDir;
+  @JsonProperty("statusQueueMaxSize")
+  private final int statusQueueMaxSize;
   @JsonProperty("virtualStorage")
-  private boolean virtualStorage = false;
-
+  private final boolean virtualStorage;
   @JsonProperty("virtualStorageLoadThreads")
-  private int virtualStorageLoadThreads = Math.max(32, 4 * runtimeInfo.getAvailableProcessors());
+  private final int virtualStorageLoadThreads;
 
   /**
    * When true (the default), the on-demand load executor uses one virtual thread per task with a {@link
@@ -85,15 +96,15 @@ public class SegmentLoaderConfig
    * particular deep storage SDK or workload.
    */
   @JsonProperty("virtualStorageUseVirtualThreads")
-  private boolean virtualStorageUseVirtualThreads = true;
+  private final boolean virtualStorageUseVirtualThreads;
 
   /**
    * When enabled, weakly-held cache entries are evicted immediately upon release of all holds, rather than
    * waiting for space pressure to trigger eviction. This setting is not intended to be configured directly by
-   * administrators. Instead, it is expected to be set when appropriate via {@link #setVirtualStorage}.
+   * administrators. Instead, it is expected to be set when appropriate via {@link Builder#virtualStorageIsEphemeral}.
    */
   @JsonProperty("virtualStorageIsEphemeral")
-  private boolean virtualStorageIsEphemeral = false;
+  private final boolean virtualStorageIsEphemeral;
 
   /**
    * Up-front size reservation (in bytes) used when mounting a partial-segment metadata cache entry. The entry
@@ -104,7 +115,7 @@ public class SegmentLoaderConfig
    * need a higher value.
    */
   @JsonProperty("virtualStorageMetadataReservationEstimate")
-  private long virtualStorageMetadataReservationEstimate = 16L * 1024L * 1024L;
+  private final long virtualStorageMetadataReservationEstimate;
 
   /**
    * When true, partial-eligible V10 segments are mounted via the partial machinery and
@@ -113,7 +124,7 @@ public class SegmentLoaderConfig
    * {@link AcquireMode#FULL} so the entire segment is downloaded up front (matching pre-partial-download behavior).
    */
   @JsonProperty("virtualStoragePartialDownloadsEnabled")
-  private boolean virtualStoragePartialDownloadsEnabled = false;
+  private final boolean virtualStoragePartialDownloadsEnabled;
 
   /**
    * Maximum number of unrequested bytes a partial-download range read will fetch in order to bridge two requested
@@ -124,7 +135,7 @@ public class SegmentLoaderConfig
    * request latency vs streaming throughput.
    */
   @JsonProperty("virtualStorageCoalesceGapBytes")
-  private long virtualStorageCoalesceGapBytes = PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES;
+  private final long virtualStorageCoalesceGapBytes;
 
   /**
    * Maximum size of a single range read in a query-driven partial download. Larger fetches split at internal-file
@@ -133,36 +144,82 @@ public class SegmentLoaderConfig
    * containers sequentially and are unaffected. {@code <= 0} disables splitting. Defaults to 64 MiB.
    */
   @JsonProperty("virtualStorageMaxFetchRunBytes")
-  private long virtualStorageMaxFetchRunBytes = PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES;
+  private final long virtualStorageMaxFetchRunBytes;
 
-  private long combinedMaxSize = 0;
-
-  public SegmentLoaderConfig()
+  @JsonCreator
+  public SegmentLoaderConfig(
+      @JacksonInject @Nullable RuntimeInfo runtimeInfo,
+      @JsonProperty("locations") @Nullable List<StorageLocationConfig> locations,
+      @JsonProperty("lazyLoadOnStart") @Nullable Boolean lazyLoadOnStart,
+      @JsonProperty("deleteOnRemove") @Nullable Boolean deleteOnRemove,
+      @JsonProperty("dropSegmentDelayMillis") @Nullable Integer dropSegmentDelayMillis,
+      @JsonProperty("announceIntervalMillis") @Nullable Integer announceIntervalMillis,
+      @JsonProperty("numLoadingThreads") @Nullable Integer numLoadingThreads,
+      @JsonProperty("numBootstrapThreads") @Nullable Integer numBootstrapThreads,
+      @JsonProperty("numThreadsToLoadSegmentsIntoPageCacheOnDownload") @Nullable Integer numThreadsToLoadSegmentsIntoPageCacheOnDownload,
+      @JsonProperty("numThreadsToLoadSegmentsIntoPageCacheOnBootstrap") @Nullable Integer numThreadsToLoadSegmentsIntoPageCacheOnBootstrap,
+      @JsonProperty("infoDir") @Nullable File infoDir,
+      @JsonProperty("statusQueueMaxSize") @Nullable Integer statusQueueMaxSize,
+      @JsonProperty("virtualStorage") @Nullable Boolean virtualStorage,
+      @JsonProperty("virtualStorageLoadThreads") @Nullable Integer virtualStorageLoadThreads,
+      @JsonProperty("virtualStorageUseVirtualThreads") @Nullable Boolean virtualStorageUseVirtualThreads,
+      @JsonProperty("virtualStorageIsEphemeral") @Nullable Boolean virtualStorageIsEphemeral,
+      @JsonProperty("virtualStorageMetadataReservationEstimate") @Nullable Long virtualStorageMetadataReservationEstimate,
+      @JsonProperty("virtualStoragePartialDownloadsEnabled") @Nullable Boolean virtualStoragePartialDownloadsEnabled,
+      @JsonProperty("virtualStorageCoalesceGapBytes") @Nullable Long virtualStorageCoalesceGapBytes,
+      @JsonProperty("virtualStorageMaxFetchRunBytes") @Nullable Long virtualStorageMaxFetchRunBytes
+  )
   {
-  }
-
-  private SegmentLoaderConfig(SegmentLoaderConfig other)
-  {
-    this.locations = other.locations;
-    this.lazyLoadOnStart = other.lazyLoadOnStart;
-    this.deleteOnRemove = other.deleteOnRemove;
-    this.dropSegmentDelayMillis = other.dropSegmentDelayMillis;
-    this.announceIntervalMillis = other.announceIntervalMillis;
-    this.numLoadingThreads = other.numLoadingThreads;
-    this.numBootstrapThreads = other.numBootstrapThreads;
-    this.numThreadsToLoadSegmentsIntoPageCacheOnDownload = other.numThreadsToLoadSegmentsIntoPageCacheOnDownload;
-    this.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap = other.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap;
-    this.infoDir = other.infoDir;
-    this.statusQueueMaxSize = other.statusQueueMaxSize;
-    this.virtualStorage = other.virtualStorage;
-    this.virtualStorageLoadThreads = other.virtualStorageLoadThreads;
-    this.virtualStorageUseVirtualThreads = other.virtualStorageUseVirtualThreads;
-    this.virtualStorageIsEphemeral = other.virtualStorageIsEphemeral;
-    this.virtualStorageMetadataReservationEstimate = other.virtualStorageMetadataReservationEstimate;
-    this.virtualStoragePartialDownloadsEnabled = other.virtualStoragePartialDownloadsEnabled;
-    this.virtualStorageCoalesceGapBytes = other.virtualStorageCoalesceGapBytes;
-    this.virtualStorageMaxFetchRunBytes = other.virtualStorageMaxFetchRunBytes;
-    this.combinedMaxSize = other.combinedMaxSize;
+    // RuntimeInfo is an injected @LazySingleton (test-overridable); fall back to a fresh instance when it is not
+    // available, e.g. when deserializing outside a Guice context. Only used to size the thread-count defaults.
+    final RuntimeInfo resolvedRuntimeInfo = runtimeInfo == null ? new RuntimeInfo() : runtimeInfo;
+    this.runtimeInfo = resolvedRuntimeInfo;
+    this.locations = locations == null ? Collections.emptyList() : List.copyOf(locations);
+    this.lazyLoadOnStart = Configs.valueOrDefault(lazyLoadOnStart, DEFAULT_LAZY_LOAD_ON_START);
+    this.deleteOnRemove = Configs.valueOrDefault(deleteOnRemove, DEFAULT_DELETE_ON_REMOVE);
+    this.dropSegmentDelayMillis = Configs.valueOrDefault(dropSegmentDelayMillis, DEFAULT_DROP_SEGMENT_DELAY_MILLIS);
+    this.announceIntervalMillis = Configs.valueOrDefault(announceIntervalMillis, DEFAULT_ANNOUNCE_INTERVAL_MILLIS);
+    this.numLoadingThreads = Configs.valueOrDefault(
+        numLoadingThreads,
+        Math.max(1, resolvedRuntimeInfo.getAvailableProcessors() / 6)
+    );
+    this.numBootstrapThreads = numBootstrapThreads;
+    this.numThreadsToLoadSegmentsIntoPageCacheOnDownload = Configs.valueOrDefault(
+        numThreadsToLoadSegmentsIntoPageCacheOnDownload,
+        DEFAULT_NUM_THREADS_TO_LOAD_INTO_PAGE_CACHE_ON_DOWNLOAD
+    );
+    this.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap = numThreadsToLoadSegmentsIntoPageCacheOnBootstrap;
+    this.infoDir = infoDir;
+    this.statusQueueMaxSize = Configs.valueOrDefault(statusQueueMaxSize, DEFAULT_STATUS_QUEUE_MAX_SIZE);
+    this.virtualStorage = Configs.valueOrDefault(virtualStorage, DEFAULT_VIRTUAL_STORAGE);
+    this.virtualStorageLoadThreads = Configs.valueOrDefault(
+        virtualStorageLoadThreads,
+        Math.max(32, 4 * resolvedRuntimeInfo.getAvailableProcessors())
+    );
+    this.virtualStorageUseVirtualThreads = Configs.valueOrDefault(
+        virtualStorageUseVirtualThreads,
+        DEFAULT_VIRTUAL_STORAGE_USE_VIRTUAL_THREADS
+    );
+    this.virtualStorageIsEphemeral = Configs.valueOrDefault(
+        virtualStorageIsEphemeral,
+        DEFAULT_VIRTUAL_STORAGE_IS_EPHEMERAL
+    );
+    this.virtualStorageMetadataReservationEstimate = Configs.valueOrDefault(
+        virtualStorageMetadataReservationEstimate,
+        DEFAULT_VIRTUAL_STORAGE_METADATA_RESERVATION_ESTIMATE
+    );
+    this.virtualStoragePartialDownloadsEnabled = Configs.valueOrDefault(
+        virtualStoragePartialDownloadsEnabled,
+        DEFAULT_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_ENABLED
+    );
+    this.virtualStorageCoalesceGapBytes = Configs.valueOrDefault(
+        virtualStorageCoalesceGapBytes,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES
+    );
+    this.virtualStorageMaxFetchRunBytes = Configs.valueOrDefault(
+        virtualStorageMaxFetchRunBytes,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
+    );
   }
 
   public List<StorageLocationConfig> getLocations()
@@ -212,6 +269,7 @@ public class SegmentLoaderConfig
            numThreadsToLoadSegmentsIntoPageCacheOnBootstrap;
   }
 
+  @Nullable
   public File getInfoDir()
   {
     return infoDir;
@@ -224,10 +282,7 @@ public class SegmentLoaderConfig
 
   public long getCombinedMaxSize()
   {
-    if (combinedMaxSize == 0) {
-      combinedMaxSize = getLocations().stream().mapToLong(StorageLocationConfig::getMaxSize).sum();
-    }
-    return combinedMaxSize;
+    return getLocations().stream().mapToLong(StorageLocationConfig::getMaxSize).sum();
   }
 
   public boolean isVirtualStorage()
@@ -270,53 +325,29 @@ public class SegmentLoaderConfig
     return virtualStorageMaxFetchRunBytes;
   }
 
-  public SegmentLoaderConfig setLocations(List<StorageLocationConfig> locations)
-  {
-    this.locations = Lists.newArrayList(locations);
-    return this;
-  }
-
-  public SegmentLoaderConfig setVirtualStoragePartialDownloadsEnabled(boolean enabled)
-  {
-    this.virtualStoragePartialDownloadsEnabled = enabled;
-    return this;
-  }
-
   /**
-   * Sets {@link #virtualStorage}.
+   * Returns a copy of this config configured as an ephemeral, on-demand virtual-storage cache:
+   * {@link #isVirtualStorage()} and {@link #isVirtualStorageEphemeral()} are set, and the settings that only apply to
+   * a classic on-disk historical cache are dropped. Virtual-storage tuning ({@link #getVirtualStorageLoadThreads()},
+   * {@link #isVirtualStorageUseVirtualThreads()}, {@link #getVirtualStorageMetadataReservationEstimate()}, the
+   * coalescing/fetch-run limits) is preserved, so a per-task cache derived from a node's {@code druid.segmentCache}
+   * config keeps operator tuning.
    */
-  public SegmentLoaderConfig setVirtualStorage(boolean virtualStorage)
+  public SegmentLoaderConfig toEphemeralVirtualStorage()
   {
-    this.virtualStorage = virtualStorage;
-    return this;
-  }
-
-  /**
-   * Returns a copy of this config with {@link #virtualStorage} set to {@code virtualStorage}. All other settings
-   * (notably {@link #getVirtualStorageLoadThreads()} and {@link #isVirtualStorageUseVirtualThreads()}) are preserved.
-   * Used to derive an always-virtual config for the shared ephemeral on-demand loading pool from a node config that
-   * may not itself run in virtual-storage mode.
-   */
-  public SegmentLoaderConfig withVirtualStorage(boolean virtualStorage)
-  {
-    final SegmentLoaderConfig copy = new SegmentLoaderConfig(this);
-    copy.virtualStorage = virtualStorage;
-    return copy;
-  }
-
-  /**
-   * Sets {@link #virtualStorageIsEphemeral}.
-   */
-  public SegmentLoaderConfig setVirtualStorageIsEphemeral(boolean virtualStorageFabricEphemeral)
-  {
-    this.virtualStorageIsEphemeral = virtualStorageFabricEphemeral;
-    return this;
+    return toBuilder()
+        .virtualStorage(true)
+        .virtualStorageIsEphemeral(true)
+        .lazyLoadOnStart(false)
+        .infoDir(null)
+        .numThreadsToLoadSegmentsIntoPageCacheOnDownload(0)
+        .numThreadsToLoadSegmentsIntoPageCacheOnBootstrap(null)
+        .deleteOnRemove(true)
+        .build();
   }
 
   /**
    * Convert a list of {@link StorageLocationConfig} objects to {@link StorageLocation} objects.
-   * <p>
-   * Note: {@link #getLocations} is called instead of variable access because some testcases overrides this method
    */
   public List<StorageLocation> toStorageLocations()
   {
@@ -336,6 +367,31 @@ public class SegmentLoaderConfig
                  return location;
                })
                .collect(Collectors.toList());
+  }
+
+  public Builder toBuilder()
+  {
+    return new Builder()
+        .runtimeInfo(runtimeInfo)
+        .locations(locations)
+        .lazyLoadOnStart(lazyLoadOnStart)
+        .deleteOnRemove(deleteOnRemove)
+        .dropSegmentDelayMillis(dropSegmentDelayMillis)
+        .announceIntervalMillis(announceIntervalMillis)
+        .numLoadingThreads(numLoadingThreads)
+        .numBootstrapThreads(numBootstrapThreads)
+        .numThreadsToLoadSegmentsIntoPageCacheOnDownload(numThreadsToLoadSegmentsIntoPageCacheOnDownload)
+        .numThreadsToLoadSegmentsIntoPageCacheOnBootstrap(numThreadsToLoadSegmentsIntoPageCacheOnBootstrap)
+        .infoDir(infoDir)
+        .statusQueueMaxSize(statusQueueMaxSize)
+        .virtualStorage(virtualStorage)
+        .virtualStorageLoadThreads(virtualStorageLoadThreads)
+        .virtualStorageUseVirtualThreads(virtualStorageUseVirtualThreads)
+        .virtualStorageIsEphemeral(virtualStorageIsEphemeral)
+        .virtualStorageMetadataReservationEstimate(virtualStorageMetadataReservationEstimate)
+        .virtualStoragePartialDownloadsEnabled(virtualStoragePartialDownloadsEnabled)
+        .virtualStorageCoalesceGapBytes(virtualStorageCoalesceGapBytes)
+        .virtualStorageMaxFetchRunBytes(virtualStorageMaxFetchRunBytes);
   }
 
   @Override
@@ -361,7 +417,212 @@ public class SegmentLoaderConfig
            ", virtualStoragePartialDownloadsEnabled=" + virtualStoragePartialDownloadsEnabled +
            ", virtualStorageCoalesceGapBytes=" + virtualStorageCoalesceGapBytes +
            ", virtualStorageMaxFetchRunBytes=" + virtualStorageMaxFetchRunBytes +
-           ", combinedMaxSize=" + combinedMaxSize +
            '}';
+  }
+
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
+  /**
+   * Builds a {@link SegmentLoaderConfig}. Any field left unset takes the same default the {@link JsonCreator}
+   * constructor applies. Obtain one via {@link SegmentLoaderConfig#builder()} (all defaults) or
+   * {@link SegmentLoaderConfig#toBuilder()} (a copy of an existing config).
+   */
+  public static class Builder
+  {
+    @Nullable
+    private RuntimeInfo runtimeInfo;
+    @Nullable
+    private List<StorageLocationConfig> locations;
+    @Nullable
+    private Boolean lazyLoadOnStart;
+    @Nullable
+    private Boolean deleteOnRemove;
+    @Nullable
+    private Integer dropSegmentDelayMillis;
+    @Nullable
+    private Integer announceIntervalMillis;
+    @Nullable
+    private Integer numLoadingThreads;
+    @Nullable
+    private Integer numBootstrapThreads;
+    @Nullable
+    private Integer numThreadsToLoadSegmentsIntoPageCacheOnDownload;
+    @Nullable
+    private Integer numThreadsToLoadSegmentsIntoPageCacheOnBootstrap;
+    @Nullable
+    private File infoDir;
+    @Nullable
+    private Integer statusQueueMaxSize;
+    @Nullable
+    private Boolean virtualStorage;
+    @Nullable
+    private Integer virtualStorageLoadThreads;
+    @Nullable
+    private Boolean virtualStorageUseVirtualThreads;
+    @Nullable
+    private Boolean virtualStorageIsEphemeral;
+    @Nullable
+    private Long virtualStorageMetadataReservationEstimate;
+    @Nullable
+    private Boolean virtualStoragePartialDownloadsEnabled;
+    @Nullable
+    private Long virtualStorageCoalesceGapBytes;
+    @Nullable
+    private Long virtualStorageMaxFetchRunBytes;
+
+    public Builder runtimeInfo(@Nullable RuntimeInfo runtimeInfo)
+    {
+      this.runtimeInfo = runtimeInfo;
+      return this;
+    }
+
+    public Builder locations(@Nullable List<StorageLocationConfig> locations)
+    {
+      this.locations = locations;
+      return this;
+    }
+
+    public Builder locations(StorageLocationConfig... locations)
+    {
+      this.locations = Arrays.asList(locations);
+      return this;
+    }
+
+    public Builder lazyLoadOnStart(boolean lazyLoadOnStart)
+    {
+      this.lazyLoadOnStart = lazyLoadOnStart;
+      return this;
+    }
+
+    public Builder deleteOnRemove(boolean deleteOnRemove)
+    {
+      this.deleteOnRemove = deleteOnRemove;
+      return this;
+    }
+
+    public Builder dropSegmentDelayMillis(int dropSegmentDelayMillis)
+    {
+      this.dropSegmentDelayMillis = dropSegmentDelayMillis;
+      return this;
+    }
+
+    public Builder announceIntervalMillis(int announceIntervalMillis)
+    {
+      this.announceIntervalMillis = announceIntervalMillis;
+      return this;
+    }
+
+    public Builder numLoadingThreads(int numLoadingThreads)
+    {
+      this.numLoadingThreads = numLoadingThreads;
+      return this;
+    }
+
+    public Builder numBootstrapThreads(@Nullable Integer numBootstrapThreads)
+    {
+      this.numBootstrapThreads = numBootstrapThreads;
+      return this;
+    }
+
+    public Builder numThreadsToLoadSegmentsIntoPageCacheOnDownload(int numThreads)
+    {
+      this.numThreadsToLoadSegmentsIntoPageCacheOnDownload = numThreads;
+      return this;
+    }
+
+    public Builder numThreadsToLoadSegmentsIntoPageCacheOnBootstrap(@Nullable Integer numThreads)
+    {
+      this.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap = numThreads;
+      return this;
+    }
+
+    public Builder infoDir(@Nullable File infoDir)
+    {
+      this.infoDir = infoDir;
+      return this;
+    }
+
+    public Builder statusQueueMaxSize(int statusQueueMaxSize)
+    {
+      this.statusQueueMaxSize = statusQueueMaxSize;
+      return this;
+    }
+
+    public Builder virtualStorage(boolean virtualStorage)
+    {
+      this.virtualStorage = virtualStorage;
+      return this;
+    }
+
+    public Builder virtualStorageLoadThreads(int virtualStorageLoadThreads)
+    {
+      this.virtualStorageLoadThreads = virtualStorageLoadThreads;
+      return this;
+    }
+
+    public Builder virtualStorageUseVirtualThreads(boolean virtualStorageUseVirtualThreads)
+    {
+      this.virtualStorageUseVirtualThreads = virtualStorageUseVirtualThreads;
+      return this;
+    }
+
+    public Builder virtualStorageIsEphemeral(boolean virtualStorageIsEphemeral)
+    {
+      this.virtualStorageIsEphemeral = virtualStorageIsEphemeral;
+      return this;
+    }
+
+    public Builder virtualStorageMetadataReservationEstimate(long virtualStorageMetadataReservationEstimate)
+    {
+      this.virtualStorageMetadataReservationEstimate = virtualStorageMetadataReservationEstimate;
+      return this;
+    }
+
+    public Builder virtualStoragePartialDownloadsEnabled(boolean virtualStoragePartialDownloadsEnabled)
+    {
+      this.virtualStoragePartialDownloadsEnabled = virtualStoragePartialDownloadsEnabled;
+      return this;
+    }
+
+    public Builder virtualStorageCoalesceGapBytes(long virtualStorageCoalesceGapBytes)
+    {
+      this.virtualStorageCoalesceGapBytes = virtualStorageCoalesceGapBytes;
+      return this;
+    }
+
+    public Builder virtualStorageMaxFetchRunBytes(long virtualStorageMaxFetchRunBytes)
+    {
+      this.virtualStorageMaxFetchRunBytes = virtualStorageMaxFetchRunBytes;
+      return this;
+    }
+
+    public SegmentLoaderConfig build()
+    {
+      return new SegmentLoaderConfig(
+          runtimeInfo,
+          locations,
+          lazyLoadOnStart,
+          deleteOnRemove,
+          dropSegmentDelayMillis,
+          announceIntervalMillis,
+          numLoadingThreads,
+          numBootstrapThreads,
+          numThreadsToLoadSegmentsIntoPageCacheOnDownload,
+          numThreadsToLoadSegmentsIntoPageCacheOnBootstrap,
+          infoDir,
+          statusQueueMaxSize,
+          virtualStorage,
+          virtualStorageLoadThreads,
+          virtualStorageUseVirtualThreads,
+          virtualStorageIsEphemeral,
+          virtualStorageMetadataReservationEstimate,
+          virtualStoragePartialDownloadsEnabled,
+          virtualStorageCoalesceGapBytes,
+          virtualStorageMaxFetchRunBytes
+      );
+    }
   }
 }
