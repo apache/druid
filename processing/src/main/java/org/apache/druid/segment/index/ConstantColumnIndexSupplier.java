@@ -88,7 +88,7 @@ public class ConstantColumnIndexSupplier implements ColumnIndexSupplier
     if (constant.value() == null) {
       this.value = null;
     } else {
-      // FLOAT has no ExpressionType of its own, so explcitly narrow it back down.
+      // FLOAT has no ExpressionType of its own, so explicitly narrow it back down.
       this.value = type.is(ValueType.FLOAT) ? (float) constant.asDouble() : constant.value();
     }
   }
