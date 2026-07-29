@@ -1896,7 +1896,7 @@ name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.8.0
+version: 5.9.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
@@ -1904,13 +1904,13 @@ libraries:
 notices:
   - curator-client: |
       Curator Client
-      Copyright 2011-2022 The Apache Software Foundation
+      Copyright 2011-2023 The Apache Software Foundation
   - curator-framework: |
       Curator Framework
-      Copyright 2011-2022 The Apache Software Foundation
+      Copyright 2011-2023 The Apache Software Foundation
   - curator-recipes: |
       Curator Recipes
-      Copyright 2011-2022 The Apache Software Foundation
+      Copyright 2011-2023 The Apache Software Foundation
 
 ---
 
