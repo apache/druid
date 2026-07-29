@@ -30,7 +30,7 @@ import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.Cos
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DOWN_DELAY;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_UP_DELAY;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_SCALE_ACTION_PERIOD;
-import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.WeightedCostFunction.CRITICAL_LAG_AMPLIFICATION_MULTIPLIER;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.WeightedCostFunction.DEFAULT_HIGH_LAG_COST_FACTOR;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO;
 
 @SuppressWarnings("TextBlockMigration")
@@ -59,7 +59,7 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"usePollIdleRatio\": false,\n"
                   + "  \"criticalLagThreshold\": 500000,\n"
                   + "  \"minCostDropPercentForScaling\": 10,\n"
-                  + "  \"criticalLagAmplificationMultiplier\": 8.0\n"
+                  + "  \"highLagCostFactor\": 8.0\n"
                   + "}";
 
     final CostBasedAutoScalerConfig config = mapper.readValue(json, CostBasedAutoScalerConfig.class);
@@ -81,7 +81,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertTrue(config.isUseTaskCountBoundariesOnScaleDown());
     Assert.assertEquals(Long.valueOf(500000), config.getCriticalLagThreshold());
     Assert.assertEquals(10, config.getMinCostDropPercentForScaling());
-    Assert.assertEquals(8.0, config.getCriticalLagAmplificationMultiplier(), 0.001);
+    Assert.assertEquals(8.0, config.getHighLagCostFactor(), 0.001);
 
     // Test serialization back to JSON
     final String serialized = mapper.writeValueAsString(config);
@@ -122,7 +122,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertNull(config.getStopTaskCountRatio());
     Assert.assertNull(config.getCriticalLagThreshold());
     Assert.assertEquals(0, config.getMinCostDropPercentForScaling());
-    Assert.assertEquals(CRITICAL_LAG_AMPLIFICATION_MULTIPLIER, config.getCriticalLagAmplificationMultiplier(), 0.001);
+    Assert.assertEquals(DEFAULT_HIGH_LAG_COST_FACTOR, config.getHighLagCostFactor(), 0.001);
   }
 
   @Test
@@ -233,7 +233,7 @@ public class CostBasedAutoScalerConfigTest
                                                                       .scaleDownDuringTaskRolloverOnly(true)
                                                                       .usePollIdleRatio(false)
                                                                       .criticalLagThreshold(500000L)
-                                                                      .criticalLagAmplificationMultiplier(8.0)
+                                                                      .highLagCostFactor(8.0)
                                                                       .build();
 
     Assert.assertTrue(config.getEnableTaskAutoScaler());
@@ -252,7 +252,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
     Assert.assertFalse(config.isUsePollIdleRatio());
     Assert.assertEquals(Long.valueOf(500000), config.getCriticalLagThreshold());
-    Assert.assertEquals(8.0, config.getCriticalLagAmplificationMultiplier(), 0.001);
+    Assert.assertEquals(8.0, config.getHighLagCostFactor(), 0.001);
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -261,7 +261,7 @@ public class CostBasedAutoScalerConfigTest
     CostBasedAutoScalerConfig.builder()
                              .taskCountMax(100)
                              .taskCountMin(5)
-                             .criticalLagAmplificationMultiplier(-1.0)
+                             .highLagCostFactor(-1.0)
                              .enableTaskAutoScaler(true)
                              .build();
   }

@@ -43,25 +43,24 @@ public class WeightedCostFunction
   static final double LAG_AMPLIFICATION_MULTIPLIER = 0.0;
 
   /**
-   * Amplification multiplier used once aggregate lag crosses {@link #CRITICAL_LAG_TIER1_FRACTION} of
-   * {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()} (tier 1 of the critical-lag fast path).
+   * Default cost factor used once aggregate lag crosses {@link #HIGH_LAG_THRESHOLD_FRACTION} of
+   * {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()}.
    */
-  static final double CRITICAL_LAG_AMPLIFICATION_MULTIPLIER = 6.0;
+  static final double DEFAULT_HIGH_LAG_COST_FACTOR = 6.0;
 
   /**
-   * Fraction of {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()} at which tier 1 of the
-   * critical-lag fast path engages: amplification maxes out at {@link #CRITICAL_LAG_AMPLIFICATION_MULTIPLIER}
+   * Fraction of {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()} at which the high-lag
+   * fast path engages: the cost factor maxes out at {@link #DEFAULT_HIGH_LAG_COST_FACTOR}
    * and the scale-up candidate boundary is bypassed.
    */
-  static final double CRITICAL_LAG_TIER1_FRACTION = 0.75;
+  static final double HIGH_LAG_THRESHOLD_FRACTION = 0.75;
 
   /**
-   * Fraction of {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()} at which tier 2 of the
-   * critical-lag fast path engages: the cost-minimization search is skipped entirely and the task
-   * count jumps straight to the maximum. Tier 2 engages once aggregate lag reaches the full
-   * critical threshold.
+   * Fraction of {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()} at which the critical-lag
+   * fast path engages: the cost-minimization search is skipped entirely and the task count jumps
+   * straight to the maximum.
    */
-  static final double CRITICAL_LAG_TIER2_FRACTION = 1.0;
+  static final double CRITICAL_LAG_THRESHOLD_FRACTION = 1.0;
 
   /**
    * Exponent (< 1) for sublinear busy redistribution in the idle projection:
@@ -127,20 +126,20 @@ public class WeightedCostFunction
     }
 
     // Lag recovery time is decreasing by adding tasks and increasing by ejecting tasks.
-    // Critical lag uses extra amplification; normal lag uses raw recovery time so capacity cost remains meaningful.
-    // Once aggregate lag crosses CRITICAL_LAG_TIER1_FRACTION of criticalLagThreshold, the multiplier is
-    // maxed out at CRITICAL_LAG_AMPLIFICATION_MULTIPLIER (vs unamplified normal recovery).
+    // High lag uses extra cost; normal lag uses raw recovery time so capacity cost remains meaningful.
+    // Once aggregate lag crosses HIGH_LAG_THRESHOLD_FRACTION of criticalLagThreshold, the cost factor is
+    // maxed out at the configured highLagCostFactor (vs unamplified normal recovery).
     final double lagRecoveryTime;
     if (metrics.getAggregateLag() <= 0) {
       lagRecoveryTime = 0;
     } else {
       final double lagPerPartition = metrics.getAggregateLag() / metrics.getPartitionCount();
       final Long criticalLagThreshold = config.getCriticalLagThreshold();
-      final boolean criticalLag = criticalLagThreshold != null
-          && metrics.getAggregateLag() >= criticalLagThreshold * CRITICAL_LAG_TIER1_FRACTION;
+      final boolean highLag = criticalLagThreshold != null
+          && metrics.getAggregateLag() >= criticalLagThreshold * HIGH_LAG_THRESHOLD_FRACTION;
 
-      final double amplificationMultiplier = criticalLag ? config.getCriticalLagAmplificationMultiplier() : LAG_AMPLIFICATION_MULTIPLIER;
-      final double amplification = Math.max(1.0, 1.0 + amplificationMultiplier * Math.log(lagPerPartition));
+      final double costFactor = highLag ? config.getHighLagCostFactor() : LAG_AMPLIFICATION_MULTIPLIER;
+      final double amplification = Math.max(1.0, 1.0 + costFactor * Math.log(lagPerPartition));
       final double adjustedProcessingRate = Math.max(avgProcessingRate, MIN_PROCESSING_RATE);
       lagRecoveryTime = metrics.getAggregateLag() * amplification / (proposedTaskCount * adjustedProcessingRate);
     }

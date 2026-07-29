@@ -344,7 +344,7 @@ public class WeightedCostFunctionTest
     int partitionCount = 10;
     double pollIdleRatio = 0.1;
 
-    // Normal lag uses raw recovery time; critical lag is tested separately below.
+    // Normal lag uses raw recovery time; high lag is tested separately below.
     CostMetrics metrics = createMetrics(150.0, currentTaskCount, partitionCount, pollIdleRatio);
 
     double costWithAmp = costFunction.computeCost(metrics, proposedTaskCount, lagOnly).totalCost();
@@ -356,7 +356,7 @@ public class WeightedCostFunctionTest
   }
 
   @Test
-  public void testCriticalLagThresholdMaxesOutAmplificationMultiplier()
+  public void testHighLagThresholdMaxesOutCostFactor()
   {
     int currentTaskCount = 10;
     int proposedTaskCount = 10;
@@ -367,7 +367,7 @@ public class WeightedCostFunctionTest
     CostMetrics metrics = createMetrics(avgPartitionLag, currentTaskCount, partitionCount, 0.1);
 
     // aggregateLag sits at exactly tier1Fraction (75%) of this threshold.
-    long tier1Threshold = (long) (aggregateLag / WeightedCostFunction.CRITICAL_LAG_TIER1_FRACTION);
+    long tier1Threshold = (long) (aggregateLag / WeightedCostFunction.HIGH_LAG_THRESHOLD_FRACTION);
 
     CostBasedAutoScalerConfig noThreshold = CostBasedAutoScalerConfig.builder()
                                                                       .taskCountMax(100)
@@ -402,20 +402,17 @@ public class WeightedCostFunctionTest
     );
 
     double lagPerPartition = aggregateLag / partitionCount;
-    double criticalAmplification =
-        1.0 + WeightedCostFunction.CRITICAL_LAG_AMPLIFICATION_MULTIPLIER * Math.log(lagPerPartition);
-    double expectedCriticalCost =
-        aggregateLag * criticalAmplification / (proposedTaskCount * WeightedCostFunction.MIN_PROCESSING_RATE);
-
+    double highLagCostFactor =
+        1.0 + WeightedCostFunction.DEFAULT_HIGH_LAG_COST_FACTOR * Math.log(lagPerPartition);
     double costAtTier1 = costFunction.computeCost(metrics, proposedTaskCount, atTier1).totalCost();
     Assert.assertEquals(
-        "At/above tier1, the amplification multiplier maxes out at CRITICAL_LAG_AMPLIFICATION_MULTIPLIER",
-        expectedCriticalCost,
+        "At/above the high-lag threshold, the cost factor maxes out at DEFAULT_HIGH_LAG_COST_FACTOR",
+        aggregateLag * highLagCostFactor / (proposedTaskCount * WeightedCostFunction.MIN_PROCESSING_RATE),
         costAtTier1,
         0.0001
     );
     Assert.assertTrue(
-        "Critical-lag cost should exceed the default-multiplier cost for the same lag",
+        "High-lag cost should exceed the default-multiplier cost for the same lag",
         costAtTier1 > costBelowTier1
     );
   }

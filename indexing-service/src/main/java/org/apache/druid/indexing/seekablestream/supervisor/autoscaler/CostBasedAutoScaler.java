@@ -214,23 +214,22 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     return config;
   }
 
+  private boolean isHighLag(CostMetrics metrics)
+  {
+    final Long criticalLagThreshold = config.getCriticalLagThreshold();
+    return metrics != null && criticalLagThreshold != null
+           && metrics.getAggregateLag() >= criticalLagThreshold * WeightedCostFunction.HIGH_LAG_THRESHOLD_FRACTION;
+  }
+
+  /**
+   * Whether the last collected metrics crossed {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()},
+   * meaning the argmin search should be skipped entirely in favor of jumping to the maximum task count.
+   */
   private boolean isCriticalLag(CostMetrics metrics)
   {
     final Long criticalLagThreshold = config.getCriticalLagThreshold();
     return metrics != null && criticalLagThreshold != null
-           && metrics.getAggregateLag() >= criticalLagThreshold * WeightedCostFunction.CRITICAL_LAG_TIER1_FRACTION;
-  }
-
-  /**
-   * Whether the last collected metrics crossed {@link WeightedCostFunction#CRITICAL_LAG_TIER2_FRACTION} of
-   * {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()}, meaning the argmin search should be
-   * skipped entirely in favor of jumping straight to the maximum task count.
-   */
-  private boolean isEmergencyLag(CostMetrics metrics)
-  {
-    final Long criticalLagThreshold = config.getCriticalLagThreshold();
-    return metrics != null && criticalLagThreshold != null
-           && metrics.getAggregateLag() >= criticalLagThreshold * WeightedCostFunction.CRITICAL_LAG_TIER2_FRACTION;
+           && metrics.getAggregateLag() >= criticalLagThreshold * WeightedCostFunction.CRITICAL_LAG_THRESHOLD_FRACTION;
   }
 
   /**
@@ -269,20 +268,20 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return currentTaskCount;
     }
 
+    final boolean highLag = isHighLag(metrics);
     final boolean criticalLag = isCriticalLag(metrics);
-    final boolean emergencyLag = isEmergencyLag(metrics);
-    if (emergencyLag) {
+    if (criticalLag) {
       log.info(
           "Supervisor[%s] aggregateLag[%.0f] crossed [%.0f%%] of criticalLagThreshold[%d]: skipping the argmin"
           + " search and jumping straight to the maximum task count.",
-          supervisorId, metrics.getAggregateLag(), WeightedCostFunction.CRITICAL_LAG_TIER2_FRACTION * 100,
+          supervisorId, metrics.getAggregateLag(), WeightedCostFunction.CRITICAL_LAG_THRESHOLD_FRACTION * 100,
           config.getCriticalLagThreshold()
       );
-    } else if (criticalLag) {
+    } else if (highLag) {
       log.info(
           "Supervisor[%s] aggregateLag[%.0f] crossed [%.0f%%] of criticalLagThreshold[%d]: widening scale-up"
-          + " candidates and maxing out the lag-amplification multiplier.",
-          supervisorId, metrics.getAggregateLag(), WeightedCostFunction.CRITICAL_LAG_TIER1_FRACTION * 100,
+          + " candidates and maxing out the high-lag cost factor.",
+          supervisorId, metrics.getAggregateLag(), WeightedCostFunction.HIGH_LAG_THRESHOLD_FRACTION * 100,
           config.getCriticalLagThreshold()
       );
     }
@@ -315,7 +314,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     int startIndex = 0;
     int endIndex = validTaskCounts.length - 1;
 
-    if (config.isUseTaskCountBoundariesOnScaleUp() && !criticalLag) {
+    if (config.isUseTaskCountBoundariesOnScaleUp() && !highLag) {
       int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
       endIndex = currentTaskCountIndex >= 0
                  ? Math.min(currentTaskCountIndex + BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK, endIndex)
@@ -329,8 +328,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
                    : startIndex;
     }
 
-    // Emergency (tier 2) lag skips the argmin search entirely: evaluate only the maximum valid task count.
-    if (emergencyLag) {
+    // Critical lag skips the argmin search entirely: evaluate only the maximum valid task count.
+    if (criticalLag) {
       startIndex = validTaskCounts.length - 1;
       endIndex = validTaskCounts.length - 1;
     }
@@ -341,7 +340,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       double cost = costResult.totalCost();
 
       costResults[i] = costResult;
-      if (emergencyLag || cost < optimalCost.totalCost()) {
+      if (criticalLag || cost < optimalCost.totalCost()) {
         optimalTaskCount = taskCount;
         optimalCost = costResult;
       }
@@ -374,7 +373,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       emitter.emit(getMetricBuilder().setMetric(OPTIMAL_LAG_COST_METRIC, optimalCost.lagCost()));
       emitter.emit(getMetricBuilder().setMetric(OPTIMAL_IDLE_COST_METRIC, optimalCost.idleCost()));
 
-      if (!emergencyLag) {
+      if (!criticalLag) {
         final double costDropPercent
             = 100.0 * (currentCost.totalCost() - optimalCost.totalCost()) / currentCost.totalCost();
         if (costDropPercent < config.getMinCostDropPercentForScaling()) {

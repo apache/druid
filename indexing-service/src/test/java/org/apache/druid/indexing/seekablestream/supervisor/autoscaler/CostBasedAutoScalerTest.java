@@ -241,11 +241,11 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
-  public void testCriticalLagThresholdBypassesScaleUpBoundary()
+  public void testHighLagThresholdBypassesScaleUpBoundary()
   {
     // aggregateLag = 100_000 * 100 = 10,000,000. With threshold=12,000,000: tier1=9,000,000 (crossed),
-    // tier2=11,400,000 (not crossed), so this exercises tier1 (boundary bypass) without triggering
-    // tier2's emergency jump-to-max.
+    // critical lag=11,400,000 (not crossed), so this exercises high lag (boundary bypass) without
+    // triggering the critical-lag jump-to-max.
     final CostBasedAutoScalerConfig boundedScaleUpConfig = CostBasedAutoScalerConfig
         .builder()
         .taskCountMax(100)
@@ -259,7 +259,7 @@ public class CostBasedAutoScalerTest
     final CostBasedAutoScaler scaler = createAutoScaler(boundedScaleUpConfig);
 
     Assert.assertEquals(
-        "Critical lag should bypass the scale-up boundary and jump straight to the argmin",
+        "High lag should bypass the scale-up boundary and jump straight to the argmin",
         100,
         scaler.computeOptimalTaskCount(createMetrics(100_000.0, 10, 100, 0.25))
     );
@@ -273,7 +273,7 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
-  public void testCriticalLagThresholdUsesExactAggregateLag()
+  public void testHighLagThresholdUsesExactAggregateLag()
   {
     final CostBasedAutoScalerConfig boundedScaleUpConfig = CostBasedAutoScalerConfig
         .builder()
@@ -288,14 +288,14 @@ public class CostBasedAutoScalerTest
     final CostBasedAutoScaler scaler = createAutoScaler(boundedScaleUpConfig);
 
     Assert.assertEquals(
-        "Exact aggregate lag should engage tier 1 even when integer average lag is zero",
+        "Exact aggregate lag should engage high lag even when integer average lag is zero",
         1_000,
         scaler.computeOptimalTaskCount(createMetrics(0.0, 999.0, 10, 1_000, 0.25))
     );
   }
 
   @Test
-  public void testEmergencyLagJumpsStraightToMaxTaskCount()
+  public void testCriticalLagJumpsStraightToMaxTaskCount()
   {
     // aggregateLag = 100_000 * 500 = 50,000,000. With threshold=10,000,000: tier2=10,000,000 is
     // comfortably crossed, so the argmin search is skipped entirely in favor of the maximum task count.
@@ -310,19 +310,19 @@ public class CostBasedAutoScalerTest
         .build();
     final CostBasedAutoScaler scaler = createAutoScaler(config);
 
-    // Idle-heavy weights would normally argue for scaling down, but emergency lag overrides that entirely.
+    // Idle-heavy weights would normally argue for scaling down, but critical lag overrides that entirely.
     Assert.assertEquals(
-        "Emergency lag should jump straight to the maximum task count regardless of idle-favoring weights",
+        "Critical lag should jump straight to the maximum task count regardless of idle-favoring weights",
         500,
         scaler.computeOptimalTaskCount(createMetrics(100_000.0, 10, 500, 0.9))
     );
   }
 
   @Test
-  public void testEmergencyLagJumpsToMaxEvenWhenMaxCostsMore()
+  public void testCriticalLagJumpsToMaxEvenWhenMaxCostsMore()
   {
     // lagWeight=0 means the max candidate's cost is driven entirely by idle cost, which is higher
-    // at 500 tasks than at the current 10 tasks. Emergency lag must still jump to the maximum
+    // at 500 tasks than at the current 10 tasks. Critical lag must still jump to the maximum
     // instead of leaving the current (cheaper-looking) task count in place.
     final CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig
         .builder()
@@ -336,14 +336,14 @@ public class CostBasedAutoScalerTest
     final CostBasedAutoScaler scaler = createAutoScaler(config);
 
     Assert.assertEquals(
-        "Emergency lag should jump to the maximum task count even if it costs more than the current count",
+        "Critical lag should jump to the maximum task count even if it costs more than the current count",
         500,
         scaler.computeOptimalTaskCount(createMetrics(100_000.0, 10, 500, 0.9))
     );
   }
 
   @Test
-  public void testEmergencyLagRequiresFullCriticalLagThreshold()
+  public void testCriticalLagRequiresFullThreshold()
   {
     final CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig
         .builder()
