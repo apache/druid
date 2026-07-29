@@ -53,6 +53,9 @@ public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<Coordi
 {
   private final CoordinatorClient coordinatorClient;
 
+  // volatile, not synchronized: getCurrentServersToIgnore() is called per-segment during query planning.
+  // Under high concurrency, synchronized causes monitor convoy with 100x throughput degradation.
+  // Each field is an immutable Set reference, so volatile provides sufficient visibility.
   private volatile Set<String> targetCloneServers = Set.of();
   private volatile Set<String> sourceCloneServers = Set.of();
 
@@ -132,6 +135,8 @@ public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<Coordi
 
   /**
    * Get the list of servers that should not be queried based on the cloneQueryMode parameter.
+   * Each branch reads only one volatile field, so readers may see targetCloneServers and sourceCloneServers
+   * from different setDynamicConfig() calls — this is acceptable since no CloneQueryMode needs both.
    */
   private Set<String> getCurrentServersToIgnore(CloneQueryMode cloneQueryMode)
   {
