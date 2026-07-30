@@ -286,6 +286,21 @@ public class JavaScriptAggregatorTest
     Assert.assertTrue(false);
   }
 
+  @Test
+  public void testCacheKeyUsesSha256Digest()
+  {
+    final JavaScriptAggregatorFactory factory = new JavaScriptAggregatorFactory(
+        "foo",
+        ImmutableList.of("foo"),
+        SCRIPT_DOUBLE_SUM.get("fnAggregate"),
+        SCRIPT_DOUBLE_SUM.get("fnReset"),
+        SCRIPT_DOUBLE_SUM.get("fnCombine"),
+        new JavaScriptConfig(false)
+    );
+
+    Assert.assertEquals(1 + StringUtils.toUtf8("foo").length + 32, factory.getCacheKey().length);
+  }
+
   public static void main(String... args)
   {
     final JavaScriptAggregatorBenchmark.LoopingDoubleColumnSelector selector = new JavaScriptAggregatorBenchmark.LoopingDoubleColumnSelector(
