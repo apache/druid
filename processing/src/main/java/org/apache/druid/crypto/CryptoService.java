@@ -207,24 +207,28 @@ public class CryptoService
    * so that short-lived pac4j session cookies remain readable during rolling upgrades. New ciphertext is never written
    * with this configurable transformation.
    */
-  @SuppressWarnings({"InsecureCryptoUsage", "java/potentially-weak-cryptographic-algorithm"})
+  @SuppressWarnings({
+      "InsecureCryptoUsage",
+      "codeql[java/potentially-weak-cryptographic-algorithm]"
+  })
   private byte[] decryptLegacy(final EncryptedData encryptedData) throws Exception
   {
     final SecretKey tmp = getKeyFromPassword(passPhrase, encryptedData.getSalt());
     final SecretKey secret = new SecretKeySpec(tmp.getEncoded(), legacyCipherAlgName);
     // This configurable transformation is used exclusively to read ciphertext written by earlier versions.
-    // codeql[java/potentially-weak-cryptographic-algorithm]
     final Cipher dcipher = Cipher.getInstance(legacyTransformation);
     dcipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(encryptedData.getIv()));
     return dcipher.doFinal(encryptedData.getCipher());
   }
 
-  @SuppressWarnings("InsecureCryptoUsage")
+  @SuppressWarnings({
+      "InsecureCryptoUsage",
+      "codeql[java/potentially-weak-cryptographic-algorithm]"
+  })
   private void validateLegacyCipherConfiguration()
   {
     try {
       // Preserve eager validation of the backward-compatible decryption configuration.
-      // codeql[java/potentially-weak-cryptographic-algorithm]
       Cipher.getInstance(legacyTransformation);
     }
     catch (GeneralSecurityException ex) {
