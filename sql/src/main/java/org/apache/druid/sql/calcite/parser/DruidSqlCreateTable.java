@@ -54,6 +54,7 @@ public class DruidSqlCreateTable extends SqlCreate
   private final SqlGranularityLiteral partitionedBy;
   @Nullable
   private final SqlNodeList clusteredBy;
+  private final boolean sealed;
 
   public DruidSqlCreateTable(
       SqlParserPos pos,
@@ -63,10 +64,12 @@ public class DruidSqlCreateTable extends SqlCreate
       SqlNodeList columnList,
       SqlNodeList projectionList,
       @Nullable SqlGranularityLiteral partitionedBy,
-      @Nullable SqlNodeList clusteredBy
+      @Nullable SqlNodeList clusteredBy,
+      boolean sealed
   )
   {
     super(OPERATOR, pos, replace, ifNotExists);
+    this.sealed = sealed;
     this.name = name;
     this.columnList = columnList;
     this.projectionList = projectionList;
@@ -113,6 +116,14 @@ public class DruidSqlCreateTable extends SqlCreate
     return ifNotExists;
   }
 
+  /**
+   * Whether the statement declared SEALED, which requires every ingested column to be declared.
+   */
+  public boolean isSealed()
+  {
+    return sealed;
+  }
+
   @Nonnull
   @Override
   public List<SqlNode> getOperandList()
@@ -125,7 +136,8 @@ public class DruidSqlCreateTable extends SqlCreate
         partitionedBy,
         clusteredBy,
         SqlLiteral.createBoolean(getReplace(), SqlParserPos.ZERO),
-        SqlLiteral.createBoolean(ifNotExists, SqlParserPos.ZERO)
+        SqlLiteral.createBoolean(ifNotExists, SqlParserPos.ZERO),
+        SqlLiteral.createBoolean(sealed, SqlParserPos.ZERO)
     );
   }
 
@@ -167,6 +179,10 @@ public class DruidSqlCreateTable extends SqlCreate
       }
       writer.endList(clusterFrame);
     }
+
+    if (sealed) {
+      writer.keyword("SEALED");
+    }
   }
 
   private static class DruidSqlCreateTableOperator extends SqlSpecialOperator
@@ -191,7 +207,8 @@ public class DruidSqlCreateTable extends SqlCreate
           (SqlNodeList) operands[1],
           (SqlNodeList) operands[2],
           (SqlGranularityLiteral) operands[3],
-          (SqlNodeList) operands[4]
+          (SqlNodeList) operands[4],
+          ((SqlLiteral) operands[7]).booleanValue()
       );
     }
   }

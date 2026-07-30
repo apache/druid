@@ -33,6 +33,7 @@ SqlCreate DruidSqlCreateTable(Span s, boolean replace) :
   Span elementSpan = null;
   SqlGranularityLiteral partitionedBy = null;
   SqlNodeList clusteredBy = null;
+  boolean sealed = false;
 }
 {
   <TABLE>
@@ -53,6 +54,9 @@ SqlCreate DruidSqlCreateTable(Span s, boolean replace) :
   [
     clusteredBy = ClusteredBy()
   ]
+  [
+    <SEALED> { sealed = true; }
+  ]
   {
     final SqlParserPos elementPos = elementSpan == null ? s.pos() : elementSpan.end(this);
     return new DruidSqlCreateTable(
@@ -63,7 +67,8 @@ SqlCreate DruidSqlCreateTable(Span s, boolean replace) :
         new SqlNodeList(columns, elementPos),
         new SqlNodeList(projections, elementPos),
         partitionedBy,
-        clusteredBy
+        clusteredBy,
+        sealed
     );
   }
 }
@@ -102,6 +107,7 @@ SqlProjectionSpec DruidProjectionDefinition() :
   SqlLiteral keyword = null;
   final SqlNode where;
   final SqlNodeList groupBy;
+  SqlNodeList clusteredBy = null;
 }
 {
   <PROJECTION> { s = span(); }
@@ -117,11 +123,14 @@ SqlProjectionSpec DruidProjectionDefinition() :
   )*
   ( where = Where() | { where = null; } )
   ( groupBy = GroupBy() | { groupBy = null; } )
+  // Only meaningful for the reserved __base projection, where it names the columns segments are clustered on.
+  [ clusteredBy = ClusteredBy() ]
   <RPAREN>
   {
     return new SqlProjectionSpec(
         s.end(this),
         name,
+        clusteredBy,
         new SqlSelect(
             bodySpan.end(this),
             keywordList,

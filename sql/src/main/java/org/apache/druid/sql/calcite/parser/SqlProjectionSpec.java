@@ -24,6 +24,7 @@ import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSpecialOperator;
@@ -32,6 +33,7 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.ImmutableNullableList;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -47,13 +49,31 @@ public class SqlProjectionSpec extends SqlCall
   public static final SqlOperator OPERATOR = new SqlProjectionSpecOperator();
 
   private final SqlIdentifier name;
+  @Nullable
+  private final SqlNodeList clusteredBy;
   private final SqlSelect body;
 
-  public SqlProjectionSpec(SqlParserPos pos, SqlIdentifier name, SqlSelect body)
+  public SqlProjectionSpec(
+      SqlParserPos pos,
+      SqlIdentifier name,
+      @Nullable SqlNodeList clusteredBy,
+      SqlSelect body
+  )
   {
     super(pos);
     this.name = name;
+    this.clusteredBy = clusteredBy;
     this.body = body;
+  }
+
+  /**
+   * The columns segments are clustered on, meaningful only for the reserved base-table projection: an aggregate
+   * projection is ordered by its grouping columns and has nothing to choose.
+   */
+  @Nullable
+  public SqlNodeList getClusteredBy()
+  {
+    return clusteredBy;
   }
 
   public SqlIdentifier getName()
@@ -77,7 +97,7 @@ public class SqlProjectionSpec extends SqlCall
   @Override
   public List<SqlNode> getOperandList()
   {
-    return ImmutableNullableList.of(name, body);
+    return ImmutableNullableList.of(name, clusteredBy, body);
   }
 
   @Override
@@ -88,6 +108,15 @@ public class SqlProjectionSpec extends SqlCall
     writer.keyword("AS");
     final SqlWriter.Frame frame = writer.startList("(", ")");
     body.unparse(writer, 0, 0);
+    if (clusteredBy != null) {
+      writer.keyword("CLUSTERED BY");
+      final SqlWriter.Frame clusterFrame = writer.startList("", "");
+      for (SqlNode column : clusteredBy) {
+        writer.sep(",");
+        column.unparse(writer, 0, 0);
+      }
+      writer.endList(clusterFrame);
+    }
     writer.endList(frame);
   }
 
@@ -101,7 +130,12 @@ public class SqlProjectionSpec extends SqlCall
     @Override
     public SqlCall createCall(SqlLiteral functionQualifier, SqlParserPos pos, SqlNode... operands)
     {
-      return new SqlProjectionSpec(pos, (SqlIdentifier) operands[0], (SqlSelect) operands[1]);
+      return new SqlProjectionSpec(
+          pos,
+          (SqlIdentifier) operands[0],
+          (SqlNodeList) operands[1],
+          (SqlSelect) operands[2]
+      );
     }
   }
 }

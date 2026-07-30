@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
@@ -515,14 +516,18 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     assertTrue(e.getMessage().contains("does not aggregate"), e.getMessage());
   }
 
+  /**
+   * {@code __base} names the table's own layout and is handled separately; every other name beginning with the
+   * reserved prefix stays unavailable.
+   */
   @Test
-  public void testProjectionRejectsReservedBaseName()
+  public void testProjectionRejectsOtherReservedNames()
   {
     final DruidException e = assertThrows(
         DruidException.class,
-        () -> execute("CREATE TABLE tbl (a VARCHAR, PROJECTION __base AS (SELECT a GROUP BY a))")
+        () -> execute("CREATE TABLE tbl (a VARCHAR, PROJECTION __other AS (SELECT a GROUP BY a))")
     );
-    assertTrue(e.getMessage().contains("base table layout"), e.getMessage());
+    assertTrue(e.getMessage().contains("reserved name"), e.getMessage());
   }
 
   @Test
@@ -548,6 +553,212 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
   {
     return queryFramework().queryJsonMapper()
                            .writeValueAsString(WRITER.calls.get(0).spec.properties().get("projections"));
+  }
+
+  /**
+   * The reserved {@code __base} projection describes the table's own layout, so it becomes the baseTable property
+   * rather than one of the projections. A computed column becomes a virtual column materializing the declared column
+   * it fills.
+   */
+  @Test
+  public void testCreateTableWithBaseProjection() throws Exception
+  {
+    execute(
+        "CREATE TABLE tbl ("
+        + " tenant VARCHAR,"
+        + " bucket BIGINT,"
+        + " __time TIMESTAMP,"
+        + " user_id BIGINT,"
+        + " PROJECTION __base AS ("
+        + "   SELECT tenant, ABS(user_id) AS bucket, __time, user_id"
+        + "   CLUSTERED BY tenant, bucket"
+        + " )"
+        + ") PARTITIONED BY DAY SEALED"
+    );
+
+    final TableSpec spec = WRITER.calls.get(0).spec;
+    assertEquals(true, spec.properties().get(DatasourceDefn.SEALED_PROPERTY));
+    assertNull(spec.properties().get(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY));
+    assertEquals(
+        "{\"clusteringColumns\":[\"tenant\",\"bucket\"],"
+        + "\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"bucket\","
+        + "\"expression\":\"abs(\\\"user_id\\\")\",\"outputType\":\"LONG\"}],"
+        + "\"type\":\"clusteredValueGroups\"}",
+        queryFramework().queryJsonMapper()
+                        .writeValueAsString(spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY))
+    );
+  }
+
+  @Test
+  public void testBaseProjectionWithoutComputedColumns()
+  {
+    execute(
+        "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
+        + " PROJECTION __base AS (SELECT tenant, __time, v CLUSTERED BY tenant)) SEALED"
+    );
+    final ClusteredValueGroupsBaseTableMetadata baseTable = baseTable();
+    assertEquals(List.of("tenant"), baseTable.getClusteringColumns());
+    assertEquals(0, baseTable.getVirtualColumns().getVirtualColumns().length);
+  }
+
+  /**
+   * A base table and aggregate projections are different catalog entities and may coexist.
+   */
+  @Test
+  public void testBaseProjectionAlongsideAggregateProjection()
+  {
+    execute(
+        "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
+        + " PROJECTION __base AS (SELECT tenant, __time, v CLUSTERED BY tenant),"
+        + " PROJECTION by_tenant AS (SELECT tenant, SUM(v) AS sum_v GROUP BY tenant)) SEALED"
+    );
+    final TableSpec spec = WRITER.calls.get(0).spec;
+    assertNotNull(spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY));
+    assertEquals(1, ((List<?>) spec.properties().get(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY)).size());
+  }
+
+  @Test
+  public void testBaseProjectionRequiresSealed()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP,"
+            + " PROJECTION __base AS (SELECT tenant, __time CLUSTERED BY tenant))"
+        )
+    );
+    assertTrue(e.getMessage().contains("must be declared SEALED"), e.getMessage());
+  }
+
+  /**
+   * The body lists the columns in the order segments store them, so it must match the declaration exactly.
+   */
+  @Test
+  public void testBaseProjectionColumnOrderMustMatch()
+  {
+    final DruidException wrongOrder = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
+            + " PROJECTION __base AS (SELECT __time, tenant, v CLUSTERED BY tenant)) SEALED"
+        )
+    );
+    assertTrue(wrongOrder.getMessage().contains("the table declares"), wrongOrder.getMessage());
+
+    final DruidException missing = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
+            + " PROJECTION __base AS (SELECT tenant, __time CLUSTERED BY tenant)) SEALED"
+        )
+    );
+    assertTrue(missing.getMessage().contains("must name every declared column"), missing.getMessage());
+  }
+
+  /**
+   * Clustering columns must lead the declared column list, since the declared order is the physical order. The
+   * catalog enforces this on write; catching it here names the statement that caused it.
+   */
+  @Test
+  public void testBaseProjectionClusteringMustBeLeadingPrefix()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
+            + " PROJECTION __base AS (SELECT tenant, __time, v CLUSTERED BY v)) SEALED"
+        )
+    );
+    assertTrue(e.getMessage().contains("__base"), e.getMessage());
+  }
+
+  @Test
+  public void testBaseProjectionRejectsFilterOrGrouping()
+  {
+    for (String body : new String[]{
+        "SELECT tenant, __time WHERE tenant <> 'x'",
+        "SELECT tenant, __time GROUP BY tenant, __time"
+    }) {
+      final DruidException e = assertThrows(
+          DruidException.class,
+          () -> execute(
+              "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, PROJECTION __base AS (" + body + ")) SEALED"
+          ),
+          body
+      );
+      assertTrue(e.getMessage().contains("filters or groups"), e.getMessage());
+    }
+  }
+
+  /**
+   * Only the base projection chooses a clustering; an aggregate projection is ordered by its grouping columns.
+   */
+  @Test
+  public void testAggregateProjectionRejectsClusteredBy()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (a VARCHAR, b BIGINT,"
+            + " PROJECTION p AS (SELECT a, SUM(b) AS s GROUP BY a CLUSTERED BY a))"
+        )
+    );
+    assertTrue(e.getMessage().contains("cannot use CLUSTERED BY"), e.getMessage());
+  }
+
+  @Test
+  public void testAlterTableAddBaseProjection()
+  {
+    WRITER.existing.put(
+        TableId.datasource("tbl"),
+        TableMetadata.newTable(
+            TableId.datasource("tbl"),
+            new TableSpec(
+                DatasourceDefn.TABLE_TYPE,
+                ImmutableMap.of(DatasourceDefn.SEALED_PROPERTY, true),
+                List.of(
+                    new ColumnSpec("tenant", "VARCHAR", null),
+                    new ColumnSpec("__time", "TIMESTAMP", null)
+                )
+            )
+        )
+    );
+    execute("ALTER TABLE tbl ADD PROJECTION __base AS (SELECT tenant, __time CLUSTERED BY tenant)");
+
+    final RecordingCatalogTableWriter.Call call = WRITER.lastCall("updateProperties");
+    assertNotNull(call.properties.get(DatasourceDefn.BASE_TABLE_PROPERTY));
+  }
+
+  @Test
+  public void testAlterTableDropBaseProjection()
+  {
+    WRITER.existing.put(
+        TableId.datasource("tbl"),
+        TableMetadata.newTable(
+            TableId.datasource("tbl"),
+            new TableSpec(
+                DatasourceDefn.TABLE_TYPE,
+                ImmutableMap.of(DatasourceDefn.BASE_TABLE_PROPERTY, ImmutableMap.of("type", "clusteredValueGroups")),
+                List.of(new ColumnSpec("tenant", "VARCHAR", null))
+            )
+        )
+    );
+    execute("ALTER TABLE tbl DROP PROJECTION __base");
+
+    final RecordingCatalogTableWriter.Call call = WRITER.lastCall("updateProperties");
+    assertTrue(call.properties.containsKey(DatasourceDefn.BASE_TABLE_PROPERTY));
+    assertNull(call.properties.get(DatasourceDefn.BASE_TABLE_PROPERTY));
+
+    // Dropping one that is not there is an error unless tolerated.
+    WRITER.reset();
+    assertThrows(DruidException.class, () -> execute("ALTER TABLE tbl DROP PROJECTION __base"));
+    execute("ALTER TABLE tbl DROP PROJECTION IF EXISTS __base");
+  }
+
+  private ClusteredValueGroupsBaseTableMetadata baseTable()
+  {
+    return (ClusteredValueGroupsBaseTableMetadata)
+        WRITER.calls.get(0).spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY);
   }
 
   private void execute(String sql)

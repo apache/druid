@@ -31,6 +31,7 @@ import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
@@ -244,22 +245,54 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
   )
   {
     final String name = simpleName(projection.getName(), "Projection");
-    if (BASE_PROJECTION_NAME.equals(name)) {
-      throw InvalidSqlInput.exception(
-          "Projection [%s] names the base table layout, which is not supported yet",
-          BASE_PROJECTION_NAME
-      );
-    }
     try {
       Projections.validateProjectionName(name);
     }
     catch (DruidException e) {
       throw InvalidSqlInput.exception(e, "%s", e.getMessage());
     }
+    if (projection.getClusteredBy() != null) {
+      throw InvalidSqlInput.exception(
+          "Projection [%s] cannot use CLUSTERED BY: an aggregate projection is ordered by its grouping columns."
+          + " Only the [%s] projection, which describes the table's own layout, chooses a clustering",
+          name,
+          BASE_PROJECTION_NAME
+      );
+    }
     return new DatasourceProjectionMetadata(
         new ProjectionSpecTranslator(handlerContext.plannerFactory())
             .translate(tableName, columns, name, projection.getBody())
     );
+  }
+
+  /**
+   * Translate the reserved {@code __base} projection, which describes the physical layout of the table rather than an
+   * additional aggregate, and so becomes the {@code baseTable} property instead of one of the projections.
+   */
+  protected static ClusteredValueGroupsBaseTableMetadata translateBaseTable(
+      final SqlStatementHandler.HandlerContext handlerContext,
+      final String tableName,
+      final List<ColumnSpec> columns,
+      final SqlProjectionSpec projection
+  )
+  {
+    return new ProjectionSpecTranslator(handlerContext.plannerFactory())
+        .translateBaseTable(tableName, columns, projection.getBody(), projection.getClusteredBy());
+  }
+
+  /**
+   * A base table layout derives the physical segment schema from the declared columns, so a column that is not
+   * declared cannot be stored. The catalog enforces this too, but saying it here names the clause that is missing.
+   */
+  protected static void requireSealed(boolean sealed)
+  {
+    if (!sealed) {
+      throw InvalidSqlInput.exception(
+          "A table with a [%s] projection must be declared SEALED: its columns define the physical segment schema,"
+          + " so columns that are not declared cannot be ingested",
+          BASE_PROJECTION_NAME
+      );
+    }
   }
 
   protected static String simpleName(SqlIdentifier identifier, String what)
@@ -355,6 +388,9 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
       if (createTable.getClusteredBy() != null) {
         properties.put(DatasourceDefn.CLUSTER_KEYS_PROPERTY, toClusterKeys(createTable.getClusteredBy()));
       }
+      if (createTable.isSealed()) {
+        properties.put(DatasourceDefn.SEALED_PROPERTY, true);
+      }
       if (!createTable.getProjectionList().isEmpty()) {
         final List<DatasourceProjectionMetadata> projections =
             new ArrayList<>(createTable.getProjectionList().size());
@@ -365,9 +401,19 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
           if (!seenProjections.add(name)) {
             throw InvalidSqlInput.exception("Projection [%s] is declared more than once", name);
           }
-          projections.add(translateProjection(handlerContext, tableId.name(), columns, projection));
+          if (BASE_PROJECTION_NAME.equals(name)) {
+            requireSealed(createTable.isSealed());
+            properties.put(
+                DatasourceDefn.BASE_TABLE_PROPERTY,
+                translateBaseTable(handlerContext, tableId.name(), columns, projection)
+            );
+          } else {
+            projections.add(translateProjection(handlerContext, tableId.name(), columns, projection));
+          }
         }
-        properties.put(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY, projections);
+        if (!projections.isEmpty()) {
+          properties.put(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY, projections);
+        }
       }
 
       tableSpec = new TableSpec(DatasourceDefn.TABLE_TYPE, properties, columns);
@@ -538,6 +584,30 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
       }
       final List<ColumnSpec> columns =
           existing.spec().columns() == null ? Collections.emptyList() : existing.spec().columns();
+
+      if (BASE_PROJECTION_NAME.equals(projectionName)) {
+        // The base table is a property of the table, not one of its projections, so it is set rather than appended.
+        if (existing.spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY) != null) {
+          if (alterTable.isIfNotExists()) {
+            return;
+          }
+          throw InvalidSqlInput.exception(
+              "Table [%s] already has a [%s] projection; drop it before defining another",
+              tableId.name(),
+              BASE_PROJECTION_NAME
+          );
+        }
+        requireSealed(Boolean.TRUE.equals(existing.spec().properties().get(DatasourceDefn.SEALED_PROPERTY)));
+        writer.updateProperties(
+            tableId,
+            Collections.singletonMap(
+                DatasourceDefn.BASE_TABLE_PROPERTY,
+                translateBaseTable(handlerContext, tableId.name(), columns, alterTable.getProjection())
+            )
+        );
+        return;
+      }
+
       writer.addProjection(
           tableId,
           translateProjection(handlerContext, tableId.name(), columns, alterTable.getProjection()),
@@ -579,6 +649,27 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
     @Override
     protected void execute(CatalogTableWriter writer)
     {
+      if (BASE_PROJECTION_NAME.equals(projectionName)) {
+        // Removing the layout leaves the declared columns alone; only future segments are affected.
+        final TableMetadata existing = writer.readTable(tableId);
+        final boolean present = existing != null
+                                && existing.spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY) != null;
+        if (!present) {
+          if (alterTable.isIfExists()) {
+            return;
+          }
+          throw InvalidSqlInput.exception(
+              "Table [%s] does not have a [%s] projection",
+              tableId.name(),
+              BASE_PROJECTION_NAME
+          );
+        }
+        writer.updateProperties(
+            tableId,
+            Collections.singletonMap(DatasourceDefn.BASE_TABLE_PROPERTY, null)
+        );
+        return;
+      }
       writer.dropProjection(tableId, projectionName, alterTable.isIfExists());
     }
 

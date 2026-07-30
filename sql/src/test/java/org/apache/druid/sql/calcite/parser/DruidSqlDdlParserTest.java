@@ -311,6 +311,58 @@ public class DruidSqlDdlParserTest
     }
   }
 
+  @Test
+  public void testCreateTableWithBaseProjectionAndSealed()
+  {
+    final DruidSqlCreateTable create = parseCreate(
+        "CREATE TABLE t (\n"
+        + "  tenant VARCHAR,\n"
+        + "  bucket BIGINT,\n"
+        + "  __time TIMESTAMP,\n"
+        + "  PROJECTION __base AS (\n"
+        + "    SELECT tenant, ABS(user_id) AS bucket, __time\n"
+        + "    CLUSTERED BY tenant, bucket\n"
+        + "  )\n"
+        + ") PARTITIONED BY DAY SEALED"
+    );
+
+    assertTrue(create.isSealed());
+    assertEquals(1, create.getProjectionList().size());
+
+    final SqlProjectionSpec base = (SqlProjectionSpec) create.getProjectionList().get(0);
+    assertEquals("__base", base.getName().toString());
+    assertEquals("`tenant`, `bucket`", base.getClusteredBy().toString());
+    assertNull(base.getBody().getGroup());
+  }
+
+  @Test
+  public void testSealedWithoutProjection()
+  {
+    assertTrue(parseCreate("CREATE TABLE t (a VARCHAR) SEALED").isSealed());
+    assertFalse(parseCreate("CREATE TABLE t (a VARCHAR)").isSealed());
+  }
+
+  /**
+   * SEALED is a non-reserved keyword, so it remains usable as an identifier.
+   */
+  @Test
+  public void testSealedUsableAsIdentifier()
+  {
+    assertEquals("sealed VARCHAR", columnsOf(parseCreate("CREATE TABLE t (sealed VARCHAR)")));
+    assertTrue(parseCreate("CREATE TABLE sealed (a VARCHAR) SEALED").isSealed());
+  }
+
+  @Test
+  public void testAlterTableAddBaseProjection()
+  {
+    final DruidSqlAlterTable.AddProjection alter = parseAlter(
+        "ALTER TABLE t ADD PROJECTION __base AS (SELECT a, __time CLUSTERED BY a)",
+        DruidSqlAlterTable.AddProjection.class
+    );
+    assertEquals("__base", alter.getProjection().getName().toString());
+    assertEquals("`a`", alter.getProjection().getClusteredBy().toString());
+  }
+
   /**
    * DDL nodes must round-trip through {@link SqlNode#unparse}, which is what makes them safe to log and re-print.
    */
@@ -327,6 +379,7 @@ public class DruidSqlDdlParserTest
     assertUnparseRoundTrips("ALTER TABLE \"tbl\" DROP COLUMN \"a\"");
     assertUnparseRoundTrips("ALTER TABLE \"tbl\" ALTER COLUMN \"a\" SET DATA TYPE BIGINT");
     assertUnparseRoundTrips("ALTER TABLE \"tbl\" SET PROPERTIES (\"sealed\" = TRUE)");
+    assertUnparseRoundTrips("CREATE TABLE \"tbl\" (\"a\" VARCHAR) SEALED");
   }
 
   @Test

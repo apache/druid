@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -338,6 +339,115 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
         client.readTable(TableId.datasource(tableName))
               .spec().properties().get(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY),
         new TypeReference<List<DatasourceProjectionMetadata>>() {}
+    );
+  }
+
+  /**
+   * A clustered table defined entirely in SQL. The declared column order is the physical segment order, so rows come
+   * back grouped by the clustering column, and a computed column is materialized at ingest time from the expression
+   * the __base projection gives it.
+   */
+  @Test
+  public void testCreateClusteredBaseTableThenIngestAndQuery()
+  {
+    final String tableName = dataSource;
+
+    cluster.callApi().runSql(
+        "CREATE TABLE \"%s\" (\n"
+        + "  varchar_col2 VARCHAR,\n"
+        + "  __time TIMESTAMP,\n"
+        + "  varchar_col1 VARCHAR,\n"
+        + "  bigint_col1 BIGINT,\n"
+        + "  doubled BIGINT,\n"
+        + "  PROJECTION __base AS (\n"
+        + "    SELECT varchar_col2, __time, varchar_col1, bigint_col1, bigint_col1 * 2 AS doubled\n"
+        + "    CLUSTERED BY varchar_col2\n"
+        + "  )\n"
+        + ")\n"
+        + "PARTITIONED BY DAY SEALED",
+        tableName
+    );
+
+    final TableMetadata table = client.readTable(TableId.datasource(tableName));
+    assertEquals(true, table.spec().properties().get(DatasourceDefn.SEALED_PROPERTY));
+    assertNotNull(table.spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY));
+
+    // 'doubled' is computed by the base table, so the INSERT supplies only its input column.
+    ingest(
+        "INSERT INTO \"%s\"\n"
+        + "SELECT TIME_PARSE(a) AS __time, b AS varchar_col1, c AS bigint_col1, f AS varchar_col2\n"
+        + "FROM TABLE(\n"
+        + "  EXTERN(\n"
+        + "    '{\"type\":\"inline\",\"data\":\"2022-12-26T12:34:56,extra,10,foo"
+        + "\\n2022-12-26T12:34:56,extra,9,foo\\n2022-12-26T12:34:56,extra,8,foq"
+        + "\\n2022-12-26T12:34:56,extra,8,fop\"}',\n"
+        + "    '{\"type\":\"csv\",\"findColumnsFromHeader\":false,\"columns\":[\"a\",\"b\",\"c\",\"f\"]}'\n"
+        + "  )\n"
+        + ") EXTEND (a VARCHAR, b VARCHAR, c BIGINT, f VARCHAR)\n",
+        tableName
+    );
+
+    // Columns come back in declared order, rows in clustering-value order, and 'doubled' was materialized at ingest.
+    cluster.callApi().verifySqlQuery(
+        "SELECT * FROM %s",
+        tableName,
+        "foo,2022-12-26T12:34:56.000Z,extra,9,18\n"
+        + "foo,2022-12-26T12:34:56.000Z,extra,10,20\n"
+        + "fop,2022-12-26T12:34:56.000Z,extra,8,16\n"
+        + "foq,2022-12-26T12:34:56.000Z,extra,8,16"
+    );
+  }
+
+  /**
+   * A column the base table computes cannot be written directly: the catalog rejects the INSERT and says to supply
+   * the expression's inputs instead.
+   */
+  @Test
+  public void testInsertIntoComputedColumnIsRejected()
+  {
+    final String tableName = dataSource;
+
+    cluster.callApi().runSql(
+        "CREATE TABLE \"%s\" (t VARCHAR, __time TIMESTAMP, v BIGINT, doubled BIGINT,"
+        + " PROJECTION __base AS (SELECT t, __time, v, v * 2 AS doubled CLUSTERED BY t))"
+        + " PARTITIONED BY DAY SEALED",
+        tableName
+    );
+
+    verifySubmitSqlTaskFailsWith400BadRequest(
+        StringUtils.format(
+            "INSERT INTO \"%s\" SELECT TIME_PARSE(a) AS __time, b AS t, 1 AS v, 2 AS doubled"
+            + " FROM TABLE(EXTERN('{\"type\":\"inline\",\"data\":\"2022-12-26T12:34:56,x\"}',"
+            + " '{\"type\":\"csv\",\"findColumnsFromHeader\":false,\"columns\":[\"a\",\"b\"]}'))"
+            + " EXTEND (a VARCHAR, b VARCHAR) PARTITIONED BY DAY",
+            tableName
+        ),
+        "computed by a virtual column"
+    );
+  }
+
+  @Test
+  public void testAlterTableAddAndDropBaseProjection()
+  {
+    final String tableName = dataSource;
+
+    cluster.callApi().runSql(
+        "CREATE TABLE \"%s\" (t VARCHAR, __time TIMESTAMP, v BIGINT) PARTITIONED BY DAY SEALED",
+        tableName
+    );
+    cluster.callApi().runSql(
+        "ALTER TABLE \"%s\" ADD PROJECTION __base AS (SELECT t, __time, v CLUSTERED BY t)",
+        tableName
+    );
+    assertNotNull(
+        client.readTable(TableId.datasource(tableName))
+              .spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
+    );
+
+    cluster.callApi().runSql("ALTER TABLE \"%s\" DROP PROJECTION __base", tableName);
+    assertNull(
+        client.readTable(TableId.datasource(tableName))
+              .spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
     );
   }
 

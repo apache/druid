@@ -83,6 +83,7 @@ data: {
       "IF"
       "PROPERTIES"
       "PROJECTION"
+      "SEALED"
     ]
 
     nonReservedKeywordsToAdd: [
@@ -91,6 +92,7 @@ data: {
       "IF"
       "PROPERTIES"
       "PROJECTION"
+      "SEALED"
     ]
 
     # List of methods for parsing custom SQL statements.

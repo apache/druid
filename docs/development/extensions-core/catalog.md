@@ -66,11 +66,16 @@ CREATE [OR REPLACE] TABLE [IF NOT EXISTS] <table>
   [ ( { <column> <type> | PROJECTION <name> AS ( <select> ) } [, ...] ) ]
   [ PARTITIONED BY <granularity> ]
   [ CLUSTERED BY <column> [, ...] ]
+  [ SEALED ]
 ```
 
 `OR REPLACE` replaces the specification of an existing table; `IF NOT EXISTS` leaves an existing table unchanged.
 The two cannot be combined. `PARTITIONED BY` sets [`segmentGranularity`](#table-properties) and `CLUSTERED BY` sets
-`clusterKeys`, both of which a later `INSERT` or `REPLACE` inherits unless it states its own.
+`clusterKeys`, both of which a later `INSERT` or `REPLACE` inherits unless it states its own. `SEALED` sets
+[`sealed`](#table-properties), which requires every ingested column to be declared.
+
+Note that the table-level `CLUSTERED BY` is a sort order applied to each ingestion, which is a different thing from
+the `CLUSTERED BY` inside a [`__base` projection](#the-base-table), which defines how segments physically group rows.
 
 Column types are written as SQL types, such as `VARCHAR`, `BIGINT`, `DOUBLE`, or `VARCHAR ARRAY`. The `__time` column
 is written as `TIMESTAMP`. Types that have no SQL spelling, such as complex types, use `TYPE('...')` with the Druid
@@ -139,7 +144,46 @@ ALTER TABLE "druid"."visits" DROP PROJECTION [IF EXISTS] by_agent
 Both take effect for subsequent ingestion. Segments already built keep whatever projections they were built with, so
 dropping a projection does not rewrite data.
 
-The name `__base` is reserved for the projection describing the table's own physical layout, and is not accepted yet.
+#### The base table
+
+The reserved projection name `__base` describes the table's own physical layout rather than an additional
+pre-aggregation. Defining it makes the table a 'clustered' table: rows of segments are stored grouped by the clustering
+columns.
+
+Its body lists the columns in the order segments store them, so it must name every declared column, in declared
+order. An item written as `<expr> AS <name>` makes that column computed at ingest time, from the columns it reads:
+
+```sql
+CREATE TABLE "druid"."events" (
+  tenant VARCHAR,
+  bucket BIGINT,
+  __time TIMESTAMP,
+  user_id BIGINT,
+  payload TYPE('COMPLEX<json>'),
+  PROJECTION __base AS (
+    SELECT tenant, ABS(user_id) % 128 AS bucket, __time, user_id, payload
+    CLUSTERED BY tenant, bucket
+  )
+)
+PARTITIONED BY DAY
+SEALED
+```
+
+The clustering columns must be the leading columns of the table, because the declared order is the physical order.
+`SEALED` is required: the declared columns define the physical segment schema, so a column that is not declared
+cannot be stored.
+
+A computed column is written by the expression, not by the ingestion query, so an `INSERT` must supply the
+expression's inputs and leave the computed column out. Above, that means supplying `user_id` and letting `bucket`
+be derived.
+
+Unlike an aggregate projection, a `__base` body cannot filter or group: the base table stores every ingested row.
+It is the only projection that chooses a clustering.
+
+`ALTER TABLE ... ADD PROJECTION __base AS ( ... )` gives an existing table a layout, and
+`ALTER TABLE ... DROP PROJECTION __base` removes it. Both affect future segments only.
+
+Every other name beginning with `__` remains reserved.
 
 #### Setting table properties
 
