@@ -108,6 +108,8 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
     );
 
     randBytes = new byte[objectSize * 1024];
+    // A fresh fixed-seed generator keeps the representative payload identical across benchmark setup invocations.
+    // codeql[java/random-used-once]
     new Random(0).nextBytes(randBytes);
   }
 
