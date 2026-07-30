@@ -993,7 +993,7 @@ public class FixedBucketsHistogram
     double lowerLimit = buf.getDouble();
     double upperLimit = buf.getDouble();
     int numBuckets = buf.getInt();
-    OutlierHandlingMode outlierHandlingMode = OutlierHandlingMode.values()[buf.get()];
+    final OutlierHandlingMode outlierHandlingMode = readOutlierHandlingMode(buf);
 
     long count = buf.getLong();
     long lowerOutlierCount = buf.getLong();
@@ -1034,7 +1034,7 @@ public class FixedBucketsHistogram
     double lowerLimit = buf.getDouble();
     double upperLimit = buf.getDouble();
     int numBuckets = buf.getInt();
-    OutlierHandlingMode outlierHandlingMode = OutlierHandlingMode.values()[buf.get()];
+    final OutlierHandlingMode outlierHandlingMode = readOutlierHandlingMode(buf);
 
     long count = buf.getLong();
     long lowerOutlierCount = buf.getLong();
@@ -1065,6 +1065,21 @@ public class FixedBucketsHistogram
         upperOutlierCount,
         missingValueCount
     );
+  }
+
+  private static OutlierHandlingMode readOutlierHandlingMode(final ByteBuffer buf)
+  {
+    final byte mode = buf.get();
+    switch (mode) {
+      case 0:
+        return OutlierHandlingMode.IGNORE;
+      case 1:
+        return OutlierHandlingMode.OVERFLOW;
+      case 2:
+        return OutlierHandlingMode.CLIP;
+      default:
+        throw new ISE("Invalid outlier handling mode [%s].", mode);
+    }
   }
 
   /**

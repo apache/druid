@@ -107,7 +107,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
         // make a copy of buffer, because the given buffer is not duplicated in HyperLogLogCollector.makeCollector() and
         // stored in a field.
         final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-        readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
+        readOnlyBuffer.limit(Math.addExact(readOnlyBuffer.position(), numBytes));
         return HyperLogLogCollector.makeCollector(readOnlyBuffer);
       }
 

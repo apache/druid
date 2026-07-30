@@ -67,8 +67,8 @@ public class RearrangedRowsAndColumns implements RowsAndColumns
       RowsAndColumns rac
   )
   {
-    if (end - start < 0 || end > pointers.length) {
-      throw new IAE("end[%,d] - start[%,d] was invalid!? pointers.length[%,d]", end, start, pointers.length);
+    if (start < 0 || end < start || end > pointers.length) {
+      throw new IAE("Invalid row range start[%,d], end[%,d], pointers.length[%,d]", start, end, pointers.length);
     }
     this.pointers = pointers;
     this.start = start;
@@ -85,7 +85,7 @@ public class RearrangedRowsAndColumns implements RowsAndColumns
   @Override
   public int numRows()
   {
-    return end - start;
+    return Math.subtractExact(end, start);
   }
 
   @Override

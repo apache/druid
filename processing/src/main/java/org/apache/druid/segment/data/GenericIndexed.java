@@ -115,7 +115,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     public ByteBuffer fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
       final ByteBuffer dup = buffer.asReadOnlyBuffer();
-      dup.limit(buffer.position() + numBytes);
+      dup.limit(Math.addExact(buffer.position(), numBytes));
       return dup;
     }
 

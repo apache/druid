@@ -286,6 +286,8 @@ public final class SegmentId implements Comparable<SegmentId>
     // added in the end of the chain, resulting hashCode of SegmentId could have worse distribution.
     int hashCode = partitionNum;
     // 1000003 is a constant used in Google AutoValue, provides a little better distribution than 31
+    // Hash-code overflow is intentional and required for standard Java hash behavior.
+    // codeql[java/tainted-arithmetic]
     hashCode = hashCode * 1000003 + version.hashCode();
 
     hashCode = hashCode * 1000003 + dataSource.hashCode();

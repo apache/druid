@@ -55,6 +55,7 @@ public class FixedIndexed<T> implements Indexed<T>
 
   public static <T> Supplier<FixedIndexed<T>> read(ByteBuffer bb, TypeStrategy<T> strategy, ByteOrder byteOrder, int width)
   {
+    Preconditions.checkArgument(width > 0, "FixedIndexed requires a fixed width value type");
     final ByteBuffer buffer = bb.asReadOnlyBuffer().order(byteOrder);
     final byte version = buffer.get();
     Preconditions.checkState(version == 0, "Unknown version [%s]", version);
@@ -62,7 +63,9 @@ public class FixedIndexed<T> implements Indexed<T>
     final boolean hasNull = (flags & TypeStrategies.IS_NULL_BYTE) == TypeStrategies.IS_NULL_BYTE ? true : false;
     final boolean isSorted = (flags & IS_SORTED_MASK) == IS_SORTED_MASK ? true : false;
     Preconditions.checkState(!(hasNull && !isSorted), "cannot have null values if not sorted");
-    final int size = buffer.getInt() + (hasNull ? 1 : 0);
+    final int storedSize = buffer.getInt();
+    Preconditions.checkState(storedSize >= 0, "FixedIndexed size must be nonnegative");
+    final int size = Math.addExact(storedSize, hasNull ? 1 : 0);
     final int valuesOffset = buffer.position();
     final Supplier<FixedIndexed<T>> fixedIndexed = () -> new FixedIndexed<>(
         bb,
@@ -75,7 +78,7 @@ public class FixedIndexed<T> implements Indexed<T>
         valuesOffset
     );
 
-    bb.position(buffer.position() + (width * (hasNull ? size - 1 : size)));
+    bb.position(Math.addExact(buffer.position(), Math.multiplyExact(width, storedSize)));
     return fixedIndexed;
   }
 
@@ -125,9 +128,12 @@ public class FixedIndexed<T> implements Indexed<T>
       if (index == 0) {
         return null;
       }
-      return typeStrategy.read(buffer, valuesOffset + ((index - 1) * width));
+      return typeStrategy.read(
+          buffer,
+          Math.addExact(valuesOffset, Math.multiplyExact(Math.subtractExact(index, 1), width))
+      );
     } else {
-      return typeStrategy.read(buffer, valuesOffset + (index * width));
+      return typeStrategy.read(buffer, Math.addExact(valuesOffset, Math.multiplyExact(index, width)));
     }
   }
 

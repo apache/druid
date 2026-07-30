@@ -66,7 +66,7 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
     double estimatedTotalSketchSizeInBytes = averageKeyLength * sketch.getN();
     // The key is added "weight" times to the sketch, we can update the total weight directly.
     estimatedTotalSketchSizeInBytes += key.estimatedObjectSizeBytes() * weight;
-    for (int i = 0; i < weight; i++) {
+    for (long i = 0; i < weight; i++) {
       // Add the same key multiple times to make it "heavier".
       sketch.update(key.array());
     }

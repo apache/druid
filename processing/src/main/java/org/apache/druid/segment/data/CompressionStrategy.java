@@ -241,9 +241,10 @@ public enum CompressionStrategy
     public void decompress(ByteBuffer in, int numBytes, ByteBuffer out)
     {
       final ByteBuffer copyBuffer = in.duplicate();
-      copyBuffer.limit(copyBuffer.position() + numBytes);
+      final int newPosition = Math.addExact(copyBuffer.position(), numBytes);
+      copyBuffer.limit(newPosition);
       out.put(copyBuffer).flip();
-      in.position(in.position() + numBytes);
+      in.position(newPosition);
     }
 
   }

@@ -60,7 +60,7 @@ public class FrameReaderUtils
     if (memory.hasByteBuffer()) {
       // Avoid data copy
       final ByteBuffer byteBuffer = memory.getByteBuffer().duplicate();
-      byteBuffer.limit(Ints.checkedCast(memory.getRegionOffset(dataStart + dataLength)));
+      byteBuffer.limit(Ints.checkedCast(memory.getRegionOffset(Math.addExact(dataStart, dataLength))));
       byteBuffer.position(Ints.checkedCast(memory.getRegionOffset(dataStart)));
       return byteBuffer;
     } else {

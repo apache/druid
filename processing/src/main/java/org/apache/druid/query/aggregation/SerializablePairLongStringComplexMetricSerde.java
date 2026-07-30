@@ -156,7 +156,7 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
       {
         ByteBuffer readOnlyByteBuffer = buffer.asReadOnlyBuffer().order(buffer.order());
 
-        readOnlyByteBuffer.limit(buffer.position() + numBytes);
+        readOnlyByteBuffer.limit(Math.addExact(buffer.position(), numBytes));
 
         return SERDE.deserialize(readOnlyByteBuffer);
       }
