@@ -81,15 +81,17 @@ public class KafkaResourceTest
     resource.createTopicWithPartitions(expandedTopicName, 2);
     resource.increasePartitionsInTopic(expandedTopicName, 4);
 
-    // Verify that newly added partitions can accept records immediately.
+    // Verify that every partition can accept records immediately after increasing the partition count.
     resource.produceRecordsWithoutTransaction(
         List.of(
+            new ProducerRecord<>(expandedTopicName, 0, null, new byte[]{1}),
+            new ProducerRecord<>(expandedTopicName, 1, null, new byte[]{1}),
             new ProducerRecord<>(expandedTopicName, 2, null, new byte[]{1}),
             new ProducerRecord<>(expandedTopicName, 3, null, new byte[]{1})
         )
     );
     assertEquals(
-        Map.of("0", 0L, "1", 0L, "2", 1L, "3", 1L),
+        Map.of("0", 1L, "1", 1L, "2", 1L, "3", 1L),
         resource.getPartitionOffsets(expandedTopicName)
     );
     resource.deleteTopic(expandedTopicName);
