@@ -111,8 +111,7 @@ public class CryptoService
     this.iterationCount = iterationCount == null ? 65536 : iterationCount;
     this.keyLength = keyLength == null ? 128 : keyLength;
 
-    // Validate the authenticated format parameters. The configurable legacy transformation is decrypt-only and is
-    // validated lazily if legacy ciphertext is encountered.
+    // Validate authenticated parameters eagerly; the legacy transformation is decrypt-only and validated on first use.
     final String testString = "duh! !! !!!";
     Preconditions.checkState(
         testString.equals(StringUtils.fromUtf8(decrypt(encrypt(StringUtils.toUtf8(testString))))),
