@@ -299,6 +299,27 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testEnumeratedRejectsMismatchedValuesAndProbabilities()
+  {
+    final GeneratorColumnSchema schema = GeneratorColumnSchema.makeEnumerated(
+        "dimA",
+        ValueType.STRING,
+        false,
+        1,
+        null,
+        Arrays.asList("Hello", "World"),
+        Collections.singletonList(1.0)
+    );
+
+    final IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> schema.makeGenerator(9999)
+    );
+    Assert.assertTrue(exception.getMessage().contains("enumeratedValues size[2]"));
+    Assert.assertTrue(exception.getMessage().contains("enumeratedProbabilities size[1]"));
+  }
+
+  @Test
   public void testNormal()
   {
     List<GeneratorColumnSchema> schemas = new ArrayList<>();

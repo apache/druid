@@ -255,7 +255,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         theAggFactory = aggregatorType.createAggregatorFactory(aggregatorName, fieldName, null, outputType, null, true);
         break;
       case 2: {
-        final int maxStringBytes = RexLiteral.intValue(rexNodes.get(1)); // added not null check at the function
+        final int maxStringBytes = RexLiteral.intValue(rexNodes.get(1));
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
@@ -267,8 +267,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         break;
       }
       case 3: {
-        final int maxStringBytes =
-            RexLiteral.intValue(rexNodes.get(1)); // added not null check at the function for rexNode 1,2
+        final int maxStringBytes = RexLiteral.intValue(rexNodes.get(1));
         final boolean aggregateMultipleValues = RexLiteral.booleanValue(rexNodes.get(2));
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,

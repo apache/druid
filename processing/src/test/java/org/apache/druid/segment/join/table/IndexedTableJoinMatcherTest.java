@@ -372,14 +372,14 @@ public class IndexedTableJoinMatcherTest
     public void evictsLeastRecentlyUsed()
     {
       final long start = 1L;
-      final Long next = start + SIZE;
+      final long next = start + SIZE;
 
       for (long i = start; i < next; i++) {
-        Long key = i;
-        Assertions.assertEquals(key, target.getAndLoadIfAbsent(key));
+        final long key = i;
+        Assertions.assertEquals(key, target.getAndLoadIfAbsent(key).longValue());
       }
 
-      Assertions.assertEquals(next, target.getAndLoadIfAbsent(next));
+      Assertions.assertEquals(next, target.getAndLoadIfAbsent(next).longValue());
       Assertions.assertNull(target.get(start));
 
       Assertions.assertEquals(SIZE + 1, counter.longValue());
