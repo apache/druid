@@ -351,8 +351,9 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   }
 
   /**
-   * Returns the initial search intervals for compaction, excluding both the provided skipIntervals
-   * and the computed skip interval from {@code config.getSkipOffsetFromLatest()}.
+   * Returns the initial search intervals for compaction, excluding the provided skipIntervals,
+   * {@code config.getSkipIntervals()} and the computed skip interval from
+   * {@code config.getSkipOffsetFromLatest()}.
    */
   @VisibleForTesting
   List<Interval> findInitialSearchInterval(SegmentTimeline timeline, List<Interval> skipIntervals)
@@ -370,6 +371,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
     );
     final List<Interval> allSkipIntervals = JodaUtils.condenseIntervals(Iterables.concat(
         skipIntervals,
+        config.getSkipIntervals(),
         List.of(latestSkipInterval)
     ));
 

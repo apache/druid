@@ -94,7 +94,7 @@ public class DataSourceCompactibleSegmentIteratorTest
         FINGERPRINT_MAPPER
     );
 
-    final List<Interval> searchIntervals = iterator.findInitialSearchInterval(timeline, config.getSkipIntervals());
+    final List<Interval> searchIntervals = iterator.findInitialSearchInterval(timeline, List.of());
 
     // Expected: Total interval is 2018-01-01T00:00:00/2018-01-01T12:00:00
     // Skip interval: 2018-01-01T08:00:00/2018-01-01T12:00:00 (computed from 4h offset)
@@ -131,7 +131,7 @@ public class DataSourceCompactibleSegmentIteratorTest
         FINGERPRINT_MAPPER
     );
 
-    final List<Interval> searchIntervals = iterator.findInitialSearchInterval(timeline, config.getSkipIntervals());
+    final List<Interval> searchIntervals = iterator.findInitialSearchInterval(timeline, List.of());
 
     // Expected: Total interval is 2018-01-01T00:00:00/2018-01-02T00:00:00
     // Skip intervals: 2018-01-01T06:00:00/2018-01-01T08:00:00 (explicit)
