@@ -58,7 +58,7 @@ export default env => {
   const plugins = [
     new webpack.DefinePlugin({
       'process.env': JSON.stringify({ NODE_ENV: mode }),
-      'global': {},
+      'global': 'globalThis.global',
       'NODE_ENV': JSON.stringify(mode),
     }),
 
