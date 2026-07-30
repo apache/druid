@@ -37,67 +37,85 @@ package org.apache.druid.math.expr.vector.simd;
  */
 public enum SimdSupportedUnaryOp
 {
-  NEG,
-  ABS,
-  SQRT,
+  NEG(false),
+  ABS(false),
+  SQRT(false),
   /**
    * Natural log. VO_MATHLIB code path.
    */
-  LOG,
+  LOG(true),
   /**
    * Natural exponentiation. VO_MATHLIB code path.
    */
-  EXP,
+  EXP(true),
   /**
    * Base-10 logarithm. VO_MATHLIB code path.
    */
-  LOG10,
+  LOG10(true),
   /**
    * {@code log(1+x)}. VO_MATHLIB code path.
    */
-  LOG1P,
+  LOG1P(true),
   /**
    * {@code exp(x)-1}. VO_MATHLIB code path.
    */
-  EXPM1,
+  EXPM1(true),
   /**
    * Cube root. VO_MATHLIB code path.
    */
-  CBRT,
+  CBRT(true),
   /**
    * Sine. VO_MATHLIB code path.
    */
-  SIN,
+  SIN(true),
   /**
    * Cosine. VO_MATHLIB code path.
    */
-  COS,
+  COS(true),
   /**
    * Tangent. VO_MATHLIB code path.
    */
-  TAN,
+  TAN(true),
   /**
    * Arc sine. VO_MATHLIB code path.
    */
-  ASIN,
+  ASIN(true),
   /**
    * Arc cosine. VO_MATHLIB code path.
    */
-  ACOS,
+  ACOS(true),
   /**
    * Arc tangent. VO_MATHLIB code path.
    */
-  ATAN,
+  ATAN(true),
   /**
    * Hyperbolic sine. VO_MATHLIB code path.
    */
-  SINH,
+  SINH(true),
   /**
    * Hyperbolic cosine. VO_MATHLIB code path.
    */
-  COSH,
+  COSH(true),
   /**
    * Hyperbolic tangent. VO_MATHLIB code path.
    */
-  TANH
+  TANH(true);
+
+  private final boolean mathLib;
+
+  SimdSupportedUnaryOp(boolean mathLib)
+  {
+    this.mathLib = mathLib;
+  }
+
+  /**
+   * Whether this op's SIMD path routes through the JDK's VO_MATHLIB (SVML/SLEEF) dispatch rather than a direct
+   * hardware FP intrinsic. Callers that gate on
+   * {@link org.apache.druid.math.expr.ExpressionProcessingConfig#USE_VECTOR_MATH_API} should consult this to
+   * decide whether the extra flag applies.
+   */
+  public boolean isMathLib()
+  {
+    return mathLib;
+  }
 }
