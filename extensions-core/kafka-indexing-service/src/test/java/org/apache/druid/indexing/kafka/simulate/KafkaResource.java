@@ -137,6 +137,7 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
       admin.createTopics(
           List.of(new NewTopic(topicName, numPartitions, (short) 1))
       ).all().get();
+      waitForPartitionsToBeReady(admin, topicName, numPartitions);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -178,15 +179,7 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
       );
 
       result.values().get(topic).get();
-
-      // createPartitions() may complete before the new partition leaders are
-      // ready to handle requests. Verify all partitions through their leaders
-      // before allowing callers to publish records.
-      final Map<TopicPartition, OffsetSpec> partitionOffsets = new HashMap<>();
-      for (int partition = 0; partition < newPartitionCount; partition++) {
-        partitionOffsets.put(new TopicPartition(topic, partition), OffsetSpec.latest());
-      }
-      admin.listOffsets(partitionOffsets).all().get();
+      waitForPartitionsToBeReady(admin, topic, newPartitionCount);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -308,6 +301,18 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
       producerProperties.putAll(extraProperties);
     }
     return new KafkaProducer<>(producerProperties);
+  }
+
+  private void waitForPartitionsToBeReady(Admin admin, String topic, int partitionCount) throws Exception
+  {
+    // Topic and partition creation may complete before the partition leaders
+    // are ready to handle requests. Verify all partitions through their
+    // leaders before allowing callers to publish records.
+    final Map<TopicPartition, OffsetSpec> partitionOffsets = new HashMap<>();
+    for (int partition = 0; partition < partitionCount; partition++) {
+      partitionOffsets.put(new TopicPartition(topic, partition), OffsetSpec.latest());
+    }
+    admin.listOffsets(partitionOffsets).all().get();
   }
 
   private Map<String, Object> commonClientProperties()

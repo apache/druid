@@ -62,6 +62,16 @@ public class KafkaResourceTest
     resource.createTopicWithPartitions(topicName, 2);
     assertEquals(Set.of(topicName), resource.listTopics());
 
+    // Verify that records can be published immediately after creating a topic.
+    resource.publishRecordsToTopicWithoutTransaction(
+        topicName,
+        Collections.nCopies(100, new byte[]{1})
+    );
+    assertEquals(
+        100,
+        resource.getPartitionOffsets(topicName).values().stream().mapToLong(Long::longValue).sum()
+    );
+
     // Verify that records can be published immediately after adding partitions.
     resource.increasePartitionsInTopic(topicName, 4);
     resource.publishRecordsToTopicWithoutTransaction(
@@ -70,7 +80,7 @@ public class KafkaResourceTest
     );
     final Map<String, Long> partitionOffsets = resource.getPartitionOffsets(topicName);
     assertEquals(4, partitionOffsets.size());
-    assertEquals(1_000, partitionOffsets.values().stream().mapToLong(Long::longValue).sum());
+    assertEquals(1_100, partitionOffsets.values().stream().mapToLong(Long::longValue).sum());
 
     resource.deleteTopic(topicName);
 
