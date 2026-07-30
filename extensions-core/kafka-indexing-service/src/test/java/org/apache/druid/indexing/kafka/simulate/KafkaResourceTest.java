@@ -23,6 +23,7 @@ import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -60,6 +61,16 @@ public class KafkaResourceTest
     final String topicName = "test-topic";
     resource.createTopicWithPartitions(topicName, 3);
     assertEquals(Set.of(topicName), resource.listTopics());
+
+    // Verify that callers can publish immediately after topic creation.
+    resource.publishRecordsToTopicWithoutTransaction(
+        topicName,
+        Collections.nCopies(1_000, new byte[]{1})
+    );
+    final Map<String, Long> partitionOffsets = resource.getPartitionOffsets(topicName);
+    assertEquals(3, partitionOffsets.size());
+    assertEquals(1_000, partitionOffsets.values().stream().mapToLong(Long::longValue).sum());
+
     resource.deleteTopic(topicName);
 
     resource.stop();

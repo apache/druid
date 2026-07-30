@@ -27,6 +27,7 @@ import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.CreatePartitionsResult;
 import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.admin.OffsetSpec;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -134,6 +135,15 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
       admin.createTopics(
           List.of(new NewTopic(topicName, numPartitions, (short) 1))
       ).all().get();
+
+      // createTopics() may complete before the partition leaders are ready to
+      // handle requests. Verify every partition through its leader before
+      // allowing callers to start a supervisor or publish records.
+      final Map<TopicPartition, OffsetSpec> partitionOffsets = new HashMap<>();
+      for (int partition = 0; partition < numPartitions; partition++) {
+        partitionOffsets.put(new TopicPartition(topicName, partition), OffsetSpec.latest());
+      }
+      admin.listOffsets(partitionOffsets).all().get();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
