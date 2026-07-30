@@ -29,7 +29,11 @@ import org.mockito.junit.MockitoJUnitRunner;
 import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLStreamHandler;
 
 @RunWith(MockitoJUnitRunner.class)
 public class RedirectFilterTest
@@ -61,7 +65,7 @@ public class RedirectFilterTest
   public void testRedirect() throws Exception
   {
     final String location = "https://leader.example:8081" + REQUEST_URI + "?" + QUERY_STRING + "#result";
-    Mockito.when(redirectInfo.getRedirectURL(QUERY_STRING, REQUEST_URI)).thenReturn(new URL(location));
+    Mockito.when(redirectInfo.getRedirectURL(QUERY_STRING, REQUEST_URI)).thenReturn(URI.create(location).toURL());
 
     redirectFilter.doFilter(request, response, filterChain);
 
@@ -74,7 +78,7 @@ public class RedirectFilterTest
   public void testRedirectPreservesEncodedNewlines() throws Exception
   {
     final String location = "https://leader.example/path%0D%0Avalue?query=%0a";
-    Mockito.when(redirectInfo.getRedirectURL(QUERY_STRING, REQUEST_URI)).thenReturn(new URL(location));
+    Mockito.when(redirectInfo.getRedirectURL(QUERY_STRING, REQUEST_URI)).thenReturn(URI.create(location).toURL());
 
     redirectFilter.doFilter(request, response, filterChain);
 
@@ -96,12 +100,33 @@ public class RedirectFilterTest
 
   private void assertInvalidRedirect(String location) throws Exception
   {
-    Mockito.when(redirectInfo.getRedirectURL(QUERY_STRING, REQUEST_URI)).thenReturn(new URL(location));
+    Mockito.when(redirectInfo.getRedirectURL(QUERY_STRING, REQUEST_URI)).thenReturn(urlWithExternalForm(location));
 
     redirectFilter.doFilter(request, response, filterChain);
 
     Mockito.verify(response).sendError(HttpServletResponse.SC_BAD_REQUEST);
     Mockito.verify(response, Mockito.never()).setStatus(Mockito.anyInt());
     Mockito.verify(response, Mockito.never()).setHeader(Mockito.anyString(), Mockito.anyString());
+  }
+
+  private static URL urlWithExternalForm(final String externalForm) throws Exception
+  {
+    return URL.of(
+        URI.create("https://leader.example"),
+        new URLStreamHandler()
+        {
+          @Override
+          protected URLConnection openConnection(final URL url) throws IOException
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          protected String toExternalForm(final URL url)
+          {
+            return externalForm;
+          }
+        }
+    );
   }
 }
