@@ -27,10 +27,12 @@ import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.CreatePartitionsResult;
 import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.admin.OffsetSpec;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
@@ -41,6 +43,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -162,9 +165,9 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
   }
 
   /**
-   * Increases the number of partitions in the given Kakfa topic. The topic must
-   * already exist. This method waits until the increase in the partition count
-   * has started (but not necessarily finished).
+   * Increases the number of partitions in the given Kafka topic. The topic must
+   * already exist. This method waits until every partition is ready to handle
+   * requests.
    */
   @Override
   public void increasePartitionsInTopic(String topic, int newPartitionCount)
@@ -174,8 +177,16 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
           Map.of(topic, NewPartitions.increaseTo(newPartitionCount))
       );
 
-      // Wait for the partitioning to start
       result.values().get(topic).get();
+
+      // createPartitions() may complete before the new partition leaders are
+      // ready to handle requests. Verify all partitions through their leaders
+      // before allowing callers to publish records.
+      final Map<TopicPartition, OffsetSpec> partitionOffsets = new HashMap<>();
+      for (int partition = 0; partition < newPartitionCount; partition++) {
+        partitionOffsets.put(new TopicPartition(topic, partition), OffsetSpec.latest());
+      }
+      admin.listOffsets(partitionOffsets).all().get();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -218,8 +229,12 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
     props.remove(ProducerConfig.TRANSACTIONAL_ID_CONFIG);
 
     try (final KafkaProducer<byte[], byte[]> kafkaProducer = new KafkaProducer<>(props)) {
-      for (ProducerRecord<byte[], byte[]> record : records) {
-        kafkaProducer.send(record);
+      final List<Future<RecordMetadata>> sendResults = new ArrayList<>(records.size());
+      for (final ProducerRecord<byte[], byte[]> record : records) {
+        sendResults.add(kafkaProducer.send(record));
+      }
+      for (final Future<RecordMetadata> sendResult : sendResults) {
+        sendResult.get();
       }
     }
     catch (Exception e) {
