@@ -21,7 +21,6 @@ package org.apache.druid.indexing.kafka.simulate;
 
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.kafka.clients.admin.Admin;
@@ -35,7 +34,6 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.errors.RetriableException;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.testcontainers.kafka.KafkaContainer;
@@ -56,8 +54,6 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class KafkaResource extends StreamIngestResource<KafkaContainer>
 {
-  private static final int PARTITION_READINESS_MAX_TRIES = 5;
-
   /**
    * Kafka Docker image used in embedded tests. The image name is
    * read from the system property {@code druid.testing.kafka.image} and
@@ -316,17 +312,7 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
     for (int partition = 0; partition < partitionCount; partition++) {
       partitionOffsets.put(new TopicPartition(topic, partition), OffsetSpec.latest());
     }
-    RetryUtils.retry(
-        () -> admin.listOffsets(partitionOffsets).all().get(),
-        KafkaResource::isRetriableKafkaException,
-        PARTITION_READINESS_MAX_TRIES
-    );
-  }
-
-  private static boolean isRetriableKafkaException(Throwable throwable)
-  {
-    return throwable instanceof RetriableException
-           || throwable.getCause() != null && isRetriableKafkaException(throwable.getCause());
+    admin.listOffsets(partitionOffsets).all().get();
   }
 
   private Map<String, Object> commonClientProperties()
