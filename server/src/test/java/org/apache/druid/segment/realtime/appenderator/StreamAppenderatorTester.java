@@ -233,14 +233,9 @@ public class StreamAppenderatorTester implements AutoCloseable
           taskIntervalUnlocker
       );
     } else {
-      SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
-      {
-        @Override
-        public int getDropSegmentDelayMillis()
-        {
-          return delayInMilli;
-        }
-      };
+      SegmentLoaderConfig segmentLoaderConfig = SegmentLoaderConfig.builder()
+                                                                   .dropSegmentDelayMillis(delayInMilli)
+                                                                   .build();
       appenderator = Appenderators.createRealtime(
           segmentLoaderConfig,
           schema.getDataSource(),

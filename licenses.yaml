@@ -240,10 +240,11 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.40.0
+version: 2.49.6
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
+  - software.amazon.awssdk: apache5-client
   - software.amazon.awssdk: arns
   - software.amazon.awssdk: auth
   - software.amazon.awssdk: aws-core
@@ -308,7 +309,7 @@ name: AWS CRT
 license_category: binary
 module: extensions-core/s3-extensions
 license_name: Apache License version 2.0
-version: 0.40.1
+version: 0.48.0
 libraries:
   - software.amazon.awssdk.crt: aws-crt
 notice: |
@@ -1742,7 +1743,7 @@ name: Apache Calcite Avatica
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.27.0
+version: 1.28.0
 libraries:
   - org.apache.calcite.avatica: avatica-core
   - org.apache.calcite.avatica: avatica-metrics
@@ -1750,20 +1751,20 @@ libraries:
 notices:
   - avatica-core: |
       Apache Calcite Avatica
-      Copyright 2012-2020 The Apache Software Foundation
+      Copyright 2012-2026 The Apache Software Foundation
   - avatica-metrics: |
       Apache Calcite Avatica Metrics
-      Copyright 2012-2020 The Apache Software Foundation
+      Copyright 2012-2026 The Apache Software Foundation
   - avatica-server: |
       Apache Calcite Avatica Server
-      Copyright 2012-2020 The Apache Software Foundation
+      Copyright 2012-2026 The Apache Software Foundation
 ---
 
 name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.8.0
+version: 5.9.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
@@ -1771,13 +1772,13 @@ libraries:
 notices:
   - curator-client: |
       Curator Client
-      Copyright 2011-2022 The Apache Software Foundation
+      Copyright 2011-2023 The Apache Software Foundation
   - curator-framework: |
       Curator Framework
-      Copyright 2011-2022 The Apache Software Foundation
+      Copyright 2011-2023 The Apache Software Foundation
   - curator-recipes: |
       Curator Recipes
-      Copyright 2011-2022 The Apache Software Foundation
+      Copyright 2011-2023 The Apache Software Foundation
 
 ---
 
@@ -1900,6 +1901,38 @@ notices:
   - httpcore: |
       Apache HttpCore
       Copyright 2005-2019 The Apache Software Foundation
+
+---
+
+name: Apache HttpClient 5
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.6.2
+libraries:
+  - org.apache.httpcomponents.client5: httpclient5
+notices:
+  - httpclient5: |
+      Apache HttpClient
+      Copyright 1999-2021 The Apache Software Foundation
+
+---
+
+name: Apache HttpCore 5
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.4.3
+libraries:
+  - org.apache.httpcomponents.core5: httpcore5
+  - org.apache.httpcomponents.core5: httpcore5-h2
+notices:
+  - httpcore5: |
+      Apache HttpComponents Core HTTP/1.1
+      Copyright 2005-2021 The Apache Software Foundation
+  - httpcore5-h2: |
+      Apache HttpComponents Core HTTP/2
+      Copyright 2005-2021 The Apache Software Foundation
 
 ---
 
@@ -2123,7 +2156,7 @@ name: AsyncHttpClient asynchttpclient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.0.10
+version: 3.0.11
 libraries:
   - org.asynchttpclient: async-http-client
 
@@ -2502,7 +2535,7 @@ name: JDBI
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.63.1
+version: 2.78
 libraries:
   - org.jdbi: jdbi
 notices:
@@ -3451,7 +3484,7 @@ name: Checker Qual
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 3.48.1
+version: 3.49.2
 copyright: the Checker Framework developers
 license_file_path: licenses/bin/checker-qual.MIT
 libraries:
@@ -3498,7 +3531,7 @@ name: SLF4J API
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.0.17
+version: 2.0.18
 copyright: QOS.ch
 license_file_path: licenses/bin/slf4j.MIT
 libraries:
@@ -3545,7 +3578,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 4.33.0
+version: 4.35.1
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3
@@ -3711,7 +3744,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 4.33.0
+version: 4.35.1
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -3958,7 +3991,7 @@ name: Rhino
 license_category: binary
 module: java-core
 license_name: Mozilla Public License Version 2.0
-version: 1.8.1
+version: 1.9.1
 copyright: Mozilla and individual contributors.
 license_file_path: licenses/bin/rhino.MPL2
 libraries:

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -31,6 +32,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.AutoTypeColumnSchema;
+import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -47,7 +49,9 @@ import java.util.Map;
 public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHandlingTest
 {
   private final ObjectMapper mapper = new DefaultObjectMapper().setInjectableValues(
-      new InjectableValues.Std().addValue(ExprMacroTable.class, ExprMacroTable.nil())
+      new InjectableValues.Std()
+          .addValue(ExprMacroTable.class, ExprMacroTable.nil())
+          .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null, null, null))
   );
 
   // Declared order is the physical segment order: clustering columns lead, __time is an explicit positional column.
@@ -66,7 +70,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         Collections.singletonList("tenant_lower"),
         VirtualColumns.create(
             new ExpressionVirtualColumn("tenant_lower", "lower(\"tenant\")", ColumnType.STRING, ExprMacroTable.nil())
-        )
+        ), null
     );
     final String json = mapper.writeValueAsString(metadata);
     final DatasourceBaseTableMetadata fromJson = mapper.readValue(json, DatasourceBaseTableMetadata.class);
@@ -78,10 +82,29 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Arrays.asList("tenant", "region"),
+        null,
         null
     );
     final String json = mapper.writeValueAsString(metadata);
     Assert.assertFalse(json.contains("virtualColumns"));
+    Assert.assertFalse(json.contains("columnSchemas"));
+    final DatasourceBaseTableMetadata fromJson = mapper.readValue(json, DatasourceBaseTableMetadata.class);
+    Assert.assertEquals(metadata, fromJson);
+  }
+
+  @Test
+  public void testSerdeWithColumnSchemas() throws Exception
+  {
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        Arrays.asList(
+            new StringDimensionSchema("region", DimensionSchema.MultiValueHandling.ARRAY, false),
+            new AutoTypeColumnSchema("value", ColumnType.DOUBLE, null),
+            new NestedDataColumnSchema("attrs", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION)
+        )
+    );
+    final String json = mapper.writeValueAsString(metadata);
     final DatasourceBaseTableMetadata fromJson = mapper.readValue(json, DatasourceBaseTableMetadata.class);
     Assert.assertEquals(metadata, fromJson);
   }
@@ -93,6 +116,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
     // the type discriminator must survive that path (it is an EXISTING_PROPERTY for this reason).
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Collections.singletonList("tenant"),
+        null,
         null
     );
     final String json = mapper.writeValueAsString(Collections.singletonMap("baseTable", metadata));
@@ -109,6 +133,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Collections.singletonList("tenant"),
+        null,
         null
     );
     // The declared column order is the physical segment order, used verbatim; types map through Columns.druidType
@@ -139,7 +164,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
     );
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Collections.singletonList("tenant_lower"),
-        virtualColumns
+        virtualColumns,
+        null
     );
     final List<ColumnSpec> columns = Arrays.asList(
         new ColumnSpec("tenant_lower", Columns.SQL_VARCHAR, null),
@@ -163,10 +189,202 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   }
 
   @Test
+  public void testCreateSpecWithColumnSchemas()
+  {
+    // Column schemas customize the exact DimensionSchema used at segment creation without defining columns: the
+    // declared column list remains the logical schema. 'region' keeps its declared STRING type but customizes
+    // multi-value handling and disables the bitmap index; 'value' is stored as an auto column cast to its declared
+    // DOUBLE type.
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        Arrays.asList(
+            new StringDimensionSchema("region", DimensionSchema.MultiValueHandling.ARRAY, false),
+            new AutoTypeColumnSchema("value", ColumnType.DOUBLE, null)
+        )
+    );
+    Assert.assertEquals(
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new LongDimensionSchema(Columns.TIME_COLUMN),
+                                                       new StringDimensionSchema("region", DimensionSchema.MultiValueHandling.ARRAY, false),
+                                                       new LongDimensionSchema("delta"),
+                                                       new AutoTypeColumnSchema("value", ColumnType.DOUBLE, null)
+                                                   )
+                                                   .clusteringColumns("tenant")
+                                                   .build(),
+        metadata.createSpec(COLUMNS)
+    );
+  }
+
+  @Test
+  public void testCreateSpecAutoColumnSchemaCoercions()
+  {
+    // A declared FLOAT column may be customized with an auto schema cast to FLOAT: the auto schema itself stores
+    // FLOAT as DOUBLE (the same coercion the default derivation relies on for FLOAT arrays). A column declared
+    // COMPLEX<json> may use an uncast auto schema, since arbitrary shapes are that type's contract.
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        Arrays.asList(
+            new AutoTypeColumnSchema("ratio", ColumnType.FLOAT, null),
+            AutoTypeColumnSchema.of("attrs")
+        )
+    );
+    final List<ColumnSpec> columns = Arrays.asList(
+        new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
+        new ColumnSpec(Columns.TIME_COLUMN, null, null),
+        new ColumnSpec("ratio", Columns.SQL_FLOAT, null),
+        new ColumnSpec("attrs", ColumnType.NESTED_DATA.asTypeString(), null)
+    );
+    Assert.assertEquals(
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new LongDimensionSchema(Columns.TIME_COLUMN),
+                                                       new AutoTypeColumnSchema("ratio", ColumnType.FLOAT, null),
+                                                       AutoTypeColumnSchema.of("attrs")
+                                                   )
+                                                   .clusteringColumns("tenant")
+                                                   .build(),
+        metadata.createSpec(columns)
+    );
+  }
+
+  @Test
+  public void testCreateSpecUncastAutoColumnSchemaFails()
+  {
+    // An uncast auto column stores values as ingested rather than coercing to the declared type, so it is only
+    // legal for columns declared COMPLEX<json>.
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        Collections.singletonList(AutoTypeColumnSchema.of("value"))
+    );
+    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assert.assertTrue(
+        e.getMessage().contains("columnSchemas entry [value] is an auto column schema without a castToType")
+    );
+  }
+
+  @Test
+  public void testCreateSpecAutoColumnSchemaCastMismatchFails()
+  {
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        Collections.singletonList(new AutoTypeColumnSchema("region", ColumnType.LONG, null))
+    );
+    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assert.assertTrue(
+        e.getMessage().contains("columnSchemas entry [region] of type [LONG] does not match the column's declared type [STRING]")
+    );
+  }
+
+  @Test
+  public void testCreateSpecJsonColumnSchemaForNonJsonColumnFails()
+  {
+    // A json schema always stores COMPLEX<json>, so it may only customize columns declared as COMPLEX<json>.
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        Collections.singletonList(new NestedDataColumnSchema("region", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION))
+    );
+    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assert.assertTrue(
+        e.getMessage().contains(
+            "columnSchemas entry [region] of type [COMPLEX<json>] does not match the column's declared type [STRING]"
+        )
+    );
+  }
+
+  @Test
+  public void testCreateSpecColumnSchemaForUndeclaredColumnFails()
+  {
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        Collections.singletonList(new StringDimensionSchema("no_such_column"))
+    );
+    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assert.assertTrue(
+        e.getMessage().contains("columnSchemas entry [no_such_column] does not customize a declared column")
+    );
+  }
+
+  @Test
+  public void testCreateSpecColumnSchemaForClusteringColumnFails()
+  {
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        Collections.singletonList(new StringDimensionSchema("tenant", DimensionSchema.MultiValueHandling.ARRAY, false))
+    );
+    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assert.assertTrue(e.getMessage().contains("columnSchemas cannot customize clustering column [tenant]"));
+  }
+
+  @Test
+  public void testCreateSpecColumnSchemaForTimeColumnFails()
+  {
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        Collections.singletonList(new LongDimensionSchema(Columns.TIME_COLUMN))
+    );
+    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assert.assertTrue(e.getMessage().contains("columnSchemas cannot customize [__time]"));
+  }
+
+  @Test
+  public void testCreateSpecColumnSchemaTypeMismatchFails()
+  {
+    // 'region' is declared as STRING; a LONG dimension schema would contradict the logical schema SQL writes are
+    // validated against.
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        Collections.singletonList(new LongDimensionSchema("region"))
+    );
+    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assert.assertTrue(
+        e.getMessage().contains("columnSchemas entry [region] of type [LONG] does not match the column's declared type [STRING]")
+    );
+  }
+
+  @Test
+  public void testCreateSpecNullColumnSchemaEntryFails() throws Exception
+  {
+    final DatasourceBaseTableMetadata metadata = mapper.readValue(
+        "{\"type\":\"clusteredValueGroups\",\"clusteringColumns\":[\"tenant\"],\"columnSchemas\":[null]}",
+        DatasourceBaseTableMetadata.class
+    );
+    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assert.assertTrue(e.getMessage().contains("columnSchemas must not contain null entries"));
+  }
+
+  @Test
+  public void testCreateSpecDuplicateColumnSchemasFails()
+  {
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        Arrays.asList(
+            new StringDimensionSchema("region"),
+            new StringDimensionSchema("region", DimensionSchema.MultiValueHandling.ARRAY, false)
+        )
+    );
+    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assert.assertTrue(e.getMessage().contains("columnSchemas contains duplicate entries for column [region]"));
+  }
+
+  @Test
   public void testCreateSpecMultipleClusteringColumns()
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Arrays.asList("region", "tenant"),
+        null,
         null
     );
     final List<ColumnSpec> columns = Arrays.asList(
@@ -194,6 +412,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Collections.singletonList("tenant"),
+        null,
         null
     );
     final List<ColumnSpec> columns = Arrays.asList(
@@ -202,7 +421,10 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         new ColumnSpec("tags", Columns.SQL_VARCHAR_ARRAY, null),
         new ColumnSpec("vals", Columns.SQL_BIGINT_ARRAY, null),
         new ColumnSpec("ratios", Columns.SQL_FLOAT_ARRAY, null),
-        new ColumnSpec("attrs", ColumnType.NESTED_DATA.asTypeString(), null)
+        new ColumnSpec("attrs", ColumnType.NESTED_DATA.asTypeString(), null),
+        // type prefixes match case-insensitively; these must not silently fall back to STRING
+        new ColumnSpec("attrs2", "complex<json>", null),
+        new ColumnSpec("vals2", "array<long>", null)
     );
     // Declared types are retained in the ingestion schema rather than left to inference: arrays cast an auto column
     // to the declared type (an all-null batch has no values to infer from; FLOAT ARRAY is stored as DOUBLE ARRAY by
@@ -215,7 +437,9 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
                                                        new AutoTypeColumnSchema("tags", ColumnType.STRING_ARRAY, null),
                                                        new AutoTypeColumnSchema("vals", ColumnType.LONG_ARRAY, null),
                                                        new AutoTypeColumnSchema("ratios", ColumnType.DOUBLE_ARRAY, null),
-                                                       new NestedDataColumnSchema("attrs", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION)
+                                                       new NestedDataColumnSchema("attrs", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION),
+                                                       new NestedDataColumnSchema("attrs2", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION),
+                                                       new AutoTypeColumnSchema("vals2", ColumnType.LONG_ARRAY, null)
                                                    )
                                                    .clusteringColumns("tenant")
                                                    .build(),
@@ -228,6 +452,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Collections.singletonList("tenant"),
+        null,
         null
     );
     final List<ColumnSpec> columns = Arrays.asList(
@@ -240,12 +465,38 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   }
 
   @Test
+  public void testCreateSpecUnparseableTypeFails()
+  {
+    // A column declared WITHOUT a type defaults to STRING, but a declared type that does not parse must be rejected
+    // rather than silently defaulted: the declared type is the physical segment schema here. (A malformed
+    // parameterized type such as a missing closing bracket parses to null.)
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        null
+    );
+    for (String badType : new String[]{"COMPLEX<json", "ARRAY<LONG", "ARRAY<FOO>", "FOO"}) {
+      final List<ColumnSpec> columns = Arrays.asList(
+          new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
+          new ColumnSpec(Columns.TIME_COLUMN, null, null),
+          new ColumnSpec("busted", badType, null)
+      );
+      final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
+      Assert.assertTrue(
+          "expected unrecognized-type error for [" + badType + "] but got: " + e.getMessage(),
+          e.getMessage().contains("column [busted] has an unrecognized type [" + badType + "]")
+      );
+    }
+  }
+
+  @Test
   public void testCreateSpecClusteringColumnsNotLeadingPrefixFails()
   {
     // 'region' is declared, but not as part of the leading prefix of the column list; the declared order is the
     // physical segment order, so this is an error rather than a silent reorder.
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Collections.singletonList("region"),
+        null,
         null
     );
     final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
@@ -257,6 +508,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Arrays.asList("tenant", "region"),
+        null,
         null
     );
     final List<ColumnSpec> columns = Arrays.asList(
@@ -273,6 +525,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Collections.singletonList("no_such_column"),
+        null,
         null
     );
     final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
@@ -284,6 +537,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Collections.singletonList("tenant"),
+        null,
         null
     );
     final List<ColumnSpec> columns = Arrays.asList(
@@ -299,6 +553,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Collections.singletonList("tags"),
+        null,
         null
     );
     final List<ColumnSpec> columns = Arrays.asList(
@@ -312,7 +567,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   @Test
   public void testCreateSpecEmptyClusteringColumnsFails()
   {
-    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(null, null);
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(null, null, null);
     final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
     Assert.assertTrue(e.getMessage().contains("clusteringColumns must be non-empty"));
   }
@@ -322,6 +577,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Collections.singletonList("tenant"),
+        null,
         null
     );
     final DruidException e = Assert.assertThrows(

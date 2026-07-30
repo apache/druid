@@ -33,7 +33,9 @@ import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
@@ -402,6 +404,11 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                                         ColumnType.STRING,
                                         ExprMacroTable.nil()
                                     )
+                                ),
+                                // customizes the segment-creation schema of 'dim1'; invisible to the planner, since
+                                // the declared column list remains the logical schema
+                                ImmutableList.of(
+                                    new StringDimensionSchema("dim1", DimensionSchema.MultiValueHandling.ARRAY, false)
                                 )
                             )
                         ),

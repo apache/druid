@@ -1595,6 +1595,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return virtualStorageLoadingThreadPool;
   }
 
+  @VisibleForTesting
+  public SegmentLoaderConfig getConfig()
+  {
+    return config;
+  }
+
   /**
    * Checks whether a segment is already cached. This method does not confirm if the segment is actually mounted in
    * the location, or even that the segment files in some location are valid, just that some files exist in the
