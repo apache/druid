@@ -22,7 +22,6 @@ package org.apache.druid.indexing.rabbitstream;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Queues;
 import com.rabbitmq.stream.Consumer;
 import com.rabbitmq.stream.ConsumerBuilder;
@@ -271,7 +270,7 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
 
   }
 
-  private void filterBufferAndResetBackgroundFetch(Set<StreamPartition<String>> partitions)
+  private void filterBufferAndResetBackgroundFetch()
   {
     this.stopBackgroundFetch();
     // filter records in buffer and only retain ones whose partition was not seeked
@@ -288,14 +287,14 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
   @Override
   public void seek(StreamPartition<String> partition, Long sequenceNumber)
   {
-    filterBufferAndResetBackgroundFetch(ImmutableSet.of(partition));
+    filterBufferAndResetBackgroundFetch();
     offsetMap.put(partition.getPartitionId(), OffsetSpecification.offset(sequenceNumber));
   }
 
   @Override
   public void seekToEarliest(Set<StreamPartition<String>> partitions)
   {
-    filterBufferAndResetBackgroundFetch(partitions);
+    filterBufferAndResetBackgroundFetch();
     for (StreamPartition<String> part : partitions) {
       offsetMap.put(part.getPartitionId(), OffsetSpecification.first());
     }
@@ -304,7 +303,7 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
   @Override
   public void seekToLatest(Set<StreamPartition<String>> partitions)
   {
-    filterBufferAndResetBackgroundFetch(partitions);
+    filterBufferAndResetBackgroundFetch();
     for (StreamPartition<String> part : partitions) {
       offsetMap.put(part.getPartitionId(), OffsetSpecification.last());
     }
