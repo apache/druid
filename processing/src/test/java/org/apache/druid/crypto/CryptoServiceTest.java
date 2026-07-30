@@ -131,21 +131,20 @@ public class CryptoServiceTest
   }
 
   @Test
-  public void testInvalidLegacyCipherParametersConstructorFailure()
+  public void testInvalidLegacyCipherParametersFailWhenDecryptingLegacyCiphertext()
   {
-    Assertions.assertThrows(
-        IllegalArgumentException.class,
-        () -> new CryptoService(
-            PASSPHRASE,
-            "ABCD",
-            "EFGH",
-            "PAXXDDING",
-            "PBKDF2WithHmacSHA256",
-            8,
-            65536,
-            128
-        )
+    final CryptoService cryptoService = new CryptoService(
+        PASSPHRASE,
+        "ABCD",
+        "EFGH",
+        "PAXXDDING",
+        "PBKDF2WithHmacSHA256",
+        8,
+        65536,
+        128
     );
+
+    Assertions.assertThrows(DruidException.class, () -> cryptoService.decrypt(LEGACY_CIPHERTEXT));
   }
 
   private static CryptoService createCryptoService(final String passphrase)
