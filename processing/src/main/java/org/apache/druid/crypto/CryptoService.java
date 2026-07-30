@@ -219,6 +219,7 @@ public class CryptoService
     return dcipher.doFinal(encryptedData.getCipher());
   }
 
+  @SuppressWarnings("InsecureCryptoUsage")
   private void validateLegacyCipherConfiguration()
   {
     try {
