@@ -29,7 +29,6 @@ import org.mockito.junit.MockitoJUnitRunner;
 import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
@@ -116,7 +115,7 @@ public class RedirectFilterTest
         new URLStreamHandler()
         {
           @Override
-          protected URLConnection openConnection(final URL url) throws IOException
+          protected URLConnection openConnection(final URL url)
           {
             throw new UnsupportedOperationException();
           }
