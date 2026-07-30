@@ -57,6 +57,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -76,7 +77,10 @@ public class CompressionUtilsTest
   static {
     final StringBuilder builder = new StringBuilder();
     try (
-        final InputStream stream = CompressionUtilsTest.class.getClassLoader().getResourceAsStream("white-rabbit.txt");
+        final InputStream stream = Objects.requireNonNull(
+            CompressionUtilsTest.class.getClassLoader().getResourceAsStream("white-rabbit.txt"),
+            "Missing test resource: white-rabbit.txt"
+        );
         final InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8);
         final Scanner scanner = new Scanner(reader).useDelimiter(Pattern.quote(System.lineSeparator()))
     ) {

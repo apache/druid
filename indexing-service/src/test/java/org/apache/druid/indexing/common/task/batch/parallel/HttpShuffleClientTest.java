@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -39,6 +40,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -184,12 +186,12 @@ public class HttpShuffleClientTest
   {
     HttpClient httpClient = EasyMock.strictMock(HttpClient.class);
     if (numFailures == 0) {
-      EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject()))
+      EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.<InputStreamResponseHandler>anyObject()))
               // should return different instances of input stream
               .andReturn(openSegmentFile())
               .andReturn(openSegmentFile());
     } else {
-      EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject()))
+      EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.<InputStreamResponseHandler>anyObject()))
               .andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(numFailures)
               // should return different instances of input stream
               .andReturn(openSegmentFile())
@@ -199,11 +201,11 @@ public class HttpShuffleClientTest
     return new HttpShuffleClient(httpClient);
   }
 
-  private ListenableFuture<Object> openSegmentFile() throws FileNotFoundException
+  private ListenableFuture<InputStream> openSegmentFile() throws FileNotFoundException
   {
     // Ownership passes through HttpShuffleClient to FileUtils.copyLarge, which closes the response stream.
     // codeql[java/input-resource-leak]
-    return Futures.<Object>immediateFuture(new FileInputStream(segmentFile));
+    return Futures.immediateFuture(new FileInputStream(segmentFile));
   }
 
   private static class TestPartitionLocation extends GenericPartitionLocation
