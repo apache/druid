@@ -174,6 +174,14 @@ public class AuthorizationUtils
 
   /**
    * Builds a RequestInfo object that can be used for auditing purposes.
+   *
+   * <p>The {@link RequestInfo#getRequestMetadata()} map is populated from the thread-local
+   * {@link org.apache.druid.server.audit.RequestHeaderContext}, which holds the values captured
+   * from the configured inbound request headers (see {@code RequestHeaderContextFilter} and
+   * {@code druid.audit.requestHeaders.headerToContextKey}), keyed by their context key (for
+   * example {@code traceId}). Passing the whole captured map — rather than a single hard-coded
+   * field — lets operators map additional headers and have them appear in audit records with no
+   * code change, and lets consumers extract whichever fields they need.
    */
   public static RequestInfo buildRequestInfo(String service, HttpServletRequest request)
   {
@@ -181,7 +189,8 @@ public class AuthorizationUtils
         service,
         request.getMethod(),
         request.getRequestURI(),
-        request.getQueryString()
+        request.getQueryString(),
+        org.apache.druid.server.audit.RequestHeaderContext.current()
     );
   }
 

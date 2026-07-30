@@ -20,6 +20,7 @@
 package org.apache.druid.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.junit.jupiter.api.Assertions;
@@ -87,6 +88,48 @@ public class AuditInfoTest
     RequestInfo requestInfo = new RequestInfo("overlord", "GET", "/uri", "a=b");
     RequestInfo deserialized = mapper.readValue(mapper.writeValueAsString(requestInfo), RequestInfo.class);
     Assertions.assertEquals(requestInfo, deserialized);
+  }
+
+  @Test
+  public void testRequestInfoMetadataSerde() throws IOException
+  {
+    RequestInfo withMeta = new RequestInfo(
+        "overlord", "GET", "/uri", "a=b", ImmutableMap.of("traceId", "trace-abc-123")
+    );
+    RequestInfo deserialized = mapper.readValue(mapper.writeValueAsString(withMeta), RequestInfo.class);
+    Assertions.assertEquals(withMeta, deserialized);
+    Assertions.assertEquals("trace-abc-123", deserialized.getRequestMetadata().get("traceId"));
+  }
+
+  @Test
+  public void testRequestInfoEmptyMetadataOmittedFromJson() throws IOException
+  {
+    RequestInfo withoutMeta = new RequestInfo("overlord", "GET", "/uri", "a=b", null);
+    String json = mapper.writeValueAsString(withoutMeta);
+    Assertions.assertFalse(
+        json.contains("requestMetadata"),
+        "empty requestMetadata should be omitted from JSON for wire-size hygiene; got: " + json
+    );
+  }
+
+  @Test
+  public void testRequestInfoMetadataBackwardsCompatible() throws IOException
+  {
+    // Old audit rows persisted before requestMetadata existed must still deserialize.
+    String legacyJson = "{\"service\":\"overlord\",\"method\":\"GET\",\"uri\":\"/uri\",\"queryParams\":\"a=b\"}";
+    RequestInfo parsed = mapper.readValue(legacyJson, RequestInfo.class);
+    Assertions.assertEquals("overlord", parsed.getService());
+    Assertions.assertNull(parsed.getRequestMetadata());
+  }
+
+  @Test
+  public void testRequestInfoEqualityConsidersMetadata()
+  {
+    RequestInfo a = new RequestInfo("s", "GET", "/u", "p", ImmutableMap.of("traceId", "trace-1"));
+    RequestInfo b = new RequestInfo("s", "GET", "/u", "p", ImmutableMap.of("traceId", "trace-2"));
+    RequestInfo c = new RequestInfo("s", "GET", "/u", "p", ImmutableMap.of("traceId", "trace-1"));
+    Assertions.assertNotEquals(a, b);
+    Assertions.assertEquals(a, c);
   }
 
 }

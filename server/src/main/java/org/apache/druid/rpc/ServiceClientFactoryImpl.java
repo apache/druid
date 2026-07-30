@@ -19,6 +19,7 @@
 
 package org.apache.druid.rpc;
 
+import org.apache.druid.audit.RequestHeaderContextConfig;
 import org.apache.druid.java.util.http.client.HttpClient;
 
 import java.util.concurrent.ScheduledExecutorService;
@@ -30,14 +31,25 @@ public class ServiceClientFactoryImpl implements ServiceClientFactory
 {
   private final HttpClient httpClient;
   private final ScheduledExecutorService connectExec;
+  private final RequestHeaderContextConfig requestHeaderContextConfig;
 
   public ServiceClientFactoryImpl(
       final HttpClient httpClient,
       final ScheduledExecutorService connectExec
   )
   {
+    this(httpClient, connectExec, new RequestHeaderContextConfig());
+  }
+
+  public ServiceClientFactoryImpl(
+      final HttpClient httpClient,
+      final ScheduledExecutorService connectExec,
+      final RequestHeaderContextConfig requestHeaderContextConfig
+  )
+  {
     this.httpClient = httpClient;
     this.connectExec = connectExec;
+    this.requestHeaderContextConfig = requestHeaderContextConfig;
   }
 
   @Override
@@ -47,6 +59,13 @@ public class ServiceClientFactoryImpl implements ServiceClientFactory
       final ServiceRetryPolicy retryPolicy
   )
   {
-    return new ServiceClientImpl(serviceName, httpClient, serviceLocator, retryPolicy, connectExec);
+    return new ServiceClientImpl(
+        serviceName,
+        httpClient,
+        serviceLocator,
+        retryPolicy,
+        connectExec,
+        requestHeaderContextConfig
+    );
   }
 }

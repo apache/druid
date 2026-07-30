@@ -20,6 +20,7 @@
 package org.apache.druid.sql;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.audit.RequestHeaderContextConfig;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.log.RequestLogger;
@@ -37,7 +38,17 @@ public class SqlToolbox
   final RequestLogger requestLogger;
   final QueryScheduler queryScheduler;
   final SqlLifecycleManager sqlLifecycleManager;
+  /**
+   * Drives anti-spoof sanitization and propagation of reserved request-header context keys
+   * on the SQL path (see {@link AbstractStatement}), mirroring the native-query handling in
+   * {@code QueryLifecycle.initialize()}.
+   */
+  final RequestHeaderContextConfig requestHeaderContextConfig;
 
+  /**
+   * Convenience constructor that uses the default {@link RequestHeaderContextConfig}. Used
+   * by tests; production wiring goes through the full constructor so operator config is honored.
+   */
   public SqlToolbox(
       final SqlEngine engine,
       final PlannerFactory plannerFactory,
@@ -47,12 +58,30 @@ public class SqlToolbox
       final SqlLifecycleManager sqlLifecycleManager
   )
   {
+    this(engine, plannerFactory, emitter, requestLogger, queryScheduler, sqlLifecycleManager,
+         new RequestHeaderContextConfig());
+  }
+
+  public SqlToolbox(
+      final SqlEngine engine,
+      final PlannerFactory plannerFactory,
+      final ServiceEmitter emitter,
+      final RequestLogger requestLogger,
+      final QueryScheduler queryScheduler,
+      final SqlLifecycleManager sqlLifecycleManager,
+      final RequestHeaderContextConfig requestHeaderContextConfig
+  )
+  {
     this.engine = engine;
     this.plannerFactory = plannerFactory;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.queryScheduler = queryScheduler;
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
+    this.requestHeaderContextConfig = Preconditions.checkNotNull(
+        requestHeaderContextConfig,
+        "requestHeaderContextConfig"
+    );
   }
 
   public SqlToolbox withEngine(final SqlEngine engine)
@@ -63,7 +92,8 @@ public class SqlToolbox
         emitter,
         requestLogger,
         queryScheduler,
-        sqlLifecycleManager
+        sqlLifecycleManager,
+        requestHeaderContextConfig
     );
   }
 }

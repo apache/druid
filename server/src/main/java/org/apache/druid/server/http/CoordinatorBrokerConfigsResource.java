@@ -91,8 +91,10 @@ public class CoordinatorBrokerConfigsResource
 
       final SetResult setResult = configManager.set(
           BrokerDynamicConfig.CONFIG_KEY,
+          null,
           newConfig,
-          AuthorizationUtils.buildAuditInfo(req)
+          AuthorizationUtils.buildAuditInfo(req),
+          AuthorizationUtils.buildRequestInfo("coordinator", req)
       );
 
       if (setResult.isOk()) {

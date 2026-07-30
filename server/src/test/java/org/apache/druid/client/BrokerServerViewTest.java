@@ -805,7 +805,8 @@ public class BrokerServerViewTest
         EasyMock.createMock(QueryRunnerFactoryConglomerate.class),
         EasyMock.createMock(QueryWatcher.class),
         getSmileMapper(),
-        EasyMock.createMock(HttpClient.class)
+        EasyMock.createMock(HttpClient.class),
+        new org.apache.druid.audit.RequestHeaderContextConfig()
     );
 
     brokerServerView = new BrokerServerView(

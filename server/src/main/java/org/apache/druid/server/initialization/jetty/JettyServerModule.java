@@ -131,9 +131,15 @@ public class JettyServerModule extends JerseyServletModule
     // Add empty binding for Handlers so that the injector returns an empty set if none are provided by extensions.
     Multibinder.newSetBinder(binder, Handler.class);
     Multibinder.newSetBinder(binder, JettyBindings.QosFilterHolder.class);
-    Multibinder.newSetBinder(binder, ServletFilterHolder.class)
-               .addBinding()
-               .to(StandardResponseHeaderFilterHolder.class);
+    JsonConfigProvider.bind(
+        binder,
+        "druid.audit.requestHeaders",
+        org.apache.druid.audit.RequestHeaderContextConfig.class
+    );
+    final Multibinder<ServletFilterHolder> filterMultibinder =
+        Multibinder.newSetBinder(binder, ServletFilterHolder.class);
+    filterMultibinder.addBinding().to(StandardResponseHeaderFilterHolder.class);
+    filterMultibinder.addBinding().to(org.apache.druid.server.audit.RequestHeaderContextFilterHolder.class);
 
     MetricsModule.register(binder, JettyMonitor.class);
   }

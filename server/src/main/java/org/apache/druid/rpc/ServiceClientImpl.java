@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.audit.RequestHeaderContextConfig;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -37,6 +38,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.ObjectOrErrorResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.server.audit.RequestHeaderContext;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
@@ -58,6 +60,7 @@ public class ServiceClientImpl implements ServiceClient
   private final ServiceLocator serviceLocator;
   private final ServiceRetryPolicy retryPolicy;
   private final ScheduledExecutorService connectExec;
+  private final RequestHeaderContextConfig requestHeaderContextConfig;
 
   // Populated when we receive a redirect. The location here has no base path; it only identifies a preferred server.
   private final AtomicReference<ServiceLocation> preferredLocationNoPath = new AtomicReference<>();
@@ -70,11 +73,25 @@ public class ServiceClientImpl implements ServiceClient
       final ScheduledExecutorService connectExec
   )
   {
+    this(serviceName, httpClient, serviceLocator, retryPolicy, connectExec, new RequestHeaderContextConfig());
+  }
+
+  public ServiceClientImpl(
+      final String serviceName,
+      final HttpClient httpClient,
+      final ServiceLocator serviceLocator,
+      final ServiceRetryPolicy retryPolicy,
+      final ScheduledExecutorService connectExec,
+      final RequestHeaderContextConfig requestHeaderContextConfig
+  )
+  {
     this.serviceName = Preconditions.checkNotNull(serviceName, "serviceName");
     this.httpClient = Preconditions.checkNotNull(httpClient, "httpClient");
     this.serviceLocator = Preconditions.checkNotNull(serviceLocator, "serviceLocator");
     this.retryPolicy = Preconditions.checkNotNull(retryPolicy, "retryPolicy");
     this.connectExec = Preconditions.checkNotNull(connectExec, "connectExec");
+    this.requestHeaderContextConfig =
+        Preconditions.checkNotNull(requestHeaderContextConfig, "requestHeaderContextConfig");
 
     if (retryPolicy.maxAttempts() == 0) {
       throw new IAE("Invalid maxAttempts[%d] in retry policy", retryPolicy.maxAttempts());
@@ -87,6 +104,13 @@ public class ServiceClientImpl implements ServiceClient
       final HttpResponseHandler<IntermediateType, FinalType> handler
   )
   {
+    // Forward configured request headers (e.g. X-Druid-Trace-Id) captured from the inbound
+    // request onto this outbound inter-service call, so they propagate to downstream services on
+    // the normal (non-query) path. This is done HERE, on the caller's thread, where the
+    // RequestHeaderContextFilter's thread-local is bound — the request is actually built and sent
+    // later on the connectExec pool (see tryRequest), where the thread-local is not visible, so
+    // we stamp the RequestBuilder now and it carries the headers into that async send.
+    requestHeaderContextConfig.applyCapturedHeaders(RequestHeaderContext.current(), requestBuilder::header);
     final SettableFuture<FinalType> retVal = SettableFuture.create();
     tryRequest(requestBuilder, handler, retVal, 0, ImmutableSet.of());
     return retVal;
@@ -95,7 +119,14 @@ public class ServiceClientImpl implements ServiceClient
   @Override
   public ServiceClientImpl withRetryPolicy(ServiceRetryPolicy newRetryPolicy)
   {
-    return new ServiceClientImpl(serviceName, httpClient, serviceLocator, newRetryPolicy, connectExec);
+    return new ServiceClientImpl(
+        serviceName,
+        httpClient,
+        serviceLocator,
+        newRetryPolicy,
+        connectExec,
+        requestHeaderContextConfig
+    );
   }
 
   /**

@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.audit.RequestHeaderContextConfig;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
@@ -36,14 +37,25 @@ public abstract class SeekableStreamIndexTaskClientFactory<PartitionIdType, Sequ
 
   private final HttpClient httpClient;
   private final ObjectMapper jsonMapper;
+  private final RequestHeaderContextConfig requestHeaderContextConfig;
 
   protected SeekableStreamIndexTaskClientFactory(
       final HttpClient httpClient,
       final ObjectMapper jsonMapper
   )
   {
+    this(httpClient, jsonMapper, new RequestHeaderContextConfig());
+  }
+
+  protected SeekableStreamIndexTaskClientFactory(
+      final HttpClient httpClient,
+      final ObjectMapper jsonMapper,
+      final RequestHeaderContextConfig requestHeaderContextConfig
+  )
+  {
     this.httpClient = httpClient;
     this.jsonMapper = jsonMapper;
+    this.requestHeaderContextConfig = requestHeaderContextConfig;
   }
 
   /**
@@ -72,7 +84,7 @@ public abstract class SeekableStreamIndexTaskClientFactory<PartitionIdType, Sequ
 
     return new SeekableStreamIndexTaskClientAsyncImpl<>(
         dataSource,
-        new ServiceClientFactoryImpl(httpClient, connectExec),
+        new ServiceClientFactoryImpl(httpClient, connectExec, requestHeaderContextConfig),
         taskInfoProvider,
         jsonMapper,
         tuningConfig.getHttpTimeout(),

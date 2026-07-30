@@ -216,6 +216,7 @@ public class PerSegmentTimeoutInjectionTest
         NoopPolicyEnforcer.instance(),
         Collections.emptyList(),
         perSegmentTimeoutConfig,
+        new org.apache.druid.audit.RequestHeaderContextConfig(),
         System.currentTimeMillis(),
         System.nanoTime()
     );

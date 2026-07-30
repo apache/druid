@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
+import org.apache.druid.audit.RequestHeaderContextConfig;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -49,6 +50,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.server.audit.RequestHeaderContext;
 import org.apache.druid.server.broker.PerSegmentTimeoutConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
@@ -104,6 +106,7 @@ public class QueryLifecycle
   private final PolicyEnforcer policyEnforcer;
   private final List<QueryBlocklistRule> queryBlocklist;
   private final Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig;
+  private final RequestHeaderContextConfig requestHeaderContextConfig;
   private final long startMs;
   private final long startNs;
 
@@ -128,6 +131,7 @@ public class QueryLifecycle
       final PolicyEnforcer policyEnforcer,
       final List<QueryBlocklistRule> queryBlocklist,
       final Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig,
+      final RequestHeaderContextConfig requestHeaderContextConfig,
       final long startMs,
       final long startNs
   )
@@ -143,6 +147,7 @@ public class QueryLifecycle
     this.policyEnforcer = policyEnforcer;
     this.queryBlocklist = queryBlocklist;
     this.perSegmentTimeoutConfig = perSegmentTimeoutConfig;
+    this.requestHeaderContextConfig = requestHeaderContextConfig;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -215,7 +220,23 @@ public class QueryLifecycle
   {
     transition(State.NEW, State.INITIALIZED);
 
+    // Values captured from inbound request headers (see RequestHeaderContext). Computed once
+    // and used both for context-key authorization (below) and for anti-spoof injection (further
+    // down).
+    final Map<String, String> captured = RequestHeaderContext.current();
+
     userContextKeys = new HashSet<>(baseQuery.getContext().keySet());
+    // A body-supplied value for a header-target key is stripped below (anti-spoof) and never
+    // takes effect, so it must not count toward context-key authorization.
+    userContextKeys.removeAll(requestHeaderContextConfig.getHeaderToContextKey().values());
+    // A value actually captured from an inbound header DOES take effect on the query, and the
+    // caller controls what headers it sends, so it is subject to the same QUERY_CONTEXT WRITE
+    // authorization as a value supplied in the query body (see #authorize). This prevents a
+    // client from setting an operational context key (priority, lane, cache flags, ...) via a
+    // header to bypass the authorization required for the same key in the body. Inter-node RPCs
+    // run as the escalated internal identity, which is authorized for all context keys, so
+    // cross-node propagation is unaffected.
+    userContextKeys.addAll(captured.keySet());
     String queryId = baseQuery.getId();
     if (Strings.isNullOrEmpty(queryId)) {
       queryId = UUID.randomUUID().toString();
@@ -226,6 +247,39 @@ public class QueryLifecycle
     applyPerDatasourcePerSegmentTimeout(baseQuery, contextWithDefaults, queryId);
     Map<String, Object> finalContext = QueryContexts.override(contextWithDefaults, baseQuery.getContext());
     finalContext.put(BaseQuery.QUERY_ID, queryId);
+
+    // Anti-spoof + propagation. Reserved keys may ONLY originate from a filter-captured
+    // header — either a real client request (entry point) or an inter-Druid RPC where the
+    // upstream Druid node attached the header onto the wire (see
+    // DirectDruidClient.applyToOutboundRequest). Without sanitizing, a malicious client
+    // could supply {"context":{"traceId":"forged"}} in the query JSON body and have it
+    // survive into audit events and any downstream consumers of the query context.
+    //
+    // NOTE: withOverriddenContext() MERGES finalContext on top of baseQuery.getContext()
+    // (see QueryContexts.override) rather than replacing it. So merely removing a reserved
+    // key from finalContext does NOT drop a client-supplied value — the original (possibly
+    // forged) value still lives in baseQuery.getContext() and would survive the merge.
+    // Each reserved key must therefore be overridden explicitly:
+    //   - header captured     -> inject the captured value (authoritative)
+    //   - present in body only -> override to null so the spoofed value cannot survive
+    //   - absent everywhere    -> remove, keeping the executed context clean
+    //
+    // Trade-off: if an intermediate L7 proxy strips the custom X- header between two
+    // Druid nodes, the propagated value is lost on the receiving node (no fallback to
+    // the body-context value, which was just stripped). Druid's internal RPCs are
+    // expected to be direct (broker→historical etc.) rather than mediated by a
+    // header-rewriting proxy. Operators running a mesh that strips custom X-* headers
+    // should add the configured headers to their mesh's allow-list.
+    for (String reservedKey : requestHeaderContextConfig.getHeaderToContextKey().values()) {
+      final String capturedValue = captured.get(reservedKey);
+      if (capturedValue != null) {
+        finalContext.put(reservedKey, capturedValue);
+      } else if (baseQuery.getContext().containsKey(reservedKey)) {
+        finalContext.put(reservedKey, null);
+      } else {
+        finalContext.remove(reservedKey);
+      }
+    }
 
     this.baseQuery = baseQuery.withOverriddenContext(finalContext);
     this.toolChest = conglomerate.getToolChest(this.baseQuery);

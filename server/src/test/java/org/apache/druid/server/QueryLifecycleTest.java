@@ -59,6 +59,7 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.server.audit.RequestHeaderContext;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -861,6 +862,7 @@ public class QueryLifecycleTest
         policyEnforcer,
         queryBlocklist,
         Collections.emptyMap(),
+        new org.apache.druid.audit.RequestHeaderContextConfig(),
         System.currentTimeMillis(),
         System.nanoTime()
     );
@@ -913,12 +915,139 @@ public class QueryLifecycleTest
         policyEnforcer,
         queryBlocklist,
         Collections.emptyMap(),
+        new org.apache.druid.audit.RequestHeaderContextConfig(),
         System.currentTimeMillis(),
         System.nanoTime()
     );
 
     // This should succeed because query doesn't match blocklist rule
     lifecycle.runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION);
+  }
+
+  /**
+   * Anti-spoof regression test: a client supplies a value for a reserved context key
+   * ("traceId") in the query body but sends NO corresponding header. The forged value
+   * must NOT survive into the executed query context. This guards against the
+   * withOverriddenContext() merge re-introducing the body value after the strip.
+   */
+  @Test
+  public void testInitialize_forgedReservedContextKeyStrippedWhenNoHeader()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).anyTimes();
+    replayAll();
+
+    final TimeseriesQuery forgedQuery = Druids.newTimeseriesQueryBuilder()
+                                              .dataSource(DATASOURCE)
+                                              .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                              .aggregators(new CountAggregatorFactory("chocula"))
+                                              .context(ImmutableMap.of("traceId", "FORGED", "foo", "bar"))
+                                              .build();
+
+    RequestHeaderContext.clear();
+    try {
+      QueryLifecycle lifecycle = createLifecycle();
+      lifecycle.initialize(forgedQuery);
+
+      final Map<String, Object> ctx = lifecycle.getQuery().getContext();
+      Assert.assertNull("forged traceId must not survive into the query context", ctx.get("traceId"));
+      // Non-reserved user context is untouched.
+      Assert.assertEquals("bar", ctx.get("foo"));
+    }
+    finally {
+      RequestHeaderContext.clear();
+    }
+  }
+
+  /**
+   * A captured header value is authoritative: even when the body carries a forged value
+   * for the same reserved key, the filter-captured value wins.
+   */
+  @Test
+  public void testInitialize_capturedHeaderOverridesForgedBody()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).anyTimes();
+    replayAll();
+
+    final TimeseriesQuery forgedQuery = Druids.newTimeseriesQueryBuilder()
+                                              .dataSource(DATASOURCE)
+                                              .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                              .aggregators(new CountAggregatorFactory("chocula"))
+                                              .context(ImmutableMap.of("traceId", "FORGED"))
+                                              .build();
+
+    RequestHeaderContext.bind(ImmutableMap.of("traceId", "real-trace-123"));
+    try {
+      QueryLifecycle lifecycle = createLifecycle();
+      lifecycle.initialize(forgedQuery);
+      Assert.assertEquals(
+          "captured header value must override forged body value",
+          "real-trace-123",
+          lifecycle.getQuery().getContext().get("traceId")
+      );
+    }
+    finally {
+      RequestHeaderContext.clear();
+    }
+  }
+
+  /**
+   * A context key whose value is captured from an inbound request header is client-influenced
+   * (a caller controls the headers it sends), so it must be subject to QUERY_CONTEXT WRITE
+   * authorization just like a body-supplied key. This guards against a client bypassing
+   * context-key authorization by sending an operational key's value as a header instead of in
+   * the query body.
+   */
+  @Test
+  public void testAuthorizeQueryContext_capturedHeaderKeyRequiresAuthorization()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(
+                authenticationResult,
+                new Resource(DATASOURCE, ResourceType.DATASOURCE),
+                Action.READ
+            ))
+            .andReturn(Access.OK)
+            .times(2);
+    // "traceId" is supplied only via the captured header (not the body) yet must still be
+    // authorized as a QUERY_CONTEXT write.
+    EasyMock.expect(authorizer.authorize(
+                authenticationResult,
+                new Resource("traceId", ResourceType.QUERY_CONTEXT),
+                Action.WRITE
+            ))
+            .andReturn(Access.DENIED)
+            .times(2);
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest)
+            .times(2);
+
+    replayAll();
+
+    // Note: no context keys in the query body; "traceId" arrives only via the captured header.
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource(DATASOURCE)
+                                        .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                        .aggregators(new CountAggregatorFactory("chocula"))
+                                        .build();
+
+    authConfig = AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build();
+    RequestHeaderContext.bind(ImmutableMap.of("traceId", "client-set-trace"));
+    try {
+      QueryLifecycle lifecycle = createLifecycle();
+      lifecycle.initialize(query);
+      Assert.assertFalse(lifecycle.authorize(mockRequest()).allowBasicAccess());
+
+      lifecycle = createLifecycle();
+      lifecycle.initialize(query);
+      Assert.assertFalse(lifecycle.authorize(authenticationResult).allowBasicAccess());
+    }
+    finally {
+      RequestHeaderContext.clear();
+    }
   }
 
   private HttpServletRequest mockRequest()
