@@ -241,6 +241,10 @@ public abstract class QueryResultPusher
         counter.incrementInterrupted();
         break;
       case CAPACITY_EXCEEDED:
+      case CONFLICT:
+      case FORBIDDEN:
+      case NOT_FOUND:
+      case SERVICE_UNAVAILABLE:
       case UNSUPPORTED:
       case UNCATEGORIZED:
       case DEFENSIVE:

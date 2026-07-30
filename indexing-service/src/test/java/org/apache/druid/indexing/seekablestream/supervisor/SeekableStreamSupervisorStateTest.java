@@ -3404,6 +3404,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     @Override
     protected OrderedSequenceNumber<String> makeSequenceNumber(String seq, boolean isExclusive)
     {
+      // Offset ordering intentionally excludes boundary exclusivity, which value equality includes.
+      // codeql[java/inconsistent-compareto-and-equals]
       return new OrderedSequenceNumber<>(seq, isExclusive)
       {
         @Override
