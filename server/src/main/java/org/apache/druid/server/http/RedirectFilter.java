@@ -72,17 +72,22 @@ public class RedirectFilter implements Filter
     if (redirectInfo.doLocal(request.getRequestURI())) {
       chain.doFilter(request, response);
     } else {
-      URL url = redirectInfo.getRedirectURL(request.getQueryString(), request.getRequestURI());
-      log.debug("Forwarding request to [%s]", url);
-
+      final URL url = redirectInfo.getRedirectURL(request.getQueryString(), request.getRequestURI());
       if (url == null) {
         // We apparently have nothing to redirect to, so let's do a Service Unavailable
         response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
         return;
       }
 
+      final String location = url.toString();
+      if (location.indexOf('\r') >= 0 || location.indexOf('\n') >= 0) {
+        response.sendError(HttpServletResponse.SC_BAD_REQUEST);
+        return;
+      }
+
+      log.debug("Forwarding request to [%s]", url);
       response.setStatus(HttpServletResponse.SC_TEMPORARY_REDIRECT);
-      response.setHeader("Location", url.toString());
+      response.setHeader("Location", location);
     }
   }
 
