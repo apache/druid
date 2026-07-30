@@ -206,7 +206,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
   }
 
-  private class ServerWrapper
+  private class ServerWrapper implements AutoCloseable
   {
     final DruidMeta druidMeta;
     final Server server;
@@ -248,6 +248,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     //  return DriverManager.getConnection(url);
     //}
 
+    @Override
     public void close() throws Exception
     {
       druidMeta.closeAllConnections();
@@ -1172,8 +1173,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       }
     };
 
-    ServerWrapper server = new ServerWrapper(smallFrameDruidMeta);
-    try (final Connection smallFrameClient = server.getUserConnection();
+    try (final ServerWrapper server = new ServerWrapper(smallFrameDruidMeta);
+         final Connection smallFrameClient = server.getUserConnection();
          final Statement statement = smallFrameClient.createStatement();
          final ResultSet resultSet = statement.executeQuery("SELECT dim1 FROM druid.foo")) {
       final List<Map<String, Object>> rows = getRows(resultSet);
@@ -1190,9 +1191,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
           rows
       );
     }
-
-    exec.shutdown();
-    server.close();
+    finally {
+      exec.shutdown();
+    }
   }
 
   @Test
@@ -1231,8 +1232,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       }
     };
 
-    ServerWrapper server = new ServerWrapper(smallFrameDruidMeta);
-    try (final Connection smallFrameClient = server.getUserConnection();
+    try (final ServerWrapper server = new ServerWrapper(smallFrameDruidMeta);
+         final Connection smallFrameClient = server.getUserConnection();
          final PreparedStatement statement = smallFrameClient.prepareStatement("SELECT dim1 FROM druid.foo")) {
       // use a prepared statement because Avatica currently ignores fetchSize on the initial fetch of a Statement
       // set a fetch size below the minimum configured threshold
@@ -1254,9 +1255,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         );
       }
     }
-
-    exec.shutdown();
-    server.close();
+    finally {
+      exec.shutdown();
+    }
   }
 
   @Test
@@ -1841,29 +1842,30 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       }
     };
 
-    ServerWrapper server = new ServerWrapper(druidMeta);
-    try (Connection conn = server.getUserConnection()) {
+    try (final ServerWrapper server = new ServerWrapper(druidMeta)) {
+      try (final Connection conn = server.getUserConnection()) {
 
-      // Test with plain JDBC
-      try (final Statement statement = conn.createStatement();
-           final ResultSet resultSet = statement.executeQuery("SELECT dim1 FROM druid.foo")) {
-        List<Map<String, Object>> rows = getRows(resultSet);
-        Assert.assertEquals(6, rows.size());
-        Assert.assertEquals(6, frames.size()); // 3 empty frames and then 3 frames of 2 rows each
+        // Test with plain JDBC
+        try (final Statement statement = conn.createStatement();
+             final ResultSet resultSet = statement.executeQuery("SELECT dim1 FROM druid.foo")) {
+          final List<Map<String, Object>> rows = getRows(resultSet);
+          Assert.assertEquals(6, rows.size());
+          Assert.assertEquals(6, frames.size()); // 3 empty frames and then 3 frames of 2 rows each
 
-        Assert.assertFalse(frames.get(0).rows.iterator().hasNext());
-        Assert.assertFalse(frames.get(1).rows.iterator().hasNext());
-        Assert.assertFalse(frames.get(2).rows.iterator().hasNext());
-        Assert.assertTrue(frames.get(3).rows.iterator().hasNext());
-        Assert.assertTrue(frames.get(4).rows.iterator().hasNext());
-        Assert.assertTrue(frames.get(5).rows.iterator().hasNext());
+          Assert.assertFalse(frames.get(0).rows.iterator().hasNext());
+          Assert.assertFalse(frames.get(1).rows.iterator().hasNext());
+          Assert.assertFalse(frames.get(2).rows.iterator().hasNext());
+          Assert.assertTrue(frames.get(3).rows.iterator().hasNext());
+          Assert.assertTrue(frames.get(4).rows.iterator().hasNext());
+          Assert.assertTrue(frames.get(5).rows.iterator().hasNext());
+        }
       }
+
+      testWithJDBI(server.url);
     }
-
-    testWithJDBI(server.url);
-
-    exec.shutdown();
-    server.close();
+    finally {
+      exec.shutdown();
+    }
   }
 
   @Test

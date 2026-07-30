@@ -869,19 +869,20 @@ public class CompressionUtilsTest
     final AtomicLong flushes = new AtomicLong(0L);
     try (
         final InputStream inputStream = new FileInputStream(gzFile);
-        final OutputStream fileOutputStream = new FileOutputStream(testFile)
-        {
-          @Override
-          public void flush() throws IOException
-          {
-            if (flushes.getAndIncrement() > 0) {
-              super.flush();
-            } else {
-              throw new IOException("Test exception");
+        final OutputStream outputStream = new FilterOutputStream(
+            new FileOutputStream(testFile)
+            {
+              @Override
+              public void flush() throws IOException
+              {
+                if (flushes.getAndIncrement() > 0) {
+                  super.flush();
+                } else {
+                  throw new IOException("Test exception");
+                }
+              }
             }
-          }
-        };
-        final OutputStream outputStream = new FilterOutputStream(fileOutputStream)
+        )
     ) {
       CompressionUtils.gunzip(inputStream, outputStream);
     }
