@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -185,17 +186,24 @@ public class HttpShuffleClientTest
     if (numFailures == 0) {
       EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject()))
               // should return different instances of input stream
-              .andReturn(Futures.immediateFuture(new FileInputStream(segmentFile)))
-              .andReturn(Futures.immediateFuture(new FileInputStream(segmentFile)));
+              .andReturn(openSegmentFile())
+              .andReturn(openSegmentFile());
     } else {
       EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject()))
               .andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(numFailures)
               // should return different instances of input stream
-              .andReturn(Futures.immediateFuture(new FileInputStream(segmentFile)))
-              .andReturn(Futures.immediateFuture(new FileInputStream(segmentFile)));
+              .andReturn(openSegmentFile())
+              .andReturn(openSegmentFile());
     }
     EasyMock.replay(httpClient);
     return new HttpShuffleClient(httpClient);
+  }
+
+  private ListenableFuture<Object> openSegmentFile() throws FileNotFoundException
+  {
+    // Ownership passes through HttpShuffleClient to FileUtils.copyLarge, which closes the response stream.
+    // codeql[java/input-resource-leak]
+    return Futures.<Object>immediateFuture(new FileInputStream(segmentFile));
   }
 
   private static class TestPartitionLocation extends GenericPartitionLocation

@@ -963,7 +963,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   @Test
   public void testTooManyStatements() throws SQLException
   {
+    // Leave these statements open until tearDown closes client so the test reaches the configured limit.
     for (int i = 0; i < STATEMENT_LIMIT; i++) {
+      // codeql[java/database-resource-leak]
       client.createStatement();
     }
 
@@ -978,7 +980,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testNotTooManyStatementsWhenYouCloseThem() throws SQLException
   {
     for (int i = 0; i < STATEMENT_LIMIT * 2; i++) {
-      client.createStatement().close();
+      try (final Statement ignored = client.createStatement()) {
+        // Closing each statement is the behavior under test.
+      }
     }
   }
 
@@ -1037,7 +1041,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testNotTooManyStatementsWhenClosed()
   {
     for (int i = 0; i < 50; i++) {
-      try (Statement statement = client.createStatement()) {
+      try (final Statement statement = client.createStatement()) {
         statement.executeQuery("SELECT SUM(nonexistent) FROM druid.foo");
         Assert.fail();
       }
@@ -1051,11 +1055,13 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testAutoReconnectOnNoSuchConnection() throws SQLException
   {
     for (int i = 0; i < 50; i++) {
-      final ResultSet resultSet = client.createStatement().executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
-      Assert.assertEquals(
-          ImmutableList.of(ImmutableMap.of("cnt", 6L)),
-          getRows(resultSet)
-      );
+      try (Statement statement = client.createStatement()) {
+        final ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+        Assert.assertEquals(
+            ImmutableList.of(ImmutableMap.of("cnt", 6L)),
+            getRows(resultSet)
+        );
+      }
       server.druidMeta.closeAllConnections();
     }
   }
@@ -1063,9 +1069,14 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   @Test
   public void testTooManyConnections() throws SQLException
   {
+    // Keep one statement open on each connection until tearDown so all connection slots remain occupied.
+    // codeql[java/database-resource-leak]
     client.createStatement();
+    // codeql[java/database-resource-leak]
     clientLosAngeles.createStatement();
+    // codeql[java/database-resource-leak]
     superuserClient.createStatement();
+    // codeql[java/database-resource-leak]
     clientNoTrailingSlash.createStatement();
 
     AvaticaClientRuntimeException ex = Assert.assertThrows(
@@ -1090,11 +1101,15 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     for (int i = 0; i < CONNECTION_LIMIT * 2; i++) {
       try (Connection connection = server.getUserConnection()) {
         // Note: NOT in a try-catch block. Let the connection close the statement
+        // codeql[java/database-resource-leak]
         final Statement statement = connection.createStatement();
 
         // Again, NOT in a try-catch block: let the statement close the
         // result set.
-        final ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+        // codeql[java/database-resource-leak]
+        final ResultSet resultSet = statement.executeQuery(
+            "SELECT COUNT(*) AS cnt FROM druid.foo"
+        );
         Assert.assertTrue(resultSet.next());
       }
     }
@@ -1158,27 +1173,24 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     };
 
     ServerWrapper server = new ServerWrapper(smallFrameDruidMeta);
-    Connection smallFrameClient = server.getUserConnection();
+    try (final Connection smallFrameClient = server.getUserConnection();
+         final Statement statement = smallFrameClient.createStatement();
+         final ResultSet resultSet = statement.executeQuery("SELECT dim1 FROM druid.foo")) {
+      final List<Map<String, Object>> rows = getRows(resultSet);
+      Assert.assertEquals(2, frames.size());
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableMap.of("dim1", ""),
+              ImmutableMap.of("dim1", "10.1"),
+              ImmutableMap.of("dim1", "2"),
+              ImmutableMap.of("dim1", "1"),
+              ImmutableMap.of("dim1", "def"),
+              ImmutableMap.of("dim1", "abc")
+          ),
+          rows
+      );
+    }
 
-    final ResultSet resultSet = smallFrameClient.createStatement().executeQuery(
-        "SELECT dim1 FROM druid.foo"
-    );
-    List<Map<String, Object>> rows = getRows(resultSet);
-    Assert.assertEquals(2, frames.size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            ImmutableMap.of("dim1", ""),
-            ImmutableMap.of("dim1", "10.1"),
-            ImmutableMap.of("dim1", "2"),
-            ImmutableMap.of("dim1", "1"),
-            ImmutableMap.of("dim1", "def"),
-            ImmutableMap.of("dim1", "abc")
-        ),
-        rows
-    );
-
-    resultSet.close();
-    smallFrameClient.close();
     exec.shutdown();
     server.close();
   }
@@ -1220,30 +1232,29 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     };
 
     ServerWrapper server = new ServerWrapper(smallFrameDruidMeta);
-    Connection smallFrameClient = server.getUserConnection();
+    try (final Connection smallFrameClient = server.getUserConnection();
+         final PreparedStatement statement = smallFrameClient.prepareStatement("SELECT dim1 FROM druid.foo")) {
+      // use a prepared statement because Avatica currently ignores fetchSize on the initial fetch of a Statement
+      // set a fetch size below the minimum configured threshold
+      statement.setFetchSize(2);
+      try (final ResultSet resultSet = statement.executeQuery()) {
+        final List<Map<String, Object>> rows = getRows(resultSet);
+        // expect minimum threshold to be used, which should be enough to do this all in first fetch
+        Assert.assertEquals(0, frames.size());
+        Assert.assertEquals(
+            ImmutableList.of(
+                ImmutableMap.of("dim1", ""),
+                ImmutableMap.of("dim1", "10.1"),
+                ImmutableMap.of("dim1", "2"),
+                ImmutableMap.of("dim1", "1"),
+                ImmutableMap.of("dim1", "def"),
+                ImmutableMap.of("dim1", "abc")
+            ),
+            rows
+        );
+      }
+    }
 
-    // use a prepared statement because Avatica currently ignores fetchSize on the initial fetch of a Statement
-    PreparedStatement statement = smallFrameClient.prepareStatement("SELECT dim1 FROM druid.foo");
-    // set a fetch size below the minimum configured threshold
-    statement.setFetchSize(2);
-    final ResultSet resultSet = statement.executeQuery();
-    List<Map<String, Object>> rows = getRows(resultSet);
-    // expect minimum threshold to be used, which should be enough to do this all in first fetch
-    Assert.assertEquals(0, frames.size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            ImmutableMap.of("dim1", ""),
-            ImmutableMap.of("dim1", "10.1"),
-            ImmutableMap.of("dim1", "2"),
-            ImmutableMap.of("dim1", "1"),
-            ImmutableMap.of("dim1", "def"),
-            ImmutableMap.of("dim1", "abc")
-        ),
-        rows
-    );
-
-    resultSet.close();
-    smallFrameClient.close();
     exec.shutdown();
     server.close();
   }
@@ -1834,8 +1845,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     try (Connection conn = server.getUserConnection()) {
 
       // Test with plain JDBC
-      try (ResultSet resultSet = conn.createStatement().executeQuery(
-          "SELECT dim1 FROM druid.foo")) {
+      try (final Statement statement = conn.createStatement();
+           final ResultSet resultSet = statement.executeQuery("SELECT dim1 FROM druid.foo")) {
         List<Map<String, Object>> rows = getRows(resultSet);
         Assert.assertEquals(6, rows.size());
         Assert.assertEquals(6, frames.size()); // 3 empty frames and then 3 frames of 2 rows each
