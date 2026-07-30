@@ -27,6 +27,7 @@ import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.hamcrest.number.IsCloseTo;
 import org.junit.Assert;
@@ -208,12 +209,12 @@ public class StringSketchTest
         String partitionBoundariesString = PartitionTest.toString(partitionBoundaries);
         int expectedHighPartitionBoundaryCount = (int) Math.ceil((double) NUM_STRING / targetSize);
         int expectedLowPartitionBoundaryCount = expectedHighPartitionBoundaryCount - 1;
-        Assert.assertThat(
+        MatcherAssert.assertThat(
             "targetSize=" + targetSize + " " + partitionBoundariesString,
             partitionBoundaries.size(),
             Matchers.lessThanOrEqualTo(expectedHighPartitionBoundaryCount + 1)
         );
-        Assert.assertThat(
+        MatcherAssert.assertThat(
             "targetSize=" + targetSize + " " + partitionBoundariesString,
             partitionBoundaries.size(),
             Matchers.greaterThanOrEqualTo(expectedLowPartitionBoundaryCount + 1)
@@ -223,7 +224,7 @@ public class StringSketchTest
         for (int i = 1; i < partitionBoundaries.size() - 1; i++) {
           int current = Integer.parseInt(partitionBoundaries.get(i).get(0));
           int size = current - previous;
-          Assert.assertThat(
+          MatcherAssert.assertThat(
               getErrMsgPrefix(targetSize, i) + partitionBoundariesString,
               (double) size,
               IsCloseTo.closeTo(targetSize, Math.ceil(DELTA) * 2)
@@ -314,12 +315,12 @@ public class StringSketchTest
         for (int i = 1; i < partitionBoundaries.size() - 1; i++) {
           int current = Integer.parseInt(partitionBoundaries.get(i).get(0));
           int size = current - previous;
-          Assert.assertThat(
+          MatcherAssert.assertThat(
               getErrMsgPrefix(maxSize, i) + partitionBoundariesString,
               size,
               Matchers.lessThanOrEqualTo(maxSize)
           );
-          Assert.assertThat(
+          MatcherAssert.assertThat(
               getErrMsgPrefix(maxSize, i) + partitionBoundariesString,
               (double) size,
               Matchers.greaterThanOrEqualTo(minSize)
