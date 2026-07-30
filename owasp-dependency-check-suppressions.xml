@@ -242,15 +242,6 @@
   </suppress>
 
   <suppress>
-    <!-- TODO: Fix by updating ambari-metrics-emitter's transitive hadoop dependency -->
-    <notes><![CDATA[
-   file name: jackson-mapper-asl-1.9.13.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.codehaus\.jackson/jackson\-mapper\-asl@1.9.13$</packageUrl>
-    <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-mapper-asl:1.9.13; pulled in (test scope only) via ambari-metrics-emitter -->
-  </suppress>
-
-  <suppress>
     <!-- TODO: Fix by updating org.apache.druid.java.util.http.client.NettyHttpClient to use netty 4 -->
     <notes><![CDATA[
    file name: netty-3.10.6.Final.jar

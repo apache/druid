@@ -106,7 +106,6 @@
         <jetty.version>12.1.11</jetty.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.21.4</jackson.version>
-        <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.26.0</log4j.version>
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
@@ -1168,16 +1167,6 @@
                 <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-core</artifactId>
                 <version>${dropwizard.metrics.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-core-asl</artifactId>
-                <version>${codehaus.jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-mapper-asl</artifactId>
-                <version>${codehaus.jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>javax.servlet</groupId>
