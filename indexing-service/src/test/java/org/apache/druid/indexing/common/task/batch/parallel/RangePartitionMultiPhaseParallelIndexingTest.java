@@ -454,16 +454,17 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     Assert.assertTrue(shardSpec.toString(), start != null || end != null);
 
     for (StringTuple value : values) {
+      if (value == null) {
+        Assert.assertNull("null values should be in first partition", start);
+        continue;
+      }
+
       if (start != null) {
         Assert.assertThat(value.compareTo(start), Matchers.greaterThanOrEqualTo(0));
       }
 
       if (end != null) {
-        if (value == null) {
-          Assert.assertNull("null values should be in first partition", start);
-        } else {
-          Assert.assertThat(value.compareTo(end), Matchers.lessThan(0));
-        }
+        Assert.assertThat(value.compareTo(end), Matchers.lessThan(0));
       }
     }
   }

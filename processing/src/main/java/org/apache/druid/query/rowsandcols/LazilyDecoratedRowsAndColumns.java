@@ -285,15 +285,8 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
         cursor.advance();
       }
 
-      if (writer == null) {
-        // This means that the accumulate was never called, which can only happen if we didn't have any cursors.
-        // We would only have zero cursors if we essentially didn't match anything, meaning that our RowsAndColumns
-        // should be completely empty.
-        return null;
-      } else {
-        final byte[] bytes = writer.toByteArray();
-        return Pair.of(bytes, siggy.get());
-      }
+      final byte[] bytes = writer.toByteArray();
+      return Pair.of(bytes, siggy.get());
     }
   }
 

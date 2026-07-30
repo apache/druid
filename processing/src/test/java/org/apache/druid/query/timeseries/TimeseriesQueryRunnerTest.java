@@ -96,6 +96,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -324,7 +325,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     }
 
     stubServiceEmitter.verifyEmitted("query/wait/time", ImmutableMap.of("vectorized", vectorize), 1);
-    Assert.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
+    final Result nonNullLastResult = Objects.requireNonNull(lastResult, "Expected at least one query result");
+    Assert.assertEquals(nonNullLastResult.toString(), expectedLast, nonNullLastResult.getTimestamp());
   }
 
   @Test
@@ -356,7 +358,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       lastResult = result;
     }
 
-    Assert.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
+    final Result nonNullLastResult = Objects.requireNonNull(lastResult, "Expected at least one query result");
+    Assert.assertEquals(nonNullLastResult.toString(), expectedLast, nonNullLastResult.getTimestamp());
   }
 
   @Test
@@ -2820,7 +2823,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       lastResult = result;
       ++count;
     }
-    Assert.assertEquals(expectedLast, lastResult[0]);
+    final Object[] nonNullLastResult = Objects.requireNonNull(lastResult, "Expected at least one query result");
+    Assert.assertEquals(expectedLast, nonNullLastResult[0]);
   }
 
   @Test
@@ -2925,7 +2929,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       ++count;
     }
 
-    Assert.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
+    final Result nonNullLastResult = Objects.requireNonNull(lastResult, "Expected at least one query result");
+    Assert.assertEquals(nonNullLastResult.toString(), expectedLast, nonNullLastResult.getTimestamp());
   }
 
   @Test
