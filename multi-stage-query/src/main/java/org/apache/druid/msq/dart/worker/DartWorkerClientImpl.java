@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import io.netty.handler.codec.http.HttpMethod;
 import it.unimi.dsi.fastutil.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -38,7 +39,6 @@ import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.utils.CloseableUtils;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;

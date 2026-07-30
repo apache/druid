@@ -36,6 +36,9 @@ import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.concurrent.LifecycleLock;
@@ -57,9 +60,6 @@ import org.apache.druid.java.util.http.client.response.SequenceInputStreamRespon
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.http.HostAndPortWithScheme;
 import org.apache.druid.server.listener.resource.ListenerResource;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
@@ -899,8 +899,8 @@ public class LookupCoordinatorManager
         @Override
         public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
         {
-          returnCode.set(response.getStatus().getCode());
-          reasonString.set(response.getStatus().getReasonPhrase());
+          returnCode.set(response.status().code());
+          reasonString.set(response.status().reasonPhrase());
           return super.handleResponse(response, trafficCop);
         }
       };

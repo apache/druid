@@ -22,7 +22,14 @@ package org.apache.druid.frame.file;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ListenableFuture;
-import it.unimi.dsi.fastutil.bytes.ByteArrays;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.frame.read.FrameReader;
@@ -37,14 +44,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.jboss.netty.buffer.ByteBufferBackedChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -111,10 +110,11 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
   @Test
   public void testNonChunkedResponse() throws Exception
   {
-    final ClientResponse<FrameFilePartialFetch> response1 = handler.handleResponse(
-        makeResponse(HttpResponseStatus.OK, Files.readAllBytes(file.toPath())),
+    ClientResponse<FrameFilePartialFetch> response1 = handler.handleResponse(
+        makeResponse(HttpResponseStatus.OK),
         null
     );
+    response1 = handler.handleChunk(response1, makeChunk(Files.readAllBytes(file.toPath())), 1);
 
     Assert.assertFalse(response1.isFinished());
     Assert.assertTrue(response1.isContinueReading());
@@ -146,7 +146,7 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
   public void testEmptyResponseWithoutLastFetchHeader()
   {
     final ClientResponse<FrameFilePartialFetch> response1 = handler.handleResponse(
-        makeResponse(HttpResponseStatus.OK, ByteArrays.EMPTY_ARRAY),
+        makeResponse(HttpResponseStatus.OK),
         null
     );
 
@@ -167,7 +167,7 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
   @Test
   public void testEmptyResponseWithLastFetchHeader()
   {
-    final HttpResponse serverResponse = makeResponse(HttpResponseStatus.OK, ByteArrays.EMPTY_ARRAY);
+    final HttpResponse serverResponse = makeResponse(HttpResponseStatus.OK);
     serverResponse.headers().set(
         FrameFileHttpResponseHandler.HEADER_LAST_FETCH_NAME,
         FrameFileHttpResponseHandler.HEADER_LAST_FETCH_VALUE
@@ -199,9 +199,10 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     final byte[] allBytes = Files.readAllBytes(file.toPath());
 
     ClientResponse<FrameFilePartialFetch> response = handler.handleResponse(
-        makeResponse(HttpResponseStatus.OK, byteSlice(allBytes, 0, chunkSize)),
+        makeResponse(HttpResponseStatus.OK),
         null
     );
+    response = handler.handleChunk(response, makeChunk(byteSlice(allBytes, 0, chunkSize)), 1);
 
     Assert.assertFalse(response.isFinished());
 
@@ -209,7 +210,7 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
       response = handler.handleChunk(
           response,
           makeChunk(byteSlice(allBytes, p, chunkSize)),
-          p / chunkSize
+          p / chunkSize + 1
       );
 
       Assert.assertFalse(response.isFinished());
@@ -242,7 +243,7 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
   public void testServerErrorResponse()
   {
     ClientResponse<FrameFilePartialFetch> response = handler.handleResponse(
-        makeResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR, StringUtils.toUtf8("Oh no!")),
+        makeResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR),
         null
     );
 
@@ -269,11 +270,12 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
   public void testChunkedServerErrorResponse()
   {
     ClientResponse<FrameFilePartialFetch> response = handler.handleResponse(
-        makeResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR, StringUtils.toUtf8("Oh ")),
+        makeResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR),
         null
     );
 
-    response = handler.handleChunk(response, makeChunk(StringUtils.toUtf8("no!")), 1);
+    response = handler.handleChunk(response, makeChunk(StringUtils.toUtf8("Oh ")), 1);
+    response = handler.handleChunk(response, makeChunk(StringUtils.toUtf8("no!")), 2);
 
     final ClientResponse<FrameFilePartialFetch> finalResponse = handler.done(response);
     Assert.assertTrue(finalResponse.isFinished());
@@ -302,9 +304,10 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     final byte[] allBytes = Files.readAllBytes(file.toPath());
 
     ClientResponse<FrameFilePartialFetch> response = handler.handleResponse(
-        makeResponse(HttpResponseStatus.OK, byteSlice(allBytes, 0, chunkSize)),
+        makeResponse(HttpResponseStatus.OK),
         null
     );
+    response = handler.handleChunk(response, makeChunk(byteSlice(allBytes, 0, chunkSize)), 1);
 
     Assert.assertFalse(response.isFinished());
 
@@ -312,7 +315,7 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     response = handler.handleChunk(
         response,
         makeChunk(byteSlice(allBytes, chunkSize, chunkSize)),
-        1
+        2
     );
 
     // Set an exception.
@@ -355,12 +358,12 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     final byte[] allBytes = Files.readAllBytes(file.toPath());
 
     // Add firstPart and be done.
-    ClientResponse<FrameFilePartialFetch> response = handler.done(
-        handler.handleResponse(
-            makeResponse(HttpResponseStatus.OK, byteSlice(allBytes, 0, firstPart)),
-            null
-        )
+    ClientResponse<FrameFilePartialFetch> response = handler.handleResponse(
+        makeResponse(HttpResponseStatus.OK),
+        null
     );
+    response = handler.handleChunk(response, makeChunk(byteSlice(allBytes, 0, firstPart)), 1);
+    response = handler.done(response);
 
     Assert.assertEquals(firstPart, channel.getBytesAdded());
     Assert.assertTrue(response.isFinished());
@@ -368,9 +371,10 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     // Add first quarter after firstPart using a new handler.
     handler = new FrameFileHttpResponseHandler(channel);
     response = handler.handleResponse(
-        makeResponse(HttpResponseStatus.OK, byteSlice(allBytes, firstPart, chunkSize * 3)),
+        makeResponse(HttpResponseStatus.OK),
         null
     );
+    response = handler.handleChunk(response, makeChunk(byteSlice(allBytes, firstPart, chunkSize * 3)), 1);
 
     // Set an exception.
     handler.exceptionCaught(response, new ISE("Oh no!"));
@@ -392,9 +396,10 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     // thirds instead of quarters as chunks. (ServiceClientImpl would retry from the same offset with the same handler
     // if the exception is retryable.)
     response = handler.handleResponse(
-        makeResponse(HttpResponseStatus.OK, byteSlice(allBytes, firstPart, chunkSize * 4)),
+        makeResponse(HttpResponseStatus.OK),
         null
     );
+    response = handler.handleChunk(response, makeChunk(byteSlice(allBytes, firstPart, chunkSize * 4)), 1);
 
     Assert.assertEquals(firstPart + chunkSize * 4L, channel.getBytesAdded());
     Assert.assertFalse(response.isFinished());
@@ -426,24 +431,17 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     );
   }
 
-  private static HttpResponse makeResponse(final HttpResponseStatus status, final byte[] content)
+  private static HttpResponse makeResponse(final HttpResponseStatus status)
   {
-    final ByteBufferBackedChannelBuffer channelBuffer = new ByteBufferBackedChannelBuffer(ByteBuffer.wrap(content));
-
-    return new DefaultHttpResponse(HttpVersion.HTTP_1_1, status)
-    {
-      @Override
-      public ChannelBuffer getContent()
-      {
-        return channelBuffer;
-      }
-    };
+    // In Netty 4 the initial HttpResponse has no body; the content arrives via HttpContent chunks.
+    // Tests feed body data through {@link #makeChunk(byte[])} and the handleChunk() callback.
+    return new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
   }
 
-  private static HttpChunk makeChunk(final byte[] content)
+  private static HttpContent makeChunk(final byte[] content)
   {
-    final ByteBufferBackedChannelBuffer channelBuffer = new ByteBufferBackedChannelBuffer(ByteBuffer.wrap(content));
-    return new DefaultHttpChunk(channelBuffer);
+    final ByteBuf channelBuffer = Unpooled.wrappedBuffer(ByteBuffer.wrap(content));
+    return new DefaultHttpContent(channelBuffer);
   }
 
   private static byte[] byteSlice(final byte[] bytes, final int start, final int length)

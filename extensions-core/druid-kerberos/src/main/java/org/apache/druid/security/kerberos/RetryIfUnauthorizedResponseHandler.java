@@ -19,12 +19,12 @@
 
 package org.apache.druid.security.kerberos;
 
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
     implements HttpResponseHandler<RetryResponseHolder<Intermediate>, RetryResponseHolder<Final>>
@@ -39,16 +39,14 @@ public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
   }
 
   @Override
-  @SuppressWarnings("ReturnValueIgnored")
   public ClientResponse<RetryResponseHolder<Intermediate>> handleResponse(
       HttpResponse httpResponse,
       TrafficCop trafficCop
   )
   {
-    log.debug("UnauthorizedResponseHandler - Got response status [%s]", httpResponse.getStatus());
-    if (httpResponse.getStatus().equals(HttpResponseStatus.UNAUTHORIZED)) {
-      // Drain the buffer
-      httpResponse.getContent().toString();
+    log.debug("UnauthorizedResponseHandler - Got response status [%s]", httpResponse.status());
+    if (httpResponse.status().equals(HttpResponseStatus.UNAUTHORIZED)) {
+      // Netty 4: initial HttpResponse has no body to drain; chunks will be discarded in handleChunk.
       return ClientResponse.unfinished(RetryResponseHolder.retry());
     } else {
       return wrap(httpResponseHandler.handleResponse(httpResponse, trafficCop));
@@ -56,15 +54,14 @@ public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
   }
 
   @Override
-  @SuppressWarnings("ReturnValueIgnored")
   public ClientResponse<RetryResponseHolder<Intermediate>> handleChunk(
       ClientResponse<RetryResponseHolder<Intermediate>> clientResponse,
-      HttpChunk httpChunk,
+      HttpContent httpChunk,
       long chunkNum
   )
   {
     if (clientResponse.getObj().shouldRetry()) {
-      httpChunk.getContent().toString();
+      // Discard chunks once we've decided to retry; SimpleChannelInboundHandler releases the buffer.
       return clientResponse;
     } else {
       return wrap(httpResponseHandler.handleChunk(unwrap(clientResponse), httpChunk, chunkNum));
@@ -107,6 +104,4 @@ public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
       return ClientResponse.unfinished(response.getObj().getObj(), response.isContinueReading());
     }
   }
-
-
 }
