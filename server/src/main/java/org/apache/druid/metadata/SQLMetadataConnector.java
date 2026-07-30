@@ -370,7 +370,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       columns.add("num_rows BIGINT");
     }
 
-    StringBuilder createStatementBuilder = new StringBuilder("CREATE TABLE %1$s (");
+    final StringBuilder createStatementBuilder = new StringBuilder("CREATE TABLE %1$s (");
 
     for (String column : columns) {
       createStatementBuilder.append(column);
@@ -399,6 +399,15 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             "start"
         )
     );
+
+    // Index to cover the query to find the segments that were upgraded from a
+    // given segment ID in 'retrieveUpgradedToSegmentIds' task action
+    createIndex(
+        tableName,
+        "IDX_%S_DATASOURCE_UPGRADED_FROM_SEGMENT_ID",
+        List.of("dataSource", "upgraded_from_segment_id")
+    );
+
     // Covering index for the used-segment ID scan performed on every metadata
     // cache sync (SELECT id, dataSource, used_status_last_updated WHERE used=true).
     // Includes id explicitly so the scan is index-only on all backends (not only
@@ -619,6 +628,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   /**
    * Adds new columns (used_status_last_updated) to the "segments" table.
    * Conditionally, add schema_fingerprint, num_rows columns.
+   * This method is a no-op for a freshly created segment table in a new Druid cluster.
    */
   protected void alterSegmentTable()
   {
