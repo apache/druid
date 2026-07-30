@@ -83,6 +83,7 @@ public class RedirectFilterTest
 
     Mockito.verify(response).setStatus(HttpServletResponse.SC_TEMPORARY_REDIRECT);
     Mockito.verify(response).setHeader("Location", location);
+    Mockito.verifyNoInteractions(filterChain);
   }
 
   @Test
@@ -106,6 +107,7 @@ public class RedirectFilterTest
     Mockito.verify(response).sendError(HttpServletResponse.SC_BAD_REQUEST);
     Mockito.verify(response, Mockito.never()).setStatus(Mockito.anyInt());
     Mockito.verify(response, Mockito.never()).setHeader(Mockito.anyString(), Mockito.anyString());
+    Mockito.verifyNoInteractions(filterChain);
   }
 
   private static URL urlWithExternalForm(final String externalForm) throws Exception

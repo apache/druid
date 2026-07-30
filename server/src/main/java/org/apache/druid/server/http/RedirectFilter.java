@@ -80,15 +80,14 @@ public class RedirectFilter implements Filter
       }
 
       final String location = url.toString();
-      final String sanitizedLocation = location.replace('\r', ' ').replace('\n', ' ');
-      if (!location.equals(sanitizedLocation)) {
+      if (location.indexOf('\r') >= 0 || location.indexOf('\n') >= 0) {
         response.sendError(HttpServletResponse.SC_BAD_REQUEST);
         return;
       }
 
       log.debug("Forwarding request to [%s]", url);
       response.setStatus(HttpServletResponse.SC_TEMPORARY_REDIRECT);
-      response.setHeader("Location", sanitizedLocation);
+      response.setHeader("Location", location);
     }
   }
 
