@@ -240,10 +240,11 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.40.0
+version: 2.49.6
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
+  - software.amazon.awssdk: apache5-client
   - software.amazon.awssdk: arns
   - software.amazon.awssdk: auth
   - software.amazon.awssdk: aws-core
@@ -2033,6 +2034,38 @@ notices:
   - httpcore: |
       Apache HttpCore
       Copyright 2005-2019 The Apache Software Foundation
+
+---
+
+name: Apache HttpClient 5
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.6.2
+libraries:
+  - org.apache.httpcomponents.client5: httpclient5
+notices:
+  - httpclient5: |
+      Apache HttpClient
+      Copyright 1999-2021 The Apache Software Foundation
+
+---
+
+name: Apache HttpCore 5
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.4.3
+libraries:
+  - org.apache.httpcomponents.core5: httpcore5
+  - org.apache.httpcomponents.core5: httpcore5-h2
+notices:
+  - httpcore5: |
+      Apache HttpComponents Core HTTP/1.1
+      Copyright 2005-2021 The Apache Software Foundation
+  - httpcore5-h2: |
+      Apache HttpComponents Core HTTP/2
+      Copyright 2005-2021 The Apache Software Foundation
 
 ---
 
