@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation;
 
 import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
@@ -101,7 +102,10 @@ public class SerializablePairLongLongComplexMetricSerde extends AbstractSerializ
       @Override
       public SerializablePairLongLong fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        ByteBuffer readOnlyByteBuffer = buffer.asReadOnlyBuffer().order(buffer.order());
+        if (numBytes < 0 || numBytes > buffer.remaining()) {
+          throw new IAE("Invalid numBytes[%d] for buffer remaining[%d]", numBytes, buffer.remaining());
+        }
+        final ByteBuffer readOnlyByteBuffer = buffer.asReadOnlyBuffer().order(buffer.order());
 
         readOnlyByteBuffer.limit(Math.addExact(buffer.position(), numBytes));
 

@@ -158,7 +158,7 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
         if (numBytes < 0 || numBytes > buffer.remaining()) {
           throw new IAE("Invalid numBytes[%d] for buffer remaining[%d]", numBytes, buffer.remaining());
         }
-        ByteBuffer readOnlyByteBuffer = buffer.asReadOnlyBuffer().order(buffer.order());
+        final ByteBuffer readOnlyByteBuffer = buffer.asReadOnlyBuffer().order(buffer.order());
 
         readOnlyByteBuffer.limit(Math.addExact(buffer.position(), numBytes));
 

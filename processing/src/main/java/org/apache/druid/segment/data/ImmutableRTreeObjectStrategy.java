@@ -68,7 +68,7 @@ public class ImmutableRTreeObjectStrategy implements ObjectStrategy<ImmutableRTr
       throw new IAE("Invalid numBytes[%d] for buffer remaining[%d]", numBytes, buffer.remaining());
     }
     // always create the duplicate buffer for creating the objects as original buffer may have mutations somewhere else which can corrupt objects
-    ByteBuffer duplicateBuf = buffer.duplicate();
+    final ByteBuffer duplicateBuf = buffer.duplicate();
     duplicateBuf.limit(Math.addExact(duplicateBuf.position(), numBytes));
     return new ImmutableRTree(duplicateBuf, bitmapFactory);
   }
