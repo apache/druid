@@ -115,9 +115,6 @@ Some of the parameters used in the task payload are further explained below:
 :::warning
 - The `kill` task permanently removes all information about the affected segments from the metadata store and
 deep storage. This operation cannot be undone.
-- When using [concurrent locks](../ingestion/concurrent-append-replace.md) to run a `kill` task, ensure to keep a large
-enough buffer period before killing segments after they have been marked as unused. Otherwise, there may be a potential
-data loss if a concurrent append job upgrades one of the segments that are being killed.
 :::
 
 ### Auto-kill data using Coordinator duties

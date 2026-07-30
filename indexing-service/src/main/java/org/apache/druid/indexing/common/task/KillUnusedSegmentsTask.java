@@ -87,10 +87,16 @@ import java.util.stream.Collectors;
  * <li> Filter the set of unreferenced segments using load specs from the set of used segments. </li>
  * <li> Kill the filtered set of segments from deep storage. </li>
  * </ol>
- * Note: When {@link Tasks#USE_CONCURRENT_LOCKS} is true, keep a large buffer
- * period before killing segments after they have been marked as unused.
- * Otherwise, there may be a potential data loss if a concurrent APPEND job
- * upgrades one of the segments that are being killed.
+ * <p>
+ * <b>Use concurrent locks:</b> A kill task using REPLACE locks (enabled by
+ * {@link Tasks#USE_CONCURRENT_LOCKS}) is affected by other tasks in the following
+ * manner:
+ * <ul>
+ * <li>Not affected by tasks using EXCLUSIVE, SHARED or another REPLACE lock
+ * since they are mutually exclusive with this REPLACE lock.</li>
+ * <li>Not affected by APPEND tasks since they can only upgrade used segments
+ * and do not modify unused segments.</li>
+ * </ul>
  */
 public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 {

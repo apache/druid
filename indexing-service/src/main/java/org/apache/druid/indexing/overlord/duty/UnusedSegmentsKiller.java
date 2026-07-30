@@ -25,10 +25,10 @@ import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.TaskMetrics;
@@ -65,18 +65,11 @@ import java.util.concurrent.atomic.AtomicReference;
  * {@link OverlordDuty} to delete unused segments from metadata store and the
  * deep storage. Launches {@link EmbeddedKillTask}s to clean unused segments
  * of a single datasource-interval. These tasks use REPLACE locks by default.
- * The kill task is affected by other tasks in the following manner:
- * <ul>
- * <li>Not affected by tasks using EXCLUSIVE, SHARED or another REPLACE lock
- * since they are mutually exclusive with this REPLACE lock.</li>
- * <li>Not affected by APPEND tasks as long as no unused segment is marked as
- * used and subsequently upgraded while a kill task on that interval is in
- * progress.</li>
- * </ul>
  *
- * @see SegmentsMetadataManagerConfig to enable the cleanup
- * @see org.apache.druid.server.coordinator.duty.KillUnusedSegments for legacy
- * mode of killing unused segments via Coordinator duties
+ * @see SegmentsMetadataManagerConfig#getKillUnused() Config to enable the cleanup
+ * @see org.apache.druid.server.coordinator.duty.KillUnusedSegments
+ * Legacy mode of killing segments via Coordinator duties
+ * @see KillUnusedSegmentsTask Behaviour of kill task with concurrent locks
  */
 public class UnusedSegmentsKiller implements OverlordDuty
 {
@@ -87,7 +80,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
   /**
    * Use concurrent locks by default.
    *
-   * @see UnusedSegmentsKiller
+   * @see KillUnusedSegmentsTask Behaviour of kill tasks with concurrent locks
    */
   private static final boolean DEFAULT_USE_CONCURRENT_LOCKS = true;
 
@@ -159,7 +152,10 @@ public class UnusedSegmentsKiller implements OverlordDuty
     this.taskActionClientFactory = taskActionClientFactory;
 
     this.killConfig = config.getKillUnused();
-    this.useConcurrentLocks = shouldUseConcurrentLocks(defaultTaskConfig.getContext());
+    this.useConcurrentLocks = TaskLocks.shouldUseConcurrentLocksForReplace(
+        defaultTaskConfig.getContext(),
+        DEFAULT_USE_CONCURRENT_LOCKS
+    );
 
     if (isEnabled()) {
       this.exec = executorFactory.create(1, "UnusedSegmentsKiller-%s");
@@ -422,26 +418,6 @@ public class UnusedSegmentsKiller implements OverlordDuty
     finally {
       cleanupLocksSilently(killTask);
       emitMetric(Metric.PROCESSED_KILL_JOBS, 1L, Map.of(DruidMetrics.DATASOURCE, candidate.dataSource()));
-    }
-  }
-
-  private boolean shouldUseConcurrentLocks(Map<String, Object> context)
-  {
-    if (context == null) {
-      return DEFAULT_USE_CONCURRENT_LOCKS;
-    }
-
-    final Boolean useConcurrentLocksOverride = (Boolean) context.get(Tasks.USE_CONCURRENT_LOCKS);
-    if (useConcurrentLocksOverride != null) {
-      return useConcurrentLocksOverride;
-    }
-
-    final String taskLockTypeOverride = (String) context.get(Tasks.TASK_LOCK_TYPE);
-    if (taskLockTypeOverride != null
-        && !TaskLockType.REPLACE.equals(TaskLockType.valueOf(taskLockTypeOverride))) {
-      return false;
-    } else {
-      return DEFAULT_USE_CONCURRENT_LOCKS;
     }
   }
 
