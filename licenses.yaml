@@ -309,7 +309,7 @@ name: AWS CRT
 license_category: binary
 module: extensions-core/s3-extensions
 license_name: Apache License version 2.0
-version: 0.40.1
+version: 0.48.0
 libraries:
   - software.amazon.awssdk.crt: aws-crt
 notice: |
