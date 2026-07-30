@@ -2635,7 +2635,7 @@ name: JDBI
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.63.1
+version: 2.78
 libraries:
   - org.jdbi: jdbi
 notices:
