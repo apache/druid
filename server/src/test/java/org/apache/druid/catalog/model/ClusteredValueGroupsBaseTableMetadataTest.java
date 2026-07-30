@@ -421,7 +421,10 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         new ColumnSpec("tags", Columns.SQL_VARCHAR_ARRAY, null),
         new ColumnSpec("vals", Columns.SQL_BIGINT_ARRAY, null),
         new ColumnSpec("ratios", Columns.SQL_FLOAT_ARRAY, null),
-        new ColumnSpec("attrs", ColumnType.NESTED_DATA.asTypeString(), null)
+        new ColumnSpec("attrs", ColumnType.NESTED_DATA.asTypeString(), null),
+        // type prefixes match case-insensitively; these must not silently fall back to STRING
+        new ColumnSpec("attrs2", "complex<json>", null),
+        new ColumnSpec("vals2", "array<long>", null)
     );
     // Declared types are retained in the ingestion schema rather than left to inference: arrays cast an auto column
     // to the declared type (an all-null batch has no values to infer from; FLOAT ARRAY is stored as DOUBLE ARRAY by
@@ -434,7 +437,9 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
                                                        new AutoTypeColumnSchema("tags", ColumnType.STRING_ARRAY, null),
                                                        new AutoTypeColumnSchema("vals", ColumnType.LONG_ARRAY, null),
                                                        new AutoTypeColumnSchema("ratios", ColumnType.DOUBLE_ARRAY, null),
-                                                       new NestedDataColumnSchema("attrs", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION)
+                                                       new NestedDataColumnSchema("attrs", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION),
+                                                       new NestedDataColumnSchema("attrs2", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION),
+                                                       new AutoTypeColumnSchema("vals2", ColumnType.LONG_ARRAY, null)
                                                    )
                                                    .clusteringColumns("tenant")
                                                    .build(),
@@ -457,6 +462,31 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
     );
     final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
     Assert.assertTrue(e.getMessage().contains("column [unique_things] has unsupported type [COMPLEX<hyperUnique>]"));
+  }
+
+  @Test
+  public void testCreateSpecUnparseableTypeFails()
+  {
+    // A column declared WITHOUT a type defaults to STRING, but a declared type that does not parse must be rejected
+    // rather than silently defaulted: the declared type is the physical segment schema here. (A malformed
+    // parameterized type such as a missing closing bracket parses to null.)
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        null
+    );
+    for (String badType : new String[]{"COMPLEX<json", "ARRAY<LONG", "ARRAY<FOO>", "FOO"}) {
+      final List<ColumnSpec> columns = Arrays.asList(
+          new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
+          new ColumnSpec(Columns.TIME_COLUMN, null, null),
+          new ColumnSpec("busted", badType, null)
+      );
+      final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
+      Assert.assertTrue(
+          "expected unrecognized-type error for [" + badType + "] but got: " + e.getMessage(),
+          e.getMessage().contains("column [busted] has an unrecognized type [" + badType + "]")
+      );
+    }
   }
 
   @Test
