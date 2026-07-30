@@ -389,6 +389,10 @@ public class QueryLifecycle
     Preconditions.checkNotNull(authenticationResult, "authenticationResult");
     Preconditions.checkNotNull(authorizationResult, "authorizationResult");
 
+    // Authentication has already happened, so record the identity before anything below can throw. Note this means
+    // a set authenticationResult implies only that authorization was attempted, not that it succeeded.
+    this.authenticationResult = authenticationResult;
+
     if (!authorizationResult.allowBasicAccess()) {
       // Not authorized; go straight to Jail, do not pass Go.
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
@@ -405,7 +409,6 @@ public class QueryLifecycle
                                                               ));
     }
 
-    this.authenticationResult = authenticationResult;
     return authorizationResult;
   }
 

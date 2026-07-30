@@ -874,7 +874,7 @@ export class SupervisorsView extends React.PureComponent<
             pages={count >= 0 ? Math.ceil(count / pageSize) : 10000000} // We are hiding the page selector
             loading={supervisorsState.loading}
             noDataText={
-              supervisorsState.isEmpty()
+              supervisorsState.data?.supervisors.length === 0
                 ? 'No supervisors'
                 : supervisorsState.getErrorMessage() || ''
             }

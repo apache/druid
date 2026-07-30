@@ -710,10 +710,11 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     final List<StorageLocationConfig> locConfigs = locationRoots.stream()
         .map(root -> new StorageLocationConfig(root, 1024L * 1024L * 1024L, null))
         .toList();
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-        .setLocations(locConfigs)
-        .setVirtualStorage(virtualStorage)
-        .setVirtualStoragePartialDownloadsEnabled(partialDownloadsEnabled);
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
+        .locations(locConfigs)
+        .virtualStorage(virtualStorage)
+        .virtualStoragePartialDownloadsEnabled(partialDownloadsEnabled)
+        .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     return new SegmentLocalCacheManager(
         storageLocations,

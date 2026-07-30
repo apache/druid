@@ -80,7 +80,7 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
             new DoubleDimensionSchema("double"),
             new LongDimensionSchema("bool"),
             new StringDimensionSchema("variant"),
-            AutoTypeColumnSchema.of("array"),
+            new AutoTypeColumnSchema("array", ColumnType.LONG_ARRAY, null),
             AutoTypeColumnSchema.of("nested")
         ),
         response.getLogicalDimensions()
