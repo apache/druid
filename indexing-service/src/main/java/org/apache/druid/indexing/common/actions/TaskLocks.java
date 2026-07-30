@@ -219,7 +219,11 @@ public class TaskLocks
         context.get(Tasks.TASK_LOCK_TYPE),
         TaskLockType.class
     );
-    return taskLockType == validConcurrentLockType;
+    if (taskLockType != null) {
+      return taskLockType == validConcurrentLockType;
+    }
+
+    return defaultValue;
   }
 
   /**
