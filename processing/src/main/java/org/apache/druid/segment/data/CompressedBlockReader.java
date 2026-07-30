@@ -75,12 +75,17 @@ public final class CompressedBlockReader implements Closeable
       final int numBlocks = buffer.getInt();
       Preconditions.checkState(numBlocks > 0, "Number of blocks must be positive");
       final int offsetsSize = Math.multiplyExact(numBlocks, Integer.BYTES);
+      Preconditions.checkState(offsetsSize <= buffer.remaining(), "Offset table exceeds remaining buffer size");
       // buffer is at start of ending offsets
       final ByteBuffer offsets = buffer.asReadOnlyBuffer().order(compressionOrder);
       offsets.limit(Math.addExact(offsets.position(), offsetsSize));
       final IntBuffer offsetView = offsets.slice().order(compressionOrder).asIntBuffer();
       final int compressedSize = offsetView.get(Math.subtractExact(numBlocks, 1));
       Preconditions.checkState(compressedSize >= 0, "Compressed size must be nonnegative");
+      Preconditions.checkState(
+          compressedSize <= Math.subtractExact(buffer.remaining(), offsetsSize),
+          "Compressed data exceeds remaining buffer size"
+      );
 
       // move to start of compressed data
       buffer.position(Math.addExact(buffer.position(), offsetsSize));
