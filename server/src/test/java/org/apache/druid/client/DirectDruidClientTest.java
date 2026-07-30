@@ -23,6 +23,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.timeout.ReadTimeoutException;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -32,6 +40,8 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.ClientResponse;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
@@ -55,8 +65,7 @@ import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorSer
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.timeout.ReadTimeoutException;
+import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -76,6 +85,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class DirectDruidClientTest
 {
@@ -84,6 +94,21 @@ public class DirectDruidClientTest
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  private static final HttpResponseHandler.TrafficCop NOOP_TRAFFIC_COP = new HttpResponseHandler.TrafficCop()
+  {
+    @Override
+    public long resume(long chunkNum)
+    {
+      return 0;
+    }
+
+    @Override
+    public void abort()
+    {
+      // Nothing to abort: this test drives the handler directly, without a channel.
+    }
+  };
 
   private final String hostName = "localhost:8080";
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
@@ -313,6 +338,101 @@ public class DirectDruidClientTest
                            hostName
         ), actualException.getMessage()
     );
+  }
+
+  /**
+   * A consumer that closes the result stream early abandons whatever chunks are still buffered. Those chunks hold
+   * Netty buffers retained by {@link InputStreamHolder#fromByteBuf}, which are only freed when their stream is
+   * closed, so abandoning a response must close them rather than merely drop the references.
+   */
+  @Test
+  public void testAbandonedResponseReleasesBufferedChunks() throws Exception
+  {
+    final HttpResponseHandler<InputStream, InputStream> handler = captureResponseHandler();
+
+    final ClientResponse<InputStream> clientResponse = handler.handleResponse(
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK),
+        NOOP_TRAFFIC_COP
+    );
+
+    // Stands in for an inbound chunk owned by NettyHttpClient, which releases its own reference after
+    // handleChunk returns.
+    final ByteBuf chunk = Unpooled.wrappedBuffer(StringUtils.toUtf8("[{\"timestamp\":\"2014-01-01T01:02:03Z\"}]"));
+    Assert.assertEquals(1, chunk.refCnt());
+
+    handler.handleChunk(clientResponse, new DefaultHttpContent(chunk), 1);
+    Assert.assertEquals("retained while buffered", 2, chunk.refCnt());
+
+    // The consumer gives up without ever reading the chunk.
+    clientResponse.getObj().close();
+
+    Assert.assertEquals("released once abandoned", 1, chunk.refCnt());
+    chunk.release();
+  }
+
+  /**
+   * A chunk can reach the queue after the failure teardown has already drained it: handleChunk clears its timeout
+   * check on the Netty thread, the consumer thread then fails the query and drains, and only afterwards is the chunk
+   * queued. Nothing dequeues once the query has failed, so the handler itself has to release that late chunk.
+   */
+  @Test
+  public void testChunkQueuedAfterFailureIsReleased()
+  {
+    final HttpResponseHandler<InputStream, InputStream> handler = captureResponseHandler();
+
+    final ClientResponse<InputStream> clientResponse = handler.handleResponse(
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK),
+        NOOP_TRAFFIC_COP
+    );
+
+    handler.exceptionCaught(clientResponse, new RuntimeException("transport failure"));
+
+    final ByteBuf chunk = Unpooled.wrappedBuffer(StringUtils.toUtf8("[{\"timestamp\":\"2014-01-01T01:02:03Z\"}]"));
+    Assert.assertEquals(1, chunk.refCnt());
+
+    handler.handleChunk(clientResponse, new DefaultHttpContent(chunk), 1);
+
+    Assert.assertEquals("released even though it arrived after teardown", 1, chunk.refCnt());
+    chunk.release();
+  }
+
+  /**
+   * Runs a query against an HTTP client that never completes the future, and hands back the response handler it was
+   * given, so a test can drive the handler's callbacks directly.
+   */
+  private HttpResponseHandler<InputStream, InputStream> captureResponseHandler()
+  {
+    final AtomicReference<HttpResponseHandler<InputStream, InputStream>> handlerRef = new AtomicReference<>();
+    final DirectDruidClient client = makeDirectDruidClient(
+        new HttpClient()
+        {
+          @Override
+          @SuppressWarnings("unchecked")
+          public <Intermediate, Final> ListenableFuture<Final> go(
+              Request request,
+              HttpResponseHandler<Intermediate, Final> handler,
+              Duration readTimeout
+          )
+          {
+            handlerRef.set((HttpResponseHandler<InputStream, InputStream>) handler);
+            return SettableFuture.create();
+          }
+
+          @Override
+          public <Intermediate, Final> ListenableFuture<Final> go(
+              Request request,
+              HttpResponseHandler<Intermediate, Final> handler
+          )
+          {
+            return go(request, handler, null);
+          }
+        }
+    );
+
+    client.run(getQueryPlus(), responseContext);
+    final HttpResponseHandler<InputStream, InputStream> handler = handlerRef.get();
+    Assert.assertNotNull("handler was passed to the http client", handler);
+    return handler;
   }
 
   @Test

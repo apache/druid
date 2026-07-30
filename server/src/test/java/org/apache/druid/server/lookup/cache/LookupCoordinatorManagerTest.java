@@ -26,6 +26,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
@@ -36,6 +41,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.SequenceInputStreamResponseHandler;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -61,6 +67,21 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class LookupCoordinatorManagerTest
 {
+  private static final HttpResponseHandler.TrafficCop NOOP_TRAFFIC_COP = new HttpResponseHandler.TrafficCop()
+  {
+    @Override
+    public long resume(long chunkNum)
+    {
+      return 0;
+    }
+
+    @Override
+    public void abort()
+    {
+      // Nothing to abort: this test drives the handler directly, without a channel.
+    }
+  };
+
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createStrictMock(DruidNodeDiscoveryProvider.class);
   private final LookupNodeDiscovery lookupNodeDiscovery = EasyMock.createStrictMock(
@@ -234,6 +255,42 @@ public class LookupCoordinatorManagerTest
     }
 
     EasyMock.verify(client, responseHandler);
+  }
+
+  /**
+   * The other tests here stub out makeResponseHandler, so this one drives the real handler. Lookup state responses can
+   * be large, which is why the handler streams chunks straight through rather than accumulating and re-copying them.
+   */
+  @Test(timeout = 60_000L)
+  public void testResponseHandlerRecordsStatusAndStreamsContent() throws Exception
+  {
+    final LookupCoordinatorManager.LookupsCommunicator lookupsCommunicator =
+        new LookupCoordinatorManager.LookupsCommunicator(client, lookupCoordinatorManagerConfig, mapper);
+
+    final AtomicInteger returnCode = new AtomicInteger();
+    final AtomicReference<String> reasonString = new AtomicReference<>();
+    final HttpResponseHandler<InputStream, InputStream> handler =
+        lookupsCommunicator.makeResponseHandler(returnCode, reasonString);
+
+    Assert.assertTrue(
+        "streams rather than buffering the whole response",
+        handler instanceof SequenceInputStreamResponseHandler
+    );
+
+    final ClientResponse<InputStream> response = handler.handleResponse(
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND),
+        NOOP_TRAFFIC_COP
+    );
+
+    Assert.assertEquals(HttpResponseStatus.NOT_FOUND.code(), returnCode.get());
+    Assert.assertEquals(HttpResponseStatus.NOT_FOUND.reasonPhrase(), reasonString.get());
+
+    handler.handleChunk(response, new DefaultHttpContent(Unpooled.wrappedBuffer(StringUtils.toUtf8("[1,"))), 1);
+    handler.handleChunk(response, new DefaultHttpContent(Unpooled.wrappedBuffer(StringUtils.toUtf8("2]"))), 2);
+
+    try (InputStream content = handler.done(response).getObj()) {
+      Assert.assertEquals("[1,2]", StringUtils.fromUtf8(content.readAllBytes()));
+    }
   }
 
   @Test

@@ -25,6 +25,8 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
@@ -36,8 +38,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.server.coordinator.rules.Rule;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
 import java.util.ArrayList;
@@ -137,7 +137,7 @@ public class CoordinatorRuleManager
           throw new ISE(
               "Error while polling rules, status[%s] content[%s]",
               response.getStatus(),
-              response.getContent()
+              httpException.getResponse().getContent()
           );
         }
       }

@@ -27,6 +27,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -57,12 +63,6 @@ import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.utils.CloseableUtils;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.Duration;
 
 import javax.ws.rs.core.MediaType;
@@ -187,6 +187,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         private final AtomicBoolean nodeMetricsEmitted = new AtomicBoolean(false);
         private final AtomicReference<String> fail = new AtomicReference<>();
         private final AtomicReference<TrafficCop> trafficCopRef = new AtomicReference<>();
+        // The stream most recently handed to the SequenceInputStream below. It owns a retained buffer that
+        // SequenceInputStream releases only when it advances to the following stream, so a consumer that
+        // abandons the response partway has to close this one explicitly.
+        private final AtomicReference<InputStream> currentStream = new AtomicReference<>();
 
         private QueryMetrics<? super Query<T>> queryMetrics;
         private long responseStartTimeNs;
@@ -203,7 +207,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         /**
          * Queue a buffer. Returns true if we should keep reading, false otherwise.
          */
-        private boolean enqueue(ChannelBuffer buffer, long chunkNum) throws InterruptedException
+        private boolean enqueue(ByteBuf buffer, long chunkNum) throws InterruptedException
         {
           // If the consumer has abandoned the response (see the SequenceInputStream.close() override below), drop the
           // chunk instead of buffering it, and keep reads flowing (continueReading = true) so we never suspend the
@@ -213,9 +217,21 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
           // Increment queuedByteCount before queueing the object, so queuedByteCount is at least as high as
           // the actual number of queued bytes at any particular time.
-          final InputStreamHolder holder = InputStreamHolder.fromChannelBuffer(buffer, chunkNum);
+          final InputStreamHolder holder = InputStreamHolder.fromByteBuf(buffer, chunkNum);
           final long currentQueuedByteCount = queuedByteCount.addAndGet(holder.getLength());
           queue.put(holder);
+
+          // close() can set discard after the check above, once this chunk is past it. Drain again so that
+          // a chunk queued during that window is released rather than stranded.
+          if (discard.get()) {
+            discardQueuedChunks();
+          } else if (fail.get() != null && queue.remove(holder)) {
+            // setupResponseReadFailure has the same window: it may have drained the queue after this chunk passed
+            // the check above but before it was queued. Nothing dequeues once fail is set, so release this chunk
+            // here. Only this holder is removed, so the error stream that teardown queued stays available to a
+            // consumer already parked in dequeue().
+            closeChunk(holder.getStream());
+          }
 
           // True if we should keep reading.
           return !usingBackpressure || currentQueuedByteCount < maxQueuedBytes;
@@ -238,12 +254,49 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           return holder.getStream();
         }
 
+        /**
+         * Drop everything currently buffered, closing each stream as it goes. {@link InputStreamHolder#fromByteBuf}
+         * hands over a retained Netty buffer that is only released when its stream is closed, so clearing the
+         * queue without closing would strand those retains and leak pooled direct memory on every query that is
+         * cancelled or fails.
+         */
+        private void discardQueuedChunks()
+        {
+          InputStreamHolder holder;
+          while ((holder = queue.poll()) != null) {
+            closeChunk(holder.getStream());
+          }
+        }
+
+        /**
+         * Close the stream the consumer was reading when it gave up. Only safe to call from the consumer's own
+         * thread (i.e. from close()), since another thread may still be reading it.
+         */
+        private void discardCurrentChunk()
+        {
+          final InputStream stream = currentStream.getAndSet(null);
+          if (stream != null) {
+            closeChunk(stream);
+          }
+        }
+
+        private void closeChunk(InputStream stream)
+        {
+          try {
+            stream.close();
+          }
+          catch (IOException e) {
+            log.debug(e, "Could not close abandoned response chunk from url[%s]", url);
+          }
+        }
+
         @Override
         public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
         {
           trafficCopRef.set(trafficCop);
           checkQueryTimeout();
-          checkTotalBytesLimit(response.getContent().readableBytes());
+          // HttpResponse in Netty 4 doesn't usually contain content. Assume 0.
+          checkTotalBytesLimit(0);
 
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
           responseStartTimeNs = System.nanoTime();
@@ -263,7 +316,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             if (responseContext != null) {
               context.merge(ResponseContext.deserialize(responseContext, objectMapper));
             }
-            continueReading = enqueue(response.getContent(), 0L);
+            // Pass empty buffer, handle content in handleChunk
+            continueReading = enqueue(Unpooled.EMPTY_BUFFER, 0L);
           }
           catch (final IOException e) {
             log.error(e, "Error parsing response context from url [%s]", url);
@@ -283,7 +337,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
           }
-          totalByteCount.addAndGet(response.getContent().readableBytes());
+          totalByteCount.addAndGet(0);
           return ClientResponse.finished(
               new SequenceInputStream(
                   new Enumeration<>()
@@ -317,7 +371,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                       }
 
                       try {
-                        return dequeue();
+                        final InputStream stream = dequeue();
+                        currentStream.set(stream);
+                        return stream;
                       }
                       catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -337,13 +393,16 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 {
                   final TrafficCop trafficCop;
                   synchronized (done) {
+                    // Release whatever the consumer never read, whether or not the response finished: these
+                    // chunks hold retained Netty buffers (see enqueue()), so dropping the references without
+                    // closing them would leak. Stop buffering anything further, too.
+                    discard.set(true);
+                    discardQueuedChunks();
+                    discardCurrentChunk();
                     if (done.get()) {
+                      // Response already fully received, so there is no connection left to abort.
                       return;
                     }
-                    // Stop buffering further chunks (see enqueue()) and drop anything already buffered so the
-                    // underlying Netty ChannelBuffers can be released.
-                    discard.set(true);
-                    queue.clear();
                     trafficCop = trafficCopRef.get();
                   }
                   if (trafficCop == null) {
@@ -359,13 +418,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         @Override
         public ClientResponse<InputStream> handleChunk(
             ClientResponse<InputStream> clientResponse,
-            HttpChunk chunk,
+            HttpContent chunk,
             long chunkNum
         )
         {
           checkQueryTimeout();
 
-          final ChannelBuffer channelBuffer = chunk.getContent();
+          final ByteBuf channelBuffer = chunk.content();
           final int bytes = channelBuffer.readableBytes();
 
           checkTotalBytesLimit(bytes);
@@ -406,7 +465,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             try {
               // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
               // after done is set to true, regardless of the rest of the stream's state.
-              queue.put(InputStreamHolder.fromChannelBuffer(ChannelBuffers.EMPTY_BUFFER, Long.MAX_VALUE));
+              queue.put(InputStreamHolder.fromByteBuf(Unpooled.EMPTY_BUFFER, Long.MAX_VALUE));
             }
             catch (InterruptedException e) {
               log.error(e, "Unable to put finalizing input stream into Sequence queue for url [%s]", url);
@@ -436,7 +495,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           emitNodeMetrics(System.nanoTime() - requestStartTimeNs);
           fail.set(msg);
-          queue.clear();
+          discardQueuedChunks();
           queue.offer(
               InputStreamHolder.fromStream(
                   new InputStream()
@@ -518,7 +577,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 new URL(url)
             ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
              .setHeader(
-                 HttpHeaders.Names.CONTENT_TYPE,
+                 HttpHeaderNames.CONTENT_TYPE.toString(),
                  isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
              ),
             responseHandler,
@@ -604,7 +663,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         Future<StatusResponseHolder> responseFuture = httpClient.go(
             new Request(HttpMethod.DELETE, new URL(cancelUrl))
             .setContent(objectMapper.writeValueAsBytes(query))
-            .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON),
+            .setHeader(HttpHeaderNames.CONTENT_TYPE.toString(), isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON),
             StatusResponseHandler.getInstance(),
             Duration.standardSeconds(1));
 
@@ -614,11 +673,11 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               log.error("Error cancelling query[%s]", query);
             }
             StatusResponseHolder response = responseFuture.get(30, TimeUnit.SECONDS);
-            if (response.getStatus().getCode() >= 500) {
+            if (response.getStatus().code() >= 500) {
               log.error("Error cancelling query[%s]: queriable node returned status[%d] [%s].",
                   query,
-                  response.getStatus().getCode(),
-                  response.getStatus().getReasonPhrase());
+                  response.getStatus().code(),
+                  response.getStatus().reasonPhrase());
             }
           }
           catch (ExecutionException | InterruptedException e) {

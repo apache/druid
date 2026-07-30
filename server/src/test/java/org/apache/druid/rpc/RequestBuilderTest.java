@@ -21,14 +21,12 @@ package org.apache.druid.rpc;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.io.ByteStreams;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.segment.TestHelper;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.jboss.netty.buffer.ChannelBufferInputStream;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Test;
@@ -128,11 +126,7 @@ public class RequestBuilderTest
     Assert.assertEquals("def", Iterables.getOnlyElement(request.getHeaders().get("x-test-header-2")));
     Assert.assertTrue(request.hasContent());
 
-    // Read and verify content.
-    Assert.assertEquals(
-        json,
-        StringUtils.fromUtf8(ByteStreams.toByteArray(new ChannelBufferInputStream(request.getContent())))
-    );
+    Assert.assertEquals(json, StringUtils.fromUtf8(request.getContent()));
   }
 
   @Test
@@ -150,11 +144,7 @@ public class RequestBuilderTest
     Assert.assertEquals("def", Iterables.getOnlyElement(request.getHeaders().get("x-test-header-2")));
     Assert.assertTrue(request.hasContent());
 
-    // Read and verify content.
-    Assert.assertEquals(
-        "{\"foo\":3}",
-        StringUtils.fromUtf8(ByteStreams.toByteArray(new ChannelBufferInputStream(request.getContent())))
-    );
+    Assert.assertEquals("{\"foo\":3}", StringUtils.fromUtf8(request.getContent()));
   }
 
   @Test

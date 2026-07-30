@@ -22,17 +22,14 @@ package org.apache.druid.java.util.http.client;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
-import org.jboss.netty.handler.codec.base64.Base64;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
 
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -40,11 +37,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * An HTTP request, which may be sent more than once.
+ *
+ * The body is held as a plain byte array rather than a Netty {@link io.netty.buffer.ByteBuf} so that a Request has no
+ * reference-counted state and therefore needs no release step. Sending does not consume or modify it: the client wraps
+ * a fresh outbound buffer around these bytes for each attempt. That is what allows a Request to be resent, as
+ * KerberosHttpClient does after a 401.
  */
 public class Request
 {
-  private static final ChannelBufferFactory FACTORY = HeapChannelBufferFactory.getInstance();
-
   private final HttpMethod method;
   private final URL url;
   private final Multimap<String, String> headers = Multimaps.newListMultimap(
@@ -59,7 +60,7 @@ public class Request
       }
   );
 
-  private ChannelBuffer content;
+  private byte[] content;
 
   public Request(
       HttpMethod method,
@@ -90,7 +91,10 @@ public class Request
     return content != null;
   }
 
-  public ChannelBuffer getContent()
+  /**
+   * The request body, or null if there is none. Not copied, and never modified by sending the request.
+   */
+  public byte[] getContent()
   {
     return content;
   }
@@ -99,7 +103,8 @@ public class Request
   {
     Request retVal = new Request(method, url);
     retVal.headers.putAll(this.headers);
-    retVal.content = content == null ? null : content.copy();
+    // Shares the body with the original rather than duplicating it, since nothing writes to it in place.
+    retVal.content = content;
     return retVal;
   }
 
@@ -134,11 +139,6 @@ public class Request
     return setContent(null, bytes);
   }
 
-  public Request setContent(ChannelBuffer content)
-  {
-    return setContent(null, content);
-  }
-
   public Request setContent(String contentType, byte[] bytes)
   {
     return setContent(contentType, bytes, 0, bytes.length);
@@ -146,39 +146,28 @@ public class Request
 
   public Request setContent(String contentType, byte[] bytes, int offset, int length)
   {
-    return setContent(contentType, FACTORY.getBuffer(bytes, offset, length));
-  }
-
-  public Request setContent(String contentType, ChannelBuffer content)
-  {
     if (contentType != null) {
-      setHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
+      setHeader(HttpHeaderNames.CONTENT_TYPE.toString(), contentType);
     }
 
-    this.content = content;
+    // The whole array is kept as-is; only a partial view has to be extracted.
+    this.content = offset == 0 && length == bytes.length
+                   ? bytes
+                   : Arrays.copyOfRange(bytes, offset, offset + length);
 
-    setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(content.writerIndex()));
+    setHeader(HttpHeaderNames.CONTENT_LENGTH.toString(), String.valueOf(length));
 
     return this;
   }
 
   public Request setBasicAuthentication(String username, String password)
   {
-    setHeader(HttpHeaders.Names.AUTHORIZATION, makeBasicAuthenticationString(username, password));
+    setHeader(HttpHeaderNames.AUTHORIZATION.toString(), makeBasicAuthenticationString(username, password));
     return this;
   }
 
   public static String makeBasicAuthenticationString(String username, String password)
   {
-    return "Basic " + base64Encode(username + ":" + password);
-  }
-
-  private static String base64Encode(final String value)
-  {
-    final ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
-
-    return Base64
-        .encode(bufferFactory.getBuffer(ByteBuffer.wrap(value.getBytes(StandardCharsets.UTF_8))), false)
-        .toString(StandardCharsets.UTF_8);
+    return "Basic " + Base64.getEncoder().encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
   }
 }

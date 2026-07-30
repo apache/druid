@@ -21,6 +21,10 @@ package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.client.InputStreamHolder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -32,10 +36,6 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -89,7 +89,7 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
   {
     trafficCopRef.set(trafficCop);
     checkQueryTimeout();
-    log.debug("Received response status[%s] for queryId[%s]", response.getStatus(), query.getId());
+    log.debug("Received response status[%s] for queryId[%s]", response.status(), query.getId());
 
     final boolean continueReading;
     try {
@@ -98,7 +98,15 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
         responseContext.merge(ResponseContext.deserialize(queryResponseHeaders, objectMapper));
       }
 
-      continueReading = enqueue(response.getContent(), 0L);
+      // HttpResponse in Netty 4 usually doesn't have content unless it's FullHttpResponse.
+      // But even if it does, we should probably handle it in handleChunk or assume it's empty for consistency
+      // if we are using streaming.
+      // However, if we receive FullHttpResponse, it implements HttpContent.
+      if (response instanceof HttpContent) {
+        continueReading = enqueue(((HttpContent) response).content(), 0L);
+      } else {
+        continueReading = enqueue(Unpooled.EMPTY_BUFFER, 0L);
+      }
     }
     catch (final IOException e) {
       return ClientResponse.finished(
@@ -159,13 +167,13 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
   @Override
   public ClientResponse<InputStream> handleChunk(
       ClientResponse<InputStream> clientResponse,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   )
   {
     checkQueryTimeout();
 
-    final ChannelBuffer channelBuffer = chunk.getContent();
+    final ByteBuf channelBuffer = chunk.content();
     final int bytes = channelBuffer.readableBytes();
 
     boolean continueReading = true;
@@ -191,7 +199,7 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
       try {
         // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
         // after done is set to true, regardless of the rest of the stream's state.
-        queue.put(InputStreamHolder.fromChannelBuffer(ChannelBuffers.EMPTY_BUFFER, Long.MAX_VALUE));
+        queue.put(InputStreamHolder.fromByteBuf(Unpooled.EMPTY_BUFFER, Long.MAX_VALUE));
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
@@ -215,13 +223,22 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
     setupResponseReadFailure(msg, e);
   }
 
-  private boolean enqueue(ChannelBuffer buffer, long chunkNum) throws InterruptedException
+  private boolean enqueue(ByteBuf buffer, long chunkNum) throws InterruptedException
   {
     // Increment queuedByteCount before queueing the object, so queuedByteCount is at least as high as
     // the actual number of queued bytes at any particular time.
-    final InputStreamHolder holder = InputStreamHolder.fromChannelBuffer(buffer, chunkNum);
+    final InputStreamHolder holder = InputStreamHolder.fromByteBuf(buffer, chunkNum);
     final long currentQueuedByteCount = queuedByteCount.addAndGet(holder.getLength());
     queue.put(holder);
+
+    // A failure can be set between the timeout check that let this chunk through and the put above, in which case
+    // the drain in setupResponseReadFailure ran too early to see it. Nothing dequeues once fail is set, so this
+    // chunk would keep its buffer retained forever. Remove just this holder rather than draining again, to leave
+    // the error stream that setupResponseReadFailure queued in place for a consumer already parked in dequeue().
+    // If that drain got here first, remove() finds nothing and the chunk has already been closed.
+    if (fail.get() != null && queue.remove(holder)) {
+      closeChunk(holder);
+    }
 
     // True if we should keep reading.
     return !usingBackpressure || currentQueuedByteCount < maxQueuedBytes;
@@ -256,10 +273,37 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
     }
   }
 
+  /**
+   * Close every queued chunk, releasing the buffer each one retains. {@link InputStreamHolder#fromByteBuf} retains
+   * the Netty buffer and hands it to a {@link io.netty.buffer.ByteBufInputStream} that releases it only on close, so
+   * dropping the holders without closing them (as {@code queue.clear()} does) strands those retains and leaks pooled
+   * direct memory on every query that times out or fails.
+   *
+   * <p>Only the queued chunks are closed, never the one the consumer has already dequeued: that one may still be
+   * being read on another thread.
+   */
+  private void discardQueuedChunks()
+  {
+    InputStreamHolder holder;
+    while ((holder = queue.poll()) != null) {
+      closeChunk(holder);
+    }
+  }
+
+  private void closeChunk(InputStreamHolder holder)
+  {
+    try {
+      holder.getStream().close();
+    }
+    catch (IOException e) {
+      log.debug(e, "Could not close abandoned response chunk for queryId[%s]", query.getId());
+    }
+  }
+
   private void setupResponseReadFailure(String msg, Throwable th)
   {
     fail.set(msg);
-    queue.clear();
+    discardQueuedChunks();
     queue.offer(
         InputStreamHolder.fromStream(
             new InputStream()

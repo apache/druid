@@ -110,8 +110,7 @@
         <log4j.version>2.26.0</log4j.version>
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
-        <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.2.15.Final</netty4.version>
+        <netty4.version>4.1.136.Final</netty4.version>
         <postgresql.version>42.7.12</postgresql.version>
         <protobuf.version>4.35.1</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
@@ -409,6 +408,16 @@
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>netty-nio-client</artifactId>
                 <version>${aws.sdk.v2.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>io.netty</groupId>
+              <artifactId>netty-buffer</artifactId>
+              <version>4.1.136.Final</version>
+            </dependency>
+            <dependency>
+              <groupId>io.netty</groupId>
+              <artifactId>netty-codec-http</artifactId>
+              <version>4.1.136.Final</version>
             </dependency>
             <dependency>
                 <groupId>com.ning</groupId>
@@ -892,11 +901,6 @@
             </dependency>
             <dependency>
                 <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
-                <version>${netty3.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
                 <artifactId>netty-bom</artifactId>
                 <version>${netty4.version}</version>
                 <scope>import</scope>
@@ -1148,6 +1152,28 @@
                 <groupId>org.asynchttpclient</groupId>
                 <artifactId>async-http-client</artifactId>
                 <version>3.0.11</version>
+                <exclusions>
+                    <!--
+                      Netty 4.2 split netty-codec into netty-codec-base, netty-codec-compression and friends;
+                      async-http-client depends on the two listed here directly. They exist only in the 4.2 line, so
+                      netty-bom cannot pull them back to the version everything else resolves to, and they would be
+                      the only 4.2 jars on an otherwise 4.1 classpath. That is worse than a version skew: the classes
+                      they carry are the very classes netty-codec 4.1 already provides, under the same names, so the
+                      two jars would shadow each other and which one wins would depend on classpath order.
+
+                      Excluding them leaves async-http-client running on netty-codec 4.1, which supplies everything
+                      it needs under those same names. Remove this once Druid moves to Netty 4.2, at which point
+                      netty-bom manages these artifacts like any other.
+                    -->
+                    <exclusion>
+                        <groupId>io.netty</groupId>
+                        <artifactId>netty-codec-base</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>io.netty</groupId>
+                        <artifactId>netty-codec-compression</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
@@ -1887,6 +1913,40 @@
                                 </bannedDependencies>
                                 <requireUpperBoundDeps>
                                     <excludes>
+                                       <!--
+                                         Netty is deliberately held at 4.1.x (via netty-bom) while we migrate off
+                                         Netty 3; moving to 4.2 is a separate piece of work. Dependencies that have
+                                         already moved on (org.asynchttpclient:async-http-client, and for the native
+                                         transports com.github.docker-java:docker-java-transport-netty and
+                                         com.azure:azure-core-http-netty) therefore request a higher version than we
+                                         resolve to, which is exactly what this rule reports.
+
+                                         It is a deliberate downgrade, not an unnoticed conflict: netty-bom
+                                         converges every io.netty artifact in the graph onto that one version, which
+                                         `mvn dependency:tree -Dincludes=io.netty:*` confirms.
+
+                                         Listed artifact by artifact, and only the ones that actually conflict today,
+                                         so that a Netty artifact newly pulled in by some upstream bump fails the
+                                         build and gets looked at rather than being waved through. Note that this
+                                         rule only ever compares versions of the same artifact, so it cannot report
+                                         a 4.2-only artifact with no 4.1 counterpart either way; the license check is
+                                         what catches those. Drop this block once we upgrade to Netty 4.2.
+                                       -->
+                                       <exclude>io.netty:netty-buffer</exclude>
+                                       <exclude>io.netty:netty-codec</exclude>
+                                       <exclude>io.netty:netty-codec-dns</exclude>
+                                       <exclude>io.netty:netty-codec-http</exclude>
+                                       <exclude>io.netty:netty-codec-http2</exclude>
+                                       <exclude>io.netty:netty-codec-socks</exclude>
+                                       <exclude>io.netty:netty-common</exclude>
+                                       <exclude>io.netty:netty-handler</exclude>
+                                       <exclude>io.netty:netty-handler-proxy</exclude>
+                                       <exclude>io.netty:netty-resolver</exclude>
+                                       <exclude>io.netty:netty-resolver-dns</exclude>
+                                       <exclude>io.netty:netty-transport</exclude>
+                                       <exclude>io.netty:netty-transport-native-epoll</exclude>
+                                       <exclude>io.netty:netty-transport-native-kqueue</exclude>
+                                       <exclude>io.netty:netty-transport-native-unix-common</exclude>
                                        <!-- upgrading these later -->
                                        <exclude>org.apache.zookeeper:zookeeper</exclude>
                                        <exclude>com.google.guava:guava</exclude>

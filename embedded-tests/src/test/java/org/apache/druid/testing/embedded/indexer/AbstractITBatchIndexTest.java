@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.indexer;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
@@ -48,7 +49,6 @@ import org.apache.druid.testing.embedded.utils.ITRetryUtil;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.Assert;
 
 import java.io.IOException;

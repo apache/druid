@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.hrtr;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -40,8 +41,6 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 
 import java.net.URL;
@@ -192,20 +191,20 @@ public class WorkerHolder
             try {
               final StatusResponseHolder response = httpClient.go(
                   new Request(HttpMethod.POST, url)
-                      .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+                      .addHeader("Content-Type", SmileMediaTypes.APPLICATION_JACKSON_SMILE)
                       .setContent(smileMapper.writeValueAsBytes(task)),
                   StatusResponseHandler.getInstance(),
                   config.getAssignRequestHttpTimeout().toStandardDuration()
               ).get();
 
-              if (response.getStatus().getCode() == 200) {
+              if (response.getStatus().code() == 200) {
                 return true;
               } else {
                 throw new RE(
                     "Failed to assign task[%s] to worker[%s]. Response Code[%s] and Message[%s]. Retrying...",
                     task.getId(),
                     enabledWorker.getHost(),
-                    response.getStatus().getCode(),
+                    response.getStatus().code(),
                     response.getContent()
                 );
               }
@@ -243,7 +242,7 @@ public class WorkerHolder
                   config.getShutdownRequestHttpTimeout().toStandardDuration()
               ).get();
 
-              if (response.getStatus().getCode() == 200) {
+              if (response.getStatus().code() == 200) {
                 log.info(
                     "Sent shutdown message to worker: %s, status %s, response: %s",
                     enabledWorker.getHost(),

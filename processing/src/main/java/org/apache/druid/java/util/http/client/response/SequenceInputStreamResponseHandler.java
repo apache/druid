@@ -20,12 +20,13 @@
 package org.apache.druid.java.util.http.client.response;
 
 import com.google.common.io.ByteSource;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferInputStream;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
@@ -49,6 +50,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class SequenceInputStreamResponseHandler implements HttpResponseHandler<InputStream, InputStream>
 {
   private static final Logger log = new Logger(SequenceInputStreamResponseHandler.class);
+  private static final byte[] EMPTY_BYTES = new byte[0];
   private final AtomicLong byteCount = new AtomicLong(0);
   private final BlockingQueue<InputStream> queue = new LinkedBlockingQueue<>();
   private final AtomicBoolean done = new AtomicBoolean(false);
@@ -56,18 +58,36 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   @Override
   public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    try (ChannelBufferInputStream channelStream = new ChannelBufferInputStream(response.getContent())) {
-      queue.put(channelStream);
+    // Netty 4 delivers headers and body separately, so a plain HttpResponse carries no content; only a
+    // FullHttpResponse does. Either way something must be queued before the SequenceInputStream below is built,
+    // because its constructor eagerly pulls the first element and nextElement() blocks until one is available.
+    // Blocking there would stall the caller, which is the same Netty I/O thread that has to deliver the chunks that
+    // would unblock it. Netty 3 could not reach this state: getContent() always returned a buffer, empty or not.
+    final InputStream firstStream;
+    final int readableBytes;
+    if (response instanceof HttpContent) {
+      final ByteBuf content = ((HttpContent) response).content();
+      // Retain content as ByteBufInputStream will release it on close
+      content.retain();
+      readableBytes = content.readableBytes();
+      firstStream = new ByteBufInputStream(content, true);
+    } else {
+      readableBytes = 0;
+      firstStream = new ByteArrayInputStream(EMPTY_BYTES);
     }
-    catch (IOException e) {
-      throw new RuntimeException(e);
+
+    try {
+      queue.put(firstStream);
+      byteCount.addAndGet(readableBytes);
     }
     catch (InterruptedException e) {
+      // Close the stream so the retained buffer is released instead of leaking.
+      closeStream(firstStream);
       log.error(e, "Queue appending interrupted");
       Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
-    byteCount.addAndGet(response.getContent().readableBytes());
+
     return ClientResponse.finished(
         new SequenceInputStream(
             new Enumeration<>()
@@ -102,27 +122,29 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   @Override
   public ClientResponse<InputStream> handleChunk(
       ClientResponse<InputStream> clientResponse,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   )
   {
-    final ChannelBuffer channelBuffer = chunk.getContent();
+    final ByteBuf channelBuffer = chunk.content();
     final int bytes = channelBuffer.readableBytes();
     if (bytes > 0) {
-      try (ChannelBufferInputStream channelStream = new ChannelBufferInputStream(channelBuffer)) {
+      // Retain content as ByteBufInputStream will release it on close
+      channelBuffer.retain();
+      final ByteBufInputStream channelStream = new ByteBufInputStream(channelBuffer, true);
+      try {
         queue.put(channelStream);
         // Queue.size() can be expensive in some implementations, but LinkedBlockingQueue.size is just an AtomicLong
         log.debug("Added stream. Queue length %d", queue.size());
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
+        byteCount.addAndGet(bytes);
       }
       catch (InterruptedException e) {
+        // Close the stream so the retained buffer is released instead of leaking.
+        closeStream(channelStream);
         log.warn(e, "Thread interrupted while adding to queue");
         Thread.currentThread().interrupt();
         throw new RuntimeException(e);
       }
-      byteCount.addAndGet(bytes);
     } else {
       log.debug("Skipping zero length chunk");
     }
@@ -187,5 +209,15 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   public final long getByteCount()
   {
     return byteCount.get();
+  }
+
+  private static void closeStream(InputStream stream)
+  {
+    try {
+      stream.close();
+    }
+    catch (IOException e) {
+      log.warn(e, "Failed to close stream while releasing buffer");
+    }
   }
 }

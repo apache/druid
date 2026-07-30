@@ -19,9 +19,18 @@
 
 package org.apache.druid.java.util.http.client;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.http.client.response.ClientResponse;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.eclipse.jetty.server.Connector;
@@ -33,22 +42,23 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.util.ssl.KeyStoreScanner;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -105,7 +115,7 @@ public class FriendlyServersTest
               StatusResponseHandler.getInstance()
           ).get();
 
-      Assert.assertEquals(200, response.getStatus().getCode());
+      Assert.assertEquals(200, response.getStatus().code());
       Assert.assertEquals("hello!", response.getContent());
     }
     finally {
@@ -115,10 +125,178 @@ public class FriendlyServersTest
     }
   }
 
-  @Test
+  /**
+   * A response handler that throws (for example one enforcing a byte limit or a query timeout) must not wedge the
+   * request. The message being processed is released in a finally block, so this also exercises the path where an
+   * inbound buffer would otherwise be leaked.
+   */
+  @Test(timeout = 60_000L)
+  public void testThrowingResponseHandlerCompletesRequest() throws Exception
+  {
+    final ExecutorService exec = Executors.newSingleThreadExecutor();
+    final ServerSocket serverSocket = new ServerSocket(0);
+    exec.submit(
+        () -> {
+          while (!Thread.currentThread().isInterrupted()) {
+            try (
+                Socket clientSocket = serverSocket.accept();
+                BufferedReader in = new BufferedReader(
+                    new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
+                );
+                OutputStream out = clientSocket.getOutputStream()
+            ) {
+              String line;
+              while ((line = in.readLine()) != null && !line.isEmpty()) {
+                // Skip the request headers.
+              }
+              out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+              out.flush();
+            }
+            catch (Exception e) {
+              if (serverSocket.isClosed()) {
+                return;
+              }
+            }
+          }
+        }
+    );
+
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClient client = HttpClientInit.createClient(HttpClientConfig.builder().build(), lifecycle);
+      final URL url = URI.create(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort())).toURL();
+
+      final ListenableFuture<String> future = client.go(
+          new Request(HttpMethod.GET, url),
+          new HttpResponseHandler<String, String>()
+          {
+            @Override
+            public ClientResponse<String> handleResponse(HttpResponse response, TrafficCop trafficCop)
+            {
+              return ClientResponse.unfinished("");
+            }
+
+            @Override
+            public ClientResponse<String> handleChunk(ClientResponse<String> clientResponse, HttpContent chunk, long chunkNum)
+            {
+              throw new ISE("Handler failed while reading chunk[%d]", chunkNum);
+            }
+
+            @Override
+            public ClientResponse<String> done(ClientResponse<String> clientResponse)
+            {
+              return ClientResponse.finished(clientResponse.getObj());
+            }
+
+            @Override
+            public void exceptionCaught(ClientResponse<String> clientResponse, Throwable e)
+            {
+              // Nothing to do; the assertion below covers the outcome.
+            }
+          }
+      );
+
+      // The request has to settle one way or another rather than hang.
+      future.get();
+    }
+    finally {
+      exec.shutdownNow();
+      serverSocket.close();
+      lifecycle.stop();
+    }
+  }
+
+  /**
+   * A {@link Request} may legitimately be sent more than once: KerberosHttpClient resends
+   * {@code request.copy()} after a 401, and ClientUtils retargets a request at another server. Sending must
+   * therefore leave the body intact, rather than handing it to Netty's encoder (which releases the buffer it
+   * encodes) or letting the socket write consume it.
+   */
+  @Test(timeout = 60_000L)
+  public void testRequestBodySurvivesBeingSent() throws Exception
+  {
+    final List<String> receivedBodies = new CopyOnWriteArrayList<>();
+    final ExecutorService exec = Executors.newSingleThreadExecutor();
+    final ServerSocket serverSocket = new ServerSocket(0);
+    exec.submit(
+        () -> {
+          while (!Thread.currentThread().isInterrupted()) {
+            try (
+                Socket clientSocket = serverSocket.accept();
+                BufferedReader in = new BufferedReader(
+                    new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
+                );
+                OutputStream out = clientSocket.getOutputStream()
+            ) {
+              // Serve every request on this connection, since the client pools connections.
+              while (in.readLine() != null) {
+                int contentLength = 0;
+                String line;
+                while ((line = in.readLine()) != null && !line.isEmpty()) {
+                  if (StringUtils.toLowerCase(line).startsWith("content-length:")) {
+                    contentLength = Integer.parseInt(line.substring(line.indexOf(':') + 1).trim());
+                  }
+                }
+
+                final char[] body = new char[contentLength];
+                int read = 0;
+                while (read < contentLength) {
+                  final int count = in.read(body, read, contentLength - read);
+                  if (count < 0) {
+                    break;
+                  }
+                  read += count;
+                }
+
+                receivedBodies.add(new String(body, 0, read));
+                out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+                out.flush();
+              }
+            }
+            catch (Exception e) {
+              if (serverSocket.isClosed()) {
+                return;
+              }
+            }
+          }
+        }
+    );
+
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClient client = HttpClientInit.createClient(HttpClientConfig.builder().build(), lifecycle);
+      final URL url = URI.create(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort())).toURL();
+      final byte[] body = "body!".getBytes(StandardCharsets.UTF_8);
+      final Request request = new Request(HttpMethod.POST, url).setContent("text/plain", body);
+
+      final StatusResponseHolder first =
+          client.go(request, StatusResponseHandler.getInstance()).get();
+      Assert.assertEquals(200, first.getStatus().code());
+
+      // Sending must leave the body intact, or a retry cannot resend it.
+      Assert.assertArrayEquals("content after sending", body, request.getContent());
+
+      // This is what KerberosHttpClient does when it retries an unauthorized request.
+      final StatusResponseHolder second =
+          client.go(request.copy(), StatusResponseHandler.getInstance()).get();
+      Assert.assertEquals(200, second.getStatus().code());
+
+      Assert.assertEquals(ImmutableList.of("body!", "body!"), receivedBodies);
+    }
+    finally {
+      exec.shutdownNow();
+      serverSocket.close();
+      lifecycle.stop();
+    }
+  }
+
+  // Bounded so that a regression in the proxy CONNECT handling fails this test instead of hanging
+  // until the CI job's own timeout expires.
+  @Test(timeout = 60_000L)
   public void testFriendlyProxyHttpServer() throws Exception
   {
     final AtomicReference<String> requestContent = new AtomicReference<>();
+    final AtomicReference<Throwable> serverError = new AtomicReference<>();
 
     final ExecutorService exec = Executors.newSingleThreadExecutor();
     final ServerSocket serverSocket = new ServerSocket(0);
@@ -138,19 +316,28 @@ public class FriendlyServersTest
               ) {
                 StringBuilder request = new StringBuilder();
                 String line;
-                while (!"".equals((line = in.readLine()))) {
+                while ((line = in.readLine()) != null && !line.isEmpty()) {
                   request.append(line).append("\r\n");
                 }
                 requestContent.set(request.toString());
                 out.write("HTTP/1.1 200 OK\r\n\r\n".getBytes(StandardCharsets.UTF_8));
 
-                while (!in.readLine().equals("")) {
-                  // skip lines
+                while ((line = in.readLine()) != null && !line.isEmpty()) {
+                  // Skip the headers of the request that the client tunnels through the proxy.
                 }
                 out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+                out.flush();
               }
-              catch (Exception e) {
-                Assert.fail(e.toString());
+              catch (Throwable t) {
+                // Keep accepting rather than calling Assert.fail. The AssertionError it throws would
+                // escape into the executor's Future, where nobody looks at it, silently stopping this
+                // server while the client waits for a response that can no longer arrive. A pooled
+                // client may also open and drop connections on its own, so a single failed exchange is
+                // not necessarily a test failure; just remember it in case the request below fails.
+                serverError.compareAndSet(null, t);
+                if (serverSocket.isClosed()) {
+                  return;
+                }
               }
             }
           }
@@ -166,21 +353,36 @@ public class FriendlyServersTest
           )
           .build();
       final HttpClient client = HttpClientInit.createClient(config, lifecycle);
-      final StatusResponseHolder response = client
-          .go(
-              new Request(
-                  HttpMethod.GET,
-                  new URL("http://anotherHost:8080/")
-              ),
-              StatusResponseHandler.getInstance()
-          ).get();
+      final StatusResponseHolder response;
+      try {
+        response = client
+            .go(
+                new Request(
+                    HttpMethod.GET,
+                    URI.create("http://anotherHost:8080/").toURL()
+                ),
+                StatusResponseHandler.getInstance()
+            ).get();
+      }
+      catch (Throwable t) {
+        // A failure on the proxy side is the more informative one, so make sure it is not lost.
+        final Throwable proxyError = serverError.get();
+        if (proxyError != null) {
+          t.addSuppressed(proxyError);
+        }
+        throw t;
+      }
 
-      Assert.assertEquals(200, response.getStatus().getCode());
+      Assert.assertEquals(200, response.getStatus().code());
       Assert.assertEquals("hello!", response.getContent());
 
-      Assert.assertEquals(
-          "CONNECT anotherHost:8080 HTTP/1.1\r\nProxy-Authorization: Basic Ym9iOnNhbGx5\r\n",
-          requestContent.get()
+      // Netty 4 may normalize header names to lowercase
+      String actualRequest = requestContent.get();
+      Assert.assertTrue(
+          "Request should contain proxy authorization",
+          actualRequest.contains("CONNECT anotherHost:8080 HTTP/1.1") &&
+          (actualRequest.contains("Proxy-Authorization: Basic Ym9iOnNhbGx5") ||
+           actualRequest.contains("proxy-authorization: Basic Ym9iOnNhbGx5"))
       );
     }
     finally {
@@ -213,7 +415,9 @@ public class FriendlyServersTest
                 // Read headers
                 String header;
                 while (!(header = in.readLine()).equals("")) {
-                  if ("Accept-Encoding: identity".equals(header)) {
+                  // Netty 4 may send headers in lowercase
+                  if ("Accept-Encoding: identity".equals(header) || 
+                      "accept-encoding: identity".equals(header)) {
                     foundAcceptEncoding.set(true);
                   }
                 }
@@ -242,7 +446,7 @@ public class FriendlyServersTest
               StatusResponseHandler.getInstance()
           ).get();
 
-      Assert.assertEquals(200, response.getStatus().getCode());
+      Assert.assertEquals(200, response.getStatus().code());
       Assert.assertEquals("hello!", response.getContent());
       Assert.assertTrue(foundAcceptEncoding.get());
     }
@@ -300,7 +504,7 @@ public class FriendlyServersTest
                 ),
                 StatusResponseHandler.getInstance()
             ).get().getStatus();
-        Assert.assertEquals(404, status.getCode());
+        Assert.assertEquals(404, status.code());
       }
 
       // Incorrect name ("127.0.0.1")
@@ -373,7 +577,7 @@ public class FriendlyServersTest
                 StatusResponseHandler.getInstance()
             ).get().getStatus();
 
-        Assert.assertEquals(200, status.getCode());
+        Assert.assertEquals(200, status.code());
       }
 
       {
@@ -384,7 +588,7 @@ public class FriendlyServersTest
                 StatusResponseHandler.getInstance()
             ).get().getStatus();
 
-        Assert.assertEquals(200, status.getCode());
+        Assert.assertEquals(200, status.code());
       }
     }
     finally {

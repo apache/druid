@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.http.client;
 
-import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -71,7 +70,19 @@ public class HttpClientConfig
   private static final int DEFAULT_BOSS_COUNT = 1;
 
   // Default from SelectorUtil.DEFAULT_IO_THREADS, which is private:
-  private static final int DEFAULT_WORKER_COUNT = JvmUtils.getRuntimeInfo().getAvailableProcessors() * 2;
+  // Netty 4 migration: Cap worker threads to prevent memory exhaustion
+  //
+  // CRITICAL: Runtime.availableProcessors() may not respect cgroup limits in all Java versions
+  // even though the JVM detects the limit. We cap aggressively to prevent OOM in containers.
+  //
+  // On systems with cpu:2000m (2 CPUs), this prevents creating 192 threads (96*2)
+  // Cap at 8 for memory-constrained environments (indexing tasks, CI)
+  // This is sufficient for HTTP client parallelism
+  private static final int MAX_WORKER_THREADS = 8;
+  private static final int DEFAULT_WORKER_COUNT = Math.min(
+      Runtime.getRuntime().availableProcessors() * 2,
+      MAX_WORKER_THREADS
+  );
 
   private static final Duration DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION = new Period("PT4M").toStandardDuration();
 

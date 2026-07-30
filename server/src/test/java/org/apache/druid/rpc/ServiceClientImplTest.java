@@ -24,6 +24,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -34,11 +39,6 @@ import org.apache.druid.java.util.http.client.response.ObjectOrErrorResponseHand
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -54,8 +54,8 @@ import org.mockito.quality.Strictness;
 import org.mockito.stubbing.OngoingStubbing;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -774,7 +774,12 @@ public class ServiceClientImplTest
       @Nullable final String content
   )
   {
-    final DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, responseStatus);
+    final byte[] responseBytes = content == null ? null : StringUtils.toUtf8(content);
+    final DefaultFullHttpResponse response = new DefaultFullHttpResponse(
+        HttpVersion.HTTP_1_1,
+        responseStatus,
+        responseBytes == null ? Unpooled.EMPTY_BUFFER : Unpooled.wrappedBuffer(responseBytes)
+    );
 
     if (headers != null) {
       for (final Map.Entry<String, String> headerEntry : headers.entrySet()) {
@@ -782,11 +787,10 @@ public class ServiceClientImplTest
       }
     }
 
-    if (content != null) {
-      response.setContent(ChannelBuffers.wrappedBuffer(ByteBuffer.wrap(StringUtils.toUtf8(content))));
-    }
-
     final StringFullResponseHolder errorHolder = new StringFullResponseHolder(response, StandardCharsets.UTF_8);
+    if (content != null) {
+      errorHolder.addChunk(content);
+    }
     return Futures.immediateFuture(Either.error(errorHolder));
   }
 

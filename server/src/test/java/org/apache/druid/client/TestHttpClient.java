@@ -22,6 +22,12 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.DefaultLastHttpContent;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -41,14 +47,10 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.timeline.DataSegment;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -153,7 +155,7 @@ public class TestHttpClient implements HttpClient
   )
   {
     try {
-      final Query query = objectMapper.readValue(request.getContent().array(), Query.class);
+      final Query query = objectMapper.readValue(request.getContent(), Query.class);
       final QueryRunner queryRunner = servers.get(request.getUrl()).getQueryRunner();
       if (queryRunner == null) {
         throw new ISE("Can't find queryRunner for url[%s]", request.getUrl());
@@ -171,13 +173,16 @@ public class TestHttpClient implements HttpClient
       );
       final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
       response.headers().add(QueryResource.HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
-      response.setContent(
-          HeapChannelBufferFactory.getInstance().getBuffer(serializedContent, 0, serializedContent.length)
-      );
       if (responseDelayMillis > 0) {
         Thread.sleep(responseDelayMillis);
       }
-      final ClientResponse<Intermediate> intermClientResponse = handler.handleResponse(response, NOOP_TRAFFIC_COP);
+      // Mimic the real Netty pipeline: headers arrive in handleResponse, body arrives as content chunks.
+      ClientResponse<Intermediate> intermClientResponse = handler.handleResponse(response, NOOP_TRAFFIC_COP);
+      intermClientResponse = handler.handleChunk(
+          intermClientResponse,
+          new DefaultLastHttpContent(Unpooled.wrappedBuffer(serializedContent)),
+          0
+      );
       final ClientResponse<Final> finalClientResponse = handler.done(intermClientResponse);
       if (future != null) {
         return future;

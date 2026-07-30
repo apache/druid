@@ -19,24 +19,24 @@
 
 package org.apache.druid.java.util.http.client.netty;
 
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.DefaultChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpClientCodec;
-import org.jboss.netty.handler.codec.http.HttpContentDecompressor;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpContentDecompressor;
 
 /**
  */
-public class HttpClientPipelineFactory implements ChannelPipelineFactory
+public class HttpClientPipelineFactory extends ChannelInitializer<SocketChannel>
 {
   @Override
-  public ChannelPipeline getPipeline()
+  protected void initChannel(SocketChannel ch)
   {
-    ChannelPipeline pipeline = new DefaultChannelPipeline();
+    ChannelPipeline pipeline = ch.pipeline();
 
     pipeline.addLast("codec", new HttpClientCodec());
-    pipeline.addLast("inflater", new HttpContentDecompressor());
-
-    return pipeline;
+    // The second argument is maxAllocation, where 0 means the decompression buffer is not capped. The
+    // single-argument constructor is deprecated but defaulted to exactly this, so behavior is unchanged.
+    pipeline.addLast("inflater", new HttpContentDecompressor(false, 0));
   }
 }

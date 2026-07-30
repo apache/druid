@@ -19,8 +19,8 @@
 
 package org.apache.druid.client;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferInputStream;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
 
 import java.io.InputStream;
 
@@ -42,10 +42,11 @@ public class InputStreamHolder
     return new InputStreamHolder(stream, chunkNum, length);
   }
 
-  public static InputStreamHolder fromChannelBuffer(final ChannelBuffer buffer, final long chunkNum)
+  public static InputStreamHolder fromByteBuf(final ByteBuf buffer, final long chunkNum)
   {
     final int length = buffer.readableBytes();
-    return new InputStreamHolder(new ChannelBufferInputStream(buffer), chunkNum, length);
+    buffer.retain();
+    return new InputStreamHolder(new ByteBufInputStream(buffer, true), chunkNum, length);
   }
 
   public InputStream getStream()
