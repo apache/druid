@@ -35,7 +35,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jclouds.version>2.6.0</jclouds.version>
+        <jclouds.version>2.7.0</jclouds.version>
     </properties>
 
     <dependencies>
