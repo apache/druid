@@ -61,7 +61,7 @@
     "@fontsource/open-sans": "^5.0.30",
     "@internationalized/date": "^3.5.6",
     "ace-builds": "~1.5.3",
-    "axios": "^1.15.2",
+    "axios": "^1.18.0",
     "chronoshift": "^1.2.3",
     "classnames": "^2.2.6",
     "copy-to-clipboard": "^3.3.3",
@@ -158,7 +158,7 @@
     "webpack": "^5.89.0",
     "webpack-bundle-analyzer": "^4.10.1",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.2.2"
+    "webpack-dev-server": "^5.2.6"
   },
   "overrides": {
     "@types/react": "$@types/react"

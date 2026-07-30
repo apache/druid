@@ -136,46 +136,16 @@ class SegmentLocalCacheManagerConcurrencyTest
     locations.add(locationConfig);
     locations.add(locationConfig2);
 
-    loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return locations;
-      }
-
-      @Override
-      public File getInfoDir()
-      {
-        return new File(tempDir, "info");
-      }
-    };
-    vsfLoaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return locations;
-      }
-
-      @Override
-      public boolean isVirtualStorage()
-      {
-        return true;
-      }
-
-      @Override
-      public int getVirtualStorageLoadThreads()
-      {
-        return Runtime.getRuntime().availableProcessors();
-      }
-
-      @Override
-      public File getInfoDir()
-      {
-        return new File(tempDir, "info");
-      }
-    };
+    loaderConfig = SegmentLoaderConfig.builder()
+                                      .locations(locations)
+                                      .infoDir(new File(tempDir, "info"))
+                                      .build();
+    vsfLoaderConfig = SegmentLoaderConfig.builder()
+                                         .locations(locations)
+                                         .virtualStorage(true)
+                                         .virtualStorageLoadThreads(Runtime.getRuntime().availableProcessors())
+                                         .infoDir(new File(tempDir, "info"))
+                                         .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     location = storageLocations.get(0);
     location2 = storageLocations.get(1);
