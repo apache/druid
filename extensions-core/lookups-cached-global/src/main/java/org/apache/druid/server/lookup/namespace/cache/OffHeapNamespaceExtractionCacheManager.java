@@ -115,8 +115,10 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
 
     private void doDispose()
     {
-      if (!mmapDB.isClosed()) {
-        mmapDB.delete(mapDbKey);
+      synchronized (mmapDB) {
+        if (!mmapDB.isClosed()) {
+          mmapDB.delete(mapDbKey);
+        }
       }
       cacheCount.decrementAndGet();
     }
@@ -150,6 +152,10 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
     }
   }
 
+  /**
+   * MapDB synchronizes its state-changing methods on the {@link DB} instance. Check-and-use sequences must hold the
+   * same monitor to prevent the database from closing between the two calls.
+   */
   private final DB mmapDB;
   private final File tmpFile;
   private AtomicLong mapDbKeyCounter = new AtomicLong(0);
@@ -192,12 +198,14 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
             }
 
             @Override
-            public synchronized void stop()
+            public void stop()
             {
-              if (!mmapDB.isClosed()) {
-                mmapDB.close();
-                if (!tmpFile.delete()) {
-                  log.warn("Unable to delete file at [%s]", tmpFile.getAbsolutePath());
+              synchronized (mmapDB) {
+                if (!mmapDB.isClosed()) {
+                  mmapDB.close();
+                  if (!tmpFile.delete()) {
+                    log.warn("Unable to delete file at [%s]", tmpFile.getAbsolutePath());
+                  }
                 }
               }
             }

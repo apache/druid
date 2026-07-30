@@ -217,7 +217,7 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
                       () -> {
                         synchronized (readMonitor) {
                           keepReading = true;
-                          readMonitor.notify();
+                          readMonitor.notifyAll();
                         }
                       },
                       Execs.directExecutor()
