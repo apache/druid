@@ -85,8 +85,9 @@ public class UnusedSegmentsKiller implements OverlordDuty
   private static final String TASK_ID_PREFIX = "overlord-issued";
 
   /**
-   * The default for embedded kill tasks may differ from the cluster-level default
-   * {@link Tasks#DEFAULT_USE_CONCURRENT_LOCKS}.
+   * Use concurrent locks by default.
+   *
+   * @see UnusedSegmentsKiller
    */
   private static final boolean DEFAULT_USE_CONCURRENT_LOCKS = true;
 
