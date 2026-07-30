@@ -158,8 +158,8 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
    */
   private final DB mmapDB;
   private final File tmpFile;
-  private AtomicLong mapDbKeyCounter = new AtomicLong(0);
-  private AtomicInteger cacheCount = new AtomicInteger(0);
+  private final AtomicLong mapDbKeyCounter = new AtomicLong(0);
+  private final AtomicInteger cacheCount = new AtomicInteger(0);
 
   @Inject
   public OffHeapNamespaceExtractionCacheManager(
@@ -200,13 +200,15 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
             @Override
             public void stop()
             {
+              final boolean shouldDelete;
               synchronized (mmapDB) {
-                if (!mmapDB.isClosed()) {
+                shouldDelete = !mmapDB.isClosed();
+                if (shouldDelete) {
                   mmapDB.close();
-                  if (!tmpFile.delete()) {
-                    log.warn("Unable to delete file at [%s]", tmpFile.getAbsolutePath());
-                  }
                 }
+              }
+              if (shouldDelete && !tmpFile.delete()) {
+                log.warn("Unable to delete file at [%s]", tmpFile.getAbsolutePath());
               }
             }
           }

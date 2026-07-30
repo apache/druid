@@ -51,7 +51,7 @@ public class AppendableByteArrayInputStream extends InputStream
     synchronized (singleByteReaderDoer) {
       bytes.addLast(bytesToAdd);
       available += bytesToAdd.length;
-      singleByteReaderDoer.notifyAll();
+      singleByteReaderDoer.notify();
     }
   }
 
