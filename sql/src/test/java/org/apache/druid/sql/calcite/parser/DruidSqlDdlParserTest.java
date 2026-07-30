@@ -383,6 +383,40 @@ public class DruidSqlDdlParserTest
     assertUnparseRoundTrips("CREATE TABLE \"tbl\" (\"a\" VARCHAR) SEALED");
   }
 
+  /**
+   * Calcite clones a node by asking its operator to rebuild it from its operand list, which is how shuttles rewrite
+   * a statement. The operand order is hand-written per node, so a round trip is what proves it is right.
+   */
+  @Test
+  public void testCloneRoundTrip()
+  {
+    for (String sql : new String[]{
+        "CREATE TABLE \"tbl\" (\"a\" VARCHAR, \"b\" BIGINT)",
+        "CREATE OR REPLACE TABLE \"tbl\" (\"a\" VARCHAR)",
+        "CREATE TABLE IF NOT EXISTS \"tbl\" (\"a\" VARCHAR)",
+        "CREATE TABLE \"tbl\" (\"a\" VARCHAR) PARTITIONED BY DAY CLUSTERED BY \"a\"",
+        "CREATE TABLE \"tbl\" (\"a\" VARCHAR) SEALED",
+        "CREATE TABLE \"tbl\" (\"a\" VARCHAR, PROJECTION \"p\" AS (SELECT \"a\" GROUP BY \"a\"))",
+        "CREATE TABLE \"tbl\" (\"a\" VARCHAR, PROJECTION \"__base\" AS (SELECT \"a\" CLUSTERED BY \"a\")) SEALED",
+        "ALTER TABLE \"tbl\" ADD COLUMN \"a\" DOUBLE",
+        "ALTER TABLE \"tbl\" DROP COLUMN \"a\"",
+        "ALTER TABLE \"tbl\" ALTER COLUMN \"a\" SET DATA TYPE BIGINT",
+        "ALTER TABLE \"tbl\" ADD PROJECTION \"p\" AS (SELECT \"a\" GROUP BY \"a\")",
+        "ALTER TABLE \"tbl\" ADD IF NOT EXISTS PROJECTION \"p\" AS (SELECT \"a\" GROUP BY \"a\")",
+        "ALTER TABLE \"tbl\" DROP PROJECTION \"p\"",
+        "ALTER TABLE \"tbl\" DROP PROJECTION IF EXISTS \"p\"",
+        "ALTER TABLE \"tbl\" SET PROPERTIES (\"sealed\" = TRUE)"
+    }) {
+      final SqlNode node = parse(sql);
+      final SqlNode clone = node.clone(node.getParserPosition());
+      assertEquals(
+          node.toSqlString(CalciteSqlDialect.DEFAULT).getSql(),
+          clone.toSqlString(CalciteSqlDialect.DEFAULT).getSql(),
+          sql
+      );
+    }
+  }
+
   @Test
   public void testDdlAfterSetStatement()
   {

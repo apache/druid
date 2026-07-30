@@ -446,7 +446,7 @@ public class TableEditor
     });
   }
 
-  private List<DatasourceProjectionMetadata> projectionsOf(TableMetadata table) throws CatalogException
+  private List<DatasourceProjectionMetadata> projectionsOf(TableMetadata table)
   {
     final ResolvedTable resolved = catalog.tableRegistry().resolve(table.spec());
     final List<DatasourceProjectionMetadata> projections =
