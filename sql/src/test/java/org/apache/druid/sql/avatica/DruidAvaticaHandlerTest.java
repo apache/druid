@@ -1055,7 +1055,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testAutoReconnectOnNoSuchConnection() throws SQLException
   {
     for (int i = 0; i < 50; i++) {
-      try (Statement statement = client.createStatement()) {
+      try (final Statement statement = client.createStatement()) {
         final ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
         Assert.assertEquals(
             ImmutableList.of(ImmutableMap.of("cnt", 6L)),
