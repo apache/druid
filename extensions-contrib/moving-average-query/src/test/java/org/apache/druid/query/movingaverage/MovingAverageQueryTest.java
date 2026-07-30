@@ -94,6 +94,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
@@ -171,9 +172,13 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
     retryConfig = injector.getInstance(RetryQueryRunnerConfig.class);
     serverConfig = injector.getInstance(ServerConfig.class);
 
-    InputStream is = getClass().getResourceAsStream("/queryTests/" + yamlFile);
-    ObjectMapper reader = new ObjectMapper(new YAMLFactory());
-    config = reader.readValue(is, TestConfig.class);
+    final ObjectMapper reader = new ObjectMapper(new YAMLFactory());
+    try (InputStream inputStream = Objects.requireNonNull(
+        MovingAverageQueryTest.class.getResourceAsStream("/queryTests/" + yamlFile),
+        "Missing query test resource " + yamlFile
+    )) {
+      config = reader.readValue(inputStream, TestConfig.class);
+    }
   }
 
   /**

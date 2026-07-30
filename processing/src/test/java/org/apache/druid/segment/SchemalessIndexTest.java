@@ -182,8 +182,8 @@ public class SchemalessIndexTest
         IncrementalIndex top = makeIncrementalIndex("druid.sample.json.top", METRIC_AGGS);
         IncrementalIndex bottom = makeIncrementalIndex("druid.sample.json.bottom", METRIC_AGGS);
 
-        File tmpFile = File.createTempFile("yay", "who");
-        tmpFile.delete();
+        final File tmpFile = FileUtils.createTempDir("schemaless-index-merge");
+        tmpFile.deleteOnExit();
 
         File topFile = new File(tmpFile, "top");
         File bottomFile = new File(tmpFile, "bottom");
@@ -239,8 +239,8 @@ public class SchemalessIndexTest
       }
 
       try {
-        File tmpFile = File.createTempFile("yay", "who");
-        tmpFile.delete();
+        final File tmpFile = FileUtils.createTempDir("schemaless-index-merge");
+        tmpFile.deleteOnExit();
 
         File mergedFile = new File(tmpFile, "merged");
 
@@ -277,8 +277,8 @@ public class SchemalessIndexTest
       }
 
       try {
-        File tmpFile = File.createTempFile("yay", "who");
-        tmpFile.delete();
+        final File tmpFile = FileUtils.createTempDir("schemaless-index-merge");
+        tmpFile.deleteOnExit();
 
         File mergedFile = new File(tmpFile, "merged");
 
@@ -364,9 +364,7 @@ public class SchemalessIndexTest
               new MapBasedInputRow(timestamp, dims, event)
           );
 
-          File tmpFile = File.createTempFile("billy", "yay");
-          tmpFile.delete();
-          FileUtils.mkdirp(tmpFile);
+          final File tmpFile = FileUtils.createTempDir("schemaless-row-index");
           tmpFile.deleteOnExit();
 
           indexMerger.persist(rowIndex, tmpFile, INDEX_SPEC, null);
@@ -444,8 +442,8 @@ public class SchemalessIndexTest
   private QueryableIndex makeMergedMMappedIndex(Iterable<Pair<String, AggregatorFactory[]>> files)
   {
     try {
-      File tmpFile = File.createTempFile("yay", "who");
-      tmpFile.delete();
+      final File tmpFile = FileUtils.createTempDir("schemaless-index-merge");
+      tmpFile.deleteOnExit();
       File mergedFile = new File(tmpFile, "merged");
       FileUtils.mkdirp(mergedFile);
       mergedFile.deleteOnExit();

@@ -43,9 +43,11 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TimeZone;
 
 
@@ -95,16 +97,22 @@ public abstract class CompressedBigDecimalAggregatorGroupByTestBase
   @Test
   public void testIngestAndGroupByAllQuery() throws IOException, Exception
   {
-    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
-        this.getClass().getResourceAsStream("/" + "bd_test_data.csv"),
-        CompressedBigDecimalAggregatorTimeseriesTestBase.SCHEMA,
-        CompressedBigDecimalAggregatorTimeseriesTestBase.FORMAT,
-        cbdGroupByQueryConfig.getIngestionAggregators(),
-        0,
-        Granularities.NONE,
-        5,
-        cbdGroupByQueryConfig.getQuery()
-    );
+    final Sequence<ResultRow> seq;
+    try (InputStream inputStream = Objects.requireNonNull(
+        CompressedBigDecimalAggregatorGroupByTestBase.class.getResourceAsStream("/bd_test_data.csv"),
+        "Missing resource /bd_test_data.csv"
+    )) {
+      seq = helper.createIndexAndRunQueryOnSegment(
+          inputStream,
+          CompressedBigDecimalAggregatorTimeseriesTestBase.SCHEMA,
+          CompressedBigDecimalAggregatorTimeseriesTestBase.FORMAT,
+          cbdGroupByQueryConfig.getIngestionAggregators(),
+          0,
+          Granularities.NONE,
+          5,
+          cbdGroupByQueryConfig.getQuery()
+      );
+    }
 
     List<ResultRow> results = seq.toList();
     Assert.assertThat(results, IsCollectionWithSize.hasSize(1));

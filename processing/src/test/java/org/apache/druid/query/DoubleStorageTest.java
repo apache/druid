@@ -27,7 +27,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
@@ -64,7 +63,9 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -132,6 +133,9 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
   private QueryableIndex index;
   private final SegmentAnalysis expectedSegmentAnalysis;
   private final String storeDoubleAs;
+
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public DoubleStorageTest(
       String storeDoubleAs,
@@ -257,7 +261,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
   @Before
   public void setup() throws IOException
   {
-    index = buildIndex(storeDoubleAs);
+    index = buildIndex(storeDoubleAs, temporaryFolder.newFolder());
   }
 
   @Test
@@ -319,7 +323,8 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
     ScanQueryRunnerTest.verify(expectedResults, results);
   }
 
-  private static QueryableIndex buildIndex(String storeDoubleAsFloat) throws IOException
+  private static QueryableIndex buildIndex(final String storeDoubleAsFloat, final File indexDirectory)
+      throws IOException
   {
     String oldValue = System.getProperty(ColumnHolder.DOUBLE_STORAGE_TYPE_PROPERTY);
     System.setProperty(ColumnHolder.DOUBLE_STORAGE_TYPE_PROPERTY, storeDoubleAsFloat);
@@ -352,12 +357,8 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
     } else {
       System.setProperty(ColumnHolder.DOUBLE_STORAGE_TYPE_PROPERTY, oldValue);
     }
-    File someTmpFile = File.createTempFile("billy", "yay");
-    someTmpFile.delete();
-    FileUtils.mkdirp(someTmpFile);
-    INDEX_MERGER_V9.persist(index, someTmpFile, IndexSpec.getDefault(), null);
-    someTmpFile.delete();
-    return INDEX_IO.loadIndex(someTmpFile);
+    INDEX_MERGER_V9.persist(index, indexDirectory, IndexSpec.getDefault(), null);
+    return INDEX_IO.loadIndex(indexDirectory);
   }
 
   @After

@@ -255,10 +255,8 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
   private static QueryableIndex makeQueryableIndex(IndexSpec indexSpec, IndexMergerV9 indexMergerV9, IndexIO indexIO)
       throws IOException
   {
-    IncrementalIndex theIndex = makeIncrementalIndex();
-    File tmpFile = File.createTempFile("billy", "yay");
-    tmpFile.delete();
-    FileUtils.mkdirp(tmpFile);
+    final IncrementalIndex theIndex = makeIncrementalIndex();
+    final File tmpFile = FileUtils.createTempDir("spatial-index");
 
     try {
       indexMergerV9.persist(theIndex, tmpFile, indexSpec, null);
@@ -476,8 +474,7 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
       }
 
 
-      File tmpFile = File.createTempFile("yay", "who");
-      tmpFile.delete();
+      final File tmpFile = FileUtils.createTempDir("spatial-index-merge");
 
       File firstFile = new File(tmpFile, "first");
       File secondFile = new File(tmpFile, "second");
@@ -513,10 +510,7 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
 
       }
       finally {
-        FileUtils.deleteDirectory(firstFile);
-        FileUtils.deleteDirectory(secondFile);
-        FileUtils.deleteDirectory(thirdFile);
-        FileUtils.deleteDirectory(mergedFile);
+        FileUtils.deleteDirectory(tmpFile);
       }
 
     }

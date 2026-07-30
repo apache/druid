@@ -26,18 +26,24 @@ import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 
 @RunWith(JUnitParamsRunner.class)
 public class WhiteListBasedConverterTest
 {
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   private final String prefix = "druid";
   private final WhiteListBasedConverter defaultWhiteListBasedConverter = new WhiteListBasedConverter(
       prefix,
@@ -98,17 +104,17 @@ public class WhiteListBasedConverterTest
   @Test
   public void testWhiteListedStringArrayDimension() throws IOException
   {
-    File mapFile = File.createTempFile("testing-" + System.nanoTime(), ".json");
-    mapFile.deleteOnExit();
+    final File mapFile = temporaryFolder.newFile("whiteList.json");
 
-    try (OutputStream outputStream = new FileOutputStream(mapFile)) {
-      IOUtils.copyLarge(
-          getClass().getResourceAsStream("/testWhiteListedStringArrayDimension.json"),
-          outputStream
-      );
+    try (
+        InputStream inputStream =
+            WhiteListBasedConverterTest.class.getResourceAsStream("/testWhiteListedStringArrayDimension.json");
+        OutputStream outputStream = new FileOutputStream(mapFile)
+    ) {
+      IOUtils.copyLarge(inputStream, outputStream);
     }
 
-    WhiteListBasedConverter converter = new WhiteListBasedConverter(
+    final WhiteListBasedConverter converter = new WhiteListBasedConverter(
         prefix,
         false,
         false,
@@ -117,12 +123,12 @@ public class WhiteListBasedConverterTest
         new DefaultObjectMapper()
     );
 
-    ServiceMetricEvent event = new ServiceMetricEvent.Builder()
+    final ServiceMetricEvent event = new ServiceMetricEvent.Builder()
         .setDimension("gcName", new String[]{"g1"})
         .setMetric("jvm/gc/cpu", 10)
         .build(serviceName, hostname);
 
-    GraphiteEvent graphiteEvent = converter.druidEventToGraphite(event);
+    final GraphiteEvent graphiteEvent = converter.druidEventToGraphite(event);
 
     Assert.assertNotNull(graphiteEvent);
     Assert.assertEquals(defaultNamespace + ".g1.jvm/gc/cpu", graphiteEvent.getEventPath());

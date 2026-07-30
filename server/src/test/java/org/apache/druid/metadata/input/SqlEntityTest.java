@@ -31,6 +31,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -43,6 +44,8 @@ public class SqlEntityTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private final ObjectMapper mapper = TestHelper.makeSmileMapper();
   private TestDerbyConnector derbyConnector;
@@ -63,19 +66,21 @@ public class SqlEntityTest
   public void testExecuteQuery() throws IOException
   {
     derbyConnector = derbyConnectorRule.getConnector();
-    SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
+    final SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
     final InputRow expectedRow = testUtils.createTableWithRows(TABLE_NAME_1, 1).get(0);
-    File tmpFile = File.createTempFile("testQueryResults", "");
-    InputEntity.CleanableFile queryResult = SqlEntity.openCleanableFile(
+    final File tmpFile = temporaryFolder.newFile("testQueryResults");
+    final InputEntity.CleanableFile queryResult = SqlEntity.openCleanableFile(
         VALID_SQL,
         testUtils.getDerbyInputSourceConnector(),
         mapper,
         true,
         tmpFile
     );
-    InputStream queryInputStream = new FileInputStream(queryResult.file());
-    String actualJson = IOUtils.toString(queryInputStream, StandardCharsets.UTF_8);
-    String expectedJson = mapper.writeValueAsString(
+    final String actualJson;
+    try (InputStream queryInputStream = new FileInputStream(queryResult.file())) {
+      actualJson = IOUtils.toString(queryInputStream, StandardCharsets.UTF_8);
+    }
+    final String expectedJson = mapper.writeValueAsString(
         Collections.singletonList(((MapBasedInputRow) expectedRow).getEvent())
     );
     Assert.assertEquals(actualJson, expectedJson);
@@ -86,9 +91,9 @@ public class SqlEntityTest
   public void testFileDeleteOnInvalidQuery() throws IOException
   {
     derbyConnector = derbyConnectorRule.getConnector();
-    SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
+    final SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
     testUtils.createTableWithRows(TABLE_NAME_1, 1);
-    File tmpFile = File.createTempFile("testQueryResults", "");
+    final File tmpFile = temporaryFolder.newFile("testQueryResults");
     Assert.assertTrue(tmpFile.exists());
 
     Assert.assertThrows(

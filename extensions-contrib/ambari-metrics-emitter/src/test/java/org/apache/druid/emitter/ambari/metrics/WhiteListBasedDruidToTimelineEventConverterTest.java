@@ -27,17 +27,23 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 @RunWith(JUnitParamsRunner.class)
 public class WhiteListBasedDruidToTimelineEventConverterTest
 {
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   private final String prefix = "druid";
   private final WhiteListBasedDruidToTimelineEventConverter defaultWhiteListBasedDruidToTimelineEventConverter =
       new WhiteListBasedDruidToTimelineEventConverter(prefix, "druid", null, new DefaultObjectMapper());
@@ -93,29 +99,31 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
   @Test
   public void testWhiteListedStringArrayDimension() throws IOException
   {
-    File mapFile = File.createTempFile("testing-" + System.nanoTime(), ".json");
-    mapFile.deleteOnExit();
+    final File mapFile = temporaryFolder.newFile("whiteList.json");
 
-    try (OutputStream outputStream = new FileOutputStream(mapFile)) {
-      IOUtils.copyLarge(
-          getClass().getResourceAsStream("/testWhiteListedStringArrayDimension.json"),
-          outputStream
-      );
+    try (
+        InputStream inputStream =
+            WhiteListBasedDruidToTimelineEventConverterTest.class
+                .getResourceAsStream("/testWhiteListedStringArrayDimension.json");
+        OutputStream outputStream = new FileOutputStream(mapFile)
+    ) {
+      IOUtils.copyLarge(inputStream, outputStream);
     }
 
-    WhiteListBasedDruidToTimelineEventConverter converter = new WhiteListBasedDruidToTimelineEventConverter(
-        prefix,
-        "druid",
-        mapFile.getAbsolutePath(),
-        new DefaultObjectMapper()
-    );
+    final WhiteListBasedDruidToTimelineEventConverter converter =
+        new WhiteListBasedDruidToTimelineEventConverter(
+            prefix,
+            "druid",
+            mapFile.getAbsolutePath(),
+            new DefaultObjectMapper()
+        );
 
-    ServiceMetricEvent event = new ServiceMetricEvent.Builder()
+    final ServiceMetricEvent event = new ServiceMetricEvent.Builder()
         .setDimension("gcName", new String[] {"g1"})
         .setMetric("jvm/gc/cpu", 10)
         .build(serviceName, hostname);
 
-    TimelineMetric metric = converter.druidEventToTimelineMetric(event);
+    final TimelineMetric metric = converter.druidEventToTimelineMetric(event);
 
     Assert.assertNotNull(metric);
     Assert.assertEquals(defaultNamespace + ".g1.jvm/gc/cpu", metric.getMetricName());
