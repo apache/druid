@@ -254,20 +254,22 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
       case 1:
         theAggFactory = aggregatorType.createAggregatorFactory(aggregatorName, fieldName, null, outputType, null, true);
         break;
-      case 2:
-        Integer maxStringBytes = RexLiteral.intValue(rexNodes.get(1)); // added not null check at the function
+      case 2: {
+        final int maxStringBytes = RexLiteral.intValue(rexNodes.get(1)); // added not null check at the function
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
             null,
             outputType,
-            maxStringBytes.intValue(),
+            maxStringBytes,
             true
         );
         break;
-      case 3:
-        maxStringBytes = RexLiteral.intValue(rexNodes.get(1)); // added not null check at the function for rexNode 1,2
-        boolean aggregateMultipleValues = RexLiteral.booleanValue(rexNodes.get(2));
+      }
+      case 3: {
+        final int maxStringBytes =
+            RexLiteral.intValue(rexNodes.get(1)); // added not null check at the function for rexNode 1,2
+        final boolean aggregateMultipleValues = RexLiteral.booleanValue(rexNodes.get(2));
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
@@ -277,6 +279,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
             aggregateMultipleValues
         );
         break;
+      }
       default:
         throw InvalidSqlInput.exception(
             "Function [%s] expects 1 or 2 or 3 arguments but found [%s]",

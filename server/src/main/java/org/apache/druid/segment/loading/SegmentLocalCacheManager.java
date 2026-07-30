@@ -2259,13 +2259,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           log.makeAlert(
               e,
               "Failed to load segment in current location [%s], try next location if any",
-              location.getPath().getAbsolutePath()
-          ).addData("location", location.getPath().getAbsolutePath()).emit();
+              mountLocation.getPath().getAbsolutePath()
+          ).addData("location", mountLocation.getPath().getAbsolutePath()).emit();
 
           throw new SegmentLoadingException(
               "Failed to load segment[%s] in reserved location[%s]",
               dataSegment.getId(),
-              location.getPath().getAbsolutePath()
+              mountLocation.getPath().getAbsolutePath()
           );
         }
         finally {

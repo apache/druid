@@ -62,10 +62,16 @@ public class ImmutableDruidDataSourceTestUtils
    * @param actual actual list
    * @return
    */
-  public static boolean assertEquals(List<ImmutableDruidDataSource> expected, List<ImmutableDruidDataSource> actual)
+  public static boolean assertEquals(
+      @Nullable List<ImmutableDruidDataSource> expected,
+      @Nullable List<ImmutableDruidDataSource> actual
+  )
   {
     if (expected == null) {
       return actual == null;
+    }
+    if (actual == null) {
+      return false;
     }
 
     Assertions.assertEquals(expected.size(), actual.size(),

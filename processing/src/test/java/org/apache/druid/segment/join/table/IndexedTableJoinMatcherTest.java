@@ -371,8 +371,8 @@ public class IndexedTableJoinMatcherTest
     @Test
     public void evictsLeastRecentlyUsed()
     {
-      Long start = 1L;
-      Long next = start + SIZE;
+      final long start = 1L;
+      final Long next = start + SIZE;
 
       for (long i = start; i < next; i++) {
         Long key = i;
