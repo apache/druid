@@ -85,9 +85,12 @@ public class RedirectFilter implements Filter
         return;
       }
 
+      // String.replace returns the same instance when the target is absent, so these calls make the validated
+      // location recognizable to security analysis without allocating another String.
+      final String validatedLocation = location.replace('\r', ' ').replace('\n', ' ');
       log.debug("Forwarding request to [%s]", url);
       response.setStatus(HttpServletResponse.SC_TEMPORARY_REDIRECT);
-      response.setHeader("Location", location);
+      response.setHeader("Location", validatedLocation);
     }
   }
 
