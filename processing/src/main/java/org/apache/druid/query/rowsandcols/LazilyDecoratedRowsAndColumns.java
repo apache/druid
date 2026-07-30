@@ -276,17 +276,18 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
           sortColumns
       );
 
-      final FrameWriter writer = frameWriterFactory.newFrameWriter(columnSelectorFactory);
-      for (; !cursor.isDoneOrInterrupted() && remainingRowsToSkip > 0; remainingRowsToSkip--) {
-        cursor.advance();
-      }
-      for (; !cursor.isDoneOrInterrupted() && remainingRowsToFetch > 0; remainingRowsToFetch--) {
-        writer.addSelection();
-        cursor.advance();
-      }
+      try (final FrameWriter writer = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
+        for (; !cursor.isDoneOrInterrupted() && remainingRowsToSkip > 0; remainingRowsToSkip--) {
+          cursor.advance();
+        }
+        for (; !cursor.isDoneOrInterrupted() && remainingRowsToFetch > 0; remainingRowsToFetch--) {
+          writer.addSelection();
+          cursor.advance();
+        }
 
-      final byte[] bytes = writer.toByteArray();
-      return Pair.of(bytes, siggy.get());
+        final byte[] bytes = writer.toByteArray();
+        return Pair.of(bytes, siggy.get());
+      }
     }
   }
 
@@ -376,26 +377,28 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     long remainingRowsToSkip = limit.getOffset();
     long remainingRowsToFetch = limit.getLimitOrMax();
 
-    final FrameWriter frameWriter = FrameWriters.makeColumnBasedFrameWriterFactory(
-        memFactory,
-        sigBob.build(),
-        Collections.emptyList()
-    ).newFrameWriter(selectorFactory);
+    try (
+        final FrameWriter frameWriter = FrameWriters.makeColumnBasedFrameWriterFactory(
+            memFactory,
+            sigBob.build(),
+            Collections.emptyList()
+        ).newFrameWriter(selectorFactory)
+    ) {
+      rowId.set(0);
+      for (; rowId.get() < numRows && remainingRowsToFetch > 0; rowId.incrementAndGet()) {
+        final int theId = rowId.get();
+        if (rowsToSkip != null && rowsToSkip.get(theId)) {
+          continue;
+        }
+        if (remainingRowsToSkip > 0) {
+          remainingRowsToSkip--;
+          continue;
+        }
+        remainingRowsToFetch--;
+        frameWriter.addSelection();
+      }
 
-    rowId.set(0);
-    for (; rowId.get() < numRows && remainingRowsToFetch > 0; rowId.incrementAndGet()) {
-      final int theId = rowId.get();
-      if (rowsToSkip != null && rowsToSkip.get(theId)) {
-        continue;
-      }
-      if (remainingRowsToSkip > 0) {
-        remainingRowsToSkip--;
-        continue;
-      }
-      remainingRowsToFetch--;
-      frameWriter.addSelection();
+      return Pair.of(frameWriter.toByteArray(), sigBob.build());
     }
-
-    return Pair.of(frameWriter.toByteArray(), sigBob.build());
   }
 }
