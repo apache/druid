@@ -212,6 +212,12 @@ public class ColumnValueGenerator implements Supplier<Object>
             Preconditions.checkNotNull(enumeratedValues, "enumeratedValues");
         final List<Double> nonNullEnumeratedProbabilities =
             Preconditions.checkNotNull(enumeratedProbabilities, "enumeratedProbabilities");
+        Preconditions.checkArgument(
+            nonNullEnumeratedValues.size() == nonNullEnumeratedProbabilities.size(),
+            "enumeratedValues size[%s] must match enumeratedProbabilities size[%s]",
+            nonNullEnumeratedValues.size(),
+            nonNullEnumeratedProbabilities.size()
+        );
         for (int i = 0; i < nonNullEnumeratedValues.size(); i++) {
           probabilities.add(new Pair<>(nonNullEnumeratedValues.get(i), nonNullEnumeratedProbabilities.get(i)));
         }
