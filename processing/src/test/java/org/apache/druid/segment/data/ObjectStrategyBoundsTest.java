@@ -21,6 +21,9 @@ package org.apache.druid.segment.data;
 
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.aggregation.SerializablePairLongDoubleComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
 import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.junit.Assert;
@@ -38,6 +41,9 @@ public class ObjectStrategyBoundsTest
         GenericIndexed.UTF8_STRATEGY,
         new ImmutableRTreeObjectStrategy(new ConciseBitmapFactory()),
         new HyperUniquesSerde().getObjectStrategy(),
+        new SerializablePairLongDoubleComplexMetricSerde().getObjectStrategy(),
+        new SerializablePairLongFloatComplexMetricSerde().getObjectStrategy(),
+        new SerializablePairLongLongComplexMetricSerde().getObjectStrategy(),
         new SerializablePairLongStringComplexMetricSerde().getObjectStrategy()
     );
 
