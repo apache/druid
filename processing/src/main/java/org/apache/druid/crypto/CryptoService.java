@@ -188,8 +188,10 @@ public class CryptoService
 
     public byte[] toByteAray()
     {
-      int headerLength = 12;
-      ByteBuffer bb = ByteBuffer.allocate(salt.length + iv.length + cipher.length + headerLength);
+      final int headerLength = 12;
+      final int encryptedDataLength =
+          Math.addExact(Math.addExact(Math.addExact(salt.length, iv.length), cipher.length), headerLength);
+      final ByteBuffer bb = ByteBuffer.allocate(encryptedDataLength);
       bb.putInt(salt.length)
         .putInt(iv.length)
         .putInt(cipher.length)

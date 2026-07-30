@@ -103,7 +103,7 @@ public class SerializablePairLongLongComplexMetricSerde extends AbstractSerializ
       {
         ByteBuffer readOnlyByteBuffer = buffer.asReadOnlyBuffer().order(buffer.order());
 
-        readOnlyByteBuffer.limit(buffer.position() + numBytes);
+        readOnlyByteBuffer.limit(Math.addExact(buffer.position(), numBytes));
 
         return SERDE.deserialize(readOnlyByteBuffer);
       }

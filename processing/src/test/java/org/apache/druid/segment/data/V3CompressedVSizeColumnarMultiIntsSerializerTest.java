@@ -466,9 +466,10 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
       V3CompressedVSizeColumnarMultiIntsSupplier supplierFromByteBuffer =
           V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(mapper.mapFile("test"), byteOrder, mapper);
       ColumnarMultiInts columnarMultiInts = supplierFromByteBuffer.get();
-      Assert.assertEquals(columnarMultiInts.size(), numRows);
+      final int rowCount = Math.toIntExact(numRows);
+      Assert.assertEquals(columnarMultiInts.size(), rowCount);
       Random verifier = new Random(0);
-      for (int i = 0; i < numRows; ++i) {
+      for (int i = 0; i < rowCount; ++i) {
         IndexedInts subVals = columnarMultiInts.get(i);
         int[] expected = generateRow(verifier, maxValue, maxValuesPerRow);
         Assert.assertEquals(subVals.size(), expected.length);

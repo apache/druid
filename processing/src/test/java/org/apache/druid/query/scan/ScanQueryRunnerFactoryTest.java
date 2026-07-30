@@ -265,7 +265,7 @@ public class ScanQueryRunnerFactoryTest
       }
 
       // check total # of rows <= limit
-      Assert.assertTrue(output.size() <= query.getScanRowsLimit());
+      Assert.assertTrue((long) output.size() <= query.getScanRowsLimit());
 
       // check ordering is correct
       for (int i = 1; i < output.size(); i++) {
@@ -279,7 +279,7 @@ public class ScanQueryRunnerFactoryTest
       }
 
       // check the values are correct
-      for (int i = 0; i < query.getScanRowsLimit() && i < output.size(); i++) {
+      for (int i = 0; (long) i < query.getScanRowsLimit() && i < output.size(); i++) {
         Assert.assertEquals((long) expectedEventTimestamps.get(i), output.get(i).getFirstEventTimestamp(resultFormat));
       }
     }

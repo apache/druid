@@ -59,12 +59,16 @@ final class BinPlusExpr extends BinaryEvalOpExprBase
   @Override
   protected long evalLong(long left, long right)
   {
+    // Druid expression arithmetic follows Java's wrapping long semantics.
+    // codeql[java/tainted-arithmetic]
     return left + right;
   }
 
   @Override
   protected double evalDouble(double left, double right)
   {
+    // Druid expression arithmetic follows IEEE 754 semantics, including infinity.
+    // codeql[java/tainted-arithmetic]
     return left + right;
   }
 
@@ -105,12 +109,16 @@ final class BinMinusExpr extends BinaryEvalOpExprBase
   @Override
   protected long evalLong(long left, long right)
   {
+    // Druid expression arithmetic follows Java's wrapping long semantics.
+    // codeql[java/tainted-arithmetic]
     return left - right;
   }
 
   @Override
   protected double evalDouble(double left, double right)
   {
+    // Druid expression arithmetic follows IEEE 754 semantics, including infinity.
+    // codeql[java/tainted-arithmetic]
     return left - right;
   }
 
@@ -144,12 +152,16 @@ final class BinMulExpr extends BinaryEvalOpExprBase
   @Override
   protected long evalLong(long left, long right)
   {
+    // Druid expression arithmetic follows Java's wrapping long semantics.
+    // codeql[java/tainted-arithmetic]
     return left * right;
   }
 
   @Override
   protected double evalDouble(double left, double right)
   {
+    // Druid expression arithmetic follows IEEE 754 semantics, including infinity.
+    // codeql[java/tainted-arithmetic]
     return left * right;
   }
 

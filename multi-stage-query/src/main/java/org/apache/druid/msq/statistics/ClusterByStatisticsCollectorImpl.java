@@ -474,7 +474,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   private static class BucketHolder
   {
     private final KeyCollector<?> keyCollector;
-    private double retainedBytes;
+    private long retainedBytes;
 
     public BucketHolder(final KeyCollector<?> keyCollector)
     {
@@ -482,10 +482,10 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
       this.retainedBytes = keyCollector.estimatedRetainedBytes();
     }
 
-    public double updateRetainedBytes()
+    public long updateRetainedBytes()
     {
-      final double newRetainedBytes = keyCollector.estimatedRetainedBytes();
-      final double difference = newRetainedBytes - retainedBytes;
+      final long newRetainedBytes = keyCollector.estimatedRetainedBytes();
+      final long difference = newRetainedBytes - retainedBytes;
       retainedBytes = newRetainedBytes;
       return difference;
     }

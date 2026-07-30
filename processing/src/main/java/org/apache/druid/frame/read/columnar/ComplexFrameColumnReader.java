@@ -236,22 +236,31 @@ public class ComplexFrameColumnReader implements FrameColumnReader
     private Object getObjectForPhysicalRow(final int physicalRow)
     {
       final long endOffset =
-          startOfDataSection + memory.getInt(startOfOffsetSection + (long) Integer.BYTES * physicalRow);
+          Math.addExact(
+              startOfDataSection,
+              memory.getInt(Math.addExact(startOfOffsetSection, (long) Integer.BYTES * physicalRow))
+          );
       final long startOffset;
 
       if (physicalRow == 0) {
         startOffset = startOfDataSection;
       } else {
         startOffset =
-            startOfDataSection + memory.getInt(startOfOffsetSection + (long) Integer.BYTES * (physicalRow - 1));
+            Math.addExact(
+                startOfDataSection,
+                memory.getInt(
+                    Math.addExact(startOfOffsetSection, (long) Integer.BYTES * Math.subtractExact(physicalRow, 1))
+                )
+            );
       }
 
       if (memory.getByte(startOffset) == ComplexFrameMaker.NULL_MARKER) {
         return null;
       } else {
-        final int payloadLength = Ints.checkedCast(endOffset - startOffset - Byte.BYTES);
+        final int payloadLength =
+            Ints.checkedCast(Math.subtractExact(Math.subtractExact(endOffset, startOffset), Byte.BYTES));
         final byte[] complexBytes = new byte[payloadLength];
-        memory.getByteArray(startOffset + Byte.BYTES, complexBytes, 0, payloadLength);
+        memory.getByteArray(Math.addExact(startOffset, Byte.BYTES), complexBytes, 0, payloadLength);
         return serde.fromBytes(complexBytes, 0, complexBytes.length);
       }
     }

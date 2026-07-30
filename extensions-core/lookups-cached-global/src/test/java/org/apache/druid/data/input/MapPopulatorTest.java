@@ -39,7 +39,7 @@ public class MapPopulatorTest
   public void test_getByteLengthOfObject_string_stringLength()
   {
     String o = "string";
-    Assert.assertEquals((o.length() * Character.BYTES) + 40, MapPopulator.getByteLengthOfObject(o));
+    Assert.assertEquals(((long) o.length() * Character.BYTES) + 40, MapPopulator.getByteLengthOfObject(o));
   }
 
   @Test
