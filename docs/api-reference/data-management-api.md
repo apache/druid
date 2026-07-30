@@ -45,6 +45,7 @@ You can mark segments as used by sending POST requests to the datasource, but th
 Even if these API requests update segments to used, you still need to configure a [load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes.
 
 When you use APIs to mark segments as unused concurrently with an indexing task or a kill task, the behavior is undefined.
+APIs to mark segments as used simply fail when any other task on the same datasource and overlapping interval is in progress.
 Druid terminates some segments and marks others as used.
 Furthermore, it is possible that all segments could be unused, yet an indexing task might still be able to read data from these segments and complete successfully.
 
