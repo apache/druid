@@ -22,6 +22,7 @@ package org.apache.druid.segment.data;
 import com.google.common.collect.Ordering;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.spatial.ImmutableRTree;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
 import java.io.IOException;
@@ -63,6 +64,9 @@ public class ImmutableRTreeObjectStrategy implements ObjectStrategy<ImmutableRTr
   @Override
   public ImmutableRTree fromByteBuffer(ByteBuffer buffer, int numBytes)
   {
+    if (numBytes < 0 || numBytes > buffer.remaining()) {
+      throw new IAE("Invalid numBytes[%d] for buffer remaining[%d]", numBytes, buffer.remaining());
+    }
     // always create the duplicate buffer for creating the objects as original buffer may have mutations somewhere else which can corrupt objects
     ByteBuffer duplicateBuf = buffer.duplicate();
     duplicateBuf.limit(Math.addExact(duplicateBuf.position(), numBytes));

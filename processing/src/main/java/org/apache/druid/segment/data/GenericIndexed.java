@@ -114,6 +114,9 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     @Override
     public ByteBuffer fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
+      if (numBytes < 0 || numBytes > buffer.remaining()) {
+        throw new IAE("Invalid numBytes[%d] for buffer remaining[%d]", numBytes, buffer.remaining());
+      }
       final ByteBuffer dup = buffer.asReadOnlyBuffer();
       dup.limit(Math.addExact(buffer.position(), numBytes));
       return dup;

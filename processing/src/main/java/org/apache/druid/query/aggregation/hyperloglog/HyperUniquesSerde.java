@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.hyperloglog;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.hll.HyperLogLogHash;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -104,6 +105,9 @@ public class HyperUniquesSerde extends ComplexMetricSerde
       @Override
       public HyperLogLogCollector fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
+        if (numBytes < 0 || numBytes > buffer.remaining()) {
+          throw new IAE("Invalid numBytes[%d] for buffer remaining[%d]", numBytes, buffer.remaining());
+        }
         // make a copy of buffer, because the given buffer is not duplicated in HyperLogLogCollector.makeCollector() and
         // stored in a field.
         final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
