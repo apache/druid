@@ -26,6 +26,7 @@ import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.junit.jupiter.api.Test;
 
@@ -458,7 +459,7 @@ public class DruidSqlDdlParserTest
   private static void assertUnparseRoundTrips(String sql)
   {
     final SqlNode node = parse(sql);
-    assertEquals(sql, node.toSqlString(CalciteSqlDialect.DEFAULT).getSql().replace("\n", " "));
+    assertEquals(sql, StringUtils.replace(node.toSqlString(CalciteSqlDialect.DEFAULT).getSql(), "\n", " "));
   }
 
   private static String columnsOf(DruidSqlCreateTable create)
