@@ -30,6 +30,7 @@ import net.jpountz.lz4.LZ4SafeDecompressor;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.ByteBufferUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -240,6 +241,14 @@ public enum CompressionStrategy
     @Override
     public void decompress(ByteBuffer in, int numBytes, ByteBuffer out)
     {
+      if (numBytes < 0 || numBytes > in.remaining() || numBytes > out.remaining()) {
+        throw new IAE(
+            "Invalid numBytes[%d] for input remaining[%d] and output remaining[%d]",
+            numBytes,
+            in.remaining(),
+            out.remaining()
+        );
+      }
       final ByteBuffer copyBuffer = in.duplicate();
       final int newPosition = Math.addExact(copyBuffer.position(), numBytes);
       copyBuffer.limit(newPosition);
