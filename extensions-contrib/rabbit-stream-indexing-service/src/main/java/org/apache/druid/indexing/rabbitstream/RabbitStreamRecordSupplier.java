@@ -22,6 +22,7 @@ package org.apache.druid.indexing.rabbitstream;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Queues;
 import com.rabbitmq.stream.Consumer;
 import com.rabbitmq.stream.ConsumerBuilder;
@@ -270,15 +271,18 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
 
   }
 
-  private void filterBufferAndResetBackgroundFetch()
+  private void filterBufferAndResetBackgroundFetch(Set<StreamPartition<String>> partitions)
   {
     this.stopBackgroundFetch();
     // filter records in buffer and only retain ones whose partition was not seeked
-    BlockingQueue<OrderedPartitionableRecord<String, Long, ByteEntity>> newQ = new LinkedBlockingQueue<>(
+    final Set<String> partitionIds = partitions.stream()
+                                               .map(StreamPartition::getPartitionId)
+                                               .collect(Collectors.toSet());
+    final BlockingQueue<OrderedPartitionableRecord<String, Long, ByteEntity>> newQ = new LinkedBlockingQueue<>(
         recordBufferSize);
 
     queue.stream()
-        .filter(x -> !streamBuilders.containsKey(x.getPartitionId()))
+        .filter(x -> !partitionIds.contains(x.getPartitionId()))
         .forEachOrdered(newQ::offer);
 
     queue = newQ;
@@ -287,14 +291,14 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
   @Override
   public void seek(StreamPartition<String> partition, Long sequenceNumber)
   {
-    filterBufferAndResetBackgroundFetch();
+    filterBufferAndResetBackgroundFetch(ImmutableSet.of(partition));
     offsetMap.put(partition.getPartitionId(), OffsetSpecification.offset(sequenceNumber));
   }
 
   @Override
   public void seekToEarliest(Set<StreamPartition<String>> partitions)
   {
-    filterBufferAndResetBackgroundFetch();
+    filterBufferAndResetBackgroundFetch(partitions);
     for (StreamPartition<String> part : partitions) {
       offsetMap.put(part.getPartitionId(), OffsetSpecification.first());
     }
@@ -303,7 +307,7 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
   @Override
   public void seekToLatest(Set<StreamPartition<String>> partitions)
   {
-    filterBufferAndResetBackgroundFetch();
+    filterBufferAndResetBackgroundFetch(partitions);
     for (StreamPartition<String> part : partitions) {
       offsetMap.put(part.getPartitionId(), OffsetSpecification.last());
     }
