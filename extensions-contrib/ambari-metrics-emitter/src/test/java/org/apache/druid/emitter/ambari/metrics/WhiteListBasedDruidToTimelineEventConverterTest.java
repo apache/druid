@@ -37,6 +37,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Objects;
 
 @RunWith(JUnitParamsRunner.class)
 public class WhiteListBasedDruidToTimelineEventConverterTest
@@ -102,10 +103,12 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
     final File mapFile = temporaryFolder.newFile("whiteList.json");
 
     try (
-        InputStream inputStream =
+        final InputStream inputStream = Objects.requireNonNull(
             WhiteListBasedDruidToTimelineEventConverterTest.class
-                .getResourceAsStream("/testWhiteListedStringArrayDimension.json");
-        OutputStream outputStream = new FileOutputStream(mapFile)
+                .getResourceAsStream("/testWhiteListedStringArrayDimension.json"),
+            "Missing test resource: /testWhiteListedStringArrayDimension.json"
+        );
+        final OutputStream outputStream = new FileOutputStream(mapFile)
     ) {
       IOUtils.copyLarge(inputStream, outputStream);
     }

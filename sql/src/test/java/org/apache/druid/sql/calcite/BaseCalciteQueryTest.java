@@ -1541,12 +1541,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public File getResourceAsTemporaryFile(final String resource)
   {
     final File file = newTempFile("resourceAsTempFile");
-    try (InputStream stream = BaseCalciteQueryTest.class.getResourceAsStream(resource);
-         OutputStream outputStream = Files.newOutputStream(file.toPath())) {
+    try (final InputStream stream = BaseCalciteQueryTest.class.getResourceAsStream(resource)) {
       if (stream == null) {
         throw new RE(StringUtils.format("No such resource [%s]", resource));
       }
-      ByteStreams.copy(stream, outputStream);
+      try (final OutputStream outputStream = Files.newOutputStream(file.toPath())) {
+        ByteStreams.copy(stream, outputStream);
+      }
     }
     catch (IOException e) {
       throw new RuntimeException(e);
