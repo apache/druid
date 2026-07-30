@@ -91,7 +91,7 @@ public class CustomStatementRewriterTest
 
   /**
    *
-   * @see org.apache.druid.metadata.SQLMetadataConnector#createTable(String, Iterable)
+   * @see org.apache.druid.metadata.SQLMetadataConnector#createTableIfNotExists(String, Iterable)
    *
    */
   @Test
