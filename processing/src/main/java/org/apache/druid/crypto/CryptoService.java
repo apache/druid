@@ -33,7 +33,6 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
-import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
@@ -78,8 +77,12 @@ public class CryptoService
   private final int keyLength;
 
   // Cipher algorithm information retained for decrypting ciphertext written by earlier versions.
-  private final String legacyCipherAlgName;
-  private final String legacyTransformation;
+  private final String cipherAlgName;
+  private final String cipherAlgMode;
+  private final String cipherAlgPadding;
+
+  // transformation =  "cipherAlgName/cipherAlgMode/cipherAlgPadding" used in Cipher.getInstance(transformation)
+  private final String transformation;
 
   public CryptoService(
       String passPhrase,
@@ -98,22 +101,15 @@ public class CryptoService
     );
     this.passPhrase = passPhrase.toCharArray();
 
-    this.legacyCipherAlgName = cipherAlgName == null ? "AES" : cipherAlgName;
-    final String legacyCipherAlgMode = cipherAlgMode == null ? "CBC" : cipherAlgMode;
-    final String legacyCipherAlgPadding = cipherAlgPadding == null ? "PKCS5Padding" : cipherAlgPadding;
-    this.legacyTransformation = StringUtils.format(
-        "%s/%s/%s",
-        this.legacyCipherAlgName,
-        legacyCipherAlgMode,
-        legacyCipherAlgPadding
-    );
+    this.cipherAlgName = cipherAlgName == null ? "AES" : cipherAlgName;
+    this.cipherAlgMode = cipherAlgMode == null ? "CBC" : cipherAlgMode;
+    this.cipherAlgPadding = cipherAlgPadding == null ? "PKCS5Padding" : cipherAlgPadding;
+    this.transformation = StringUtils.format("%s/%s/%s", this.cipherAlgName, this.cipherAlgMode, this.cipherAlgPadding);
 
     this.secretKeyFactoryAlg = secretKeyFactoryAlg == null ? "PBKDF2WithHmacSHA256" : secretKeyFactoryAlg;
     this.saltSize = saltSize == null ? 8 : saltSize;
     this.iterationCount = iterationCount == null ? 65536 : iterationCount;
     this.keyLength = keyLength == null ? 128 : keyLength;
-
-    validateLegacyCipherConfiguration();
 
     // encrypt/decrypt a test string to ensure all params are valid
     final String testString = "duh! !! !!!";
@@ -160,9 +156,19 @@ public class CryptoService
     try {
       if (hasAuthenticatedFormatMagic(data)) {
         return decryptAuthenticated(data);
-      } else {
-        return decryptLegacy(EncryptedData.fromByteArray(data));
       }
+
+      EncryptedData encryptedData = EncryptedData.fromByteArray(data);
+
+      SecretKey tmp = getKeyFromPassword(passPhrase, encryptedData.getSalt());
+      SecretKey secret = new SecretKeySpec(tmp.getEncoded(), cipherAlgName);
+
+      // error-prone warns if the transformation is not a compile-time constant
+      // since it cannot check it for insecure combinations.
+      @SuppressWarnings("InsecureCryptoUsage")
+      Cipher dcipher = Cipher.getInstance(transformation);
+      dcipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(encryptedData.getIv()));
+      return dcipher.doFinal(encryptedData.getCipher());
     }
     catch (Exception ex) {
       log.noStackTrace().warn(ex, "Decryption failed");
@@ -200,40 +206,6 @@ public class CryptoService
     );
     dcipher.updateAAD(AUTHENTICATED_FORMAT_HEADER);
     return dcipher.doFinal(encryptedData.getCipher());
-  }
-
-  /**
-   * Decrypts the unversioned CBC format written before authenticated encryption was introduced. This path is retained
-   * so that short-lived pac4j session cookies remain readable during rolling upgrades. New ciphertext is never written
-   * with this configurable transformation.
-   */
-  @SuppressWarnings({
-      "InsecureCryptoUsage",
-      "codeql[java/potentially-weak-cryptographic-algorithm]"
-  })
-  private byte[] decryptLegacy(final EncryptedData encryptedData) throws Exception
-  {
-    final SecretKey tmp = getKeyFromPassword(passPhrase, encryptedData.getSalt());
-    final SecretKey secret = new SecretKeySpec(tmp.getEncoded(), legacyCipherAlgName);
-    // This configurable transformation is used exclusively to read ciphertext written by earlier versions.
-    final Cipher dcipher = Cipher.getInstance(legacyTransformation);
-    dcipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(encryptedData.getIv()));
-    return dcipher.doFinal(encryptedData.getCipher());
-  }
-
-  @SuppressWarnings({
-      "InsecureCryptoUsage",
-      "codeql[java/potentially-weak-cryptographic-algorithm]"
-  })
-  private void validateLegacyCipherConfiguration()
-  {
-    try {
-      // Preserve eager validation of the backward-compatible decryption configuration.
-      Cipher.getInstance(legacyTransformation);
-    }
-    catch (GeneralSecurityException ex) {
-      throw new IllegalArgumentException("Invalid legacy cipher configuration", ex);
-    }
   }
 
   private static boolean hasAuthenticatedFormatMagic(final byte[] data)
