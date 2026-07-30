@@ -265,7 +265,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     Assert.assertFalse(unsafeInfoFile.exists());
 
     Files.write(unsafeInfoFile.toPath(), new byte[]{1});
-    Assert.assertThrows(IAE.class, () -> manager.removeInfoFile(segment));
+    manager.removeInfoFile(segment);
     Assert.assertTrue(unsafeInfoFile.exists());
   }
 

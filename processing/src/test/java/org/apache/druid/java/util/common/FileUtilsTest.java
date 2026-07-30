@@ -31,6 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 
 public class FileUtilsTest
@@ -202,6 +203,21 @@ public class FileUtilsTest
             temporaryFolder.toPath().resolve("inside").toAbsolutePath().toString()
         )
     );
+  }
+
+  @Test
+  public void testResolveFileWithinDirectoryRejectsInvalidPath()
+  {
+    final IAE exception = Assertions.assertThrows(
+        IAE.class,
+        () -> FileUtils.resolveFileWithinDirectory(temporaryFolder, "invalid\0path")
+    );
+
+    Assertions.assertEquals(
+        StringUtils.format("Path[%s] is not within directory[%s]", "invalid\0path", temporaryFolder),
+        exception.getMessage()
+    );
+    Assertions.assertInstanceOf(InvalidPathException.class, exception.getCause());
   }
 
   @Test

@@ -42,6 +42,7 @@ import java.nio.channels.FileChannel;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -453,7 +454,13 @@ public class FileUtils
   public static File resolveFileWithinDirectory(final File directory, final String path)
   {
     final Path normalizedDirectory = directory.toPath().toAbsolutePath().normalize();
-    final Path childPath = Path.of(path);
+    final Path childPath;
+    try {
+      childPath = Path.of(path);
+    }
+    catch (InvalidPathException e) {
+      throw new IAE(e, "Path[%s] is not within directory[%s]", path, directory);
+    }
     if (childPath.isAbsolute()) {
       throw new IAE("Path[%s] is not within directory[%s]", path, directory);
     }

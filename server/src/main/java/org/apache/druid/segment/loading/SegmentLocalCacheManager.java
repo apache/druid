@@ -33,6 +33,7 @@ import org.apache.druid.client.DataSegmentAndLoadProfile;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -461,9 +462,16 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
-  private void deleteSegmentInfoFile(DataSegment segment)
+  private void deleteSegmentInfoFile(final DataSegment segment)
   {
-    final File segmentInfoCacheFile = getSegmentInfoFile(segment);
+    final File segmentInfoCacheFile;
+    try {
+      segmentInfoCacheFile = getSegmentInfoFile(segment);
+    }
+    catch (IAE e) {
+      log.warn(e, "Refusing to delete info file with invalid path for segment[%s].", segment.getId());
+      return;
+    }
     if (!segmentInfoCacheFile.delete()) {
       log.warn("Unable to delete cache file[%s] for segment[%s].", segmentInfoCacheFile, segment.getId());
     }
