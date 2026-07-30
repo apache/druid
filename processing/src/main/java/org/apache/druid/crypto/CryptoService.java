@@ -158,15 +158,15 @@ public class CryptoService
         return decryptAuthenticated(data);
       }
 
-      EncryptedData encryptedData = EncryptedData.fromByteArray(data);
+      final EncryptedData encryptedData = EncryptedData.fromByteArray(data);
 
-      SecretKey tmp = getKeyFromPassword(passPhrase, encryptedData.getSalt());
-      SecretKey secret = new SecretKeySpec(tmp.getEncoded(), cipherAlgName);
+      final SecretKey tmp = getKeyFromPassword(passPhrase, encryptedData.getSalt());
+      final SecretKey secret = new SecretKeySpec(tmp.getEncoded(), cipherAlgName);
 
       // error-prone warns if the transformation is not a compile-time constant
       // since it cannot check it for insecure combinations.
       @SuppressWarnings("InsecureCryptoUsage")
-      Cipher dcipher = Cipher.getInstance(transformation);
+      final Cipher dcipher = Cipher.getInstance(transformation);
       dcipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(encryptedData.getIv()));
       return dcipher.doFinal(encryptedData.getCipher());
     }
