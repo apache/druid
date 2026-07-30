@@ -854,7 +854,7 @@ public class NestedDataExpressions
   }
 
   @Nullable
-  static Object unwrapEval(ExprEval input)
+  static Object unwrapEval(ExprEval<?> input)
   {
     return unwrap(input.value());
   }
