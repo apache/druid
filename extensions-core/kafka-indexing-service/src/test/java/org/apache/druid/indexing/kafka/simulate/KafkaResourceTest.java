@@ -20,10 +20,11 @@
 package org.apache.druid.indexing.kafka.simulate;
 
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -59,30 +60,39 @@ public class KafkaResourceTest
 
     // Test topic creation
     final String topicName = "test-topic";
-    resource.createTopicWithPartitions(topicName, 2);
+    resource.createTopicWithPartitions(topicName, 3);
     assertEquals(Set.of(topicName), resource.listTopics());
 
-    // Verify that records can be published immediately after creating a topic.
-    resource.publishRecordsToTopicWithoutTransaction(
-        topicName,
-        Collections.nCopies(100, new byte[]{1})
+    // Verify that every partition can accept records immediately after creating a topic.
+    resource.produceRecordsWithoutTransaction(
+        List.of(
+            new ProducerRecord<>(topicName, 0, null, new byte[]{1}),
+            new ProducerRecord<>(topicName, 1, null, new byte[]{1}),
+            new ProducerRecord<>(topicName, 2, null, new byte[]{1})
+        )
     );
     assertEquals(
-        100,
-        resource.getPartitionOffsets(topicName).values().stream().mapToLong(Long::longValue).sum()
+        Map.of("0", 1L, "1", 1L, "2", 1L),
+        resource.getPartitionOffsets(topicName)
     );
-
-    // Verify that records can be published immediately after adding partitions.
-    resource.increasePartitionsInTopic(topicName, 4);
-    resource.publishRecordsToTopicWithoutTransaction(
-        topicName,
-        Collections.nCopies(1_000, new byte[]{1})
-    );
-    final Map<String, Long> partitionOffsets = resource.getPartitionOffsets(topicName);
-    assertEquals(4, partitionOffsets.size());
-    assertEquals(1_100, partitionOffsets.values().stream().mapToLong(Long::longValue).sum());
-
     resource.deleteTopic(topicName);
+
+    final String expandedTopicName = "test-expanded-topic";
+    resource.createTopicWithPartitions(expandedTopicName, 2);
+    resource.increasePartitionsInTopic(expandedTopicName, 4);
+
+    // Verify that newly added partitions can accept records immediately.
+    resource.produceRecordsWithoutTransaction(
+        List.of(
+            new ProducerRecord<>(expandedTopicName, 2, null, new byte[]{1}),
+            new ProducerRecord<>(expandedTopicName, 3, null, new byte[]{1})
+        )
+    );
+    assertEquals(
+        Map.of("0", 0L, "1", 0L, "2", 1L, "3", 1L),
+        resource.getPartitionOffsets(expandedTopicName)
+    );
+    resource.deleteTopic(expandedTopicName);
 
     resource.stop();
     assertFalse(resource.isRunning());
