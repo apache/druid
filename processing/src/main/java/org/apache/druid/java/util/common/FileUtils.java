@@ -446,6 +446,24 @@ public class FileUtils
     return new File(parentDirectory).toPath();
   }
 
+  /**
+   * Resolves {@code path} below {@code directory}, rejecting absolute paths and parent traversal that would escape it.
+   * This is intended for paths containing externally supplied identifiers.
+   */
+  public static File resolveFileWithinDirectory(final File directory, final String path)
+  {
+    final Path normalizedDirectory = directory.toPath().toAbsolutePath().normalize();
+    final Path childPath = Path.of(path);
+    if (childPath.isAbsolute()) {
+      throw new IAE("Path[%s] is not within directory[%s]", path, directory);
+    }
+    final Path resolvedPath = normalizedDirectory.resolve(childPath).normalize();
+    if (!resolvedPath.startsWith(normalizedDirectory)) {
+      throw new IAE("Path[%s] is not within directory[%s]", path, directory);
+    }
+    return resolvedPath.toFile();
+  }
+
   @SuppressForbidden(reason = "Files#createTempDirectory")
   public static File createTempDirInLocation(final Path parentDirectory, @Nullable final String prefix)
   {

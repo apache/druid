@@ -29,6 +29,7 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -59,6 +60,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -245,6 +247,26 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     Assert.assertTrue(manager.canHandleSegments());
     assertThat(manager.getCachedSegments(), containsInAnyOrder(segment1, segment2));
     Assert.assertFalse(segment3InfoFile.exists());
+  }
+
+  @Test
+  public void testSegmentInfoFileRejectsPathTraversal() throws IOException
+  {
+    final DataSegment segment = TestSegmentUtils.makeSegment(
+        "../../outside",
+        "v0",
+        Intervals.of("2014-10-20T00:00:00Z/P1D")
+    );
+    final File infoDir = new File(localSegmentCacheDir, "info_dir");
+    final File unsafeInfoFile = new File(infoDir, segment.getId().toString());
+    FileUtils.mkdirp(infoDir);
+
+    Assert.assertThrows(IAE.class, () -> manager.storeInfoFile(segment));
+    Assert.assertFalse(unsafeInfoFile.exists());
+
+    Files.write(unsafeInfoFile.toPath(), new byte[]{1});
+    Assert.assertThrows(IAE.class, () -> manager.removeInfoFile(segment));
+    Assert.assertTrue(unsafeInfoFile.exists());
   }
 
   @Test

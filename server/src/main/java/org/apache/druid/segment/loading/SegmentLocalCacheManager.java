@@ -417,10 +417,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return files == null ? new File[0] : files;
   }
 
+  private File getSegmentInfoFile(final DataSegment segment)
+  {
+    return FileUtils.resolveFileWithinDirectory(getEffectiveInfoDir(), segment.getId().toString());
+  }
+
   @Override
   public void storeInfoFile(final DataSegment segment) throws IOException
   {
-    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
+    final File segmentInfoCacheFile = getSegmentInfoFile(segment);
     if (!segmentInfoCacheFile.exists()) {
       FileUtils.mkdirp(segmentInfoCacheFile.getParentFile());
       FileUtils.writeAtomically(
@@ -458,7 +463,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private void deleteSegmentInfoFile(DataSegment segment)
   {
-    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
+    final File segmentInfoCacheFile = getSegmentInfoFile(segment);
     if (!segmentInfoCacheFile.delete()) {
       log.warn("Unable to delete cache file[%s] for segment[%s].", segmentInfoCacheFile, segment.getId());
     }
@@ -473,7 +478,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    */
   private void writePartialInfoFile(DataSegment segment) throws IOException
   {
-    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
+    final File segmentInfoCacheFile = getSegmentInfoFile(segment);
     FileUtils.mkdirp(getEffectiveInfoDir());
     FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
       jsonMapper.writeValue(out, segment);
@@ -530,7 +535,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           try {
             if (hold != null) {
               // write the segment info file if it doesn't exist. this can happen if we are loading after a drop
-              final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), dataSegment.getId().toString());
+              final File segmentInfoCacheFile = getSegmentInfoFile(dataSegment);
               if (!segmentInfoCacheFile.exists()) {
                 FileUtils.mkdirp(getEffectiveInfoDir());
                 FileUtils.writeAtomically(segmentInfoCacheFile, out -> {

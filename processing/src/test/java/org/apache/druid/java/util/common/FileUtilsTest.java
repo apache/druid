@@ -31,6 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class FileUtilsTest
 {
@@ -169,6 +170,38 @@ public class FileUtilsTest
       return null;
     });
     Assertions.assertEquals("baz", StringUtils.fromUtf8(Files.readAllBytes(tmpFile.toPath())));
+  }
+
+  @Test
+  public void testResolveFileWithinDirectory()
+  {
+    final File resolved = FileUtils.resolveFileWithinDirectory(temporaryFolder, "nested/file");
+
+    Assertions.assertEquals(
+        temporaryFolder.toPath().toAbsolutePath().resolve(Path.of("nested", "file")).normalize(),
+        resolved.toPath()
+    );
+  }
+
+  @Test
+  public void testResolveFileWithinDirectoryRejectsTraversal()
+  {
+    Assertions.assertThrows(
+        IAE.class,
+        () -> FileUtils.resolveFileWithinDirectory(temporaryFolder, "../outside")
+    );
+  }
+
+  @Test
+  public void testResolveFileWithinDirectoryRejectsAbsolutePath()
+  {
+    Assertions.assertThrows(
+        IAE.class,
+        () -> FileUtils.resolveFileWithinDirectory(
+            temporaryFolder,
+            temporaryFolder.toPath().resolve("inside").toAbsolutePath().toString()
+        )
+    );
   }
 
   @Test
