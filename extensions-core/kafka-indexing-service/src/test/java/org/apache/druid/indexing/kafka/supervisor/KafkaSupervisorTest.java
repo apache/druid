@@ -4837,7 +4837,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         .withMaxRowsInMemory(42)
         .build();
 
-    KafkaIndexTask completedTaskFromStorage = createKafkaIndexTask(
+    KafkaIndexTask completedTaskFromStorage = createKafkaIndexTaskFromSupervisorTuningConfig(
         "id0",
         0,
         new SeekableStreamStartSequenceNumbers<>(
@@ -4858,7 +4858,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     // Expect metadata call only for tasks that are not active
     EasyMock.expect(taskStorage.getTask("id0")).andReturn(Optional.of(completedTaskFromStorage));
 
-    KafkaIndexTask taskFromStorage = createKafkaIndexTask(
+    KafkaIndexTask taskFromStorage = createKafkaIndexTaskFromSupervisorTuningConfig(
         "id1",
         0,
         new SeekableStreamStartSequenceNumbers<>(
@@ -4876,7 +4876,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         supervisor.getTuningConfig()
     );
 
-    KafkaIndexTask taskFromStorageMismatchedDataSchema = createKafkaIndexTask(
+    KafkaIndexTask taskFromStorageMismatchedDataSchema = createKafkaIndexTaskFromSupervisorTuningConfig(
         "id2",
         0,
         new SeekableStreamStartSequenceNumbers<>(
@@ -4894,7 +4894,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         supervisor.getTuningConfig()
     );
 
-    KafkaIndexTask taskFromStorageMismatchedTuningConfig = createKafkaIndexTask(
+    KafkaIndexTask taskFromStorageMismatchedTuningConfig = createKafkaIndexTaskFromSupervisorTuningConfig(
         "id3",
         0,
         new SeekableStreamStartSequenceNumbers<>(
@@ -4912,23 +4912,24 @@ public class KafkaSupervisorTest extends EasyMockSupport
         modifiedTuningConfig
     );
 
-    KafkaIndexTask taskFromStorageMismatchedPartitionsWithTaskGroup = createKafkaIndexTask(
-        "id4",
-        0,
-        new SeekableStreamStartSequenceNumbers<>(
-            "topic",
-            singlePartitionMap(topic, 0, 0L, 2, 6L),
-            ImmutableSet.of()
-        ),
-        new SeekableStreamEndSequenceNumbers<>(
-            "topic",
-            singlePartitionMap(topic, 0, Long.MAX_VALUE, 2, Long.MAX_VALUE)
-        ),
-        minMessageTime,
-        maxMessageTime,
-        dataSchema,
-        supervisor.getTuningConfig()
-    );
+    KafkaIndexTask taskFromStorageMismatchedPartitionsWithTaskGroup =
+        createKafkaIndexTaskFromSupervisorTuningConfig(
+            "id4",
+            0,
+            new SeekableStreamStartSequenceNumbers<>(
+                "topic",
+                singlePartitionMap(topic, 0, 0L, 2, 6L),
+                ImmutableSet.of()
+            ),
+            new SeekableStreamEndSequenceNumbers<>(
+                "topic",
+                singlePartitionMap(topic, 0, Long.MAX_VALUE, 2, Long.MAX_VALUE)
+            ),
+            minMessageTime,
+            maxMessageTime,
+            dataSchema,
+            supervisor.getTuningConfig()
+        );
 
     Map<String, Task> taskMap = ImmutableMap.of(
         taskFromStorage.getId(), taskFromStorage,
@@ -4967,7 +4968,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
 
     // Create task1 with some start and end offsets
-    final KafkaIndexTask task1 = createKafkaIndexTask(
+    final KafkaIndexTask task1 = createKafkaIndexTaskFromSupervisorTuningConfig(
         "id0",
         0,
         new SeekableStreamStartSequenceNumbers<>(
@@ -4986,7 +4987,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
 
     // Create task2 with same offsets
-    final KafkaIndexTask task2 = createKafkaIndexTask(
+    final KafkaIndexTask task2 = createKafkaIndexTaskFromSupervisorTuningConfig(
         "id1",
         0,
         task1.getIOConfig().getStartSequenceNumbers(),
@@ -6082,7 +6083,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       KafkaSupervisorTuningConfig tuningConfig
   )
   {
-    return createKafkaIndexTask(
+    return createKafkaIndexTaskFromSupervisorTuningConfig(
         id,
         taskGroupId,
         startPartitions,
@@ -6094,7 +6095,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
-  private KafkaIndexTask createKafkaIndexTask(
+  private KafkaIndexTask createKafkaIndexTaskFromSupervisorTuningConfig(
       String id,
       int taskGroupId,
       SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long> startPartitions,
