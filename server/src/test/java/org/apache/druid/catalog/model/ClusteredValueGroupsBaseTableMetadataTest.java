@@ -30,11 +30,15 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
+import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.DoubleDimensionHandler;
 import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -447,8 +451,12 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
     );
   }
 
+  /**
+   * A complex type with no registered dimension handler cannot be stored, and the message says so rather than
+   * claiming the type is unsupported in general: the handler may simply belong to an extension that is not loaded.
+   */
   @Test
-  public void testCreateSpecUnsupportedComplexTypeFails()
+  public void testCreateSpecComplexTypeWithoutHandlerFails()
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Collections.singletonList("tenant"),
@@ -461,7 +469,73 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         new ColumnSpec("unique_things", "COMPLEX<hyperUnique>", null)
     );
     final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
-    Assert.assertTrue(e.getMessage().contains("column [unique_things] has unsupported type [COMPLEX<hyperUnique>]"));
+    Assert.assertTrue(
+        e.getMessage(),
+        e.getMessage().contains("column [unique_things] has type [COMPLEX<hyperUnique>], which cannot be stored")
+    );
+  }
+
+  /**
+   * A complex type that does have a registered handler resolves through it, which is how types contributed by
+   * extensions become declarable.
+   */
+  @Test
+  public void testCreateSpecComplexTypeWithRegisteredHandler()
+  {
+    final String typeName = "clusteredBaseTableTestType";
+    DimensionHandlerUtils.registerDimensionHandlerProvider(
+        typeName,
+        name -> new DoubleDimensionHandler(name)
+        {
+          @Override
+          public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
+          {
+            return new DoubleDimensionSchema(name);
+          }
+        }
+    );
+
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        null
+    );
+    final List<ColumnSpec> columns = Arrays.asList(
+        new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
+        new ColumnSpec(Columns.TIME_COLUMN, null, null),
+        new ColumnSpec("sketch", StringUtils.format("COMPLEX<%s>", typeName), null)
+    );
+
+    final List<DimensionSchema> specColumns = metadata.createSpec(columns).getDimensionsSpec().getDimensions();
+    Assert.assertEquals(
+        new DoubleDimensionSchema("sketch"),
+        specColumns.get(specColumns.size() - 1)
+    );
+  }
+
+  /**
+   * A column declared COMPLEX<json> is nested by declaration, so it keeps a nested schema rather than the 'auto'
+   * schema its dimension handler would produce, which would infer the type from the ingested values instead.
+   */
+  @Test
+  public void testCreateSpecNestedTypeStaysNested()
+  {
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        null
+    );
+    final List<ColumnSpec> columns = Arrays.asList(
+        new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
+        new ColumnSpec(Columns.TIME_COLUMN, null, null),
+        new ColumnSpec("payload", ColumnType.NESTED_DATA.asTypeString(), null)
+    );
+
+    final List<DimensionSchema> specColumns = metadata.createSpec(columns).getDimensionsSpec().getDimensions();
+    Assert.assertEquals(
+        new NestedDataColumnSchema("payload", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION),
+        specColumns.get(specColumns.size() - 1)
+    );
   }
 
   @Test

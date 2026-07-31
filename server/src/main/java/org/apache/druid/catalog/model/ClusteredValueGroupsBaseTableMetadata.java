@@ -26,11 +26,14 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.AutoTypeColumnSchema;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -212,14 +215,36 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
     if (ColumnType.NESTED_DATA.equals(druidType)) {
       return new NestedDataColumnSchema(column.name(), NestedDataColumnSchema.DEFAULT_FORMAT_VERSION);
     }
-    // Other complex types cannot be ingested into a clustered base table: there is no dimension handler for them,
-    // and clustered base tables have no aggregators to produce them.
+    if (druidType.is(ValueType.COMPLEX)) {
+      return complexDimensionSchema(column.name(), druidType);
+    }
     throw InvalidInput.exception(
-        "column [%s] has unsupported type [%s] for a clustered base table; supported types are primitive, primitive"
-        + " array, and COMPLEX<json> columns",
+        "column [%s] has unsupported type [%s] for a clustered base table",
         column.name(),
         druidType
     );
+  }
+
+  /**
+   * Resolve a complex column through its registered {@link org.apache.druid.segment.DimensionHandler}, so that any
+   * complex type which can be stored as a dimension may be declared, including types contributed by extensions. The
+   * handler is looked up by the complex type name, so the schema it returns is specific to the declared type.
+   */
+  private static DimensionSchema complexDimensionSchema(String name, ColumnType druidType)
+  {
+    try {
+      return DimensionHandlerUtils.getComplexDimensionSchema(name, druidType);
+    }
+    catch (ISE e) {
+      // No handler is registered for this complex type, which usually means the extension that defines it is not
+      // loaded on whichever service is validating the spec.
+      throw InvalidInput.exception(
+          "column [%s] has type [%s], which cannot be stored as a dimension of a clustered base table; if this type"
+          + " comes from an extension, check that the extension is loaded",
+          name,
+          druidType
+      );
+    }
   }
 
   private void validateColumnSchemaCustomization(

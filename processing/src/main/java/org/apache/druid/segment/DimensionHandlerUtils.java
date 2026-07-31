@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
@@ -130,15 +131,42 @@ public final class DimensionHandlerUtils
     }
 
     if (capabilities.is(ValueType.COMPLEX) && capabilities.getComplexTypeName() != null) {
-      DimensionHandlerProvider provider = DIMENSION_HANDLER_PROVIDERS.get(capabilities.getComplexTypeName());
-      if (provider == null) {
-        throw new ISE("Can't find DimensionHandlerProvider for typeName [%s]", capabilities.getComplexTypeName());
-      }
-      return provider.get(dimensionName);
+      return getHandlerForComplexType(dimensionName, capabilities.getComplexTypeName());
     }
 
     // Return a StringDimensionHandler by default (null columns will be treated as String typed)
     return new StringDimensionHandler(dimensionName, multiValueHandling, true, false);
+  }
+
+  /**
+   * The {@link DimensionHandler} registered for a complex type. Complex columns are stored by type-specific handlers,
+   * so a type contributed by an extension becomes storable as soon as that extension registers one.
+   *
+   * @throws ISE if no handler is registered for the type, which usually means the extension defining it is not loaded
+   */
+  public static DimensionHandler<?, ?, ?> getHandlerForComplexType(String dimensionName, String complexTypeName)
+  {
+    final DimensionHandlerProvider provider = DIMENSION_HANDLER_PROVIDERS.get(complexTypeName);
+    if (provider == null) {
+      throw new ISE("Can't find DimensionHandlerProvider for typeName [%s]", complexTypeName);
+    }
+    return provider.get(dimensionName);
+  }
+
+  /**
+   * The {@link DimensionSchema} to use when storing a complex column of the given type, for callers that have a
+   * declared type rather than an existing column. Handlers are free to consult the {@link ColumnCapabilities} they
+   * are given, so a default set describing the type is supplied on the caller's behalf.
+   *
+   * @throws ISE if no handler is registered for the type, which usually means the extension defining it is not loaded
+   */
+  public static DimensionSchema getComplexDimensionSchema(String dimensionName, ColumnType type)
+  {
+    if (!type.is(ValueType.COMPLEX) || type.getComplexTypeName() == null) {
+      throw new IAE("Type [%s] is not a named complex type", type);
+    }
+    return getHandlerForComplexType(dimensionName, type.getComplexTypeName())
+        .getDimensionSchema(ColumnCapabilitiesImpl.createDefault().setType(type));
   }
 
   public static List<ColumnType> getValueTypesFromDimensionSpecs(List<DimensionSpec> dimSpecs)

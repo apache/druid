@@ -26,6 +26,7 @@ import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -349,4 +350,42 @@ public class DimensionHandlerUtilsTest extends InitializedNullHandlingTest
       return ColumnType.ofComplex(TYPE);
     }
   }
+
+  @Test
+  public void testGetComplexDimensionSchema()
+  {
+    Assert.assertEquals(
+        new TestDimensionSchema("x", null, false),
+        DimensionHandlerUtils.getComplexDimensionSchema("x", ColumnType.ofComplex(TYPE))
+    );
+  }
+
+  @Test
+  public void testGetComplexDimensionSchemaUnregisteredType()
+  {
+    Assert.assertThrows(
+        ISE.class,
+        () -> DimensionHandlerUtils.getComplexDimensionSchema("x", ColumnType.ofComplex("noSuchType"))
+    );
+  }
+
+  @Test
+  public void testGetComplexDimensionSchemaRejectsNonComplexType()
+  {
+    Assert.assertThrows(
+        IAE.class,
+        () -> DimensionHandlerUtils.getComplexDimensionSchema("x", ColumnType.STRING)
+    );
+  }
+
+  @Test
+  public void testGetHandlerForComplexType()
+  {
+    Assert.assertNotNull(DimensionHandlerUtils.getHandlerForComplexType("x", TYPE));
+    Assert.assertThrows(
+        ISE.class,
+        () -> DimensionHandlerUtils.getHandlerForComplexType("x", "noSuchType")
+    );
+  }
+
 }
