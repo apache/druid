@@ -63,9 +63,9 @@ public class PartialClusterGroupLoadSpec extends PartialLoadSpec
   {
     return Map.of(
         "type", TYPE,
-        "delegate", delegate,
+        DELEGATE_FIELD, delegate,
         "clusterGroupIndices", clusterGroupIndices,
-        "fingerprint", fingerprint
+        FINGERPRINT_FIELD, fingerprint
     );
   }
 

@@ -65,6 +65,18 @@ public abstract class PartialLoadSpec implements LoadSpec
   public static final String TYPE_PREFIX = "partial";
 
   /**
+   * Wire-form field holding the inner load spec that says where the segment data lives. Named here so code that
+   * builds or inspects raw {@link Map}-form wrappers agrees with {@link #getDelegate()}.
+   */
+  public static final String DELEGATE_FIELD = "delegate";
+
+  /**
+   * Wire-form field holding the fingerprint of the request that produced the wrapper. Named here so code that builds
+   * or inspects raw {@link Map}-form wrappers agrees with {@link #getFingerprint()}.
+   */
+  public static final String FINGERPRINT_FIELD = "fingerprint";
+
+  /**
    * Returns {@code true} if {@code loadSpec} matches the shape of the {@link PartialLoadSpec} subtype.
    * Convention-based detection (no subtype allowlist): the {@code type} field must be a {@link String} starting with
    * {@link #TYPE_PREFIX}, the {@code fingerprint} field must be a {@link String}, and the {@code delegate} field
@@ -76,8 +88,8 @@ public abstract class PartialLoadSpec implements LoadSpec
     return loadSpec != null
            && loadSpec.get("type") instanceof String typeString
            && typeString.startsWith(TYPE_PREFIX)
-           && loadSpec.get("fingerprint") instanceof String
-           && loadSpec.get("delegate") instanceof Map;
+           && loadSpec.get(FINGERPRINT_FIELD) instanceof String
+           && loadSpec.get(DELEGATE_FIELD) instanceof Map;
   }
 
   /**

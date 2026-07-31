@@ -1426,7 +1426,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                 reapplyRuleFromInfoFile(dataSegment, partial);
                 loadedProfile = PartialLoadProfile.forLoaded(
                     dataSegment.getLoadSpec(),
-                    (String) dataSegment.getLoadSpec().get("fingerprint"),
+                    (String) dataSegment.getLoadSpec().get(PartialLoadSpec.FINGERPRINT_FIELD),
                     partial.getRealizedBytes()
                 );
               }

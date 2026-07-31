@@ -165,7 +165,7 @@ public class CloneHistoricals implements CoordinatorDuty
         loadableSegment,
         targetServer,
         SegmentAction.LOAD,
-        sourceProfile == null ? null : sourceProfile.asRequest()
+        sourceProfile == null ? null : sourceProfile.asRequestFor(loadableSegment)
     )) {
       params.getCoordinatorStats().add(
           Stats.Segments.ASSIGNED_TO_CLONE,

@@ -196,6 +196,26 @@ public class CloneHistoricalsTest
   }
 
   @Test
+  public void testCloneLoadIsRebasedOntoTheSegmentsCurrentLoadSpec()
+  {
+    // The source announced its profile when the segment lived somewhere else, and the wrapped load spec replaces the
+    // outbound segment's load spec wholesale. The clone must be pointed at where the segment lives now, otherwise it
+    // can never catch up once the old object is gone.
+    final DataSegment segment = createSegment();
+    final DataSegment relocated = segment.withLoadSpec(Map.of("type", "local", "path", "/mnt/relocated/foo"));
+    final ServerHolder source = createServer(SOURCE_HOST, segment, loadedProfile(FP_REVENUE, "revenue"));
+    final ServerHolder target = createServer(TARGET_HOST);
+
+    runDuty(source, target, relocated);
+
+    final PartialLoadProfile queued = peonOf(target).getProfileFor(relocated);
+    Assertions.assertNotNull(queued);
+    Assertions.assertEquals(relocated.getLoadSpec(), queued.wrappedLoadSpec().get("delegate"));
+    Assertions.assertEquals(FP_REVENUE, queued.fingerprint());
+    Assertions.assertEquals(List.of("revenue"), queued.wrappedLoadSpec().get("projections"));
+  }
+
+  @Test
   public void testSegmentMissingFromSourceIsDroppedFromClone()
   {
     final DataSegment segment = createSegment();

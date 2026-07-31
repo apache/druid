@@ -187,8 +187,10 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
     // A replica loaded under a partial-load rule holds only part of the segment, so the destination has to be asked
     // for the same parts. Read the profile up front: cancelling the load below clears serverA's in-flight profile.
+    // `segment` is the metadata-resolved segment (see TierSegmentBalancer.getLoadableSegment), which is what
+    // asRequestFor needs to rebase the request onto the segment's current location.
     final PartialLoadProfile profile = serverA.getProjectedProfile(segment);
-    final PartialLoadProfile request = profile == null ? null : profile.asRequest();
+    final PartialLoadProfile request = profile == null ? null : profile.asRequestFor(segment);
 
     if (serverA.isLoadingSegment(segment)) {
       // Cancel the load on serverA and load on serverB instead

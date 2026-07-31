@@ -22,8 +22,11 @@ package org.apache.druid.server.coordinator.loading;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.segment.loading.PartialLoadSpec;
+import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -94,14 +97,34 @@ public record PartialLoadProfile(
   }
 
   /**
-   * This profile in request form, for reissuing to another server the same partial load that produced it. A profile
-   * read back off a server carries the footprint that server realized, which belongs to that server's announcement
-   * and not to a request; the wrapped load spec and fingerprint are what identify the request. Returns {@code this}
-   * when the profile is already a request.
+   * This profile in request form for {@code segment}, for reissuing to another server the same partial load that
+   * produced it (clone catch-up, balancer move). Two things are normalized:
+   * <ul>
+   *   <li>{@code loadedBytes} is dropped. A profile read back off a server carries the footprint that server
+   *       realized, which belongs to that server's announcement and not to a request.</li>
+   *   <li>The wrapper's {@link PartialLoadSpec#DELEGATE_FIELD} is replaced with {@code segment}'s load spec. The
+   *       wrapper was built when the source server was asked to load, so it carries whatever deep-storage location
+   *       the segment had then; if the payload has since been corrected or migrated, that location may no longer
+   *       exist. The scheme-specific selection and the fingerprint are what identify the request and are preserved,
+   *       so the reissued load still reconciles against the same rule.</li>
+   * </ul>
+   * {@code segment} must be the current metadata view of the segment, which is what the coordinator's data-sources
+   * snapshot hands back. The wrapper's delegate is left alone when there is nothing better to point it at: a segment
+   * carrying no load spec, or one whose load spec is already a partial-load wrapper (an outbound request segment
+   * rather than the metadata view, which would otherwise nest one wrapper inside another).
    */
-  public PartialLoadProfile asRequest()
+  public PartialLoadProfile asRequestFor(DataSegment segment)
   {
-    return loadedBytes == null ? this : forRequest(wrappedLoadSpec, fingerprint);
+    final Map<String, Object> currentLoadSpec = segment.getLoadSpec();
+    if (currentLoadSpec == null
+        || currentLoadSpec.isEmpty()
+        || PartialLoadSpec.hasPartialTypePrefix(currentLoadSpec)
+        || currentLoadSpec.equals(wrappedLoadSpec.get(PartialLoadSpec.DELEGATE_FIELD))) {
+      return loadedBytes == null ? this : forRequest(wrappedLoadSpec, fingerprint);
+    }
+    final Map<String, Object> rebased = new HashMap<>(wrappedLoadSpec);
+    rebased.put(PartialLoadSpec.DELEGATE_FIELD, currentLoadSpec);
+    return forRequest(rebased, fingerprint);
   }
 
   private static PartialLoadProfile intern(PartialLoadProfile profile)
