@@ -129,6 +129,7 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
       const resp = await Api.instance.post<{ data: AutoScalerRow[] }>(
         `/druid/indexer/v1/supervisor/${Api.encodePath(params.supervisorId)}/autoscaler`,
         {
+          autoScalerStrategy: 'costBased',
           enableTaskAutoScaler: true,
           taskCountMin: params.taskCountMin,
           taskCountMax: params.taskCountMax,

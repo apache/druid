@@ -720,6 +720,7 @@ public class SupervisorManager implements SupervisorStatsProvider
       final double observedAggregateLag = (double) lagStepSize * i;
       final CostMetrics costMetrics = new CostMetrics(
           observedAggregateLag / partitionCount,
+          observedAggregateLag,
           simulationTaskCount,
           partitionCount,
           idleRatio,
