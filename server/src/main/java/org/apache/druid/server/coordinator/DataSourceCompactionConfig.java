@@ -81,6 +81,9 @@ public interface DataSourceCompactionConfig
 
   Period getSkipOffsetFromLatest();
 
+  /**
+   * Intervals to skip from compaction. A compaction interval overlapping any of these will be skipped.
+   */
   List<Interval> getSkipIntervals();
 
   @Nullable

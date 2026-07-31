@@ -31,6 +31,7 @@ import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.indexer.CompactionEngine;
@@ -75,7 +76,7 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.engine = engine;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
-    this.skipIntervals = skipIntervals == null ? List.of() : skipIntervals;
+    this.skipIntervals = Configs.valueOrDefault(skipIntervals, List.of());
     this.inputSegmentSizeBytes = inputSegmentSizeBytes == null
                                  ? DEFAULT_INPUT_SEGMENT_SIZE_BYTES
                                  : inputSegmentSizeBytes;

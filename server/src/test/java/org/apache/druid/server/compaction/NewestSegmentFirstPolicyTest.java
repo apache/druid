@@ -535,12 +535,8 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
-  public void testWithConfiguredSkipIntervals()
+  public void testConfiguredSkipIntervalsAreHonoredWithNoExternalSkipIntervals()
   {
-    // Uses createIterator(), which mirrors the Coordinator duty path
-    // (PriorityBasedCompactionSegmentIterator with no externally supplied skip intervals), to
-    // verify that config.getSkipIntervals() is honored even when nothing else carries skip
-    // information into the iterator.
     final SegmentTimeline timeline = createTimeline(
         createSegments().forIntervals(4, Granularities.DAY)
                         .startingAt("2017-12-01")

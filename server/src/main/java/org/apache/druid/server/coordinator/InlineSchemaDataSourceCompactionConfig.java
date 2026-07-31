@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.indexer.CompactionEngine;
@@ -108,7 +109,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
                                  : inputSegmentSizeBytes;
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
-    this.skipIntervals = skipIntervals == null ? List.of() : skipIntervals;
+    this.skipIntervals = Configs.valueOrDefault(skipIntervals, List.of());
     this.tuningConfig = tuningConfig;
     this.ioConfig = ioConfig;
     this.granularitySpec = granularitySpec;

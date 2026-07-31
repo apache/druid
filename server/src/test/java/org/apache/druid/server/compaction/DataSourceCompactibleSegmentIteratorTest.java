@@ -133,25 +133,16 @@ public class DataSourceCompactibleSegmentIteratorTest
 
     final List<Interval> searchIntervals = iterator.findInitialSearchInterval(timeline, List.of());
 
-    // Expected: Total interval is 2018-01-01T00:00:00/2018-01-02T00:00:00
-    // Skip intervals: 2018-01-01T06:00:00/2018-01-01T08:00:00 (explicit)
-    //                 2018-01-01T12:00:00/2018-01-01T14:00:00 (explicit)
-    //                 2018-01-01T18:30:00/2018-01-01T21:00:00 (explicit)
-    //                 2018-01-01T20:00:00/2018-01-02T00:00:00 (computed from 4h offset)
-    // After condensing: 2018-01-01T06:00:00/2018-01-01T08:00:00
-    //                   2018-01-01T12:00:00/2018-01-01T14:00:00
-    //                   2018-01-01T18:30:00/2018-01-02T00:00:00 (merged from overlapping intervals)
-    // Filtered intervals: 2018-01-01T00:00:00/2018-01-01T06:00:00
-    //                     2018-01-01T08:00:00/2018-01-01T12:00:00
-    //                     2018-01-01T14:00:00/2018-01-01T18:30:00
-    // Actual segments are hourly (aligned to hour boundaries), so the segment 18:00-19:00 overlaps with skip interval starting at 18:30 and is excluded.
-    // Search intervals based on actual segment boundaries:
-    //   [2018-01-01T00:00:00/2018-01-01T06:00:00,
-    //    2018-01-01T08:00:00/2018-01-01T12:00:00,
-    //    2018-01-01T14:00:00/2018-01-01T18:00:00]
-    Assert.assertEquals(3, searchIntervals.size());
-    Assert.assertEquals(Intervals.of("2018-01-01T00:00:00/2018-01-01T06:00:00"), searchIntervals.get(0));
-    Assert.assertEquals(Intervals.of("2018-01-01T08:00:00/2018-01-01T12:00:00"), searchIntervals.get(1));
-    Assert.assertEquals(Intervals.of("2018-01-01T14:00:00/2018-01-01T18:00:00"), searchIntervals.get(2));
+    // The three configured skip intervals and the 4h-offset skip interval (18:30-21:00 and
+    // 20:00-00:00 merge) leave three search windows. The last window is clipped to 18:00
+    // since segments are hourly and the 18:00-19:00 segment overlaps the 18:30 skip start.
+    Assert.assertEquals(
+        List.of(
+            Intervals.of("2018-01-01T00:00:00/PT6H"),
+            Intervals.of("2018-01-01T08:00:00/PT4H"),
+            Intervals.of("2018-01-01T14:00:00/PT4H")
+        ),
+        searchIntervals
+    );
   }
 }

@@ -152,7 +152,7 @@ public class CatalogDataSourceCompactionConfigTest
   }
 
   @Test
-  public void testSerdeWithSkip() throws JsonProcessingException
+  public void testSerdeWithSkipIntervals() throws JsonProcessingException
   {
     final Period skipOffsetFromLatest = new Period("PT1H");
     final List<Interval> skipIntervals = List.of(
