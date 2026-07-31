@@ -19,7 +19,6 @@
 
 package org.apache.druid.timeline;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -30,10 +29,10 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -89,9 +88,9 @@ public class IntervalTreeMapTest
   public void testValues()
   {
     IntervalTreeMap<String> tree = setupTree(baseData);
-    Collection<String> values = tree.values();
-    Collection<String> bvalues = baseData.stream().map(entry -> entry.rhs).collect(Collectors.toList());
-    Assertions.assertTrue(CollectionUtils.isEqualCollection(bvalues, values), "values");
+    Set<String> values = new LinkedHashSet<>(tree.values());
+    Set<String> bvalues = baseData.stream().map(entry -> entry.rhs).collect(Collectors.toCollection(LinkedHashSet::new));
+    Assertions.assertEquals(bvalues, values, "values");
   }
 
   @Test
