@@ -229,11 +229,17 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
    * Resolve a complex column through its registered {@link org.apache.druid.segment.DimensionHandler}, so that any
    * complex type which can be stored as a dimension may be declared, including types contributed by extensions. The
    * handler is looked up by the complex type name, so the schema it returns is specific to the declared type.
+   * <p>
+   * The returned schema is checked against the declared type before it is accepted. A schema selects its own handler
+   * at ingest time (via {@link DimensionSchema#getDimensionHandler()}, which reads
+   * {@link DimensionSchema#getColumnType()}), so a schema of some other type would quietly store the column as that
+   * type instead, contradicting the declared schema that queries are validated and coerced against.
    */
   private static DimensionSchema complexDimensionSchema(String name, ColumnType druidType)
   {
+    final DimensionSchema schema;
     try {
-      return DimensionHandlerUtils.getComplexDimensionSchema(name, druidType);
+      schema = DimensionHandlerUtils.getComplexDimensionSchema(name, druidType);
     }
     catch (ISE e) {
       // No handler is registered for this complex type, which usually means the extension that defines it is not
@@ -245,6 +251,16 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
           druidType
       );
     }
+    if (!druidType.equals(schema.getColumnType())) {
+      throw InvalidInput.exception(
+          "column [%s] has type [%s], but the dimension handler registered for that type produced a schema of type"
+          + " [%s]; a column cannot be stored as a type other than the one it declares",
+          name,
+          druidType,
+          schema.getColumnType()
+      );
+    }
+    return schema;
   }
 
   private void validateColumnSchemaCustomization(

@@ -483,6 +483,45 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
   public void testCreateSpecComplexTypeWithRegisteredHandler()
   {
     final String typeName = "clusteredBaseTableTestType";
+    // Only getDimensionSchema is exercised; the handler's storage behavior is irrelevant to building a spec.
+    DimensionHandlerUtils.registerDimensionHandlerProvider(
+        typeName,
+        name -> new DoubleDimensionHandler(name)
+        {
+          @Override
+          public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
+          {
+            return new TestComplexDimensionSchema(name, typeName);
+          }
+        }
+    );
+
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        null
+    );
+    final List<ColumnSpec> columns = Arrays.asList(
+        new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
+        new ColumnSpec(Columns.TIME_COLUMN, null, null),
+        new ColumnSpec("sketch", StringUtils.format("COMPLEX<%s>", typeName), null)
+    );
+
+    final List<DimensionSchema> specColumns = metadata.createSpec(columns).getDimensionsSpec().getDimensions();
+    final DimensionSchema stored = specColumns.get(specColumns.size() - 1);
+    Assert.assertEquals("sketch", stored.getName());
+    Assert.assertEquals(ColumnType.ofComplex(typeName), stored.getColumnType());
+  }
+
+  /**
+   * A handler that hands back a schema of some other type is rejected. The schema, not the declared type, selects the
+   * handler used at ingest time, so accepting it would store the column as that other type and contradict the declared
+   * schema that queries are validated and coerced against.
+   */
+  @Test
+  public void testCreateSpecComplexTypeHandlerSchemaOfOtherTypeFails()
+  {
+    final String typeName = "clusteredBaseTableMismatchedType";
     DimensionHandlerUtils.registerDimensionHandlerProvider(
         typeName,
         name -> new DoubleDimensionHandler(name)
@@ -506,11 +545,44 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         new ColumnSpec("sketch", StringUtils.format("COMPLEX<%s>", typeName), null)
     );
 
-    final List<DimensionSchema> specColumns = metadata.createSpec(columns).getDimensionsSpec().getDimensions();
-    Assert.assertEquals(
-        new DoubleDimensionSchema("sketch"),
-        specColumns.get(specColumns.size() - 1)
+    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
+    Assert.assertTrue(
+        e.getMessage(),
+        e.getMessage().contains(
+            StringUtils.format(
+                "column [sketch] has type [COMPLEX<%s>], but the dimension handler registered for that type produced"
+                + " a schema of type [DOUBLE]",
+                typeName
+            )
+        )
     );
+  }
+
+  /**
+   * Minimal complex {@link DimensionSchema}, the shape an honest handler for a complex type returns: the column type
+   * it reports is the type it was registered for.
+   */
+  private static class TestComplexDimensionSchema extends DimensionSchema
+  {
+    private final String typeName;
+
+    TestComplexDimensionSchema(String name, String typeName)
+    {
+      super(name, null, false);
+      this.typeName = typeName;
+    }
+
+    @Override
+    public String getTypeName()
+    {
+      return typeName;
+    }
+
+    @Override
+    public ColumnType getColumnType()
+    {
+      return ColumnType.ofComplex(typeName);
+    }
   }
 
   /**
