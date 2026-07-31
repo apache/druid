@@ -23,7 +23,7 @@ title: "Build from source"
   -->
 
 
-You can build Apache Druid directly from source. Use the version of this page
+You can build Apache&circledR; Druid directly from source. Use the version of this page
 that matches the version you want to build.
 For building the latest code in master, follow the latest version of this page
 [here](https://github.com/apache/druid/blob/master/docs/development/build.md):
@@ -33,7 +33,7 @@ make sure it has `/master/` in the URL.
 
 ### Installing Java and Maven
 
-- See our [Java documentation](../operations/java.md) for information about obtaining a supported JDK
+- See the [Java documentation](../operations/java.md) for information about obtaining a supported JDK
 - [Maven version 3.x](http://maven.apache.org/download.cgi)
 
 ### Other Dependencies

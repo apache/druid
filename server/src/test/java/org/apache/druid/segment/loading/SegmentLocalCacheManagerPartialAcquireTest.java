@@ -253,10 +253,11 @@ class SegmentLocalCacheManagerPartialAcquireTest
     FileUtils.mkdirp(cacheRoot);
 
     final StorageLocationConfig locConfig = new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null);
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-        .setLocations(List.of(locConfig))
-        .setVirtualStorage(true)
-        .setVirtualStoragePartialDownloadsEnabled(true);
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
+        .locations(locConfig)
+        .virtualStorage(true)
+        .virtualStoragePartialDownloadsEnabled(true)
+        .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     manager = new SegmentLocalCacheManager(
         storageLocations,
@@ -350,7 +351,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
       throws ExecutionException, InterruptedException, IOException
   {
     final StorageLocation loc = manager.getLocations().get(0);
-    final long estimate = new SegmentLoaderConfig().getVirtualStorageMetadataReservationEstimate();
+    final long estimate = SegmentLoaderConfig.builder().build().getVirtualStorageMetadataReservationEstimate();
 
     // A lazy (PARTIAL) acquire mounts only the metadata entry (downloads the header); bundles stay lazy until a cursor
     // is built, so exactly one weak reservation + one weak load is expected.
@@ -492,9 +493,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
         Assertions.assertEquals(CLUSTERED_SEGMENT_ID, segment.getId());
 
         // group-by tenant + sum(x) matches the aggregate projection. Building this cursor drives the 'proj' bundle to
-        // mount through the real acquire path. inferParentBundles must return no parent for it (the clustered segment
-        // has no __base bundle); the old "aggregate always depends on __base" rule would have tried to mount a
-        // nonexistent __base here and failed.
+        // mount through the real acquire path. inferBundleDependencies must return no dep for it (the clustered
+        // segment has no __base bundle); the old "aggregate always depends on __base" rule would have tried to mount
+        // a nonexistent __base here and failed.
         final CursorBuildSpec aggSpec = CursorBuildSpec.builder()
                                                        .setGroupingColumns(List.of("tenant"))
                                                        .setAggregators(List.of(new LongSumAggregatorFactory("sum_x", "x")))
@@ -630,10 +631,11 @@ class SegmentLocalCacheManagerPartialAcquireTest
     final File plainCacheRoot = new File(perTestTempDir, "plain_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
     FileUtils.mkdirp(plainCacheRoot);
     final StorageLocationConfig locConfig = new StorageLocationConfig(plainCacheRoot, 1024L * 1024L * 1024L, null);
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-        .setLocations(List.of(locConfig))
-        .setVirtualStorage(true)
-        .setVirtualStoragePartialDownloadsEnabled(true);
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
+        .locations(locConfig)
+        .virtualStorage(true)
+        .virtualStoragePartialDownloadsEnabled(true)
+        .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     final SegmentLocalCacheManager plain = new SegmentLocalCacheManager(
         storageLocations,
@@ -697,10 +699,11 @@ class SegmentLocalCacheManagerPartialAcquireTest
     // eager counterparts: the returned segment is an eager QueryableIndexSegment (NOT PartialQueryableIndexSegment),
     // and no PartialSegmentMetadataCacheEntry is registered on the location.
     final StorageLocationConfig locConfig = new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null);
-    final SegmentLoaderConfig disabledConfig = new SegmentLoaderConfig()
-        .setLocations(List.of(locConfig))
-        .setVirtualStorage(true)
-        .setVirtualStoragePartialDownloadsEnabled(false);
+    final SegmentLoaderConfig disabledConfig = SegmentLoaderConfig.builder()
+        .locations(locConfig)
+        .virtualStorage(true)
+        .virtualStoragePartialDownloadsEnabled(false)
+        .build();
     final List<StorageLocation> storageLocations = disabledConfig.toStorageLocations();
     final SegmentLocalCacheManager disabledManager = new SegmentLocalCacheManager(
         storageLocations,
@@ -807,10 +810,11 @@ class SegmentLocalCacheManagerPartialAcquireTest
     // A manager with partial downloads disabled (operator toggled the flag off) over the same cache dir must reclaim
     // the now-unusable partial layout at bootstrap rather than reserving it and failing at query time.
     final StorageLocationConfig locConfig = new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null);
-    final SegmentLoaderConfig disabledConfig = new SegmentLoaderConfig()
-        .setLocations(List.of(locConfig))
-        .setVirtualStorage(true)
-        .setVirtualStoragePartialDownloadsEnabled(false);
+    final SegmentLoaderConfig disabledConfig = SegmentLoaderConfig.builder()
+        .locations(locConfig)
+        .virtualStorage(true)
+        .virtualStoragePartialDownloadsEnabled(false)
+        .build();
     final List<StorageLocation> storageLocations = disabledConfig.toStorageLocations();
     final SegmentLocalCacheManager disabledManager = new SegmentLocalCacheManager(
         storageLocations,
@@ -926,7 +930,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
                  partialDir,
                  IndexIO.V10_FILE_NAME,
                  List.of(),
-                 PartialSegmentDownloadListener.NOOP
+                 PartialSegmentDownloadListener.NOOP,
+                 PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+                 PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
              )) {
       final int numContainers = seed.getSegmentFileMetadata().getContainers().size();
       for (int i = 0; i < numContainers; i++) {

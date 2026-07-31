@@ -68,43 +68,51 @@ public class DruidAvaticaProtobufHandler extends DruidAvaticaHandler
   public boolean handle(Request request, Response response, Callback callback) throws Exception
   {
     String requestURI = request.getHttpURI().getPath();
-    if (AVATICA_PATH_NO_TRAILING_SLASH.equals(StringUtils.maybeRemoveTrailingSlash(requestURI))) {
-      try (Timer.Context ctx = this.requestTimer.start()) {
-        if (!"POST".equals(request.getMethod())) {
-          response.setStatus(405);
-          response.write(
-              true,
-              ByteBuffer.wrap("This server expects only POST calls.".getBytes(StandardCharsets.UTF_8)), callback
-          );
+    String remoteAddr = Request.getRemoteAddr(request);
+    DruidMeta.setThreadLocalRemoteAddress(remoteAddr);
+
+    try {
+      if (AVATICA_PATH_NO_TRAILING_SLASH.equals(StringUtils.maybeRemoveTrailingSlash(requestURI))) {
+        try (Timer.Context ctx = this.requestTimer.start()) {
+          if (!"POST".equals(request.getMethod())) {
+            response.setStatus(405);
+            response.write(
+                true,
+                ByteBuffer.wrap("This server expects only POST calls.".getBytes(StandardCharsets.UTF_8)), callback
+            );
+            return true;
+          }
+          final byte[] requestBytes;
+          // Avoid a new buffer creation for every HTTP request
+          final UnsynchronizedBuffer buffer = threadLocalBuffer.get();
+          try (InputStream inputStream = Content.Source.asInputStream(request)) {
+            requestBytes = AvaticaUtils.readFullyToBytes(inputStream, buffer);
+          }
+          finally {
+            buffer.reset();
+          }
+
+          response.getHeaders().put("Content-Type", "application/octet-stream;charset=utf-8");
+
+          org.apache.calcite.avatica.remote.Handler.HandlerResponse<byte[]> handlerResponse;
+          try {
+            handlerResponse = protobufHandler.apply(requestBytes);
+          }
+          catch (Exception e) {
+            LOG.debug(e, "Error invoking request");
+            handlerResponse = protobufHandler.convertToErrorResponse(e);
+          }
+
+          response.setStatus(handlerResponse.getStatusCode());
+          response.write(true, ByteBuffer.wrap(handlerResponse.getResponse()), callback);
           return true;
         }
-        final byte[] requestBytes;
-        // Avoid a new buffer creation for every HTTP request
-        final UnsynchronizedBuffer buffer = threadLocalBuffer.get();
-        try (InputStream inputStream = Content.Source.asInputStream(request)) {
-          requestBytes = AvaticaUtils.readFullyToBytes(inputStream, buffer);
-        }
-        finally {
-          buffer.reset();
-        }
-
-        response.getHeaders().put("Content-Type", "application/octet-stream;charset=utf-8");
-
-        org.apache.calcite.avatica.remote.Handler.HandlerResponse<byte[]> handlerResponse;
-        try {
-          handlerResponse = protobufHandler.apply(requestBytes);
-        }
-        catch (Exception e) {
-          LOG.debug(e, "Error invoking request");
-          handlerResponse = protobufHandler.convertToErrorResponse(e);
-        }
-
-        response.setStatus(handlerResponse.getStatusCode());
-        response.write(true, ByteBuffer.wrap(handlerResponse.getResponse()), callback);
-        return true;
       }
+      return false;
     }
-    return false;
+    finally {
+      DruidMeta.clearThreadLocalRemoteAddress();
+    }
   }
 
   @Override

@@ -87,7 +87,7 @@ public class DruidServerConfigTest
     locations.add(locationConfig2);
     DruidServerConfig druidServerConfig = new DruidServerConfig(
         new RuntimeInfo(),
-        new SegmentLoaderConfig().setLocations(locations)
+        SegmentLoaderConfig.builder().locations(locations).build()
     );
     Assert.assertEquals(30000000000L, druidServerConfig.getMaxSize());
   }
@@ -103,14 +103,7 @@ public class DruidServerConfigTest
         return HumanReadableBytes.parse("3GiB");
       }
     };
-    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public boolean isVirtualStorage()
-      {
-        return true;
-      }
-    };
+    SegmentLoaderConfig segmentLoaderConfig = SegmentLoaderConfig.builder().virtualStorage(true).build();
     DruidServerConfig druidServerConfig = new DruidServerConfig(runtimeInfo, segmentLoaderConfig);
     Assert.assertEquals(HumanReadableBytes.parse("45TiB"), druidServerConfig.getMaxSize());
   }
@@ -132,7 +125,7 @@ public class DruidServerConfigTest
     mapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
                                                          .addValue(
                                                              SegmentLoaderConfig.class,
-                                                             new SegmentLoaderConfig().setLocations(locations)
+                                                             SegmentLoaderConfig.builder().locations(locations).build()
                                                          )
                                                          .addValue(RuntimeInfo.class, new RuntimeInfo()));
 

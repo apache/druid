@@ -152,13 +152,18 @@ public class StrategicSegmentAssignerPartialTest
   }
 
   @Test
-  public void testFullFallbackProfileCountsAsMatching()
+  public void testFullFallbackLoadedBytesCountsAsMatching()
   {
-    // s1 announced with a full-fallback profile (historical was asked to partial-load but fell back to full). The
-    // fingerprint matches the rule, so the rule is satisfied; no further action.
+    // s1 announced with a loaded profile whose loadedBytes equals the full segment size (historical was asked to
+    // partial-load but fell back to full). The fingerprint matches the rule, so the rule is satisfied; no further
+    // action.
     final DataSegment segment = createSegment();
-    final PartialLoadProfile fullFallback = PartialLoadProfile.forFullFallback(FP_REVENUE, 1024L);
-    final ServerHolder s1 = createServerWithLoaded(TIER1, segment, fullFallback);
+    final PartialLoadProfile fullSizeLoaded = PartialLoadProfile.forLoaded(
+        profileForRevenue().wrappedLoadSpec(),
+        FP_REVENUE,
+        segment.getSize()
+    );
+    final ServerHolder s1 = createServerWithLoaded(TIER1, segment, fullSizeLoaded);
     final ServerHolder s2 = createServer(TIER1);
     final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1, s2).build();
 

@@ -164,10 +164,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<Interval> retrieveUnusedSegmentIntervals(String dataSource, int limit)
+  public List<Interval> retrieveSomeUnusedSegmentIntervals(String dataSource, int limit)
   {
     return inReadOnlyTransaction(
-        sql -> sql.retrieveUnusedSegmentIntervals(dataSource, limit)
+        sql -> sql.retrieveSomeUnusedSegmentIntervals(dataSource, limit)
     );
   }
 
@@ -259,7 +259,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<DataSegment> retrieveUnusedSegmentsWithExactInterval(
+  public List<DataSegmentPlus> retrieveUnusedSegmentsWithExactInterval(
       String dataSource,
       Interval interval,
       DateTime maxUpdatedTime,

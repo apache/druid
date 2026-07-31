@@ -24,10 +24,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import org.apache.druid.segment.file.SegmentFileMetadata;
+import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -136,4 +139,17 @@ public abstract class PartialLoadSpec implements LoadSpec
   {
     return materializedDelegate().openRangeReader();
   }
+
+  /**
+   * Returns the cache-layer bundle names that this partial-load spec selects for {@code segment}, resolving the
+   * scheme-specific identifiers carried in the load spec against the segment's parsed {@code metadata}. The
+   * historical's cache layer uses the returned names to acquire rule holds on the matching bundles as part of
+   * {@link SegmentCacheManager#load} for a partial-load rule; bundles not in the returned list are left to the
+   * ordinary on-demand acquire path.
+   * <p>
+   * Returns an empty list when the load spec's selection is empty (the "sibling-empty" case — coordinator matcher
+   * applied but produced no positive selection; the historical still installs a rule hold on the metadata so
+   * bootstrap re-discovers the segment).
+   */
+  public abstract List<String> getSelectedBundleNames(DataSegment segment, SegmentFileMetadata metadata);
 }

@@ -85,6 +85,10 @@ public interface AsyncResource<T> extends Closeable
    * holder is already ready, the callback fires immediately in the calling thread. Callbacks are not fired if
    * {@link #close()} is called prior to the resource becoming available.
    *
+   * <p>Because of the fires-immediately case, the callback can run on the REGISTERING thread, not just on whatever
+   * thread completes the resource, so a callback must not do blocking or expensive work (I/O, deserialization)
+   * unless the registering thread can tolerate it; hand such work to an executor from inside the callback instead.
+   *
    * <p>Throws {@link DruidException} if {@link #close()} has been called prior to this method.
    */
   void addReadyCallback(Runnable callback);

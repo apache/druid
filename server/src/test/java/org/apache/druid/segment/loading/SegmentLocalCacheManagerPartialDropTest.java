@@ -156,7 +156,7 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
     FileUtils.mkdirp(infoDir);
 
     final StorageLocationConfig locConfig = new StorageLocationConfig(cacheDir, ESTIMATE * 16, null);
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().setLocations(List.of(locConfig));
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder().locations(locConfig).build();
     final List<StorageLocation> locations = loaderConfig.toStorageLocations();
     manager = new SegmentLocalCacheManager(
         locations,
@@ -200,7 +200,9 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
         new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
         null,
-        ESTIMATE
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     final StorageLocation.ReservationHold<SegmentCacheEntry> hold = location.addWeakReservationHold(
         new SegmentCacheEntryIdentifier(SEGMENT_ID),

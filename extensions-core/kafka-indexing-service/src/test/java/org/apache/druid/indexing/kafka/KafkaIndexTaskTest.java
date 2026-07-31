@@ -3479,8 +3479,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     for (Event event : emitter.getEvents()) {
       if (event instanceof ServiceMetricEvent) {
         EventMap observedEvent = event.toMap();
+        // Do not verify emission of "id" dimension as that is deprecated in favor of "taskId"
         Assert.assertEquals("test_ds", observedEvent.get("dataSource"));
-        Assert.assertEquals("index_kafka_test_id1", observedEvent.get("id"));
         Assert.assertEquals("index_kafka_test_id1", observedEvent.get("taskId"));
         Assert.assertEquals("index_kafka", observedEvent.get("taskType"));
         Assert.assertEquals("index_kafka_test_ds", observedEvent.get("groupId"));

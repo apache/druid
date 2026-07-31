@@ -2217,7 +2217,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     // Verify that query for exact interval returns the segments
     Assert.assertEquals(
-        List.of(defaultSegment3),
+        List.of(toSegmentPlusUpgradedId(defaultSegment3, null)),
         coordinator.retrieveUnusedSegmentsWithExactInterval(
             dataSource,
             defaultSegment3.getInterval(),
@@ -2228,7 +2228,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Assert.assertEquals(defaultSegment.getInterval(), defaultSegment2.getInterval());
     Assert.assertEquals(
-        Set.of(defaultSegment, defaultSegment2),
+        Set.of(toSegmentPlusUpgradedId(defaultSegment, null), toSegmentPlusUpgradedId(defaultSegment2, null)),
         Set.copyOf(
             coordinator.retrieveUnusedSegmentsWithExactInterval(
                 dataSource,
@@ -2252,29 +2252,29 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
-  public void testRetrieveUnusedSegmentIntervals()
+  public void testRetrieveSomeUnusedSegmentIntervals()
   {
     final String dataSource = defaultSegment.getDataSource();
     coordinator.commitSegments(Set.of(defaultSegment, defaultSegment3), null);
 
-    Assert.assertTrue(coordinator.retrieveUnusedSegmentIntervals(dataSource, 100).isEmpty());
+    Assert.assertTrue(coordinator.retrieveSomeUnusedSegmentIntervals(dataSource, 100).isEmpty());
 
     markAllSegmentsUnused(Set.of(defaultSegment), DateTimes.nowUtc().minusHours(1));
     Assert.assertEquals(
         List.of(defaultSegment.getInterval()),
-        coordinator.retrieveUnusedSegmentIntervals(dataSource, 100)
+        coordinator.retrieveSomeUnusedSegmentIntervals(dataSource, 100)
     );
 
     markAllSegmentsUnused(Set.of(defaultSegment3), DateTimes.nowUtc().minusHours(1));
     Assert.assertEquals(
         Set.of(defaultSegment.getInterval(), defaultSegment3.getInterval()),
-        Set.copyOf(coordinator.retrieveUnusedSegmentIntervals(dataSource, 100))
+        Set.copyOf(coordinator.retrieveSomeUnusedSegmentIntervals(dataSource, 100))
     );
 
     // Verify retrieve with limit 1 returns only 1 interval
     Assert.assertEquals(
         1,
-        coordinator.retrieveUnusedSegmentIntervals(dataSource, 1).size()
+        coordinator.retrieveSomeUnusedSegmentIntervals(dataSource, 1).size()
     );
   }
 
@@ -4844,5 +4844,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         Set.of(expectedSegments),
         coordinator.retrieveUsedSegmentsForIntervals(dataSource, List.of(interval), Segments.ONLY_VISIBLE)
     );
+  }
+
+  private DataSegmentPlus toSegmentPlusUpgradedId(DataSegment segment, String upgradedFromSegmentId)
+  {
+    return new DataSegmentPlus(segment, null, null, null, null, null, upgradedFromSegmentId, null);
   }
 }

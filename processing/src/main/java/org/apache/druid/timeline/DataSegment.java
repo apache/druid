@@ -223,46 +223,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     );
   }
 
-  /**
-   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
-   */
-  @Deprecated
-  public DataSegment(
-      String dataSource,
-      Interval interval,
-      String version,
-      @Nullable Map<String, Object> loadSpec,
-      @Nullable List<String> dimensions,
-      @Nullable List<String> metrics,
-      @Nullable List<String> projections,
-      @Nullable ShardSpec shardSpec,
-      @Nullable CompactionState lastCompactionState,
-      Integer binaryVersion,
-      long size,
-      Integer totalRows,
-      String indexingStateFingerprint,
-      PruneSpecsHolder pruneSpecsHolder
-  )
-  {
-    this(
-        dataSource,
-        interval,
-        version,
-        loadSpec,
-        dimensions,
-        metrics,
-        projections,
-        null,
-        shardSpec,
-        lastCompactionState,
-        binaryVersion,
-        size,
-        totalRows,
-        indexingStateFingerprint,
-        pruneSpecsHolder
-    );
-  }
-
   @JsonCreator
   private DataSegment(
       @JsonProperty("dataSource") String dataSource,

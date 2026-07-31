@@ -144,7 +144,7 @@ public abstract class TaskBuilder<
             null,
             TestHelper.getTestIndexIO(),
             new NoopCoordinatorClient(),
-            new SegmentCacheManagerFactory(TestHelper.getTestIndexIO(), TestHelper.JSON_MAPPER),
+            SegmentCacheManagerFactory.createWithOwnedPool(TestHelper.getTestIndexIO(), TestHelper.JSON_MAPPER),
             new TaskConfigBuilder().build()
         )
     );

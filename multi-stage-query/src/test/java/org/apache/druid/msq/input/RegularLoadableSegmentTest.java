@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -164,11 +163,12 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
 
     // SegmentManager with virtualStorage for dynamically-loaded data tests
     cacheDir = tempDir.resolve("cache").toFile();
-    final SegmentLoaderConfig virtualLoaderConfig = new SegmentLoaderConfig()
-        .setLocations(ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null)))
-        .setVirtualStorage(true)
-        .setVirtualStorageIsEphemeral(true)
-        .setVirtualStoragePartialDownloadsEnabled(true);
+    final SegmentLoaderConfig virtualLoaderConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(cacheDir, 10_000_000_000L, null))
+        .virtualStorage(true)
+        .virtualStorageIsEphemeral(true)
+        .virtualStoragePartialDownloadsEnabled(true)
+        .build();
     final List<StorageLocation> virtualLocations = virtualLoaderConfig.toStorageLocations();
     segmentManagerDynamic = new SegmentManager(
         new SegmentLocalCacheManager(
@@ -183,8 +183,9 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
 
     // SegmentManager without virtualStorage for pre-loaded data tests
     preLoadCacheDir = tempDir.resolve("localCache").toFile();
-    final SegmentLoaderConfig localLoaderConfig = new SegmentLoaderConfig()
-        .setLocations(ImmutableList.of(new StorageLocationConfig(preLoadCacheDir, 10_000_000_000L, null)));
+    final SegmentLoaderConfig localLoaderConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(preLoadCacheDir, 10_000_000_000L, null))
+        .build();
     final List<StorageLocation> localLocations = localLoaderConfig.toStorageLocations();
     segmentManagerPreLoad = new SegmentManager(
         new SegmentLocalCacheManager(

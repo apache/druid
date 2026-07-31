@@ -233,7 +233,7 @@ public abstract class CompactionTaskRunBase
     temporaryFolder.create();
     reportsFile = temporaryFolder.newFile();
     testUtils = new TestUtils();
-    segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testUtils.getTestObjectMapper());
+    segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, testUtils.getTestObjectMapper());
 
     objectMapper = testUtils.getTestObjectMapper();
     objectMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
@@ -1268,7 +1268,12 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
+        cacheDir,
+        null,
+        false,
+        false
+    );
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -1380,7 +1385,12 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
+        cacheDir,
+        null,
+        false,
+        false
+    );
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -1497,7 +1507,12 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), compactSegment.getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
+        cacheDir,
+        null,
+        false,
+        false
+    );
 
     List<String> rowsFromSegment = new ArrayList<>();
     segmentCacheManager.load(compactSegment);
@@ -1695,26 +1710,11 @@ public abstract class CompactionTaskRunBase
 
   private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, TaskActionClient taskActionClient) throws IOException
   {
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return ImmutableList.of(new StorageLocationConfig(localDeepStorage, null, null));
-      }
-
-      @Override
-      public boolean isVirtualStorage()
-      {
-        return true;
-      }
-
-      @Override
-      public boolean isVirtualStorageEphemeral()
-      {
-        return true;
-      }
-    };
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(localDeepStorage, null, null))
+        .virtualStorage(true)
+        .virtualStorageIsEphemeral(true)
+        .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     final SegmentCacheManager cacheManager = new SegmentLocalCacheManager(
         storageLocations,
@@ -1754,7 +1754,12 @@ public abstract class CompactionTaskRunBase
   protected List<String> getCSVFormatRowsFromSegments(List<DataSegment> segments) throws Exception
   {
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
+        cacheDir,
+        null,
+        false,
+        false
+    );
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {

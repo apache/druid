@@ -172,6 +172,53 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
+  public Builder toBuilder()
+  {
+    return new Builder().awsCredentialsConfig(awsCredentialsConfig).copyFrom(this);
+  }
+
+  public static class Builder extends SeekableStreamSupervisorSpec.Builder<Builder>
+  {
+    private AWSCredentialsConfig awsCredentialsConfig;
+
+    public Builder awsCredentialsConfig(AWSCredentialsConfig awsCredentialsConfig)
+    {
+      this.awsCredentialsConfig = awsCredentialsConfig;
+      return this;
+    }
+
+    @Override
+    protected Builder self()
+    {
+      return this;
+    }
+
+    @Override
+    public KinesisSupervisorSpec build()
+    {
+      return new KinesisSupervisorSpec(
+          id,
+          null,
+          dataSchema,
+          (KinesisSupervisorTuningConfig) tuningConfig,
+          (KinesisSupervisorIOConfig) ioConfig,
+          context,
+          suspended,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          awsCredentialsConfig,
+          null
+      );
+    }
+  }
+
+  @Override
   protected KinesisSupervisorSpec toggleSuspend(boolean suspend)
   {
     return new KinesisSupervisorSpec(

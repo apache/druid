@@ -56,11 +56,12 @@ import java.util.Set;
  *   {@link #restoreBundlesFromDisk} to discover, reserve, and mount any bundles whose container files survived. The
  *   same call from the fresh acquire path is a no-op (no on-disk containers to restore).</li>
  * </ol>
- * Parent-set inference is delegated to {@link PartialSegmentMetadataCacheEntry#inferParentBundles}. A bundle whose
- * inferred parent isn't itself present on disk is treated as <i>orphaned</i>: its on-disk container files are deleted
- * (via {@link PartialSegmentFileMapperV10#evictContainer}, which also clears the relevant bitmap bits) and the bundle
- * is not restored. The next access through the cache manager acquire path then triggers a clean cold re-fetch, the
- * same fall-back as when the cache manager finds a segment listed in the info directory but missing on disk.
+ * Dependency inference is delegated to {@link PartialSegmentMetadataCacheEntry#inferBundleDependencies}. A bundle
+ * whose inferred dependency isn't itself present on disk is treated as <i>orphaned</i>: its on-disk container files
+ * are deleted (via {@link PartialSegmentFileMapperV10#evictContainer}, which also clears the relevant bitmap bits) and
+ * the bundle is not restored. The next access through the cache manager acquire path then triggers a clean cold
+ * re-fetch, the same fall-back as when the cache manager finds a segment listed in the info directory but missing on
+ * disk.
  */
 public final class PartialSegmentCacheBootstrap
 {
@@ -83,6 +84,10 @@ public final class PartialSegmentCacheBootstrap
    * @param storagePool       thread pool the async cursor path submits on-demand column downloads to (which bounds
    *                          load concurrency itself); may be null in tests that never invoke the cursor factory
    * @param location          the storage location to reserve the metadata entry on
+   * @param coalesceGapBytes  gap tolerance for coalesced range downloads, see
+   *                          {@link PartialSegmentFileMapperV10#fetchFiles}
+   * @param maxFetchRunBytes  size cap for parallel-fetch range reads, see
+   *                          {@link PartialSegmentFileMapperV10#planParallelFetch}
    * @return the reserved {@link PartialSegmentMetadataCacheEntry}; the caller is responsible for mounting it
    * @throws DruidException if the expected header file is missing or the location cannot accept the reservation
    */
@@ -94,7 +99,9 @@ public final class PartialSegmentCacheBootstrap
       SegmentRangeReader rangeReader,
       ObjectMapper jsonMapper,
       @Nullable StorageLoadingThreadPool storagePool,
-      StorageLocation location
+      StorageLocation location,
+      long coalesceGapBytes,
+      long maxFetchRunBytes
   )
   {
     final File headerFile = new File(localCacheDir, targetFilename + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX);
@@ -116,7 +123,9 @@ public final class PartialSegmentCacheBootstrap
         rangeReader,
         jsonMapper,
         storagePool,
-        actualMetadataSize
+        actualMetadataSize,
+        coalesceGapBytes,
+        maxFetchRunBytes
     );
 
     if (!location.reserveWeak(metadata)) {
@@ -173,8 +182,8 @@ public final class PartialSegmentCacheBootstrap
     final Set<String> orphanedBundleNames = new HashSet<>();
     for (String name : presentBundleNames) {
       boolean orphaned = false;
-      for (PartialSegmentBundleCacheEntryIdentifier parent : metadata.inferParentBundles(name)) {
-        if (!presentBundleNames.contains(parent.bundleName())) {
+      for (PartialSegmentBundleCacheEntryIdentifier dep : metadata.inferBundleDependencies(name)) {
+        if (!presentBundleNames.contains(dep.bundleName())) {
           orphaned = true;
           break;
         }
@@ -192,23 +201,23 @@ public final class PartialSegmentCacheBootstrap
         fileMapper.mapperForContainer(ref.externalFilename()).evictContainer(ref.containerIndex());
       }
       LOG.debug(
-          "Deleted on-disk state of orphaned bundle[%s] for segment[%s] (parent unrestorable); next access "
+          "Deleted on-disk state of orphaned bundle[%s] for segment[%s] (dependency unrestorable); next access "
           + "will trigger cold re-fetch",
           orphanName,
           segmentId
       );
     }
 
-    // mount base bundle before any dependent bundle so its hold is available when dependents acquire parent holds
+    // Mount the base bundle before any dependent bundle so its hold is available when dependents acquire deps.
     mountableBundleNames.sort(Comparator.comparing(name -> !Projections.BASE_TABLE_PROJECTION_NAME.equals(name)));
 
     final List<PartialSegmentBundleCacheEntry> mountedBundles = new ArrayList<>();
     boolean success = false;
     try {
       for (String bundleName : mountableBundleNames) {
-        // Mountable bundles have all parents present by construction (orphans were filtered out above), so the
-        // inferred parent set is exactly what we want, no further filtering needed.
-        final List<PartialSegmentBundleCacheEntryIdentifier> parentIds = metadata.inferParentBundles(bundleName);
+        // Mountable bundles have all dependencies present by construction (orphans were filtered out above), so the
+        // inferred dependency set is exactly what we want, no further filtering needed.
+        final List<PartialSegmentBundleCacheEntryIdentifier> parentIds = metadata.inferBundleDependencies(bundleName);
         final PartialSegmentBundleCacheEntry bundle = PartialSegmentBundleCacheEntry.forBundle(
             metadata,
             bundleName,

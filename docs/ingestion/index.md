@@ -56,7 +56,7 @@ supervisor.
 | **Method** | [Kafka](../ingestion/kafka-ingestion.md) | [Kinesis](../ingestion/kinesis-ingestion.md) |
 |---|-----|--------------|
 | **Supervisor type** | `kafka` | `kinesis`|
-| **How it works** | Druid reads directly from Apache Kafka. | Druid reads directly from Amazon Kinesis.|
+| **How it works** | Druid reads directly from Apache Kafka&circledR;. | Druid reads directly from Amazon Kinesis.|
 | **Can ingest late data?** | Yes. | Yes. |
 | **Exactly-once guarantees?** | Yes. | Yes. |
 

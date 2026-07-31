@@ -33,26 +33,22 @@ import java.util.Objects;
  * matches the shape of the wire-form load-spec wrapper that gets stamped onto outbound load requests via
  * {@code DataSegment.withLoadSpec(...)}.
  * <p>
- * Used in three distinct states:
+ * Used in two distinct states:
  * <ul>
  *   <li>{@link #forRequest(Map, String) forRequest}: outbound from coordinator to historical. Carries the wrapped
  *       load-spec map identifying what to load and the fingerprint identifying that request. {@code loadedBytes} is
  *       null because the on-disk footprint is only known after the historical has parsed segment metadata.</li>
- *   <li>{@link #forLoaded(Map, String, long) forLoaded}: inbound on a historical announcement after a successful
- *       partial load. {@code wrappedLoadSpec} echoes the request and {@code loadedBytes} reports the realized
- *       footprint.</li>
- *   <li>{@link #forFullFallback(String, long) forFullFallback}: inbound on a historical announcement when partial
- *       loading was requested but the historical fell back to a full download (zipped-V10 segment, capability
- *       mismatch on a partially-upgraded server, etc.). {@code wrappedLoadSpec} is null to signal the fallback;
- *       {@code loadedBytes} equals the full segment size. The matching fingerprint still satisfies the rule that
- *       requested the load, so no reload-thrash occurs.</li>
+ *   <li>{@link #forLoaded(Map, String, long) forLoaded}: inbound on a historical announcement after a load completed.
+ *       {@code wrappedLoadSpec} echoes the request and {@code loadedBytes} reports the realized footprint. Covers
+ *       both real partial loads and historicals that fell back to a full download. The fingerprint match is what
+ *       satisfies the coordinator's rule either way; the footprint number rides through for capacity accounting.</li>
  * </ul>
  * The fingerprint is derived from the resolved scheme-specific data (e.g., for projections, the sorted/deduped name
  * list, see {@code ProjectionPartialLoadMatcher}) so that two rule configurations that resolve to the same set on a
  * segment produce the same fingerprint and don't churn replicas across coordinator runs.
  */
 public record PartialLoadProfile(
-    @Nullable Map<String, Object> wrappedLoadSpec,
+    Map<String, Object> wrappedLoadSpec,
     String fingerprint,
     @Nullable Long loadedBytes
 )
@@ -66,10 +62,9 @@ public record PartialLoadProfile(
 
   public PartialLoadProfile
   {
+    Objects.requireNonNull(wrappedLoadSpec, "wrappedLoadSpec");
     Objects.requireNonNull(fingerprint, "fingerprint");
-    if (wrappedLoadSpec != null) {
-      wrappedLoadSpec = Map.copyOf(wrappedLoadSpec);
-    }
+    wrappedLoadSpec = Map.copyOf(wrappedLoadSpec);
   }
 
   /**
@@ -86,7 +81,9 @@ public record PartialLoadProfile(
   }
 
   /**
-   * Build the inbound profile for a successful partial load announcement.
+   * Build the inbound profile for a completed load announcement. Applies to both real partial loads (whose
+   * {@code loadedBytes} reflects the rule-declared on-disk footprint) and full-download fallbacks (whose
+   * {@code loadedBytes} equals the full segment size).
    */
   public static PartialLoadProfile forLoaded(Map<String, Object> wrappedLoadSpec, String fingerprint, long loadedBytes)
   {
@@ -96,26 +93,8 @@ public record PartialLoadProfile(
     return intern(new PartialLoadProfile(wrappedLoadSpec, fingerprint, loadedBytes));
   }
 
-  /**
-   * Build the inbound profile for a historical that was asked to partial-load but fell back to a full download.
-   * {@code wrappedLoadSpec} is null as a sentinel; {@code loadedBytes} should be the full segment size so that
-   * inventory accounting reflects actual on-disk footprint.
-   */
-  public static PartialLoadProfile forFullFallback(String fingerprint, long fullBytes)
-  {
-    return intern(new PartialLoadProfile(null, fingerprint, fullBytes));
-  }
-
   private static PartialLoadProfile intern(PartialLoadProfile profile)
   {
     return INTERNER.intern(profile);
-  }
-
-  /**
-   * Whether this profile represents a historical's full-fallback (i.e., it was asked to partial-load but couldn't).
-   */
-  public boolean isFullFallback()
-  {
-    return wrappedLoadSpec == null;
   }
 }

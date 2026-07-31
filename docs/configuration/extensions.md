@@ -36,7 +36,7 @@ Core extensions are maintained by Druid committers.
 |Name|Description|Docs|
 |----|-----------|----|
 |druid-avro-extensions|Support for data in Apache Avro data format.|[link](../development/extensions-core/avro.md)|
-|druid-azure-extensions|Microsoft Azure deep storage.|[link](../development/extensions-core/azure.md)|
+|druid-azure-extensions|Microsoft&circledR; Azure deep storage.|[link](../development/extensions-core/azure.md)|
 |druid-basic-security|Support for Basic HTTP authentication and role-based access control.|[link](../development/extensions-core/druid-basic-security.md)|
 |druid-bloom-filter|Support for providing Bloom filters in druid queries.|[link](../development/extensions-core/bloom-filter.md)|
 |druid-catalog|This extension allows users to configure, update, retrieve, and manage metadata stored in Druid's catalog. |[link](../development/extensions-core/catalog.md)|
@@ -45,13 +45,13 @@ Core extensions are maintained by Druid committers.
 |druid-hdfs-storage|HDFS deep storage.|[link](../development/extensions-core/hdfs.md)|
 |druid-histogram|Approximate histograms and quantiles aggregator. Deprecated, please use the [DataSketches quantiles aggregator](../development/extensions-core/datasketches-quantiles.md) from the `druid-datasketches` extension instead.|[link](../development/extensions-core/approximate-histograms.md)|
 |druid-kafka-extraction-namespace|Apache Kafka-based namespaced lookup. Requires namespace lookup extension.|[link](../querying/kafka-extraction-namespace.md)|
-|druid-kafka-indexing-service|Supervised exactly-once Apache Kafka ingestion for the indexing service.|[link](../ingestion/kafka-ingestion.md)|
+|druid-kafka-indexing-service|Supervised exactly-once Apache Kafka&circledR; ingestion for the indexing service.|[link](../ingestion/kafka-ingestion.md)|
 |druid-kinesis-indexing-service|Supervised exactly-once Kinesis ingestion for the indexing service.|[link](../ingestion/kinesis-ingestion.md)|
 |druid-kerberos|Kerberos authentication for druid processes.|[link](../development/extensions-core/druid-kerberos.md)|
 |druid-lookups-cached-global|A module for [lookups](../querying/lookups.md) providing a jvm-global eager caching for lookups. It provides JDBC and URI implementations for fetching lookup data.|[link](../querying/lookups-cached-global.md)|
 |druid-lookups-cached-single| Per lookup caching module to support the use cases where a lookup need to be isolated from the global pool of lookups |[link](../development/extensions-core/druid-lookups.md)|
 |druid-orc-extensions|Support for data in Apache ORC data format.|[link](../development/extensions-core/orc.md)|
-|druid-parquet-extensions|Support for data in Apache Parquet data format. Requires druid-avro-extensions to be loaded.|[link](../development/extensions-core/parquet.md)|
+|druid-parquet-extensions|Support for data in Apache&circledR; Parquet data format. Requires druid-avro-extensions to be loaded.|[link](../development/extensions-core/parquet.md)|
 |druid-protobuf-extensions| Support for data in Protobuf data format.|[link](../development/extensions-core/protobuf.md)|
 |druid-s3-extensions|Interfacing with data in Amazon S3, and using S3 as deep storage.|[link](../development/extensions-core/s3.md)|
 |druid-ec2-extensions|Interfacing with AWS EC2 for autoscaling middle managers|UNDOCUMENTED|
@@ -61,7 +61,7 @@ Core extensions are maintained by Druid committers.
 |postgresql-metadata-storage|PostgreSQL metadata store.|[link](../development/extensions-core/postgresql.md)|
 |simple-client-sslcontext|Simple SSLContext provider module to be used by Druid's internal HttpClient when talking to other Druid processes over HTTPS.|[link](../development/extensions-core/simple-client-sslcontext.md)|
 |druid-pac4j|OpenID Connect authentication for druid processes.|[link](../development/extensions-core/druid-pac4j.md)|
-|druid-kubernetes-extensions|Druid cluster deployment on Kubernetes without Zookeeper.|[link](../development/extensions-core/kubernetes.md)|
+|druid-kubernetes-extensions|Druid cluster deployment on Kubernetes&circledR; without Zookeeper.|[link](../development/extensions-core/kubernetes.md)|
 |druid-kubernetes-overlord-extensions|Support for launching tasks in k8s without Middle Managers|[link](../development/extensions-core/k8s-jobs.md)|
 
 ## Community extensions
@@ -104,7 +104,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |prometheus-emitter|Exposes [Druid metrics](../operations/metrics.md) for [Prometheus](https://prometheus.io/)|[link](../development/extensions-contrib/prometheus.md)|
 |druid-spectator-histogram|Support for efficient approximate percentile queries|[link](../development/extensions-contrib/spectator-histogram.md)|
 |druid-rabbit-indexing-service|Support for creating and managing [RabbitMQ](https://www.rabbitmq.com/) indexing tasks|[link](../development/extensions-contrib/rabbit-stream-ingestion.md)|
-|druid-ranger-security|Support for access control through Apache Ranger.|[link](../development/extensions-contrib/druid-ranger-security.md)|
+|druid-ranger-security|Support for access control through Apache&circledR; Ranger.|[link](../development/extensions-contrib/druid-ranger-security.md)|
 
 ## Promoting community extensions to core extensions
 

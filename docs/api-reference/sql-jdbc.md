@@ -24,7 +24,7 @@ sidebar_label: SQL JDBC driver
   -->
 
 :::info
- Apache Druid supports two query languages: Druid SQL and [native queries](../querying/querying.md).
+ Apache&circledR; Druid supports two query languages: Druid SQL and [native queries](../querying/querying.md).
  This document describes the SQL language.
 :::
 

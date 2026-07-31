@@ -24,12 +24,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fppt.jedismock.RedisServer;
 import com.github.fppt.jedismock.server.ServiceOptions;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.metadata.PasswordProvider;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import redis.clients.jedis.JedisClientConfig;
+import redis.clients.jedis.SslVerifyMode;
 
 import java.io.IOException;
 
@@ -231,5 +234,93 @@ public class RedisCacheConfigTest
         new ContainsMatcher("no redis server")
     ));
     RedisCacheFactory.create(fromJson);
+  }
+
+  @Test
+  public void testEnableTls() throws IOException
+  {
+    ObjectMapper mapper = new ObjectMapper();
+
+    RedisCacheConfig defaultConfig = mapper.readValue(
+        "{\"host\": \"localhost\", \"port\": 6379}",
+        RedisCacheConfig.class
+    );
+    Assert.assertFalse(defaultConfig.getEnableTls());
+
+    RedisCacheConfig tlsConfig = mapper.readValue(
+        "{\"host\": \"localhost\", \"port\": 6379, \"enableTls\": true}",
+        RedisCacheConfig.class
+    );
+    Assert.assertTrue(tlsConfig.getEnableTls());
+  }
+
+  @Test
+  public void testSkipTlsHostnameVerification() throws IOException
+  {
+    ObjectMapper mapper = new ObjectMapper();
+
+    RedisCacheConfig defaultConfig = mapper.readValue(
+        "{\"host\": \"localhost\", \"port\": 6379}",
+        RedisCacheConfig.class
+    );
+    Assert.assertFalse(defaultConfig.getSkipTlsHostnameVerification());
+
+    RedisCacheConfig skipConfig = mapper.readValue(
+        "{\"host\": \"localhost\", \"port\": 6379, \"skipTlsHostnameVerification\": true}",
+        RedisCacheConfig.class
+    );
+    Assert.assertTrue(skipConfig.getSkipTlsHostnameVerification());
+  }
+
+  @Test
+  public void testBuildClientConfig()
+  {
+    // TLS disabled: not SSL, no SSL options, database argument passed through, null password.
+    JedisClientConfig plain = RedisCacheFactory.buildClientConfig(new RedisCacheConfig(), 3);
+    Assert.assertFalse(plain.isSsl());
+    Assert.assertNull(plain.getSslOptions());
+    Assert.assertEquals(3, plain.getDatabase());
+    Assert.assertNull(plain.getPassword());
+
+    // TLS enabled with hostname verification (default) maps to SslVerifyMode.FULL, and a
+    // non-null password is forwarded.
+    RedisCacheConfig verifyConfig = new RedisCacheConfig()
+    {
+      @Override
+      public boolean getEnableTls()
+      {
+        return true;
+      }
+
+      @Override
+      public PasswordProvider getPassword()
+      {
+        return () -> "secret";
+      }
+    };
+    JedisClientConfig verify = RedisCacheFactory.buildClientConfig(verifyConfig, 0);
+    Assert.assertTrue(verify.isSsl());
+    Assert.assertEquals(SslVerifyMode.FULL, verify.getSslOptions().getSslVerifyMode());
+    Assert.assertEquals("secret", verify.getPassword());
+
+    // skipTlsHostnameVerification maps to SslVerifyMode.CA (chain verified, hostname skipped).
+    RedisCacheConfig skipConfig = new RedisCacheConfig()
+    {
+      @Override
+      public boolean getEnableTls()
+      {
+        return true;
+      }
+
+      @Override
+      public boolean getSkipTlsHostnameVerification()
+      {
+        return true;
+      }
+    };
+    Assert.assertEquals(
+        SslVerifyMode.CA,
+        RedisCacheFactory.buildClientConfig(skipConfig, 0).getSslOptions().getSslVerifyMode()
+    );
   }
 }

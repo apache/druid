@@ -133,7 +133,9 @@ class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
         cacheDir,
         IndexIO.V10_FILE_NAME,
         Collections.emptyList(),
-        PartialSegmentDownloadListener.NOOP
+        PartialSegmentDownloadListener.NOOP,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     return new PartialQueryableIndex(mapper.getSegmentFileMetadata(), mapper, COLUMN_CONFIG);
   }

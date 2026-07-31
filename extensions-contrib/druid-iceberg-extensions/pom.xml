@@ -29,7 +29,7 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>38.0.0-SNAPSHOT</version>
+    <version>39.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -284,6 +284,13 @@
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>glue</artifactId>
       <version>${aws.sdk.v2.version}</version>
+    </dependency>
+    <!-- Iceberg AWS still loads the Apache 4 client reflectively. -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>apache-client</artifactId>
+      <version>${aws.sdk.v2.version}</version>
+      <scope>runtime</scope>
     </dependency>
     <!-- software/amazon/awssdk/services/sts/model/Tag needed for GlueCatalog initialize -->
     <dependency>

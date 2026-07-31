@@ -391,11 +391,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
     createIndex(
         tableName,
-        "IDX_%S_USED",
-        List.of("used")
-    );
-    createIndex(
-        tableName,
         "IDX_%S_DATASOURCE_USED_END_START",
         List.of(
             "dataSource",
@@ -403,6 +398,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             quoteColumn("end"),
             "start"
         )
+    );
+    // Covering index for the used-segment ID scan performed on every metadata
+    // cache sync (SELECT id, dataSource, used_status_last_updated WHERE used=true).
+    // Includes id explicitly so the scan is index-only on all backends (not only
+    // engines like InnoDB that append the primary key to secondary indexes).
+    // Its leading 'used' column also serves plain 'WHERE used = ?' lookups, so a
+    // separate IDX_%S_USED index is not created.
+    createIndex(
+        tableName,
+        "IDX_%S_USED_USLU_DATASOURCE",
+        List.of("used", "used_status_last_updated", "dataSource", "id")
     );
   }
 
@@ -663,6 +669,16 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         "IDX_%S_DATASOURCE_UPGRADED_FROM_SEGMENT_ID",
         List.of("dataSource", "upgraded_from_segment_id")
     );
+    // Migration for existing tables: covering index backing the used-segment ID
+    // scan on every cache sync (see createSegmentTable).
+    createIndex(
+        tableName,
+        "IDX_%S_USED_USLU_DATASOURCE",
+        List.of("used", "used_status_last_updated", "dataSource", "id")
+    );
+    // The covering index above leads with 'used', so it supersedes the single-column
+    // IDX_%S_USED. Drop the now-redundant index on existing tables.
+    dropIndex(tableName, "IDX_%S_USED", List.of("used"));
   }
 
   @Override
@@ -1254,6 +1270,59 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     catch (Exception e) {
       log.error(e, "Exception while creating index[%s] on table[%s]", indexName, tableName);
     }
+  }
+
+  /**
+   * Drops an index on {@code tableName} if it exists, under either the full or
+   * short naming convention (see {@link #createIndex}). No-op if absent, so it is
+   * safe to call on every startup.
+   *
+   * @param tableName           Name of the table the index is on
+   * @param fullIndexNameFormat Same format string that was passed to {@link #createIndex}
+   * @param indexCols           Same columns that were passed to {@link #createIndex}
+   */
+  public void dropIndex(
+      final String tableName,
+      final String fullIndexNameFormat,
+      final List<String> indexCols
+  )
+  {
+    final Set<String> createdIndexSet = getIndexOnTable(tableName);
+    final String shortIndexName = generateShortIndexName(tableName, indexCols);
+    final String fullIndexName = StringUtils.toUpperCase(StringUtils.format(fullIndexNameFormat, tableName));
+
+    final String indexName;
+    if (createdIndexSet.contains(fullIndexName)) {
+      indexName = fullIndexName;
+    } else if (createdIndexSet.contains(shortIndexName)) {
+      indexName = shortIndexName;
+    } else {
+      log.info("Index[%s] on table[%s] does not exist, skipping drop.", fullIndexName, tableName);
+      return;
+    }
+
+    try {
+      retryWithHandle(
+          (HandleCallback<Void>) handle -> {
+            final String dropSQL = getDropIndexStatement(indexName, tableName);
+            log.info("Dropping index[%s] on table[%s] using SQL[%s].", indexName, tableName, dropSQL);
+            handle.execute(dropSQL);
+            return null;
+          }
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Could not drop index[%s] on table[%s]", indexName, tableName);
+    }
+  }
+
+  /**
+   * SQL to drop an index. Standard SQL / Derby / PostgreSQL use {@code DROP INDEX <name>};
+   * MySQL requires the {@code ON <table>} clause (see {@code MySQLConnector}).
+   */
+  protected String getDropIndexStatement(String indexName, String tableName)
+  {
+    return StringUtils.format("DROP INDEX %s", indexName);
   }
 
   /**

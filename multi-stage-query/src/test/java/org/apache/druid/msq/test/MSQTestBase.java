@@ -218,6 +218,7 @@ import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.apache.druid.test.utils.TestSegmentManager;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
@@ -473,7 +474,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
     indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
 
     segmentCacheManager =
-        new SegmentCacheManagerFactory(indexIO, objectMapper).manufacturate(newTempFolder("cacheManager"), null, true);
+        SegmentCacheManagerFactory.createWithOwnedPool(indexIO, objectMapper)
+                                  .manufacturate(newTempFolder("cacheManager"), null, true, false);
 
     testSegmentManager = new TestSegmentManager();
 
@@ -1289,6 +1291,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     private List<AggregateProjectionMetadata> expectedProjections = null;
 
+    private ClusterGroupTuples expectedClusterGroups = null;
+
     private IngestTester()
     {
       // nothing to do
@@ -1333,6 +1337,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public IngestTester setExpectedProjections(List<AggregateProjectionMetadata> expectedProjections)
     {
       this.expectedProjections = expectedProjections;
+      return this;
+    }
+
+    public IngestTester setExpectedClusterGroups(ClusterGroupTuples expectedClusterGroups)
+    {
+      this.expectedClusterGroups = expectedClusterGroups;
       return this;
     }
 
@@ -1441,14 +1451,22 @@ public class MSQTestBase extends BaseCalciteQueryTest
           // assert query granularity
           Assert.assertEquals(expectedQueryGranularity, queryableIndex.getMetadata().getQueryGranularity());
 
-          // assert aggregator factories
+          // assert aggregator factories; clustered base table segments have no aggregator metadata (never rollup),
+          // so treat null as empty
           Assert.assertArrayEquals(
               expectedAggregatorFactories.toArray(new AggregatorFactory[0]),
-              queryableIndex.getMetadata().getAggregators()
+              queryableIndex.getMetadata().getAggregators() == null
+              ? new AggregatorFactory[0]
+              : queryableIndex.getMetadata().getAggregators()
           );
 
           if (expectedProjections != null) {
             Assert.assertEquals(expectedProjections, queryableIndex.getMetadata().getProjections());
+          }
+
+          if (expectedClusterGroups != null) {
+            Assert.assertEquals(expectedClusterGroups, dataSegment.getClusterGroups());
+            Assert.assertNotNull(queryableIndex.getMetadata().getClusteredBaseTable());
           }
 
           for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {

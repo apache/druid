@@ -66,6 +66,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class QueryableIndexCursorHolder implements CursorHolder
 {
@@ -84,6 +85,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
   private final QueryContext queryContext;
   private final int vectorSize;
   private final Supplier<CursorResources> resourcesSupplier;
+  private final AtomicBoolean resourcesComputed = new AtomicBoolean(false);
 
   public QueryableIndexCursorHolder(
       QueryableIndex index,
@@ -127,16 +129,20 @@ public class QueryableIndexCursorHolder implements CursorHolder
     this.vectorSize = cursorBuildSpec.getQueryContext().getVectorSize();
     this.metrics = cursorBuildSpec.getQueryMetrics();
     this.resourcesSupplier = Suppliers.memoize(
-        () -> new CursorResources(
-            index,
-            timeBoundaryInspector,
-            virtualColumns,
-            Cursors.getTimeOrdering(ordering),
-            interval,
-            filter,
-            cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CURSOR_AUTO_ARRANGE_FILTERS, true),
-            metrics
-        )
+        () -> {
+          final CursorResources resources = new CursorResources(
+              index,
+              timeBoundaryInspector,
+              virtualColumns,
+              Cursors.getTimeOrdering(ordering),
+              interval,
+              filter,
+              cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CURSOR_AUTO_ARRANGE_FILTERS, true),
+              metrics
+          );
+          resourcesComputed.set(true);
+          return resources;
+        }
     );
   }
 
@@ -333,7 +339,9 @@ public class QueryableIndexCursorHolder implements CursorHolder
   @Override
   public void close()
   {
-    CloseableUtils.closeAndWrapExceptions(resourcesSupplier.get());
+    if (resourcesComputed.get()) {
+      CloseableUtils.closeAndWrapExceptions(resourcesSupplier.get());
+    }
   }
 
 

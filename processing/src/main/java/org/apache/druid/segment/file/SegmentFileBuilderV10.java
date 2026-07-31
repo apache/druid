@@ -75,6 +75,9 @@ import java.util.TreeMap;
  * format and there is a fair bit of overlap. In fact, the initial implementation of this class wrapped a V9 smoosher
  * to build the files before combining them into the V10 format. The main difference is that V9 fills each container to
  * the max while here we organize with bundles.
+ * <p>
+ * <b>Not thread-safe.</b> All writes, including closing delegate {@link SegmentFileChannel}s, which is when delegated
+ * files merge and get attributed, must happen on the thread driving the merge.
  */
 public class SegmentFileBuilderV10 implements SegmentFileBuilder
 {
@@ -108,6 +111,7 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
   private final CompressionStrategy metadataCompression;
   private final Map<String, SegmentFileBuilderV10> externalSegmentFileBuilders;
   private final Map<String, ColumnDescriptor> columns = new TreeMap<>();
+  private final Map<String, List<String>> columnFiles = new TreeMap<>();
 
   private final List<ContainerWriter> containers = new ArrayList<>();
   private final Map<String, SegmentInternalFileMetadata> internalFiles = new TreeMap<>();
@@ -129,6 +133,15 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
    * The bundle declared by the most recent {@link #startFileBundle} call
    */
   private String currentBundle = SegmentFileBuilder.ROOT_BUNDLE_NAME;
+
+  /**
+   * The column declared by the most recent {@link #addColumn} call, or null when no column scope is active (before
+   * the first column, after {@link #finishColumn()}, or after a {@link #startFileBundle} transition). Every file
+   * written while a column scope is active is attributed to that column in {@link #columnFiles}; files written
+   * outside any scope are unattributed and simply omitted from the mapping.
+   */
+  @Nullable
+  private String currentColumn = null;
 
   @Nullable
   private String interval = null;
@@ -210,6 +223,7 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
     ensureContainer(currentBundle, size);
     final ContainerWriter target = currentContainer;
     final long startOffset = target.currOffset;
+    final String owner = currentColumn;
     writerCurrentlyInUse = true;
 
     return new SegmentFileChannel()
@@ -274,6 +288,9 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
             name,
             new SegmentInternalFileMetadata(target.fileNum, startOffset, target.currOffset - startOffset)
         );
+        if (owner != null) {
+          columnFiles.computeIfAbsent(owner, k -> new ArrayList<>()).add(name);
+        }
         mergeDelegatedFiles();
       }
     };
@@ -293,6 +310,8 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
           if (!SegmentFileBuilder.ROOT_BUNDLE_NAME.equals(currentBundle)) {
             fresh.startFileBundle(currentBundle);
           }
+          // likewise inherit any open column attribution scope (e.g. an external created mid-writeTo)
+          fresh.currentColumn = currentColumn;
           return fresh;
         }
     );
@@ -303,6 +322,31 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
   {
     ensureNameMatchesActiveBundle(name);
     this.columns.put(name, columnDescriptor);
+    setCurrentColumn(name);
+  }
+
+  /**
+   * Close the column attribution scope opened by the most recent {@link #addColumn} call, so that files written
+   * afterward are not attributed to it. Callers should invoke this once the column's serializer has finished
+   * writing. No-op when no scope is open.
+   */
+  public void finishColumn()
+  {
+    setCurrentColumn(null);
+  }
+
+  /**
+   * Open (or close, with null) a column attribution scope: subsequent writes (including delegated writes created
+   * while the scope is active, even if they merge after it closes, since attribution snapshots at creation) are
+   * attributed to this column in {@link #columnFiles}. Broadcast to externals so a serde that writes a column's data
+   * into an external file attributes those files in the external's own metadata.
+   */
+  private void setCurrentColumn(@Nullable String name)
+  {
+    this.currentColumn = name;
+    for (SegmentFileBuilderV10 externalFile : externalSegmentFileBuilders.values()) {
+      externalFile.setCurrentColumn(name);
+    }
   }
 
   /**
@@ -344,6 +388,7 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
       throw DruidException.defensive("Cannot start file bundle[%s] while a writer is in progress", bundleName);
     }
     this.currentBundle = bundleName == null ? SegmentFileBuilder.ROOT_BUNDLE_NAME : bundleName;
+    this.currentColumn = null;
     for (SegmentFileBuilderV10 externalFile : externalSegmentFileBuilders.values()) {
       externalFile.startFileBundle(bundleName);
     }
@@ -397,6 +442,7 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
         internalFiles,
         interval,
         columns.isEmpty() ? null : columns,
+        columnFiles.isEmpty() ? null : columnFiles,
         projections,
         bitmapEncoding
     );
@@ -519,9 +565,10 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
     // cannot collide, since main and external always have distinct output file names.
     final String delegateName = StringUtils.format("%s-delegate-%d", outputFileName, delegateFileCounter++);
     final File tmpFile = new File(baseDir, delegateName);
-    // Snapshot the active bundle now so that if this delegate is merged after the outer writer has advanced past
-    // the bundle it was created under, it still routes into the correct container.
-    final DelegateEntry entry = new DelegateEntry(tmpFile, name, currentBundle);
+    // Snapshot the active bundle and column now so that if this delegate is merged after the outer writer has
+    // advanced past the bundle/column it was created under, it still routes into the correct container and is
+    // attributed to the correct column.
+    final DelegateEntry entry = new DelegateEntry(tmpFile, name, currentBundle, currentColumn);
     inProgressDelegates.add(entry);
 
     return new SegmentFileChannel()
@@ -598,9 +645,11 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
     final List<DelegateEntry> toProcess = new ArrayList<>(completedDelegates);
     completedDelegates.clear();
     final String savedBundle = currentBundle;
+    final String savedColumn = currentColumn;
     try {
       for (DelegateEntry entry : toProcess) {
         currentBundle = entry.bundle;
+        currentColumn = entry.column;
         add(entry.name, entry.file);
         if (!entry.file.delete()) {
           LOG.warn("Unable to delete delegate file[%s]", entry.file);
@@ -609,10 +658,11 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
     }
     finally {
       currentBundle = savedBundle;
+      currentColumn = savedColumn;
     }
   }
 
-  private record DelegateEntry(File file, String name, String bundle)
+  private record DelegateEntry(File file, String name, String bundle, @Nullable String column)
   {
   }
 

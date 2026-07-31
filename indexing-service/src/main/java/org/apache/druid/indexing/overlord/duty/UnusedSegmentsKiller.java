@@ -45,7 +45,7 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.UnusedSegmentKillerConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.loading.DataSegmentKiller;
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -249,7 +249,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
 
       final Map<String, Integer> dataSourceToIntervalCounts = new HashMap<>();
       for (String dataSource : dataSources) {
-        storageCoordinator.retrieveUnusedSegmentIntervals(dataSource, MAX_INTERVALS_TO_KILL_IN_DATASOURCE).forEach(
+        storageCoordinator.retrieveSomeUnusedSegmentIntervals(dataSource, MAX_INTERVALS_TO_KILL_IN_DATASOURCE).forEach(
             interval -> {
               dataSourceToIntervalCounts.merge(dataSource, 1, Integer::sum);
               killQueue.offer(new KillCandidate(dataSource, interval));
@@ -455,7 +455,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
     }
 
     @Override
-    protected List<DataSegment> fetchNextBatchOfUnusedSegments(TaskToolbox toolbox, int nextBatchSize)
+    protected List<DataSegmentPlus> fetchNextBatchOfUnusedSegments(TaskToolbox toolbox, int nextBatchSize)
     {
       // Kill only 1000 segments in the batch so that locks are not held for very long
       return storageCoordinator.retrieveUnusedSegmentsWithExactInterval(
@@ -464,6 +464,27 @@ public class UnusedSegmentsKiller implements OverlordDuty
           getMaxUsedStatusLastUpdatedTime(),
           MAX_SEGMENTS_TO_KILL_IN_INTERVAL
       );
+    }
+
+    @Override
+    protected Map<String, String> fetchParentIdsForSegments(
+        TaskToolbox toolbox,
+        Map<String, DataSegmentPlus> unusedIdToSegmentPlus
+    )
+    {
+      // No need to make another DB call, the parent IDs have already been fetched
+      // in fetchNextBatchOfUnusedSegments
+      final Map<String, String> unusedSegmentIdToParentId = new HashMap<>();
+      for (DataSegmentPlus segment : unusedIdToSegmentPlus.values()) {
+        if (segment.getUpgradedFromSegmentId() != null) {
+          unusedSegmentIdToParentId.put(
+              segment.getDataSegment().getId().toString(),
+              segment.getUpgradedFromSegmentId()
+          );
+        }
+      }
+
+      return unusedSegmentIdToParentId;
     }
 
     @Override

@@ -337,7 +337,9 @@ class PartialSegmentCacheBootstrapTest
         failingReader,
         JSON_MAPPER,
         null,
-        location
+        location,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     Assertions.assertTrue(location.isWeakReserved(id));
 
@@ -361,9 +363,9 @@ class PartialSegmentCacheBootstrapTest
   }
 
   @Test
-  void testRestoredEntryCanLazilyFetchUndownloadedFile() throws IOException
+  void testRestoredEntryCanFetchUndownloadedFile() throws IOException
   {
-    // a bootstrap-restored entry must keep the segment's real deep-storage range reader so a later query can lazily
+    // a bootstrap-restored entry must keep the segment's real deep-storage range reader so a later query can
     // fetch a bundle/column that wasn't on disk at startup. Previously the entry held a throwing disk-only reader, so
     // this fetch failed with "bootstrap should only read from local disk".
     primeOnDiskState();
@@ -383,9 +385,10 @@ class PartialSegmentCacheBootstrapTest
         "precondition: " + fileToFetch + " should not be downloaded yet"
     );
 
+    mapper.fetchFiles(Set.of(fileToFetch));
     Assertions.assertNotNull(
         mapper.mapFile(fileToFetch),
-        "restored entry must lazily fetch an un-downloaded file from deep storage"
+        "restored entry must be able to fetch an un-downloaded file from deep storage"
     );
     Assertions.assertTrue(mapper.getDownloadedFiles().contains(fileToFetch));
   }
@@ -405,7 +408,9 @@ class PartialSegmentCacheBootstrapTest
             new DirectoryBackedRangeReader(deepStorageDir),
             JSON_MAPPER,
             null,
-            location
+            location,
+            PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+            PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
         )
     );
   }
@@ -453,6 +458,7 @@ class PartialSegmentCacheBootstrapTest
       mapper.close();
       return;
     }
+    mapper.fetchFiles(Set.of(fileInAgg));
     Assertions.assertNotNull(mapper.mapFile(fileInAgg), "expected file " + fileInAgg + " to be downloadable");
     Assertions.assertTrue(mapper.getDownloadedFiles().contains(fileInAgg));
     mapper.close();
@@ -488,7 +494,9 @@ class PartialSegmentCacheBootstrapTest
         new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
         null,
-        ESTIMATE
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     Assertions.assertTrue(seedLocation.reserve(seedMeta));
     seedMeta.mount(seedLocation);
@@ -536,7 +544,9 @@ class PartialSegmentCacheBootstrapTest
         new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
         null,
-        location
+        location,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     metadata.mount(location);
     return metadata;
@@ -550,7 +560,9 @@ class PartialSegmentCacheBootstrapTest
         cacheDir,
         IndexIO.V10_FILE_NAME,
         List.of(),
-        PartialSegmentDownloadListener.NOOP
+        PartialSegmentDownloadListener.NOOP,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
   }
 }

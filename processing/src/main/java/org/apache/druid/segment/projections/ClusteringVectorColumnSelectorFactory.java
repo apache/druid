@@ -21,6 +21,7 @@ package org.apache.druid.segment.projections;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
@@ -40,6 +41,8 @@ import javax.annotation.Nullable;
  * Vectorized counterpart of {@link ClusteringColumnSelectorFactory}. Wraps a delegate
  * {@link VectorColumnSelectorFactory} and intercepts requests for clustering columns, returning constant-typed
  * vector selectors (via {@link ConstantVectorSelectors}). Other column requests pass through to delegating wrappers.
+ * As with the scalar wrapper, a clustering column whose name is also a query virtual column's output is NOT
+ * intercepted but left to the delegate (which resolves virtual columns before physical columns).
  *
  * The factory is mutable via {@link #setDelegate(VectorColumnSelectorFactory, Object[])}: a multi-group
  * {@code ConcatenatingVectorCursor} swaps the underlying delegate + clustering values on each group transition.
@@ -52,12 +55,15 @@ import javax.annotation.Nullable;
 public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelectorFactory
 {
   private final RowSignature clusteringColumns;
+  // Query virtual columns whose output names shadow a clustering column are deferred to the delegate; see class doc.
+  private final VirtualColumns queryVirtualColumns;
   private final int maxVectorSize;
   private VectorColumnSelectorFactory delegate;
   private Object[] clusteringValues;
   // Bumped on every setDelegate(...) so per-call selector wrappers can detect group transitions and rebuild their
   // cached inner state.
   private long generation;
+  private final ReadableVectorInspector readableVectorInspector = new DelegatingReadableVectorInspector(this);
 
   /**
    * Convenience overload that derives {@code maxVectorSize} from the supplied delegate. Used by single-group
@@ -79,9 +85,30 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
       int maxVectorSize
   )
   {
+    this(delegate, clusteringColumns, clusteringValues, maxVectorSize, VirtualColumns.EMPTY);
+  }
+
+  public ClusteringVectorColumnSelectorFactory(
+      VectorColumnSelectorFactory delegate,
+      RowSignature clusteringColumns,
+      Object[] clusteringValues,
+      int maxVectorSize,
+      VirtualColumns queryVirtualColumns
+  )
+  {
     this.clusteringColumns = clusteringColumns;
+    this.queryVirtualColumns = queryVirtualColumns;
     this.maxVectorSize = maxVectorSize;
     setDelegate(delegate, clusteringValues);
+  }
+
+  /**
+   * Whether {@code column} should be served as this group's clustering constant: a clustering column not shadowed by a
+   * query virtual column of the same output name (see class doc).
+   */
+  private boolean servesClusteringConstant(String column)
+  {
+    return clusteringColumns.indexOf(column) >= 0 && !queryVirtualColumns.exists(column);
   }
 
   /**
@@ -120,7 +147,7 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
   @Override
   public ReadableVectorInspector getReadableVectorInspector()
   {
-    return delegate.getReadableVectorInspector();
+    return readableVectorInspector;
   }
 
   @Override
@@ -155,30 +182,28 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
   @Override
   public VectorValueSelector makeValueSelector(String column)
   {
-    final int idx = clusteringColumns.indexOf(column);
-    if (idx < 0) {
+    if (!servesClusteringConstant(column)) {
       return new DelegatingVectorValueSelector(this, column);
     }
-    return new ClusteringVectorValueSelector(this, idx);
+    return new ClusteringVectorValueSelector(this, clusteringColumns.indexOf(column));
   }
 
   @Override
   public VectorObjectSelector makeObjectSelector(String column)
   {
-    final int idx = clusteringColumns.indexOf(column);
-    if (idx < 0) {
+    if (!servesClusteringConstant(column)) {
       return new DelegatingVectorObjectSelector(this, column);
     }
-    return new ClusteringVectorObjectSelector(this, idx);
+    return new ClusteringVectorObjectSelector(this, clusteringColumns.indexOf(column));
   }
 
   @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    final int idx = clusteringColumns.indexOf(column);
-    if (idx < 0) {
-      // Non-clustering columns are stored per cluster group with per-group local dictionaries that are NOT stable
+    if (!servesClusteringConstant(column)) {
+      // Non-clustering columns (or a clustering column shadowed by a query VC, resolved by the delegate) are stored
+      // per cluster group with per-group local dictionaries that are NOT stable
       // across the concatenating vector cursor. We must not advertise dictionary encoding: the vectorized group-by
       // keys on the selector's (per-group-local) IDs when the column reports as dictionary-encoded
       // (GroupByVectorColumnProcessorFactory#useDictionaryEncodedSelector), conflating distinct values across groups.
@@ -194,11 +219,58 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
                                    .setDictionaryValuesUnique(false)
                                    .setHasBitmapIndexes(false);
     }
+    final int idx = clusteringColumns.indexOf(column);
     final ColumnType type = clusteringColumns.getColumnType(idx).orElseThrow();
     if (type.is(ValueType.STRING)) {
       return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities();
     }
     return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
+  }
+
+  /**
+   * A {@link ReadableVectorInspector} bound to the factory, not to one delegate: {@link #getCurrentVectorSize} and
+   * {@link #getId} follow whichever delegate is current, so an inspector grabbed once keeps tracking the active group
+   * across {@code ConcatenatingVectorCursor} transitions. {@link #getMaxVectorSize} is the factory's fixed max.
+   */
+  private static final class DelegatingReadableVectorInspector implements ReadableVectorInspector
+  {
+    private final ClusteringVectorColumnSelectorFactory parent;
+    private int vectorId = NULL_ID;
+    private int lastDelegateId = NULL_ID;
+    private VectorColumnSelectorFactory lastDelegate;
+
+    private DelegatingReadableVectorInspector(ClusteringVectorColumnSelectorFactory parent)
+    {
+      this.parent = parent;
+    }
+
+    @Override
+    public int getMaxVectorSize()
+    {
+      return parent.getMaxVectorSize();
+    }
+
+    @Override
+    public int getCurrentVectorSize()
+    {
+      return parent.getDelegate().getReadableVectorInspector().getCurrentVectorSize();
+    }
+
+    @Override
+    public int getId()
+    {
+      final VectorColumnSelectorFactory delegate = parent.getDelegate();
+      final int id = delegate.getReadableVectorInspector().getId();
+      if (id == NULL_ID) {
+        return NULL_ID;
+      }
+      if (delegate != lastDelegate || id != lastDelegateId) {
+        lastDelegate = delegate;
+        lastDelegateId = id;
+        vectorId++;
+      }
+      return vectorId;
+    }
   }
 
   private static final class ClusteringVectorValueSelector implements VectorValueSelector

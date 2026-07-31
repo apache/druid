@@ -75,10 +75,14 @@ public interface SegmentCacheManager
    * {@link SegmentLoadingException}.
    *
    * @param segment Segment to get on each download (after service bootstrap)
+   * @return the input {@code segment}, or a
+   *         {@link org.apache.druid.client.DataSegmentAndLoadProfile} wrapping it when the historical
+   *         actually materialized a partial-load footprint; the announcement path uses the wrapper's
+   *         {@code realizedBytes} to stamp accurate {@code loadedBytes} on the wire form.
    * @throws SegmentLoadingException If there is an error in loading the segment or insufficient storage space
    * @see SegmentCacheManager#bootstrap(DataSegment, SegmentLazyLoadFailCallback)
    */
-  void load(DataSegment segment) throws SegmentLoadingException;
+  DataSegment load(DataSegment segment) throws SegmentLoadingException;
 
   /**
    * Similar to {@link #load(DataSegment)}, this method loads segments during startup on data nodes. Implementations of
@@ -88,11 +92,13 @@ public interface SegmentCacheManager
    * @param segment    Segment to retrieve during service bootstrap
    * @param loadFailed Callback to execute when segment lazy load failed. This applies only when
    *                   {@code lazyLoadOnStart} is enabled
+   * @return same as {@link #load(DataSegment)}: the input {@code segment} or a
+   *         {@link org.apache.druid.client.DataSegmentAndLoadProfile} wrapping it.
    * @throws SegmentLoadingException - If there is an error in loading the segment or insufficient storage space
    * @see SegmentCacheManager#load(DataSegment)
    * @see SegmentCacheManager#shutdownBootstrap()
    */
-  void bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
+  DataSegment bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
 
   /**
    * Cleanup the segment files cache space used by the segment, releasing the {@link StorageLocation} reservation

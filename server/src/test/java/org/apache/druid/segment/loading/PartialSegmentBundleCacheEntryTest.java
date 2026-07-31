@@ -357,6 +357,7 @@ class PartialSegmentBundleCacheEntryTest
     final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
     Assertions.assertNotNull(mapper);
     final String anyFile = mapper.getInternalFilenames().stream().findFirst().orElseThrow();
+    mapper.fetchFiles(Set.of(anyFile));
     Assertions.assertNotNull(mapper.mapFile(anyFile));
     Assertions.assertEquals(1, mapper.getDownloadedFiles().size());
     final PartialSegmentBundleCacheEntry.BundleContainerRef evictedRef = baseEntry.getContainerRefs().getFirst();
@@ -481,6 +482,7 @@ class PartialSegmentBundleCacheEntryTest
     final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
     Assertions.assertNotNull(mapper);
     final String anyFile = mapper.getInternalFilenames().stream().findFirst().orElseThrow();
+    mapper.fetchFiles(Set.of(anyFile));
     Assertions.assertNotNull(mapper.mapFile(anyFile));
     final PartialSegmentBundleCacheEntry.BundleContainerRef containerRef = base.getContainerRefs().getFirst();
     final String mapperFilename =
@@ -522,7 +524,9 @@ class PartialSegmentBundleCacheEntryTest
         new DirectoryBackedRangeReader(deepDir),
         JSON_MAPPER,
         null,
-        ESTIMATE
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     Assertions.assertTrue(location.reserve(metadata));
     metadata.mount(location);
@@ -570,7 +574,9 @@ class PartialSegmentBundleCacheEntryTest
         new DirectoryBackedRangeReader(deepDir),
         JSON_MAPPER,
         null,
-        ESTIMATE
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     Assertions.assertTrue(location.reserve(metadata));
     metadata.mount(location);
@@ -613,7 +619,9 @@ class PartialSegmentBundleCacheEntryTest
         new DirectoryBackedRangeReader(deepDir),
         JSON_MAPPER,
         null,
-        ESTIMATE
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     Assertions.assertTrue(location.reserve(metadata));
     metadata.mount(location);
@@ -644,7 +652,9 @@ class PartialSegmentBundleCacheEntryTest
         new DirectoryBackedRangeReader(deepDir),
         JSON_MAPPER,
         null,
-        ESTIMATE
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     Assertions.assertTrue(location.reserve(metadata));
     metadata.mount(location);
@@ -890,7 +900,9 @@ class PartialSegmentBundleCacheEntryTest
         new DirectoryBackedRangeReader(deepStorageDir),
         JSON_MAPPER,
         null,
-        ESTIMATE
+        ESTIMATE,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
   }
 
