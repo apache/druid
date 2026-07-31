@@ -20,8 +20,10 @@
 package org.apache.druid.benchmark;
 
 import org.apache.datasketches.hll.HllSketch;
+import org.apache.datasketches.hll.Union;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.datasketches.hll.HllSketchHolder;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -66,11 +68,27 @@ public class DataSketchesHllBenchmark
 
   private final ByteBuffer buf = ByteBuffer.allocateDirect(aggregatorFactory.getMaxIntermediateSize());
 
+  private static final int MERGE_LG_K = 12;
+  private static final int MERGE_NUM_VALUES = (1 << MERGE_LG_K) * 8;
+
   private BufferAggregator aggregator;
+
+  private byte[] mergeSketchBytes1;
+  private byte[] mergeSketchBytes2;
+  private HllSketchHolder mergeHolder1;
+  private HllSketchHolder mergeHolder2;
 
   @Setup(Level.Trial)
   public void setUp()
   {
+    HllSketch s1 = new HllSketch(MERGE_LG_K);
+    HllSketch s2 = new HllSketch(MERGE_LG_K);
+    for (int i = 0; i < MERGE_NUM_VALUES; i++) {
+      s1.update(i);
+      s2.update(MERGE_NUM_VALUES + i);
+    }
+    mergeSketchBytes1 = s1.toCompactByteArray();
+    mergeSketchBytes2 = s2.toCompactByteArray();
     aggregator = aggregatorFactory.factorizeBuffered(
         new ColumnSelectorFactory()
         {
@@ -121,5 +139,23 @@ public class DataSketchesHllBenchmark
   {
     aggregator.init(buf, 0);
     return aggregatorFactory.deserialize(((HllSketch) aggregator.get(buf, 0)).toCompactByteArray());
+  }
+
+  @Setup(Level.Invocation)
+  public void setUpMerge()
+  {
+    Union u1 = new Union(MERGE_LG_K);
+    u1.update(HllSketch.heapify(mergeSketchBytes1));
+    mergeHolder1 = HllSketchHolder.of(u1);
+
+    Union u2 = new Union(MERGE_LG_K);
+    u2.update(HllSketch.heapify(mergeSketchBytes2));
+    mergeHolder2 = HllSketchHolder.of(u2);
+  }
+
+  @Benchmark
+  public HllSketchHolder mergeUnionHolders()
+  {
+    return mergeHolder1.merge(mergeHolder2);
   }
 }

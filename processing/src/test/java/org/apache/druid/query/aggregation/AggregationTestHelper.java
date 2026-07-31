@@ -430,7 +430,7 @@ public class AggregationTestHelper implements Closeable
         }
 
         @Override
-        public InputStream open()
+        public InputStream openRaw()
         {
           return inputDataStream;
         }

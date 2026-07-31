@@ -33,6 +33,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
@@ -97,7 +98,9 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
       SeekableStreamSequenceNumbers<String, String> partitions
   )
   {
-    return new KinesisDataSourceMetadata(partitions);
+    // Include bounded config if this is a bounded task
+    BoundedStreamConfig boundedConfig = task.getIOConfig().getBoundedStreamConfig();
+    return new KinesisDataSourceMetadata(partitions, boundedConfig);
   }
 
   @Override

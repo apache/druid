@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Defines if and when {@link SeekableStreamSupervisor} can become idle.
@@ -57,6 +58,25 @@ public class IdleConfig
   public Long getInactiveAfterMillis()
   {
     return this.inactiveAfterMillis;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    IdleConfig that = (IdleConfig) o;
+    return enabled == that.enabled && Objects.equals(inactiveAfterMillis, that.inactiveAfterMillis);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(enabled, inactiveAfterMillis);
   }
 
   @Override

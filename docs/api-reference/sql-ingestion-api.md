@@ -26,9 +26,8 @@ import TabItem from '@theme/TabItem';
   -->
 
 :::info
- This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
- extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
- ingestion method is right for you.
+ This page describes SQL-based batch ingestion using the [multi-stage query (MSQ) task engine](../multi-stage-query/index.md).
+ Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
 :::
 
 The **Query** view in the web console provides a friendly experience for the multi-stage query task engine (MSQ task engine) and multi-stage query architecture. We recommend using the web console if you don't need a programmatic interface.
@@ -49,7 +48,7 @@ The `/druid/v2/sql/task` endpoint accepts the following:
 - [SQL requests in the JSON-over-HTTP form](sql-api.md#request-body) using the
 `query`, `context`, and `parameters` fields. The endpoint ignores the `resultFormat`, `header`, `typesHeader`, and `sqlTypesHeader` fields.
 - [INSERT](../multi-stage-query/reference.md#insert) and [REPLACE](../multi-stage-query/reference.md#replace) statements.
-- SELECT queries (experimental feature). SELECT query results are collected from workers by the controller, and written into the [task report](#get-the-report-for-a-query-task) as an array of arrays. The behavior and result format of plain SELECT queries (without INSERT or REPLACE) is subject to change.
+- SELECT queries as batch tasks. SELECT query results are collected from workers by the controller and written into the [task report](#get-the-report-for-a-query-task) as an array of arrays.
 
 ### URL
 
@@ -298,7 +297,7 @@ Keep the following in mind when using the task API to view reports:
 
 - The task report for an entire job is associated with the `query_controller` task. The `query_worker` tasks don't have their own reports; their information is incorporated into the controller report.
 - The task report API may report `404 Not Found` temporarily while the task is in the process of starting up.
-- As an experimental feature, the MSQ task engine supports running SELECT queries. SELECT query results are written into
+- The MSQ task engine supports running SELECT queries. SELECT query results are written into
 the `multiStageQuery.payload.results.results` task report key as an array of arrays. The behavior and result format of plain
 SELECT queries (without INSERT or REPLACE) is subject to change.
 - `multiStageQuery.payload.results.resultsTruncated` denotes whether the results of the report have been truncated to prevent the reports from blowing up.

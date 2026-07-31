@@ -101,9 +101,6 @@ public class S3DataSegmentPullerTest
 
     final File tmpDir = temporaryFolder.newFolder("gzTestDir");
 
-    EasyMock.expect(s3Client.doesObjectExist(EasyMock.eq(bucket), EasyMock.eq(key)))
-            .andReturn(true)
-            .once();
     EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(key)))
             .andAnswer(() -> new ResponseInputStream<>(
                 GetObjectResponse.builder().lastModified(Instant.ofEpochMilli(0)).build(),
@@ -152,9 +149,6 @@ public class S3DataSegmentPullerTest
             .build())
         .statusCode(404)
         .build();
-    EasyMock.expect(s3Client.doesObjectExist(EasyMock.eq(bucket), EasyMock.eq(key)))
-            .andReturn(true)
-            .once();
     EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(key)))
             .andThrow(exception)
             .once();
@@ -201,9 +195,6 @@ public class S3DataSegmentPullerTest
             .build())
         .statusCode(503)
         .build();
-    EasyMock.expect(s3Client.doesObjectExist(EasyMock.eq(bucket), EasyMock.eq(key)))
-            .andReturn(true)
-            .once();
     EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(key)))
             .andThrow(exception)
             .once();

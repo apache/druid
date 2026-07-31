@@ -35,8 +35,8 @@ import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -288,11 +288,11 @@ public class CardinalityVectorAggregatorTest extends InitializedNullHandlingTest
     aggregator.init(buf, position);
     aggregator.aggregate(buf, position, 0, numRows);
 
-    Assert.assertEquals(
-        "style1",
+    Assertions.assertEquals(
         expectedResult,
         ((HyperLogLogCollector) aggregator.get(buf, position)).estimateCardinality(),
-        0.01
+        0.01,
+        "style1"
     );
   }
 
@@ -319,13 +319,13 @@ public class CardinalityVectorAggregatorTest extends InitializedNullHandlingTest
 
     aggregator.aggregate(buf, numRows, positions, rows, positionOffset);
 
-    Assert.assertEquals(
-        "style2",
+    Assertions.assertEquals(
         expectedResult,
         ((HyperLogLogCollector) aggregator.get(buf, positionOffset))
             .fold((HyperLogLogCollector) aggregator.get(buf, positionOffset + aggregatorSize))
             .estimateCardinality(),
-        0.01
+        0.01,
+        "style2"
     );
   }
 }

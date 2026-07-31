@@ -30,7 +30,6 @@ import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.DruidServerConfig;
-import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.discovery.WorkerNodeService;
@@ -45,7 +44,6 @@ import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
@@ -78,7 +76,6 @@ import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
@@ -104,7 +101,6 @@ public class CliIndexer extends ServerRunnable
   private static final Logger log = new Logger(CliIndexer.class);
 
   private Properties properties;
-  private boolean isZkEnabled = true;
 
   public CliIndexer()
   {
@@ -115,7 +111,6 @@ public class CliIndexer extends ServerRunnable
   public void configure(Properties properties)
   {
     this.properties = properties;
-    isZkEnabled = ZkEnablementConfig.isEnabled(properties);
   }
 
   @Override
@@ -168,7 +163,7 @@ public class CliIndexer extends ServerRunnable
             CliPeon.bindPeonDataSegmentHandlers(binder);
             CliPeon.bindRealtimeCache(binder);
             CliPeon.bindCoordinatorHandoffNotifer(binder);
-            binder.install(CliMiddleManager.makeWorkerManagementModule(isZkEnabled));
+            binder.install(CliMiddleManager.makeWorkerManagementModule());
 
             binder.bind(AppenderatorsManager.class)
                   .to(UnifiedIndexerAppenderatorsManager.class)
@@ -182,12 +177,8 @@ public class CliIndexer extends ServerRunnable
             LifecycleModule.register(binder, Server.class, RemoteChatHandler.class);
 
             binder.bind(SegmentManager.class).in(LazySingleton.class);
-            binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
             Jerseys.addResource(binder, HistoricalResource.class);
 
-            if (isZkEnabled) {
-              LifecycleModule.register(binder, ZkCoordinator.class);
-            }
             LifecycleModule.register(binder, SegmentCacheBootstrapper.class);
 
             bindAnnouncer(

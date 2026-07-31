@@ -985,6 +985,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                   text="Learn more..."
                   href={`${getLink('DOCS')}/ingestion/schema-model#primary-timestamp`}
                   target="_blank"
+                  rel="noopener noreferrer"
                   intent={Intent.WARNING}
                   minimal
                 />

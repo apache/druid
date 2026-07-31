@@ -25,6 +25,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
+
 /**
  * Manager for addition/removal of segments to server load queues and the
  * corresponding success/failure callbacks.
@@ -51,12 +53,30 @@ public class SegmentLoadQueueManager
    */
   public boolean loadSegment(DataSegment segment, ServerHolder server, SegmentAction action)
   {
+    return loadSegment(segment, server, action, null);
+  }
+
+  /**
+   * Queues load of the segment on the given server, optionally carrying a partial-load profile that wraps the
+   * outbound load spec for the historical.
+   */
+  public boolean loadSegment(
+      DataSegment segment,
+      ServerHolder server,
+      SegmentAction action,
+      @Nullable PartialLoadProfile profile
+  )
+  {
     try {
-      if (!server.startOperation(action, segment)) {
+      if (!server.startOperation(action, segment, profile)) {
         return false;
       }
 
-      server.getPeon().loadSegment(segment, action, null);
+      if (profile == null) {
+        server.getPeon().loadSegment(segment, action, null);
+      } else {
+        server.getPeon().loadSegment(segment, action, profile, null);
+      }
       return true;
     }
     catch (Exception e) {

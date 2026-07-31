@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -67,7 +67,7 @@ public class CacheKeyBuilderTest
                              + cacheable.getCacheKey().length            // cacheable
                              + Integer.BYTES + 4                         // cacheable list
                              + 12;                                       // type keys
-    Assert.assertEquals(expectedSize, actual.length);
+    Assertions.assertEquals(expectedSize, actual.length);
 
     final byte[] expected = ByteBuffer.allocate(expectedSize)
                                       .put((byte) 10)
@@ -102,7 +102,7 @@ public class CacheKeyBuilderTest
                                       .put(cacheable.getCacheKey())
                                       .array();
 
-    Assert.assertArrayEquals(expected, actual);
+    Assertions.assertArrayEquals(expected, actual);
   }
 
   @Test
@@ -116,7 +116,7 @@ public class CacheKeyBuilderTest
         .appendStringsIgnoringOrder(Lists.newArrayList("BA", "AB"))
         .build();
 
-    Assert.assertArrayEquals(key1, key2);
+    Assertions.assertArrayEquals(key1, key2);
 
     final Cacheable cacheable1 = () -> new byte[]{1};
 
@@ -130,7 +130,7 @@ public class CacheKeyBuilderTest
         .appendCacheablesIgnoringOrder(Lists.newArrayList(cacheable2, cacheable1))
         .build();
 
-    Assert.assertArrayEquals(key1, key2);
+    Assertions.assertArrayEquals(key1, key2);
   }
 
   @Test
@@ -253,7 +253,7 @@ public class CacheKeyBuilderTest
   {
     for (int i = 0; i < keys.size(); i++) {
       for (int j = i + 1; j < keys.size(); j++) {
-        Assert.assertFalse(Arrays.equals(keys.get(i), keys.get(j)));
+        Assertions.assertFalse(Arrays.equals(keys.get(i), keys.get(j)));
       }
     }
   }
@@ -269,7 +269,7 @@ public class CacheKeyBuilderTest
         .appendStrings(Collections.singletonList(""))
         .build();
 
-    Assert.assertFalse(Arrays.equals(key1, key2));
+    Assertions.assertFalse(Arrays.equals(key1, key2));
 
     key1 = new CacheKeyBuilder((byte) 10)
         .appendStrings(Collections.singletonList(""))
@@ -279,7 +279,7 @@ public class CacheKeyBuilderTest
         .appendStrings(Collections.singletonList(null))
         .build();
 
-    Assert.assertArrayEquals(key1, key2);
+    Assertions.assertArrayEquals(key1, key2);
   }
 
   @Test
@@ -293,7 +293,7 @@ public class CacheKeyBuilderTest
         .appendCacheables(Collections.singletonList(null))
         .build();
 
-    Assert.assertFalse(Arrays.equals(key1, key2));
+    Assertions.assertFalse(Arrays.equals(key1, key2));
   }
 
   @Test
@@ -314,7 +314,7 @@ public class CacheKeyBuilderTest
                                 .put(StringUtils.toUtf8("test2"))
                                 .array();
 
-    Assert.assertArrayEquals(expected, actual);
+    Assertions.assertArrayEquals(expected, actual);
 
     final Cacheable c1 = () -> StringUtils.toUtf8("te");
 
@@ -335,6 +335,6 @@ public class CacheKeyBuilderTest
                          .put(c3.getCacheKey())
                          .array();
 
-    Assert.assertArrayEquals(expected, actual);
+    Assertions.assertArrayEquals(expected, actual);
   }
 }

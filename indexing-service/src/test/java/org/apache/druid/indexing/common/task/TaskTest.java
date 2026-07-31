@@ -79,12 +79,6 @@ public class TaskTest
     }
 
     @Override
-    public boolean supportsQueries()
-    {
-      return false;
-    }
-
-    @Override
     public String getClasspathPrefix()
     {
       return null;

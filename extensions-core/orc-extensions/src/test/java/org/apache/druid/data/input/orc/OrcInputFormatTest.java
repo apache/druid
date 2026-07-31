@@ -73,6 +73,7 @@ public class OrcInputFormatTest
   {
     EqualsVerifier.forClass(OrcInputFormat.class)
                   .withPrefabValues(Configuration.class, new Configuration(), new Configuration())
+                  .withIgnoredFields("fileSystemInitialized")
                   .usingGetClass()
                   .verify();
   }

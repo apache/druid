@@ -22,7 +22,7 @@ title: "Joins"
   ~ under the License.
   -->
 
-Apache Druid has two features related to joining of data:
+Apache&circledR; Druid has two features related to joining of data:
 
 1. [Join](datasource.md#join) operators. These are available using a [join datasource](datasource.md#join) in native
 queries, or using the [JOIN operator](sql.md) in Druid SQL. Refer to the

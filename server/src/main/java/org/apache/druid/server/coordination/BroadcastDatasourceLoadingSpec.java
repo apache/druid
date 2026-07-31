@@ -51,7 +51,19 @@ public class BroadcastDatasourceLoadingSpec
 
   public enum Mode
   {
-    ALL, NONE, ONLY_REQUIRED
+    ALL(true), NONE(false), ONLY_REQUIRED(true);
+
+    private final boolean needsBroadcastSegments;
+
+    Mode(boolean needsBroadcastSegments)
+    {
+      this.needsBroadcastSegments = needsBroadcastSegments;
+    }
+
+    public boolean needsBroadcastSegments()
+    {
+      return needsBroadcastSegments;
+    }
   }
 
   private final Mode mode;

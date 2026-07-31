@@ -21,6 +21,7 @@ package org.apache.druid.testing.embedded.auth;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.ExceptionMatcher;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.query.http.ClientSqlQuery;
@@ -57,6 +58,12 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   public static final String USER_1 = "user1";
   public static final String ROLE_1 = "role1";
   public static final String USER_1_PASSWORD = "password1";
+
+  /**
+   * Attempts allowed for a request while basic-auth changes reach the broker, which the
+   * coordinator then propagates asynchronously.
+   */
+  private static final int AUTH_PROPAGATION_ATTEMPTS = 5;
 
   private SecurityClient securityClient;
   private EmbeddedServiceClient userClient;
@@ -134,7 +141,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void testIngestionWithPermissions()
+  public void testIngestionWithPermissions() throws Exception
   {
     List<ResourceAction> permissions = ImmutableList.of(
         new ResourceAction(new Resource(".*", "DATASOURCE"), Action.READ),
@@ -150,11 +157,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
         Resources.DataFile.tinyWiki1Json()
     );
 
-    final SqlTaskStatus taskStatus = userClient.onAnyBroker(
-        b -> b.submitSqlTask(
-            new ClientSqlQuery(queryLocal, null, false, false, false, Map.of(), List.of())
-        )
-    );
+    final SqlTaskStatus taskStatus = submitSqlTaskWhenAuthorized(queryLocal);
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
   }
 
@@ -173,16 +176,18 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
 
     String exportQuery =
         StringUtils.format(
-            "INSERT INTO extern(%s(exportPath => '%s'))\n"
-            + "AS CSV\n"
-            + "SELECT page, added, delta\n"
-            + "FROM TABLE(\n"
-            + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"%s\"]}',\n"
-            + "    '{\"type\":\"json\"}',\n"
-            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
-            + "  )\n"
-            + ")\n",
+            """
+                INSERT INTO extern(%s(exportPath => '%s'))
+                AS CSV
+                SELECT page, added, delta
+                FROM TABLE(
+                  EXTERN(
+                    '{"type":"local","files":["%s"]}',
+                    '{"type":"json"}',
+                    '[{"type":"string","name":"timestamp"},{"type":"string","name":"isRobot"},{"type":"string","name":"diffUrl"},{"type":"long","name":"added"},{"type":"string","name":"countryIsoCode"},{"type":"string","name":"regionName"},{"type":"string","name":"channel"},{"type":"string","name":"flags"},{"type":"long","name":"delta"},{"type":"string","name":"isUnpatrolled"},{"type":"string","name":"isNew"},{"type":"double","name":"deltaBucket"},{"type":"string","name":"isMinor"},{"type":"string","name":"isAnonymous"},{"type":"long","name":"deleted"},{"type":"string","name":"cityName"},{"type":"long","name":"metroCode"},{"type":"string","name":"namespace"},{"type":"string","name":"comment"},{"type":"string","name":"page"},{"type":"long","name":"commentLength"},{"type":"string","name":"countryName"},{"type":"string","name":"user"},{"type":"string","name":"regionIsoCode"}]'
+                  )
+                )
+                """,
             LocalFileExportStorageProvider.TYPE_NAME,
             cluster.getTestFolder().getOrCreateFolder("msq-export").getAbsolutePath(),
             Resources.DataFile.tinyWiki1Json().getAbsolutePath()
@@ -192,7 +197,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void testExportWithPermissions()
+  public void testExportWithPermissions() throws Exception
   {
     // No external write permissions for s3
     List<ResourceAction> permissions = ImmutableList.of(
@@ -206,41 +211,76 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
 
     String exportQuery =
         StringUtils.format(
-            "INSERT INTO extern(%s(exportPath => '%s'))\n"
-            + "AS CSV\n"
-            + "SELECT page, added, delta\n"
-            + "FROM TABLE(\n"
-            + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"%s\"]}',\n"
-            + "    '{\"type\":\"json\"}',\n"
-            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
-            + "  )\n"
-            + ")\n",
+            """
+                INSERT INTO extern(%s(exportPath => '%s'))
+                AS CSV
+                SELECT page, added, delta
+                FROM TABLE(
+                  EXTERN(
+                    '{"type":"local","files":["%s"]}',
+                    '{"type":"json"}',
+                    '[{"type":"string","name":"timestamp"},{"type":"string","name":"isRobot"},{"type":"string","name":"diffUrl"},{"type":"long","name":"added"},{"type":"string","name":"countryIsoCode"},{"type":"string","name":"regionName"},{"type":"string","name":"channel"},{"type":"string","name":"flags"},{"type":"long","name":"delta"},{"type":"string","name":"isUnpatrolled"},{"type":"string","name":"isNew"},{"type":"double","name":"deltaBucket"},{"type":"string","name":"isMinor"},{"type":"string","name":"isAnonymous"},{"type":"long","name":"deleted"},{"type":"string","name":"cityName"},{"type":"long","name":"metroCode"},{"type":"string","name":"namespace"},{"type":"string","name":"comment"},{"type":"string","name":"page"},{"type":"long","name":"commentLength"},{"type":"string","name":"countryName"},{"type":"string","name":"user"},{"type":"string","name":"regionIsoCode"}]'
+                  )
+                )
+                """,
             LocalFileExportStorageProvider.TYPE_NAME,
             new File(exportDirectory.get(), dataSource).getAbsolutePath(),
             Resources.DataFile.tinyWiki1Json()
         );
 
-    final SqlTaskStatus taskStatus = userClient.onAnyBroker(
-        b -> b.submitSqlTask(
-            new ClientSqlQuery(exportQuery, null, false, false, false, Map.of(), List.of())
-        )
-    );
+    final SqlTaskStatus taskStatus = submitSqlTaskWhenAuthorized(exportQuery);
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
   }
 
+  /**
+   * Submits an MSQ task to an arbitrary Broker as {@link #USER_1}.
+   */
+  private SqlTaskStatus submitSqlTaskAsUser(String sql)
+  {
+    return userClient.onAnyBroker(
+        b -> b.submitSqlTask(
+            new ClientSqlQuery(sql, null, false, false, false, Map.of(), List.of())
+        )
+    );
+  }
+
+  /**
+   * Submits an MSQ task as {@link #USER_1}.
+   */
+  private SqlTaskStatus submitSqlTaskWhenAuthorized(String sql) throws Exception
+  {
+    return RetryUtils.retry(
+        () -> submitSqlTaskAsUser(sql),
+        e -> unauthorizedExceptionMatcher().matches(e) || forbiddenExceptionMatcher().matches(e),
+        AUTH_PROPAGATION_ATTEMPTS
+    );
+  }
+
+  /**
+   * Asserts that submitting SQL as an unauthorized user fails with 403 Forbidden.
+   */
   private void verifySqlSubmitFailsWith403Forbidden(String sql)
   {
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> userClient.onAnyBroker(
-                b -> b.submitSqlTask(
-                    new ClientSqlQuery(sql, null, false, false, false, Map.of(), List.of())
-                )
-            )
-        ),
-        ExceptionMatcher.of(Exception.class).expectMessageContains("403 Forbidden")
-    );
+    try {
+      RetryUtils.retry(
+          () -> submitSqlTaskAsUser(sql),
+          e -> unauthorizedExceptionMatcher().matches(e),
+          AUTH_PROPAGATION_ATTEMPTS
+      );
+      Assertions.fail("Expected submit to fail with 403 Forbidden");
+    }
+    catch (Exception e) {
+      MatcherAssert.assertThat(e, forbiddenExceptionMatcher());
+    }
+  }
+
+  private static ExceptionMatcher unauthorizedExceptionMatcher()
+  {
+    return ExceptionMatcher.of(Exception.class).expectMessageContains("401 Unauthorized");
+  }
+
+  private static ExceptionMatcher forbiddenExceptionMatcher()
+  {
+    return ExceptionMatcher.of(Exception.class).expectMessageContains("403 Forbidden");
   }
 }

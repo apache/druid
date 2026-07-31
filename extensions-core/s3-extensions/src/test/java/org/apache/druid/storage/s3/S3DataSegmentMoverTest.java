@@ -38,6 +38,7 @@ import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
 import software.amazon.awssdk.services.s3.model.GetBucketAclResponse;
 import software.amazon.awssdk.services.s3.model.Grant;
 import software.amazon.awssdk.services.s3.model.Grantee;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.Owner;
@@ -121,6 +122,45 @@ public class S3DataSegmentMoverTest
     );
 
     Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
+
+    Assert.assertEquals(
+        "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
+        MapUtils.getString(targetLoadSpec, "key")
+    );
+    Assert.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
+    Assert.assertFalse(mockS3Client.didMove());
+  }
+
+  @Test
+  public void testMoveNoopWhenHeadReturnsGeneric404() throws Exception
+  {
+    final MockAmazonS3Client mockS3Client = new MockAmazonS3Client()
+    {
+      @Override
+      public HeadObjectResponse getObjectMetadata(String bucketName, String key)
+      {
+        if (doesObjectExist(bucketName, key)) {
+          return HeadObjectResponse.builder().storageClass(StorageClass.STANDARD).build();
+        }
+        throw (S3Exception) S3Exception.builder().statusCode(404).build();
+      }
+    };
+    final S3DataSegmentMover mover = new S3DataSegmentMover(
+        Suppliers.ofInstance(mockS3Client),
+        new S3DataSegmentPusherConfig()
+    );
+
+    mockS3Client.putObject(
+        "archive",
+        "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip"
+    );
+
+    final DataSegment movedSegment = mover.move(
+        SOURCE_SEGMENT,
+        ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
+    );
+
+    final Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
 
     Assert.assertEquals(
         "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
@@ -248,6 +288,18 @@ public class S3DataSegmentMoverTest
     {
       Set<String> objects = storage.get(bucketName);
       return (objects != null && objects.contains(objectKey));
+    }
+
+    @Override
+    public HeadObjectResponse getObjectMetadata(String bucketName, String key)
+    {
+      if (doesObjectExist(bucketName, key)) {
+        return HeadObjectResponse.builder().storageClass(StorageClass.STANDARD).build();
+      }
+      throw (S3Exception) S3Exception.builder()
+          .awsErrorDetails(AwsErrorDetails.builder().errorCode("NoSuchKey").build())
+          .statusCode(404)
+          .build();
     }
 
     @Override

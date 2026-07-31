@@ -36,13 +36,21 @@ public abstract class RetryingInputEntity implements InputEntity
   @Override
   public InputStream open() throws IOException
   {
-    RetryingInputStream<?> retryingInputStream = new RetryingInputStream<>(
+    return CompressionUtils.decompress(openRaw(), getPath());
+  }
+
+  /**
+   * Opens a raw {@link InputStream} on the entity, without decompression.
+   */
+  @Override
+  public InputStream openRaw() throws IOException
+  {
+    return new RetryingInputStream<>(
         this,
         new RetryingInputEntityOpenFunction(),
         getRetryCondition(),
         getMaxRetries()
     );
-    return CompressionUtils.decompress(retryingInputStream, getPath());
   }
 
   // override this in sub-classes to customize retries

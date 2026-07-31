@@ -42,7 +42,7 @@ command = "git log {}..{} --oneline | tail -1".format(upstream_master, upstream_
 
 # Find the commit where the previous release branch was cut from master
 previous_branch_first_commit = subprocess.check_output(command, shell=True).decode('UTF-8')
-match_result = re.match("(\w+) .*", previous_branch_first_commit)
+match_result = re.match(r"(\w+) .*", previous_branch_first_commit)
 previous_branch_first_commit = match_result.group(1)
 
 print("Previous branch: {}, first commit: {}".format(upstream_previous, previous_branch_first_commit))

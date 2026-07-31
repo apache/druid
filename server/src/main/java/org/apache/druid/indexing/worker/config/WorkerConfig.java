@@ -71,6 +71,9 @@ public class WorkerConfig
   @JsonProperty
   private boolean startAlwaysEnabled = false;
 
+  @JsonProperty
+  private boolean useSeparateTaskLogFiles = true;
+
   public String getIp()
   {
     return ip;
@@ -138,6 +141,16 @@ public class WorkerConfig
     return startAlwaysEnabled;
   }
 
+  /**
+   * Whether {@link org.apache.druid.indexing.overlord.ThreadingTaskRunner} routes each task's log output to a
+   * separate file via Log4j thread context. When {@code false}, task logs are written only to the indexer process
+   * log, and per-task log files are not created or pushed to the {@link org.apache.druid.tasklogs.TaskLogPusher}.
+   */
+  public boolean isUseSeparateTaskLogFiles()
+  {
+    return useSeparateTaskLogFiles;
+  }
+
   public Builder cloneBuilder()
   {
     return new Builder(this);
@@ -157,6 +170,7 @@ public class WorkerConfig
     private long globalIngestionHeapLimitBytes;
     private int numConcurrentMerges;
     private boolean startAlwaysEnabled;
+    private boolean useSeparateTaskLogFiles;
 
     private Builder(WorkerConfig input)
     {
@@ -172,6 +186,7 @@ public class WorkerConfig
       this.globalIngestionHeapLimitBytes = input.globalIngestionHeapLimitBytes;
       this.numConcurrentMerges = input.numConcurrentMerges;
       this.startAlwaysEnabled = input.startAlwaysEnabled;
+      this.useSeparateTaskLogFiles = input.useSeparateTaskLogFiles;
     }
 
     public Builder setIp(String ip)
@@ -246,6 +261,12 @@ public class WorkerConfig
       return this;
     }
 
+    public Builder setUseSeparateTaskLogFiles(boolean useSeparateTaskLogFiles)
+    {
+      this.useSeparateTaskLogFiles = useSeparateTaskLogFiles;
+      return this;
+    }
+
     public WorkerConfig build()
     {
       final WorkerConfig retVal = new WorkerConfig();
@@ -261,6 +282,7 @@ public class WorkerConfig
       retVal.globalIngestionHeapLimitBytes = this.globalIngestionHeapLimitBytes;
       retVal.numConcurrentMerges = this.numConcurrentMerges;
       retVal.startAlwaysEnabled = this.startAlwaysEnabled;
+      retVal.useSeparateTaskLogFiles = this.useSeparateTaskLogFiles;
       return retVal;
     }
   }

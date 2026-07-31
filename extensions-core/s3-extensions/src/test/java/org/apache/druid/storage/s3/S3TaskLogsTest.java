@@ -39,16 +39,16 @@ import org.junit.runner.RunWith;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
-import software.amazon.awssdk.services.s3.model.GetBucketAclResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.Grant;
+import software.amazon.awssdk.services.s3.model.Grantee;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
-import software.amazon.awssdk.services.s3.model.Owner;
 import software.amazon.awssdk.services.s3.model.Permission;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.model.Type;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -633,22 +633,19 @@ public class S3TaskLogsTest extends EasyMockSupport
   private List<Grant> testPushInternal(boolean disableAcl, String ownerId, String ownerDisplayName) throws Exception
   {
     List<Grant> capturedGrants = new ArrayList<>();
-    Owner owner = Owner.builder()
-        .id(ownerId)
-        .displayName(ownerDisplayName)
-        .build();
 
     if (disableAcl) {
       // When ACL is disabled, upload is called with null grant
       s3Client.upload(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.isNull(Grant.class));
       EasyMock.expectLastCall().once();
     } else {
-      // When ACL is enabled, getBucketAcl is called and a grant is created
-      GetBucketAclResponse aclResponse = GetBucketAclResponse.builder()
-          .owner(owner)
+      // When ACL is enabled, getBucketOwnerGrant is called and a grant is created
+      Grant ownerGrant = Grant.builder()
+          .grantee(Grantee.builder().type(Type.CANONICAL_USER).id(ownerId).build())
+          .permission(Permission.FULL_CONTROL)
           .build();
-      EasyMock.expect(s3Client.getBucketAcl(TEST_BUCKET))
-              .andReturn(aclResponse)
+      EasyMock.expect(s3Client.getBucketOwnerGrant(TEST_BUCKET))
+              .andReturn(ownerGrant)
               .once();
 
       Capture<Grant> grantCapture = Capture.newInstance(CaptureType.FIRST);

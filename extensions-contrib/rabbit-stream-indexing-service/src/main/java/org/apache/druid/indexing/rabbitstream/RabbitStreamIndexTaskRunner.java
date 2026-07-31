@@ -33,6 +33,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nonnull;
@@ -93,7 +94,9 @@ public class RabbitStreamIndexTaskRunner
   protected SeekableStreamDataSourceMetadata<String, Long> createDataSourceMetadata(
       SeekableStreamSequenceNumbers<String, Long> partitions)
   {
-    return new RabbitStreamDataSourceMetadata(partitions);
+    // Include bounded config if this is a bounded task
+    BoundedStreamConfig boundedConfig = task.getIOConfig().getBoundedStreamConfig();
+    return new RabbitStreamDataSourceMetadata(partitions, boundedConfig);
   }
 
   @Override

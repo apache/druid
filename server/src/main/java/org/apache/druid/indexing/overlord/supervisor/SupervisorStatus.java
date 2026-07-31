@@ -57,7 +57,8 @@ public class SupervisorStatus
   )
   {
     this.id = Preconditions.checkNotNull(builder.id, "id");
-    this.dataSource = builder.dataSource;
+    // Fallback to id for rolling upgrade purposes. See https://github.com/apache/druid/pull/19425
+    this.dataSource = builder.dataSource != null ? builder.dataSource : this.id;
     this.state = builder.state;
     this.detailedState = builder.detailedState;
     this.healthy = builder.healthy;

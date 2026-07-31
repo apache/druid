@@ -48,13 +48,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.hdfs.HdfsStorageDruidModule;
 import org.apache.druid.utils.Streams;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -66,6 +62,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -147,45 +144,59 @@ public class HdfsInputSource
     }
   }
 
+  /**
+   * Matches Hadoop's FileInputFormat hidden-file filter: rejects paths whose name starts with '_' or '.'.
+   */
+  private static boolean isHiddenPath(Path path)
+  {
+    final String name = path.getName();
+    return name.startsWith("_") || name.startsWith(".");
+  }
+
   public static Collection<Path> getPaths(List<String> inputPaths, Configuration configuration) throws IOException
   {
     if (inputPaths.isEmpty()) {
       return Collections.emptySet();
     }
 
-    // Use FileInputFormat to read splits. To do this, we need to make a fake Job.
-    Job job = Job.getInstance(configuration);
-
-    // Add paths to the fake JobContext.
-    for (String inputPath : inputPaths) {
-      FileInputFormat.addInputPaths(job, inputPath);
+    final Set<Path> paths = new LinkedHashSet<>();
+    for (final String inputPath : inputPaths) {
+      final String[] splitPaths = org.apache.hadoop.util.StringUtils.split(inputPath);
+      for (final String singlePath : splitPaths) {
+        final Path p = new Path(singlePath);
+        final FileSystem fs = p.getFileSystem(configuration);
+        final FileStatus[] statuses = fs.globStatus(p);
+        if (statuses != null) {
+          for (final FileStatus status : statuses) {
+            if (isHiddenPath(status.getPath())) {
+              continue;
+            }
+            if (status.isDirectory()) {
+              addFilesFromDirectory(fs, status.getPath(), paths);
+            } else if (status.getLen() > 0) {
+              paths.add(status.getPath());
+            }
+          }
+        }
+      }
     }
-
-    return new HdfsFileInputFormat().getSplits(job)
-                                    .stream()
-                                    .filter(split -> ((FileSplit) split).getLength() > 0)
-                                    .map(split -> ((FileSplit) split).getPath())
-                                    .collect(Collectors.toSet());
+    return paths;
   }
 
   /**
-   * Helper for leveraging hadoop code to interpret HDFS paths with globs
+   * Lists files in a directory non-recursively, matching the behavior of Hadoop's FileInputFormat
+   * when mapreduce.input.fileinputformat.input.dir.recursive is not set (the default).
+   * Hidden files (names starting with '_' or '.') and subdirectories are skipped.
    */
-  private static class HdfsFileInputFormat extends FileInputFormat<Object, Object>
+  private static void addFilesFromDirectory(FileSystem fs, Path dir, Set<Path> paths) throws IOException
   {
-    @Override
-    public RecordReader<Object, Object> createRecordReader(
-        org.apache.hadoop.mapreduce.InputSplit inputSplit,
-        TaskAttemptContext taskAttemptContext
-    )
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected boolean isSplitable(JobContext context, Path filename)
-    {
-      return false;  // prevent generating extra paths
+    final FileStatus[] children = fs.listStatus(dir);
+    if (children != null) {
+      for (final FileStatus child : children) {
+        if (!child.isDirectory() && !isHiddenPath(child.getPath()) && child.getLen() > 0) {
+          paths.add(child.getPath());
+        }
+      }
     }
   }
 

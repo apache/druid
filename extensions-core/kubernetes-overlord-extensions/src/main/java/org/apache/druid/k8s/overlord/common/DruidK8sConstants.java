@@ -46,6 +46,7 @@ public class DruidK8sConstants
   public static final String OVERLORD_NAMESPACE_KEY = "druid.overlord.namespace";
   public static final String DRUID_LABEL_PREFIX = "druid.";
   public static final String BASE_TEMPLATE_NAME = "base";
+  public static final String TASK_CONTEXT_POD_TEMPLATE_SELECTION_KEY = "podTemplateSelectionKey";
   public static final long MAX_ENV_VARIABLE_KBS = 130048; // 127 KB
 
   public static final ImmutableList<String> BLACKLISTED_PEON_POD_ERROR_MESSAGES = ImmutableList.of(

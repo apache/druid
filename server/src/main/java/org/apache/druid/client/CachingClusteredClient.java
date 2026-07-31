@@ -61,6 +61,7 @@ import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContexts.RealtimeSegmentsMode;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -444,7 +445,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();
       final SegmentPruner segmentPruner = ev.getSegmentPruner();
 
-      boolean isRealtimeSegmentOnly = query.context().isRealtimeSegmentsOnly();
+      RealtimeSegmentsMode realtimeSegmentsMode = query.context().getRealtimeSegmentsMode();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Collection<PartitionChunk<ServerSelector>> filteredChunks;
@@ -458,8 +459,19 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
-          if (isRealtimeSegmentOnly && !server.isRealtimeSegment()) {
-            continue; // Skip historical segments when only realtime segments are requested
+          switch (realtimeSegmentsMode) {
+            case EXCLUSIVE:
+              if (!server.isRealtimeSegment()) {
+                continue;
+              }
+              break;
+            case EXCLUDE:
+              if (server.isRealtimeSegment()) {
+                continue;
+              }
+              break;
+            case INCLUDE:
+              break;
           }
           final SegmentDescriptor segment = new SegmentDescriptor(
               holder.getInterval(),

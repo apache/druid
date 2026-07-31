@@ -56,6 +56,7 @@ public class LimitedTemporaryStorage implements Closeable
 
   private final AtomicLong bytesUsed = new AtomicLong();
   private final Set<File> files = new TreeSet<>();
+  private int nextFileIndex = 0;
 
   private volatile boolean closed = false;
 
@@ -105,7 +106,7 @@ public class LimitedTemporaryStorage implements Closeable
         createdStorageDirectory = true;
       }
 
-      final File theFile = new File(storageDirectory, StringUtils.format("%08d.tmp", files.size()));
+      final File theFile = new File(storageDirectory, StringUtils.format("%08d.tmp", nextFileIndex++));
       final EnumSet<StandardOpenOption> openOptions = EnumSet.of(
           StandardOpenOption.CREATE_NEW,
           StandardOpenOption.WRITE
@@ -121,8 +122,10 @@ public class LimitedTemporaryStorage implements Closeable
   {
     synchronized (files) {
       if (files.contains(file)) {
+        final long fileSize = file.length();
         try {
           Files.delete(file.toPath());
+          bytesUsed.addAndGet(-fileSize);
         }
         catch (IOException e) {
           log.warn(e, "Cannot delete file: %s", file);
@@ -143,6 +146,14 @@ public class LimitedTemporaryStorage implements Closeable
     return bytesUsed.get();
   }
 
+  @VisibleForTesting
+  public int currentFileCount()
+  {
+    synchronized (files) {
+      return files.size();
+    }
+  }
+
   @Override
   public void close()
   {
@@ -151,8 +162,6 @@ public class LimitedTemporaryStorage implements Closeable
         return;
       }
       closed = true;
-
-      perQueryStatsContainer.spilledBytes(bytesUsed.get());
 
       bytesUsed.set(0);
 

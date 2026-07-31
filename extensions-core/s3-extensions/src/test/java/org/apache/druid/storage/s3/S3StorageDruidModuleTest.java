@@ -19,11 +19,12 @@
 
 package org.apache.druid.storage.s3;
 
-import com.google.common.collect.ImmutableList;
+import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.apache.druid.common.aws.AWSModule;
-import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ServerModule;
+import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.segment.loading.OmniDataSegmentArchiver;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
@@ -70,12 +71,12 @@ public class S3StorageDruidModuleTest
 
   private static Injector createInjector()
   {
-    return GuiceInjectors.makeStartupInjectorWithModules(
-        ImmutableList.of(
-            new AWSModule(),
-            new S3StorageDruidModule(),
-            new ServerModule()
-        )
+    final Injector startupInjector = new StartupInjectorBuilder().forServer().build();
+    return Guice.createInjector(
+        startupInjector.getInstance(DruidSecondaryModule.class),
+        new AWSModule(),
+        new S3StorageDruidModule(),
+        new ServerModule()
     );
   }
 }

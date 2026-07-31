@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -32,9 +31,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.curator.discovery.LatchableServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -96,7 +93,6 @@ public class DruidCoordinatorTest
 {
   private static final long COORDINATOR_START_DELAY = 1;
   private static final long COORDINATOR_PERIOD = 100;
-  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
   private DruidCoordinator coordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
@@ -106,8 +102,6 @@ public class DruidCoordinatorTest
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private LoadQueueTaskMaster loadQueueTaskMaster;
   private MetadataRuleManager metadataRuleManager;
-  private CountDownLatch leaderAnnouncerLatch;
-  private CountDownLatch leaderUnannouncerLatch;
   private DruidCoordinatorConfig druidCoordinatorConfig;
   private DruidNode druidNode;
   private OverlordClient overlordClient;
@@ -150,8 +144,6 @@ public class DruidCoordinatorTest
     );
     druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
     scheduledExecutorFactory = ScheduledExecutors::fixed;
-    leaderAnnouncerLatch = new CountDownLatch(1);
-    leaderUnannouncerLatch = new CountDownLatch(1);
     serviceEmitter = new LatchableServiceEmitter();
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
@@ -162,8 +154,6 @@ public class DruidCoordinatorTest
         overlordClient,
         loadQueueTaskMaster,
         new SegmentLoadQueueManager(serverInventoryView, loadQueueTaskMaster),
-        new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
-        druidNode,
         new CoordinatorCustomDutyGroups(ImmutableSet.of()),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
@@ -172,7 +162,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
   }
 
@@ -245,7 +235,6 @@ public class DruidCoordinatorTest
     Assert.assertNull(coordinator.getBroadcastSegments());
 
     // Wait for this coordinator to become leader
-    leaderAnnouncerLatch.await();
 
     // This coordinator should be leader by now
     Assert.assertTrue(coordinator.isLeader());
@@ -294,7 +283,6 @@ public class DruidCoordinatorTest
     Assert.assertEquals(Integer.valueOf(2), coordinator.getReplicationFactor(dataSegment.getId()));
 
     coordinator.stop();
-    leaderUnannouncerLatch.await();
 
     Assert.assertFalse(coordinator.isLeader());
     Assert.assertNull(coordinator.getCurrentLeader());
@@ -341,7 +329,6 @@ public class DruidCoordinatorTest
     EasyMock.replay(metadataRuleManager, serverInventoryView, loadQueueTaskMaster);
 
     coordinator.start();
-    leaderAnnouncerLatch.await(); // Wait for this coordinator to become leader
 
     serviceEmitter.coordinatorRunLatch.await();
 
@@ -362,7 +349,6 @@ public class DruidCoordinatorTest
     dataSegments.forEach(dataSegment -> Assert.assertEquals(Integer.valueOf(1), coordinator.getReplicationFactor(dataSegment.getId())));
 
     coordinator.stop();
-    leaderUnannouncerLatch.await();
 
     EasyMock.verify(serverInventoryView);
     EasyMock.verify(segmentsMetadataManager);
@@ -425,7 +411,6 @@ public class DruidCoordinatorTest
     EasyMock.replay(metadataRuleManager, serverInventoryView, loadQueueTaskMaster);
 
     coordinator.start();
-    leaderAnnouncerLatch.await(); // Wait for this coordinator to become leader
 
     serviceEmitter.coordinatorRunLatch.await();
 
@@ -450,7 +435,6 @@ public class DruidCoordinatorTest
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName2).getLong(dataSource));
 
     coordinator.stop();
-    leaderUnannouncerLatch.await();
 
     EasyMock.verify(serverInventoryView);
     EasyMock.verify(segmentsMetadataManager);
@@ -463,7 +447,7 @@ public class DruidCoordinatorTest
   {
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
             .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
+    EasyMock.replay(segmentsMetadataManager, metadataRuleManager);
 
     CoordinatorCustomDutyGroups emptyCustomDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of());
     coordinator = new DruidCoordinator(
@@ -475,8 +459,6 @@ public class DruidCoordinatorTest
         overlordClient,
         loadQueueTaskMaster,
         null,
-        new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
-        druidNode,
         emptyCustomDutyGroups,
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
@@ -485,7 +467,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
     coordinator.start();
 
@@ -512,7 +494,7 @@ public class DruidCoordinatorTest
   {
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
             .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
+    EasyMock.replay(segmentsMetadataManager, metadataRuleManager);
     CoordinatorCustomDutyGroup group = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
@@ -528,8 +510,6 @@ public class DruidCoordinatorTest
         overlordClient,
         loadQueueTaskMaster,
         null,
-        new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
-        druidNode,
         customDutyGroups,
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
@@ -538,7 +518,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
     coordinator.start();
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
@@ -565,7 +545,7 @@ public class DruidCoordinatorTest
   {
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
             .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
+    EasyMock.replay(segmentsMetadataManager, metadataRuleManager);
     CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
@@ -581,8 +561,6 @@ public class DruidCoordinatorTest
         overlordClient,
         loadQueueTaskMaster,
         null,
-        new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
-        druidNode,
         customDutyGroups,
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
@@ -591,7 +569,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
     coordinator.start();
 
@@ -656,7 +634,7 @@ public class DruidCoordinatorTest
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(Collections.emptyList()).anyTimes();
-    EasyMock.replay(serverInventoryView, loadQueueTaskMaster, segmentsMetadataManager);
+    EasyMock.replay(serverInventoryView, loadQueueTaskMaster, segmentsMetadataManager, metadataRuleManager);
 
     // Create CoordinatorCustomDutyGroups
     // We will have two groups and each group has one duty
@@ -692,8 +670,6 @@ public class DruidCoordinatorTest
         overlordClient,
         loadQueueTaskMaster,
         new SegmentLoadQueueManager(serverInventoryView, loadQueueTaskMaster),
-        new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
-        druidNode,
         groups,
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
@@ -702,14 +678,18 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class)
+        new CloneStatusManager()
     );
     coordinator.start();
-
-    // Wait until group 1 duty ran for latch1 to countdown
-    latch1.await();
-    // Wait until group 2 duty ran for latch2 to countdown
-    latch2.await();
+    try {
+      // Wait until group 1 duty ran for latch1 to countdown
+      latch1.await();
+      // Wait until group 2 duty ran for latch2 to countdown
+      latch2.await();
+    }
+    finally {
+      coordinator.stop();
+    }
   }
 
   @Test(timeout = 60_000L)
@@ -783,7 +763,6 @@ public class DruidCoordinatorTest
     coordinator.start();
     
     // Wait for this coordinator to become leader
-    leaderAnnouncerLatch.await();
 
     // This coordinator should be leader by now
     Assert.assertTrue(coordinator.isLeader());
@@ -816,7 +795,6 @@ public class DruidCoordinatorTest
     Assert.assertEquals(1, numsDeepStorageOnlySegmentsPerDataSource.getInt(dataSource));
 
     coordinator.stop();
-    leaderUnannouncerLatch.await();
 
     Assert.assertFalse(coordinator.isLeader());
     Assert.assertNull(coordinator.getCurrentLeader());

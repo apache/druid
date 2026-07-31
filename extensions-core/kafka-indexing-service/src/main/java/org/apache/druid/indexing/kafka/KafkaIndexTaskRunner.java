@@ -34,6 +34,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.utils.CollectionUtils;
@@ -174,7 +175,9 @@ public class KafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<KafkaTop
       SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> partitions
   )
   {
-    return new KafkaDataSourceMetadata(partitions);
+    // Include bounded config if this is a bounded task
+    BoundedStreamConfig boundedConfig = task.getIOConfig().getBoundedStreamConfig();
+    return new KafkaDataSourceMetadata(partitions, boundedConfig);
   }
 
   @Override

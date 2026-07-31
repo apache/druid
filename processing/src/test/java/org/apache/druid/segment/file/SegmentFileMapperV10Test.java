@@ -22,12 +22,12 @@ package org.apache.druid.segment.file;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
-import junit.framework.Assert;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -62,8 +62,8 @@ class SegmentFileMapperV10Test
     File[] files = baseDir.listFiles();
     File segmentFile = new File(baseDir, IndexIO.V10_FILE_NAME);
 
-    Assert.assertEquals(1, files.length); // v10 format has a single file
-    Assert.assertEquals(segmentFile, files[0]);
+    Assertions.assertEquals(1, files.length); // v10 format has a single file
+    Assertions.assertEquals(segmentFile, files[0]);
 
     try (SegmentFileMapperV10 mapper = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER)) {
       validateInternalFiles(mapper);
@@ -87,8 +87,8 @@ class SegmentFileMapperV10Test
     File[] files = baseDir.listFiles();
     File segmentFile = new File(baseDir, IndexIO.V10_FILE_NAME);
 
-    Assert.assertEquals(1, files.length); // v10 format has a single file
-    Assert.assertEquals(segmentFile, files[0]);
+    Assertions.assertEquals(1, files.length); // v10 format has a single file
+    Assertions.assertEquals(segmentFile, files[0]);
 
     try (SegmentFileMapperV10 mapper = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER)) {
       validateInternalFiles(mapper);
@@ -120,18 +120,18 @@ class SegmentFileMapperV10Test
     Arrays.sort(files);
     File segmentFile = new File(baseDir, IndexIO.V10_FILE_NAME);
 
-    Assert.assertEquals(2, files.length);
-    Assert.assertEquals(segmentFile, files[0]);
-    Assert.assertEquals(new File(baseDir, externalName), files[1]);
+    Assertions.assertEquals(2, files.length);
+    Assertions.assertEquals(segmentFile, files[0]);
+    Assertions.assertEquals(new File(baseDir, externalName), files[1]);
 
     try (SegmentFileMapperV10 mapper = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER, List.of(externalName))) {
       validateInternalFiles(mapper);
       for (int i = 20; i < 40; ++i) {
         ByteBuffer buf = mapper.mapExternalFile(externalName, String.valueOf(i));
-        Assert.assertEquals(0, buf.position());
-        Assert.assertEquals(4, buf.remaining());
-        Assert.assertEquals(4, buf.capacity());
-        Assert.assertEquals(i, buf.getInt());
+        Assertions.assertEquals(0, buf.position());
+        Assertions.assertEquals(4, buf.remaining());
+        Assertions.assertEquals(4, buf.capacity());
+        Assertions.assertEquals(i, buf.getInt());
       }
     }
   }
@@ -140,10 +140,10 @@ class SegmentFileMapperV10Test
   {
     for (int i = 0; i < 20; ++i) {
       ByteBuffer buf = mapper.mapFile(String.valueOf(i));
-      Assert.assertEquals(0, buf.position());
-      Assert.assertEquals(4, buf.remaining());
-      Assert.assertEquals(4, buf.capacity());
-      Assert.assertEquals(i, buf.getInt());
+      Assertions.assertEquals(0, buf.position());
+      Assertions.assertEquals(4, buf.remaining());
+      Assertions.assertEquals(4, buf.capacity());
+      Assertions.assertEquals(i, buf.getInt());
     }
   }
 }

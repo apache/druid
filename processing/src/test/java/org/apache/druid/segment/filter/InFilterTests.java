@@ -358,6 +358,121 @@ public class InFilterTests
     }
 
     @Test
+    public void testNumericMatchValuesAreNotTruncatedWhenMatchingLongs()
+    {
+      // Match values with a fractional part must not be truncated into a value that matches a stored long.
+      // l0 is [0, 100, 40, null, 9001, 12345].
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Collections.singletonList(0.5)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Collections.singletonList(-0.5)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Collections.singletonList(100.5)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Arrays.asList(40.5, 9001.5, 12345.5)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          NotDimFilter.of(inFilter("l0", ColumnType.DOUBLE, Collections.singletonList(100.5))),
+          ImmutableList.of("a", "b", "c", "e", "f")
+      );
+
+      // Same as above, but with FLOAT.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Collections.singletonList(0.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Collections.singletonList(-0.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Collections.singletonList(100.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Arrays.asList(40.5f, 9001.5f, 12345.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          NotDimFilter.of(inFilter("l0", ColumnType.FLOAT, Collections.singletonList(100.5f))),
+          ImmutableList.of("a", "b", "c", "e", "f")
+      );
+
+      // Same as above, but with STRING.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Collections.singletonList("0.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Collections.singletonList("-0.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Collections.singletonList("100.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Arrays.asList("12345.5", "40.5", "9001.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          NotDimFilter.of(inFilter("l0", ColumnType.STRING, Collections.singletonList("100.5"))),
+          ImmutableList.of("a", "b", "c", "e", "f")
+      );
+
+      // Exactly representable values still match, and are not thrown out along with their fractional neighbors.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Arrays.asList(100.0, 9001.5)),
+          ImmutableList.of("b")
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Arrays.asList(100.5, 9001.0)),
+          ImmutableList.of("e")
+      );
+      assertTypedFilterMatches(
+          NotDimFilter.of(inFilter("l0", ColumnType.DOUBLE, Arrays.asList(100.5, 9001.0))),
+          ImmutableList.of("a", "b", "c", "f")
+      );
+
+      // Nulls are still matched too.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Arrays.asList(null, 100.5)),
+          ImmutableList.of("d")
+      );
+
+      // Same story for FLOAT match values.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Collections.singletonList(100.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Arrays.asList(0.5f, 9001.0f)),
+          ImmutableList.of("e")
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Arrays.asList(null, 100.5f)),
+          ImmutableList.of("d")
+      );
+
+      // And for STRING match values that spell out a non-integral number.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Collections.singletonList("100.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Arrays.asList("100.5", "9001.0")),
+          ImmutableList.of("e")
+      );
+    }
+
+    @Test
     public void testLegacyNumericDefaults()
     {
       assertLegacyFilterMatches(new InDimFilter("f0", Sets.newHashSet("0"), null), ImmutableList.of("a"));
@@ -686,23 +801,16 @@ public class InFilterTests
       RangeSet<String> range = filter.getDimensionRangeSet("x");
       Assert.assertTrue(range.contains("b"));
 
-      filter = inFilter("x", ColumnType.LONG, Arrays.asList(null, 1L, 2L, 3L));
-      filter2 = inFilter("x", ColumnType.LONG, Arrays.asList(3L, 1L, null, 2L));
-      Assert.assertEquals(filter.getDimensionRangeSet("x"), filter2.getDimensionRangeSet("x"));
-      range = filter.getDimensionRangeSet("x");
-      Assert.assertTrue(range.contains("2"));
-
-      filter = inFilter("x", ColumnType.DOUBLE, Arrays.asList(null, 1.1, 2.2, 3.3));
-      filter2 = inFilter("x", ColumnType.DOUBLE, Arrays.asList(3.3, 1.1, null, 2.2));
-      range = filter.getDimensionRangeSet("x");
-      Assert.assertEquals(filter.getDimensionRangeSet("x"), filter2.getDimensionRangeSet("x"));
-      Assert.assertTrue(range.contains("2.2"));
-
-      filter = inFilter("x", ColumnType.FLOAT, Arrays.asList(null, 1.1f, 2.2f, 3.3f));
-      filter2 = inFilter("x", ColumnType.FLOAT, Arrays.asList(3.3f, 1.1f, null, 2.2f));
-      range = filter.getDimensionRangeSet("x");
-      Assert.assertEquals(filter.getDimensionRangeSet("x"), filter2.getDimensionRangeSet("x"));
-      Assert.assertTrue(range.contains("2.2"));
+      // Non-STRING match value types must not return a RangeSet.
+      Assert.assertNull(
+          inFilter("x", ColumnType.LONG, Arrays.asList(null, 1L, 2L, 3L)).getDimensionRangeSet("x")
+      );
+      Assert.assertNull(
+          inFilter("x", ColumnType.DOUBLE, Arrays.asList(null, 1.1, 2.2, 3.3)).getDimensionRangeSet("x")
+      );
+      Assert.assertNull(
+          inFilter("x", ColumnType.FLOAT, Arrays.asList(null, 1.1f, 2.2f, 3.3f)).getDimensionRangeSet("x")
+      );
     }
 
     @Test

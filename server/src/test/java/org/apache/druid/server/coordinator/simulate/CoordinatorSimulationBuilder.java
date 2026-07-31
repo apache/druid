@@ -27,7 +27,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -217,8 +216,6 @@ public class CoordinatorSimulationBuilder
         new SimOverlordClient(env.segmentManager),
         env.loadQueueTaskMaster,
         env.loadQueueManager,
-        new ServiceAnnouncer.Noop(),
-        null,
         new CoordinatorCustomDutyGroups(Collections.emptySet()),
         env.lookupCoordinatorManager,
         env.leaderSelector,
@@ -522,11 +519,10 @@ public class CoordinatorSimulationBuilder
 
       this.configSyncer = EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class);
       this.brokerConfigSyncer = EasyMock.niceMock(BrokerDynamicConfigSyncer.class);
-      this.cloneStatusManager = EasyMock.niceMock(CloneStatusManager.class);
+      this.cloneStatusManager = new CloneStatusManager();
 
       mocks.add(configSyncer);
       mocks.add(brokerConfigSyncer);
-      mocks.add(cloneStatusManager);
     }
 
     private void setUp() throws Exception

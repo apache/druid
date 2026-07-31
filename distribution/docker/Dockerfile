@@ -17,13 +17,13 @@
 # under the License.
 #
 
-ARG JDK_VERSION=21
+ARG JDK_VERSION=25
 
 # The platform is explicitly specified as x64 to build the Druid distribution.
 # This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012
 # Since only java jars are shipped in the final image, it's OK to build the distribution on x64.
 # Once the web-console dependency problem is resolved, we can remove the --platform directive.
-FROM --platform=linux/amd64 maven:3.9 as builder
+FROM --platform=linux/amd64 maven:3.9-eclipse-temurin-25 as builder
 
 # Rebuild from source in this stage
 # This can be unset if the tarball was already built outside of Docker
@@ -35,7 +35,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
 COPY . /src
 WORKDIR /src
-RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
+RUN --mount=type=cache,target=/root/.m2,sharing=locked if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
       mvn -B -ff -q \
       install \
       -Pdist,bundle-contrib-exts \
@@ -43,7 +43,7 @@ RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; th
       -Dmaven.javadoc.skip=true -T1C \
       ; fi
 
-RUN --mount=type=cache,target=/root/.m2 VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
+RUN --mount=type=cache,target=/root/.m2,sharing=locked VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
       -Dexpression=project.version -DforceStdout=true \
     ) \
  && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
@@ -68,7 +68,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
 
 FROM busybox:1.35.0-glibc as busybox
 
-FROM gcr.io/distroless/java$JDK_VERSION-debian12
+FROM gcr.io/distroless/java$JDK_VERSION-debian13
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox

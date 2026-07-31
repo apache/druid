@@ -27,8 +27,8 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,7 +54,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
         new KeyColumn("3", KeyOrder.DESCENDING),
         new KeyColumn("4", KeyOrder.DESCENDING)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         sortUsingObjectComparator(keyColumns, KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN, NO_COMPLEX_SIGNATURE),
         sortUsingKeyComparator(keyColumns, KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN, NO_COMPLEX_SIGNATURE)
     );
@@ -69,7 +69,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
         new KeyColumn("3", KeyOrder.ASCENDING),
         new KeyColumn("4", KeyOrder.ASCENDING)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         sortUsingObjectComparator(keyColumns, KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN, NO_COMPLEX_SIGNATURE),
         sortUsingKeyComparator(keyColumns, KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN, NO_COMPLEX_SIGNATURE)
     );
@@ -84,7 +84,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
         new KeyColumn("3", KeyOrder.DESCENDING),
         new KeyColumn("4", KeyOrder.ASCENDING)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         sortUsingObjectComparator(keyColumns, KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN, NO_COMPLEX_SIGNATURE),
         sortUsingKeyComparator(keyColumns, KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN, NO_COMPLEX_SIGNATURE)
     );
@@ -99,7 +99,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
         new KeyColumn("3", KeyOrder.ASCENDING),
         new KeyColumn("4", KeyOrder.DESCENDING)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         sortUsingObjectComparator(keyColumns, KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN, NO_COMPLEX_SIGNATURE),
         sortUsingKeyComparator(keyColumns, KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN, NO_COMPLEX_SIGNATURE)
     );
@@ -114,7 +114,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
         new KeyColumn("3", KeyOrder.DESCENDING),
         new KeyColumn("4", KeyOrder.ASCENDING)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         sortUsingObjectComparator(keyColumns, KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN, NO_COMPLEX_SIGNATURE),
         sortUsingKeyComparator(keyColumns, KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN, NO_COMPLEX_SIGNATURE)
     );
@@ -133,7 +133,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
         new KeyColumn("7", KeyOrder.DESCENDING),
         new KeyColumn("8", KeyOrder.DESCENDING)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         sortUsingObjectComparator(keyColumns, ALL_KEY_OBJECTS, SIGNATURE),
         sortUsingKeyComparator(keyColumns, ALL_KEY_OBJECTS, SIGNATURE)
     );
@@ -152,7 +152,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
         new KeyColumn("7", KeyOrder.ASCENDING),
         new KeyColumn("8", KeyOrder.ASCENDING)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         sortUsingObjectComparator(keyColumns, ALL_KEY_OBJECTS, SIGNATURE),
         sortUsingKeyComparator(keyColumns, ALL_KEY_OBJECTS, SIGNATURE)
     );
@@ -171,7 +171,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
         new KeyColumn("7", KeyOrder.ASCENDING),
         new KeyColumn("8", KeyOrder.ASCENDING)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         sortUsingObjectComparator(keyColumns, ALL_KEY_OBJECTS, SIGNATURE),
         sortUsingKeyComparator(keyColumns, ALL_KEY_OBJECTS, SIGNATURE)
     );
@@ -190,7 +190,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
         new KeyColumn("7", KeyOrder.DESCENDING),
         new KeyColumn("8", KeyOrder.DESCENDING)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         sortUsingObjectComparator(keyColumns, ALL_KEY_OBJECTS, SIGNATURE),
         sortUsingKeyComparator(keyColumns, ALL_KEY_OBJECTS, SIGNATURE)
     );
@@ -209,7 +209,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
         new KeyColumn("7", KeyOrder.DESCENDING),
         new KeyColumn("8", KeyOrder.ASCENDING)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         sortUsingObjectComparator(keyColumns, ALL_KEY_OBJECTS, SIGNATURE),
         sortUsingKeyComparator(keyColumns, ALL_KEY_OBJECTS, SIGNATURE)
     );

@@ -23,7 +23,7 @@ sidebar_label: Request logging
   ~ under the License.
   -->
 
-All Apache Druid services that can serve queries can also log the query requests they process.
+All Apache&circledR; Druid services that can serve queries can also log the query requests they process.
 Request logs contain information on query metrics, including execution time and memory usage.
 You can use information in the request logs to monitor query performance, determine bottlenecks, and analyze and improve slow queries.
 

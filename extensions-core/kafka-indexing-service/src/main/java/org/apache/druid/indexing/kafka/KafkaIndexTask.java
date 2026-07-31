@@ -116,8 +116,13 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
       props.put("auto.offset.reset", "none");
 
       final KafkaRecordSupplier recordSupplier =
-          new KafkaRecordSupplier(props, configMapper, kafkaIndexTaskIOConfig.getConfigOverrides(),
-                                  kafkaIndexTaskIOConfig.isMultiTopic());
+          new KafkaRecordSupplier(
+              props,
+              configMapper,
+              kafkaIndexTaskIOConfig.getConfigOverrides(),
+              kafkaIndexTaskIOConfig.isMultiTopic(),
+              this::getMetricBuilder
+          );
 
       if (toolbox.getMonitorScheduler() != null) {
         toolbox.getMonitorScheduler().addMonitor(recordSupplier.monitor());
@@ -162,11 +167,5 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
   public Set<ResourceAction> getInputSourceResources()
   {
     return INPUT_SOURCE_RESOURCES;
-  }
-
-  @Override
-  public boolean supportsQueries()
-  {
-    return true;
   }
 }

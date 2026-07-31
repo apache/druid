@@ -37,7 +37,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
-import org.apache.curator.test.TestingCluster;
 import org.apache.druid.cli.CliPeon;
 import org.apache.druid.cli.CliPeonTest;
 import org.apache.druid.cli.PeonLoadSpecHolder;
@@ -73,7 +72,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisor;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
-import org.apache.druid.indexing.kafka.test.TestBroker;
+import org.apache.druid.indexing.kafka.test.EmbeddedKafkaBroker;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
@@ -198,8 +197,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
       "kafka.testheader.", "kafka.key", "kafka.timestamp", "kafka.topic", "kafka.partition", "kafka.offset"
   );
 
-  private static TestingCluster zkServer;
-  private static TestBroker kafkaServer;
+  private static EmbeddedKafkaBroker kafkaServer;
   private static int topicPostfix;
   static final Module TEST_MODULE = new SimpleModule("kafkaTestModule").registerSubtypes(
       new NamedType(TestKafkaInputFormat.class, "testKafkaInputFormat"),
@@ -288,17 +286,9 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
   @BeforeClass
-  public static void setupClass() throws Exception
+  public static void setupClass()
   {
-    zkServer = new TestingCluster(1);
-    zkServer.start();
-
-    kafkaServer = new TestBroker(
-        zkServer.getConnectString(),
-        null,
-        1,
-        ImmutableMap.of("num.partitions", "2")
-    );
+    kafkaServer = new EmbeddedKafkaBroker(ImmutableMap.of("KAFKA_NUM_PARTITIONS", "2"));
     kafkaServer.start();
 
     taskExec = MoreExecutors.listeningDecorator(
@@ -345,9 +335,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     kafkaServer.close();
     kafkaServer = null;
-
-    zkServer.stop();
-    zkServer = null;
   }
 
   @Test(timeout = 60_000L)
@@ -373,7 +360,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             Duration.standardHours(2).getStandardMinutes()
         )
     );
-    Assert.assertTrue(task.supportsQueries());
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
@@ -1237,7 +1223,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAwayByReason(InputRowFilterResult.NULL_OR_EMPTY_RECORD, 4).totalProcessed(1));
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAwayByReason(InputRowFilterResult.CUSTOM_FILTER, 4).totalProcessed(1));
 
     // Check published metadata
     final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
@@ -1296,7 +1282,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             Duration.standardHours(2).getStandardMinutes()
         )
     );
-    Assert.assertTrue(task.supportsQueries());
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
@@ -1369,7 +1354,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             Duration.standardHours(2).getStandardMinutes()
         )
     );
-    Assert.assertTrue(task.supportsQueries());
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
@@ -2917,6 +2901,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         maxSavedParseExceptions,
         null,
         null,
+        null,
         null
     );
     if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
@@ -3095,7 +3080,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    Assert.assertTrue(task.supportsQueries());
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
@@ -3168,7 +3152,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    Assert.assertTrue(task.supportsQueries());
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
@@ -3243,7 +3226,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    Assert.assertTrue(task.supportsQueries());
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit. Should fail and trip up with the first two bad messages in the stream
@@ -3425,7 +3407,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAwayByReason(InputRowFilterResult.NULL_OR_EMPTY_RECORD, 4).totalProcessed(1));
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAwayByReason(InputRowFilterResult.CUSTOM_FILTER, 4).totalProcessed(1));
 
     // Check published metadata
     final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
@@ -3497,8 +3479,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     for (Event event : emitter.getEvents()) {
       if (event instanceof ServiceMetricEvent) {
         EventMap observedEvent = event.toMap();
+        // Do not verify emission of "id" dimension as that is deprecated in favor of "taskId"
         Assert.assertEquals("test_ds", observedEvent.get("dataSource"));
-        Assert.assertEquals("index_kafka_test_id1", observedEvent.get("id"));
         Assert.assertEquals("index_kafka_test_id1", observedEvent.get("taskId"));
         Assert.assertEquals("index_kafka", observedEvent.get("taskType"));
         Assert.assertEquals("index_kafka_test_ds", observedEvent.get("groupId"));

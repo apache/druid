@@ -43,13 +43,12 @@ import software.amazon.awssdk.services.s3.model.Grant;
 import software.amazon.awssdk.services.s3.model.Grantee;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
-import software.amazon.awssdk.services.s3.model.Permission;
 import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
-import software.amazon.awssdk.services.s3.model.Type;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLException;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -79,6 +78,10 @@ public class S3Utils
     {
       if (e == null) {
         return false;
+      } else if (e instanceof SSLException) {
+        // Transient TLS read failure (e.g. AEADBadTagException "Tag mismatch!"). Retry here, ahead of
+        // the IOException branch, which would recurse into the non-IOException crypto cause and not retry.
+        return true;
       } else if (e instanceof IOException) {
         if (e.getCause() != null) {
           // Recurse with the underlying cause to see if it's retriable.
@@ -238,20 +241,6 @@ public class S3Utils
         baseKey.isEmpty() ? null : baseKey,
         storageDir
     ) + "/";
-  }
-
-  static Grant grantFullControlToBucketOwner(ServerSideEncryptingAmazonS3 s3Client, String bucket)
-  {
-    final String ownerId = s3Client.getBucketAcl(bucket).owner().id();
-    return Grant
-        .builder()
-        .grantee(Grantee
-            .builder()
-            .type(Type.CANONICAL_USER)
-            .id(ownerId)
-            .build())
-        .permission(Permission.FULL_CONTROL)
-        .build();
   }
 
   /**
@@ -427,15 +416,15 @@ public class S3Utils
   )
   {
     log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
-    service.upload(bucket, key, file, disableAcl ? null : S3Utils.grantFullControlToBucketOwner(service, bucket));
+    service.upload(bucket, key, file, disableAcl ? null : service.getBucketOwnerGrant(bucket));
   }
 
   /**
    * Determines whether to use HTTP or HTTPS protocol based on configuration.
    */
-  public static boolean useHttps(AWSClientConfig clientConfig, AWSEndpointConfig endpointConfig)
+  public static boolean useHttps(@Nullable AWSClientConfig clientConfig, AWSEndpointConfig endpointConfig)
   {
-    String protocol = clientConfig.getProtocol();
+    final String protocol = clientConfig == null ? null : clientConfig.getProtocol();
     final String endpointUrl = endpointConfig.getUrl();
 
     if (org.apache.commons.lang3.StringUtils.isNotEmpty(endpointUrl)) {

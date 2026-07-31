@@ -21,7 +21,10 @@ package org.apache.druid.indexing.worker;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.guice.annotations.PublicApi;
+
+import javax.annotation.Nullable;
 
 /**
  * A container for worker metadata.
@@ -35,6 +38,7 @@ public class Worker
   private final int capacity;
   private final String version;
   private final String category;
+  private final boolean disabled;
 
   @JsonCreator
   public Worker(
@@ -43,7 +47,8 @@ public class Worker
       @JsonProperty("ip") String ip,
       @JsonProperty("capacity") int capacity,
       @JsonProperty("version") String version,
-      @JsonProperty("category") String category
+      @JsonProperty("category") String category,
+      @JsonProperty("disabled") @Nullable Boolean disabled
   )
   {
     this.scheme = scheme == null ? "http" : scheme; // needed for backwards compatibility with older workers (pre-#4270)
@@ -52,6 +57,19 @@ public class Worker
     this.capacity = capacity;
     this.version = version;
     this.category = category;
+    this.disabled = Configs.valueOrDefault(disabled, false);
+  }
+
+  public Worker(
+      String scheme,
+      String host,
+      String ip,
+      int capacity,
+      String version,
+      String category
+  )
+  {
+    this(scheme, host, ip, capacity, version, category, false);
   }
 
   @JsonProperty
@@ -90,6 +108,12 @@ public class Worker
     return category;
   }
 
+  @JsonProperty
+  public boolean isDisabled()
+  {
+    return disabled;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -103,6 +127,9 @@ public class Worker
     Worker worker = (Worker) o;
 
     if (capacity != worker.capacity) {
+      return false;
+    }
+    if (disabled != worker.disabled) {
       return false;
     }
     if (!scheme.equals(worker.scheme)) {
@@ -129,6 +156,7 @@ public class Worker
     result = 31 * result + capacity;
     result = 31 * result + version.hashCode();
     result = 31 * result + category.hashCode();
+    result = 31 * result + (disabled ? 1 : 0);
     return result;
   }
 
@@ -142,6 +170,7 @@ public class Worker
            ", capacity=" + capacity +
            ", version='" + version + '\'' +
            ", category='" + category + '\'' +
+           ", disabled=" + disabled +
            '}';
   }
 

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
@@ -32,6 +33,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpecUpdateAction;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
@@ -43,12 +45,13 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 {
+
   protected static final String ILLEGAL_INPUT_SOURCE_UPDATE_ERROR_MESSAGE =
       "Update of the input source stream from [%s] to [%s] is not supported for a running supervisor."
       + "%nTo perform the update safely, follow these steps:"
@@ -261,33 +264,176 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     }
   }
 
+  /**
+   * Updates {@link SeekableStreamSupervisorIOConfig#getTaskCount()} on this user-submitted spec
+   * to the desired value. The rules applied are:
+   *
+   * <ol>
+   *   <li>If {@code taskCountStart} is set on this user-submitted spec, use it.</li>
+   *   <li>Otherwise, if {@code taskCount} is set on this user-submitted spec, use it.</li>
+   *   <li>Otherwise, use the existing spec's {@code taskCount}.</li>
+   * </ol>
+   */
   @Override
-  public void merge(@NotNull SupervisorSpec existingSpec)
+  public void merge(@Nullable SupervisorSpec existingSpec)
   {
-    AutoScalerConfig thisAutoScalerConfig = this.getIoConfig().getAutoScalerConfig();
-    // Either if autoscaler is absent or taskCountStart is specified - just return.
-    if (thisAutoScalerConfig == null || thisAutoScalerConfig.getTaskCountStart() != null) {
+    // Use this spec's taskCountStart if set.
+    final AutoScalerConfig thisAutoScalerConfig = getIoConfig().getAutoScalerConfig();
+    if (thisAutoScalerConfig != null
+        && thisAutoScalerConfig.getEnableTaskAutoScaler()
+        && thisAutoScalerConfig.getTaskCountStart() != null) {
+      getIoConfig().setTaskCount(thisAutoScalerConfig.getTaskCountStart());
       return;
     }
 
-    // Use a switch expression with pattern matching when we move to Java 21 as a minimum requirement.
-    if (existingSpec instanceof SeekableStreamSupervisorSpec) {
-      SeekableStreamSupervisorSpec spec = (SeekableStreamSupervisorSpec) existingSpec;
-      AutoScalerConfig autoScalerConfig = spec.getIoConfig().getAutoScalerConfig();
-      if (autoScalerConfig == null) {
-        return;
-      }
-      // provided `taskCountStart` > provided `taskCount` > existing `taskCount` > provided `taskCountMin`.
-      int taskCount = thisAutoScalerConfig.getTaskCountMin();
-      if (this.getIoConfig().getTaskCount() != null) {
-        taskCount = this.getIoConfig().getTaskCount();
-      } else if (spec.getIoConfig().getTaskCount() != null) {
-        taskCount = spec.getIoConfig().getTaskCount();
-      }
-      this.getIoConfig().setTaskCount(taskCount);
+    // Use this spec's taskCount if set.
+    if (getIoConfig().isTaskCountExplicit()) {
+      return;
+    }
+
+    // Use the existing spec's taskCount. If it isn't there, we'll fall back to this spec's taskCount. Because there's
+    // no taskCountStart (and taskCount hasn't been explicitly set) this spec's taskCount will be taskCountMin or 1.
+    if (existingSpec instanceof SeekableStreamSupervisorSpec existingSeekableStreamSpec) {
+      getIoConfig().setTaskCount(existingSeekableStreamSpec.getIoConfig().getTaskCount());
     }
   }
 
+  @Override
+  public SupervisorSpecUpdateAction getActionOnUpdateTo(SupervisorSpec proposedSpec)
+  {
+    if (!(proposedSpec instanceof SeekableStreamSupervisorSpec proposed)) {
+      return SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS;
+    }
+
+    final Builder<?> proposedCopy = proposed.toBuilder();
+
+    // When autoscaling is enabled on either side, taskCount is owned by the autoscaler at runtime, so a differing
+    // taskCount does not by itself warrant a stop/recreate. Normalize the proposed copy to the running taskCount so
+    // that only non-taskCount changes can force a restart; the persisted spec still carries the submitted value.
+    if (isAutoScalerEnabled() || proposed.isAutoScalerEnabled()) {
+      proposedCopy.taskCount(getIoConfig().getTaskCount());
+    }
+
+    return !proposedCopy.build().equals(this)
+           ? SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS
+           : SupervisorSpecUpdateAction.NONE;
+  }
+
+  private boolean isAutoScalerEnabled()
+  {
+    final AutoScalerConfig autoScalerConfig = getIoConfig().getAutoScalerConfig();
+    return autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SeekableStreamSupervisorSpec that = (SeekableStreamSupervisorSpec) o;
+    return suspended == that.suspended
+           && Objects.equals(id, that.id)
+           && Objects.equals(ingestionSchema, that.ingestionSchema)
+           && Objects.equals(context, that.context);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(id, ingestionSchema, context, suspended);
+  }
+
   protected abstract SeekableStreamSupervisorSpec toggleSuspend(boolean suspend);
+
+  public abstract SeekableStreamSupervisorSpec createBackfillSpec(
+      String backfillId,
+      BoundedStreamConfig boundedStreamConfig,
+      @Nullable Integer taskCount
+  );
+
+  /**
+   * Returns a copy builder seeded from this spec, used by {@link #getActionOnUpdateTo} for structured comparison.
+   * Abstract so that every stream supervisor spec participates in the restart decision.
+   */
+  public abstract Builder<?> toBuilder();
+
+  @SuppressFBWarnings(
+      value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
+      justification = "Fields are populated via copyFrom() and read by build() in concrete subclasses, which "
+                      + "live in other modules and so are invisible to SpotBugs' per-module analysis."
+  )
+  public abstract static class Builder<T extends Builder<T>>
+  {
+    protected String id;
+    protected DataSchema dataSchema;
+    protected SeekableStreamSupervisorIOConfig ioConfig;
+    protected SeekableStreamSupervisorTuningConfig tuningConfig;
+    protected Map<String, Object> context;
+    protected Boolean suspended;
+
+    protected abstract T self();
+
+    public abstract SeekableStreamSupervisorSpec build();
+
+    public T copyFrom(SeekableStreamSupervisorSpec spec)
+    {
+      this.id = spec.id;
+      this.dataSchema = spec.getSpec().getDataSchema();
+      this.ioConfig = spec.getIoConfig();
+      this.tuningConfig = spec.getTuningConfig();
+      this.context = spec.context;
+      this.suspended = spec.suspended;
+      return self();
+    }
+
+    public T id(String id)
+    {
+      this.id = id;
+      return self();
+    }
+
+    public T dataSchema(DataSchema dataSchema)
+    {
+      this.dataSchema = dataSchema;
+      return self();
+    }
+
+    public T ioConfig(SeekableStreamSupervisorIOConfig ioConfig)
+    {
+      this.ioConfig = ioConfig;
+      return self();
+    }
+
+    public T tuningConfig(SeekableStreamSupervisorTuningConfig tuningConfig)
+    {
+      this.tuningConfig = tuningConfig;
+      return self();
+    }
+
+    public T context(Map<String, Object> context)
+    {
+      this.context = context;
+      return self();
+    }
+
+    public T suspended(boolean suspended)
+    {
+      this.suspended = suspended;
+      return self();
+    }
+
+    /**
+     * Sets {@code ioConfig.taskCount} on a copy (does not mutate the builder's current ioConfig reference).
+     */
+    public T taskCount(int taskCount)
+    {
+      this.ioConfig = this.ioConfig.toBuilder().withTaskCount(taskCount).build();
+      return self();
+    }
+  }
 
 }

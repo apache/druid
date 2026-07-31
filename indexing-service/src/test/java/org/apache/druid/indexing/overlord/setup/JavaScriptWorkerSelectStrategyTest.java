@@ -25,12 +25,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
-import org.apache.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
+import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.js.JavaScriptConfig;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
-import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -123,7 +122,7 @@ public class JavaScriptWorkerSelectStrategyTest
     );
 
     ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
         createMockTask("index_parallel")
     );
@@ -131,7 +130,7 @@ public class JavaScriptWorkerSelectStrategyTest
     Assert.assertEquals(worker1, workerForBatchTask);
 
     ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
         createMockTask("other_type")
     );
@@ -147,7 +146,7 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.2", createMockWorker(1, true, true)
     );
     ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
         createMockTask("other_type")
     );
@@ -162,14 +161,14 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.4", createMockWorker(1, true, false)
     );
     ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
         createMockTask("index_parallel")
     );
     Assert.assertNull(workerForBatchTask);
 
     ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
         createMockTask("otherTask")
     );
@@ -185,14 +184,14 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.4", createMockWorker(1, false, true)
     );
     ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
         createMockTask("index_parallel")
     );
     Assert.assertNull(workerForBatchTask);
 
     ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
         createMockTask("otherTask")
     );
@@ -209,7 +208,7 @@ public class JavaScriptWorkerSelectStrategyTest
         "10.0.0.2", createMockWorker(5, true, true)
     );
     ImmutableWorkerInfo workerForBatchTask = STRATEGY.findWorkerForTask(
-        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
+        new HttpRemoteTaskRunnerConfig(),
         workerMap,
         createMockTask("index_parallel")
     );

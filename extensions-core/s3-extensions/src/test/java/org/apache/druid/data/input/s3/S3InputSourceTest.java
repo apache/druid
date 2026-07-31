@@ -59,6 +59,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.S3InputDataConfig;
+import org.apache.druid.storage.s3.S3StorageConfig;
 import org.apache.druid.storage.s3.S3TransferConfig;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -110,7 +111,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   public static final S3Client S3_CLIENT = EasyMock.createMock(S3Client.class);
   public static final ServerSideEncryptingAmazonS3.Builder SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER =
       EasyMock.createMock(ServerSideEncryptingAmazonS3.Builder.class);
-  public static final S3ClientBuilder S3_CLIENT_BUILDER = S3Client.builder();
+  public static final S3StorageConfig S3_STORAGE_CONFIG = new S3StorageConfig(
+      new NoopServerSideEncryption(),
+      new S3TransferConfig()
+  );
   public static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
       S3_CLIENT,
       null,
@@ -346,10 +350,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   public void testSerdeWithCloudConfigPropertiesWithKeyAndSecret() throws Exception
   {
     EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.setS3ClientSupplier(EasyMock.anyObject()))
-            .andReturn(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
-            .andReturn(SERVICE);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getS3StorageConfig()).andStubReturn(S3_STORAGE_CONFIG);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,
@@ -376,10 +377,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   public void testSerdeWithCloudConfigPropertiesWithSessionToken() throws Exception
   {
     EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.setS3ClientSupplier(EasyMock.anyObject()))
-            .andReturn(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
-            .andReturn(SERVICE);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getS3StorageConfig()).andStubReturn(S3_STORAGE_CONFIG);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     final S3InputSource withSessionToken = new S3InputSource(
         SERVICE,
@@ -403,6 +401,39 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     Assert.assertNotNull(serdeWithSessionToken.getS3InputSourceConfig());
     Assert.assertNotNull(serdeWithSessionToken.getS3InputSourceConfig().getSessionToken());
     Assert.assertEquals("mySessionToken", serdeWithSessionToken.getS3InputSourceConfig().getSessionToken().getPassword());
+    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+  }
+
+  @Test
+  public void testSchemelessEndpointConfigUrlWithNullClientConfigResolvesSupplier() throws Exception
+  {
+    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getS3StorageConfig())
+            .andStubReturn(S3_STORAGE_CONFIG);
+    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+
+    final AWSEndpointConfig schemelessEndpoint = MAPPER.readValue(
+        "{\"url\":\"s3.example.com\",\"signingRegion\":\"us-east-1\"}",
+        AWSEndpointConfig.class
+    );
+
+    final S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        EXPECTED_LOCATION,
+        null,
+        CLOUD_CONFIG_PROPERTIES,
+        null,
+        schemelessEndpoint,
+        null
+    );
+
+    // Forces s3ClientSupplier evaluation, which hits S3Utils.useHttps and confirms a null client config does not blow up.
+    inputSource.createEntity(new CloudObjectLocation("bucket", "path"));
+
     EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
   }
 
@@ -451,73 +482,6 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSessionCredentialsUsedWhenSessionTokenProvided() throws IOException
-  {
-    // This test verifies that when session token is provided, the S3InputSource
-    // correctly uses BasicSessionCredentials instead of BasicAWSCredentials
-    EasyMock.reset(S3_CLIENT);
-    expectListObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)), CONTENT);
-    expectGetObject(EXPECTED_URIS.get(0));
-    EasyMock.replay(S3_CLIENT);
-
-    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.setS3ClientSupplier(EasyMock.anyObject()))
-            .andReturn(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
-            .andReturn(SERVICE);
-    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-
-    // Create S3InputSource with session token
-    S3InputSource inputSource = new S3InputSource(
-        SERVICE,
-        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
-        INPUT_DATA_CONFIG,
-        null,
-        ImmutableList.of(PREFIXES.get(0)),
-        null,
-        null,
-        CLOUD_CONFIG_PROPERTIES_WITH_SESSION_TOKEN,
-        null,
-        null,
-        null
-    );
-
-    // Verify session token is set
-    Assert.assertNotNull(inputSource.getS3InputSourceConfig());
-    Assert.assertNotNull(inputSource.getS3InputSourceConfig().getSessionToken());
-    Assert.assertEquals(
-        "mySessionToken",
-        inputSource.getS3InputSourceConfig().getSessionToken().getPassword()
-    );
-
-    // Create a reader which will trigger the s3ClientSupplier and use the session credentials
-    InputRowSchema someSchema = new InputRowSchema(
-        new TimestampSpec("time", "auto", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
-        ColumnsFilter.all()
-    );
-
-    InputSourceReader reader = inputSource.reader(
-        someSchema,
-        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0, null),
-        temporaryFolder.newFolder()
-    );
-
-    // Read data - this exercises the session credentials path
-    CloseableIterator<InputRow> iterator = reader.read();
-
-    while (iterator.hasNext()) {
-      InputRow nextRow = iterator.next();
-      Assert.assertEquals(NOW, nextRow.getTimestamp());
-      Assert.assertEquals("hello", nextRow.getDimension("dim1").get(0));
-      Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
-    }
-
-    EasyMock.verify(S3_CLIENT);
-    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-  }
-
-  @Test
   public void testGetTypes()
   {
     final S3InputSource inputSource = new S3InputSource(
@@ -556,6 +520,9 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.expect(mockAwsClientConfig.isEnablePathStyleAccess()).andStubReturn(false);
     EasyMock.expect(mockAwsClientConfig.isCrossRegionAccessEnabled()).andStubReturn(true);
     EasyMock.expect(mockAwsClientConfig.getProtocol()).andStubReturn("http");
+    EasyMock.expect(mockAwsClientConfig.getConnectionTimeoutMillis()).andStubReturn(10_000);
+    EasyMock.expect(mockAwsClientConfig.getSocketTimeoutMillis()).andStubReturn(50_000);
+    EasyMock.expect(mockAwsClientConfig.getMaxConnections()).andStubReturn(50);
 
     EasyMock.expect(mockAwsProxyConfig.getHost()).andStubReturn("");
     EasyMock.expect(mockAwsProxyConfig.getPort()).andStubReturn(-1);
@@ -563,6 +530,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.expect(mockAwsProxyConfig.getPassword()).andStubReturn("");
 
     EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.getAssumeRoleArn()).andStubReturn(null);
+    EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.getAssumeRoleExternalId()).andStubReturn(null);
     EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.isCredentialsConfigured())
             .andStubReturn(false);
     EasyMock.replay(mockConfigPropertiesWithoutKeyAndSecret);
@@ -571,10 +539,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.replay(mockAwsProxyConfig);
 
     EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.setS3ClientSupplier(EasyMock.anyObject()))
-            .andReturn(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
-            .andReturn(SERVICE);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getS3StorageConfig()).andStubReturn(S3_STORAGE_CONFIG);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,
@@ -604,14 +569,18 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     S3InputSourceConfig mockConfigPropertiesWithoutKeyAndSecret = EasyMock.createMock(S3InputSourceConfig.class);
     EasyMock.reset(mockConfigPropertiesWithoutKeyAndSecret);
     EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.getAssumeRoleArn()).andStubReturn(null);
+    EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.getAssumeRoleExternalId()).andStubReturn(null);
     EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.isCredentialsConfigured())
             .andStubReturn(false);
     EasyMock.replay(mockConfigPropertiesWithoutKeyAndSecret);
+
+    S3StorageConfig mockS3StorageConfig = EasyMock.createMock(S3StorageConfig.class);
+    EasyMock.reset(mockS3StorageConfig);
+    EasyMock.expect(mockS3StorageConfig.getS3TransferConfig()).andStubReturn(new S3TransferConfig());
+    EasyMock.expect(mockS3StorageConfig.getServerSideEncryption()).andStubReturn(new NoopServerSideEncryption());
+    EasyMock.replay(mockS3StorageConfig);
     EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.setS3ClientSupplier(EasyMock.anyObject()))
-            .andReturn(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
-            .andReturn(SERVICE);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getS3StorageConfig()).andStubReturn(mockS3StorageConfig);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,

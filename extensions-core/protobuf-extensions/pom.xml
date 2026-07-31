@@ -30,7 +30,7 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>38.0.0-SNAPSHOT</version>
+    <version>39.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -230,7 +230,7 @@
       <plugin>
         <groupId>io.github.ascopes</groupId>
         <artifactId>protobuf-maven-plugin</artifactId>
-        <version>3.7.0</version>
+        <version>3.10.2</version>
         <configuration>
           <protocVersion>${protobuf.version}</protocVersion>
           <sourceDirectories>

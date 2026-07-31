@@ -64,7 +64,7 @@ public class ManualQueryLaningStrategy implements QueryLaningStrategy
     // 'default' has special meaning for resilience4j bulkhead used by query scheduler, this restriction
     // can potentially be relaxed if we ever change enforcement mechanism
     Preconditions.checkArgument(
-        lanes.keySet().stream().noneMatch("default"::equals),
+        lanes.keySet().stream().noneMatch(QueryScheduler.DEFAULT::equals),
         "Lane cannot be named 'default'"
     );
   }

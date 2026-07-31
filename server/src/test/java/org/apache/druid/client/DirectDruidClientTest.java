@@ -29,8 +29,10 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryContexts;
@@ -323,6 +325,60 @@ public class DirectDruidClientTest
   }
 
   @Test
+  public void testNodeMetricsEmittedOnSuccess()
+  {
+    StubServiceEmitter stubEmitter = StubServiceEmitter.createStarted();
+    DirectDruidClient client = makeDirectDruidClient(initHttpClientWithSuccessfulQuery(), stubEmitter);
+
+    client.run(getQueryPlus(), responseContext).toList();
+
+    Assert.assertEquals(1, stubEmitter.getMetricEventCount("query/node/time"));
+    Assert.assertEquals(1, stubEmitter.getMetricEventCount("query/node/bytes"));
+  }
+
+  @Test
+  public void testNodeMetricsEmittedOnError()
+  {
+    // Only setupResponseReadFailure fires (checkQueryTimeout during handleResponse) — done() is never called.
+    StubServiceEmitter stubEmitter = StubServiceEmitter.createStarted();
+    final TestHttpClient testHttpClient = new TestHttpClient(objectMapper, 110);
+    DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(testHttpClient, false), stubEmitter);
+
+    final QueryPlus queryPlus = getQueryPlus(Map.of(
+        DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 50
+    ));
+
+    Assert.assertThrows(QueryTimeoutException.class, () -> client.run(queryPlus, responseContext));
+
+    Assert.assertEquals(1, stubEmitter.getMetricEventCount("query/node/time"));
+    Assert.assertEquals(1, stubEmitter.getMetricEventCount("query/node/bytes"));
+  }
+
+  @Test
+  public void testNodeMetricsEmittedExactlyOnceWhenDoneAndTimeoutBothFire() throws InterruptedException
+  {
+    // done() fires synchronously during run(), then results.toList() calls checkQueryTimeout() after the
+    // timeout has already expired, triggering setupResponseReadFailure(). The compareAndSet guard must
+    // prevent the second emitNodeMetrics() call from emitting.
+    StubServiceEmitter stubEmitter = StubServiceEmitter.createStarted();
+    DirectDruidClient client = makeDirectDruidClient(initHttpClientWithSuccessfulQuery(), stubEmitter);
+
+    // Timeout far enough in the future that handleResponse + done() complete during run(), but we sleep
+    // past it before consuming the sequence so that checkQueryTimeout() fires during toList().
+    final QueryPlus queryPlus = getQueryPlus(Map.of(
+        DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 500
+    ));
+
+    Sequence results = client.run(queryPlus, responseContext);
+    Thread.sleep(600);
+
+    Assert.assertThrows(QueryTimeoutException.class, results::toList);
+
+    Assert.assertEquals(1, stubEmitter.getMetricEventCount("query/node/time"));
+    Assert.assertEquals(1, stubEmitter.getMetricEventCount("query/node/bytes"));
+  }
+
+  @Test
   public void testResourceLimitExceededException()
   {
     final DirectDruidClient client = makeDirectDruidClient(initHttpClientWithSuccessfulQuery());
@@ -347,6 +403,11 @@ public class DirectDruidClientTest
 
   private DirectDruidClient makeDirectDruidClient(HttpClient httpClient)
   {
+    return makeDirectDruidClient(httpClient, new NoopServiceEmitter());
+  }
+
+  private DirectDruidClient makeDirectDruidClient(HttpClient httpClient, ServiceEmitter emitter)
+  {
     return new DirectDruidClient(
         conglomerateRule.getConglomerate(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
@@ -354,7 +415,7 @@ public class DirectDruidClientTest
         httpClient,
         "http",
         hostName,
-        new NoopServiceEmitter(),
+        emitter,
         queryCancellationExecutor
     );
   }
