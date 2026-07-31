@@ -122,6 +122,39 @@ public class PerSegmentTimeoutInjectionTest
   }
 
   @Test
+  public void testDynamicOverrideBeatsStaticDefault()
+  {
+    // The bug being fixed: the static default used to shadow the per-datasource dynamic config.
+    QueryLifecycle lifecycle = createLifecycle(Map.of(KEY, 100L), perSegmentTimeout(5000));
+    lifecycle.initialize(baseQuery);
+
+    Assert.assertEquals(5000L, lifecycle.getQuery().context().getPerSegmentTimeout());
+  }
+
+  @Test
+  public void testStaticDefaultUsedWhenNoDatasourceOverride()
+  {
+    QueryLifecycle lifecycle = createLifecycle(Map.of(KEY, 100L), BrokerDynamicConfig.builder().build());
+    lifecycle.initialize(baseQuery);
+
+    Assert.assertEquals(100L, lifecycle.getQuery().context().getPerSegmentTimeout());
+  }
+
+  @Test
+  public void testMonitorOnlyIsNotEnforced()
+  {
+    BrokerDynamicConfig dynamicConfig =
+        BrokerDynamicConfig.builder()
+                           .withPerSegmentTimeoutConfig(Map.of(DATASOURCE, new PerSegmentTimeoutConfig(5000L, true)))
+                           .build();
+
+    QueryLifecycle lifecycle = createLifecycle(dynamicConfig);
+    lifecycle.initialize(baseQuery);
+
+    Assert.assertFalse(lifecycle.getQuery().context().usePerSegmentTimeout());
+  }
+
+  @Test
   public void testNoDynamicConfigMeansNoInjection()
   {
     QueryLifecycle lifecycle = createLifecycle(null);
@@ -139,6 +172,11 @@ public class PerSegmentTimeoutInjectionTest
 
   private QueryLifecycle createLifecycle(BrokerDynamicConfig dynamicConfig)
   {
+    return createLifecycle(Collections.emptyMap(), dynamicConfig);
+  }
+
+  private QueryLifecycle createLifecycle(Map<String, Object> resolvedDefaultQueryContext, BrokerDynamicConfig dynamicConfig)
+  {
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
     EasyMock.replay(conglomerate);
 
@@ -151,7 +189,7 @@ public class PerSegmentTimeoutInjectionTest
         authzMapper,
         new AuthConfig(),
         NoopPolicyEnforcer.instance(),
-        new QueryConfigSnapshot(Collections.emptyMap(), dynamicConfig),
+        new QueryConfigSnapshot(resolvedDefaultQueryContext, dynamicConfig),
         System.currentTimeMillis(),
         System.nanoTime()
     );

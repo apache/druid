@@ -77,7 +77,7 @@ public class QueryLifecycleFactory
 
   public QueryLifecycle factorize()
   {
-    // Capture one snapshot per query so the default context, per-query overrides, and blocklist are consistent.
+    // Read once per query so the whole lifecycle sees one config, even if it is swapped mid-query.
     final QueryConfigSnapshot configSnapshot =
         brokerViewOfBrokerConfig == null
         ? new QueryConfigSnapshot(queryConfigProvider.getContext(), null)

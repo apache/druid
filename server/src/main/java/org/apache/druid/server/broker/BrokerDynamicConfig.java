@@ -97,27 +97,31 @@ public class BrokerDynamicConfig
   }
 
   /**
-   * Query-specific broker dynamic config query context overrides (e.g. per segment timeout).
+   * Query context overrides (e.g. per-segment timeout) for the datasources the query targets. With multiple
+   * datasources the first match wins, in non-deterministic order.
    */
-  public QueryContext getQuerySpecificContextOverrides(Query<?> query)
+  public QueryContext getContextOverridesForQuery(Query<?> query)
   {
     if (perSegmentTimeoutConfig.isEmpty()) {
       return QueryContext.empty();
     }
 
     for (String tableName : query.getDataSource().getTableNames()) {
-      PerSegmentTimeoutConfig dsConfig = perSegmentTimeoutConfig.get(tableName);
-      if (dsConfig != null) {
-        if (dsConfig.isMonitorOnly()) {
+      PerSegmentTimeoutConfig dataSourceTimeoutConfig = perSegmentTimeoutConfig.get(tableName);
+      if (dataSourceTimeoutConfig != null) {
+        if (dataSourceTimeoutConfig.isMonitorOnly()) {
+          // monitorOnly is documented as "logged but not enforced", so this log is its only effect.
           log.debug(
-              "Per-segment timeout [%d ms] configured for datasource [%s] in monitorOnly mode (not enforced) for query [%s].",
-              dsConfig.getPerSegmentTimeoutMs(),
+              "Per-segment timeout[%d ms] configured for datasource[%s] in monitorOnly mode (not enforced) for query[%s].",
+              dataSourceTimeoutConfig.getPerSegmentTimeoutMs(),
               tableName,
               query.getId()
           );
           return QueryContext.empty();
         }
-        return QueryContext.of(Map.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, dsConfig.getPerSegmentTimeoutMs()));
+        return QueryContext.of(
+            Map.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, dataSourceTimeoutConfig.getPerSegmentTimeoutMs())
+        );
       }
     }
     return QueryContext.empty();

@@ -187,8 +187,7 @@ public class NativeQueryMaker implements QueryMaker
         (Query<T>) query,
         authenticationResult,
         authorizationResult,
-        // SQL merges static defaults into the context; pass the user-set keys so dynamic config can override a
-        // merged-in default but not a value the caller set.
+        // The user-set keys, as distinct from the defaults SQL merged into the context.
         plannerContext.authContextKeys()
     );
 

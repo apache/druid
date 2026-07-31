@@ -213,27 +213,27 @@ public class BrokerDynamicConfigTest
   public void testContextOverridesInjectsPerSegmentTimeoutForMatchingDatasource()
   {
     BrokerDynamicConfig config = perSegmentTimeout("ds", new PerSegmentTimeoutConfig(5000, false));
-    Assert.assertEquals(5000L, config.getQuerySpecificContextOverrides(query("ds")).getPerSegmentTimeout());
+    Assert.assertEquals(5000L, config.getContextOverridesForQuery(query("ds")).getPerSegmentTimeout());
   }
 
   @Test
   public void testContextOverridesEmptyForMonitorOnly()
   {
     BrokerDynamicConfig config = perSegmentTimeout("ds", new PerSegmentTimeoutConfig(5000, true));
-    Assert.assertTrue(config.getQuerySpecificContextOverrides(query("ds")).isEmpty());
+    Assert.assertTrue(config.getContextOverridesForQuery(query("ds")).isEmpty());
   }
 
   @Test
   public void testContextOverridesEmptyForNonMatchingDatasource()
   {
     BrokerDynamicConfig config = perSegmentTimeout("other", new PerSegmentTimeoutConfig(5000, false));
-    Assert.assertTrue(config.getQuerySpecificContextOverrides(query("ds")).isEmpty());
+    Assert.assertTrue(config.getContextOverridesForQuery(query("ds")).isEmpty());
   }
 
   @Test
   public void testContextOverridesEmptyWhenNoPerSegmentTimeoutConfigured()
   {
-    Assert.assertTrue(BrokerDynamicConfig.builder().build().getQuerySpecificContextOverrides(query("ds")).isEmpty());
+    Assert.assertTrue(BrokerDynamicConfig.builder().build().getContextOverridesForQuery(query("ds")).isEmpty());
   }
 
   private static BrokerDynamicConfig perSegmentTimeout(String datasource, PerSegmentTimeoutConfig timeoutConfig)

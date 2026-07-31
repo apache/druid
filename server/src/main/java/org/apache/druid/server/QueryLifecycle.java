@@ -109,10 +109,10 @@ public class QueryLifecycle
   @MonotonicNonNull
   private Query<?> baseQuery;
   /**
-   * Keys present on the query context as received; the candidate set fed to context-key authorization.
+   * Context keys as received, i.e. the candidate set for {@link AuthConfig#contextKeysToAuthorize}.
    */
   @MonotonicNonNull
-  private Set<String> authorizationContextKeys;
+  private Set<String> queryContextKeysToAuthorize;
 
   public QueryLifecycle(
       final QueryRunnerFactoryConglomerate conglomerate,
@@ -226,8 +226,8 @@ public class QueryLifecycle
 
   /**
    * As {@link #initialize(Query)}, but takes the context keys the client actually set. Pass {@code null} to treat the
-   * whole context as client-set (native queries). The SQL layer merges static defaults into the context, so it must
-   * pass the real client-set keys so dynamic overrides can beat a merged-in default without overriding the client.
+   * whole context as client-set. The SQL layer must pass the real keys, since it merges defaults into the context
+   * and those should still be overridable by dynamic config.
    *
    * @throws DruidException if the current state is not NEW, which indicates a bug
    */
@@ -236,9 +236,8 @@ public class QueryLifecycle
     transition(State.NEW, State.INITIALIZED);
 
     final Map<String, Object> baseContext = baseQuery.getContext();
-    authorizationContextKeys = new HashSet<>(baseContext.keySet());
+    queryContextKeysToAuthorize = new HashSet<>(baseContext.keySet());
 
-    // Keys the client actually set (native queries pass null, so the whole context is client-set).
     final Set<String> effectiveClientProvidedQueryContextKeys =
         clientProvidedQueryContextKeys != null ? clientProvidedQueryContextKeys : baseContext.keySet();
 
@@ -278,7 +277,7 @@ public class QueryLifecycle
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
         ),
         Iterables.transform(
-            authConfig.contextKeysToAuthorize(authorizationContextKeys),
+            authConfig.contextKeysToAuthorize(queryContextKeysToAuthorize),
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
     );
@@ -316,7 +315,7 @@ public class QueryLifecycle
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
         ),
         Iterables.transform(
-            authConfig.contextKeysToAuthorize(authorizationContextKeys),
+            authConfig.contextKeysToAuthorize(queryContextKeysToAuthorize),
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
     );

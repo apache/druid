@@ -30,33 +30,52 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * A snapshot of the broker's resolved default query context and dynamic config, captured once for a single query so
- * that context resolution and the blocklist read one consistent view (rather than re-reading the live config at
- * different points in the query lifecycle). The context-resolution logic lives here, keeping it out of
- * {@code QueryLifecycle}. On non-broker nodes {@code dynamicConfig} is null (defaults only, no per-query overrides).
+ * A snapshot of the {@link BrokerDynamicConfig} (null on non-Broker nodes)
+ * and the resolved default query context that is used for the entire {@code QueryLifecycle}
+ * of a single query.
  */
 public class QueryConfigSnapshot
 {
-  private final Map<String, Object> defaultContext;
+  /** Already resolved against {@link BrokerDynamicConfig#getQueryContext()}. */
+  private final Map<String, Object> resolvedDefaultQueryContext;
   @Nullable
   private final BrokerDynamicConfig dynamicConfig;
 
-  public QueryConfigSnapshot(Map<String, Object> defaultContext, @Nullable BrokerDynamicConfig dynamicConfig)
+  public QueryConfigSnapshot(
+      Map<String, Object> resolvedDefaultQueryContext,
+      @Nullable BrokerDynamicConfig dynamicConfig
+  )
   {
-    this.defaultContext = defaultContext;
+    this.resolvedDefaultQueryContext = resolvedDefaultQueryContext;
     this.dynamicConfig = dynamicConfig;
   }
 
+  public Map<String, Object> getResolvedDefaultQueryContext()
+  {
+    return resolvedDefaultQueryContext;
+  }
+
+  @Nullable
+  public BrokerDynamicConfig getDynamicConfig()
+  {
+    return dynamicConfig;
+  }
+
   /**
-   * The final query context. Precedence high to low: a key the client set > per-query dynamic override > the query's
-   * own context > defaults. Dynamic overrides are applied over the merged context but skipped for keys the client set,
-   * so a client-provided value always wins.
+   * The final query context for the given query. Precedence, highest to lowest:
+   * <ol>
+   *   <li>Keys the client set on the query payload</li>
+   *   <li>Per-query overrides from {@link BrokerDynamicConfig#getContextOverridesForQuery}</li>
+   *   <li>Remaining keys on the query context (defaults merged in by the SQL layer)</li>
+   *   <li>{@link #resolvedDefaultQueryContext}, i.e. runtime properties overridden by
+   *       {@link BrokerDynamicConfig#getQueryContext()}</li>
+   * </ol>
    */
   public Map<String, Object> resolveContext(Query<?> query, Set<String> clientProvidedQueryContextKeys)
   {
-    Map<String, Object> result = QueryContexts.override(defaultContext, query.getContext());
+    final Map<String, Object> result = QueryContexts.override(resolvedDefaultQueryContext, query.getContext());
     if (dynamicConfig != null) {
-      for (Map.Entry<String, Object> override : dynamicConfig.getQuerySpecificContextOverrides(query).asMap().entrySet()) {
+      for (Map.Entry<String, Object> override : dynamicConfig.getContextOverridesForQuery(query).asMap().entrySet()) {
         if (!clientProvidedQueryContextKeys.contains(override.getKey())) {
           result.put(override.getKey(), override.getValue());
         }

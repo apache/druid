@@ -1978,10 +1978,12 @@ public class QueryResourceTest
 
   private QueryResource createQueryResourceWithBlocklist(ServerConfig serverConfig, QueryBlocklistRule... rules)
   {
+    final BrokerDynamicConfig dynamicConfig =
+        new BrokerDynamicConfig.Builder().withQueryBlocklist(Arrays.asList(rules)).build();
     final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig = Mockito.mock(BrokerViewOfBrokerConfig.class);
-    Mockito.when(brokerViewOfBrokerConfig.getDynamicConfig()).thenReturn(
-        new BrokerDynamicConfig.Builder().withQueryBlocklist(Arrays.asList(rules)).build()
-    );
+    Mockito.when(brokerViewOfBrokerConfig.getDynamicConfig()).thenReturn(dynamicConfig);
+    Mockito.when(brokerViewOfBrokerConfig.snapshotForQuery())
+           .thenReturn(new QueryConfigSnapshot(Map.of(), dynamicConfig));
 
     return createQueryResource(
         new QueryLifecycleFactory(
