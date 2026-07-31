@@ -477,13 +477,10 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   }
 
   /**
-   * Sum container sizes by bundle name across two segments' container lists. A container has no identity across
-   * segments (which internal files land in which container is an incidental per-segment packing detail), so unlike
-   * a within-segment container list, the merged result isn't "the containers" of any single segment — it's a
-   * per-bundle total. When only one side has data, that side is returned unchanged rather than run through the
-   * per-bundle collapse: there's nothing to merge it with, and a single segment's own container list may
-   * legitimately have more than one entry for the same bundle (a bundle spanning multiple containers), which this
-   * method should not silently collapse when it isn't actually merging anything.
+   * Sums container sizes by bundle name, since a container has no identity across segments. If only one side has
+   * data, it's returned unchanged instead of being run through the per-bundle collapse: there's nothing to merge it
+   * with, and a single segment's own list may already have more than one entry for the same bundle (a bundle
+   * spanning multiple containers).
    */
   @Nullable
   private static List<ContainerAnalysis> mergeContainers(
