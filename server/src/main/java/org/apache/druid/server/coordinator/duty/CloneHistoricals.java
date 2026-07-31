@@ -27,6 +27,7 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerCloneStatus;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -38,6 +39,7 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -45,6 +47,12 @@ import java.util.stream.Collectors;
  * Handles cloning of historicals. Given the historical to historical clone mappings, based on
  * {@link CoordinatorDynamicConfig#getCloneServers()}, copies any segments load or unload requests from the source
  * historical to the target historical.
+ * <p>
+ * Under a partial-load rule the source holds only part of a segment, so copying its load state means copying the
+ * {@link PartialLoadProfile} it holds the segment under, not just the segment id. Replicas are therefore compared by
+ * profile fingerprint: a clone whose replica was loaded under a different profile than the source's is re-loaded with
+ * the source's profile. Clone targets are excluded from rule-driven assignment
+ * ({@link DruidCluster#getManagedHistoricals()}), so this duty is the only thing that can correct them.
  */
 public class CloneHistoricals implements CoordinatorDuty
 {
@@ -103,10 +111,17 @@ public class CloneHistoricals implements CoordinatorDuty
 
       final Set<DataSegment> sourceProjectedSegments = sourceServer.getProjectedSegments();
       final Set<DataSegment> targetProjectedSegments = targetServer.getProjectedSegments();
-      // Load any segments missing in the clone target.
+      // Load any segment that the clone target is missing, or that it holds under a different partial-load profile
+      // than the source. Segment identity alone can't tell those apart: two replicas of the same segment id may hold
+      // different parts of it.
       for (DataSegment segment : sourceProjectedSegments) {
-        if (!targetProjectedSegments.contains(segment)) {
-          loadSegmentOnTargetServer(segment, targetServer, params);
+        final PartialLoadProfile sourceProfile = projectedProfile(sourceServer, segment);
+        if (!targetProjectedSegments.contains(segment)
+            || !Objects.equals(
+                fingerprintOf(sourceProfile),
+                fingerprintOf(projectedProfile(targetServer, segment))
+            )) {
+          loadSegmentOnTargetServer(segment, sourceProfile, targetServer, params);
         }
       }
 
@@ -124,8 +139,13 @@ public class CloneHistoricals implements CoordinatorDuty
     return params;
   }
 
+  /**
+   * Queues a load of {@code segment} on the clone target, asking for the same parts of the segment that the source
+   * holds. A null {@code sourceProfile} means the source holds the whole segment, which is the regular full load.
+   */
   private void loadSegmentOnTargetServer(
       DataSegment segment,
+      @Nullable PartialLoadProfile sourceProfile,
       ServerHolder targetServer,
       DruidCoordinatorRuntimeParams params
   )
@@ -141,13 +161,54 @@ public class CloneHistoricals implements CoordinatorDuty
           rowKey.and(Dimension.DESCRIPTION, "Segment not found in metadata cache"),
           1L
       );
-    } else if (loadQueueManager.loadSegment(loadableSegment, targetServer, SegmentAction.LOAD)) {
+    } else if (loadQueueManager.loadSegment(
+        loadableSegment,
+        targetServer,
+        SegmentAction.LOAD,
+        toRequestProfile(sourceProfile)
+    )) {
       params.getCoordinatorStats().add(
           Stats.Segments.ASSIGNED_TO_CLONE,
           rowKey.build(),
           1L
       );
     }
+  }
+
+  /**
+   * The {@link PartialLoadProfile} that {@code server} is expected to hold {@code segment} under once its queued
+   * operations finish: the profile of an in-flight load if one is queued (a null profile there means a regular full
+   * load is on its way), else the profile the server announced for the loaded replica. Returns null when the replica
+   * is a regular full load. Mirrors the branch order in
+   * {@link org.apache.druid.server.coordinator.loading.PartialSegmentStatusInTier}, which classifies rule-managed
+   * replicas the same way.
+   */
+  @Nullable
+  private static PartialLoadProfile projectedProfile(ServerHolder server, DataSegment segment)
+  {
+    final SegmentAction action = server.getActionOnSegment(segment);
+    if (action != null && action.isLoad()) {
+      return server.getInFlightProfile(segment);
+    }
+    return server.getServer().getPartialLoadProfile(segment.getId());
+  }
+
+  @Nullable
+  private static String fingerprintOf(@Nullable PartialLoadProfile profile)
+  {
+    return profile == null ? null : profile.fingerprint();
+  }
+
+  /**
+   * Rebuilds a profile read off a server as an outbound load request. A profile announced by a historical carries
+   * the footprint that historical realized, which is its own to report and not part of the request.
+   */
+  @Nullable
+  private static PartialLoadProfile toRequestProfile(@Nullable PartialLoadProfile profile)
+  {
+    return profile == null
+           ? null
+           : PartialLoadProfile.forRequest(profile.wrappedLoadSpec(), profile.fingerprint());
   }
 
   private void dropSegmentFromTargetServer(
