@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -470,6 +471,15 @@ class WildcardClusterGroupPartialLoadMatcherTest
     Assertions.assertTrue(json.contains("\"virtualColumns\""), () -> "expected virtualColumns in JSON: " + json);
     final PartialLoadMatcher back = mapper.readValue(json, PartialLoadMatcher.class);
     Assertions.assertEquals(original, back);
+  }
+
+  @Test
+  void testEquals()
+  {
+    EqualsVerifier.forClass(WildcardClusterGroupPartialLoadMatcher.class)
+                  .withIgnoredFields("compiledPatterns", "compiledExcludePatterns")
+                  .usingGetClass()
+                  .verify();
   }
 
   @Test
