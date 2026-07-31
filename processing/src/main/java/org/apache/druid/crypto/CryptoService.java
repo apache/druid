@@ -165,9 +165,11 @@ public class CryptoService
 
       // error-prone warns if the transformation is not a compile-time constant
       // since it cannot check it for insecure combinations.
-      @SuppressWarnings("InsecureCryptoUsage")
       // Legacy ciphertext may use a weaker configured transformation; new ciphertext is always written using GCM.
-      // codeql[java/potentially-weak-cryptographic-algorithm]
+      @SuppressWarnings({
+          "InsecureCryptoUsage",
+          "codeql[java/potentially-weak-cryptographic-algorithm]"
+      })
       final Cipher dcipher = Cipher.getInstance(transformation);
       dcipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(encryptedData.getIv()));
       return dcipher.doFinal(encryptedData.getCipher());
