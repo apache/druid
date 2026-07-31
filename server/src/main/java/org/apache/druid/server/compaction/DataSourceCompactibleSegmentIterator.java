@@ -350,26 +350,36 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   }
 
   /**
-   * Returns the initial searchInterval which is {@code (timeline.first().start, timeline.last().end - skipOffset)}.
+   * Returns the initial searchInterval which is {@code (timeline.first().start + skipOffsetFromEarliest, timeline.last().end - skipOffsetFromLatest)}.
    */
   private List<Interval> findInitialSearchInterval(
       SegmentTimeline timeline,
       @Nullable List<Interval> skipIntervals
   )
   {
-    final Period skipOffset = config.getSkipOffsetFromLatest();
+    final Period skipOffsetFromLatest = config.getSkipOffsetFromLatest();
+    final Period skipOffsetFromEarliest = config.getSkipOffsetFromEarliest();
     Preconditions.checkArgument(timeline != null && !timeline.isEmpty(), "timeline should not be null or empty");
-    Preconditions.checkNotNull(skipOffset, "skipOffset");
+    Preconditions.checkNotNull(skipOffsetFromLatest, "skipOffsetFromLatest");
+    Preconditions.checkNotNull(skipOffsetFromEarliest, "skipOffsetFromEarliest");
 
     final TimelineObjectHolder<String, DataSegment> first = Preconditions.checkNotNull(timeline.first(), "first");
     final TimelineObjectHolder<String, DataSegment> last = Preconditions.checkNotNull(timeline.last(), "last");
+
     final Interval latestSkipInterval = computeLatestSkipInterval(
         config.getSegmentGranularity(),
         last.getInterval().getEnd(),
-        skipOffset
+        skipOffsetFromLatest
     );
+
+    final Interval earliestSkipInterval = computeEarliestSkipInterval(
+        config.getSegmentGranularity(),
+        first.getInterval().getStart(),
+        skipOffsetFromEarliest
+    );
+
     final List<Interval> allSkipIntervals
-        = sortAndAddSkipIntervalFromLatest(latestSkipInterval, skipIntervals);
+        = sortAndAddSkipIntervals(latestSkipInterval, earliestSkipInterval, skipIntervals);
 
     // Collect stats for all skipped segments
     for (Interval skipInterval : allSkipIntervals) {
@@ -384,7 +394,9 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
 
         final CompactionStatus reason;
         if (compactionInterval.overlaps(latestSkipInterval)) {
-          reason = CompactionStatus.skipped("skip offset from latest[%s]", skipOffset);
+          reason = CompactionStatus.skipped("skip offset from latest[%s]", skipOffsetFromLatest);
+        } else if (compactionInterval.overlaps(earliestSkipInterval)) {
+          reason = CompactionStatus.skipped("skip offset from earliest[%s]", skipOffsetFromEarliest);
         } else {
           reason = CompactionStatus.skipped("interval locked by another task");
         }
@@ -454,7 +466,52 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
     }
   }
 
+  static Interval computeEarliestSkipInterval(
+      @Nullable Granularity configuredSegmentGranularity,
+      DateTime earliestDataTimestamp,
+      Period skipOffsetFromEarliest
+  )
+  {
+    if (configuredSegmentGranularity == null) {
+      return new Interval(earliestDataTimestamp, earliestDataTimestamp.plus(skipOffsetFromEarliest));
+    } else {
+      DateTime skipFromEarliest = new DateTime(earliestDataTimestamp, earliestDataTimestamp.getZone()).plus(skipOffsetFromEarliest);
+      DateTime skipOffsetBucketToSegmentGranularity = configuredSegmentGranularity.bucketStart(skipFromEarliest);
+      return new Interval(earliestDataTimestamp, skipOffsetBucketToSegmentGranularity);
+    }
+  }
+
   @VisibleForTesting
+  static List<Interval> sortAndAddSkipIntervals(
+      Interval skipFromLatest,
+      Interval skipFromEarliest,
+      @Nullable List<Interval> skipIntervals
+  )
+  {
+    final List<Interval> nonNullSkipIntervals = skipIntervals == null
+                                                ? new ArrayList<>(2)
+                                                : new ArrayList<>(skipIntervals.size() + 2);
+
+    if (skipIntervals != null) {
+      nonNullSkipIntervals.addAll(skipIntervals);
+    }
+
+    // Add earliest skip interval if it's not empty
+    if (!skipFromEarliest.getStart().equals(skipFromEarliest.getEnd())) {
+      nonNullSkipIntervals.add(skipFromEarliest);
+    }
+
+    // Add latest skip interval
+    nonNullSkipIntervals.add(skipFromLatest);
+
+    // Sort all intervals
+    nonNullSkipIntervals.sort(Comparators.intervalsByStartThenEnd());
+
+    return nonNullSkipIntervals;
+  }
+
+  @VisibleForTesting
+  @Deprecated
   static List<Interval> sortAndAddSkipIntervalFromLatest(
       Interval skipFromLatest,
       @Nullable List<Interval> skipIntervals

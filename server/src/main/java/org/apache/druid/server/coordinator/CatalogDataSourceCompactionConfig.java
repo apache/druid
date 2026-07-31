@@ -51,6 +51,7 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
   @Nullable
   private final CompactionEngine engine;
   private final Period skipOffsetFromLatest;
+  private final Period skipOffsetFromEarliest;
   private final int taskPriority;
   @Nullable
   private final Map<String, Object> taskContext;
@@ -63,6 +64,7 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("engine") @Nullable CompactionEngine engine,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
+      @JsonProperty("skipOffsetFromEarliest") @Nullable Period skipOffsetFromEarliest,
       @JsonProperty("taskPriority") @Nullable Integer taskPriority,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext,
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
@@ -72,6 +74,7 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.engine = engine;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
+    this.skipOffsetFromEarliest = skipOffsetFromEarliest == null ? DEFAULT_SKIP_OFFSET_FROM_EARLIEST : skipOffsetFromEarliest;
     this.inputSegmentSizeBytes = inputSegmentSizeBytes == null
                                  ? DEFAULT_INPUT_SEGMENT_SIZE_BYTES
                                  : inputSegmentSizeBytes;
@@ -101,6 +104,13 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
   public Period getSkipOffsetFromLatest()
   {
     return skipOffsetFromLatest;
+  }
+
+  @JsonProperty
+  @Override
+  public Period getSkipOffsetFromEarliest()
+  {
+    return skipOffsetFromEarliest;
   }
 
   @JsonProperty
@@ -241,12 +251,13 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
            && Objects.equals(dataSource, that.dataSource)
            && engine == that.engine
            && Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest)
+           && Objects.equals(skipOffsetFromEarliest, that.skipOffsetFromEarliest)
            && Objects.equals(taskContext, that.taskContext);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, engine, skipOffsetFromLatest, taskPriority, taskContext, inputSegmentSizeBytes);
+    return Objects.hash(dataSource, engine, skipOffsetFromLatest, skipOffsetFromEarliest, taskPriority, taskContext, inputSegmentSizeBytes);
   }
 }

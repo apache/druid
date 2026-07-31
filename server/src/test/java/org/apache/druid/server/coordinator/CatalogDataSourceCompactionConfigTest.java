@@ -116,6 +116,7 @@ public class CatalogDataSourceCompactionConfigTest
         null,
         null,
         null,
+        null,
         METADATA_CATALOG
     );
 
@@ -130,6 +131,7 @@ public class CatalogDataSourceCompactionConfigTest
   {
     final CatalogDataSourceCompactionConfig config = new CatalogDataSourceCompactionConfig(
         "foo",
+        null,
         null,
         null,
         null,
