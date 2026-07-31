@@ -1,7 +1,7 @@
 ---
-id: sql-jdbc
-title: SQL JDBC driver API
-sidebar_label: SQL JDBC driver
+id: sql-jdbc-avatica
+title: Avatica JDBC driver API
+sidebar_label: Avatica JDBC driver
 ---
 
 <!--
@@ -24,11 +24,17 @@ sidebar_label: SQL JDBC driver
   -->
 
 :::info
- Apache&circledR; Druid supports two query languages: Druid SQL and [native queries](../querying/querying.md).
+ Apache&circledR; Druid supports two query languages: Druid SQL and [native queries](querying.md).
  This document describes the SQL language.
 :::
 
-You can make [Druid SQL](../querying/sql.md) queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/).
+:::info
+ We recommend the [Druid JDBC driver](sql-jdbc.md) instead of the Avatica driver described on this page.
+ The Druid JDBC driver queries the standard [SQL HTTP API](../api-reference/sql-api.md) at `/druid/v2/sql/`, so it
+ does not require connection stickiness, and is not subject to the Avatica connection and statement limits.
+:::
+
+You can make [Druid SQL](sql.md) queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/).
 We recommend using Avatica JDBC driver version 1.23.0 or later. Note that starting with Avatica 1.21.0, you may need to set the [`transparent_reconnection`](https://calcite.apache.org/avatica/docs/client_reference.html#transparent_reconnection) property to `true` if you notice intermittent query failures.
 
 Once you've downloaded the Avatica client jar, add it to your classpath.
@@ -54,7 +60,7 @@ or if a Broker is restarted.
 Set `serialization` to `protobuf` if using the protobuf endpoint.
 
 Note that as of the time of this writing, Avatica 1.23.0, the latest version, does not support passing
-[connection context parameters](../querying/sql-query-context.md) from the JDBC connection string to Druid. These context parameters
+[connection context parameters](sql-query-context.md) from the JDBC connection string to Druid. These context parameters
 must be passed using a `Properties` object instead. Refer to the Java code below for an example.
 
 Example Java code:
@@ -98,21 +104,22 @@ String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica
 :::
 
 Table metadata is available over JDBC using `connection.getMetaData()` or by querying the
-[INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md). For an example of this, see [Get the metadata for a datasource](#get-the-metadata-for-a-datasource).
+[INFORMATION_SCHEMA tables](sql-metadata-tables.md). For an example of this, see [Get the metadata for a datasource](#get-the-metadata-for-a-datasource).
 
 ## Connection stickiness
 
-Druid's JDBC server does not share connection state between Brokers. This means that if you're using JDBC and have
+Druid's Avatica server does not share connection state between Brokers. This means that if you're using JDBC and have
 multiple Druid Brokers, you should either connect to a specific Broker or use a load balancer with sticky sessions
 enabled. The Druid Router process provides connection stickiness when balancing JDBC requests, and can be used to achieve
 the necessary stickiness even with a normal non-sticky load balancer. Please see the
 [Router](../design/router.md) documentation for more details.
 
-Note that the non-JDBC [JSON over HTTP](sql-api.md#submit-a-query) API is stateless and does not require stickiness.
+Neither the [Druid JDBC driver](sql-jdbc.md) nor the non-JDBC [JSON over HTTP](../api-reference/sql-api.md#submit-a-query)
+API keeps server-side connection state, so neither requires stickiness.
 
 ## Dynamic parameters
 
-You can use [parameterized queries](../querying/sql.md#dynamic-parameters) in JDBC code, as in this example:
+You can use [parameterized queries](sql.md#dynamic-parameters) in JDBC code, as in this example:
 
 ```java
 PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ? OR dim1 = ?");
@@ -143,8 +150,6 @@ statement.executeQuery();
 
 ## Examples
 
-<!-- docs/tutorial-jdbc.md redirects here -->
-
 The following section contains two complete samples that use the JDBC connector:
 
 - [Get the metadata for a datasource](#get-the-metadata-for-a-datasource) shows you how to query the `INFORMATION_SCHEMA` to get metadata like column names. 
@@ -168,7 +173,7 @@ Make sure you meet the following requirements before trying these examples:
 
 ### Get the metadata for a datasource
 
-Metadata, such as column names, is available either through the [`INFORMATION_SCHEMA`](../querying/sql-metadata-tables.md) table or through `connection.getMetaData()`. The following example uses the `INFORMATION_SCHEMA` table to retrieve and print the list of column names for the `wikipedia` datasource that you loaded during a previous tutorial.
+Metadata, such as column names, is available either through the [`INFORMATION_SCHEMA`](sql-metadata-tables.md) table or through `connection.getMetaData()`. The following example uses the `INFORMATION_SCHEMA` table to retrieve and print the list of column names for the `wikipedia` datasource that you loaded during a previous tutorial.
 
 ```java
 import java.sql.*;
@@ -208,7 +213,7 @@ public class JdbcListColumns {
 
 ### Query data
 
-Now that you know what columns are available, you can start querying the data. The following example queries the datasource named `wikipedia` for the timestamps and comments from Japan. It also sets the [query context parameter](../querying/sql-query-context.md) `sqlTimeZone`. Optionally, you can also parameterize queries by using [dynamic parameters](#dynamic-parameters).
+Now that you know what columns are available, you can start querying the data. The following example queries the datasource named `wikipedia` for the timestamps and comments from Japan. It also sets the [query context parameter](sql-query-context.md) `sqlTimeZone`. Optionally, you can also parameterize queries by using [dynamic parameters](#dynamic-parameters).
 
 ```java
 import java.sql.*;

@@ -317,7 +317,7 @@ public class QueryDriver
                        .sql(request.getQuery())
                        .systemDefaultContext(queryConfigProvider.getContext())
                        .queryContext(translateContext(request))
-                       .sqlParameters(translateParameters(request))
+                       .parameters(translateParameters(request))
                        .auth(authResult)
                        .build();
   }

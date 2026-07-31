@@ -140,7 +140,7 @@ You can use any SQL query context parameters to control Dart's behavior unless o
   - Use the query cache.
   - Perform query prioritization or laning.
 - TopN queries are always exact. Approximate TopN queries (`useApproximateTopN`) aren't supported.
-- Dart doesn't support JDBC connections. Druid ignores the `engine` context parameter when its passed through a JDBC connection.
+- Dart doesn't support the [Avatica JDBC driver](sql-jdbc-avatica.md). Druid ignores the `engine` context parameter when it's passed through an Avatica connection. Use the [Druid JDBC driver](sql-jdbc.md) instead.
 - Realtime scans from the MSQ engine can't reliably read complex types. This can happen in situations such as if your data includes HLL Sketches for realtime data. Dart returns a `NullPointerException`. For more information, see [#18340](https://github.com/apache/druid/issues/18340).
 - The `NilStageOutputReader` can sometimes lead to a `NoClassDefFoundError`. For more information, see [#18336](https://github.com/apache/druid/pull/18336).
 - Broadcast joins with realtime data aren't supported. If the left table of a join has realtime data and you're doing a broadcast join, you must set `sqlJoinAlgorithm` to `sortMerge`.

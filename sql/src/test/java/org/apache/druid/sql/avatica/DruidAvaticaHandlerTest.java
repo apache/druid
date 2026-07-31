@@ -1396,6 +1396,27 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   @Test
+  public void testFloatParameterBinding() throws SQLException
+  {
+    testRequestLogger.clear();
+    try (PreparedStatement statement = client.prepareStatement(
+        "SELECT CAST(? AS VARCHAR) AS c FROM druid.foo LIMIT 1")) {
+      statement.setFloat(1, 0.1f);
+      final ResultSet resultSet = statement.executeQuery();
+      Assertions.assertEquals(
+          ImmutableList.of(
+              ImmutableMap.of("c", "0.1")
+          ),
+          getRows(resultSet)
+      );
+      Assertions.assertEquals(
+          List.of(new ClientSqlParameter(SqlType.FLOAT.toString(), 0.1f)),
+          testRequestLogger.getSqlQueryLogs().get(0).getSqlParameters()
+      );
+    }
+  }
+
+  @Test
   public void testSysTableParameterBindingRegularUser() throws SQLException
   {
     try (PreparedStatement statement =

@@ -31,13 +31,14 @@ import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 import org.apache.druid.sql.calcite.parser.StatementAndSetContext;
 import org.apache.druid.sql.calcite.planner.CalcitePlanner;
 import org.apache.druid.sql.http.SqlParameter;
-import org.apache.druid.sql.http.SqlQuery;
+import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Captures the inputs to a SQL execution request: the statement (as a string),
@@ -66,10 +67,10 @@ public class SqlQueryPlus
   private final String sql;
   @Nullable
   private final SqlNode sqlNode;
-  private boolean allowSetStatements;
+  private final boolean allowSetStatements;
   private final Map<String, Object> stmtContext;
   private final Set<String> authContextKeys;
-  private final List<TypedValue> parameters;
+  private final List<ParameterBinding> parameters;
   private final AuthenticationResult authResult;
 
   private SqlQueryPlus(
@@ -78,7 +79,7 @@ public class SqlQueryPlus
       boolean allowSetStatements,
       Map<String, Object> stmtContext,
       Set<String> authContextKeys,
-      List<TypedValue> parameters,
+      List<ParameterBinding> parameters,
       AuthenticationResult authResult
   )
   {
@@ -131,13 +132,18 @@ public class SqlQueryPlus
     return authContextKeys;
   }
 
-  public List<TypedValue> parameters()
+  public List<TypedValue> resolveParameters(final DateTimeZone sessionTimeZone)
   {
-    return parameters;
+    return parameters.stream()
+                     // null params are not good!
+                     // we pass them to the planner, so that it can generate a proper error message.
+                     // see SqlParameterizerShuttle and RelParameterizerShuttle.
+                     .map(p -> p == null ? null : p.resolve(sessionTimeZone))
+                     .collect(Collectors.toList());
   }
 
   /**
-   * Convert parameters list to serde friendly {@link SqlParameter}
+   * Convert parameters list to serde friendly {@link ClientSqlParameter}, for request logging.
    */
   @Nullable
   public List<ClientSqlParameter> sqlParameters()
@@ -145,9 +151,7 @@ public class SqlQueryPlus
     if (parameters.isEmpty()) {
       return null;
     }
-    return parameters.stream()
-                     .map(p -> new ClientSqlParameter(SqlType.valueOf(p.type.typeId).toString(), p.value))
-                     .toList();
+    return parameters.stream().map(ParameterBinding::toClientParameter).toList();
   }
 
   public AuthenticationResult authResult()
@@ -170,13 +174,23 @@ public class SqlQueryPlus
 
   public SqlQueryPlus withParameters(List<TypedValue> parameters)
   {
+    final List<ParameterBinding> parameterBindings;
+
+    if (parameters == null) {
+      parameterBindings = null;
+    } else {
+      parameterBindings = parameters.stream()
+                                    .<ParameterBinding>map(p -> p == null ? null : new TypedValueBinding(p))
+                                    .collect(Collectors.toList());
+    }
+
     return new SqlQueryPlus(
         sql,
         sqlNode,
         allowSetStatements,
         stmtContext,
         authContextKeys,
-        parameters,
+        parameterBindings,
         authResult
     );
   }
@@ -212,12 +226,23 @@ public class SqlQueryPlus
            '}';
   }
 
+  /**
+   * A single parameter binding, which is turned into an Avatica {@link TypedValue} by
+   * {@link #resolveParameters(DateTimeZone)} once the session time zone is known.
+   */
+  private interface ParameterBinding
+  {
+    TypedValue resolve(DateTimeZone sessionTimeZone);
+
+    ClientSqlParameter toClientParameter();
+  }
+
   public static class Builder
   {
     private String sql;
     private Map<String, Object> systemDefaultContext;
     private Map<String, Object> queryContext;
-    private List<TypedValue> parameters;
+    private List<ParameterBinding> parameters;
     private AuthenticationResult authResult;
 
     public Builder sql(String sql)
@@ -244,15 +269,16 @@ public class SqlQueryPlus
       return this;
     }
 
-    public Builder parameters(List<TypedValue> parameters)
+    public Builder parameters(List<SqlParameter> parameters)
     {
-      this.parameters = parameters;
-      return this;
-    }
+      if (parameters == null) {
+        this.parameters = null;
+      } else {
+        this.parameters = parameters.stream()
+                                    .<ParameterBinding>map(p -> p == null ? null : new SqlParameterBinding(p))
+                                    .collect(Collectors.toList());
+      }
 
-    public Builder sqlParameters(List<SqlParameter> parameters)
-    {
-      this.parameters = parameters == null ? null : SqlQuery.getParameterList(parameters);
       return this;
     }
 
@@ -310,6 +336,42 @@ public class SqlQueryPlus
           parameters,
           authResult
       );
+    }
+  }
+
+  /**
+   * Binding for a parameter supplied as a {@link SqlParameter}.
+   */
+  private record SqlParameterBinding(SqlParameter parameter) implements ParameterBinding
+  {
+    @Override
+    public TypedValue resolve(final DateTimeZone sessionTimeZone)
+    {
+      return parameter.getTypedValue(sessionTimeZone);
+    }
+
+    @Override
+    public ClientSqlParameter toClientParameter()
+    {
+      return new ClientSqlParameter(parameter.getType().toString(), parameter.getValue());
+    }
+  }
+
+  /**
+   * Binding for a parameter supplied as an Avatica {@link TypedValue}.
+   */
+  private record TypedValueBinding(TypedValue typedValue) implements ParameterBinding
+  {
+    @Override
+    public TypedValue resolve(final DateTimeZone sessionTimeZone)
+    {
+      return typedValue;
+    }
+
+    @Override
+    public ClientSqlParameter toClientParameter()
+    {
+      return new ClientSqlParameter(SqlType.valueOf(typedValue.type.typeId).toString(), typedValue.value);
     }
   }
 }
