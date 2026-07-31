@@ -110,6 +110,11 @@ public class IntervalTreeMap<T> extends AbstractMap<Interval, T> implements Navi
     return imbalanceTolerance;
   }
 
+  /**
+   * Set the allowed tolerance between the right and left branches.
+   * The setting will take effect on the next modification operation on the tree, such as an add or a delete.
+   * @param imbalanceTolerance The tolerance
+   */
   public void setImbalanceTolerance(int imbalanceTolerance)
   {
     this.imbalanceTolerance = imbalanceTolerance;
