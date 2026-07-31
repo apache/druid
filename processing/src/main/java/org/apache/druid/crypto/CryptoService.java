@@ -152,7 +152,6 @@ public class CryptoService
   }
 
   // Legacy ciphertext may use a weaker configured transformation; new ciphertext is always written using GCM.
-  @SuppressWarnings("codeql[java/potentially-weak-cryptographic-algorithm]")
   public byte[] decrypt(byte[] data)
   {
     try {
