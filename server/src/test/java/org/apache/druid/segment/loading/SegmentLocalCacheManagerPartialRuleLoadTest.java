@@ -69,6 +69,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -175,6 +176,7 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     jsonMapper = TestHelper.makeJsonMapper();
     jsonMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
     jsonMapper.registerSubtypes(new NamedType(PartialProjectionLoadSpec.class, PartialProjectionLoadSpec.TYPE));
+    jsonMapper.registerSubtypes(new NamedType(CompositePartialLoadSpec.class, CompositePartialLoadSpec.TYPE));
     jsonMapper.registerModule(new SegmentizerModule());
     jsonMapper.registerModules(new LocalDataStorageDruidModule().getJacksonModules());
     jsonMapper.setInjectableValues(
@@ -229,6 +231,71 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     Assertions.assertTrue(location.isWeakReserved(baseId), "base dependency should be weak-reserved");
     Assertions.assertFalse(location.isReserved(metaId), "metadata entry should NOT be in staticCacheEntries");
     Assertions.assertFalse(location.isReserved(aggId), "selected bundle should NOT be in staticCacheEntries");
+  }
+
+  @Test
+  void testLoadCompositeWrapperInstallsRuleHoldsOnUnionOfMemberBundles() throws Exception
+  {
+    // A partialComposite wrapper must survive the whole historical-side path: materialize each member with the
+    // composite's delegate spliced in, union their bundles, then rule-hold and eagerly download every one. Cross-scheme
+    // unions (projections + cluster groups) are covered by CompositePartialLoadSpecTest; here both members are
+    // projections because this fixture is not clustered.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+    final String compositeFingerprint = "v1:composite-bundle-test";
+
+    manager.load(compositeWrapperSegment(List.of(AGG_BUNDLE, OTHER_AGG_BUNDLE), compositeFingerprint));
+
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    Assertions.assertTrue(metadata.isRuleHeld(), "rule must be applied to the metadata entry");
+    Assertions.assertEquals(compositeFingerprint, metadata.getRuleFingerprint());
+
+    // Every member's bundle is rule-held: the union, not just the first member's selection.
+    for (String bundleName : List.of(AGG_BUNDLE, OTHER_AGG_BUNDLE)) {
+      Assertions.assertTrue(
+          metadata.isBundleRuleHeld(bundleName),
+          "bundle[" + bundleName + "] should be rule-held by the composite rule"
+      );
+    }
+    // __base is reserved as a mount-time dependency of both members rather than by a rule hold of its own.
+    Assertions.assertFalse(
+        metadata.isBundleRuleHeld(Projections.BASE_TABLE_PROJECTION_NAME),
+        "__base is a mount-time dependency, not a rule-selected bundle"
+    );
+    for (String bundleName : List.of(AGG_BUNDLE, OTHER_AGG_BUNDLE, Projections.BASE_TABLE_PROJECTION_NAME)) {
+      Assertions.assertTrue(
+          location.isWeakReserved(new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, bundleName)),
+          "bundle[" + bundleName + "] should be weak-reserved by the composite rule"
+      );
+    }
+
+    // Eager downloads completed before load() returned, for both members and the shared dependency.
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+    Assertions.assertNotNull(mapper, "metadata mount should produce a file mapper");
+    for (String bundleName : List.of(AGG_BUNDLE, OTHER_AGG_BUNDLE, Projections.BASE_TABLE_PROJECTION_NAME)) {
+      Assertions.assertTrue(
+          mapper.isBundleFullyDownloaded(bundleName),
+          "bundle[" + bundleName + "] must be fully downloaded eagerly"
+      );
+    }
+  }
+
+  @Test
+  void testLoadCompositeWrapperWithOverlappingMembersHoldsBundleOnce() throws Exception
+  {
+    // Two members selecting the same projection: getSelectedBundleNames dedupes, so this must behave exactly like a
+    // single selection rather than double-holding or failing.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    manager.load(compositeWrapperSegment(List.of(AGG_BUNDLE, AGG_BUNDLE), "v1:composite-overlap-test"));
+
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    Assertions.assertTrue(metadata.isBundleRuleHeld(AGG_BUNDLE));
+    Assertions.assertFalse(
+        location.isWeakReserved(new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, OTHER_AGG_BUNDLE)),
+        "unselected bundle must not be reserved"
+    );
   }
 
   @Test
@@ -710,10 +777,11 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     final List<StorageLocationConfig> locConfigs = locationRoots.stream()
         .map(root -> new StorageLocationConfig(root, 1024L * 1024L * 1024L, null))
         .toList();
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-        .setLocations(locConfigs)
-        .setVirtualStorage(virtualStorage)
-        .setVirtualStoragePartialDownloadsEnabled(partialDownloadsEnabled);
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
+        .locations(locConfigs)
+        .virtualStorage(virtualStorage)
+        .virtualStoragePartialDownloadsEnabled(partialDownloadsEnabled)
+        .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     return new SegmentLocalCacheManager(
         storageLocations,
@@ -741,6 +809,33 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     return DataSegment.builder(SEGMENT_ID)
                       .shardSpec(NoneShardSpec.instance())
                       .loadSpec(wrapperWire)
+                      .size(0)
+                      .build();
+  }
+
+  /**
+   * A {@code partialComposite} wrapper whose members each select one projection, matching what
+   * {@code CompositePartialLoadMatcher} emits: the delegate lives once at the top level and members carry none.
+   */
+  private DataSegment compositeWrapperSegment(List<String> projectionPerMember, String fingerprint)
+  {
+    final Map<String, Object> delegate = Map.of(
+        "type", "local",
+        "path", DEEP_STORAGE_DIR.getAbsolutePath()
+    );
+    final List<Map<String, Object>> members = projectionPerMember
+        .stream()
+        .map(projection -> {
+          final Map<String, Object> member = new HashMap<>(
+              PartialProjectionLoadSpec.wireForm(delegate, List.of(projection), fingerprint + ":" + projection)
+          );
+          member.remove(PartialLoadSpec.DELEGATE_FIELD);
+          return member;
+        })
+        .toList();
+    return DataSegment.builder(SEGMENT_ID)
+                      .shardSpec(NoneShardSpec.instance())
+                      .loadSpec(CompositePartialLoadSpec.wireForm(delegate, members, fingerprint))
                       .size(0)
                       .build();
   }

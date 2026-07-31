@@ -23,12 +23,15 @@ import com.google.common.base.Supplier;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 class MergingClusterGroupCursorTest
 {
@@ -153,10 +156,49 @@ class MergingClusterGroupCursorTest
     }
   }
 
+  @Test
+  void testVirtualColumnRemapRedirectsReads()
+  {
+    // With a remap {aliased -> v}, reads of the query virtual column's output name "aliased" through the exposed
+    // factory must resolve to the materialized "v" column of the winning group. Without the remap the per-group
+    // factories reject "aliased" (see ListCursor), so this proves the RemapColumnSelectorFactory is applied on top of
+    // the merge.
+    final List<Supplier<CursorHolder>> suppliers = new ArrayList<>(List.of(
+        group(new long[]{1, 3}, new String[]{"g0@1", "g0@3"}),
+        group(new long[]{2, 4}, new String[]{"g1@2", "g1@4"})
+    ));
+    final MergingClusterGroupCursor cursor = new MergingClusterGroupCursor(
+        suppliers,
+        RowSignature.empty(),
+        List.of(new Object[0], new Object[0]),
+        false,
+        VirtualColumns.EMPTY,
+        Map.of("aliased", "v")
+    );
+    final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+    final ColumnValueSelector timeSelector = factory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
+    final ColumnValueSelector aliasSelector = factory.makeColumnValueSelector("aliased");
+    final List<Object[]> rows = new ArrayList<>();
+    while (!cursor.isDone()) {
+      rows.add(new Object[]{timeSelector.getLong(), aliasSelector.getObject()});
+      cursor.advance();
+    }
+    assertRows(rows, new long[]{1, 2, 3, 4}, new String[]{"g0@1", "g1@2", "g0@3", "g1@4"});
+  }
+
   @SafeVarargs
   private static MergingClusterGroupCursor cursor(boolean descending, Supplier<CursorHolder>... groups)
   {
-    return new MergingClusterGroupCursor(new ArrayList<>(List.of(groups)), descending);
+    // These cases only read non-clustering columns ("v"), so no clustering columns/values are needed.
+    final List<Supplier<CursorHolder>> suppliers = new ArrayList<>(List.of(groups));
+    return new MergingClusterGroupCursor(
+        suppliers,
+        RowSignature.empty(),
+        Collections.nCopies(suppliers.size(), new Object[0]),
+        descending,
+        VirtualColumns.EMPTY,
+        Map.of()
+    );
   }
 
   private static List<Object[]> drain(MergingClusterGroupCursor cursor)
@@ -236,6 +278,11 @@ class MergingClusterGroupCursorTest
                 return false;
               }
             };
+          }
+          if (!"v".equals(columnName)) {
+            // Strict on purpose: a per-group cursor only serves its materialized columns. This makes the remap test
+            // meaningful (reading a query VC output name must be redirected to "v" before reaching this factory).
+            throw new UnsupportedOperationException("unknown column [" + columnName + "]");
           }
           return new TestObjectColumnSelector<String>()
           {

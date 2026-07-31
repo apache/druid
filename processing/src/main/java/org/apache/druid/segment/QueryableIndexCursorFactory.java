@@ -43,6 +43,7 @@ import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.segment.vector.ConcatenatingVectorCursor;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
+import org.apache.druid.segment.vector.RemapVectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -52,7 +53,6 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -126,7 +126,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
   public CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec, ClusterGroupQueryPlan plan)
   {
     if (plan.survivingGroups().isEmpty()) {
-      return EmptyCursorHolder.INSTANCE;
+      return EmptyCursorHolder.forSpec(spec);
     }
 
     if (plan.survivingGroups().size() == 1) {
@@ -200,15 +200,48 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     // This way, the returned ordering will begin with {@code __time}.
     final ClusteredValueGroupsBaseTableSchema summary = valueGroup.getSummary();
     final List<OrderBy> ordering =
-        useTimeOrderedCursors(spec, summary) ? summary.getGroupOrdering() : summary.getOrdering();
+        Projections.useTimeOrderedCursors(spec, summary) ? summary.getGroupOrdering() : summary.getOrdering();
 
-    // groupIndex exposes the group's clustering columns as constant columns, no selector wrapper is needed
+    if (plan.virtualColumnRemap().isEmpty()) {
+      return new QueryableIndexCursorHolder(
+          groupIndex,
+          plan.rebuildCursorBuildSpec(spec, valueGroup),
+          QueryableIndexTimeBoundaryInspector.create(groupIndex),
+          ordering
+      );
+    }
+
     return new QueryableIndexCursorHolder(
         groupIndex,
         plan.rebuildCursorBuildSpec(spec, valueGroup),
         QueryableIndexTimeBoundaryInspector.create(groupIndex),
         ordering
-    );
+    )
+    {
+      @Override
+      protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
+          ColumnCache columnCache,
+          Offset baseOffset
+      )
+      {
+        return new RemapColumnSelectorFactory(
+            super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset),
+            plan.virtualColumnRemap()
+        );
+      }
+
+      @Override
+      protected VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
+          ColumnCache columnCache,
+          VectorOffset baseOffset
+      )
+      {
+        return new RemapVectorColumnSelectorFactory(
+            super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset),
+            plan.virtualColumnRemap()
+        );
+      }
+    };
   }
 
   /**
@@ -254,16 +287,22 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     }
 
     // Use k-way merged group cursors for time ordering, or concatenated cursors otherwise.
-    if (useTimeOrderedCursors(spec, clusterSummary)) {
-      return makeTimeMergedClusteredCursorHolder(
+    if (Projections.useTimeOrderedCursors(spec, clusterSummary)) {
+      final boolean descending = Cursors.getTimeOrdering(spec.getPreferredOrdering()) == Order.DESCENDING;
+      return MergingClusterGroupCursor.makeCursorHolder(
           holderSuppliers,
-          closer,
-          Cursors.getTimeOrdering(spec.getPreferredOrdering())
+          clusteringColumns,
+          clusteringValuesByGroup,
+          descending,
+          spec.getVirtualColumns(),
+          plan.virtualColumnRemap(),
+          closer
       );
     }
 
     return makeConcatenatedClusteredCursorHolder(
         spec,
+        plan,
         this,
         clusteringColumns,
         clusteringValuesByGroup,
@@ -296,27 +335,6 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       }
     }
     return builder.build();
-  }
-
-  /**
-   * Whether the query requests {@code __time} ordering and each cluster group is individually time-ordered. In that
-   * case, we return time ordered cursors.
-   */
-  private static boolean useTimeOrderedCursors(CursorBuildSpec spec, ClusteredValueGroupsBaseTableSchema summary)
-  {
-    if (Cursors.getTimeOrdering(spec.getPreferredOrdering()) == Order.NONE) {
-      return false;
-    }
-    final List<OrderBy> groupOrdering = summary.getGroupOrdering();
-    if (groupOrdering.isEmpty()) {
-      return false;
-    }
-    final OrderBy first = groupOrdering.get(0);
-    // Require __time to be the first non-clustering column AND natively ASCENDING. Each per-group cursor can flip
-    // ascending->descending on request but never the reverse, so an ascending group ordering guarantees the per-group
-    // cursors emit the direction the merge's heap (and the single-group holder) assume. Druid always writes __time
-    // ascending; guarding here keeps a hypothetical descending-written group from being mis-ordered rather than served.
-    return ColumnHolder.TIME_COLUMN_NAME.equals(first.getColumnName()) && first.getOrder() == Order.ASCENDING;
   }
 
   private static CursorHolder makeAggregateProjectionCursorHolder(QueryableProjection<QueryableIndex> projection)
@@ -369,6 +387,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
    */
   private static CursorHolder makeConcatenatedClusteredCursorHolder(
       CursorBuildSpec spec,
+      ClusterGroupQueryPlan plan,
       ColumnInspector inspector,
       RowSignature clusteringColumns,
       List<Object[]> clusteringValuesByGroup,
@@ -383,24 +402,28 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     final ClusteringColumnSelectorFactory wrapperFactory = new ClusteringColumnSelectorFactory(
         ClusteringColumnSelectorFactory.UNINITIALIZED_DELEGATE,
         clusteringColumns,
-        clusteringValuesByGroup.get(0)
+        clusteringValuesByGroup.get(0),
+        spec.getVirtualColumns()
     );
     final ClusteringVectorColumnSelectorFactory vectorWrapperFactory = new ClusteringVectorColumnSelectorFactory(
         UNINITIALIZED_VECTOR_DELEGATE,
         clusteringColumns,
         clusteringValuesByGroup.get(0),
-        vectorSize
+        vectorSize,
+        spec.getVirtualColumns()
     );
 
     final ConcatenatingCursor cursor = new ConcatenatingCursor(
         holderSuppliers,
         clusteringValuesByGroup,
-        wrapperFactory
+        wrapperFactory,
+        plan.virtualColumnRemap()
     );
     final ConcatenatingVectorCursor vectorCursor = new ConcatenatingVectorCursor(
         holderSuppliers,
         clusteringValuesByGroup,
-        vectorWrapperFactory
+        vectorWrapperFactory,
+        plan.virtualColumnRemap()
     );
 
     // each group gets a different rewritten filter, so the conservative thing to do here is require the original query
@@ -410,7 +433,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     final boolean filterCanVectorize =
         queryFilter == null || queryFilter.canVectorizeMatcher(spec.getVirtualColumns().wrapInspector(inspector));
     // we still check that the first holder is vectorizable to make sure all the non-filter parts can be vectorized
-    final boolean canVectorize = filterCanVectorize && holderSuppliers.get(0).get().canVectorize();
+    final boolean canVectorize = filterCanVectorize && holderSuppliers.getFirst().get().canVectorize();
 
     return new CursorHolder()
     {
@@ -446,47 +469,6 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       public void close()
       {
         CloseableUtils.closeAndWrapExceptions(closer);
-      }
-    };
-  }
-
-  /**
-   * Builds a {@link CursorHolder} whose non-vectorized cursor is a globally {@code __time}-ordered {@link
-   * MergingClusterGroupCursor} k-way-merging the per-group cursors. Only invoked when the query requested {@code
-   * __time} ordering and each group is individually {@code __time}-sorted (see caller).
-   */
-  private static CursorHolder makeTimeMergedClusteredCursorHolder(
-      List<Supplier<CursorHolder>> holderSuppliers,
-      Closer closer,
-      Order timeOrder
-  )
-  {
-    final boolean descending = timeOrder == Order.DESCENDING;
-    final MergingClusterGroupCursor cursor = new MergingClusterGroupCursor(holderSuppliers, descending);
-    final List<OrderBy> ordering = descending ? Cursors.descendingTimeOrder() : Cursors.ascendingTimeOrder();
-    return new CursorHolder()
-    {
-      @Override
-      public Cursor asCursor()
-      {
-        return cursor;
-      }
-
-      @Override
-      public List<OrderBy> getOrdering()
-      {
-        return ordering;
-      }
-
-      @Override
-      public void close()
-      {
-        try {
-          closer.close();
-        }
-        catch (IOException e) {
-          throw new RuntimeException(e);
-        }
       }
     };
   }

@@ -125,6 +125,12 @@ public class ServerConfig
     this.enableQueryRequestsQueuing = enableQueryRequestsQueuing;
   }
 
+  @VisibleForTesting
+  public ServerConfig(@NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy)
+  {
+    this.errorResponseTransformStrategy = errorResponseTransformStrategy;
+  }
+
   @JsonProperty
   @Min(1)
   private int numThreads = getDefaultNumThreads();
