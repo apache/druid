@@ -131,13 +131,13 @@ public class IntervalTreeMap<T> extends AbstractMap<Interval, T> implements Navi
     Node<T> left;
     Node<T> right;
 
-    private static final String PRINT_FORMAT = "{\n"
-                                                + "%sinterval = %s\n"
-                                                + "%svalue = %s\n"
-                                                + "%sheight = %d\n"
-                                                + "%srange = %s\n"
-                                                + "%sleft = %s\n"
-                                                + "%sright = %s\n"
+    private static final String PRINT_FORMAT = "{%n"
+                                                + "%sinterval = %s%n"
+                                                + "%svalue = %s%n"
+                                                + "%sheight = %d%n"
+                                                + "%srange = %s%n"
+                                                + "%sleft = %s%n"
+                                                + "%sright = %s%n"
                                                 + "%s}";
 
     private String print(int level)
