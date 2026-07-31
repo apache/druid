@@ -115,11 +115,11 @@ public class CloneHistoricals implements CoordinatorDuty
       // than the source. Segment identity alone can't tell those apart: two replicas of the same segment id may hold
       // different parts of it.
       for (DataSegment segment : sourceProjectedSegments) {
-        final PartialLoadProfile sourceProfile = projectedProfile(sourceServer, segment);
+        final PartialLoadProfile sourceProfile = sourceServer.getProjectedProfile(segment);
         if (!targetProjectedSegments.contains(segment)
             || !Objects.equals(
                 fingerprintOf(sourceProfile),
-                fingerprintOf(projectedProfile(targetServer, segment))
+                fingerprintOf(targetServer.getProjectedProfile(segment))
             )) {
           loadSegmentOnTargetServer(segment, sourceProfile, targetServer, params);
         }
@@ -165,7 +165,7 @@ public class CloneHistoricals implements CoordinatorDuty
         loadableSegment,
         targetServer,
         SegmentAction.LOAD,
-        toRequestProfile(sourceProfile)
+        sourceProfile == null ? null : sourceProfile.asRequest()
     )) {
       params.getCoordinatorStats().add(
           Stats.Segments.ASSIGNED_TO_CLONE,
@@ -175,40 +175,10 @@ public class CloneHistoricals implements CoordinatorDuty
     }
   }
 
-  /**
-   * The {@link PartialLoadProfile} that {@code server} is expected to hold {@code segment} under once its queued
-   * operations finish: the profile of an in-flight load if one is queued (a null profile there means a regular full
-   * load is on its way), else the profile the server announced for the loaded replica. Returns null when the replica
-   * is a regular full load. Mirrors the branch order in
-   * {@link org.apache.druid.server.coordinator.loading.PartialSegmentStatusInTier}, which classifies rule-managed
-   * replicas the same way.
-   */
-  @Nullable
-  private static PartialLoadProfile projectedProfile(ServerHolder server, DataSegment segment)
-  {
-    final SegmentAction action = server.getActionOnSegment(segment);
-    if (action != null && action.isLoad()) {
-      return server.getInFlightProfile(segment);
-    }
-    return server.getServer().getPartialLoadProfile(segment.getId());
-  }
-
   @Nullable
   private static String fingerprintOf(@Nullable PartialLoadProfile profile)
   {
     return profile == null ? null : profile.fingerprint();
-  }
-
-  /**
-   * Rebuilds a profile read off a server as an outbound load request. A profile announced by a historical carries
-   * the footprint that historical realized, which is its own to report and not part of the request.
-   */
-  @Nullable
-  private static PartialLoadProfile toRequestProfile(@Nullable PartialLoadProfile profile)
-  {
-    return profile == null
-           ? null
-           : PartialLoadProfile.forRequest(profile.wrappedLoadSpec(), profile.fingerprint());
   }
 
   private void dropSegmentFromTargetServer(

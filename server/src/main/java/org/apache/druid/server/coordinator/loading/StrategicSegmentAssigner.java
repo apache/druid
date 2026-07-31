@@ -184,22 +184,28 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private boolean moveSegment(DataSegment segment, ServerHolder serverA, ServerHolder serverB)
   {
     final String tier = serverA.getServer().getTier();
+
+    // A replica loaded under a partial-load rule holds only part of the segment, so the destination has to be asked
+    // for the same parts. Read the profile up front: cancelling the load below clears serverA's in-flight profile.
+    final PartialLoadProfile profile = serverA.getProjectedProfile(segment);
+    final PartialLoadProfile request = profile == null ? null : profile.asRequest();
+
     if (serverA.isLoadingSegment(segment)) {
       // Cancel the load on serverA and load on serverB instead
       if (serverA.cancelOperation(SegmentAction.LOAD, segment)) {
         int loadedCountOnTier = replicaCountMap.get(segment.getId(), tier)
                                                .loadedNotDropping();
         if (loadedCountOnTier >= 1) {
-          return replicateSegment(segment, serverB, null);
+          return replicateSegment(segment, serverB, request);
         } else {
-          return loadSegment(segment, serverB, null);
+          return loadSegment(segment, serverB, request);
         }
       }
 
       // Could not cancel load, let the segment load on serverA and count it as unmoved
       return false;
     } else if (serverA.isServingSegment(segment)) {
-      return loadQueueManager.moveSegment(segment, serverA, serverB);
+      return loadQueueManager.moveSegment(segment, serverA, serverB, request);
     } else {
       return false;
     }
