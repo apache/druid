@@ -60,7 +60,13 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     TIMESTAMPSPEC,
     QUERYGRANULARITY,
     ROLLUP,
-    PROJECTIONS;
+    PROJECTIONS,
+    /**
+     * Reports {@link SegmentAnalysis#getContainers()}: per-container on-disk byte sizes. Only populated for segments
+     * written in the V10 file format ({@code IndexMergerV10}); pre-V10 segments report {@code null} here, same as
+     * any other analysis type applied to a segment that predates it.
+     */
+    CONTAINERSIZE;
 
     @JsonValue
     @Override
@@ -196,6 +202,11 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public boolean hasProjections()
   {
     return analysisTypes.contains(AnalysisType.PROJECTIONS);
+  }
+
+  public boolean hasContainerSizes()
+  {
+    return analysisTypes.contains(AnalysisType.CONTAINERSIZE);
   }
 
   public boolean hasTimestampSpec()

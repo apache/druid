@@ -40,7 +40,9 @@ import org.apache.druid.segment.column.ConstantColumns;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.file.SegmentFileContainerMetadata;
 import org.apache.druid.segment.file.SegmentFileMapper;
+import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
@@ -331,6 +333,14 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   public SegmentFileMapper getFileMapper()
   {
     return fileMapper;
+  }
+
+  @Override
+  @Nullable
+  public List<SegmentFileContainerMetadata> getFileContainers()
+  {
+    final SegmentFileMetadata segmentFileMetadata = fileMapper.getSegmentFileMetadata();
+    return segmentFileMetadata == null ? null : segmentFileMetadata.getContainers();
   }
 
   @Override
