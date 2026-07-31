@@ -20,7 +20,7 @@
 package org.apache.druid.timeline;
 
 import com.google.common.base.Predicate;
-import org.jetbrains.annotations.NotNull;
+import javax.validation.constraints.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.joda.time.Interval;
 import org.joda.time.base.BaseInterval;
