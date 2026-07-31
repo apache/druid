@@ -248,7 +248,7 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/io\.netty/netty@3.10.6.Final$</packageUrl>
     <!-- Netty 3 is EOL and cannot be upgraded independently. Replacing Druid's NettyHttpClient with Netty 4 is required. -->
-    <cvssBelow>11</cvssBelow>
+    <vulnerabilityName regex="true">.*</vulnerabilityName>
   </suppress>
 
   <suppress>
