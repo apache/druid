@@ -435,7 +435,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.49.0
+version: 2.50.0
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -4271,6 +4271,16 @@ license_name: Apache License version 2.0
 version: v1-rev20231028-2.0.0
 libraries:
   - com.google.apis: google-api-services-storage
+
+---
+
+name: Gson
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 2.14.0
+libraries:
+  - com.google.code.gson: gson
 
 ---
 
