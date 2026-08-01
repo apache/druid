@@ -53,6 +53,7 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.indexing.SegmentTimelineConfig;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -119,6 +120,9 @@ public class SqlModuleTest
   private SegmentCacheManager segmentCacheManager;
 
   @Mock
+  private SegmentTimelineConfig segmentTimelineConfig;
+
+  @Mock
   private QueryRunnerFactoryConglomerate conglomerate;
 
   @Mock
@@ -140,6 +144,7 @@ public class SqlModuleTest
         lookupExtractorFactoryContainerProvider,
         joinableFactory,
         segmentCacheManager,
+        segmentTimelineConfig,
         httpClient
     );
   }
@@ -209,6 +214,7 @@ public class SqlModuleTest
               binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupExtractorFactoryContainerProvider);
               binder.bind(JoinableFactory.class).toInstance(joinableFactory);
               binder.bind(SegmentCacheManager.class).toInstance(segmentCacheManager);
+              binder.bind(SegmentTimelineConfig.class).toInstance(segmentTimelineConfig);
               binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
               binder.bind(QueryScheduler.class)
                     .toProvider(QuerySchedulerProvider.class)
