@@ -41,16 +41,21 @@ public class HttpLoadQueuePeonConfig
   @Nullable
   private final Integer batchSize;
 
+  @JsonProperty
+  private final boolean confirmMoveBeforeDrop;
+
   @JsonCreator
   public HttpLoadQueuePeonConfig(
       @JsonProperty("hostTimeout") Duration hostTimeout,
       @JsonProperty("repeatDelay") Duration repeatDelay,
-      @JsonProperty("batchSize") @Nullable Integer batchSize
+      @JsonProperty("batchSize") @Nullable Integer batchSize,
+      @JsonProperty("confirmMoveBeforeDrop") @Nullable Boolean confirmMoveBeforeDrop
   )
   {
     this.hostTimeout = Configs.valueOrDefault(hostTimeout, Duration.standardMinutes(5));
     this.repeatDelay = Configs.valueOrDefault(repeatDelay, Duration.standardMinutes(1));
     this.batchSize = batchSize;
+    this.confirmMoveBeforeDrop = Configs.valueOrDefault(confirmMoveBeforeDrop, true);
 
     InvalidInput.conditionalException(
         batchSize == null || batchSize >= 1,
@@ -78,5 +83,21 @@ public class HttpLoadQueuePeonConfig
   public Duration getLoadTimeout()
   {
     return DEFAULT_LOAD_TIMEOUT;
+  }
+
+  /**
+   * Whether the source server of a move must keep serving the segment until the target server's load has been
+   * confirmed by the Coordinator's inventory view, rather than dropping it as soon as the target acknowledges.
+   * <p>
+   * The target's HTTP acknowledgement arrives well before Brokers learn about the new replica, so dropping on ack
+   * can leave the segment briefly unreachable from every Broker. Waiting for the inventory means the source holds
+   * the segment for roughly one extra sync period plus one Coordinator run, which raises load queue occupancy for
+   * moves; turn this off if that throttles balancing.
+   *
+   * @see org.apache.druid.server.coordinator.duty.CompletePendingMoves
+   */
+  public boolean isConfirmMoveBeforeDrop()
+  {
+    return confirmMoveBeforeDrop;
   }
 }

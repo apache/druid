@@ -62,6 +62,7 @@ import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.CloneHistoricals;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.server.coordinator.duty.CompletePendingMoves;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
@@ -553,6 +554,7 @@ public class DruidCoordinator
             balancerStrategyFactory,
             serverInventoryView
         ),
+        new CompletePendingMoves(taskMaster),
         new RunRules(deleteSegments, getRules),
         new UpdateReplicationStatus(),
         new CollectSegmentStats(),

@@ -22,6 +22,8 @@ package org.apache.druid.server.coordinator.loading;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -33,6 +35,7 @@ import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordination.SegmentChangeStatus;
+import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
@@ -58,6 +61,9 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -84,7 +90,7 @@ public class HttpLoadQueuePeonTest
         "http://dummy:4000",
         MAPPER,
         httpClient,
-        new HttpLoadQueuePeonConfig(null, null, 10),
+        new HttpLoadQueuePeonConfig(null, null, 10, null),
         () -> SegmentLoadingMode.NORMAL,
         new WrappingScheduledExecutorService(
             "HttpLoadQueuePeonTest-%s",
@@ -214,6 +220,158 @@ public class HttpLoadQueuePeonTest
   }
 
   @Test
+  public void testAcknowledgedLoadStaysInQueueUntilInventoryConfirmsIt()
+  {
+    final DataSegment segment = segments.get(0);
+    httpLoadQueuePeon.loadSegment(segment, SegmentAction.LOAD, null);
+
+    httpClient.sendRequestToServerAndHandleResponse();
+
+    // The server is done with it, but until the inventory view catches up the Coordinator must keep seeing the load
+    // as pending, otherwise it briefly sees the replica as neither loaded nor loading. See apache/druid#18764.
+    Assert.assertTrue(httpLoadQueuePeon.getSegmentsToLoad().isEmpty());
+    Assert.assertEquals(1, httpLoadQueuePeon.getNumSegmentsAwaitingConfirmation());
+    Assert.assertEquals(
+        Set.of(segment),
+        httpLoadQueuePeon.getSegmentsInQueue().stream()
+                         .map(SegmentHolder::getSegment)
+                         .collect(Collectors.toSet())
+    );
+
+    // Reading the queue against an inventory that does not have the segment yet keeps the load pending.
+    Assert.assertEquals(1, httpLoadQueuePeon.getQueueSnapshot(emptyInventory()).getSegmentsInQueue().size());
+    Assert.assertEquals(1, httpLoadQueuePeon.getNumSegmentsAwaitingConfirmation());
+
+    // Reading it against an inventory that has caught up retires the load.
+    Assert.assertTrue(httpLoadQueuePeon.getQueueSnapshot(inventoryWith(segment)).getSegmentsInQueue().isEmpty());
+    Assert.assertEquals(0, httpLoadQueuePeon.getNumSegmentsAwaitingConfirmation());
+  }
+
+  @Test
+  public void testAcknowledgedDropStaysInQueueUntilInventoryConfirmsIt()
+  {
+    final DataSegment segment = segments.get(0);
+    httpLoadQueuePeon.dropSegment(segment, null);
+
+    httpClient.sendRequestToServerAndHandleResponse();
+
+    Assert.assertTrue(httpLoadQueuePeon.getSegmentsToDrop().isEmpty());
+    Assert.assertEquals(1, httpLoadQueuePeon.getNumSegmentsAwaitingConfirmation());
+
+    // An inventory still showing the segment loaded is the pre-drop state, so the drop is not confirmed yet.
+    httpLoadQueuePeon.getQueueSnapshot(inventoryWith(segment));
+    Assert.assertEquals(1, httpLoadQueuePeon.getNumSegmentsAwaitingConfirmation());
+
+    httpLoadQueuePeon.getQueueSnapshot(emptyInventory());
+    Assert.assertEquals(0, httpLoadQueuePeon.getNumSegmentsAwaitingConfirmation());
+  }
+
+  /**
+   * An inventory snapshot for this peon's server, used to stand in for a segment sync that has or has not caught up.
+   */
+  private static ImmutableDruidServer inventoryWith(DataSegment... loadedSegments)
+  {
+    final DruidServer server = new DruidServer(
+        "dummy", "dummy:4000", null, 10L << 30, null, ServerType.HISTORICAL, "tier1", 0
+    );
+    for (DataSegment segment : loadedSegments) {
+      server.addDataSegment(segment);
+    }
+    return server.toImmutableDruidServer();
+  }
+
+  private static ImmutableDruidServer emptyInventory()
+  {
+    return inventoryWith();
+  }
+
+  @Test
+  public void testFailedRequestIsNotRetainedForConfirmation()
+  {
+    final DataSegment segment = segments.get(0);
+    httpLoadQueuePeon.loadSegment(segment, SegmentAction.LOAD, null);
+
+    httpClient.failedSegments.add(segment);
+    httpClient.sendRequestToServerAndHandleResponse();
+
+    // A failed request changed nothing on the server, so there is no inventory update to wait for.
+    Assert.assertEquals(0, httpLoadQueuePeon.getNumSegmentsAwaitingConfirmation());
+    Assert.assertTrue(httpLoadQueuePeon.getSegmentsInQueue().isEmpty());
+  }
+
+  @Test
+  public void testMarkToDropGraduatesToQueuedDrop()
+  {
+    final DataSegment segment = segments.get(0);
+    httpLoadQueuePeon.markSegmentToDrop(segment);
+    Assert.assertEquals(Set.of(segment), httpLoadQueuePeon.getSegmentsMarkedToDrop());
+
+    httpLoadQueuePeon.dropSegment(segment, null);
+
+    // Queueing the drop retires the mark; callers must not have to unmark separately, since the moment between the
+    // two steps is one in which the segment is in neither collection. See apache/druid#18764.
+    Assert.assertTrue(httpLoadQueuePeon.getSegmentsMarkedToDrop().isEmpty());
+    Assert.assertEquals(Set.of(segment), httpLoadQueuePeon.getSegmentsToDrop());
+  }
+
+  @Test
+  public void testSegmentIsNeverAbsentFromBothHalvesOfQueueSnapshotDuringMoveCompletion()
+      throws InterruptedException
+  {
+    // Graduating a MOVE_FROM mark to a queued DROP must be atomic with respect to readers. A reader that catches the
+    // moment in between sees the segment in neither collection, counts the replica as plainly loaded, and may drop
+    // the last remaining replica. See apache/druid#18764.
+    final List<DataSegment> manySegments =
+        CreateDataSegments.ofDatasource("raceTest")
+                          .forIntervals(1, Granularities.DAY)
+                          .startingAt("2023-01-01")
+                          .withNumPartitions(500)
+                          .eachOfSizeInMb(1);
+
+    // A segment is added here only once its mark is durably in place, so from that point on the invariant must hold
+    // for the rest of the test.
+    final Set<DataSegment> markedSegments = ConcurrentHashMap.newKeySet();
+    final AtomicReference<DataSegment> segmentInNeither = new AtomicReference<>();
+    final AtomicBoolean stopReading = new AtomicBoolean(false);
+
+    final Thread reader = new Thread(() -> {
+      while (!stopReading.get() && segmentInNeither.get() == null) {
+        // Snapshot the known-marked set first: a segment marked after the queue snapshot is taken is legitimately
+        // absent from it, and checking it would be a bug in this test rather than in the peon.
+        final Set<DataSegment> knownMarked = Set.copyOf(markedSegments);
+        final LoadQueueSnapshot snapshot = httpLoadQueuePeon.getQueueSnapshot();
+        final Set<DataSegment> queued = snapshot.getSegmentsInQueue().stream()
+                                                .map(SegmentHolder::getSegment)
+                                                .collect(Collectors.toSet());
+        for (DataSegment marked : knownMarked) {
+          if (!queued.contains(marked) && !snapshot.getSegmentsMarkedToDrop().contains(marked)) {
+            segmentInNeither.set(marked);
+            return;
+          }
+        }
+      }
+    });
+
+    reader.start();
+    try {
+      for (DataSegment segment : manySegments) {
+        httpLoadQueuePeon.markSegmentToDrop(segment);
+        markedSegments.add(segment);
+        httpLoadQueuePeon.dropSegment(segment, null);
+      }
+    }
+    finally {
+      stopReading.set(true);
+      reader.join(30_000);
+    }
+
+    Assert.assertNull(
+        "Snapshot observed a segment neither queued nor marked to drop",
+        segmentInNeither.get()
+    );
+  }
+
+  @Test
   public void testCancelLoad()
   {
     final DataSegment segment = segments.get(0);
@@ -331,7 +489,7 @@ public class HttpLoadQueuePeonTest
         "http://dummy:4000",
         MAPPER,
         httpClient,
-        new HttpLoadQueuePeonConfig(null, null, null),
+        new HttpLoadQueuePeonConfig(null, null, null, null),
         () -> SegmentLoadingMode.NORMAL,
         new WrappingScheduledExecutorService(
             "HttpLoadQueuePeonTest-%s",
@@ -356,6 +514,11 @@ public class HttpLoadQueuePeonTest
     final BlockingExecutorService callbackExecutor = new BlockingExecutorService("HttpLoadQueuePeonTest-cb");
     final List<DataSegment> processedSegments = new ArrayList<>();
     final List<DataSegment> segmentsSentToServer = new ArrayList<>();
+
+    /**
+     * Segments for which the simulated server should report a failed change request.
+     */
+    final Set<DataSegment> failedSegments = new HashSet<>();
 
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
@@ -395,9 +558,17 @@ public class HttpLoadQueuePeonTest
 
         List<DataSegmentChangeResponse> statuses = new ArrayList<>(changeRequests.size());
         for (DataSegmentChangeRequest cr : changeRequests) {
+          final int numSentBefore = segmentsSentToServer.size();
           cr.go(this, null);
+
+          // The handler callbacks above are what reveal which segment the request was for.
+          final boolean failed = segmentsSentToServer.size() > numSentBefore
+                                 && failedSegments.contains(segmentsSentToServer.get(numSentBefore));
           statuses.add(
-              new DataSegmentChangeResponse(cr, SegmentChangeStatus.success())
+              new DataSegmentChangeResponse(
+                  cr,
+                  failed ? SegmentChangeStatus.failed("simulated failure") : SegmentChangeStatus.success()
+              )
           );
         }
         return (ListenableFuture<Final>) Futures.immediateFuture(

@@ -133,22 +133,26 @@ public class SegmentLoadQueueManager
           segment,
           SegmentAction.MOVE_TO,
           success -> {
-            // Drop segment only if:
-            // (1) segment load was successful on serverB
-            // AND (2) segment is not already queued for drop on serverA
-            // AND (3a) loading is http-based
-            //     OR (3b) inventory shows segment loaded on serverB
+            if (!success || peonA.getSegmentsToDrop().contains(segment)) {
+              // The move failed, or serverA is already dropping the segment for some other reason.
+              moveFinishCallback.execute(success);
+              return;
+            }
+
+            if (taskMaster.isConfirmMoveBeforeDrop()) {
+              // Leave the segment marked to drop on serverA. CompletePendingMoves queues the drop once the
+              // inventory view confirms the replica on serverB, which is roughly when Brokers learn about it too;
+              // dropping now would take the segment briefly unreachable from every Broker. See apache/druid#18738.
+              return;
+            }
 
             // Do not check the inventory with http loading as the HTTP
             // response is enough to determine load success or failure
-            if (success
-                && !peonA.getSegmentsToDrop().contains(segment)
-                && (taskMaster.isHttpLoading()
-                    || serverInventoryView.isSegmentLoadedByServer(serverNameB, segment))) {
-              peonA.unmarkSegmentToDrop(segment);
+            if (taskMaster.isHttpLoading()
+                || serverInventoryView.isSegmentLoadedByServer(serverNameB, segment)) {
               peonA.dropSegment(segment, moveFinishCallback);
             } else {
-              moveFinishCallback.execute(success);
+              moveFinishCallback.execute(false);
             }
           }
       );

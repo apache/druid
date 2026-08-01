@@ -122,8 +122,9 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     addServer(newHistorical);
     historicals.add(newHistorical);
 
-    // Run the coordinator for a few cycles
-    for (int i = 0; i < 7; ++i) {
+    // Run the coordinator for a few cycles. A move spans two cycles: one to load the destination replica and one to
+    // drop the source once that replica is confirmed, so the budget is twice the number of balancing rounds needed.
+    for (int i = 0; i < 14; ++i) {
       runCoordinatorCycle();
       loadQueuedSegments();
     }

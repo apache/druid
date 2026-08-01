@@ -23,6 +23,7 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loading.LoadQueueSnapshot;
 import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentHolder;
@@ -132,6 +133,39 @@ public class ServerHolder implements Comparable<ServerHolder>
       int maxLifetimeInQueue
   )
   {
+    this(
+        server,
+        peon,
+        // Not peon.getQueueSnapshot(): this constructor has no inventory snapshot to reconcile against, so there is
+        // nothing to gain from the atomic read. Production goes through the LoadQueueSnapshot overload below.
+        new LoadQueueSnapshot(peon.getSegmentsInQueue(), peon.getSegmentsMarkedToDrop()),
+        isDecommissioning,
+        isUnmanaged,
+        maxSegmentsInLoadQueue,
+        maxLifetimeInQueue
+    );
+  }
+
+  /**
+   * Creates a new ServerHolder from a pre-captured {@link LoadQueueSnapshot} rather than reading the peon directly.
+   * <p>
+   * Callers that also capture the server's segment set separately should use this so they can pair the two captures
+   * safely -- see {@link LoadQueueSnapshot#union} for why the queue must be sampled on both sides of the segment-set
+   * copy.
+   *
+   * @param queueSnapshot Atomically captured pending work for this server.
+   * @see #ServerHolder(ImmutableDruidServer, LoadQueuePeon, boolean, boolean, int, int)
+   */
+  public ServerHolder(
+      ImmutableDruidServer server,
+      LoadQueuePeon peon,
+      LoadQueueSnapshot queueSnapshot,
+      boolean isDecommissioning,
+      boolean isUnmanaged,
+      int maxSegmentsInLoadQueue,
+      int maxLifetimeInQueue
+  )
+  {
     this.server = server;
     this.peon = peon;
     this.isDecommissioning = isDecommissioning;
@@ -144,13 +178,14 @@ public class ServerHolder implements Comparable<ServerHolder>
 
     final AtomicInteger movingSegmentCount = new AtomicInteger();
     final AtomicInteger loadingReplicaCount = new AtomicInteger();
-    initializeQueuedSegments(movingSegmentCount, loadingReplicaCount);
+    initializeQueuedSegments(queueSnapshot, movingSegmentCount, loadingReplicaCount);
 
     this.movingSegmentCount = movingSegmentCount.get();
     this.loadingReplicaCount = loadingReplicaCount.get();
   }
 
   private void initializeQueuedSegments(
+      LoadQueueSnapshot queueSnapshot,
       AtomicInteger movingSegmentCount,
       AtomicInteger loadingReplicaCount
   )
@@ -160,7 +195,14 @@ public class ServerHolder implements Comparable<ServerHolder>
     }
 
     final List<SegmentHolder> expiredSegments = new ArrayList<>();
-    for (SegmentHolder holder : peon.getSegmentsInQueue()) {
+    for (SegmentHolder holder : queueSnapshot.getSegmentsInQueue()) {
+      // A unioned snapshot can hold two entries for the same segment if its action changed while the snapshot was
+      // being taken. Either entry keeps the segment accounted for, so keep the first and skip the rest rather than
+      // letting addToQueuedSegments double-count the projected counts and sizes.
+      if (queuedSegments.containsKey(holder.getSegment())) {
+        continue;
+      }
+
       int runsInQueue = holder.incrementAndGetRunsInQueue();
       if (runsInQueue > maxLifetimeInQueue) {
         expiredSegments.add(holder);
@@ -180,8 +222,12 @@ public class ServerHolder implements Comparable<ServerHolder>
       }
     }
 
-    for (DataSegment segment : peon.getSegmentsMarkedToDrop()) {
-      addToQueuedSegments(segment, SegmentAction.MOVE_FROM);
+    for (DataSegment segment : queueSnapshot.getSegmentsMarkedToDrop()) {
+      // A segment whose MOVE_FROM has already graduated to a queued DROP appears in both collections of a unioned
+      // snapshot. The DROP is the later state, so leave it in place.
+      if (!queuedSegments.containsKey(segment)) {
+        addToQueuedSegments(segment, SegmentAction.MOVE_FROM);
+      }
     }
 
     if (!expiredSegments.isEmpty()) {

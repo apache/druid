@@ -21,7 +21,6 @@ package org.apache.druid.client;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
@@ -167,11 +166,7 @@ public class ImmutableDruidServer
 
   public String getURL()
   {
-    if (metadata.getHostAndTlsPort() != null) {
-      return StringUtils.nonStrictFormat("https://%s", metadata.getHostAndTlsPort());
-    } else {
-      return StringUtils.nonStrictFormat("http://%s", metadata.getHostAndPort());
-    }
+    return metadata.getURL();
   }
 
   @Override

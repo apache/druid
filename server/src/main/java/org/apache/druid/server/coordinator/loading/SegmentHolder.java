@@ -87,6 +87,7 @@ public class SegmentHolder implements Comparable<SegmentHolder>
   // Guaranteed to store only non-null elements
   private final List<LoadPeonCallback> callbacks = new ArrayList<>();
   private final Stopwatch sinceRequestSentToServer = Stopwatch.createUnstarted();
+  private final Stopwatch sinceAcknowledgedByServer = Stopwatch.createUnstarted();
   private int runsInQueue = 0;
 
   public SegmentHolder(
@@ -203,6 +204,27 @@ public class SegmentHolder implements Comparable<SegmentHolder>
   public boolean hasRequestTimedOut()
   {
     return sinceRequestSentToServer.millisElapsed() > requestTimeout.getMillis();
+  }
+
+  /**
+   * Marks that the server has acknowledged this request, starting the clock on how long the Coordinator's inventory
+   * view has yet to reflect it.
+   */
+  public void markAcknowledgedByServer()
+  {
+    if (!sinceAcknowledgedByServer.isRunning()) {
+      sinceAcknowledgedByServer.start();
+    }
+  }
+
+  /**
+   * Whether the inventory view has taken unreasonably long to reflect an operation the server already acknowledged.
+   * Such a holder is force-expired rather than retained forever, since the confirmation may never arrive (for
+   * instance if the server disappeared, or if the segment was dropped again before the sync landed).
+   */
+  public boolean hasConfirmationTimedOut(Duration confirmationTimeout)
+  {
+    return sinceAcknowledgedByServer.millisElapsed() > confirmationTimeout.getMillis();
   }
 
   public int incrementAndGetRunsInQueue()

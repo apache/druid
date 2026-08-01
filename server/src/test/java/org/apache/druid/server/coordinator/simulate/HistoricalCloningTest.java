@@ -127,11 +127,12 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
     final DruidServer newHistorical = createHistorical(3, Tier.T1, 10_000);
     addServer(newHistorical);
 
-    // Run 2: Let the coordinator balance segments.
+    // Run 2: Let the coordinator balance segments. The new historical picks up its share and the clone follows where
+    // its source is headed, but the source itself keeps serving until a later cycle confirms the new replicas. See
+    // apache/druid#18738.
     runCoordinatorCycle();
 
-    // Check that segments have been distributed to the new historical and have also been dropped by the clone
-    Assert.assertEquals(5, historicalT11.getTotalSegments());
+    Assert.assertEquals(10, historicalT11.getTotalSegments());
     Assert.assertEquals(5, historicalT12.getTotalSegments());
     Assert.assertEquals(5, newHistorical.getTotalSegments());
     verifyValue(
@@ -139,6 +140,14 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
         Map.of("server", historicalT12.getName()),
         5L
     );
+
+    // Run 3: The new replicas are confirmed, so the moves off historicalT11 are completed.
+    runCoordinatorCycle();
+
+    // Check that segments have been distributed to the new historical and have also been dropped by the clone
+    Assert.assertEquals(5, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+    Assert.assertEquals(5, newHistorical.getTotalSegments());
   }
 
   @Test

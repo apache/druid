@@ -23,9 +23,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -50,6 +54,7 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.http.SegmentLoadingCapabilities;
 import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
@@ -61,9 +66,11 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -94,8 +101,18 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentHashMap<>();
   private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentHashMap<>();
-  private final Set<DataSegment> segmentsMarkedToDrop = ConcurrentHashMap.newKeySet();
   private final LoadingRateTracker loadingRateTracker = new LoadingRateTracker();
+
+  /**
+   * Segments marked to be dropped once the corresponding MOVE_TO has succeeded, mapped to the time they were marked.
+   * <p>
+   * The lock is what makes the hand-off of a segment from this map to {@link #queuedSegments} as a DROP atomic; see
+   * {@link #dropSegment}. The timestamp lets a mark that will never graduate -- because the move target failed or
+   * vanished -- be expired instead of pinning the segment to this server forever.
+   * <p>
+   * This need not be thread-safe as all operations on it are synchronized with the {@link #lock}.
+   */
+  private final Map<DataSegment, Long> segmentsMarkedToDrop = new HashMap<>();
 
   /**
    * Segments currently in queue ordered by priority and interval. This includes
@@ -103,6 +120,24 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
    * are synchronized with the {@link #lock}.
    */
   private final Set<SegmentHolder> queuedSegments = new TreeSet<>();
+
+  /**
+   * Operations the server has acknowledged but which the Coordinator's inventory view has not caught up to yet, keyed
+   * by segment.
+   * <p>
+   * The server's HTTP response tells us the load or drop has happened, but the inventory view syncs independently and
+   * lags by up to a sync period. If the peon forgot the operation at ack time, the Coordinator would briefly see
+   * neither a queue entry nor an updated inventory, conclude the replica is plainly loaded (or plainly absent), and
+   * act on that -- most damagingly by queueing a redundant drop of the last remaining replica after a move. Retaining
+   * the holder until {@link #getQueueSnapshot(ImmutableDruidServer)} sees the inventory reflect it closes that
+   * window. See apache/druid#18764.
+   * <p>
+   * These holders are deliberately kept out of {@link #queuedSegments} so that {@link #doSegmentManagement} never
+   * re-sends them, but they are still reported by {@link #getSegmentsInQueue()}.
+   * <p>
+   * This need not be thread-safe as all operations on it are synchronized with the {@link #lock}.
+   */
+  private final Map<SegmentId, SegmentHolder> segmentsAwaitingConfirmation = new HashMap<>();
 
   /**
    * Set of segments for which requests have been sent to the server and can
@@ -204,6 +239,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     final List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
 
     synchronized (lock) {
+      expireStaleOperations();
+
       final Iterator<SegmentHolder> queuedSegmentIterator = queuedSegments.iterator();
 
       while (newRequests.size() < batchSize && queuedSegmentIterator.hasNext()) {
@@ -409,6 +446,10 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
             if (status.getState() == SegmentChangeStatus.State.FAILED) {
               onRequestFailed(holder, status);
             } else {
+              // Retain the acknowledged operation until the inventory view catches up, so that the Coordinator never
+              // sees a window in which the operation is invisible in both the load queue and the inventory.
+              holder.markAcknowledgedByServer();
+              segmentsAwaitingConfirmation.put(holder.getSegment().getId(), holder);
               onRequestCompleted(holder, RequestStatus.SUCCESS, status);
             }
           }
@@ -464,6 +505,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       segmentsToDrop.clear();
       segmentsToLoad.clear();
       queuedSegments.clear();
+      segmentsAwaitingConfirmation.clear();
+      segmentsMarkedToDrop.clear();
       activeRequestSegments.clear();
       queuedSize.set(0L);
       loadingRateTracker.stop();
@@ -537,6 +580,10 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         holder = new SegmentHolder(segment, SegmentAction.DROP, config.getLoadTimeout(), callback);
         segmentsToDrop.put(segment, holder);
         queuedSegments.add(holder);
+        // Graduate a pending MOVE_FROM to this DROP atomically. Unmarking separately (as callers used to do) opens a
+        // window in which the segment is in neither collection, and a Coordinator run interleaved there counts the
+        // replica as plainly loaded. See apache/druid#18764.
+        segmentsMarkedToDrop.remove(segment);
         processingExecutor.execute(this::doSegmentManagement);
         incrementStat(holder, RequestStatus.ASSIGNED, null);
       } else {
@@ -566,11 +613,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   @Override
   public Set<SegmentHolder> getSegmentsInQueue()
   {
-    final Set<SegmentHolder> segmentsInQueue;
     synchronized (lock) {
-      segmentsInQueue = new HashSet<>(queuedSegments);
+      return collectSegmentsInQueue();
     }
-    return segmentsInQueue;
   }
 
   @Override
@@ -594,19 +639,111 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   @Override
   public void markSegmentToDrop(DataSegment dataSegment)
   {
-    segmentsMarkedToDrop.add(dataSegment);
+    synchronized (lock) {
+      segmentsMarkedToDrop.putIfAbsent(dataSegment, System.currentTimeMillis());
+    }
   }
 
   @Override
   public void unmarkSegmentToDrop(DataSegment dataSegment)
   {
-    segmentsMarkedToDrop.remove(dataSegment);
+    synchronized (lock) {
+      segmentsMarkedToDrop.remove(dataSegment);
+    }
   }
 
   @Override
   public Set<DataSegment> getSegmentsMarkedToDrop()
   {
-    return Collections.unmodifiableSet(segmentsMarkedToDrop);
+    synchronized (lock) {
+      return ImmutableSet.copyOf(segmentsMarkedToDrop.keySet());
+    }
+  }
+
+  @Override
+  public LoadQueueSnapshot getQueueSnapshot()
+  {
+    synchronized (lock) {
+      return new LoadQueueSnapshot(collectSegmentsInQueue(), ImmutableSet.copyOf(segmentsMarkedToDrop.keySet()));
+    }
+  }
+
+  @Override
+  public LoadQueueSnapshot getQueueSnapshot(ImmutableDruidServer inventory)
+  {
+    synchronized (lock) {
+      // Only retire a holder once the inventory shows the outcome the operation was driving towards. A load is
+      // confirmed by the segment appearing, a drop by it disappearing; the opposite observation means the inventory
+      // is still showing the pre-operation state and the Coordinator must keep counting the operation as pending.
+      segmentsAwaitingConfirmation.entrySet().removeIf(entry -> {
+        final boolean nowLoaded = inventory.getSegment(entry.getKey()) != null;
+        if (entry.getValue().isLoad() != nowLoaded) {
+          return false;
+        }
+        log.trace(
+            "Server[%s] inventory confirmed request[%s] on segment[%s].",
+            serverId, entry.getValue().getAction(), entry.getKey()
+        );
+        return true;
+      });
+
+      return new LoadQueueSnapshot(collectSegmentsInQueue(), ImmutableSet.copyOf(segmentsMarkedToDrop.keySet()));
+    }
+  }
+
+  /**
+   * Number of operations this server has acknowledged but which the inventory view has not reflected yet. A value
+   * that stays persistently high points at a lagging or broken inventory sync for this server.
+   */
+  public int getNumSegmentsAwaitingConfirmation()
+  {
+    synchronized (lock) {
+      return segmentsAwaitingConfirmation.size();
+    }
+  }
+
+  /**
+   * Force-expires operations that are waiting on something which may never happen: an acknowledged load or drop
+   * whose inventory confirmation never arrives, and a MOVE_FROM mark whose move target never finishes. Without this
+   * either one would pin the Coordinator's view of the replica indefinitely.
+   */
+  @GuardedBy("lock")
+  private void expireStaleOperations()
+  {
+    final Duration timeout = config.getLoadTimeout();
+
+    segmentsAwaitingConfirmation.values().removeIf(holder -> {
+      if (holder.hasConfirmationTimedOut(timeout)) {
+        log.warn(
+            "Server[%s] never had request[%s] on segment[%s] confirmed by the inventory view within [%s].",
+            serverId, holder.getAction(), holder.getSegment().getId(), timeout
+        );
+        return true;
+      }
+      return false;
+    });
+
+    final long expiryCutoff = System.currentTimeMillis() - timeout.getMillis();
+    segmentsMarkedToDrop.entrySet().removeIf(entry -> {
+      if (entry.getValue() < expiryCutoff) {
+        log.warn(
+            "Server[%s] had segment[%s] marked to drop for over [%s] without the move ever completing.",
+            serverId, entry.getKey().getId(), timeout
+        );
+        return true;
+      }
+      return false;
+    });
+  }
+
+  @GuardedBy("lock")
+  private Set<SegmentHolder> collectSegmentsInQueue()
+  {
+    final Set<SegmentHolder> segmentsInQueue
+        = Sets.newHashSetWithExpectedSize(queuedSegments.size() + segmentsAwaitingConfirmation.size());
+    segmentsInQueue.addAll(queuedSegments);
+    segmentsInQueue.addAll(segmentsAwaitingConfirmation.values());
+    return segmentsInQueue;
   }
 
   private void onRequestFailed(SegmentHolder holder, SegmentChangeStatus status)

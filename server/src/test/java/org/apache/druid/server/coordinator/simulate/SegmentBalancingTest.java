@@ -86,6 +86,23 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
 
     loadQueuedSegments();
 
+    // The destination has the replicas, but the source keeps serving them until the Coordinator's inventory view
+    // confirms the destination. Dropping on the destination's acknowledgement would let a Broker apply the drop
+    // before the load and briefly see no server for the segment. See apache/druid#18738.
+    Assert.assertEquals(10, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+
+    // The move is completed by the next cycle that actually sees the destination serving the replicas, which with a
+    // stale view means not until the view has been synced.
+    if (!autoSyncInventory) {
+      runCoordinatorCycle();
+      Assert.assertEquals(10, historicalT11.getTotalSegments());
+      syncInventoryView();
+    }
+
+    runCoordinatorCycle();
+    loadQueuedSegments();
+
     // Verify that segments have now been balanced out
     Assert.assertEquals(5, historicalT11.getTotalSegments());
     Assert.assertEquals(5, historicalT12.getTotalSegments());
@@ -111,26 +128,24 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
     verifyValue(Metric.MOVED_COUNT, 5L);
 
-    // Load segments, skip callbacks and verify that some segments are now loaded on histT12
+    // Load segments, skip callbacks and verify that some segments are now loaded on histT12. Skipping the callbacks
+    // means the move's own completion path never runs, so only the inventory view can drive the move forward.
     loadQueuedSegmentsSkipCallbacks();
     Assert.assertEquals(10, historicalT11.getTotalSegments());
     Assert.assertEquals(5, historicalT12.getTotalSegments());
 
-    // Run another coordinator cycle
+    // The next cycle observes histT12 actually serving the replicas and queues the drops, without ever having seen
+    // the load callback. Recovering from a dropped callback this way is the point of driving the drop off the
+    // inventory rather than off the acknowledgement.
     runCoordinatorCycle();
     loadQueuedSegmentsSkipCallbacks();
 
-    // Verify that segments have not been dropped from either server since
-    // MOVE_FROM operation is still not complete
-    Assert.assertEquals(10, historicalT11.getTotalSegments());
-    Assert.assertEquals(5, historicalT12.getTotalSegments());
-    verifyNotEmitted(Metric.DROPPED_COUNT);
-    verifyNotEmitted(Metric.MOVED_COUNT);
-
-    // Finish the move operations
-    loadQueuedSegments();
     Assert.assertEquals(5, historicalT11.getTotalSegments());
     Assert.assertEquals(5, historicalT12.getTotalSegments());
+    verifyNotEmitted(Metric.MOVED_COUNT);
+
+    // Every segment stayed on at least one server throughout.
+    verifyDatasourceIsFullyLoaded(datasource);
   }
 
   @Test
@@ -188,7 +203,13 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     verifyNotEmitted(Metric.DROPPED_COUNT);
     verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT12), 5L);
 
-    // Finish and verify balancing
+    // Finish and verify balancing. The source is only relieved of its replicas once a subsequent cycle sees the
+    // destination serving them.
+    loadQueuedSegments();
+    Assert.assertEquals(10, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+
+    runCoordinatorCycle();
     loadQueuedSegments();
     Assert.assertEquals(5, historicalT11.getTotalSegments());
     Assert.assertEquals(5, historicalT12.getTotalSegments());
