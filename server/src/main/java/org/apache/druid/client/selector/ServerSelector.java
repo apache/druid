@@ -24,6 +24,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.DataSegmentInterner;
 import org.apache.druid.client.QueryableDruidServer;
+import org.apache.druid.client.SegmentAvailability;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Query;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -55,6 +56,13 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   private final AtomicReference<DataSegment> segment;
 
   private final HistoricalFilter filter;
+
+  /**
+   * Set by {@link org.apache.druid.client.BrokerServerView} once it has established, via the Coordinator, whether a
+   * segment left with no servers ought to be available. Volatile rather than guarded by {@code this} because it is
+   * read on the query path for every segment of every query and never in combination with the server sets.
+   */
+  private volatile SegmentAvailability availability = SegmentAvailability.UNKNOWN;
 
   @VisibleForTesting
   public ServerSelector(
@@ -187,6 +195,20 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     }
 
     return servers;
+  }
+
+  /**
+   * What the Broker believes about this segment while it has no server to query. Only meaningful when
+   * {@link #isEmpty()}; a selector with servers is always {@link SegmentAvailability#UNKNOWN}.
+   */
+  public SegmentAvailability getAvailability()
+  {
+    return availability;
+  }
+
+  public void setAvailability(SegmentAvailability availability)
+  {
+    this.availability = availability;
   }
 
   @Nullable

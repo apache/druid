@@ -35,6 +35,7 @@ import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.QueryableDruidServer;
+import org.apache.druid.client.SegmentAvailabilityTracker;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
@@ -140,6 +141,8 @@ public class CliBroker extends ServerRunnable
           binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(false));
 
           binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
+          binder.bind(SegmentAvailabilityTracker.class).in(ManageLifecycle.class);
+          LifecycleModule.register(binder, SegmentAvailabilityTracker.class);
           LifecycleModule.register(binder, BrokerServerView.class);
           LifecycleModule.register(binder, MetadataSegmentView.class);
           binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);

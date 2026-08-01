@@ -28,6 +28,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.client.SegmentAvailabilityStatus;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -66,6 +67,7 @@ import javax.ws.rs.core.UriInfo;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +82,12 @@ import java.util.stream.Stream;
 public class MetadataResource
 {
   private static final Logger log = new Logger(MetadataResource.class);
+
+  /**
+   * Cap on how many segments one availability request may ask about, so that a misbehaving client cannot turn this
+   * into an unbounded scan. Brokers batch their pending checks to stay under it.
+   */
+  public static final int MAX_SEGMENTS_PER_AVAILABILITY_REQUEST = 10_000;
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
@@ -488,6 +496,80 @@ public class MetadataResource
         authorizerMapper
     );
     return Response.status(Response.Status.OK).entity(authorizedDataSourceInformation).build();
+  }
+
+  /**
+   * Answers, for a batch of segments, whether some server ought to be serving each of them right now.
+   * <p>
+   * Brokers call this for segments they have just found themselves with no server for. A Broker cannot tell on its
+   * own whether such a segment was legitimately removed or has gone missing, and answering that question is what lets
+   * it report a genuinely unavailable segment instead of silently returning partial results. See apache/druid#18716.
+   * <p>
+   * This is deliberately a point query over a small batch rather than a bulk feed of the used-segment set: the set of
+   * segments with no server is normally empty, whereas the used set can run to tens of millions.
+   *
+   * @param dataSourceToSegmentIds Segment ids to look up, grouped by datasource so that they can be parsed
+   *                               unambiguously and authorized per datasource.
+   * @return Map of segment id to its status. Segments the Coordinator has no record of are reported as unused.
+   */
+  @POST
+  @Path("/segmentAvailability")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getSegmentAvailability(
+      @Context final HttpServletRequest req,
+      final Map<String, Set<String>> dataSourceToSegmentIds
+  )
+  {
+    if (dataSourceToSegmentIds == null || dataSourceToSegmentIds.isEmpty()) {
+      return Response.status(Response.Status.OK).entity(Collections.emptyMap()).build();
+    }
+
+    final int numRequested = dataSourceToSegmentIds.values().stream().mapToInt(Set::size).sum();
+    if (numRequested > MAX_SEGMENTS_PER_AVAILABILITY_REQUEST) {
+      return Response
+          .status(Response.Status.BAD_REQUEST)
+          .entity(ServletResourceUtils.sanitizeException(InvalidInput.exception(
+              "Cannot check availability of more than [%d] segments at a time, got [%d]",
+              MAX_SEGMENTS_PER_AVAILABILITY_REQUEST,
+              numRequested
+          )))
+          .build();
+    }
+
+    final Iterable<String> authorizedDataSources = AuthorizationUtils.filterAuthorizedResources(
+        req,
+        dataSourceToSegmentIds.keySet(),
+        dataSource -> Collections.singletonList(
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(dataSource)
+        ),
+        authorizerMapper
+    );
+
+    final DataSourcesSnapshot snapshot = segmentsMetadataManager.getRecentDataSourcesSnapshot();
+    final Map<String, SegmentAvailabilityStatus> statuses = new HashMap<>();
+
+    for (String dataSource : authorizedDataSources) {
+      final ImmutableDruidDataSource usedSegments = snapshot.getDataSource(dataSource);
+      for (String serializedId : dataSourceToSegmentIds.get(dataSource)) {
+        final SegmentId segmentId = SegmentId.tryParse(dataSource, serializedId);
+        if (segmentId == null) {
+          log.warn("Could not parse segment id[%s] for datasource[%s].", serializedId, dataSource);
+          continue;
+        }
+
+        // A segment absent from the used-segment snapshot has been killed or marked unused, so its absence from a
+        // Broker's timeline is expected.
+        final boolean used = usedSegments != null && usedSegments.getSegment(segmentId) != null;
+        statuses.put(
+            serializedId,
+            used
+            ? new SegmentAvailabilityStatus(true, coordinator.getReplicationFactor(segmentId))
+            : SegmentAvailabilityStatus.UNUSED
+        );
+      }
+    }
+
+    return Response.status(Response.Status.OK).entity(statuses).build();
   }
 
   /**

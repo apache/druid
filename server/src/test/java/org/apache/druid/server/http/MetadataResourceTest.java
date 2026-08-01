@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.client.SegmentAvailabilityStatus;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -56,11 +57,14 @@ import org.mockito.stubbing.Answer;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -523,4 +527,79 @@ public class MetadataResourceTest
         (Iterable<T>) response.getEntity()
     );
   }
+  @Test
+  public void testGetSegmentAvailabilityForUsedSegmentWithReplicas()
+  {
+    final Response response = metadataResource.getSegmentAvailability(
+        request,
+        ImmutableMap.of(DATASOURCE1, ImmutableSet.of(segments[0].getId().toString()))
+    );
+
+    final Map<String, SegmentAvailabilityStatus> statuses = extractResponseMap(response);
+    final SegmentAvailabilityStatus status = statuses.get(segments[0].getId().toString());
+    Assert.assertTrue(status.isUsed());
+    Assert.assertEquals(Integer.valueOf(2), status.getReplicationFactor());
+    Assert.assertTrue(status.isExpectedToBeAvailable());
+  }
+
+  @Test
+  public void testGetSegmentAvailabilityForSegmentWithUnknownReplicationFactor()
+  {
+    // The Coordinator has not evaluated rules for this segment, so a Broker must not treat its absence as a fault.
+    final Response response = metadataResource.getSegmentAvailability(
+        request,
+        ImmutableMap.of(DATASOURCE1, ImmutableSet.of(segments[1].getId().toString()))
+    );
+
+    final SegmentAvailabilityStatus status = extractResponseMap(response).get(segments[1].getId().toString());
+    Assert.assertTrue(status.isUsed());
+    Assert.assertNull(status.getReplicationFactor());
+    Assert.assertFalse(status.isExpectedToBeAvailable());
+  }
+
+  @Test
+  public void testGetSegmentAvailabilityForUnknownSegmentIsUnused()
+  {
+    // segments[4] belongs to another datasource, so it is not in DATASOURCE1's used-segment snapshot.
+    final Response response = metadataResource.getSegmentAvailability(
+        request,
+        ImmutableMap.of(DATASOURCE1, ImmutableSet.of(segments[4].getId().toString()))
+    );
+
+    final SegmentAvailabilityStatus status = extractResponseMap(response).get(segments[4].getId().toString());
+    Assert.assertNotNull(status);
+    Assert.assertFalse(status.isUsed());
+    Assert.assertFalse(status.isExpectedToBeAvailable());
+  }
+
+  @Test
+  public void testGetSegmentAvailabilityWithEmptyRequest()
+  {
+    final Response response = metadataResource.getSegmentAvailability(request, ImmutableMap.of());
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertTrue(extractResponseMap(response).isEmpty());
+  }
+
+  @Test
+  public void testGetSegmentAvailabilityRejectsOversizedBatch()
+  {
+    final Set<String> tooManySegments = new HashSet<>();
+    for (int i = 0; i <= MetadataResource.MAX_SEGMENTS_PER_AVAILABILITY_REQUEST; i++) {
+      tooManySegments.add("segment-" + i);
+    }
+
+    final Response response = metadataResource.getSegmentAvailability(
+        request,
+        ImmutableMap.of(DATASOURCE1, tooManySegments)
+    );
+    Assert.assertEquals(400, response.getStatus());
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Map<String, SegmentAvailabilityStatus> extractResponseMap(Response response)
+  {
+    Assert.assertEquals(200, response.getStatus());
+    return (Map<String, SegmentAvailabilityStatus>) response.getEntity();
+  }
+
 }

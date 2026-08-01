@@ -36,6 +36,7 @@ import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
@@ -44,6 +45,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -60,6 +62,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -77,6 +80,7 @@ public class CachingClusteredClientFunctionalityTest
 
   private CachingClusteredClient client;
   private VersionedIntervalTimeline<String, ServerSelector> timeline;
+  private UnavailableSegmentPolicy unavailableSegmentPolicy = UnavailableSegmentPolicy.ALERT;
   private TimelineServerView serverView;
   private Cache cache;
 
@@ -86,7 +90,9 @@ public class CachingClusteredClientFunctionalityTest
   @Before
   public void setUp()
   {
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
     timeline = new VersionedIntervalTimeline<>(Ordering.natural());
+    unavailableSegmentPolicy = UnavailableSegmentPolicy.ALERT;
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     cache = MapCache.create(100000);
     client = makeClient(
@@ -166,6 +172,119 @@ public class CachingClusteredClientFunctionalityTest
     }
     Assert.assertEquals(expectedList, context.getUncoveredIntervals());
     Assert.assertEquals(uncoveredIntervalsOverflowed, context.get(ResponseContext.Keys.UNCOVERED_INTERVALS_OVERFLOWED));
+  }
+
+
+  @Test
+  public void testUnavailableSegmentIsReportedAsMissingUnderFailPolicy()
+  {
+    unavailableSegmentPolicy = UnavailableSegmentPolicy.FAIL;
+    client = makeClient(new ForegroundCachePopulator(OBJECT_MAPPER, new CachePopulatorStats(), -1));
+
+    addUnavailableToTimeline(Intervals.of("2015-01-02/2015-01-03"), "1", SegmentAvailability.EXPECTED_AVAILABLE);
+
+    final ResponseContext responseContext = ResponseContext.createEmpty();
+    responseContext.initializeMissingSegments();
+    runQuery(client, unavailabilityQuery(), responseContext);
+
+    // Reported as missing so that RetryQueryRunner retries it and then fails the query, rather than the Broker
+    // silently returning results without it. See apache/druid#18716.
+    Assert.assertEquals(1, responseContext.getMissingSegments().size());
+  }
+
+  @Test
+  public void testUnavailableSegmentIsNotReportedUnderAlertPolicy()
+  {
+    unavailableSegmentPolicy = UnavailableSegmentPolicy.ALERT;
+    client = makeClient(new ForegroundCachePopulator(OBJECT_MAPPER, new CachePopulatorStats(), -1));
+
+    addUnavailableToTimeline(Intervals.of("2015-01-02/2015-01-03"), "1", SegmentAvailability.EXPECTED_AVAILABLE);
+
+    final ResponseContext responseContext = ResponseContext.createEmpty();
+    responseContext.initializeMissingSegments();
+    runQuery(client, unavailabilityQuery(), responseContext);
+
+    Assert.assertTrue(responseContext.getMissingSegments().isEmpty());
+  }
+
+  @Test
+  public void testSegmentOfUnknownAvailabilityIsNeverReported()
+  {
+    // The Coordinator has not answered yet. Failing here would turn a Coordinator hiccup into query errors.
+    unavailableSegmentPolicy = UnavailableSegmentPolicy.FAIL;
+    client = makeClient(new ForegroundCachePopulator(OBJECT_MAPPER, new CachePopulatorStats(), -1));
+
+    addUnavailableToTimeline(Intervals.of("2015-01-02/2015-01-03"), "1", SegmentAvailability.UNKNOWN);
+
+    final ResponseContext responseContext = ResponseContext.createEmpty();
+    responseContext.initializeMissingSegments();
+    runQuery(client, unavailabilityQuery(), responseContext);
+
+    Assert.assertTrue(responseContext.getMissingSegments().isEmpty());
+  }
+
+  private static TimeseriesQuery unavailabilityQuery()
+  {
+    return Druids.newTimeseriesQueryBuilder()
+                 .dataSource("test")
+                 .intervals("2015-01-02/2015-01-03")
+                 .granularity("day")
+                 .aggregators(Collections.singletonList(new CountAggregatorFactory("rows")))
+                 .build();
+  }
+
+  /**
+   * Adds a segment with no server at all, as {@link org.apache.druid.client.BrokerServerView} leaves behind when the
+   * last server for a segment goes away.
+   */
+  private void addUnavailableToTimeline(Interval interval, String version, SegmentAvailability availability)
+  {
+    final ServerSelector selector = new ServerSelector(
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(interval)
+                   .version(version)
+                   .shardSpec(NoneShardSpec.instance())
+                   .size(0)
+                   .build(),
+        new NoServerTierSelectorStrategy(),
+        HistoricalFilter.IDENTITY_FILTER
+    );
+    selector.setAvailability(availability);
+    timeline.add(interval, version, new SingleElementPartitionChunk<>(selector));
+  }
+
+  /**
+   * A strategy that never yields a server, so that a selector with no servers picks nothing.
+   */
+  private static class NoServerTierSelectorStrategy implements TierSelectorStrategy
+  {
+    @Override
+    public Comparator<Integer> getComparator()
+    {
+      return Ordering.natural();
+    }
+
+    @Override
+    public QueryableDruidServer pick(
+        Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
+        DataSegment segment
+    )
+    {
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public <T> QueryableDruidServer pick(
+        @Nullable Query<T> query,
+        Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
+        DataSegment segment
+    )
+    {
+      return null;
+    }
+
   }
 
   private void addToTimeline(Interval interval, String version)
@@ -331,7 +450,15 @@ public class CachingClusteredClientFunctionalityTest
         },
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        new BrokerSegmentWatcherConfig()
+        {
+          @Override
+          public UnavailableSegmentPolicy getUnavailableSegmentPolicy()
+          {
+            return unavailableSegmentPolicy;
+          }
+        }
     );
   }
 

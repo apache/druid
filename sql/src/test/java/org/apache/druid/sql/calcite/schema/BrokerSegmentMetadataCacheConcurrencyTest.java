@@ -33,6 +33,7 @@ import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.FilteringSegmentCallback;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.QueryableDruidServer;
+import org.apache.druid.client.SegmentAvailabilityTracker;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
@@ -72,6 +73,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -400,7 +402,8 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),
         new BrokerSegmentWatcherConfig(),
-        filter
+        filter,
+        new SegmentAvailabilityTracker(new TestCoordinatorClient(), new BrokerSegmentWatcherConfig())
     );
   }
 

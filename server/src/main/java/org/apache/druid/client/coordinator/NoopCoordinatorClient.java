@@ -22,6 +22,7 @@ package org.apache.druid.client.coordinator;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.SegmentAvailabilityStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
@@ -32,6 +33,7 @@ import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
 
@@ -69,6 +71,14 @@ public class NoopCoordinatorClient implements CoordinatorClient
 
   @Override
   public ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> datasources)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<Map<SegmentId, SegmentAvailabilityStatus>> fetchSegmentAvailability(
+      Set<SegmentId> segmentIds
+  )
   {
     throw new UnsupportedOperationException();
   }

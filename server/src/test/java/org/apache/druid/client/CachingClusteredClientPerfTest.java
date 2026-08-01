@@ -144,7 +144,8 @@ public class CachingClusteredClientPerfTest
         Mockito.mock(BrokerParallelMergeConfig.class),
         ForkJoinPool.commonPool(),
         queryScheduler,
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        new BrokerSegmentWatcherConfig()
     );
 
     Query<SegmentDescriptor> fakeQuery = makeFakeQuery(interval);

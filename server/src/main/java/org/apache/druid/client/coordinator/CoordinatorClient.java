@@ -22,6 +22,7 @@ package org.apache.druid.client.coordinator;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.SegmentAvailabilityStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
@@ -32,6 +33,7 @@ import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
 
@@ -68,6 +70,18 @@ public interface CoordinatorClient
    * Retrieves detailed metadata information for the specified data sources, which includes {@code RowSignature}.
    */
   ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> datasources);
+
+  /**
+   * Asks whether some server ought to be serving each of the given segments right now.
+   * <p>
+   * Used by Brokers for segments they have found themselves with no server for, to tell a segment that was
+   * legitimately removed apart from one that has gone missing. See apache/druid#18716.
+   *
+   * @param segmentIds Segments to look up. Must not exceed
+   *                   {@link org.apache.druid.server.http.MetadataResource#MAX_SEGMENTS_PER_AVAILABILITY_REQUEST}.
+   * @return Status per segment. Segments the Coordinator has no record of are reported as unused.
+   */
+  ListenableFuture<Map<SegmentId, SegmentAvailabilityStatus>> fetchSegmentAvailability(Set<SegmentId> segmentIds);
 
   /**
    * Fetch bootstrap segments from the coordinator. The results must be streamed back to the caller as the

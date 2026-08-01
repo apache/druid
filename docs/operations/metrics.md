@@ -70,6 +70,9 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 |`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 |`serverview/init/time`|Time taken to initialize the broker server view. Useful to detect if brokers are taking too long to start.||Depends on the number of segments.|
+|`query/segment/unavailable`|Number of segments touched by a query that should have been available but had no server to answer for them. A non-zero value means results would have been silently incomplete; see `druid.broker.segment.unavailableSegmentPolicy`.|`dataSource`|0|
+|`segment/noServer/count`|Number of segments the Broker currently believes should be available but that have no server to answer for them. This metric is only available if the `SegmentAvailabilityMonitor` module is included.||0|
+|`segment/noServer/tracked`|Number of segments with no server that the Broker is tracking, including those whose availability the Coordinator has not confirmed yet. This metric is only available if the `SegmentAvailabilityMonitor` module is included.||0|
 |`metadatacache/init/time`|Time taken to initialize the broker segment metadata cache. Useful to detect if brokers are taking too long to start||Depends on the number of segments.|
 |`segment/metadataCache/sync/time`|Time taken to poll segment metadata from the Coordinator and update the segment metadata cache. This metric is emitted only if [metadata cache](../configuration/index.md#sql) is enabled on the Broker.||Depends on the number of segments.|
 |`segment/schemaCache/refresh/count`|Number of segments refreshed in broker segment schema cache.|`dataSource`||

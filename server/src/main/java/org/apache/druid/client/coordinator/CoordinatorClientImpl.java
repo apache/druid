@@ -21,12 +21,14 @@ package org.apache.druid.client.coordinator;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.JsonParserIterator;
+import org.apache.druid.client.SegmentAvailabilityStatus;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -50,6 +52,7 @@ import org.apache.druid.server.coordination.LoadableDataSegment;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
@@ -59,6 +62,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -175,6 +180,43 @@ public class CoordinatorClientImpl implements CoordinatorClient
             new BytesFullResponseHandler()
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
+    );
+  }
+
+  @Override
+  public ListenableFuture<Map<SegmentId, SegmentAvailabilityStatus>> fetchSegmentAvailability(
+      Set<SegmentId> segmentIds
+  )
+  {
+    // Grouped by datasource so that the Coordinator can parse the ids unambiguously and authorize per datasource.
+    final Map<String, Set<String>> dataSourceToSegmentIds = new HashMap<>();
+    for (SegmentId segmentId : segmentIds) {
+      dataSourceToSegmentIds.computeIfAbsent(segmentId.getDataSource(), ds -> new HashSet<>())
+                            .add(segmentId.toString());
+    }
+
+    final String path = "/druid/coordinator/v1/metadata/segmentAvailability";
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path)
+                .jsonContent(jsonMapper, dataSourceToSegmentIds),
+            new BytesFullResponseHandler()
+        ),
+        holder -> {
+          final Map<String, SegmentAvailabilityStatus> bySerializedId =
+              JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {});
+
+          // Resolve back to the caller's own SegmentId instances rather than re-parsing, which also drops any id the
+          // Coordinator did not answer for (an unauthorized or unparseable datasource).
+          final Map<SegmentId, SegmentAvailabilityStatus> statuses = Maps.newHashMapWithExpectedSize(segmentIds.size());
+          for (SegmentId segmentId : segmentIds) {
+            final SegmentAvailabilityStatus status = bySerializedId.get(segmentId.toString());
+            if (status != null) {
+              statuses.put(segmentId, status);
+            }
+          }
+          return statuses;
+        }
     );
   }
 

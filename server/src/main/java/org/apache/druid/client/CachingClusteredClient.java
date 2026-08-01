@@ -53,10 +53,12 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.CloneQueryMode;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
@@ -88,6 +90,7 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -128,6 +131,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final ForkJoinPool pool;
   private final QueryScheduler scheduler;
   private final ServiceEmitter emitter;
+  private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
   @Inject
   public CachingClusteredClient(
@@ -141,7 +145,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       BrokerParallelMergeConfig parallelMergeConfig,
       @Merging ForkJoinPool pool,
       QueryScheduler scheduler,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      BrokerSegmentWatcherConfig segmentWatcherConfig
   )
   {
     this.conglomerate = conglomerate;
@@ -155,6 +160,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.pool = pool;
     this.scheduler = scheduler;
     this.emitter = emitter;
+    this.segmentWatcherConfig = segmentWatcherConfig;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -605,22 +611,72 @@ public class CachingClusteredClient implements QuerySegmentWalker
     )
     {
       final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = new TreeMap<>();
+      final List<SegmentDescriptor> unavailableSegments = new ArrayList<>();
+
       for (SegmentServerSelector segmentServer : segments) {
-        final QueryableDruidServer queryableDruidServer = segmentServer.getServer()
-                                                                       .pick(query, cloneQueryMode);
+        final ServerSelector selector = segmentServer.getServer();
+        final QueryableDruidServer queryableDruidServer = selector.pick(query, cloneQueryMode);
 
         if (queryableDruidServer == null) {
-          log.makeAlert(
-              "No servers found for SegmentDescriptor[%s] for DataSource[%s]?! How can this be?!",
-              segmentServer.getSegmentDescriptor(),
-              query.getDataSource()
-          ).emit();
+          // An empty selector still in the timeline is one the Broker deliberately retained because the segment has
+          // no server at all; a non-empty one that picked nothing just had all its servers filtered out for this
+          // query, which is not an availability problem. See apache/druid#18716.
+          if (selector.isEmpty() && selector.getAvailability() == SegmentAvailability.EXPECTED_AVAILABLE) {
+            unavailableSegments.add(segmentServer.getSegmentDescriptor());
+          } else {
+            log.makeAlert(
+                "No servers found for SegmentDescriptor[%s] for DataSource[%s]?! How can this be?!",
+                segmentServer.getSegmentDescriptor(),
+                query.getDataSource()
+            ).emit();
+          }
         } else {
           final DruidServer server = queryableDruidServer.getServer();
           serverSegments.computeIfAbsent(server, s -> new ArrayList<>()).add(segmentServer.getSegmentDescriptor());
         }
       }
+
+      if (!unavailableSegments.isEmpty()) {
+        reportUnavailableSegments(unavailableSegments);
+      }
+
       return serverSegments;
+    }
+
+    /**
+     * Handles segments that should be available but have no server, according to
+     * {@link BrokerSegmentWatcherConfig#getUnavailableSegmentPolicy()}.
+     * <p>
+     * Under {@code FAIL} these are reported to the response context as missing segments, which routes them through
+     * the same machinery that already handles data servers reporting missing segments: {@link RetryQueryRunner}
+     * retries them against a freshly resolved timeline and, once retries are exhausted and partial results are not
+     * allowed, throws {@link org.apache.druid.segment.SegmentMissingException}. That reuse is what gives operators
+     * the existing {@code druid.query.retryPolicy.numTries} and per-query partial-results escape hatches.
+     */
+    private void reportUnavailableSegments(List<SegmentDescriptor> unavailableSegments)
+    {
+      emitter.emit(
+          ServiceMetricEvent.builder()
+                            .setDimension(
+                                DruidMetrics.DATASOURCE,
+                                query.getDataSource().getTableNames().toArray(new String[0])
+                            )
+                            .setMetric("query/segment/unavailable", unavailableSegments.size())
+      );
+
+      log.makeAlert(
+          "No server is serving [%d] segments of DataSource[%s] that should be available."
+          + " Results would be incomplete.",
+          unavailableSegments.size(),
+          query.getDataSource()
+      ).addData("segments", unavailableSegments.size() > 10
+                            ? unavailableSegments.subList(0, 10)
+                            : unavailableSegments)
+       .emit();
+
+      if (segmentWatcherConfig.getUnavailableSegmentPolicy() == UnavailableSegmentPolicy.FAIL) {
+        responseContext.addMissingSegments(unavailableSegments);
+      }
     }
 
     private void addSequencesFromCache(
