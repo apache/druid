@@ -1593,7 +1593,7 @@
             <plugin>
                 <groupId>org.openrewrite.maven</groupId>
                 <artifactId>rewrite-maven-plugin</artifactId>
-                <version>5.42.0</version>
+                <version>6.44.0</version>
                 <configuration>
                     <activeRecipes>
                         <recipe>org.apache.druid.RewriteRules</recipe>
@@ -1622,7 +1622,7 @@
                     <dependency>
                         <groupId>org.openrewrite.recipe</groupId>
                         <artifactId>rewrite-jackson</artifactId>
-                        <version>0.6.0</version>
+                        <version>1.27.0</version>
                     </dependency>
                 </dependencies>
             </plugin>
