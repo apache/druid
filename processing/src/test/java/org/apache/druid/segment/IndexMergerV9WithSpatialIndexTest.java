@@ -257,14 +257,10 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
   {
     final IncrementalIndex theIndex = makeIncrementalIndex();
     final File tmpFile = FileUtils.createTempDir("spatial-index");
+    tmpFile.deleteOnExit();
 
-    try {
-      indexMergerV9.persist(theIndex, tmpFile, indexSpec, null);
-      return indexIO.loadIndex(tmpFile);
-    }
-    finally {
-      FileUtils.deleteDirectory(tmpFile);
-    }
+    indexMergerV9.persist(theIndex, tmpFile, indexSpec, null);
+    return indexIO.loadIndex(tmpFile);
   }
 
   private static QueryableIndex makeMergedQueryableIndex(
@@ -475,6 +471,7 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
 
 
       final File tmpFile = FileUtils.createTempDir("spatial-index-merge");
+      tmpFile.deleteOnExit();
 
       File firstFile = new File(tmpFile, "first");
       File secondFile = new File(tmpFile, "second");
@@ -485,33 +482,31 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
       FileUtils.mkdirp(secondFile);
       FileUtils.mkdirp(thirdFile);
       FileUtils.mkdirp(mergedFile);
+      firstFile.deleteOnExit();
+      secondFile.deleteOnExit();
+      thirdFile.deleteOnExit();
+      mergedFile.deleteOnExit();
 
       indexMergerV9.persist(first, DATA_INTERVAL, firstFile, indexSpec, null);
       indexMergerV9.persist(second, DATA_INTERVAL, secondFile, indexSpec, null);
       indexMergerV9.persist(third, DATA_INTERVAL, thirdFile, indexSpec, null);
 
-      try {
-        QueryableIndex mergedRealtime = indexIO.loadIndex(
-            indexMergerV9.mergeQueryableIndex(
-                Arrays.asList(
-                    indexIO.loadIndex(firstFile),
-                    indexIO.loadIndex(secondFile),
-                    indexIO.loadIndex(thirdFile)
-                ),
-                true,
-                METRIC_AGGS,
-                mergedFile,
-                indexSpec,
-                null,
-                -1
-            )
-        );
-        return mergedRealtime;
-
-      }
-      finally {
-        FileUtils.deleteDirectory(tmpFile);
-      }
+      QueryableIndex mergedRealtime = indexIO.loadIndex(
+          indexMergerV9.mergeQueryableIndex(
+              Arrays.asList(
+                  indexIO.loadIndex(firstFile),
+                  indexIO.loadIndex(secondFile),
+                  indexIO.loadIndex(thirdFile)
+              ),
+              true,
+              METRIC_AGGS,
+              mergedFile,
+              indexSpec,
+              null,
+              -1
+          )
+      );
+      return mergedRealtime;
 
     }
     catch (IOException e) {
