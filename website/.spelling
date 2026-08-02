@@ -56,11 +56,13 @@ blocklist
 bottlenecked
 build_revision
 cartesian
+collected_at
 concat
 CIDR
 CORS
 CNF
 CPUs
+cpu_time_ns
 CSVs
 CTEs
 CentralizedDatasourceSchema
@@ -163,6 +165,7 @@ JDK8
 JKS
 jks
 JMX
+jstack
 JRE
 JS
 JSON
@@ -425,6 +428,9 @@ laning
 lifecycle
 lineage
 localhost
+lock_name
+lock_owner_id
+lock_owner_name
 log4j
 log4j2
 log4j2.xml
@@ -573,6 +579,7 @@ smoosh
 smooshed
 snapshotting
 splittable
+stack_trace
 ssl
 sslmode
 start_time
@@ -599,6 +606,9 @@ syncs
 syntaxes
 systemFields
 tablePath
+thread_id
+thread_name
+thread_state
 tiering
 timeseries
 Timeseries
@@ -619,6 +629,7 @@ uncomment
 uncompacted
 underutilization
 unintuitive
+user_cpu_time_ns
 unioned
 unmergeable
 unmerged
@@ -683,6 +694,7 @@ DEFAULT_CHARACTER_SET_NAME
 DEFAULT_CHARACTER_SET_SCHEMA
 ISODOW
 ISOYEAR
+is_deadlocked
 IS_NULLABLE
 JDBC_TYPE
 MIDDLE_MANAGER

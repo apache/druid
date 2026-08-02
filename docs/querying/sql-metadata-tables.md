@@ -339,6 +339,53 @@ For example, to retrieve properties for a specific server, use the query
 SELECT * FROM sys.server_properties WHERE server='192.168.1.1:8081'
 ```
 
+### STACK_TRACE table
+
+The `stack_trace` table exposes a live Java platform-thread snapshot collected from explicitly selected Druid servers. Virtual threads are not included. Each thread in a successful snapshot produces one row. The table requires an equality or `IN` filter on `server`, using the same `host:port` value as `sys.servers.server`, to avoid unintentionally collecting stack traces from the entire cluster. If a snapshot cannot be retrieved, the table returns one placeholder row for that server with `server`, `service_name`, `node_roles`, and `error_message` populated; all remaining columns are null.
+
+The optional SQL query context parameter `maxStackTraceFrameDepth` controls the maximum number of stack frames in the `stack` column for each thread. It defaults to `100` and accepts effective values from `10` through `1000`. Conversion follows the standard Druid query context rules. Unquoted JSON numbers are converted using `Number.longValue()` and therefore truncate fractional values toward zero before range validation; for example, `10.9` becomes `10`, while `9.9` becomes `9` and is rejected. Quoted values are parsed exactly: `"10"` and `"10.0"` become `10`, while `"10.9"` is rejected.
+
+|Column|Type|Notes|
+|------|-----|-----|
+|server|VARCHAR|Host and port of the server, in the form `host:port`; aligns with `sys.servers.server`|
+|service_name|VARCHAR|Service name of the server, as defined by `druid.service`|
+|node_roles|VARCHAR|Comma-separated, lexicographically sorted list of roles announced by the process. A process with multiple roles, such as `coordinator` and `overlord`, is represented as `coordinator,overlord`|
+|collected_at|VARCHAR|UTC ISO-8601 timestamp recorded when collection of the server snapshot begins. All successful thread rows from one server snapshot have the same value|
+|thread_id|BIGINT|JVM thread identifier, unique while the thread exists|
+|thread_name|VARCHAR|JVM thread name|
+|thread_state|VARCHAR|JVM state of the live platform thread, such as `RUNNABLE`, `BLOCKED`, `WAITING`, or `TIMED_WAITING`|
+|daemon|BIGINT|Boolean represented as long type where 1 = true and 0 = false|
+|priority|BIGINT|JVM thread priority|
+|cpu_time_ns|BIGINT|Cumulative thread CPU time in nanoseconds at collection time. Null when unavailable or disabled|
+|user_cpu_time_ns|BIGINT|Cumulative thread user CPU time in nanoseconds at collection time. Null when unavailable or disabled|
+|lock_name|VARCHAR|Name of the object or synchronizer on which the thread is blocked or waiting, when available; otherwise null|
+|lock_owner_id|BIGINT|Identifier of the thread owning the lock, when available|
+|lock_owner_name|VARCHAR|Name of the thread owning the lock, when available|
+|is_deadlocked|BIGINT|Boolean represented as long type where 1 = the JVM reports the thread as part of a deadlock and 0 = it is not reported as deadlocked|
+|stack|VARCHAR|One jstack-style string containing the thread header, up to `maxStackTraceFrameDepth` stack frames, and lock or synchronizer annotations. The default is 100 frames. Unlike `ThreadInfo.toString()`, the stack is not truncated to eight frames|
+|error_message|VARCHAR|Describes why the snapshot could not be retrieved, such as an HTTP or connection error. Null for successful thread rows|
+
+The `cpu_time_ns` and `user_cpu_time_ns` values are nullable. Do not assume that either value is present, because availability depends on JVM support and configuration, and a thread can terminate while its snapshot is being collected.
+
+For example, to inspect threads and cumulative CPU time on one Broker:
+
+```sql
+SELECT thread_name, thread_state, cpu_time_ns, user_cpu_time_ns, stack
+FROM sys.stack_trace
+WHERE server = '192.168.1.1:8082'
+```
+
+To request a deeper stack snapshot, include the query context in the SQL request:
+
+```json
+{
+  "query": "SELECT thread_name, stack FROM sys.stack_trace WHERE server = '192.168.1.1:8082'",
+  "context": {
+    "maxStackTraceFrameDepth": 250
+  }
+}
+```
+
 ### QUERIES table
 
 :::info

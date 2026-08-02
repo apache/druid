@@ -294,6 +294,10 @@ public class SystemSchema extends AbstractSchema
         SystemServerPropertiesTable.TABLE_NAME,
         new SystemServerPropertiesTable(druidNodeDiscoveryProvider, authorizerMapper, httpClient, jsonMapper)
     );
+    builder.put(
+        SystemStackTraceTable.TABLE_NAME,
+        new SystemStackTraceTable(druidNodeDiscoveryProvider, authorizerMapper, httpClient, jsonMapper)
+    );
 
     if (plannerConfig.isEnableSysQueriesTable()) {
       builder.put(QUERIES_TABLE, new QueriesTable(sqlEngineRegistryProvider, jsonMapper, authorizerMapper));
