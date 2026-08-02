@@ -44,6 +44,7 @@ Real-time analytics database. Java, Maven, multi-module project.
 ## Pull Requests
 
 - PR titles targeting `master` must use the Conventional Commits format: `<type>: <description>` or `<type>(<scope>): <description>`.
+- For a breaking change, add `!` immediately before the colon: `<type>!: <description>` or `<type>(<scope>)!: <description>`. A breaking change is backward-incompatible and may require users to update existing code, configuration, or integrations.
 - Accepted types are `backport`, `build`, `ci`, `dev`, `docs`, `feat`, `fix`, `minor`, `perf`, `refactor`, `release`, `revert`, `style`, and `test`.
 - Example: `build: remove redundant license download step`.
 - Follow `.github/pull_request_template.md` when preparing the PR description.
