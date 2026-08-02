@@ -30,6 +30,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.impl.AbstractTable;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.error.InvalidInput;
@@ -234,9 +235,10 @@ public class SystemStackTraceTable extends AbstractTable implements ProjectableF
     ).toString();
     try {
       final Request request = new Request(HttpMethod.GET, URI.create(url).toURL());
-      final StringFullResponseHolder response = httpClient
-          .go(request, new StringFullResponseHandler(StandardCharsets.UTF_8))
-          .get();
+      final StringFullResponseHolder response = FutureUtils.get(
+          httpClient.go(request, new StringFullResponseHandler(StandardCharsets.UTF_8)),
+          true
+      );
 
       if (response.getStatus().getCode() != HttpServletResponse.SC_OK) {
         final String errorMessage = StringUtils.format(

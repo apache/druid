@@ -2460,6 +2460,47 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
+  public void testStackTraceTable_withInterruptedException()
+  {
+    final SystemStackTraceTable stackTraceTable = new SystemStackTraceTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+
+    mockAllNodeRolesWithCoordinator(coordinator);
+
+    final SettableFuture<StringFullResponseHolder> interruptingFuture = SettableFuture.create();
+    EasyMock.expect(
+        httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class))
+    ).andReturn(interruptingFuture).once();
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    try {
+      Thread.currentThread().interrupt();
+      final RuntimeException exception = Assert.assertThrows(
+          RuntimeException.class,
+          () -> stackTraceTable.scan(
+              createDataContext(Users.SUPER),
+              ImmutableList.of(
+                  createStackTraceServerEquality(stackTraceTable, coordinator.getDruidNode().getHostAndPortToUse())
+              ),
+              null
+          ).toList()
+      );
+      Assert.assertTrue(exception.getMessage().contains("Interrupted"));
+      Assert.assertTrue(interruptingFuture.isCancelled());
+      Assert.assertTrue(Thread.currentThread().isInterrupted());
+    }
+    finally {
+      Thread.interrupted();
+    }
+
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+  }
+
+  @Test
   public void testStackTraceTable_requiresServerFilter()
   {
     final SystemStackTraceTable stackTraceTable = new SystemStackTraceTable(
