@@ -41,6 +41,13 @@ Real-time analytics database. Java, Maven, multi-module project.
 - End every file with a newline.
 - Don't format changes unnecessarily.
 
+## Pull Requests
+
+- PR titles targeting `master` must use the Conventional Commits format: `<type>: <description>` or `<type>(<scope>): <description>`.
+- Accepted types are `backport`, `build`, `ci`, `dev`, `docs`, `feat`, `fix`, `minor`, `perf`, `refactor`, `release`, `revert`, `style`, and `test`.
+- Example: `build: remove redundant license download step`.
+- Follow `.github/pull_request_template.md` when preparing the PR description.
+
 ## Running Tests
 
 Use these flags for faster tests: `-Pskip-static-checks -Dweb.console.skip=true -T1C`
