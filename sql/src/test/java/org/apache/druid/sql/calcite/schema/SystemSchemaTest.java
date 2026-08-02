@@ -58,6 +58,7 @@ import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.NotYetImplemented;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.granularity.GranularitySpec;
@@ -76,6 +77,7 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -95,6 +97,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.StackTraceCollector;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
@@ -575,12 +578,28 @@ public class SystemSchemaTest extends CalciteTestBase
     );
 
     Assertions.assertEquals(
-        ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors", "server_properties"),
+        ImmutableSet.of(
+            "segments",
+            "servers",
+            "server_segments",
+            "tasks",
+            "supervisors",
+            "server_properties",
+            "stack_trace"
+        ),
         schema.getTableNames()
     );
 
     Assertions.assertEquals(
-        ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors", "server_properties"),
+        ImmutableSet.of(
+            "segments",
+            "servers",
+            "server_segments",
+            "tasks",
+            "supervisors",
+            "server_properties",
+            "stack_trace"
+        ),
         schema.tables().getNames(LikePattern.any())
     );
 
@@ -610,6 +629,14 @@ public class SystemSchemaTest extends CalciteTestBase
     final RelDataType propertiesRowType = propertiesTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> propertiesFields = propertiesRowType.getFieldList();
     Assertions.assertEquals(6, propertiesFields.size());
+
+    final SystemStackTraceTable stackTraceTable = (SystemStackTraceTable) schema.tables().get("stack_trace");
+    final RelDataType stackTraceRowType = stackTraceTable.getRowType(new JavaTypeFactoryImpl());
+    final List<RelDataTypeField> stackTraceFields = stackTraceRowType.getFieldList();
+    Assertions.assertEquals(17, stackTraceFields.size());
+    Assertions.assertEquals(SqlTypeName.VARCHAR, stackTraceFields.get(2).getType().getSqlTypeName());
+    Assertions.assertEquals("stack", stackTraceFields.get(15).getName());
+    Assertions.assertEquals(SqlTypeName.VARCHAR, stackTraceFields.get(15).getType().getSqlTypeName());
   }
 
   @Test
@@ -2237,6 +2264,282 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
+  public void testStackTraceTable() throws Exception
+  {
+    final SystemStackTraceTable stackTraceTable = new SystemStackTraceTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+
+    mockAllNodeRolesWithCoordinator(coordinator);
+
+    final StackTraceCollector.ThreadStackTrace thread = new StackTraceCollector.ThreadStackTrace(
+        42L,
+        "test-thread",
+        "RUNNABLE",
+        false,
+        7,
+        100L,
+        80L,
+        null,
+        null,
+        null,
+        false,
+        "\"test-thread\" Id=42 RUNNABLE\n\tat TestClass.testMethod(TestClass.java:42)\n"
+    );
+    final StackTraceCollector.ThreadStackTraceResponse stackTraceResponse = new StackTraceCollector.ThreadStackTraceResponse(
+        "2026-08-02T05:00:00.000Z",
+        ImmutableList.of(thread)
+    );
+    final HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    final StringFullResponseHolder responseHolder = new StringFullResponseHolder(httpResponse, StandardCharsets.UTF_8);
+    responseHolder.addChunk(MAPPER.writeValueAsString(stackTraceResponse));
+
+    EasyMock.expect(
+        httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class))
+    ).andAnswer(() -> {
+      final Request request = (Request) EasyMock.getCurrentArguments()[0];
+      Assertions.assertEquals(
+          coordinator.getDruidNode().getUriToUse()
+                    .resolve("/status/stack?maxStackTraceFrameDepth=10")
+                    .toURL(),
+          request.getUrl()
+      );
+      return Futures.immediateFuture(responseHolder);
+    }).once();
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    final List<Object[]> rows = stackTraceTable.scan(
+        createDataContext(Users.SUPER, 10),
+        ImmutableList.of(
+            createStackTraceServerEquality(stackTraceTable, coordinator.getDruidNode().getHostAndPortToUse())
+        ),
+        null
+    ).toList();
+
+    Assertions.assertEquals(1, rows.size());
+    final Object[] row = rows.get(0);
+    Assertions.assertEquals(coordinator.getDruidNode().getHostAndPortToUse(), row[0]);
+    Assertions.assertEquals(coordinator.getDruidNode().getServiceName(), row[1]);
+    Assertions.assertEquals(NodeRole.COORDINATOR.getJsonName(), row[2]);
+    Assertions.assertEquals("2026-08-02T05:00:00.000Z", row[3]);
+    Assertions.assertEquals(42L, row[4]);
+    Assertions.assertEquals("test-thread", row[5]);
+    Assertions.assertEquals("RUNNABLE", row[6]);
+    Assertions.assertEquals(0L, row[7]);
+    Assertions.assertEquals(7L, row[8]);
+    Assertions.assertEquals(100L, row[9]);
+    Assertions.assertEquals(80L, row[10]);
+    Assertions.assertNull(row[11]);
+    Assertions.assertNull(row[12]);
+    Assertions.assertNull(row[13]);
+    Assertions.assertEquals(0L, row[14]);
+    Assertions.assertEquals(thread.getStackTrace(), row[15]);
+    Assertions.assertNull(row[16]);
+
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+  }
+
+  @Test
+  public void testStackTraceTable_multiRoleAndProjection() throws Exception
+  {
+    final SystemStackTraceTable stackTraceTable = new SystemStackTraceTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+    final DiscoveryDruidNode coordinatorRole = new DiscoveryDruidNode(
+        coordinator.getDruidNode(),
+        NodeRole.COORDINATOR,
+        ImmutableMap.of(),
+        startTime
+    );
+    final DiscoveryDruidNode overlordRole = new DiscoveryDruidNode(
+        coordinator.getDruidNode(),
+        NodeRole.OVERLORD,
+        ImmutableMap.of(),
+        startTime
+    );
+
+    mockNodeDiscovery(NodeRole.BROKER);
+    mockNodeDiscovery(NodeRole.ROUTER);
+    mockNodeDiscovery(NodeRole.HISTORICAL);
+    mockNodeDiscovery(NodeRole.OVERLORD, overlordRole);
+    mockNodeDiscovery(NodeRole.PEON);
+    mockNodeDiscovery(NodeRole.INDEXER);
+    mockNodeDiscovery(NodeRole.MIDDLE_MANAGER);
+    mockNodeDiscovery(NodeRole.COORDINATOR, coordinatorRole);
+
+    final StackTraceCollector.ThreadStackTrace thread = new StackTraceCollector.ThreadStackTrace(
+        43L,
+        "multi-role-thread",
+        "WAITING",
+        true,
+        5,
+        null,
+        null,
+        "java.lang.Object@1",
+        7L,
+        "owner-thread",
+        true,
+        "\"multi-role-thread\" Id=43 WAITING\n"
+    );
+    final StackTraceCollector.ThreadStackTraceResponse stackTraceResponse = new StackTraceCollector.ThreadStackTraceResponse(
+        "2026-08-02T05:01:00.000Z",
+        ImmutableList.of(thread)
+    );
+    final HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    final StringFullResponseHolder responseHolder = new StringFullResponseHolder(httpResponse, StandardCharsets.UTF_8);
+    responseHolder.addChunk(MAPPER.writeValueAsString(stackTraceResponse));
+
+    EasyMock.expect(
+        httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class))
+    ).andReturn(Futures.immediateFuture(responseHolder)).once();
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    final int[] projects = new int[]{0, 2, 3, 4, 15, 16};
+    final List<Object[]> rows = stackTraceTable.scan(
+        createDataContext(Users.SUPER),
+        ImmutableList.of(
+            createStackTraceServerEquality(stackTraceTable, coordinator.getDruidNode().getHostAndPortToUse())
+        ),
+        projects
+    ).toList();
+
+    Assertions.assertEquals(1, rows.size());
+    Assertions.assertEquals(6, rows.get(0).length);
+    Assertions.assertEquals(coordinator.getDruidNode().getHostAndPortToUse(), rows.get(0)[0]);
+    Assertions.assertEquals("coordinator,overlord", rows.get(0)[1]);
+    Assertions.assertEquals("2026-08-02T05:01:00.000Z", rows.get(0)[2]);
+    Assertions.assertEquals(43L, rows.get(0)[3]);
+    Assertions.assertEquals(thread.getStackTrace(), rows.get(0)[4]);
+    Assertions.assertNull(rows.get(0)[5]);
+
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+  }
+
+  @Test
+  public void testStackTraceTable_httpError()
+  {
+    final SystemStackTraceTable stackTraceTable = new SystemStackTraceTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+    mockAllNodeRolesWithCoordinator(coordinator);
+
+    final HttpResponse httpResponse = new DefaultHttpResponse(
+        HttpVersion.HTTP_1_1,
+        HttpResponseStatus.SERVICE_UNAVAILABLE
+    );
+    final StringFullResponseHolder responseHolder = new StringFullResponseHolder(httpResponse, StandardCharsets.UTF_8);
+    responseHolder.addChunk("service unavailable");
+    EasyMock.expect(
+        httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class))
+    ).andReturn(Futures.immediateFuture(responseHolder)).once();
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    final List<Object[]> rows = stackTraceTable.scan(
+        createDataContext(Users.SUPER),
+        ImmutableList.of(
+            createStackTraceServerEquality(stackTraceTable, coordinator.getDruidNode().getHostAndPortToUse())
+        ),
+        null
+    ).toList();
+
+    Assertions.assertEquals(1, rows.size());
+    Assertions.assertEquals(coordinator.getDruidNode().getHostAndPortToUse(), rows.get(0)[0]);
+    Assertions.assertNull(rows.get(0)[4]);
+    Assertions.assertTrue(((String) rows.get(0)[16]).contains("HTTP 503"));
+
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+  }
+
+  @Test
+  public void testStackTraceTable_requiresServerFilter()
+  {
+    final SystemStackTraceTable stackTraceTable = new SystemStackTraceTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> stackTraceTable.scan(createDataContext(Users.SUPER), Collections.emptyList(), null).toList()
+    );
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertTrue(exception.getMessage().contains("requires a filter on the server column"));
+
+    final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
+    final int serverIndex = SystemStackTraceTable.ROW_SIGNATURE.indexOf("server");
+    final RelDataType rowType = stackTraceTable.getRowType(new JavaTypeFactoryImpl());
+    final RexNode serverRef = rexBuilder.makeInputRef(
+        rowType.getFieldList().get(serverIndex).getType(),
+        serverIndex
+    );
+    final RexNode notEquals = rexBuilder.makeCall(
+        SqlStdOperatorTable.NOT_EQUALS,
+        serverRef,
+        rexBuilder.makeLiteral(coordinator.getDruidNode().getHostAndPortToUse())
+    );
+    final DruidException notEqualsException = Assertions.assertThrows(
+        DruidException.class,
+        () -> stackTraceTable.scan(createDataContext(Users.SUPER), ImmutableList.of(notEquals), null).toList()
+    );
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, notEqualsException.getCategory());
+  }
+
+  @Test
+  public void testStackTraceTable_rejectsInvalidMaxStackTraceFrameDepth()
+  {
+    final SystemStackTraceTable stackTraceTable = new SystemStackTraceTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+
+    for (final long invalidDepth : new long[]{9, StackTraceCollector.MAX_ALLOWED_STACK_TRACE_FRAME_DEPTH + 1L}) {
+      final DruidException exception = Assertions.assertThrows(
+          DruidException.class,
+          () -> stackTraceTable.scan(
+              createDataContext(Users.SUPER, invalidDepth),
+              ImmutableList.of(
+                  createStackTraceServerEquality(stackTraceTable, coordinator.getDruidNode().getHostAndPortToUse())
+              ),
+              null
+          ).toList()
+      );
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+      Assertions.assertTrue(exception.getMessage().contains(StackTraceCollector.MAX_STACK_TRACE_FRAME_DEPTH_KEY));
+    }
+  }
+
+  @Test
+  public void testStackTraceTable_maxStackTraceFrameDepthContextConversion()
+  {
+    Assertions.assertEquals(100, SystemStackTraceTable.getMaxStackTraceFrameDepth(null));
+    Assertions.assertEquals(10, SystemStackTraceTable.getMaxStackTraceFrameDepth(10.9));
+    Assertions.assertEquals(10, SystemStackTraceTable.getMaxStackTraceFrameDepth("10"));
+    Assertions.assertEquals(10, SystemStackTraceTable.getMaxStackTraceFrameDepth("10.0"));
+
+    Assertions.assertThrows(
+        BadQueryContextException.class,
+        () -> SystemStackTraceTable.getMaxStackTraceFrameDepth("10.9")
+    );
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> SystemStackTraceTable.getMaxStackTraceFrameDepth(9.9)
+    );
+  }
+
+  @Test
   public void testQueriesTable()
   {
     // Create mock SqlEngine that returns test queries
@@ -2408,6 +2711,21 @@ public class SystemSchemaTest extends CalciteTestBase
     return discoveryDruidNode.getDruidNode().getUriToUse().resolve("/status/properties").toString();
   }
 
+  private RexNode createStackTraceServerEquality(
+      final SystemStackTraceTable stackTraceTable,
+      final String server
+  )
+  {
+    final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
+    final int serverIndex = SystemStackTraceTable.ROW_SIGNATURE.indexOf("server");
+    final RelDataType rowType = stackTraceTable.getRowType(new JavaTypeFactoryImpl());
+    return rexBuilder.makeCall(
+        SqlStdOperatorTable.EQUALS,
+        rexBuilder.makeInputRef(rowType.getFieldList().get(serverIndex).getType(), serverIndex),
+        rexBuilder.makeLiteral(server)
+    );
+  }
+
   /**
    * Creates a response holder that contains the given json.
    */
@@ -2430,6 +2748,16 @@ public class SystemSchemaTest extends CalciteTestBase
    */
   private DataContext createDataContext()
   {
+    return createDataContext(null, null);
+  }
+
+  private DataContext createDataContext(final String username)
+  {
+    return createDataContext(username, null);
+  }
+
+  private DataContext createDataContext(final String username, final Object maxStackTraceFrameDepth)
+  {
     return new DataContext()
     {
       @Override
@@ -2451,9 +2779,17 @@ public class SystemSchemaTest extends CalciteTestBase
       }
 
       @Override
-      public Object get(String name)
+      public Object get(final String name)
       {
-        throw NotYetImplemented.ex(null, "Not expected to be called");
+        if (username == null) {
+          throw NotYetImplemented.ex(null, "Not expected to be called");
+        }
+        if (StackTraceCollector.MAX_STACK_TRACE_FRAME_DEPTH_KEY.equals(name)) {
+          return maxStackTraceFrameDepth;
+        }
+        return CalciteTests.TEST_SUPERUSER_NAME.equals(username)
+               ? CalciteTests.SUPER_USER_AUTH_RESULT
+               : new AuthenticationResult(username, name, null, null);
       }
     };
   }

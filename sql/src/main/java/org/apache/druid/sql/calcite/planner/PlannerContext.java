@@ -49,6 +49,7 @@ import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.server.StackTraceCollector;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
@@ -529,6 +530,10 @@ public class PlannerContext
         }
         if (authenticationResult != null) {
           builder.put(DATA_CTX_AUTHENTICATION_RESULT, authenticationResult);
+        }
+        final Object maxStackTraceFrameDepth = queryContext().get(StackTraceCollector.MAX_STACK_TRACE_FRAME_DEPTH_KEY);
+        if (maxStackTraceFrameDepth != null) {
+          builder.put(StackTraceCollector.MAX_STACK_TRACE_FRAME_DEPTH_KEY, maxStackTraceFrameDepth);
         }
         context = builder.build();
       }
