@@ -52,7 +52,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
-import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -233,7 +233,7 @@ public class SystemStackTraceTable extends AbstractTable implements ProjectableF
         )
     ).toString();
     try {
-      final Request request = new Request(HttpMethod.GET, new URL(url));
+      final Request request = new Request(HttpMethod.GET, URI.create(url).toURL());
       final StringFullResponseHolder response = httpClient
           .go(request, new StringFullResponseHandler(StandardCharsets.UTF_8))
           .get();

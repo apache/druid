@@ -121,7 +121,7 @@ public class StatusResourceTest
     Assertions.assertNotNull(response.getCollectedAt());
     Assertions.assertFalse(response.getThreads().isEmpty());
 
-    final long currentThreadId = Thread.currentThread().getId();
+    final long currentThreadId = Thread.currentThread().threadId();
     final StackTraceCollector.ThreadStackTrace currentThread = response.getThreads()
         .stream()
         .filter(thread -> thread.getThreadId() == currentThreadId)
@@ -209,7 +209,7 @@ public class StatusResourceTest
       final StackTraceCollector.ThreadStackTrace thread = new StackTraceCollector().collect()
           .getThreads()
           .stream()
-          .filter(stackTrace -> stackTrace.getThreadId() == waitingThread.getId())
+          .filter(stackTrace -> stackTrace.getThreadId() == waitingThread.threadId())
           .findFirst()
           .orElse(null);
       Assertions.assertNotNull(thread);
@@ -263,7 +263,7 @@ public class StatusResourceTest
       final StackTraceCollector.ThreadStackTrace thread = new StackTraceCollector().collect()
           .getThreads()
           .stream()
-          .filter(stackTrace -> stackTrace.getThreadId() == lockHolder.getId())
+          .filter(stackTrace -> stackTrace.getThreadId() == lockHolder.threadId())
           .findFirst()
           .orElse(null);
       Assertions.assertNotNull(thread);

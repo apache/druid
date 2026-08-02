@@ -141,15 +141,15 @@ public class SystemStackTraceTableTest extends EmbeddedClusterTestBase
       Assertions.assertEquals(BROKER_SERVICE, columns[1]);
       Assertions.assertEquals("broker", columns[2]);
       Assertions.assertFalse(columns[3].isEmpty());
-      Assertions.assertDoesNotThrow(() -> Long.parseLong(columns[4]));
+      assertLong(columns[4]);
       Assertions.assertFalse(columns[6].isEmpty());
       Assertions.assertTrue(columns[6].equals("0") || columns[6].equals("1"), row);
-      Assertions.assertDoesNotThrow(() -> Long.parseLong(columns[7]));
+      assertLong(columns[7]);
       if (!columns[8].isEmpty()) {
-        Assertions.assertDoesNotThrow(() -> Long.parseLong(columns[8]));
+        assertLong(columns[8]);
       }
       if (!columns[9].isEmpty()) {
-        Assertions.assertDoesNotThrow(() -> Long.parseLong(columns[9]));
+        assertLong(columns[9]);
       }
       Assertions.assertTrue(columns[10].equals("0") || columns[10].equals("1"), row);
       Assertions.assertTrue(columns[11].isEmpty());
@@ -226,5 +226,15 @@ public class SystemStackTraceTableTest extends EmbeddedClusterTestBase
   private static long countStackFrames(final String stackTrace)
   {
     return stackTrace.lines().filter(line -> line.startsWith("\tat ")).count();
+  }
+
+  private static void assertLong(final String value)
+  {
+    try {
+      Long.parseLong(value);
+    }
+    catch (NumberFormatException e) {
+      Assertions.fail("Expected a long value but got[" + value + "]", e);
+    }
   }
 }

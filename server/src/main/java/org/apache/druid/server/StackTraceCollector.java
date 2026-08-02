@@ -134,7 +134,7 @@ public class StackTraceCollector
         MAX_ALLOWED_STACK_TRACE_FRAME_DEPTH,
         maxStackTraceFrameDepth
     );
-    return (int) maxStackTraceFrameDepth;
+    return Math.toIntExact(maxStackTraceFrameDepth);
   }
 
   /**
@@ -379,30 +379,35 @@ public class StackTraceCollector
       return priority;
     }
 
+    @Nullable
     @JsonProperty
     public Long getCpuTimeNs()
     {
       return cpuTimeNs;
     }
 
+    @Nullable
     @JsonProperty
     public Long getUserCpuTimeNs()
     {
       return userCpuTimeNs;
     }
 
+    @Nullable
     @JsonProperty
     public String getLockName()
     {
       return lockName;
     }
 
+    @Nullable
     @JsonProperty
     public Long getLockOwnerId()
     {
       return lockOwnerId;
     }
 
+    @Nullable
     @JsonProperty
     public String getLockOwnerName()
     {
