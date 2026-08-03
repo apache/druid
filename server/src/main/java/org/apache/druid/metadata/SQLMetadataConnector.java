@@ -1090,8 +1090,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    * Returns an empty list if the table does not exist or the metadata cannot be read.
    *
    * The lookup is scoped to the schema of the current connection, which is the schema an unqualified
-   * table name resolves to, and the table name is escaped so that it is matched literally rather than
-   * as a {@link DatabaseMetaData#getColumns} search pattern.
+   * table name resolves to. The table name is folded to the case in which the database stores
+   * unquoted identifiers, and escaped so that it is matched literally rather than as a
+   * {@link DatabaseMetaData#getColumns} search pattern.
    */
   public List<String> getTableColumns(final String tableName)
   {
@@ -1104,7 +1105,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
           try (ResultSet rs = dbMetaData.getColumns(
               null,
               escapeMetaDataSearchString(dbMetaData, conn.getSchema()),
-              escapeMetaDataSearchString(dbMetaData, tableName),
+              escapeMetaDataSearchString(dbMetaData, foldIdentifierCase(dbMetaData, tableName)),
               null
           )) {
             while (rs.next()) {
@@ -1118,6 +1119,26 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       }
       return columns;
     });
+  }
+
+  /**
+   * Folds the given identifier to the case in which the database stores unquoted identifiers.
+   * {@link DatabaseMetaData} lookup patterns are case-sensitive, while an unquoted identifier
+   * in a SQL statement is folded by the database (to lowercase in PostgreSQL, to uppercase in
+   * Derby), so the folded form must be used to match the table a SQL reference resolves to.
+   */
+  private static String foldIdentifierCase(
+      final DatabaseMetaData dbMetaData,
+      final String identifier
+  ) throws SQLException
+  {
+    if (dbMetaData.storesLowerCaseIdentifiers()) {
+      return StringUtils.toLowerCase(identifier);
+    }
+    if (dbMetaData.storesUpperCaseIdentifiers()) {
+      return StringUtils.toUpperCase(identifier);
+    }
+    return identifier;
   }
 
   /**
