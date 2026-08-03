@@ -369,11 +369,9 @@ public class KillUnreferencedIndexingStateTest
 
   private CompactionState createTestCompactionState()
   {
-    return new CompactionState(
-        new DynamicPartitionsSpec(100, null),
-        null, null, null,
-        IndexSpec.getDefault(),
-        null, null
-    );
+    return CompactionState.builder()
+                          .partitionsSpec(new DynamicPartitionsSpec(100, null))
+                          .indexSpec(IndexSpec.getDefault())
+                          .build();
   }
 }

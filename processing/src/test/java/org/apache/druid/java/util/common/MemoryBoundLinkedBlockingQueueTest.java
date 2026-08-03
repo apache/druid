@@ -20,8 +20,8 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.collect.ImmutableList;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
@@ -44,10 +44,10 @@ public class MemoryBoundLinkedBlockingQueueTest
     boolean succeeds = queue.offer(new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(item, item.length));
 
     long expectedByteSize = item.length;
-    Assert.assertTrue(succeeds);
-    Assert.assertEquals(1, queue.size());
-    Assert.assertEquals(expectedByteSize, queue.byteSize());
-    Assert.assertEquals(byteCapacity - item.length, queue.remainingCapacity());
+    Assertions.assertTrue(succeeds);
+    Assertions.assertEquals(1, queue.size());
+    Assertions.assertEquals(expectedByteSize, queue.byteSize());
+    Assertions.assertEquals(byteCapacity - item.length, queue.remainingCapacity());
   }
 
   @Test
@@ -65,10 +65,10 @@ public class MemoryBoundLinkedBlockingQueueTest
     boolean succeeds = queue.offer(new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(item2, item2.length));
 
     long expectedByteSize = item1.length + item2.length;
-    Assert.assertTrue(succeeds);
-    Assert.assertEquals(2, queue.size());
-    Assert.assertEquals(expectedByteSize, queue.byteSize());
-    Assert.assertEquals(byteCapacity - expectedByteSize, queue.remainingCapacity());
+    Assertions.assertTrue(succeeds);
+    Assertions.assertEquals(2, queue.size());
+    Assertions.assertEquals(expectedByteSize, queue.byteSize());
+    Assertions.assertEquals(byteCapacity - expectedByteSize, queue.remainingCapacity());
   }
 
   @Test
@@ -86,10 +86,10 @@ public class MemoryBoundLinkedBlockingQueueTest
     boolean succeeds = queue.offer(new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(item2, item2.length));
 
     long expectedByteSize = item1.length;
-    Assert.assertFalse(succeeds);
-    Assert.assertEquals(1, queue.size());
-    Assert.assertEquals(expectedByteSize, queue.byteSize());
-    Assert.assertEquals(byteCapacity - expectedByteSize, queue.remainingCapacity());
+    Assertions.assertFalse(succeeds);
+    Assertions.assertEquals(1, queue.size());
+    Assertions.assertEquals(expectedByteSize, queue.byteSize());
+    Assertions.assertEquals(byteCapacity - expectedByteSize, queue.remainingCapacity());
   }
 
   @Test
@@ -103,7 +103,7 @@ public class MemoryBoundLinkedBlockingQueueTest
     );
     byte[] item = "item".getBytes(StandardCharsets.UTF_8);
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         InterruptedException.class,
         () -> queue.offer(
             new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(item, item.length),
@@ -112,9 +112,9 @@ public class MemoryBoundLinkedBlockingQueueTest
         )
     );
 
-    Assert.assertEquals(0, queue.size());
-    Assert.assertEquals(0L, queue.byteSize());
-    Assert.assertEquals(byteCapacity, queue.remainingCapacity());
+    Assertions.assertEquals(0, queue.size());
+    Assertions.assertEquals(0L, queue.byteSize());
+    Assertions.assertEquals(byteCapacity, queue.remainingCapacity());
   }
 
   @Test
@@ -141,18 +141,18 @@ public class MemoryBoundLinkedBlockingQueueTest
     );
     long end = System.currentTimeMillis();
 
-    Assert.assertFalse(succeeds);
-    Assert.assertTrue(
+    Assertions.assertFalse(succeeds);
+    Assertions.assertTrue(
+        TimeUnit.MILLISECONDS.toNanos(end - start) >= TimeUnit.MILLISECONDS.toNanos(timeoutMillis),
         StringUtils.format(
             "offer only waited at most [%d] nanos instead of expected [%d] nanos",
             TimeUnit.MILLISECONDS.toNanos(end - start),
             TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
-        ),
-        TimeUnit.MILLISECONDS.toNanos(end - start) >= TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
+        )
     );
-    Assert.assertEquals(2, queue.size());
-    Assert.assertEquals(10L, queue.byteSize());
-    Assert.assertEquals(0L, queue.remainingCapacity());
+    Assertions.assertEquals(2, queue.size());
+    Assertions.assertEquals(10L, queue.byteSize());
+    Assertions.assertEquals(0L, queue.remainingCapacity());
   }
 
   @Test
@@ -167,16 +167,16 @@ public class MemoryBoundLinkedBlockingQueueTest
     MemoryBoundLinkedBlockingQueue.ObjectContainer<byte[]> item2Container =
         new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(item2, item2.length);
     MemoryBoundLinkedBlockingQueue<byte[]> queue = setupQueue(byteCapacity, ImmutableList.of());
-    Assert.assertTrue(queue.offer(item1Container));
-    Assert.assertTrue(queue.offer(item2Container));
+    Assertions.assertTrue(queue.offer(item1Container));
+    Assertions.assertTrue(queue.offer(item2Container));
 
     MemoryBoundLinkedBlockingQueue.ObjectContainer<byte[]> takenItem = queue.take();
     long expectedByteSize = item2.length;
 
-    Assert.assertSame(item1Container, takenItem);
-    Assert.assertEquals(1, queue.size());
-    Assert.assertEquals(expectedByteSize, queue.byteSize());
-    Assert.assertEquals(byteCapacity - expectedByteSize, queue.remainingCapacity());
+    Assertions.assertSame(item1Container, takenItem);
+    Assertions.assertEquals(1, queue.size());
+    Assertions.assertEquals(expectedByteSize, queue.byteSize());
+    Assertions.assertEquals(byteCapacity - expectedByteSize, queue.remainingCapacity());
   }
 
   @Test
@@ -189,10 +189,10 @@ public class MemoryBoundLinkedBlockingQueueTest
 
     int numAdded = queue.drain(buffer, 1, 1, TimeUnit.SECONDS);
 
-    Assert.assertTrue(numAdded == 0 && numAdded == buffer.size());
-    Assert.assertEquals(0, queue.size());
-    Assert.assertEquals(0L, queue.byteSize());
-    Assert.assertEquals(byteCapacity, queue.remainingCapacity());
+    Assertions.assertTrue(numAdded == 0 && numAdded == buffer.size());
+    Assertions.assertEquals(0, queue.size());
+    Assertions.assertEquals(0L, queue.byteSize());
+    Assertions.assertEquals(byteCapacity, queue.remainingCapacity());
   }
 
   @Test
@@ -209,10 +209,10 @@ public class MemoryBoundLinkedBlockingQueueTest
 
     int numAdded = queue.drain(buffer, 1, 1, TimeUnit.MINUTES);
 
-    Assert.assertTrue(numAdded == 1 && numAdded == buffer.size());
-    Assert.assertEquals(0, queue.size());
-    Assert.assertEquals(0L, queue.byteSize());
-    Assert.assertEquals(byteCapacity, queue.remainingCapacity());
+    Assertions.assertTrue(numAdded == 1 && numAdded == buffer.size());
+    Assertions.assertEquals(0, queue.size());
+    Assertions.assertEquals(0L, queue.byteSize());
+    Assertions.assertEquals(byteCapacity, queue.remainingCapacity());
   }
 
   @Test
@@ -231,10 +231,10 @@ public class MemoryBoundLinkedBlockingQueueTest
 
     int numAdded = queue.drain(buffer, 10, 1, TimeUnit.MINUTES);
 
-    Assert.assertTrue(numAdded == 2 && numAdded == buffer.size());
-    Assert.assertEquals(1, queue.size());
-    Assert.assertEquals(item3.length, queue.byteSize());
-    Assert.assertEquals(byteCapacity - item3.length, queue.remainingCapacity());
+    Assertions.assertTrue(numAdded == 2 && numAdded == buffer.size());
+    Assertions.assertEquals(1, queue.size());
+    Assertions.assertEquals(item3.length, queue.byteSize());
+    Assertions.assertEquals(byteCapacity - item3.length, queue.remainingCapacity());
   }
 
   @Test
@@ -253,10 +253,10 @@ public class MemoryBoundLinkedBlockingQueueTest
 
     int numAdded = queue.drain(buffer, item1.length - 1, 1, TimeUnit.MINUTES);
 
-    Assert.assertTrue(numAdded == 1 && numAdded == buffer.size());
-    Assert.assertEquals(2, queue.size());
-    Assert.assertEquals(item2.length + item3.length, queue.byteSize());
-    Assert.assertEquals(byteCapacity - (item2.length + item3.length), queue.remainingCapacity());
+    Assertions.assertTrue(numAdded == 1 && numAdded == buffer.size());
+    Assertions.assertEquals(2, queue.size());
+    Assertions.assertEquals(item2.length + item3.length, queue.byteSize());
+    Assertions.assertEquals(byteCapacity - (item2.length + item3.length), queue.remainingCapacity());
   }
 
   private static <T> MemoryBoundLinkedBlockingQueue<T> setupQueue(
@@ -273,10 +273,10 @@ public class MemoryBoundLinkedBlockingQueueTest
       @Nullable LinkedBlockingQueue<MemoryBoundLinkedBlockingQueue.ObjectContainer<T>> underlyingQueue
   )
   {
-    Assert.assertTrue(getTotalSizeOfItems(items) <= byteCapacity);
+    Assertions.assertTrue(getTotalSizeOfItems(items) <= byteCapacity);
     MemoryBoundLinkedBlockingQueue<T> queue = underlyingQueue != null ?
         new MemoryBoundLinkedBlockingQueue<>(underlyingQueue, byteCapacity) : new MemoryBoundLinkedBlockingQueue<>(byteCapacity);
-    items.forEach(i -> Assert.assertTrue(queue.offer(i)));
+    items.forEach(i -> Assertions.assertTrue(queue.offer(i)));
     return queue;
   }
 

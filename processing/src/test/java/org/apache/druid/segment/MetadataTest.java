@@ -64,6 +64,7 @@ public class MetadataTest extends InitializedNullHandlingTest
         Granularities.ALL,
         Boolean.FALSE,
         null,
+        null,
         null
     );
 
@@ -75,7 +76,8 @@ public class MetadataTest extends InitializedNullHandlingTest
         Granularities.ALL,
         Boolean.FALSE,
         null,
-        ImmutableList.of()
+        ImmutableList.of(),
+        null
     );
     Metadata other = jsonMapper.readValue(
         jsonMapper.writeValueAsString(metadataWithEmptyProjection),
@@ -120,7 +122,8 @@ public class MetadataTest extends InitializedNullHandlingTest
         Granularities.ALL,
         Boolean.FALSE,
         null,
-        projectionSpecs
+        projectionSpecs,
+        null
     );
 
     final Metadata m2 = new Metadata(
@@ -130,7 +133,8 @@ public class MetadataTest extends InitializedNullHandlingTest
         Granularities.ALL,
         Boolean.FALSE,
         null,
-        projectionSpecs
+        projectionSpecs,
+        null
     );
 
     final Metadata m3 = new Metadata(
@@ -140,7 +144,8 @@ public class MetadataTest extends InitializedNullHandlingTest
         Granularities.ALL,
         Boolean.TRUE,
         null,
-        projectionSpecs
+        projectionSpecs,
+        null
     );
 
     final Metadata merged = new Metadata(
@@ -152,7 +157,8 @@ public class MetadataTest extends InitializedNullHandlingTest
         Granularities.ALL,
         Boolean.FALSE,
         Cursors.ascendingTimeOrder(),
-        projectionSpecs
+        projectionSpecs,
+        null
     );
     Assert.assertEquals(merged, Metadata.merge(ImmutableList.of(m1, m2), null));
 
@@ -170,7 +176,8 @@ public class MetadataTest extends InitializedNullHandlingTest
             null,
             null,
             Cursors.ascendingTimeOrder(),
-            projectionSpecs
+            projectionSpecs,
+            null
         );
 
     Assert.assertEquals(merged2, Metadata.merge(metadataToBeMerged, null));
@@ -188,7 +195,8 @@ public class MetadataTest extends InitializedNullHandlingTest
             null,
             null,
             Cursors.ascendingTimeOrder(),
-            projectionSpecs
+            projectionSpecs,
+            null
         );
 
     Assert.assertEquals(
@@ -203,7 +211,8 @@ public class MetadataTest extends InitializedNullHandlingTest
         Granularities.ALL,
         null,
         Cursors.ascendingTimeOrder(),
-        projectionSpecs
+        projectionSpecs,
+        null
     );
     Assert.assertEquals(
         merged4,

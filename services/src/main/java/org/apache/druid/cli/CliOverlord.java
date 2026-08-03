@@ -52,6 +52,7 @@ import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.MetadataManagerModule;
 import org.apache.druid.guice.PolyBind;
+import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -129,7 +130,6 @@ import org.apache.druid.server.http.RedirectFilter;
 import org.apache.druid.server.http.RedirectInfo;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.initialization.jetty.CliIndexerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyBindings;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -483,27 +483,17 @@ public class CliOverlord extends ServerRunnable
             Jerseys.addResource(binder, OverlordDataSourcesResource.class);
 
 
-            final int serverHttpNumThreads = properties.containsKey(CliIndexerServerModule.SERVER_HTTP_NUM_THREADS_PROPERTY)
-                                             ? Integer.parseInt(properties.getProperty(CliIndexerServerModule.SERVER_HTTP_NUM_THREADS_PROPERTY))
-                                             : ServerConfig.getDefaultNumThreads();
-
-            final int maxConcurrentActions;
-            if (properties.containsKey("druid.indexer.server.maxConcurrentActions")) {
-              maxConcurrentActions = Integer.parseInt(properties.getProperty("druid.indexer.server.maxConcurrentActions"));
-            } else {
-              maxConcurrentActions = getDefaultMaxConcurrentActions(serverHttpNumThreads);
-            }
-
+            // QoS filtering to prevent action requests from starving health check endpoints.
+            // Set druid.indexer.server.maxConcurrentActions=-1 to disable.
+            final int serverHttpNumThreads = ServerConfig.getNumThreadsFromProperties(properties);
+            final int maxConcurrentActions = properties.containsKey("druid.indexer.server.maxConcurrentActions")
+                ? Integer.parseInt(properties.getProperty("druid.indexer.server.maxConcurrentActions"))
+                : ServerConfig.getDefaultMaxConcurrentRequests(serverHttpNumThreads);
             if (maxConcurrentActions > 0) {
-              // Add QoS filtering for action endpoints only
-              final String[] actionPaths = {
-                  "/druid/indexer/v1/action",
-              };
-
               log.info("Overlord QoS filtering enabled for action endpoints. Max concurrent actions: [%d]", maxConcurrentActions);
-              JettyBindings.addQosFilter(binder, actionPaths, maxConcurrentActions);
+              JettyBindings.addQosFilter(binder, "/druid/indexer/v1/action", maxConcurrentActions);
             } else {
-              log.info("Overlord QoS filtering disabled for action endpoints. Max concurrent actions: [%d]", serverHttpNumThreads);
+              log.info("Overlord QoS filtering disabled for action endpoints.");
             }
           }
         },
@@ -516,13 +506,9 @@ public class CliOverlord extends ServerRunnable
         new SamplerModule(),
         new MSQIndexingModule(),
         new MSQDurableStorageModule(),
-        new MSQExternalDataSourceModule()
+        new MSQExternalDataSourceModule(),
+        new RegexEngineModule()
     );
-  }
-
-  public static int getDefaultMaxConcurrentActions(int serverHttpNumThreads)
-  {
-    return Math.max(1, Math.max(serverHttpNumThreads - 4, (int) (serverHttpNumThreads * 0.8)));
   }
 
   /**

@@ -23,7 +23,7 @@ title: "PostgreSQL metadata store"
   -->
 
 
-To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `postgresql-metadata-storage` in the extensions load list.
+To use this Apache&circledR; Druid extension, [include](../../configuration/extensions.md#loading-extensions) `postgresql-metadata-storage` in the extensions load list.
 
 With the  PostgreSQL extension, you can use PostgreSQL as a metadata store or ingest from a PostgreSQL database.
 

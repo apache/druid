@@ -23,6 +23,7 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -34,10 +35,11 @@ public class PreparedStatement extends AbstractStatement
 
   public PreparedStatement(
       final SqlToolbox lifecycleToolbox,
-      final SqlQueryPlus queryPlus
+      final SqlQueryPlus queryPlus,
+      @Nullable final String remoteAddress
   )
   {
-    super(lifecycleToolbox, queryPlus, null);
+    super(lifecycleToolbox, queryPlus, remoteAddress);
     this.originalRequest = queryPlus;
   }
 
@@ -85,12 +87,18 @@ public class PreparedStatement extends AbstractStatement
    * same statement can be execute many times, including concurrently. Each
    * execution repeats the parse, validate, authorize and plan steps since
    * data, permissions, views and other dependencies may have changed.
+   * <p>
+   * The {@code remoteAddress} is supplied per execution (read from the execute
+   * request) rather than reusing the address captured at prepare time, so that a
+   * prepared statement reused after a reconnect or from a different remote is
+   * attributed to the actual caller of this execution.
    */
-  public DirectStatement execute(List<TypedValue> parameters)
+  public DirectStatement execute(List<TypedValue> parameters, @Nullable String remoteAddress)
   {
     return new DirectStatement(
         sqlToolbox,
-        originalRequest.freshCopy().withParameters(parameters)
+        originalRequest.freshCopy().withParameters(parameters),
+        remoteAddress
     );
   }
 

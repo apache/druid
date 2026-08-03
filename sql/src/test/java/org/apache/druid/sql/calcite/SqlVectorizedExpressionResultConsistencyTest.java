@@ -225,8 +225,8 @@ public class SqlVectorizedExpressionResultConsistencyTest extends InitializedNul
                       nonVectorObject,
                       vectorObject
                   ),
-                  ((Double) nonVectorObject).doubleValue(),
-                  ((Double) vectorObject).doubleValue(),
+                  ((Number) nonVectorObject).doubleValue(),
+                  ((Number) vectorObject).doubleValue(),
                   0.01
               );
             } else {

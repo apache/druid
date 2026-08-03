@@ -87,8 +87,9 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
 
     cluster.callApi().postSupervisor(supervisor);
 
-    // Wait for records to be ingested
-    waitUntilPublishedRecordsAreIngested(totalRecords);
+    // Bounded supervisor cold start (post supervisor -> schedule task -> consume -> publish) can exceed
+    // the cluster default wait on CI; give it a generous ceiling.
+    waitUntilPublishedRecordsAreIngested(totalRecords, 120_000L);
 
     // Wait for supervisor to transition to COMPLETED state
     waitForSupervisorToComplete(supervisor.getId());

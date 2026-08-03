@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/apache/druid/master/extensions-contrib/openlineage-emitter/src/main/resources/openlineage-schema/DruidQueryStatisticsRunFacet.json",
+  "title": "DruidQueryStatisticsRunFacet",
+  "description": "Druid-specific run facet capturing query execution statistics.",
+  "type": "object",
+  "allOf": [
+    {"$ref": "https://openlineage.io/spec/2-0-2/OpenLineage.json#/definitions/RunFacet"}
+  ],
+  "properties": {
+    "durationMs": {
+      "type": "integer",
+      "description": "Total query execution time in milliseconds."
+    },
+    "bytes": {
+      "type": "integer",
+      "description": "Number of bytes returned by the query."
+    },
+    "planningTimeMs": {
+      "type": "integer",
+      "description": "SQL planning time in milliseconds. Only present on SQL queries."
+    },
+    "statusCode": {
+      "type": "string",
+      "description": "HTTP status code of the query response."
+    }
+  }
+}

@@ -417,6 +417,36 @@ class StorageLocationTest
   }
 
   @Test
+  public void testRemoveUnheldWeakEntry()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    final UnmountTrackingCacheEntry entry = new UnmountTrackingCacheEntry("a", 30);
+
+    // an unheld weak entry is removed: unlinked from the queue, unmounted, and its size reclaimed
+    Assertions.assertTrue(location.reserveWeak(entry));
+    Assertions.assertTrue(location.isWeakReserved(entry.getId()));
+    Assertions.assertEquals(30, location.currentSizeBytes());
+
+    location.removeUnheldWeakEntry(entry.getId());
+    Assertions.assertFalse(location.isWeakReserved(entry.getId()));
+    Assertions.assertEquals(0, location.getWeakEntryCount());
+    Assertions.assertEquals(0, location.currentSizeBytes());
+    Assertions.assertTrue(entry.unmountCalled, "removeUnheldWeakEntry must unmount the entry");
+
+    // absent id is a no-op
+    location.removeUnheldWeakEntry(new StringCacheIdentifier("missing"));
+
+    // a held weak entry is left in place: its holder's release runnable is responsible for cleanup
+    final UnmountTrackingCacheEntry held = new UnmountTrackingCacheEntry("b", 40);
+    final StorageLocation.ReservationHold<?> hold = location.addWeakReservationHold(held.getId(), () -> held);
+    Assertions.assertNotNull(hold);
+    location.removeUnheldWeakEntry(held.getId());
+    Assertions.assertTrue(location.isWeakReserved(held.getId()), "a held weak entry must not be removed");
+    Assertions.assertFalse(held.unmountCalled, "a held weak entry must not be unmounted");
+    hold.close();
+  }
+
+  @Test
   public void testAdjustReservationStaticEntry()
   {
     final StorageLocation location = new StorageLocation(tempDir, 100L, null);
@@ -678,6 +708,54 @@ class StorageLocationTest
     public void unmount()
     {
       // do nothing
+    }
+  }
+
+  /**
+   * A {@link CacheEntry} that tracks mount/unmount so tests can assert that lifecycle hooks fired.
+   */
+  private static final class UnmountTrackingCacheEntry implements CacheEntry
+  {
+    private final StringCacheIdentifier id;
+    private final long size;
+    private boolean mounted = false;
+    private boolean unmountCalled = false;
+
+    private UnmountTrackingCacheEntry(String id, long size)
+    {
+      this.id = new StringCacheIdentifier(id);
+      this.size = size;
+    }
+
+    @Override
+    public StringCacheIdentifier getId()
+    {
+      return id;
+    }
+
+    @Override
+    public long getSize()
+    {
+      return size;
+    }
+
+    @Override
+    public boolean isMounted()
+    {
+      return mounted;
+    }
+
+    @Override
+    public void mount(StorageLocation location)
+    {
+      mounted = true;
+    }
+
+    @Override
+    public void unmount()
+    {
+      unmountCalled = true;
+      mounted = false;
     }
   }
 

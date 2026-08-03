@@ -115,7 +115,7 @@ public class OverlordCompactionSchedulerTest
             .Std()
             .addValue(
                 SegmentCacheManagerFactory.class,
-                new SegmentCacheManagerFactory(TestIndex.INDEX_IO, OBJECT_MAPPER)
+                SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, OBJECT_MAPPER)
             )
     );
   }
@@ -230,7 +230,7 @@ public class OverlordCompactionSchedulerTest
             TestIndex.INDEX_IO,
             Mockito.mock(TaskConfig.class),
             new NoopCoordinatorClient(),
-            new SegmentCacheManagerFactory(TestIndex.INDEX_IO, OBJECT_MAPPER)
+            SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, OBJECT_MAPPER)
         ),
         (nameFormat, numThreads) -> new WrappingScheduledExecutorService("test", executor, false),
         brokerClient,

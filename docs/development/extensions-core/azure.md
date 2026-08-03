@@ -32,7 +32,7 @@ This extension allows you to do the following:
 
 :::info
 
-To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-azure-extensions` in the extensions load list.
+To use this Apache&circledR; Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-azure-extensions` in the extensions load list.
 
 :::
 

@@ -39,7 +39,6 @@ import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.Segment;
 import org.joda.time.Interval;
 
@@ -204,10 +203,6 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
   @Nullable
   private Metadata getMetadata(Segment segment)
   {
-    PhysicalSegmentInspector inspector = segment.as(PhysicalSegmentInspector.class);
-    if (inspector != null) {
-      return inspector.getMetadata();
-    }
-    return null;
+    return segment.as(Metadata.class);
   }
 }

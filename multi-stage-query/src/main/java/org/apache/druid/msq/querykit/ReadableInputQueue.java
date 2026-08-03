@@ -34,6 +34,7 @@ import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.utils.CloseableUtils;
 
@@ -98,16 +99,25 @@ public class ReadableInputQueue implements Closeable
 
   private final StandardPartitionReader partitionReader;
   private final int loadahead;
+
+  /**
+   * How segments in this queue are acquired (fully up front, or partially with on-demand column loading at query
+   * time). Threaded through to {@link LoadableSegment#acquire(AcquireMode)} and
+   * {@link LoadableSegment#acquireIfCached(AcquireMode)}.
+   */
+  private final AcquireMode acquireMode;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   public ReadableInputQueue(
       final StandardPartitionReader partitionReader,
       final List<PhysicalInputSlice> slices,
-      final int loadahead
+      final int loadahead,
+      final AcquireMode acquireMode
   )
   {
     this.partitionReader = partitionReader;
     this.loadahead = loadahead;
+    this.acquireMode = acquireMode;
 
     for (final PhysicalInputSlice slice : slices) {
       loadableSegments.addAll(slice.getLoadableSegments());
@@ -131,7 +141,7 @@ public class ReadableInputQueue implements Closeable
         final List<LoadableSegment> toLoad = new ArrayList<>(); // Temporarily store all non-cached segments
         LoadableSegment loadableSegment;
         while ((loadableSegment = loadableSegments.poll()) != null) {
-          final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached();
+          final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached(acquireMode);
           if (cachedSegment.isPresent()) {
             final SegmentReferenceHolder holder = new SegmentReferenceHolder(
                 new SegmentReference(loadableSegment.descriptor(), cachedSegment, null),
@@ -288,7 +298,7 @@ public class ReadableInputQueue implements Closeable
         return null;
       }
 
-      final AcquireSegmentAction acquireSegmentAction = nextLoadableSegment.acquire();
+      final AcquireSegmentAction acquireSegmentAction = nextLoadableSegment.acquire(acquireMode);
       loadingSegments.add(acquireSegmentAction);
       return FutureUtils.transform(
           acquireSegmentAction.getSegmentFuture(),

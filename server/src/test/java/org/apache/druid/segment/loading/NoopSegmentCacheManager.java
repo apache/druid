@@ -71,13 +71,13 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public void load(DataSegment segment)
+  public DataSegment load(DataSegment segment)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
+  public DataSegment bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
   {
     throw new UnsupportedOperationException();
   }
@@ -95,13 +95,13 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
+  public Optional<Segment> acquireCachedSegment(SegmentId segmentId, AcquireMode acquireMode)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
+  public AcquireSegmentAction acquireSegment(DataSegment dataSegment, AcquireMode acquireMode)
   {
     throw new UnsupportedOperationException();
   }

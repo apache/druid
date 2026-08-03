@@ -439,6 +439,46 @@ public class DeltaInputSourceTest
     return rows;
   }
 
+  /**
+   * Regression test for https://github.com/apache/druid/issues/18606.
+   *
+   * {@link DeltaInputSourceReader.DeltaInputSourceIterator} used a local variable for the
+   * per-file {@code CloseableIterator<FilteredColumnarBatch>}. When {@code hasNext()} returned
+   * after the first non-empty batch of a file, that iterator went out of scope. The next
+   * {@code hasNext()} call advanced to the next file, skipping all remaining batches of the
+   * current file. With the Delta kernel default batch size of 1024 rows this produced exactly
+   * {@code 1024 * numFiles} rows regardless of actual file size.
+   *
+   * Test table: 2 Parquet files x 2000 rows = 4000 rows total.
+   * Without the fix: 1024 x 2 = 2048 rows.
+   * With the fix:    4000 rows.
+   */
+  public static class BatchDrainRegressionTests
+  {
+    @Test
+    public void testAllRowsReturnedWhenFileExceedsOneBatch() throws IOException
+    {
+      final DeltaInputSource deltaInputSource = new DeltaInputSource(
+          LargeRowGroupDeltaTable.DELTA_TABLE_PATH,
+          null,
+          null,
+          null
+      );
+      final InputSourceReader inputSourceReader = deltaInputSource.reader(
+          LargeRowGroupDeltaTable.SCHEMA,
+          null,
+          null
+      );
+      final List<InputRow> rows = readAllRows(inputSourceReader);
+      Assert.assertEquals(
+          "Expected all rows to be read. "
+          + "If this fails with " + (1024 * 2) + " rows, the per-file batch drain bug (GH-18606) has regressed.",
+          LargeRowGroupDeltaTable.EXPECTED_ROW_COUNT,
+          rows.size()
+      );
+    }
+  }
+
   private static void validateRows(
       final List<Map<String, Object>> expectedRows,
       final List<InputRow> actualReadRows,

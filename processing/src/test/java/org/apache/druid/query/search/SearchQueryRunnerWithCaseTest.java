@@ -37,10 +37,11 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,12 +51,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class SearchQueryRunnerWithCaseTest extends InitializedNullHandlingTest
 {
-  @Parameterized.Parameters
-  public static Iterable<Object[]> constructorFeeder()
+  public static Stream<Object[]> constructorFeeder()
   {
     final SearchQueryConfig[] configs = new SearchQueryConfig[3];
     configs[0] = new SearchQueryConfig();
@@ -109,7 +112,10 @@ public class SearchQueryRunnerWithCaseTest extends InitializedNullHandlingTest
       ));
     }
 
-    return QueryRunnerTestHelper.transformToConstructionFeeder(runners);
+    return StreamSupport.stream(
+        QueryRunnerTestHelper.transformToConstructionFeeder(runners).spliterator(),
+        false
+    );
   }
 
   static SearchQueryRunnerFactory makeRunnerFactory(final SearchQueryConfig config)
@@ -121,14 +127,8 @@ public class SearchQueryRunnerWithCaseTest extends InitializedNullHandlingTest
     );
   }
 
-  private final QueryRunner runner;
-
-  public SearchQueryRunnerWithCaseTest(
-      QueryRunner runner
-  )
-  {
-    this.runner = runner;
-  }
+  @Parameter(0)
+  public QueryRunner runner;
 
   private Druids.SearchQueryBuilder testBuilder()
   {
@@ -252,31 +252,32 @@ public class SearchQueryRunnerWithCaseTest extends InitializedNullHandlingTest
     Iterable<Result<SearchResultValue>> results = runner.run(QueryPlus.wrap(searchQuery)).toList();
 
     for (Result<SearchResultValue> result : results) {
-      Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());
-      Assert.assertNotNull(result.getValue());
+      Assertions.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());
+      Assertions.assertNotNull(result.getValue());
 
       Iterable<SearchHit> resultValues = result.getValue();
       for (SearchHit resultValue : resultValues) {
         String dimension = resultValue.getDimension();
         String theValue = resultValue.getValue();
-        Assert.assertTrue(
-            StringUtils.format("Result had unknown dimension[%s]", dimension),
-            expectedResults.containsKey(dimension)
+        Assertions.assertTrue(
+            expectedResults.containsKey(dimension),
+            StringUtils.format("Result had unknown dimension[%s]", dimension)
         );
 
         Set<String> expectedSet = expectedResults.get(dimension);
-        Assert.assertTrue(
-            StringUtils.format("Couldn't remove dim[%s], value[%s]", dimension, theValue), expectedSet.remove(theValue)
+        Assertions.assertTrue(
+            expectedSet.remove(theValue),
+            StringUtils.format("Couldn't remove dim[%s], value[%s]", dimension, theValue)
         );
       }
     }
 
     for (Map.Entry<String, Set<String>> entry : expectedResults.entrySet()) {
-      Assert.assertTrue(
+      Assertions.assertTrue(
+          entry.getValue().isEmpty(),
           StringUtils.format(
               "Dimension[%s] should have had everything removed, still has[%s]", entry.getKey(), entry.getValue()
-          ),
-          entry.getValue().isEmpty()
+          )
       );
     }
     expectedResults.clear();

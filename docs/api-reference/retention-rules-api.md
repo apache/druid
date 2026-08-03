@@ -27,7 +27,7 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-This topic describes the API endpoints for managing retention rules in Apache Druid. You can configure retention rules in the Druid web console or API.
+This topic describes the API endpoints for managing retention rules in Apache&circledR; Druid. You can configure retention rules in the Druid web console or API.
 
 Druid uses retention rules to determine what data is retained in the cluster. Druid supports load, drop, and broadcast rules. For more information, see [Using rules to drop and retain data](../operations/rule-configuration.md).
 

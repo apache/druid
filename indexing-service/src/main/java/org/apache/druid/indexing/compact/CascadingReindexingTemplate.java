@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -217,6 +218,12 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   public Period getSkipOffsetFromLatest()
   {
     return skipOffsetFromLatest;
+  }
+
+  @Override
+  public List<Interval> getSkipIntervals()
+  {
+    return List.of();
   }
 
   @JsonProperty
@@ -888,6 +895,13 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   public List<AggregateProjectionSpec> getProjections()
   {
     return List.of();
+  }
+
+  @Nullable
+  @Override
+  public BaseTableProjectionSpec getBaseTable()
+  {
+    return null;
   }
 
   @Nullable

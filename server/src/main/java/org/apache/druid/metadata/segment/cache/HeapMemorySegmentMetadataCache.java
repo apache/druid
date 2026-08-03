@@ -336,6 +336,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     try (final HeapMemoryDatasourceSegmentCache datasourceCache = getCacheWithReference(dataSource)) {
       return datasourceCache.withWriteLock(
           () -> {
+            // Flag the write-through before performing it, so that even a write
+            // which throws after partially mutating the cache still causes the next sync
+            // to refresh this datasource's snapshot.
+            datasourceCache.markHasNewWrites();
             try {
               return writeAction.perform(datasourceCache);
             }
@@ -570,12 +574,16 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
     final Map<String, DatasourceSegmentSummary> datasourceToSummary = new HashMap<>();
 
+    // Datasources whose used-segment set changed this sync. Null forces a full
+    // snapshot rebuild (the first sync, which has no previous snapshot to reuse).
+    Set<String> datasourcesToRefresh = null;
+
     // Fetch all used segments if this is the first sync
     if (syncFinishTime.get() == null) {
       retrieveAllUsedSegments(datasourceToSummary);
     } else {
       retrieveUsedSegmentIds(datasourceToSummary);
-      updateSegmentIdsInCache(datasourceToSummary, syncStartTime.minus(SYNC_BUFFER_DURATION));
+      datasourcesToRefresh = updateSegmentIdsInCache(datasourceToSummary, syncStartTime.minus(SYNC_BUFFER_DURATION));
       retrieveUsedSegmentPayloads(datasourceToSummary);
     }
 
@@ -591,21 +599,41 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       retrieveAndResetUsedIndexingStates();
     }
 
-    markCacheSynced(syncStartTime);
+    markCacheSynced(syncStartTime, datasourcesToRefresh);
 
     syncFinishTime.set(DateTimes.nowUtc());
     return totalSyncDuration.millisElapsed();
   }
 
   /**
-   * Marks the cache for all datasources as synced and emit total stats.
+   * Marks the cache for all datasources as synced and emits stats, then rebuilds
+   * the {@link DataSourcesSnapshot}.
+   * <p>
+   * When {@code datasourcesToRefresh} is non-null and a previous snapshot exists,
+   * only the changed datasources are rebuilt into the snapshot (reusing the prior
+   * snapshot's per-datasource timelines/overshadow for the rest); the result is
+   * identical to a full rebuild. A datasource is rebuilt if the metadata-store
+   * diff changed it ({@code datasourcesToRefresh}) or a write-through transaction
+   * mutated its cache since the last sync ({@code hasNewWrites}). Otherwise the
+   * whole snapshot is rebuilt (e.g. first sync, when there is no previous snapshot).
+   *
+   * @param datasourcesToRefresh Datasources changed by the metadata-store diff this
+   *                             sync, or null to force a full rebuild.
    */
-  private void markCacheSynced(DateTime syncStartTime)
+  private void markCacheSynced(DateTime syncStartTime, @Nullable Set<String> datasourcesToRefresh)
   {
     final Stopwatch updateDuration = Stopwatch.createStarted();
 
+    final DataSourcesSnapshot previousSnapshot = datasourcesSnapshot.get();
+    // updateSegmentIdsInCache never returns null, so datasourcesToRefresh is null
+    // only on the first sync which also has no previous snapshot to build on.
+    final boolean incremental = previousSnapshot != null;
+
     final Set<String> cachedDatasources = Set.copyOf(datasourceToSegmentCache.keySet());
+    // In incremental mode this holds only the datasources being rebuilt; in full
+    // mode it holds every non-empty datasource.
     final Map<String, Set<DataSegment>> datasourceToUsedSegments = new HashMap<>();
+    final Set<String> removedDatasources = new HashSet<>();
 
     for (String dataSource : cachedDatasources) {
       final HeapMemoryDatasourceSegmentCache cache = datasourceToSegmentCache.getOrDefault(
@@ -627,19 +655,43 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
               }
             }
         );
+        removedDatasources.add(dataSource);
       } else {
         emitMetric(dataSource, Metric.CACHED_INTERVALS, stats.getNumIntervals());
         emitMetric(dataSource, Metric.CACHED_USED_SEGMENTS, stats.getNumUsedSegments());
         emitMetric(dataSource, Metric.CACHED_UNUSED_SEGMENTS, stats.getNumUnusedSegments());
         emitMetric(dataSource, Metric.CACHED_PENDING_SEGMENTS, stats.getNumPendingSegments());
 
-        datasourceToUsedSegments.put(dataSource, cache.findUsedSegmentsOverlappingAnyOf(List.of()));
+        if (!incremental) {
+          datasourceToUsedSegments.put(dataSource, cache.findUsedSegmentsOverlappingAnyOf(List.of()));
+        } else if (datasourcesToRefresh.contains(dataSource)) {
+          // Changed by the metadata-store diff; materialize and clear the
+          // write-through flag atomically so a concurrent write is not lost.
+          datasourceToUsedSegments.put(dataSource, cache.getUsedSegmentsAndClearNewWrites());
+        } else {
+          // Not changed in the store, but a write-through transaction may have
+          // mutated the cache directly since the last snapshot; catch that here.
+          final Set<DataSegment> segmentsFromWrites = cache.getUsedSegmentsIfHasNewWrites();
+          if (segmentsFromWrites != null) {
+            datasourceToUsedSegments.put(dataSource, segmentsFromWrites);
+          }
+        }
       }
     }
 
-    datasourcesSnapshot.set(
-        DataSourcesSnapshot.fromUsedSegments(datasourceToUsedSegments, syncStartTime)
-    );
+    if (incremental) {
+      datasourcesSnapshot.set(
+          previousSnapshot.updateSnapshotForDataSources(
+              datasourceToUsedSegments,
+              removedDatasources,
+              syncStartTime
+          )
+      );
+    } else {
+      datasourcesSnapshot.set(
+          DataSourcesSnapshot.fromUsedSegments(datasourceToUsedSegments, syncStartTime)
+      );
+    }
     emitMetric(Metric.UPDATE_SNAPSHOT_DURATION_MILLIS, updateDuration.millisElapsed());
   }
 
@@ -742,13 +794,20 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
    * metadata store in {@link #retrieveUsedSegmentIds}. The update done on each
    * datasource cache is atomic. Also identifies the segment IDs which have been
    * updated in the metadata store and need to be refreshed in the cache.
+   *
+   * @return Set of datasource names whose used segment set has changed in this
+   * sync and need to be refreshed in the snapshot.
    */
-  private void updateSegmentIdsInCache(
+  private Set<String> updateSegmentIdsInCache(
       Map<String, DatasourceSegmentSummary> datasourceToSummary,
       DateTime syncStartTime
   )
   {
     final Stopwatch updateDuration = Stopwatch.createStarted();
+
+    // Datasources whose used-segment set actually changed this sync (used to
+    // rebuild only the affected part of the snapshot).
+    final Set<String> datasourcesToRefresh = new HashSet<>();
 
     // Sync segments for datasources which were retrieved in the latest poll
     datasourceToSummary.forEach((dataSource, summary) -> {
@@ -759,6 +818,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       emitNonZeroMetric(dataSource, Metric.DELETED_SEGMENTS, result.getDeleted());
 
       summary.usedSegmentIdsToRefresh.addAll(result.getExpiredIds());
+      if (result.getDeleted() > 0 || !result.getExpiredIds().isEmpty()) {
+        datasourcesToRefresh.add(dataSource);
+      }
     });
 
     // Update cache for datasources which returned no segments in the latest poll
@@ -766,10 +828,14 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       if (!datasourceToSummary.containsKey(dataSource)) {
         final SegmentSyncResult result = cache.syncSegmentIds(List.of(), syncStartTime);
         emitNonZeroMetric(dataSource, Metric.DELETED_SEGMENTS, result.getDeleted());
+        if (result.getDeleted() > 0) {
+          datasourcesToRefresh.add(dataSource);
+        }
       }
     });
 
     emitMetric(Metric.UPDATE_IDS_DURATION_MILLIS, updateDuration.millisElapsed());
+    return datasourcesToRefresh;
   }
 
   /**

@@ -233,7 +233,7 @@ public abstract class CompactionTaskRunBase
     temporaryFolder.create();
     reportsFile = temporaryFolder.newFile();
     testUtils = new TestUtils();
-    segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testUtils.getTestObjectMapper());
+    segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, testUtils.getTestObjectMapper());
 
     objectMapper = testUtils.getTestObjectMapper();
     objectMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
@@ -667,23 +667,27 @@ public abstract class CompactionTaskRunBase
 
   public void validateCompactionState(CompactionState expected, CompactionState actual)
   {
-    Assert.assertEquals(new CompactionState(
-        expected.getPartitionsSpec(),
-        expected.getDimensionsSpec().toBuilder().setDimensionExclusions(List.of()).build(),
-        expected.getMetricsSpec(),
-        null,
-        expected.getIndexSpec(),
-        expected.getGranularitySpec().withIntervals(List.of()),
-        expected.getProjections()
-    ), new CompactionState(
-        actual.getPartitionsSpec(),
-        actual.getDimensionsSpec().toBuilder().setDimensionExclusions(List.of()).build(),
-        actual.getMetricsSpec(),
-        null,
-        actual.getIndexSpec(),
-        actual.getGranularitySpec().withIntervals(List.of()),
-        actual.getProjections()
-    ));
+    Assert.assertEquals(
+        CompactionState.builder()
+                       .partitionsSpec(expected.getPartitionsSpec())
+                       .dimensionsSpec(expected.getDimensionsSpec()
+                                               .toBuilder()
+                                               .setDimensionExclusions(List.of())
+                                               .build())
+                       .metricsSpec(expected.getMetricsSpec())
+                       .indexSpec(expected.getIndexSpec())
+                       .granularitySpec(expected.getGranularitySpec().withIntervals(List.of()))
+                       .projections(expected.getProjections())
+                       .build(),
+        CompactionState.builder()
+                       .partitionsSpec(actual.getPartitionsSpec())
+                       .dimensionsSpec(actual.getDimensionsSpec().toBuilder().setDimensionExclusions(List.of()).build())
+                       .metricsSpec(actual.getMetricsSpec())
+                       .indexSpec(actual.getIndexSpec())
+                       .granularitySpec(actual.getGranularitySpec().withIntervals(List.of()))
+                       .projections(actual.getProjections())
+                       .build()
+    );
   }
 
   @Test
@@ -1264,7 +1268,12 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
+        cacheDir,
+        null,
+        false,
+        false
+    );
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -1376,7 +1385,12 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
+        cacheDir,
+        null,
+        false,
+        false
+    );
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -1493,7 +1507,12 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), compactSegment.getShardSpec());
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
+        cacheDir,
+        null,
+        false,
+        false
+    );
 
     List<String> rowsFromSegment = new ArrayList<>();
     segmentCacheManager.load(compactSegment);
@@ -1691,26 +1710,11 @@ public abstract class CompactionTaskRunBase
 
   private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, TaskActionClient taskActionClient) throws IOException
   {
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return ImmutableList.of(new StorageLocationConfig(localDeepStorage, null, null));
-      }
-
-      @Override
-      public boolean isVirtualStorage()
-      {
-        return true;
-      }
-
-      @Override
-      public boolean isVirtualStorageEphemeral()
-      {
-        return true;
-      }
-    };
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(localDeepStorage, null, null))
+        .virtualStorage(true)
+        .virtualStorageIsEphemeral(true)
+        .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     final SegmentCacheManager cacheManager = new SegmentLocalCacheManager(
         storageLocations,
@@ -1750,7 +1754,12 @@ public abstract class CompactionTaskRunBase
   protected List<String> getCSVFormatRowsFromSegments(List<DataSegment> segments) throws Exception
   {
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, null, false);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
+        cacheDir,
+        null,
+        false,
+        false
+    );
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -1880,20 +1889,18 @@ public abstract class CompactionTaskRunBase
   )
   {
     // Expected compaction state to exist after compaction as we store compaction state by default
-    return new CompactionState(
-        new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-        expectedDims,
-        expectedMetrics,
-        null,
-        IndexSpec.getDefault().getEffectiveSpec(),
-        new UniformGranularitySpec(
-            segmentGranularity,
-            queryGranularity,
-            true,
-            intervals
-        ),
-        null
-    );
+    return CompactionState.builder()
+                          .partitionsSpec(new DynamicPartitionsSpec(5000000, Long.MAX_VALUE))
+                          .dimensionsSpec(expectedDims)
+                          .metricsSpec(expectedMetrics)
+                          .indexSpec(IndexSpec.getDefault().getEffectiveSpec())
+                          .granularitySpec(new UniformGranularitySpec(
+                              segmentGranularity,
+                              queryGranularity,
+                              true,
+                              intervals
+                          ))
+                          .build();
   }
 
   private static void verifySchema(Set<DataSegment> segments, SegmentSchemaMapping segmentSchemaMapping)

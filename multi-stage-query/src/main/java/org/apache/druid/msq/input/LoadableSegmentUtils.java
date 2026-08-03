@@ -22,7 +22,7 @@ package org.apache.druid.msq.input;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.msq.counters.ChannelCounters;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
@@ -73,11 +73,11 @@ public class LoadableSegmentUtils
   }
 
   /**
-   * Gets the number of rows for a segment, using a {@link PhysicalSegmentInspector}. Returns 0 when unknown.
+   * Gets the number of rows for a segment, using a {@link RowCountInspector}. Returns 0 when unknown.
    */
   public static int getSegmentRowCount(final Segment segment)
   {
-    final PhysicalSegmentInspector inspector = segment.as(PhysicalSegmentInspector.class);
+    final RowCountInspector inspector = segment.as(RowCountInspector.class);
     return inspector != null ? inspector.getNumRows() : 0;
   }
 }

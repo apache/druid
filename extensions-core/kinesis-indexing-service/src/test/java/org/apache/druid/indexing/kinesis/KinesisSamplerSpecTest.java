@@ -33,7 +33,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
-import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorIOConfig;
+import org.apache.druid.indexing.kinesis.supervisor.KinesisIOConfigBuilder;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorSpec;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
@@ -62,6 +62,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class KinesisSamplerSpecTest extends EasyMockSupport
 {
@@ -119,30 +120,11 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
         null,
         DATA_SCHEMA,
         null,
-        new KinesisSupervisorIOConfig(
-            STREAM,
-            new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null
-        ),
+        new KinesisIOConfigBuilder()
+            .withStream(STREAM)
+            .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
+            .withUseEarliestSequenceNumber(true)
+            .build(),
         null,
         null,
         null,
@@ -175,30 +157,11 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
         null,
         DATA_SCHEMA,
         null,
-        new KinesisSupervisorIOConfig(
-            STREAM,
-            new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null
-        ),
+        new KinesisIOConfigBuilder()
+            .withStream(STREAM)
+            .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
+            .withUseEarliestSequenceNumber(true)
+            .build(),
         null,
         null,
         null,

@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.loading;
 
-import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.server.coordinator.DruidCluster;
@@ -64,8 +63,11 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private final RoundRobinServerSelector serverSelector;
   private final BalancerStrategy strategy;
 
+  private final Set<String> allTiersInCluster;
+
   private final boolean useRoundRobinAssignment;
   private final Map<String, Set<String>> historicalTierAliases;
+  private final Map<String, String> tierToAliasName;
 
   private final Map<String, Set<String>> datasourceToInvalidLoadTiers = new HashMap<>();
   private final Map<String, Integer> tierToHistoricalCount = new HashMap<>();
@@ -85,11 +87,13 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     this.cluster = cluster;
     this.strategy = strategy;
     this.loadQueueManager = loadQueueManager;
+    this.allTiersInCluster = Set.copyOf(cluster.getTierNames());
     this.replicaCountMap = SegmentReplicaCountMap.create(cluster);
     this.replicationThrottler = createReplicationThrottler(cluster, loadingConfig);
     this.useRoundRobinAssignment = loadingConfig.isUseRoundRobinSegmentAssignment();
     this.serverSelector = useRoundRobinAssignment ? new RoundRobinServerSelector(cluster) : null;
     this.historicalTierAliases = loadingConfig.getHistoricalTierAliases();
+    this.tierToAliasName = loadingConfig.getTierToAliasName();
 
     cluster.getManagedHistoricals().forEach(
         (tier, historicals) -> tierToHistoricalCount.put(tier, historicals.size())
@@ -232,7 +236,6 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   public void replicateSegment(DataSegment segment, Map<String, Integer> tierToReplicaCount)
   {
     final Map<String, Integer> effectiveTierToReplicaCount = expandWithAliases(tierToReplicaCount);
-    final Set<String> allTiersInCluster = Sets.newHashSet(cluster.getTierNames());
 
     if (effectiveTierToReplicaCount.isEmpty()) {
       // Track the counts for a segment even if it requires 0 replicas on all tiers
@@ -288,7 +291,6 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   )
   {
     final Map<String, Integer> effectiveTierToReplicaCount = expandWithAliases(tierToReplicaCount);
-    final Set<String> allTiersInCluster = Sets.newHashSet(cluster.getTierNames());
 
     if (effectiveTierToReplicaCount.isEmpty()) {
       replicaCountMap.computeIfAbsent(segment.getId(), DruidServer.DEFAULT_TIER);
@@ -654,9 +656,23 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private void reportTierCapacityStats(DataSegment segment, int requiredReplicas, String tier)
   {
-    final RowKey rowKey = RowKey.of(Dimension.TIER, tier);
+    final RowKey rowKey = tierRowKey(tier);
     stats.updateMax(Stats.Tier.REPLICATION_FACTOR, rowKey, requiredReplicas);
     stats.add(Stats.Tier.REQUIRED_CAPACITY, rowKey, segment.getSize() * requiredReplicas);
+  }
+
+  /**
+   * Builds a {@link RowKey} for the given physical tier, additionally tagging it
+   * with {@link Dimension#TIER_ALIAS} when the tier belongs to an alias. This lets
+   * metrics for aliased tiers (e.g. blue/green pairs) be aggregated by alias.
+   */
+  private RowKey tierRowKey(String tier)
+  {
+    final String alias = tierToAliasName.get(tier);
+    if (alias == null) {
+      return RowKey.of(Dimension.TIER, tier);
+    }
+    return RowKey.with(Dimension.TIER, tier).and(Dimension.TIER_ALIAS, alias);
   }
 
   @Override

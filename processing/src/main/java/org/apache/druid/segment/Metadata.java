@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -59,6 +60,8 @@ public class Metadata
   private final List<OrderBy> ordering;
   @Nullable
   private final List<AggregateProjectionMetadata> projections;
+  @Nullable
+  private final ClusteredValueGroupsBaseTableSchema clusteredBaseTable;
 
   public Metadata(
       @JsonProperty("container") @Nullable Map<String, Object> container,
@@ -67,7 +70,8 @@ public class Metadata
       @JsonProperty("queryGranularity") @Nullable Granularity queryGranularity,
       @JsonProperty("rollup") @Nullable Boolean rollup,
       @JsonProperty("ordering") @Nullable List<OrderBy> ordering,
-      @JsonProperty("projections") @Nullable List<AggregateProjectionMetadata> projections
+      @JsonProperty("projections") @Nullable List<AggregateProjectionMetadata> projections,
+      @JsonProperty("clusteredBaseTable") @Nullable ClusteredValueGroupsBaseTableSchema clusteredBaseTable
   )
   {
     this.container = container == null ? new ConcurrentHashMap<>() : container;
@@ -77,6 +81,7 @@ public class Metadata
     this.rollup = rollup;
     this.ordering = ordering;
     this.projections = projections;
+    this.clusteredBaseTable = clusteredBaseTable;
   }
 
   @JsonProperty
@@ -137,6 +142,14 @@ public class Metadata
     return projections;
   }
 
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public ClusteredValueGroupsBaseTableSchema getClusteredBaseTable()
+  {
+    return clusteredBaseTable;
+  }
+
   public Metadata withDimensionOrder(List<OrderBy> ordering)
   {
     return new Metadata(
@@ -146,7 +159,8 @@ public class Metadata
         queryGranularity,
         rollup,
         ordering,
-        projections
+        projections,
+        clusteredBaseTable
     );
   }
 
@@ -159,7 +173,22 @@ public class Metadata
         queryGranularity,
         rollup,
         ordering,
-        projections
+        projections,
+        clusteredBaseTable
+    );
+  }
+
+  public Metadata withClusteredBaseTable(ClusteredValueGroupsBaseTableSchema clusteredBaseTable)
+  {
+    return new Metadata(
+        container,
+        aggregators,
+        timestampSpec,
+        queryGranularity,
+        rollup,
+        ordering,
+        projections,
+        clusteredBaseTable
     );
   }
 
@@ -270,7 +299,10 @@ public class Metadata
         mergedGranularity,
         rollup,
         mergedOrdering,
-        projectionsToMerge.get(0) // we're going to replace this later with updated rowcount
+        projectionsToMerge.get(0), // we're going to replace this later with updated rowcount
+        // Clustered base table merging is finalized by IndexMergerV10 when it computes the merged segment's
+        // per-group containers + remapped dictionaries.
+        null
     );
   }
 
@@ -290,13 +322,23 @@ public class Metadata
            Objects.equals(queryGranularity, metadata.queryGranularity) &&
            Objects.equals(rollup, metadata.rollup) &&
            Objects.equals(ordering, metadata.ordering) &&
-           Objects.equals(projections, metadata.projections);
+           Objects.equals(projections, metadata.projections) &&
+           Objects.equals(clusteredBaseTable, metadata.clusteredBaseTable);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(container, Arrays.hashCode(aggregators), timestampSpec, queryGranularity, rollup, ordering, projections);
+    return Objects.hash(
+        container,
+        Arrays.hashCode(aggregators),
+        timestampSpec,
+        queryGranularity,
+        rollup,
+        ordering,
+        projections,
+        clusteredBaseTable
+    );
   }
 
   @Override
@@ -310,6 +352,7 @@ public class Metadata
            ", rollup=" + rollup +
            ", ordering=" + ordering +
            ", projections=" + projections +
+           ", clusteredBaseTable=" + clusteredBaseTable +
            '}';
   }
 

@@ -28,6 +28,7 @@ import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.TestDruidModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -103,7 +104,10 @@ public class StatusResourceTest
   private void testHiddenPropertiesWithPropertyFileName(String fileName) throws Exception
   {
     Injector injector = new StartupInjectorBuilder()
-        .add(new PropertiesModule(Collections.singletonList(fileName)))
+        .add(
+            new PropertiesModule(Collections.singletonList(fileName)),
+            binder -> binder.bind(SegmentLoaderConfig.class).toInstance(SegmentLoaderConfig.builder().build())
+        )
         .build();
     Map<String, String> returnedProperties = injector.getInstance(StatusResource.class).getProperties();
     Set<String> lowerCasePropertyNames = returnedProperties.keySet()

@@ -25,8 +25,6 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -85,7 +83,6 @@ class TableClusterGroupSpecTest
     final ClusteredValueGroupsBaseTableSchema schema = new ClusteredValueGroupsBaseTableSchema(
         VirtualColumns.EMPTY,
         allColumns,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
         ordering,
         clusteringColumns,
         null,
@@ -298,7 +295,6 @@ class TableClusterGroupSpecTest
     final ClusteredValueGroupsBaseTableSchema redSummary = new ClusteredValueGroupsBaseTableSchema(
         VirtualColumns.EMPTY,
         List.of(COL_TENANT, ColumnHolder.TIME_COLUMN_NAME),
-        null,
         List.of(OrderBy.ascending(COL_TENANT), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         TENANT_CLUSTER_SIGNATURE,
         null,
@@ -308,7 +304,6 @@ class TableClusterGroupSpecTest
     final ClusteredValueGroupsBaseTableSchema blueSummary = new ClusteredValueGroupsBaseTableSchema(
         VirtualColumns.EMPTY,
         List.of(COL_PRIORITY, ColumnHolder.TIME_COLUMN_NAME),
-        null,
         List.of(OrderBy.ascending(COL_PRIORITY), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         RowSignature.builder().add(COL_PRIORITY, ColumnType.LONG).build(),
         null,

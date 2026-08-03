@@ -58,6 +58,7 @@ import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskContextReport;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.SegmentUpgradeMetrics;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -80,6 +81,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -88,6 +90,7 @@ import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
@@ -118,6 +121,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -251,6 +255,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   private final Map<PartitionIdType, Long> partitionsThroughput = new HashMap<>();
 
+  /**
+   * Per-task collector that accumulates information from ingested rows and stamps each published segment with a prunable
+   * shard spec, or {@code null} when {@link SeekableStreamIndexTaskTuningConfig#getStreamingPartitionsSpec()} is unset
+   * or has nothing to collect. Created once in the constructor and shared across the run loop and the
+   * publish path (which runs on the future-completing thread via {@code MoreExecutors.directExecutor()}).
+   */
+  @Nullable
+  private final StreamingShardSpecCollector shardSpecCollector;
+
   private volatile DateTime minMessageTime;
   private volatile DateTime maxMessageTime;
   private final ScheduledExecutorService rejectionPeriodUpdaterExec;
@@ -264,6 +277,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.task = task;
     this.ioConfig = task.getIOConfig();
     this.tuningConfig = task.getTuningConfig();
+    final StreamingPartitionsSpec streamingPartitionsSpec = tuningConfig.getStreamingPartitionsSpec();
+    this.shardSpecCollector = streamingPartitionsSpec == null ? null : streamingPartitionsSpec.createCollector();
     this.inputRowSchema = InputRowSchemas.fromDataSchema(task.getDataSchema());
     this.inputFormat = ioConfig.getInputFormat();
     this.stream = ioConfig.getStartSequenceNumbers().getStream();
@@ -495,6 +510,18 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             }
           }
       );
+
+      // Segments already in the appenderator at startup were restored from disk across a task restart; tell the
+      // collector.
+      if (shardSpecCollector != null) {
+        shardSpecCollector.onSegmentsRestored(
+            appenderator.getSegments()
+                        .stream()
+                        .map(SegmentIdWithShardSpec::asSegmentId)
+                        .collect(Collectors.toList())
+        );
+      }
+
       if (restoredMetadata == null) {
         // no persist has happened so far
         // so either this is a brand new task or replacement of a failed task
@@ -693,6 +720,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 );
 
                 if (addResult.isOk()) {
+                  // Accumulate per-row info for the segment's prunable shard spec, stamped at publish time.
+                  if (shardSpecCollector != null) {
+                    shardSpecCollector.collect(addResult.getSegmentIdentifier().asSegmentId(), row);
+                  }
+
                   // If the number of rows in the segment exceeds the threshold after adding a row,
                   // move the segment out from the active segments of BaseAppenderatorDriver to make a new segment.
                   final boolean isPushRequired = addResult.isPushRequired(
@@ -999,15 +1031,42 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     handOffWaitList.removeAll(handoffFinished);
   }
 
+  /**
+   * Returns the per-task {@link StreamingShardSpecCollector} created in the constructor, or {@code null} when no
+   * {@link StreamingPartitionsSpec} is configured (or the configured one has nothing to collect).
+   */
+  @Nullable
+  @VisibleForTesting
+  StreamingShardSpecCollector getShardSpecCollector()
+  {
+    return shardSpecCollector;
+  }
+
+  /**
+   * Delegates to {@link StreamingShardSpecCollector#annotate} to stamp a segment's shard spec at publish time,
+   * returning the segment unchanged when no {@link StreamingPartitionsSpec} is configured. Safe to apply
+   * unconditionally on the publish path.
+   */
+  @VisibleForTesting
+  DataSegment annotateSegmentWithPartitionDimensionValues(DataSegment s)
+  {
+    return shardSpecCollector == null ? s : shardSpecCollector.annotate(s);
+  }
+
   private void publishAndRegisterHandoff(SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata)
   {
     log.debug("Publishing segments for sequence [%s].", sequenceMetadata);
 
+    // annotateSegmentWithPartitionDimensionValues returns the segment unchanged when there is no shardSpecCollector,
+    // so it is always safe to apply here.
     final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = Futures.transform(
         driver.publish(
             sequenceMetadata.createPublisher(this, toolbox, ioConfig.isUseTransaction()),
             sequenceMetadata.getCommitterSupplier(this, stream, lastPersistedOffsets).get(),
-            Collections.singletonList(sequenceMetadata.getSequenceName())
+            Collections.singletonList(sequenceMetadata.getSequenceName()),
+            segments -> segments.stream()
+                                .map(this::annotateSegmentWithPartitionDimensionValues)
+                                .collect(Collectors.toCollection(LinkedHashSet::new))
         ),
         publishedSegmentsAndMetadata -> {
           if (publishedSegmentsAndMetadata == null) {
@@ -1041,6 +1100,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 Preconditions.checkNotNull(publishedSegmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata")
             );
             log.infoSegments(publishedSegmentsAndCommitMetadata.getSegments(), "Published segments");
+
+            if (shardSpecCollector != null) {
+              for (DataSegment segment : publishedSegmentsAndCommitMetadata.getSegments()) {
+                shardSpecCollector.onSegmentPublished(segment.getId());
+              }
+            }
 
             publishedSequences.add(sequenceMetadata.getSequenceName());
             removeSequence(sequenceMetadata);
@@ -1695,7 +1760,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req);
     try {
-      ((StreamAppenderator) appenderator).registerUpgradedPendingSegment(upgradedPendingSegment);
+      final StreamAppenderator.PendingSegmentUpgradeResult outcome =
+          ((StreamAppenderator) appenderator).registerUpgradedPendingSegment(upgradedPendingSegment);
+      recordUpgradeResult(upgradedPendingSegment, outcome);
       return Response.ok().build();
     }
     catch (DruidException e) {
@@ -1712,6 +1779,61 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       );
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
     }
+  }
+
+  /**
+   * Logs and emits a metric for the result of a pending-segment upgrade request, keyed off the {@code result}
+   * returned by {@link StreamAppenderator#registerUpgradedPendingSegment}.
+   */
+  private void recordUpgradeResult(
+      PendingSegmentRecord upgradedPendingSegment,
+      StreamAppenderator.PendingSegmentUpgradeResult result
+  )
+  {
+    final SegmentIdWithShardSpec upgradedId = upgradedPendingSegment.getId();
+    final String upgradedFromSegmentId = upgradedPendingSegment.getUpgradedFromSegmentId();
+
+    if (result == StreamAppenderator.PendingSegmentUpgradeResult.ANNOUNCED) {
+      toolbox.getEmitter().emit(
+          IndexTaskUtils.setPendingSegmentDimensions(task.getMetricBuilder(), upgradedPendingSegment)
+                        .setMetric(SegmentUpgradeMetrics.ANNOUNCED, 1)
+      );
+      return;
+    }
+    // Log at the level appropriate to the result; the reason string itself is carried by the enum.
+    switch (result) {
+      case SKIPPED_UNKNOWN_BASE:
+        // The request targeted the wrong task: this task never held a base sink matching upgradedFromSegmentId.
+        log.warn(
+            "Not announcing upgraded pending segment[%s] on task[%s] because it has no base sink matching"
+            + " upgradedFromSegmentId[%s]; the upgrade request likely targeted the wrong task.",
+            upgradedId, task.getId(), upgradedFromSegmentId
+        );
+        break;
+      case SKIPPED_NO_SINK:
+        // Unexpected: the base sink is gone even though this task once held it.
+        log.info(
+            "Not announcing upgraded pending segment[%s] (upgradedFrom[%s]) on task[%s] because the base sink is no"
+            + " longer present.",
+            upgradedId, upgradedFromSegmentId, task.getId()
+        );
+        break;
+      case SKIPPED_DROPPING:
+        // Expected during handoff: the base sink is being dropped and the durable path re-announces at the new version.
+        log.debug(
+            "Not announcing upgraded pending segment[%s] (upgradedFrom[%s]) on task[%s] because the base sink is being"
+            + " dropped.",
+            upgradedId, upgradedFromSegmentId, task.getId()
+        );
+        break;
+      default:
+        return;
+    }
+    toolbox.getEmitter().emit(
+        IndexTaskUtils.setPendingSegmentDimensions(task.getMetricBuilder(), upgradedPendingSegment)
+                      .setDimension(DruidMetrics.REASON, result.getReason())
+                      .setMetric(SegmentUpgradeMetrics.SKIPPED, 1)
+    );
   }
 
   public Map<String, Object> doGetRowStats()

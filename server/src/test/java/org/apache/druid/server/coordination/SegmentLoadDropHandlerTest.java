@@ -44,7 +44,6 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,40 +71,13 @@ public class SegmentLoadDropHandlerTest
 
     scheduledRunnable = new ArrayList<>();
     segmentAnnouncer = new TestDataSegmentAnnouncer();
-    segmentLoaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public File getInfoDir()
-      {
-        return segmentCacheDir;
-      }
-
-      @Override
-      public int getNumLoadingThreads()
-      {
-        return 5;
-      }
-
-      @Override
-      public int getAnnounceIntervalMillis()
-      {
-        return 50;
-      }
-
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.singletonList(
-            new StorageLocationConfig(segmentCacheDir, null, null)
-        );
-      }
-
-      @Override
-      public int getDropSegmentDelayMillis()
-      {
-        return 0;
-      }
-    };
+    segmentLoaderConfig = SegmentLoaderConfig.builder()
+        .infoDir(segmentCacheDir)
+        .numLoadingThreads(5)
+        .announceIntervalMillis(50)
+        .locations(new StorageLocationConfig(segmentCacheDir, null, null))
+        .dropSegmentDelayMillis(0)
+        .build();
 
     scheduledExecutorFactory = (corePoolSize, nameFormat) -> {
       // Override normal behavior by adding the runnable to a list so that you can make sure
@@ -257,10 +229,11 @@ public class SegmentLoadDropHandlerTest
   public void testProcessBatchDuplicateLoadRequestsWhenFirstRequestFailsSecondRequestShouldSucceed() throws Exception
   {
     final SegmentManager segmentManager = Mockito.mock(SegmentManager.class);
-    Mockito.doThrow(new RuntimeException("segment loading failure test"))
-           .doNothing()
-           .when(segmentManager)
-           .loadSegment(ArgumentMatchers.any());
+    // loadSegment returns DataSegment, so doNothing() would be rejected by Mockito. Throw on the first call,
+    // then return the input segment on subsequent calls (the announcement path uses the returned segment).
+    Mockito.when(segmentManager.loadSegment(ArgumentMatchers.any()))
+           .thenThrow(new RuntimeException("segment loading failure test"))
+           .thenAnswer(invocation -> invocation.getArgument(0));
 
     final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager);
 
@@ -291,44 +264,19 @@ public class SegmentLoadDropHandlerTest
   public void testProcessBatchLoadDropLoadSequenceForSameSegment() throws Exception
   {
     final SegmentManager segmentManager = Mockito.mock(SegmentManager.class);
-    Mockito.doNothing().when(segmentManager).loadSegment(ArgumentMatchers.any());
+    // loadSegment returns DataSegment; return the input so the announcement path sees a plain DataSegment.
+    Mockito.when(segmentManager.loadSegment(ArgumentMatchers.any()))
+           .thenAnswer(invocation -> invocation.getArgument(0));
     Mockito.doNothing().when(segmentManager).dropSegment(ArgumentMatchers.any());
 
     final File storageDir = temporaryFolder.newFolder();
-    final SegmentLoaderConfig noAnnouncerSegmentLoaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public File getInfoDir()
-      {
-        return storageDir;
-      }
-
-      @Override
-      public int getNumLoadingThreads()
-      {
-        return 5;
-      }
-
-      @Override
-      public int getAnnounceIntervalMillis()
-      {
-        return 0;
-      }
-
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.singletonList(
-            new StorageLocationConfig(storageDir, null, null)
-        );
-      }
-
-      @Override
-      public int getDropSegmentDelayMillis()
-      {
-        return 0;
-      }
-    };
+    final SegmentLoaderConfig noAnnouncerSegmentLoaderConfig = SegmentLoaderConfig.builder()
+        .infoDir(storageDir)
+        .numLoadingThreads(5)
+        .announceIntervalMillis(0)
+        .locations(new StorageLocationConfig(storageDir, null, null))
+        .dropSegmentDelayMillis(0)
+        .build();
 
     final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(
         noAnnouncerSegmentLoaderConfig,

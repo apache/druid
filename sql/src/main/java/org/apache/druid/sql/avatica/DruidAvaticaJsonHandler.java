@@ -66,6 +66,9 @@ public class DruidAvaticaJsonHandler extends DruidAvaticaHandler
   public boolean handle(Request request, Response response, Callback callback) throws Exception
   {
     String requestURI = request.getHttpURI().getPath();
+    String remoteAddr = Request.getRemoteAddr(request);
+    DruidMeta.setThreadLocalRemoteAddress(remoteAddr);
+
     try (Timer.Context ctx = this.requestTimer.start()) {
       if (AVATICA_PATH_NO_TRAILING_SLASH.equals(StringUtils.maybeRemoveTrailingSlash(requestURI))) {
         response.getHeaders().put("Content-Type", "application/json;charset=utf-8");
@@ -113,6 +116,9 @@ public class DruidAvaticaJsonHandler extends DruidAvaticaHandler
         response.write(true, ByteBuffer.wrap(jsonResponse.getResponse().getBytes(StandardCharsets.UTF_8)), callback);
         return true;
       }
+    }
+    finally {
+      DruidMeta.clearThreadLocalRemoteAddress();
     }
     return false;
   }

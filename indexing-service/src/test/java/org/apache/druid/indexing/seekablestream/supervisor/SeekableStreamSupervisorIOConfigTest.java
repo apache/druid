@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
@@ -27,6 +29,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.hamcrest.MatcherAssert;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -52,7 +55,7 @@ public class SeekableStreamSupervisorIOConfigTest
     LagAggregator lagAggregator = mock(LagAggregator.class);
     InputFormat inputFormat = mock(InputFormat.class);
 
-    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         inputFormat,
         null,
@@ -129,7 +132,7 @@ public class SeekableStreamSupervisorIOConfigTest
       boolean expectedExplicit
   )
   {
-    final SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+    final SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         2,
@@ -162,7 +165,7 @@ public class SeekableStreamSupervisorIOConfigTest
 
     IAE ex = Assert.assertThrows(
         IAE.class,
-        () -> new SeekableStreamSupervisorIOConfig(
+        () -> new TestableSeekableStreamSupervisorIOConfig(
             "stream",
             null,
             null,
@@ -198,7 +201,7 @@ public class SeekableStreamSupervisorIOConfigTest
   {
     DruidException ex = Assert.assertThrows(
         DruidException.class,
-        () -> new SeekableStreamSupervisorIOConfig(
+        () -> new TestableSeekableStreamSupervisorIOConfig(
             "stream",
             null,
             null,
@@ -232,7 +235,7 @@ public class SeekableStreamSupervisorIOConfigTest
     LagAggregator lagAggregator = mock(LagAggregator.class);
 
     // Autoscaler disabled, stopTaskCount unset
-    SeekableStreamSupervisorIOConfig config1 = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config1 = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -257,7 +260,7 @@ public class SeekableStreamSupervisorIOConfigTest
     Assert.assertEquals(7, config1.getMaxAllowedStops());
 
     // Autoscaler disabled, stopTaskCount set
-    SeekableStreamSupervisorIOConfig config2 = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config2 = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -294,7 +297,7 @@ public class SeekableStreamSupervisorIOConfigTest
     when(autoScalerConfig.getTaskCountStart()).thenReturn(10);
     when(autoScalerConfig.getStopTaskCountRatio()).thenReturn(0.5);
 
-    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -328,7 +331,7 @@ public class SeekableStreamSupervisorIOConfigTest
     when(autoScalerConfig.getTaskCountStart()).thenReturn(10);
     when(autoScalerConfig.getStopTaskCountRatio()).thenReturn(null);
 
-    SeekableStreamSupervisorIOConfig config2 = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config2 = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -359,7 +362,7 @@ public class SeekableStreamSupervisorIOConfigTest
     when(autoScalerConfig.getTaskCountStart()).thenReturn(10);
     when(autoScalerConfig.getStopTaskCountRatio()).thenReturn(null);
 
-    SeekableStreamSupervisorIOConfig config3 = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config3 = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -447,7 +450,7 @@ public class SeekableStreamSupervisorIOConfigTest
 
   private SeekableStreamSupervisorIOConfig makeSeekableStreamSupervisorIOConfig(@Nullable Integer replicas, @Nullable Map<Integer, Integer> serverPriorityToReplicas)
   {
-    return new SeekableStreamSupervisorIOConfig(
+    return new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         replicas,
@@ -480,7 +483,7 @@ public class SeekableStreamSupervisorIOConfigTest
 
     LagAggregator lagAggregator = mock(LagAggregator.class);
 
-    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -513,7 +516,7 @@ public class SeekableStreamSupervisorIOConfigTest
   {
     LagAggregator lagAggregator = mock(LagAggregator.class);
 
-    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -545,7 +548,7 @@ public class SeekableStreamSupervisorIOConfigTest
   {
     LagAggregator lagAggregator = mock(LagAggregator.class);
 
-    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -570,5 +573,123 @@ public class SeekableStreamSupervisorIOConfigTest
 
     Assert.assertFalse(config.isBounded());
     Assert.assertNull(config.getBoundedStreamConfig());
+  }
+
+  private static SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder ioConfigBuilder()
+  {
+    return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withReplicas(1)
+        .withTaskCount(2)
+        .withTaskDuration(new Period("PT1H"))
+        .withLagAggregator(LagAggregator.DEFAULT);
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    final SeekableStreamSupervisorIOConfig config = ioConfigBuilder().build();
+    Assert.assertEquals(config, ioConfigBuilder().build());
+    Assert.assertEquals(config.hashCode(), ioConfigBuilder().build().hashCode());
+    Assert.assertNotEquals(config, null);
+    Assert.assertNotEquals(config, "not an io config");
+    Assert.assertNotEquals(config, ioConfigBuilder().withStream("other").build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withReplicas(9).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withTaskCount(9).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withStopTaskCount(7).build());
+    Assert.assertNotEquals(config, ioConfigBuilder().withIdleConfig(new IdleConfig(true, 5L)).build());
+  }
+
+  @Test
+  public void testIdleConfigEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(IdleConfig.class).usingGetClass().verify();
+  }
+
+  /**
+   * Drift guard: the supervisor restart decision is equality-based, so any field omitted from
+   * {@code equals} would let a changed spec persist without restarting. EqualsVerifier reflects over the
+   * fields and fails automatically on a newly-added unused field — only abstract field types need prefab
+   * values. {@code taskCountExplicit}/{@code autoScalerEnabled} are derived hints (ignored); {@code taskCount}
+   * is mutable (NONFINAL_FIELDS suppressed).
+   */
+  @Test
+  public void testEqualsContractCoversAllFields()
+  {
+    EqualsVerifier.forClass(SeekableStreamSupervisorIOConfig.class)
+                  .usingGetClass()
+                  .withIgnoredFields("taskCountExplicit", "autoScalerEnabled")
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .withPrefabValues(InputFormat.class, mock(InputFormat.class), mock(InputFormat.class))
+                  .withPrefabValues(AutoScalerConfig.class, mock(AutoScalerConfig.class), mock(AutoScalerConfig.class))
+                  .withPrefabValues(LagAggregator.class, mock(LagAggregator.class), mock(LagAggregator.class))
+                  .verify();
+  }
+
+  @Test
+  public void testDefaultLagAggregatorEquals()
+  {
+    // The default aggregator is a stateless singleton; instance() always returns DEFAULT.
+    final LagAggregator aggregator = LagAggregator.DefaultLagAggregator.instance();
+    Assert.assertSame(LagAggregator.DEFAULT, aggregator);
+    Assert.assertEquals(aggregator, LagAggregator.DefaultLagAggregator.instance());
+    Assert.assertNotEquals(aggregator, null);
+    Assert.assertNotEquals(aggregator, "not a lag aggregator");
+  }
+
+  /**
+   * Concrete subclass for tests that exercise the abstract base directly. Implements the now-abstract
+   * {@link SeekableStreamSupervisorIOConfig#toBuilder()} via the generic builder.
+   */
+  private static class TestableSeekableStreamSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
+  {
+    TestableSeekableStreamSupervisorIOConfig(
+        String stream,
+        InputFormat inputFormat,
+        Integer replicas,
+        Integer taskCount,
+        Period taskDuration,
+        Period startDelay,
+        Period period,
+        Boolean useEarliestSequenceNumber,
+        Period completionTimeout,
+        Period lateMessageRejectionPeriod,
+        Period earlyMessageRejectionPeriod,
+        AutoScalerConfig autoScalerConfig,
+        LagAggregator lagAggregator,
+        DateTime lateMessageRejectionStartDateTime,
+        IdleConfig idleConfig,
+        Integer stopTaskCount,
+        Map<Integer, Integer> serverPriorityToReplicas,
+        BoundedStreamConfig boundedStreamConfig
+    )
+    {
+      super(
+          stream,
+          inputFormat,
+          replicas,
+          taskCount,
+          taskDuration,
+          startDelay,
+          period,
+          useEarliestSequenceNumber,
+          completionTimeout,
+          lateMessageRejectionPeriod,
+          earlyMessageRejectionPeriod,
+          autoScalerConfig,
+          lagAggregator,
+          lateMessageRejectionStartDateTime,
+          idleConfig,
+          stopTaskCount,
+          serverPriorityToReplicas,
+          boundedStreamConfig
+      );
+    }
+
+    @Override
+    public SupervisorIOConfigBuilder<?, ?> toBuilder()
+    {
+      return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder().copyFromBase(this);
+    }
   }
 }

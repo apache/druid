@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ "21", "25" ]
+        jdk: [ "25" ]
         pattern: [ "C*", "N*", "D*,H*,L*", "I*,A*,U*", "K*,E*,W*,Z*,Y*,X*", "M*,P*,O*", "R*,B*,Q*,V*", "S*", "T*,F*,G*,J*" ]
     uses: ./.github/workflows/worker.yml
     with:

@@ -727,7 +727,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
 
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-8d", null, Period.days(8), null, new AggregatorFactory[0], null, null, null),
+            new ReindexingDataSchemaRule("metrics-8d", null, Period.days(8), null, new AggregatorFactory[0], null, null, null, null),
             createReindexingDataSchemaRule("metrics-8d", Period.days(8)),
             createReindexingDataSchemaRule("metrics-14d", Period.days(14)),
             createReindexingDataSchemaRule("metrics-45d", Period.days(45))
@@ -824,9 +824,9 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .partitioningRules(List.of(monthRule, dayRule))
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null),
-            new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
-            new ReindexingDataSchemaRule("metrics-21d", null, Period.days(21), null, new AggregatorFactory[0], null, null, null)
+            new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null, null),
+            new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null, null),
+            new ReindexingDataSchemaRule("metrics-21d", null, Period.days(21), null, new AggregatorFactory[0], null, null, null, null)
         ))
         .build();
 
@@ -932,9 +932,9 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             .builder()
             .partitioningRules(List.of(yearRule, monthRule, dayRule))
             .dataSchemaRules(List.of(
-                new ReindexingDataSchemaRule("metrics-1d", null, Period.days(1), null, new AggregatorFactory[0], null, null, null),
-                new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
-                new ReindexingDataSchemaRule("metrics-45d", null, Period.days(45), null, new AggregatorFactory[0], null, null, null)
+                new ReindexingDataSchemaRule("metrics-1d", null, Period.days(1), null, new AggregatorFactory[0], null, null, null, null),
+                new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null, null),
+                new ReindexingDataSchemaRule("metrics-45d", null, Period.days(45), null, new AggregatorFactory[0], null, null, null, null)
             ))
             .build();
 
@@ -1072,7 +1072,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .partitioningRules(List.of(monthRule))
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-1m", null, Period.months(1), null, new AggregatorFactory[0], null, null, null)
+            new ReindexingDataSchemaRule("metrics-1m", null, Period.months(1), null, new AggregatorFactory[0], null, null, null, null)
         ))
         .build();
 
@@ -1140,7 +1140,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .partitioningRules(List.of(dayRule))
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-12h", null, Period.hours(12), null, new AggregatorFactory[0], null, null, null)
+            new ReindexingDataSchemaRule("metrics-12h", null, Period.hours(12), null, new AggregatorFactory[0], null, null, null, null)
         ))
         .build();
 
@@ -1211,8 +1211,8 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .partitioningRules(List.of(dayRule))
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-33d-6h", null, Period.hours(33 * 24 + 6), null, new AggregatorFactory[0], null, null, null),
-            new ReindexingDataSchemaRule("metrics-33d-18h", null, Period.hours(33 * 24 + 18), null, new AggregatorFactory[0], null, null, null)
+            new ReindexingDataSchemaRule("metrics-33d-6h", null, Period.hours(33 * 24 + 6), null, new AggregatorFactory[0], null, null, null, null),
+            new ReindexingDataSchemaRule("metrics-33d-18h", null, Period.hours(33 * 24 + 18), null, new AggregatorFactory[0], null, null, null, null)
         ))
         .build();
 
@@ -1507,7 +1507,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
                 new ReindexingPartitioningRule("day-rule", null, Period.days(90), Granularities.DAY, new DynamicPartitionsSpec(5000000, null), null)
             ))
             .dataSchemaRules(List.of(
-                new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null)
+                new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null, null)
             ))
             .build();
 
@@ -2013,6 +2013,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         period,
         null,
         new AggregatorFactory[0],
+        null,
         null,
         null,
         null

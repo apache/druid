@@ -53,6 +53,7 @@ public class DataSegmentAndLoadProfile extends DataSegment
         delegate.getDimensions(),
         delegate.getMetrics(),
         delegate.getProjections(),
+        delegate.getClusterGroups(),
         delegate.getShardSpec(),
         delegate.getLastCompactionState(),
         delegate.getBinaryVersion(),

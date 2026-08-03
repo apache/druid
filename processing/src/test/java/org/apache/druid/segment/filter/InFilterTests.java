@@ -358,6 +358,121 @@ public class InFilterTests
     }
 
     @Test
+    public void testNumericMatchValuesAreNotTruncatedWhenMatchingLongs()
+    {
+      // Match values with a fractional part must not be truncated into a value that matches a stored long.
+      // l0 is [0, 100, 40, null, 9001, 12345].
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Collections.singletonList(0.5)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Collections.singletonList(-0.5)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Collections.singletonList(100.5)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Arrays.asList(40.5, 9001.5, 12345.5)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          NotDimFilter.of(inFilter("l0", ColumnType.DOUBLE, Collections.singletonList(100.5))),
+          ImmutableList.of("a", "b", "c", "e", "f")
+      );
+
+      // Same as above, but with FLOAT.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Collections.singletonList(0.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Collections.singletonList(-0.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Collections.singletonList(100.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Arrays.asList(40.5f, 9001.5f, 12345.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          NotDimFilter.of(inFilter("l0", ColumnType.FLOAT, Collections.singletonList(100.5f))),
+          ImmutableList.of("a", "b", "c", "e", "f")
+      );
+
+      // Same as above, but with STRING.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Collections.singletonList("0.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Collections.singletonList("-0.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Collections.singletonList("100.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Arrays.asList("12345.5", "40.5", "9001.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          NotDimFilter.of(inFilter("l0", ColumnType.STRING, Collections.singletonList("100.5"))),
+          ImmutableList.of("a", "b", "c", "e", "f")
+      );
+
+      // Exactly representable values still match, and are not thrown out along with their fractional neighbors.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Arrays.asList(100.0, 9001.5)),
+          ImmutableList.of("b")
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Arrays.asList(100.5, 9001.0)),
+          ImmutableList.of("e")
+      );
+      assertTypedFilterMatches(
+          NotDimFilter.of(inFilter("l0", ColumnType.DOUBLE, Arrays.asList(100.5, 9001.0))),
+          ImmutableList.of("a", "b", "c", "f")
+      );
+
+      // Nulls are still matched too.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Arrays.asList(null, 100.5)),
+          ImmutableList.of("d")
+      );
+
+      // Same story for FLOAT match values.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Collections.singletonList(100.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Arrays.asList(0.5f, 9001.0f)),
+          ImmutableList.of("e")
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Arrays.asList(null, 100.5f)),
+          ImmutableList.of("d")
+      );
+
+      // And for STRING match values that spell out a non-integral number.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Collections.singletonList("100.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Arrays.asList("100.5", "9001.0")),
+          ImmutableList.of("e")
+      );
+    }
+
+    @Test
     public void testLegacyNumericDefaults()
     {
       assertLegacyFilterMatches(new InDimFilter("f0", Sets.newHashSet("0"), null), ImmutableList.of("a"));

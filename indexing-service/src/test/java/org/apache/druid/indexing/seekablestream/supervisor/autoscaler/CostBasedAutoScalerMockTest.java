@@ -367,11 +367,13 @@ public class CostBasedAutoScalerMockTest
   {
     CostMetrics metrics = new CostMetrics(
         avgLag,
+        avgLag * PARTITION_COUNT,
         taskCount,
         PARTITION_COUNT,
         pollIdleRatio,
         TASK_DURATION_SECONDS,
-        AVG_PROCESSING_RATE
+        AVG_PROCESSING_RATE,
+        0.
     );
     doReturn(metrics).when(autoScaler).collectMetrics();
 

@@ -32,7 +32,12 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.BaseColumnHolder;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ConstantColumns;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.file.SegmentFileMapper;
@@ -44,6 +49,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -207,6 +213,33 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     return columnHolderSupplier == null ? null : columnHolderSupplier.get();
   }
 
+  /**
+   * Clustered segments store no top-level columns, so the default holder-based lookup would report null for every
+   * logical column. Resolve instead from the summary's typed clustering signature (clustering columns) and the first
+   * cluster group's sub-index (data columns + {@code __time} — all groups share the same per-group shape). Group
+   * sub-indexes have a null summary and fall through to the default holder-based path, as do non-clustered segments.
+   */
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    if (clusteredBaseSummary == null) {
+      return QueryableIndex.super.getColumnCapabilities(column);
+    }
+    final ColumnType clusteringType = clusteredBaseSummary.getClusteringColumns().getColumnType(column).orElse(null);
+    if (clusteringType != null) {
+      return clusteringType.is(ValueType.STRING)
+             ? ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities()
+             : ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(clusteringType);
+    }
+    final List<TableClusterGroupSpec> groups = clusteredBaseSummary.getClusterGroups();
+    if (groups.isEmpty()) {
+      return null;
+    }
+    final QueryableIndex firstGroupIndex = getClusterGroupQueryableIndex(groups.get(0), false);
+    return firstGroupIndex == null ? null : firstGroupIndex.getColumnCapabilities(column);
+  }
+
   @VisibleForTesting
   public Map<String, Supplier<BaseColumnHolder>> getColumns()
   {
@@ -242,7 +275,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
    * the returned index, they're injected at the cursor-factory level via {@code ClusteringColumnSelectorFactory}.
    */
   @Override
-  public QueryableIndex getClusterGroupQueryableIndex(TableClusterGroupSpec groupSpec)
+  public QueryableIndex getClusterGroupQueryableIndex(TableClusterGroupSpec groupSpec, boolean withClusteringColumns)
   {
     if (clusteredBaseSummary == null) {
       throw DruidException.defensive("getClusterGroupQueryableIndex called on a non-clustered segment");
@@ -252,14 +285,28 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     if (index < 0) {
       throw DruidException.defensive("Cluster group spec is not part of this segment");
     }
-    final Map<String, Supplier<BaseColumnHolder>> groupColumns = clusterGroupColumns.get(index);
+    // add clustering columns are constants for query paths
+    final Map<String, Supplier<BaseColumnHolder>> groupColumns;
+    if (withClusteringColumns) {
+      groupColumns = new HashMap<>(clusterGroupColumns.get(index));
+      ConstantColumns.addConstantClusteringColumns(
+          groupColumns,
+          clusteredBaseSummary.getClusteringColumns(),
+          groupSpec.lookupClusteringValues(),
+          groupSpec.getNumRows(),
+          bitmapFactory
+      );
+    } else {
+      groupColumns = clusterGroupColumns.get(index);
+    }
     final Metadata groupMetadata = new Metadata(
         null,
-        clusteredBaseSummary.getAggregators(),
+        null,
         null,
         clusteredBaseSummary.getEffectiveGranularity(),
         false,
         clusteredBaseSummary.getGroupOrdering(),
+        null,
         null
     );
     return new SimpleQueryableIndex(
@@ -339,6 +386,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
         null,
         true,
         projectionSpec.getSchema().getOrderingWithTimeColumnSubstitution(),
+        null,
         null
     );
     return new SimpleQueryableIndex(

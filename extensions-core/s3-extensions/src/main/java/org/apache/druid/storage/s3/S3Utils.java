@@ -48,6 +48,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLException;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -77,6 +78,10 @@ public class S3Utils
     {
       if (e == null) {
         return false;
+      } else if (e instanceof SSLException) {
+        // Transient TLS read failure (e.g. AEADBadTagException "Tag mismatch!"). Retry here, ahead of
+        // the IOException branch, which would recurse into the non-IOException crypto cause and not retry.
+        return true;
       } else if (e instanceof IOException) {
         if (e.getCause() != null) {
           // Recurse with the underlying cause to see if it's retriable.

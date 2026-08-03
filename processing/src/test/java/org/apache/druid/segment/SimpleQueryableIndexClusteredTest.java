@@ -23,8 +23,6 @@ import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -65,7 +63,6 @@ class SimpleQueryableIndexClusteredTest
     new ClusteredValueGroupsBaseTableSchema(
         VirtualColumns.EMPTY,
         List.of("tenant", ColumnHolder.TIME_COLUMN_NAME, "region", "metric"),
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
         List.of(
             OrderBy.ascending("tenant"),
             OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME),

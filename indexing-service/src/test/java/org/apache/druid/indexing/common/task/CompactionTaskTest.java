@@ -132,6 +132,7 @@ import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
@@ -308,7 +309,7 @@ public class CompactionTaskTest
                   binder.bind(RowIngestionMetersFactory.class).toInstance(TEST_UTILS.getRowIngestionMetersFactory());
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
                   binder.bind(SegmentCacheManagerFactory.class)
-                        .toInstance(new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper));
+                        .toInstance(SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(new TestAppenderatorsManager());
                   binder.bind(ExprMacroTable.class).toInstance(TestExprMacroTable.INSTANCE);
                 }
@@ -376,7 +377,7 @@ public class CompactionTaskTest
         testIndexIO,
         SEGMENT_MAP
     );
-    segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, OBJECT_MAPPER);
+    segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, OBJECT_MAPPER);
   }
 
   @Test
@@ -803,6 +804,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -861,6 +863,7 @@ public class CompactionTaskTest
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        null,
         null,
         null,
         null,
@@ -930,6 +933,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -990,6 +994,7 @@ public class CompactionTaskTest
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        null,
         null,
         null,
         null,
@@ -1067,6 +1072,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1119,6 +1125,7 @@ public class CompactionTaskTest
         customMetricsSpec,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1159,6 +1166,7 @@ public class CompactionTaskTest
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        null,
         null,
         null,
         null,
@@ -1216,6 +1224,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1242,6 +1251,7 @@ public class CompactionTaskTest
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        null,
         null,
         null,
         null,
@@ -1290,6 +1300,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1335,6 +1346,7 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
+        null,
         null,
         METRIC_BUILDER,
         false
@@ -1383,6 +1395,7 @@ public class CompactionTaskTest
             null
         ),
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1427,6 +1440,7 @@ public class CompactionTaskTest
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        null,
         null,
         null,
         null,
@@ -1479,6 +1493,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1526,6 +1541,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, true),
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1557,6 +1573,7 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
+        null,
         null,
         METRIC_BUILDER,
         false
@@ -1591,6 +1608,7 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
+        null,
         null,
         METRIC_BUILDER,
         true
@@ -1972,13 +1990,13 @@ public class CompactionTaskTest
     final SegmentCacheManager segmentCacheManager = new NoopSegmentCacheManager()
     {
       @Override
-      public void load(DataSegment segment)
+      public DataSegment load(DataSegment segment)
       {
-        // do nothing
+        return segment;
       }
 
       @Override
-      public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
+      public Optional<Segment> acquireCachedSegment(SegmentId segmentId, AcquireMode acquireMode)
       {
         for (Map.Entry<DataSegment, File> entry : segments.entrySet()) {
           if (entry.getKey().getId().equals(segmentId)) {
@@ -1991,7 +2009,7 @@ public class CompactionTaskTest
       }
 
       @Override
-      public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
+      public AcquireSegmentAction acquireSegment(DataSegment dataSegment, AcquireMode acquireMode)
       {
         final Segment segment =
             new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId());
@@ -2345,6 +2363,7 @@ public class CompactionTaskTest
                 return new Metadata(
                     null,
                     aggregatorFactories.toArray(new AggregatorFactory[0]),
+                    null,
                     null,
                     null,
                     null,

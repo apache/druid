@@ -65,11 +65,13 @@ import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.PhysicalSegmentColumnInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexPhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.FrontCodedIndexed;
@@ -287,17 +289,33 @@ public class SqlBaseBenchmark
           );
           realtimeSegments.put(dataSegment, index);
         } else {
-          final QueryableIndex index = segmentGenerator.generate(
-              dataSegment,
-              schema.getGeneratorSchemaInfo(),
-              schema.getDimensionsSpec(),
-              schema.getTransformSpec(),
-              getIndexSpec(),
-              schema.getQueryGranularity(),
-              schema.getProjections(),
-              rowsPerSegment,
-              CalciteTests.getJsonMapper()
-          );
+          final QueryableIndex index;
+          if (schema.isUseV10()) {
+            // clustered (and the unclustered comparison) segments use the V10 writer
+            index = segmentGenerator.generateV10(
+                dataSegment,
+                schema.getGeneratorSchemaInfo(),
+                schema.getDimensionsSpec(),
+                schema.getTransformSpec(),
+                getIndexSpec(),
+                schema.getQueryGranularity(),
+                schema.getClusterSpec(),
+                rowsPerSegment,
+                CalciteTests.getJsonMapper()
+            );
+          } else {
+            index = segmentGenerator.generate(
+                dataSegment,
+                schema.getGeneratorSchemaInfo(),
+                schema.getDimensionsSpec(),
+                schema.getTransformSpec(),
+                getIndexSpec(),
+                schema.getQueryGranularity(),
+                schema.getProjections(),
+                rowsPerSegment,
+                CalciteTests.getJsonMapper()
+            );
+          }
           log.info(
               "Segment metadata: %s",
               CalciteTests.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(index.getMetadata())
@@ -371,7 +389,7 @@ public class SqlBaseBenchmark
     }
   }
 
-  private void checkIncompatibleParameters()
+  protected void checkIncompatibleParameters()
   {
     // we only support NONE object storage encoding for auto column with mmap segments
     if (ObjectStorageEncoding.NONE.equals(jsonObjectStorageEncoding)) {
@@ -521,8 +539,10 @@ public class SqlBaseBenchmark
             public <T> T as(@Nonnull Class<T> clazz)
             {
               // computed sql schema uses segment metadata, which relies on physical inspector, use the underlying index
-              if (clazz.equals(PhysicalSegmentInspector.class)) {
+              if (clazz.equals(RowCountInspector.class) || clazz.equals(PhysicalSegmentColumnInspector.class)) {
                 return (T) new QueryableIndexPhysicalSegmentInspector(index);
+              } else if (clazz.equals(Metadata.class)) {
+                return (T) index.getMetadata();
               }
               return super.as(clazz);
             }
@@ -548,8 +568,10 @@ public class SqlBaseBenchmark
             public <T> T as(@Nonnull Class<T> clazz)
             {
               // computed sql schema uses segment metadata, which relies on physical inspector, use the underlying index
-              if (clazz.equals(PhysicalSegmentInspector.class)) {
+              if (clazz.equals(RowCountInspector.class) || clazz.equals(PhysicalSegmentColumnInspector.class)) {
                 return (T) new QueryableIndexPhysicalSegmentInspector(index);
+              } else if (clazz.equals(Metadata.class)) {
+                return (T) index.getMetadata();
               }
               return super.as(clazz);
             }

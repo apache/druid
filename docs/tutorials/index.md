@@ -23,7 +23,7 @@ sidebar_label: Local quickstart
   ~ under the License.
   -->
 
-This quickstart helps you install Apache Druid and introduces you to Druid ingestion and query features. For this tutorial, you need a machine with at least 6 GiB of RAM.
+This quickstart helps you install Apache&circledR; Druid and introduces you to Druid ingestion and query features. For this tutorial, you need a machine with at least 6 GiB of RAM.
 
 In this quickstart, you'll:
 - install Druid
@@ -40,7 +40,7 @@ You can follow these steps on a relatively modest machine, such as a workstation
 The software requirements for the installation machine are:
 
 * Linux, Mac OS X, or other Unix-like OS. (Windows is not supported)
-* [Java 17](../operations/java.md)
+* [Java 25](../operations/java.md)
 * Python 3 
 * Perl 5
 

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -29,10 +30,13 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
+import org.apache.druid.segment.IndexMergerV10;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -122,7 +126,7 @@ public class BatchAppenderatorTester implements AutoCloseable
          false
     );
   }
-  
+
   public BatchAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
@@ -132,10 +136,50 @@ public class BatchAppenderatorTester implements AutoCloseable
       final boolean skipBytesInMemoryOverheadCheck
   )
   {
+    this(
+        maxRowsInMemory,
+        maxSizeInBytes,
+        basePersistDirectory,
+        enablePushFailure,
+        rowIngestionMeters,
+        skipBytesInMemoryOverheadCheck,
+        null,
+        false
+    );
+  }
+
+  /**
+   * Construct a tester with a caller-supplied {@link DataSchema} and the option to use the V10 segment format
+   */
+  public BatchAppenderatorTester(
+      final int maxRowsInMemory,
+      @Nullable final DataSchema schemaOverride,
+      final boolean useV10
+  )
+  {
+    this(maxRowsInMemory, -1, null, false, new SimpleRowIngestionMeters(), false, schemaOverride, useV10);
+  }
+
+  public BatchAppenderatorTester(
+      final int maxRowsInMemory,
+      final long maxSizeInBytes,
+      @Nullable final File basePersistDirectory,
+      final boolean enablePushFailure,
+      final RowIngestionMeters rowIngestionMeters,
+      final boolean skipBytesInMemoryOverheadCheck,
+      @Nullable final DataSchema schemaOverride,
+      final boolean useV10
+  )
+  {
     objectMapper = new DefaultObjectMapper();
     objectMapper.registerSubtypes(LinearShardSpec.class);
+    objectMapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+    );
 
-    schema = DataSchema.builder()
+    schema = schemaOverride != null
+             ? schemaOverride
+             : DataSchema.builder()
                        .withDataSource(DATASOURCE)
                        .withTimestamp(new TimestampSpec("ts", "auto", null))
                        .withDimensions(DimensionsSpec.EMPTY)
@@ -165,11 +209,17 @@ public class BatchAppenderatorTester implements AutoCloseable
     metrics = new SegmentGenerationMetrics();
 
     IndexIO indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
-    IndexMergerV9 indexMerger = new IndexMergerV9(
-        objectMapper,
-        indexIO,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance()
-    );
+    IndexMerger indexMerger = useV10
+                              ? new IndexMergerV10(
+                                  objectMapper,
+                                  indexIO,
+                                  OffHeapMemorySegmentWriteOutMediumFactory.instance()
+                              )
+                              : new IndexMergerV9(
+                                  objectMapper,
+                                  indexIO,
+                                  OffHeapMemorySegmentWriteOutMediumFactory.instance()
+                              );
 
     emitter = new ServiceEmitter(
         "test",

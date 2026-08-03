@@ -124,7 +124,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   /**
    * Typed clustering tuples for clustered base-table segments, or {@code null} for non-clustered segments. Each tuple
    * is one cluster group's clustering-column values in the order declared by
-   * {@link ClusterGroupTuples#getClusteringColumns()}. Consumed by cluster-group partial-load matchers.
+   * {@link ClusterGroupTuples#clusteringColumns()}. Consumed by cluster-group partial-load matchers.
    */
   @Nullable
   private final ClusterGroupTuples clusterGroups;
@@ -220,46 +220,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         null,
         null,
         PruneSpecsHolder.DEFAULT
-    );
-  }
-
-  /**
-   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
-   */
-  @Deprecated
-  public DataSegment(
-      String dataSource,
-      Interval interval,
-      String version,
-      @Nullable Map<String, Object> loadSpec,
-      @Nullable List<String> dimensions,
-      @Nullable List<String> metrics,
-      @Nullable List<String> projections,
-      @Nullable ShardSpec shardSpec,
-      @Nullable CompactionState lastCompactionState,
-      Integer binaryVersion,
-      long size,
-      Integer totalRows,
-      String indexingStateFingerprint,
-      PruneSpecsHolder pruneSpecsHolder
-  )
-  {
-    this(
-        dataSource,
-        interval,
-        version,
-        loadSpec,
-        dimensions,
-        metrics,
-        projections,
-        null,
-        shardSpec,
-        lastCompactionState,
-        binaryVersion,
-        size,
-        totalRows,
-        indexingStateFingerprint,
-        pruneSpecsHolder
     );
   }
 
