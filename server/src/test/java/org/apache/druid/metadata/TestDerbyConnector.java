@@ -38,6 +38,7 @@ import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 
+import javax.annotation.Nullable;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -132,7 +133,16 @@ public class TestDerbyConnector extends DerbyConnector
    */
   public void exportTableGeneric(final String tableName, final String outputPath)
   {
-    exportTableWithJdbc(tableName, outputPath);
+    exportTableGeneric(tableName, outputPath, null);
+  }
+
+  public void exportTableGeneric(
+      final String tableName,
+      final String outputPath,
+      @Nullable final List<String> columns
+  )
+  {
+    exportTableWithJdbc(tableName, outputPath, columns);
   }
 
   public static String dbSafeUUID()

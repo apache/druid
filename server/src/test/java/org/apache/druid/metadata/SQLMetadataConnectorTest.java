@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -683,6 +684,128 @@ public class SQLMetadataConnectorTest
     // NULL trailing columns should produce empty fields
     final String hex2 = BaseEncoding.base16().encode(StringUtils.toUtf8("{\"v\":2}"));
     Assert.assertEquals("seg2,false," + hex2 + ",,", lines.get(1));
+
+    dropTable(tableName);
+  }
+
+  @Test
+  public void testExportTableWithExplicitColumnOrder() throws IOException
+  {
+    final String tableName = "test_export_colorder";
+    connector.getDBI().withHandle(
+        handle -> {
+          // "end" is a reserved word, so it must be quoted in the export query
+          handle.execute(
+              StringUtils.format(
+                  "CREATE TABLE %s ("
+                  + "id VARCHAR(255) NOT NULL, "
+                  + "used_status_last_updated VARCHAR(255), "
+                  + "\"END\" VARCHAR(255), "
+                  + "used BOOLEAN NOT NULL, "
+                  + "PRIMARY KEY(id))",
+                  tableName
+              )
+          );
+          handle.execute(
+              StringUtils.format("INSERT INTO %s VALUES (?, ?, ?, ?)", tableName),
+              "seg1",
+              "2024-01-01",
+              "2024-01-02",
+              true
+          );
+          return null;
+        }
+    );
+
+    final File outputFile = Files.createTempFile("export_colorder_test", ".csv").toFile();
+    outputFile.deleteOnExit();
+
+    connector.exportTableGeneric(
+        StringUtils.toUpperCase(tableName),
+        outputFile.getAbsolutePath(),
+        ImmutableList.of("ID", "END", "USED", "USED_STATUS_LAST_UPDATED")
+    );
+
+    final List<String> lines = Files.readAllLines(outputFile.toPath(), StandardCharsets.UTF_8);
+    Assert.assertEquals(ImmutableList.of("seg1,2024-01-02,true,2024-01-01"), lines);
+
+    dropTable(tableName);
+  }
+
+  @Test
+  public void testExportTableWithDerbyNativeExport() throws IOException
+  {
+    // Exercises DerbyConnector's native export, which is the path used by the export-metadata tool
+    // when the source is Derby
+    final String tableName = "test_export_native";
+    connector.getDBI().withHandle(
+        handle -> {
+          handle.execute(
+              StringUtils.format(
+                  "CREATE TABLE %s ("
+                  + "id VARCHAR(255) NOT NULL, "
+                  + "\"END\" VARCHAR(255), "
+                  + "used BOOLEAN NOT NULL, "
+                  + "payload BLOB NOT NULL, "
+                  + "PRIMARY KEY(id))",
+                  tableName
+              )
+          );
+          handle.execute(
+              StringUtils.format("INSERT INTO %s VALUES (?, ?, ?, ?)", tableName),
+              "seg1",
+              "2024-01-02",
+              true,
+              StringUtils.toUtf8("{\"v\":1}")
+          );
+          return null;
+        }
+    );
+
+    final File outputFile = Files.createTempFile("export_native_test", ".csv").toFile();
+    Assert.assertTrue(outputFile.delete());
+    outputFile.deleteOnExit();
+
+    connector.exportTable(
+        StringUtils.toUpperCase(tableName),
+        outputFile.getAbsolutePath(),
+        ImmutableList.of("ID", "PAYLOAD", "END", "USED")
+    );
+
+    final List<String> lines = Files.readAllLines(outputFile.toPath(), StandardCharsets.UTF_8);
+    Assert.assertEquals(1, lines.size());
+
+    // Derby quotes every field and writes BLOBs as lowercase hex, as expected by the rewrite stage
+    final String hex = BaseEncoding.base16().lowerCase().encode(StringUtils.toUtf8("{\"v\":1}"));
+    Assert.assertEquals(
+        StringUtils.format("\"seg1\",\"%s\",\"2024-01-02\",\"true\"", hex),
+        lines.get(0)
+    );
+
+    dropTable(tableName);
+  }
+
+  @Test
+  public void testGetTableColumns()
+  {
+    final String tableName = "test_get_columns";
+    connector.getDBI().withHandle(
+        handle -> {
+          handle.execute(
+              StringUtils.format(
+                  "CREATE TABLE %s (id VARCHAR(255) NOT NULL, used BOOLEAN NOT NULL, PRIMARY KEY(id))",
+                  tableName
+              )
+          );
+          return null;
+        }
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of("ID", "USED"),
+        connector.getTableColumns(StringUtils.toUpperCase(tableName))
+    );
+    Assert.assertEquals(ImmutableList.of(), connector.getTableColumns("NON_EXISTENT_TABLE"));
 
     dropTable(tableName);
   }

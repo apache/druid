@@ -172,6 +172,10 @@ Example import commands for Derby, MySQL, and PostgreSQL are shown below.
 
 These example import commands expect `/tmp/csv` and its contents to be accessible from the server. For other options, such as importing from the client filesystem, please refer to the database's documentation.
 
+The segments table is exported in a fixed column order, independent of the physical column order of the source table: `id`, `dataSource`, `created_date`, `start`, `end`, `partitioned`, `version`, `used`, `payload`, `used_status_last_updated`, `indexing_state_fingerprint`, `upgraded_from_segment_id`, followed by `schema_fingerprint` and `num_rows` if the source table has them. Add `schema_fingerprint,num_rows` to the end of the segments column list in the import commands below if those columns are present.
+
+NULL values are written as empty fields. An empty field is imported as an empty string rather than NULL, which fails for non-string columns such as `num_rows`, so the PostgreSQL command below declares the nullable columns with `FORCE_NULL`.
+
 ### Derby
 
 ```sql
@@ -189,7 +193,7 @@ CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_SUPERVISORS','/tmp/csv/druid_sup
 ### MySQL
 
 ```sql
-LOAD DATA INFILE '/tmp/csv/druid_segments.csv' INTO TABLE druid_segments FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (id,dataSource,created_date,start,end,partitioned,version,used,payload); SHOW WARNINGS;
+LOAD DATA INFILE '/tmp/csv/druid_segments.csv' INTO TABLE druid_segments FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (id,dataSource,created_date,start,end,partitioned,version,used,payload,used_status_last_updated,indexing_state_fingerprint,upgraded_from_segment_id); SHOW WARNINGS;
 
 LOAD DATA INFILE '/tmp/csv/druid_rules.csv' INTO TABLE druid_rules FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (id,dataSource,version,payload); SHOW WARNINGS;
 
@@ -203,7 +207,7 @@ LOAD DATA INFILE '/tmp/csv/druid_supervisors.csv' INTO TABLE druid_supervisors F
 ### PostgreSQL
 
 ```sql
-COPY druid_segments(id,dataSource,created_date,start,"end",partitioned,version,used,payload) FROM '/tmp/csv/druid_segments.csv' DELIMITER ',' CSV;
+COPY druid_segments(id,dataSource,created_date,start,"end",partitioned,version,used,payload,used_status_last_updated,indexing_state_fingerprint,upgraded_from_segment_id) FROM '/tmp/csv/druid_segments.csv' WITH (FORMAT csv, FORCE_NULL (used_status_last_updated,indexing_state_fingerprint,upgraded_from_segment_id));
 
 COPY druid_rules(id,dataSource,version,payload) FROM '/tmp/csv/druid_rules.csv' DELIMITER ',' CSV;
 
