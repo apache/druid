@@ -805,6 +805,12 @@ public class SQLMetadataConnectorTest
         ImmutableList.of("ID", "USED"),
         connector.getTableColumns(StringUtils.toUpperCase(tableName))
     );
+    // A table name in the wrong case must still resolve: the database folds unquoted identifiers
+    // (Derby to uppercase, PostgreSQL to lowercase), while the metadata lookup is case-sensitive
+    Assert.assertEquals(
+        ImmutableList.of("ID", "USED"),
+        connector.getTableColumns(StringUtils.toLowerCase(tableName))
+    );
     Assert.assertEquals(ImmutableList.of(), connector.getTableColumns("NON_EXISTENT_TABLE"));
 
     dropTable(tableName);
