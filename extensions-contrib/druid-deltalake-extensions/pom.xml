@@ -101,7 +101,7 @@
     <dependency>
       <groupId>it.unimi.dsi</groupId>
       <artifactId>fastutil-core</artifactId>
-      <version>8.5.4</version>
+      <version>8.5.19</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
