@@ -117,11 +117,7 @@ public class CloneHistoricals implements CoordinatorDuty
       // different parts of it.
       for (DataSegment segment : sourceProjectedSegments) {
         final PartialLoadProfile sourceProfile = sourceServer.getProjectedProfile(segment);
-        if (!targetProjectedSegments.contains(segment)
-            || !Objects.equals(
-                fingerprintOf(sourceProfile),
-                fingerprintOf(targetServer.getProjectedProfile(segment))
-            )) {
+        if (shouldLoadSegmentOnTargetServer(segment, sourceProfile, targetServer, targetProjectedSegments)) {
           loadSegmentOnTargetServer(segment, sourceProfile, targetServer, params);
         }
       }
@@ -166,7 +162,7 @@ public class CloneHistoricals implements CoordinatorDuty
         loadableSegment,
         targetServer,
         SegmentAction.LOAD,
-        sourceProfile == null ? null : sourceProfile.asRequestFor(loadableSegment)
+        sourceProfile == null ? null : sourceProfile.asCloneRequest()
     )) {
       params.getCoordinatorStats().add(
           Stats.Segments.ASSIGNED_TO_CLONE,
@@ -265,5 +261,28 @@ public class CloneHistoricals implements CoordinatorDuty
     }
 
     return newStatusMap;
+  }
+
+  /**
+   * Determine whether a segment should be loaded on the target server.
+   * <p>
+   * If the target server does not have the segment, it should be loaded. If the target server has the segment but with
+   * a different partial load profile than the source server, it should also be loaded.
+   * <p>
+   * The two conditions are separate because a null profile does not identify a missing replica: a target that does not
+   * have the segment and a target holding it as a regular full load both project no profile at all.
+   */
+  private boolean shouldLoadSegmentOnTargetServer(
+      DataSegment segment,
+      @Nullable PartialLoadProfile sourceProfile,
+      ServerHolder targetServer,
+      Set<DataSegment> targetProjectedSegments
+  )
+  {
+    if (!targetProjectedSegments.contains(segment)) {
+      return true;
+    }
+    final PartialLoadProfile targetProfile = targetServer.getProjectedProfile(segment);
+    return !Objects.equals(fingerprintOf(sourceProfile), fingerprintOf(targetProfile));
   }
 }

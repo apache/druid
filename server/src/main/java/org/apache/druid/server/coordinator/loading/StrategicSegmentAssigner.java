@@ -180,17 +180,16 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   /**
    * Moves the given segment from serverA to serverB.
+   * <p>
+   * If the segment on serverA is a partial load, the partial loadprofile is used to create the request to load
+   * the segment on serverB, ensuring that an equivalent partial load is loaded on serverB.
    */
   private boolean moveSegment(DataSegment segment, ServerHolder serverA, ServerHolder serverB)
   {
     final String tier = serverA.getServer().getTier();
 
-    // A replica loaded under a partial-load rule holds only part of the segment, so the destination has to be asked
-    // for the same parts. Read the profile up front: cancelling the load below clears serverA's in-flight profile.
-    // `segment` is the metadata-resolved segment (see TierSegmentBalancer.getLoadableSegment), which is what
-    // asRequestFor needs to rebase the request onto the segment's current location.
     final PartialLoadProfile profile = serverA.getProjectedProfile(segment);
-    final PartialLoadProfile request = profile == null ? null : profile.asRequestFor(segment);
+    final PartialLoadProfile request = profile == null ? null : profile.asCloneRequest();
 
     if (serverA.isLoadingSegment(segment)) {
       // Cancel the load on serverA and load on serverB instead

@@ -1338,9 +1338,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         return loadPartial(dataSegment);
       }
       // virtual storage doesn't do anything with loading immediately, but check to see if the segment is already cached
-      // and if so, clear out the onUnmount action. An unwrapped request for a segment currently held under a
-      // partial-load rule is the coordinator asking for the whole segment again, so release the rule as well.
-      final boolean isFullLoadRequest = !PartialLoadSpec.detectPartialLoadSpec(dataSegment.getLoadSpec());
+      // and if so, clear out the onUnmount action. Reaching here with a rule applied means the coordinator asked for
+      // the whole segment again: a rule is only ever applied on the loadPartial path above, so the request that got
+      // here carries no partial-load wrapper for this segment. Release the rule.
       final ReferenceCountingLock lock = lock(dataSegment);
       synchronized (lock) {
         try {
@@ -1351,9 +1351,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               continue;
             }
             cacheEntry.setOnUnmount(null);
-            if (isFullLoadRequest
-                && cacheEntry instanceof PartialSegmentMetadataCacheEntry partial
-                && partial.isRuleHeld()) {
+            if (cacheEntry instanceof PartialSegmentMetadataCacheEntry partial && partial.isRuleHeld()) {
               releaseRuleForFullLoad(dataSegment, partial);
             }
           }
@@ -1540,19 +1538,33 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    * That is what a full load means under virtual storage — nothing is pinned, each part is fetched on demand — and
    * reclaim of the partial state on disk is left to eviction, as it is for {@link #drop}.
    * <p>
-   * The rule is cleared before the info file is rewritten because clearing cannot fail, so the in-memory state and the
-   * load announcement come out right either way. A failed rewrite leaves the info file describing the released rule,
-   * which a restart reapplies and re-announces until the coordinator's next load request converts the segment again.
+   * The info file is rewritten before the rule is cleared, and a failed rewrite fails the load. Nothing is left half
+   * converted: releasing the holds cannot fail, and a load failure sends the historical down its drop path, which
+   * clears the rule and removes the info file, so there is no stale rule for a restart to reinstate. Leaving the rule
+   * applied and carrying on is not an option, because an unwrapped request announces as a full load either way, so the
+   * coordinator would record a replica with no profile and never ask again.
    * <p>
    * Callers must hold this segment's {@link #lock(DataSegment)}, which is the external lock that
    * {@link PartialSegmentMetadataCacheEntry#clearRule} requires to be serialized against
    * {@link PartialSegmentMetadataCacheEntry#applyRule}.
    */
   private void releaseRuleForFullLoad(DataSegment dataSegment, PartialSegmentMetadataCacheEntry partial)
+      throws SegmentLoadingException
   {
     // Snapshot both before clearRule zeroes out the rule state so the log can describe what was released.
     final String priorFingerprint = partial.getRuleFingerprint();
     final long priorRealizedBytes = partial.getRealizedBytes();
+    try {
+      rewriteInfoFile(dataSegment);
+    }
+    catch (IOException e) {
+      throw new SegmentLoadingException(
+          e,
+          "Failed to rewrite info file for segment[%s] while releasing partial-load rule[fingerprint=%s]",
+          dataSegment.getId(),
+          priorFingerprint
+      );
+    }
     partial.clearRule();
     log.info(
         "Released partial-load rule[fingerprint=%s, realizedBytes=%d] for segment[%s]; it is a regular full load now.",
@@ -1560,19 +1572,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         priorRealizedBytes,
         dataSegment.getId()
     );
-    try {
-      rewriteInfoFile(dataSegment);
-    }
-    catch (IOException e) {
-      log.warn(
-          e,
-          "Failed to rewrite info file for segment[%s] after releasing partial-load rule[fingerprint=%s]. The rule is "
-          + "released on this historical, but the info file still describes it, so a restart will reapply and "
-          + "re-announce it until the coordinator's next load request releases it again.",
-          dataSegment.getId(),
-          priorFingerprint
-      );
-    }
   }
 
   /**

@@ -453,28 +453,6 @@ public class StrategicSegmentAssignerPartialTest
   }
 
   @Test
-  public void testMoveOfPartialReplicaIsRebasedOntoTheSegmentsCurrentLoadSpec()
-  {
-    // The source announced its profile when the segment lived somewhere else, and the wrapped load spec replaces the
-    // outbound segment's load spec wholesale. The destination must be pointed at where the segment lives now,
-    // otherwise the move can never complete once the old object is gone.
-    final DataSegment segment = createSegment();
-    final DataSegment relocated = segment.withLoadSpec(Map.of("type", "local", "path", "/mnt/relocated/foo"));
-    final ServerHolder source = createDecommissioningServerWithLoaded(TIER1, segment, profileForRevenue());
-    final ServerHolder destination = createServer(TIER1);
-    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, source, destination).build();
-
-    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, relocated);
-    Assert.assertTrue(params.getSegmentAssigner().moveSegment(relocated, source, List.of(destination)));
-
-    final PartialLoadProfile queued = ((TestLoadQueuePeon) destination.getPeon()).getProfileFor(relocated);
-    Assert.assertNotNull(queued);
-    Assert.assertEquals(relocated.getLoadSpec(), queued.wrappedLoadSpec().get("delegate"));
-    Assert.assertEquals(FP_REVENUE, queued.fingerprint());
-    Assert.assertEquals(List.of("revenue"), queued.wrappedLoadSpec().get("projections"));
-  }
-
-  @Test
   public void testMoveOfFullLoadReplicaCarriesNoProfile()
   {
     final DataSegment segment = createSegment();

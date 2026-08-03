@@ -23,15 +23,10 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,15 +35,9 @@ public class PartialLoadProfileTest
 {
   private static final String FINGERPRINT = "v1:0123456789abcdef";
 
-  private static final Map<String, Object> ORIGINAL_DELEGATE =
-      ImmutableMap.of("type", "local", "path", "/var/druid/segments/foo");
-
-  private static final Map<String, Object> MIGRATED_DELEGATE =
-      ImmutableMap.of("type", "local", "path", "/mnt/relocated/segments/foo");
-
   private static final Map<String, Object> WRAPPED = ImmutableMap.of(
       "type", "partialProjection",
-      "delegate", ORIGINAL_DELEGATE,
+      "delegate", ImmutableMap.of("type", "local", "path", "/var/druid/segments/foo"),
       "projections", List.of("user_daily", "user_hourly"),
       "fingerprint", FINGERPRINT
   );
@@ -127,39 +116,24 @@ public class PartialLoadProfileTest
   }
 
   @Test
-  public void testAsRequestForRebasesDelegateOntoTheSegmentsCurrentLoadSpec()
+  public void testAsCloneRequestDropsTheAnnouncedFootprint()
   {
-    // A profile read off a server carries the location the segment had when that server was asked to load. Reissuing
-    // it must point at where the segment lives now, keeping the selection and fingerprint that identify the request.
+    // The realized footprint belongs to the announcement of the server that loaded the segment, not to the request the
+    // clone target or move destination is about to get. Everything that identifies the request carries over as-is.
     final PartialLoadProfile loaded = PartialLoadProfile.forLoaded(WRAPPED, FINGERPRINT, 12345L);
 
-    final PartialLoadProfile request = loaded.asRequestFor(segmentWithLoadSpec(MIGRATED_DELEGATE));
+    final PartialLoadProfile request = loaded.asCloneRequest();
 
-    Assertions.assertEquals(MIGRATED_DELEGATE, request.wrappedLoadSpec().get("delegate"));
-    Assertions.assertEquals(FINGERPRINT, request.fingerprint());
-    Assertions.assertEquals(List.of("user_daily", "user_hourly"), request.wrappedLoadSpec().get("projections"));
-    Assertions.assertEquals("partialProjection", request.wrappedLoadSpec().get("type"));
     Assertions.assertNull(request.loadedBytes(), "a request carries no realized footprint");
+    Assertions.assertEquals(WRAPPED, request.wrappedLoadSpec());
+    Assertions.assertEquals(FINGERPRINT, request.fingerprint());
   }
 
   @Test
-  public void testAsRequestForKeepsDelegateWhenSegmentIsUnmoved()
+  public void testAsCloneRequestOfARequestIsItself()
   {
     final PartialLoadProfile request = PartialLoadProfile.forRequest(WRAPPED, FINGERPRINT);
-    Assertions.assertSame(request, request.asRequestFor(segmentWithLoadSpec(ORIGINAL_DELEGATE)));
-  }
-
-  @Test
-  public void testAsRequestForKeepsDelegateWhenSegmentHasNoLoadSpec()
-  {
-    // Nothing better to point the wrapper at, so the existing delegate rides through rather than being replaced by an
-    // empty one the historical would reject.
-    final PartialLoadProfile loaded = PartialLoadProfile.forLoaded(WRAPPED, FINGERPRINT, 12345L);
-
-    final PartialLoadProfile request = loaded.asRequestFor(segmentWithLoadSpec(null));
-
-    Assertions.assertEquals(ORIGINAL_DELEGATE, request.wrappedLoadSpec().get("delegate"));
-    Assertions.assertNull(request.loadedBytes());
+    Assertions.assertSame(request, request.asCloneRequest());
   }
 
   @Test
@@ -190,14 +164,5 @@ public class PartialLoadProfileTest
     // Different fingerprint ⇒ different profile, no sharing.
     PartialLoadProfile pd = PartialLoadProfile.forLoaded(WRAPPED, "v1:differentfingerprint", 12345L);
     Assertions.assertNotSame(pa, pd);
-  }
-
-  private static DataSegment segmentWithLoadSpec(@Nullable Map<String, Object> loadSpec)
-  {
-    return DataSegment.builder(SegmentId.of("wiki", Intervals.of("2025/2026"), "v1", 0))
-                      .shardSpec(new NumberedShardSpec(0, 1))
-                      .loadSpec(loadSpec)
-                      .size(100L)
-                      .build();
   }
 }

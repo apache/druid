@@ -578,6 +578,33 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   }
 
   @Test
+  void testFullLoadRequestFailsWhenTheInfoFileCannotBeRewritten() throws Exception
+  {
+    // The release has to reach disk or not happen at all: an unwrapped request announces as a full load either way, so
+    // a rule released only in memory would leave the coordinator recording a replica with no profile while a restart
+    // reinstates the rule. Failing the load instead sends the historical down its drop path, which cleans both up.
+    manager = makeManager(true, true);
+    manager.load(partialWrapperSegment(List.of(AGG_BUNDLE)));
+
+    final File infoDir = new File(cacheRoot, "info_dir");
+    Assertions.assertTrue(infoDir.setReadOnly(), "test setup must be able to make the info dir read-only");
+    try {
+      Assertions.assertThrows(
+          SegmentLoadingException.class,
+          () -> manager.load(plainSegment())
+      );
+      Assertions.assertEquals(
+          FINGERPRINT,
+          manager.getRuleFingerprintForSegment(SEGMENT_ID),
+          "the rule must still be applied when the release could not be persisted"
+      );
+    }
+    finally {
+      Assertions.assertTrue(infoDir.setWritable(true), "test teardown must restore write permission");
+    }
+  }
+
+  @Test
   void testRestartAfterFullLoadRequestDoesNotReinstateRule() throws Exception
   {
     // The released rule has to stay released across a restart: bootstrap reads the rewritten info file, so it restores
