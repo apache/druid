@@ -568,8 +568,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                         .setGranularity(Granularities.ALL)
                                         .setDimFilter(equality("dim2", "abc", ColumnType.STRING))
                                         .setDimensions(dimensions(
-                                            new DefaultDimensionSpec("dim1", "d0"),
-                                            new DefaultDimensionSpec("dim2", "d1")
+                                            new DefaultDimensionSpec("dim1", "d0")
                                         ))
                                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                                         .setPostAggregatorSpecs(
