@@ -64,7 +64,8 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     /**
      * Reports {@link SegmentAnalysis#getContainers()}: per-container on-disk byte sizes. Only populated for segments
      * written in the V10 file format ({@code IndexMergerV10}); pre-V10 segments report {@code null} here, same as
-     * any other analysis type applied to a segment that predates it.
+     * any other analysis type applied to a segment that predates it. Only counts containers in the segment's
+     * entry-point file; a bundle whose data spilled into an attached external file is undercounted.
      */
     CONTAINERSIZE;
 

@@ -299,6 +299,11 @@ public class PartialQueryableIndex implements QueryableIndex
     return ordering;
   }
 
+  /**
+   * Doesn't include containers from any external mapper {@link #fileMapper} may have attached (see
+   * {@link PartialSegmentFileMapperV10}) — those aren't reflected in {@link #metadata}, so a bundle whose data
+   * spilled into an external file will be undercounted here.
+   */
   @Nullable
   @Override
   public List<SegmentFileContainerMetadata> getFileContainers()

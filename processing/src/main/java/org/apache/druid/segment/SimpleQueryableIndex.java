@@ -42,6 +42,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.file.SegmentFileContainerMetadata;
 import org.apache.druid.segment.file.SegmentFileMapper;
+import org.apache.druid.segment.file.SegmentFileMapperV10;
 import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.Projections;
@@ -335,6 +336,11 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     return fileMapper;
   }
 
+  /**
+   * Doesn't include containers from any external mapper {@link #fileMapper} may have attached (see
+   * {@link SegmentFileMapperV10}) — those aren't reflected in {@link SegmentFileMetadata#getContainers()} of the
+   * entry-point mapper, so a bundle whose data spilled into an external file will be undercounted here.
+   */
   @Override
   @Nullable
   public List<SegmentFileContainerMetadata> getFileContainers()
@@ -346,9 +352,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   @Override
   public void close()
   {
-    if (fileMapper != null) {
-      fileMapper.close();
-    }
+    fileMapper.close();
   }
 
   @Override

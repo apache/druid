@@ -63,6 +63,27 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   private final Boolean rollup;
   private final List<ContainerAnalysis> containers;
 
+  /**
+   * Retained for binary compatibility with code compiled against the pre-{@link ContainerAnalysis} constructor.
+   * New callers should use {@link Builder}.
+   */
+  @Deprecated
+  public SegmentAnalysis(
+      String id,
+      List<Interval> interval,
+      LinkedHashMap<String, ColumnAnalysis> columns,
+      long size,
+      long numRows,
+      Map<String, AggregatorFactory> aggregators,
+      Map<String, AggregateProjectionMetadata> projections,
+      TimestampSpec timestampSpec,
+      Granularity queryGranularity,
+      Boolean rollup
+  )
+  {
+    this(id, interval, columns, size, numRows, aggregators, projections, timestampSpec, queryGranularity, rollup, null);
+  }
+
   @JsonCreator
   SegmentAnalysis(
       @JsonProperty("id") String id,
@@ -271,6 +292,15 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       return this;
     }
 
+    /**
+     * Retained for binary compatibility with code compiled against the pre-{@link ContainerAnalysis} signature.
+     */
+    @Deprecated
+    public Builder size(int size)
+    {
+      return size((long) size);
+    }
+
     public Builder numRows(long numRows)
     {
       if (this.numRows.isEmpty()) {
@@ -279,6 +309,15 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
         throw new IllegalStateException("NumRows is already set: " + this.numRows.get());
       }
       return this;
+    }
+
+    /**
+     * Retained for binary compatibility with code compiled against the pre-{@link ContainerAnalysis} signature.
+     */
+    @Deprecated
+    public Builder numRows(int numRows)
+    {
+      return numRows((long) numRows);
     }
 
     public Builder rollup(@Nullable Boolean rollup)
@@ -292,6 +331,15 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
         throw new IllegalStateException("Rollup is already set: " + this.rollup.get());
       }
       return this;
+    }
+
+    /**
+     * Retained for binary compatibility with code compiled against the pre-{@link ContainerAnalysis} signature.
+     */
+    @Deprecated
+    public Builder rollup(boolean rollup)
+    {
+      return rollup(Boolean.valueOf(rollup));
     }
 
     public Builder interval(Interval interval)
