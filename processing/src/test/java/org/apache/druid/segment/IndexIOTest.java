@@ -247,9 +247,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
         .build();
   }
 
-  @ParameterizedTest(
-      name = "[{index}] schema={0}, rows={1}, dimensions={2}"
-  )
+  @ParameterizedTest
   @MethodSource("constructionFeeder")
   public void testRowValidatorEquals(
       Collection<Map<String, Object>> events1,
