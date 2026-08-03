@@ -1067,7 +1067,101 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       final String outputPath
   )
   {
-    exportTableWithJdbc(tableName, outputPath);
+    exportTable(tableName, outputPath, null);
+  }
+
+  /**
+   * Exports a table to a CSV file, emitting the given columns in the given order.
+   *
+   * @param columns columns to export in the desired order, or null to export all columns in the
+   *                order reported by the database
+   */
+  public void exportTable(
+      final String tableName,
+      final String outputPath,
+      @Nullable final List<String> columns
+  )
+  {
+    exportTableWithJdbc(tableName, outputPath, columns);
+  }
+
+  /**
+   * Returns the columns of the given table, in the order reported by the database.
+   * Returns an empty list if the table does not exist or the metadata cannot be read.
+   *
+   * The lookup is scoped to the schema of the current connection, which is the schema an unqualified
+   * table name resolves to, and the table name is escaped so that it is matched literally rather than
+   * as a {@link DatabaseMetaData#getColumns} search pattern.
+   */
+  public List<String> getTableColumns(final String tableName)
+  {
+    return getDBI().withHandle(handle -> {
+      final List<String> columns = new ArrayList<>();
+      try {
+        if (tableExists(handle, tableName)) {
+          final Connection conn = handle.getConnection();
+          final DatabaseMetaData dbMetaData = conn.getMetaData();
+          try (ResultSet rs = dbMetaData.getColumns(
+              null,
+              escapeMetaDataSearchString(dbMetaData, conn.getSchema()),
+              escapeMetaDataSearchString(dbMetaData, tableName),
+              null
+          )) {
+            while (rs.next()) {
+              columns.add(rs.getString("COLUMN_NAME"));
+            }
+          }
+        }
+      }
+      catch (SQLException e) {
+        log.warn(e, "Could not read columns of table[%s].", tableName);
+      }
+      return columns;
+    });
+  }
+
+  /**
+   * Escapes the wildcard characters of a {@link DatabaseMetaData} search pattern, so that the given
+   * value is matched literally. Returns null if the given value is null, which matches any value.
+   */
+  @Nullable
+  private static String escapeMetaDataSearchString(
+      final DatabaseMetaData dbMetaData,
+      @Nullable final String value
+  ) throws SQLException
+  {
+    final String escape = dbMetaData.getSearchStringEscape();
+    if (value == null || escape == null || escape.isEmpty()) {
+      return value;
+    }
+    final StringBuilder escaped = new StringBuilder(value.length());
+    for (int i = 0; i < value.length(); i++) {
+      final char c = value.charAt(i);
+      if (c == '_' || c == '%' || c == escape.charAt(0)) {
+        escaped.append(escape);
+      }
+      escaped.append(c);
+    }
+    return escaped.toString();
+  }
+
+  /**
+   * Builds the select list for an export query, quoting each column with the database's
+   * identifier quote string so that reserved words such as "end" are handled correctly.
+   */
+  protected String makeExportSelectList(final Connection conn, final List<String> columns) throws SQLException
+  {
+    String quote = conn.getMetaData().getIdentifierQuoteString();
+    if (quote == null || " ".equals(quote)) {
+      quote = "";
+    }
+    final String quoteString = quote;
+    return columns.stream()
+                  .map(column -> quoteString.isEmpty()
+                                 ? column
+                                 : quoteString + StringUtils.replace(column, quoteString, quoteString + quoteString)
+                                   + quoteString)
+                  .collect(Collectors.joining(","));
   }
 
   /**
@@ -1075,10 +1169,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    * Binary columns are hex-encoded and booleans are written as true/false strings.
    * Subclasses may override {@link #exportTable} with a database-specific implementation
    * while this method remains available for testing or fallback.
+   *
+   * @param columns columns to export in the desired order, or null to export all columns
    */
   protected void exportTableWithJdbc(
       final String tableName,
-      final String outputPath
+      final String outputPath,
+      @Nullable final List<String> columns
   )
   {
     // Use a transaction so that the connection has autoCommit=false.
@@ -1092,7 +1189,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 if (fetchSize > 0) {
                   stmt.setFetchSize(fetchSize);
                 }
-                try (ResultSet rs = stmt.executeQuery(StringUtils.format("SELECT * FROM %s", tableName));
+                final String selectList =
+                    columns == null || columns.isEmpty() ? "*" : makeExportSelectList(conn, columns);
+                try (ResultSet rs = stmt.executeQuery(
+                         StringUtils.format("SELECT %s FROM %s", selectList, tableName)
+                     );
                      FileOutputStream fos = new FileOutputStream(outputPath);
                      OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
                   final ResultSetMetaData meta = rs.getMetaData();
