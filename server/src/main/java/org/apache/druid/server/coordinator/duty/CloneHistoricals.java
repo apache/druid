@@ -192,9 +192,12 @@ public class CloneHistoricals implements CoordinatorDuty
    * the info file, so the next coordinator run sees a clone that is missing the segment and queues the ordinary full
    * load.
    * <p>
-   * A partial load that is still queued is cancelled and replaced by the full load within this run, since nothing has
-   * been applied on the historical yet. If the request has already gone out, the cancel fails and that load runs to
-   * completion; the drop path then converts the replica on a later run.
+   * A queued partial load is cancelled first, and then what the target is actually <em>serving</em> decides the rest.
+   * Cancelling a load says nothing about that: a partial load can be queued on top of a replica the target already
+   * serves under a different profile, which is how the historical is asked to fill in missing parts in place. So a
+   * served replica still has to be dropped, and only a target that serves nothing can take the full load right away.
+   * When the cancel fails because the request has already gone to the historical, that load runs to completion and a
+   * later run converts the replica it produces.
    */
   private void convertCloneReplicaToFullLoad(
       DataSegment segment,
@@ -203,11 +206,12 @@ public class CloneHistoricals implements CoordinatorDuty
   )
   {
     if (targetServer.isLoadingSegment(segment)) {
-      if (targetServer.cancelOperation(SegmentAction.LOAD, segment)) {
-        loadSegmentOnTargetServer(segment, null, targetServer, params);
-      }
-    } else {
+      targetServer.cancelOperation(SegmentAction.LOAD, segment);
+    }
+    if (targetServer.isServingSegment(segment)) {
       dropSegmentFromTargetServer(segment, targetServer, params);
+    } else {
+      loadSegmentOnTargetServer(segment, null, targetServer, params);
     }
   }
 

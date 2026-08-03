@@ -181,6 +181,39 @@ public class CloneHistoricalsTest
   }
 
   @Test
+  public void testCloneServingAPartialReplicaIsDroppedEvenWithAReloadQueued()
+  {
+    // A partial load can be queued on top of a replica the clone already serves under a different profile, which is
+    // how the historical is asked to fill in the missing parts in place. Cancelling that queued load leaves the served
+    // replica and its rule behind, so the conversion still has to go through a drop.
+    final DataSegment segment = createSegment();
+    final ServerHolder source = createServer(SOURCE_HOST, segment, null);
+
+    final TestLoadQueuePeon targetPeon = new TestLoadQueuePeon();
+    targetPeon.addInFlightHolder(new SegmentHolder(
+        segment,
+        SegmentAction.LOAD,
+        requestProfile(FP_USERS, "users"),
+        Duration.standardSeconds(10),
+        null
+    ));
+    final DruidServer targetDruidServer = createDruidServer(TARGET_HOST);
+    targetDruidServer.addDataSegment(segment, loadedProfile(FP_REVENUE, "revenue"));
+    final ServerHolder target = new ServerHolder(targetDruidServer.toImmutableDruidServer(), targetPeon);
+
+    runDuty(source, target, segment);
+
+    Assertions.assertTrue(
+        targetPeon.getSegmentsToDrop().contains(segment),
+        "The served partial replica must be dropped, not loaded over"
+    );
+    Assertions.assertTrue(
+        targetPeon.getSegmentsToLoad().isEmpty(),
+        "The queued reload must be cancelled and no full load queued while the replica is still served"
+    );
+  }
+
+  @Test
   public void testFullLoadSourceQueuesPlainLoadOnClone()
   {
     final DataSegment segment = createSegment();
