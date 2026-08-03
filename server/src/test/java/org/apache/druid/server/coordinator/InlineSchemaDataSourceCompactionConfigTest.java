@@ -32,6 +32,7 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -54,6 +55,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.List;
 
 public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullHandlingTest
 {
@@ -74,6 +76,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .builder()
         .forDataSource("dataSource")
         .withSkipOffsetFromLatest(new Period(3600))
+        .withSkipIntervals(List.of(Intervals.of("2024-02-15/2024-02-16")))
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -84,6 +87,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
     Assert.assertEquals(100_000_000_000_000L, fromJson.getInputSegmentSizeBytes());
     Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
+    Assert.assertEquals(config.getSkipIntervals(), fromJson.getSkipIntervals());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
     Assert.assertEquals(config.getGranularitySpec(), fromJson.getGranularitySpec());
@@ -99,6 +103,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .withInputSegmentSizeBytes(500L)
         .withMaxRowsPerSegment(30)
         .withSkipOffsetFromLatest(new Period(3600))
+        .withSkipIntervals(List.of(Intervals.of("2024-01-01/2024-01-02")))
         .withEngine(CompactionEngine.MSQ)
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
@@ -123,6 +128,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
         .withSkipOffsetFromLatest(new Period(3600))
+        .withSkipIntervals(List.of(Intervals.of("2024-03-01/2024-03-02")))
         .withEngine(CompactionEngine.NATIVE)
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
@@ -148,6 +154,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .withInputSegmentSizeBytes(500L)
         .withMaxRowsPerSegment(10000)
         .withSkipOffsetFromLatest(new Period(3600))
+        .withSkipIntervals(List.of(Intervals.of("2024-04-01/2024-04-02")))
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -248,6 +255,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
         .withSkipOffsetFromLatest(new Period(3600))
+        .withSkipIntervals(List.of(Intervals.of("2024-01-15/2024-01-16")))
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
@@ -272,6 +280,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
         .withSkipOffsetFromLatest(new Period(3600))
+        .withSkipIntervals(List.of(Intervals.of("2024-01-15/2024-01-16")))
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(null, Granularities.YEAR, null))
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
@@ -299,6 +308,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
         .withSkipOffsetFromLatest(new Period(3600))
+        .withSkipIntervals(List.of(Intervals.of("2024-01-15/2024-01-16")))
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -322,6 +332,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
         .withSkipOffsetFromLatest(new Period(3600))
+        .withSkipIntervals(List.of(Intervals.of("2024-01-15/2024-01-16")))
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(null, null, null))
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
@@ -346,6 +357,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
         .withSkipOffsetFromLatest(new Period(3600))
+        .withSkipIntervals(List.of(Intervals.of("2024-01-15/2024-01-16")))
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(null, null, true))
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
@@ -373,6 +385,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
         .withSkipOffsetFromLatest(new Period(3600))
+        .withSkipIntervals(List.of(Intervals.of("2024-01-15/2024-01-16")))
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
         .withIoConfig(new UserCompactionTaskIOConfig(true))
         .withTaskContext(ImmutableMap.of("key", "val"))
@@ -399,6 +412,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
         .withSkipOffsetFromLatest(new Period(3600))
+        .withSkipIntervals(List.of(Intervals.of("2024-01-15/2024-01-16")))
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
         .withIoConfig(new UserCompactionTaskIOConfig(null))
         .withTaskContext(ImmutableMap.of("key", "val"))
@@ -425,6 +439,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
         .withSkipOffsetFromLatest(new Period(3600))
+        .withSkipIntervals(List.of(Intervals.of("2024-01-15/2024-01-16")))
         .withDimensionsSpec(
             new UserCompactionTaskDimensionsConfig(
                 DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))
@@ -453,6 +468,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
         .withSkipOffsetFromLatest(new Period(3600))
+        .withSkipIntervals(List.of(Intervals.of("2024-01-15/2024-01-16")))
         .withTransformSpec(
             new CompactionTransformSpec(
                 new SelectorDimFilter("dim1", "foo", null),
@@ -489,6 +505,7 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
         .withSkipOffsetFromLatest(new Period(3600))
+        .withSkipIntervals(List.of(Intervals.of("2024-01-15/2024-01-16")))
         .withMetricsSpec(new AggregatorFactory[]{new CountAggregatorFactory("cnt")})
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();

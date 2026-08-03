@@ -2151,7 +2151,7 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testPropertiesTable_withInterruptedException() throws Exception
+  public void testPropertiesTable_withInterruptedException()
   {
     SystemServerPropertiesTable propertiesTable = new SystemServerPropertiesTable(
         druidNodeDiscoveryProvider,
