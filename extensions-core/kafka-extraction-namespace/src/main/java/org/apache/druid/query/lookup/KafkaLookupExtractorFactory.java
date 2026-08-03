@@ -265,10 +265,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         }
       }
       catch (InterruptedException | ExecutionException | TimeoutException e) {
-        executorService.shutdown();
-        future.cancel(true);
         LOG.error(e, "Failed to start kafka extraction factory");
-        cacheHandler.close();
+        shutdownExecutorAndCloseCache();
         return false;
       }
 
@@ -286,13 +284,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         return !started.get();
       }
       started.set(false);
-      executorService.shutdown();
-
-      final ListenableFuture<?> future = this.future;
-      if (future != null) {
-        future.cancel(true);
-      }
-      cacheHandler.close();
+      shutdownExecutorAndCloseCache();
       return true;
     }
   }
@@ -393,6 +385,32 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   ListenableFuture<?> getFuture()
   {
     return future;
+  }
+
+  private void shutdownExecutorAndCloseCache()
+  {
+    executorService.shutdown();
+
+    final ListenableFuture<?> future = this.future;
+    if (future != null) {
+      future.cancel(true);
+    }
+
+    boolean interrupted = false;
+    while (!executorService.isTerminated()) {
+      try {
+        executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+      }
+      catch (InterruptedException e) {
+        interrupted = true;
+      }
+    }
+
+    cacheHandler.close();
+
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   private static boolean hasReachedEndOffsets(
