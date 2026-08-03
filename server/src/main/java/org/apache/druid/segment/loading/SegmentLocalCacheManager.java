@@ -465,13 +465,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   /**
-   * Write the info file for a partial-load segment, overwriting any existing content atomically. Distinct from
-   * {@link #storeInfoFile} which skips the write when the file already exists, for partial segments we must
-   * unconditionally rewrite so an incoming rule swap (new {@code fingerprint}/{@code delegate} inside the
-   * wrapped load spec) reaches disk. Otherwise bootstrap after a restart would restore the segment using the
-   * prior wrapper and re-announce the old rule until the coordinator resyncs.
+   * Write the info file for a segment, overwriting any existing content atomically. Distinct from
+   * {@link #storeInfoFile}, which skips the write when the file already exists: a partial-load transition must reach
+   * disk unconditionally, whether it is a rule swap (new {@code fingerprint}/{@code delegate} inside the wrapped load
+   * spec) or a return to a regular full load (no wrapper at all). Otherwise bootstrap after a restart would restore
+   * the segment using the prior wrapper and re-announce the old rule until the coordinator resyncs.
    */
-  private void writePartialInfoFile(DataSegment segment) throws IOException
+  private void rewriteInfoFile(DataSegment segment) throws IOException
   {
     final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
     FileUtils.mkdirp(getEffectiveInfoDir());
@@ -903,7 +903,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               location.getPath()
           );
         }
-        writePartialInfoFile(dataSegment);
+        rewriteInfoFile(dataSegment);
         partial.setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
         return new ReservedPartial(partial, location, hold);
       }
@@ -1041,7 +1041,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           // branch. On the find-existing branch the info file on disk still carries the PRIOR rule's wrapped
           // load spec, so a rule swap here would apply in memory only. Rewrite unconditionally before mount.
           try {
-            writePartialInfoFile(dataSegment);
+            rewriteInfoFile(dataSegment);
           }
           catch (IOException e) {
             throw new SegmentLoadingException(
@@ -1338,15 +1338,23 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         return loadPartial(dataSegment);
       }
       // virtual storage doesn't do anything with loading immediately, but check to see if the segment is already cached
-      // and if so, clear out the onUnmount action
+      // and if so, clear out the onUnmount action. An unwrapped request for a segment currently held under a
+      // partial-load rule is the coordinator asking for the whole segment again, so release the rule as well.
+      final boolean isFullLoadRequest = !PartialLoadSpec.detectPartialLoadSpec(dataSegment.getLoadSpec());
       final ReferenceCountingLock lock = lock(dataSegment);
       synchronized (lock) {
         try {
           final SegmentCacheEntryIdentifier cacheEntryIdentifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
           for (StorageLocation location : locations) {
             final SegmentCacheEntry cacheEntry = location.getCacheEntry(cacheEntryIdentifier);
-            if (cacheEntry != null) {
-              cacheEntry.setOnUnmount(null);
+            if (cacheEntry == null) {
+              continue;
+            }
+            cacheEntry.setOnUnmount(null);
+            if (isFullLoadRequest
+                && cacheEntry instanceof PartialSegmentMetadataCacheEntry partial
+                && partial.isRuleHeld()) {
+              releaseRuleForFullLoad(dataSegment, partial);
             }
           }
         }
@@ -1523,6 +1531,47 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       finally {
         unlock(segment, lock);
       }
+    }
+  }
+
+  /**
+   * Releases the partial-load rule applied to {@code dataSegment} in response to an unwrapped load request: the
+   * coordinator has stopped asking for parts of the segment, so the metadata entry and the rule's bundles are unpinned.
+   * That is what a full load means under virtual storage — nothing is pinned, each part is fetched on demand — and
+   * reclaim of the partial state on disk is left to eviction, as it is for {@link #drop}.
+   * <p>
+   * The rule is cleared before the info file is rewritten because clearing cannot fail, so the in-memory state and the
+   * load announcement come out right either way. A failed rewrite leaves the info file describing the released rule,
+   * which a restart reapplies and re-announces until the coordinator's next load request converts the segment again.
+   * <p>
+   * Callers must hold this segment's {@link #lock(DataSegment)}, which is the external lock that
+   * {@link PartialSegmentMetadataCacheEntry#clearRule} requires to be serialized against
+   * {@link PartialSegmentMetadataCacheEntry#applyRule}.
+   */
+  private void releaseRuleForFullLoad(DataSegment dataSegment, PartialSegmentMetadataCacheEntry partial)
+  {
+    // Snapshot both before clearRule zeroes out the rule state so the log can describe what was released.
+    final String priorFingerprint = partial.getRuleFingerprint();
+    final long priorRealizedBytes = partial.getRealizedBytes();
+    partial.clearRule();
+    log.info(
+        "Released partial-load rule[fingerprint=%s, realizedBytes=%d] for segment[%s]; it is a regular full load now.",
+        priorFingerprint,
+        priorRealizedBytes,
+        dataSegment.getId()
+    );
+    try {
+      rewriteInfoFile(dataSegment);
+    }
+    catch (IOException e) {
+      log.warn(
+          e,
+          "Failed to rewrite info file for segment[%s] after releasing partial-load rule[fingerprint=%s]. The rule is "
+          + "released on this historical, but the info file still describes it, so a restart will reapply and "
+          + "re-announce it until the coordinator's next load request releases it again.",
+          dataSegment.getId(),
+          priorFingerprint
+      );
     }
   }
 

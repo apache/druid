@@ -51,9 +51,9 @@ import java.util.stream.Collectors;
  * Under a partial-load rule the source holds only part of a segment, so copying its load state means copying the
  * {@link PartialLoadProfile} it holds the segment under, not just the segment id. Replicas are therefore compared by
  * profile fingerprint: a clone whose replica was loaded under a different profile than the source's is re-loaded with
- * the source's profile. The one transition that is not a re-load is a clone going from partial back to full, which
- * takes a drop first (see {@link #convertCloneReplicaToFullLoad}). Clone targets are excluded from rule-driven
- * assignment ({@link DruidCluster#getManagedHistoricals()}), so this duty is the only thing that can correct them.
+ * the source's profile, including a source that has stopped loading partially, for which the clone is re-loaded
+ * without one. Clone targets are excluded from rule-driven assignment
+ * ({@link DruidCluster#getManagedHistoricals()}), so this duty is the only thing that can correct them.
  */
 public class CloneHistoricals implements CoordinatorDuty
 {
@@ -117,17 +117,11 @@ public class CloneHistoricals implements CoordinatorDuty
       // different parts of it.
       for (DataSegment segment : sourceProjectedSegments) {
         final PartialLoadProfile sourceProfile = sourceServer.getProjectedProfile(segment);
-        if (!targetProjectedSegments.contains(segment)) {
-          loadSegmentOnTargetServer(segment, sourceProfile, targetServer, params);
-          continue;
-        }
-        final PartialLoadProfile targetProfile = targetServer.getProjectedProfile(segment);
-        if (Objects.equals(fingerprintOf(sourceProfile), fingerprintOf(targetProfile))) {
-          continue;
-        }
-        if (sourceProfile == null) {
-          convertCloneReplicaToFullLoad(segment, targetServer, params);
-        } else {
+        if (!targetProjectedSegments.contains(segment)
+            || !Objects.equals(
+                fingerprintOf(sourceProfile),
+                fingerprintOf(targetServer.getProjectedProfile(segment))
+            )) {
           loadSegmentOnTargetServer(segment, sourceProfile, targetServer, params);
         }
       }
@@ -179,39 +173,6 @@ public class CloneHistoricals implements CoordinatorDuty
           rowKey.build(),
           1L
       );
-    }
-  }
-
-  /**
-   * Returns the clone target to a full load of {@code segment}, for when the source has stopped holding it partially.
-   * <p>
-   * A plain load request on top of the existing replica does not achieve this. A historical that receives an unwrapped
-   * load request for a segment it already holds under a partial-load rule keeps that rule applied: its holds go on
-   * pinning the parts the rule selected, and the segment's info file goes on describing a partial load, which the
-   * historical reapplies and re-announces on its next restart. Dropping the replica does release the rule and retire
-   * the info file, so the next coordinator run sees a clone that is missing the segment and queues the ordinary full
-   * load.
-   * <p>
-   * A queued partial load is cancelled first, and then what the target is actually <em>serving</em> decides the rest.
-   * Cancelling a load says nothing about that: a partial load can be queued on top of a replica the target already
-   * serves under a different profile, which is how the historical is asked to fill in missing parts in place. So a
-   * served replica still has to be dropped, and only a target that serves nothing can take the full load right away.
-   * When the cancel fails because the request has already gone to the historical, that load runs to completion and a
-   * later run converts the replica it produces.
-   */
-  private void convertCloneReplicaToFullLoad(
-      DataSegment segment,
-      ServerHolder targetServer,
-      DruidCoordinatorRuntimeParams params
-  )
-  {
-    if (targetServer.isLoadingSegment(segment)) {
-      targetServer.cancelOperation(SegmentAction.LOAD, segment);
-    }
-    if (targetServer.isServingSegment(segment)) {
-      dropSegmentFromTargetServer(segment, targetServer, params);
-    } else {
-      loadSegmentOnTargetServer(segment, null, targetServer, params);
     }
   }
 

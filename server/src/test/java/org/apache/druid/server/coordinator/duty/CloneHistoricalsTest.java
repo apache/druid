@@ -130,12 +130,11 @@ public class CloneHistoricalsTest
   }
 
   @Test
-  public void testClonePartialReplicaIsDroppedWhenSourceNoLongerLoadsPartially()
+  public void testCloneReloadsAsFullLoadWhenSourceNoLongerLoadsPartially()
   {
-    // Source moved off the partial-load rule and now holds the whole segment, so the clone has to follow it back to a
-    // full load. That takes a drop rather than a load on top: a historical asked to load a segment it already holds
-    // under a partial-load rule keeps the rule, its holds and its info file, so the clone would report a full replica
-    // while still holding only the rule's parts. The full load follows on the next run, once the replica is gone.
+    // Source moved off the partial-load rule and now holds the whole segment; the clone must follow it back. The
+    // request goes out with no profile even though the clone is already serving the segment: the historical releases
+    // the partial-load rule it holds the replica under when it receives an unwrapped load request.
     final DataSegment segment = createSegment();
     final ServerHolder source = createServer(SOURCE_HOST, segment, null);
     final ServerHolder target = createServer(TARGET_HOST, segment, loadedProfile(FP_REVENUE, "revenue"));
@@ -143,49 +142,22 @@ public class CloneHistoricalsTest
     runDuty(source, target, segment);
 
     Assertions.assertTrue(
-        peonOf(target).getSegmentsToDrop().contains(segment),
-        "Clone holding a partial replica must be dropped when the source stops loading partially"
+        peonOf(target).getSegmentsToLoad().contains(segment),
+        "Clone must be re-loaded when the source stops loading partially"
     );
-    Assertions.assertTrue(
-        peonOf(target).getSegmentsToLoad().isEmpty(),
-        "The full load has to wait for the drop to release the historical's partial-load rule"
-    );
-  }
-
-  @Test
-  public void testCloneWithInFlightPartialLoadIsSwitchedToAFullLoadInTheSameRun()
-  {
-    // Nothing has been applied on the historical while the partial load is still queued, so there is no rule to
-    // release: cancel that load and queue the full one right away instead of waiting for a drop.
-    final DataSegment segment = createSegment();
-    final ServerHolder source = createServer(SOURCE_HOST, segment, null);
-
-    final TestLoadQueuePeon targetPeon = new TestLoadQueuePeon();
-    targetPeon.addInFlightHolder(new SegmentHolder(
-        segment,
-        SegmentAction.LOAD,
-        requestProfile(FP_REVENUE, "revenue"),
-        Duration.standardSeconds(10),
-        null
-    ));
-    final ServerHolder target = new ServerHolder(createDruidServer(TARGET_HOST).toImmutableDruidServer(), targetPeon);
-
-    runDuty(source, target, segment);
-
-    Assertions.assertTrue(targetPeon.getSegmentsToLoad().contains(segment));
     Assertions.assertNull(
-        targetPeon.getProfileFor(segment),
-        "The cancelled partial load must be replaced by a plain full load"
+        peonOf(target).getProfileFor(segment),
+        "A full-load source must not thread a profile to the clone"
     );
-    Assertions.assertTrue(targetPeon.getSegmentsToDrop().isEmpty());
+    Assertions.assertTrue(peonOf(target).getSegmentsToDrop().isEmpty());
   }
 
   @Test
-  public void testCloneServingAPartialReplicaIsDroppedEvenWithAReloadQueued()
+  public void testCloneWithAPartialLoadStillQueuedIsConvertedOnALaterRun()
   {
-    // A partial load can be queued on top of a replica the clone already serves under a different profile, which is
-    // how the historical is asked to fill in the missing parts in place. Cancelling that queued load leaves the served
-    // replica and its rule behind, so the conversion still has to go through a drop.
+    // A partial load can be queued on top of a replica the clone already serves under a different profile, which is how
+    // the historical is asked to fill in the missing parts in place. A segment with an operation already queued cannot
+    // take another one, so the queued load is left to complete and the next run converts the replica it produces.
     final DataSegment segment = createSegment();
     final ServerHolder source = createServer(SOURCE_HOST, segment, null);
 
@@ -203,14 +175,12 @@ public class CloneHistoricalsTest
 
     runDuty(source, target, segment);
 
-    Assertions.assertTrue(
-        targetPeon.getSegmentsToDrop().contains(segment),
-        "The served partial replica must be dropped, not loaded over"
+    Assertions.assertEquals(
+        requestProfile(FP_USERS, "users"),
+        targetPeon.getProfileFor(segment),
+        "The queued partial load must be left alone"
     );
-    Assertions.assertTrue(
-        targetPeon.getSegmentsToLoad().isEmpty(),
-        "The queued reload must be cancelled and no full load queued while the replica is still served"
-    );
+    Assertions.assertTrue(targetPeon.getSegmentsToDrop().isEmpty());
   }
 
   @Test
