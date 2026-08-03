@@ -136,6 +136,7 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
           optimalTaskIdleRatio: params.optimalTaskIdleRatio,
           lagWeight: params.lagWeight,
           idleWeight: params.idleWeight,
+          criticalLagThreshold: params.criticalLag,
         },
         {
           params: {

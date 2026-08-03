@@ -413,28 +413,18 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         emitMetric(getMetricBuilder().setMetric(OPTIMAL_LAG_COST_METRIC, optimalCost.lagCost()));
         emitMetric(getMetricBuilder().setMetric(OPTIMAL_IDLE_COST_METRIC, optimalCost.idleCost()));
       }
-
-      if (!criticalLag) {
-        final double costDropPercent
-            = 100.0 * (currentCost.totalCost() - optimalCost.totalCost()) / currentCost.totalCost();
-        if (costDropPercent < config.getMinCostDropPercentForScaling()) {
-          log.info(
-              "Skipping scaling since cost drop percent[%.2f] is less than required minCostDropPercentForScaling[%d]",
-              costDropPercent, config.getMinCostDropPercentForScaling()
-          );
-          return currentTaskCount;
-        }
-      }
     }
 
-    final double costDropPercent
-        = 100.0 * (currentCost.totalCost() - optimalCost.totalCost()) / currentCost.totalCost();
-    if (costDropPercent < config.getMinCostDropPercentForScaling()) {
-      log.info(
-          "Skipping scaling since cost drop percent[%.2f] is less than required minCostDropPercentForScaling[%d]",
-          costDropPercent, config.getMinCostDropPercentForScaling()
-      );
-      return currentTaskCount;
+    if (!criticalLag) {
+      final double costDropPercent
+          = 100.0 * (currentCost.totalCost() - optimalCost.totalCost()) / currentCost.totalCost();
+      if (costDropPercent < config.getMinCostDropPercentForScaling()) {
+        log.info(
+            "Skipping scaling since cost drop percent[%.2f] is less than required minCostDropPercentForScaling[%d]",
+            costDropPercent, config.getMinCostDropPercentForScaling()
+        );
+        return currentTaskCount;
+      }
     }
 
     // Scale-up is applied eagerly; scale-down may be deferred by computeTaskCountForScaleAction().
