@@ -28,20 +28,29 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Bytes;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.lookup.namespace.cache.MockNamespaceExtractionCacheManager;
 import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
+import org.apache.kafka.common.TopicPartition;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class KafkaLookupExtractorFactoryTest
@@ -247,7 +256,11 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testStartStop()
   {
-    Consumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+    final TopicPartition topicPartition = new TopicPartition(TOPIC, 0);
+    kafkaConsumer.updateBeginningOffsets(ImmutableMap.of(topicPartition, 0L));
+    kafkaConsumer.updateEndOffsets(ImmutableMap.of(topicPartition, 0L));
+    kafkaConsumer.schedulePollTask(() -> kafkaConsumer.rebalance(Collections.singletonList(topicPartition)));
     EasyMock.replay(cacheManager);
 
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
@@ -268,6 +281,72 @@ public class KafkaLookupExtractorFactoryTest
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
     Assert.assertTrue(factory.getFuture().isDone());
+    EasyMock.verify(cacheManager);
+  }
+
+  @Test
+  public void testStartWaitsForInitialEndOffsets() throws Exception
+  {
+    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+    final TopicPartition topicPartition = new TopicPartition(TOPIC, 0);
+    final CountDownLatch firstPollComplete = new CountDownLatch(1);
+    final CountDownLatch allowCatchUp = new CountDownLatch(1);
+
+    kafkaConsumer.schedulePollTask(() -> {
+      kafkaConsumer.updateBeginningOffsets(ImmutableMap.of(topicPartition, 0L));
+      kafkaConsumer.updateEndOffsets(ImmutableMap.of(topicPartition, 2L));
+      kafkaConsumer.rebalance(Collections.singletonList(topicPartition));
+      kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 0L, "key-0", "value-0"));
+      firstPollComplete.countDown();
+    });
+    kafkaConsumer.schedulePollTask(() -> {
+      try {
+        if (!allowCatchUp.await(10, TimeUnit.SECONDS)) {
+          throw new RuntimeException("Timed out waiting to finish the startup catch-up");
+        }
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
+      kafkaConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 1L, "key-1", "value-1"));
+    });
+
+    EasyMock.replay(cacheManager);
+    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
+        cacheManager,
+        TOPIC,
+        ImmutableMap.of("bootstrap.servers", "localhost"),
+        10_000L,
+        false
+    )
+    {
+      @Override
+      Consumer<String, String> getConsumer()
+      {
+        return kafkaConsumer;
+      }
+    };
+    final ExecutorService startExecutor = Execs.singleThreaded("kafka-lookup-start-test");
+    final Future<Boolean> startFuture = startExecutor.submit(factory::start);
+
+    try {
+      Assert.assertTrue(firstPollComplete.await(10, TimeUnit.SECONDS));
+      Assert.assertThrows(
+          "start returned before the consumer reached its initial end offsets",
+          TimeoutException.class,
+          () -> startFuture.get(100, TimeUnit.MILLISECONDS)
+      );
+      allowCatchUp.countDown();
+      Assert.assertTrue(startFuture.get(10, TimeUnit.SECONDS));
+      Assert.assertEquals("value-0", factory.get().apply("key-0"));
+      Assert.assertEquals("value-1", factory.get().apply("key-1"));
+    }
+    finally {
+      allowCatchUp.countDown();
+      factory.close();
+      startExecutor.shutdownNow();
+    }
     EasyMock.verify(cacheManager);
   }
 
@@ -329,7 +408,11 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testStartStartStopStop()
   {
-    Consumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+    final TopicPartition topicPartition = new TopicPartition(TOPIC, 0);
+    kafkaConsumer.updateBeginningOffsets(ImmutableMap.of(topicPartition, 0L));
+    kafkaConsumer.updateEndOffsets(ImmutableMap.of(topicPartition, 0L));
+    kafkaConsumer.schedulePollTask(() -> kafkaConsumer.rebalance(Collections.singletonList(topicPartition)));
     EasyMock.replay(cacheManager);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
