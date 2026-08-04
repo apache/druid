@@ -43,6 +43,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -66,7 +67,7 @@ import static org.junit.Assert.assertTrue;
  * Test of validation and serialization of the catalog table definitions.
  */
 @Category(CatalogTest.class)
-public class DatasourceTableTest
+public class DatasourceTableTest extends InitializedNullHandlingTest
 {
   private static final Logger LOG = new Logger(DatasourceTableTest.class);
 
@@ -446,6 +447,39 @@ public class DatasourceTableTest
           .column("foo", Columns.LONG)
           .buildSpec();
       expectValidationFails(spec);
+    }
+
+    // A declared type must parse to a Druid type; no type at all remains legal (covered above).
+    {
+      TableSpec spec = builder.copy()
+          .column("foo", "FOO")
+          .buildSpec();
+      DruidException e = assertThrows(DruidException.class, () -> registry.resolve(spec).validate());
+      assertTrue(e.getMessage().contains("Column [foo] has an unrecognized type [FOO]"));
+    }
+    {
+      // A parameterized type missing its closing bracket is malformed, and must not silently pass as undeclared.
+      TableSpec spec = builder.copy()
+          .column("foo", "COMPLEX<json")
+          .buildSpec();
+      DruidException e = assertThrows(DruidException.class, () -> registry.resolve(spec).validate());
+      assertTrue(e.getMessage().contains("Column [foo] has an unrecognized type [COMPLEX<json]"));
+    }
+    {
+      // An unrecognized array element type is an invalid input, not an internal error.
+      TableSpec spec = builder.copy()
+          .column("foo", "ARRAY<FOO>")
+          .buildSpec();
+      DruidException e = assertThrows(DruidException.class, () -> registry.resolve(spec).validate());
+      assertTrue(e.getMessage().contains("Column [foo] has an unrecognized type [ARRAY<FOO>]"));
+    }
+    {
+      // Parse-level validation only: any well-formed complex type is accepted at the logical layer, whether or not
+      // its serde is registered on this server.
+      TableSpec spec = builder.copy()
+          .column("foo", "COMPLEX<thetaSketch>")
+          .buildSpec();
+      expectValidationSucceeds(spec);
     }
   }
 

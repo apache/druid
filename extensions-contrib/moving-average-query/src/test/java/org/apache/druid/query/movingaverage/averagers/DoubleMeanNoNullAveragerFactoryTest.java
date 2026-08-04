@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsInstanceOf;
-import org.junit.Assert;
 import org.junit.Test;
 
 public class DoubleMeanNoNullAveragerFactoryTest
@@ -29,6 +29,6 @@ public class DoubleMeanNoNullAveragerFactoryTest
   public void testCreateAverager()
   {
     AveragerFactory<?, ?> fac = new DoubleMeanNoNullAveragerFactory("test", 5, 1, "field");
-    Assert.assertThat(fac.createAverager(), IsInstanceOf.instanceOf(DoubleMeanNoNullAverager.class));
+    MatcherAssert.assertThat(fac.createAverager(), IsInstanceOf.instanceOf(DoubleMeanNoNullAverager.class));
   }
 }

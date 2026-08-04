@@ -41,7 +41,7 @@
     <dependency>
       <groupId>com.datadoghq</groupId>
       <artifactId>java-dogstatsd-client</artifactId>
-      <version>4.0.0</version>
+      <version>4.4.5</version>
     </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>

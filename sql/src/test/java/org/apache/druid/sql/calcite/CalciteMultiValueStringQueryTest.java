@@ -1072,9 +1072,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringToMVOfConstantGroupedBy()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
     testBuilder()
         .sql("SELECT m1, STRING_TO_MV('a,b', ',') AS mv FROM druid.numfoo GROUP BY 1, 2")
         .expectedQuery(
@@ -1082,30 +1079,23 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(
-                            expressionVirtualColumn("v0", "string_to_array('a,b',',')", ColumnType.STRING)
-                        )
                         .setDimensions(dimensions(
-                            new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT),
-                            new DefaultDimensionSpec("v0", "d1", ColumnType.STRING)
+                            new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)
                         ))
+                        .setPostAggregatorSpecs(
+                            expressionPostAgg("p0", "string_to_array('a,b',',')", ColumnType.STRING)
+                        )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{1.0f, "a"},
-                new Object[]{1.0f, "b"},
-                new Object[]{2.0f, "a"},
-                new Object[]{2.0f, "b"},
-                new Object[]{3.0f, "a"},
-                new Object[]{3.0f, "b"},
-                new Object[]{4.0f, "a"},
-                new Object[]{4.0f, "b"},
-                new Object[]{5.0f, "a"},
-                new Object[]{5.0f, "b"},
-                new Object[]{6.0f, "a"},
-                new Object[]{6.0f, "b"}
+                new Object[]{1.0f, "[\"a\",\"b\"]"},
+                new Object[]{2.0f, "[\"a\",\"b\"]"},
+                new Object[]{3.0f, "[\"a\",\"b\"]"},
+                new Object[]{4.0f, "[\"a\",\"b\"]"},
+                new Object[]{5.0f, "[\"a\",\"b\"]"},
+                new Object[]{6.0f, "[\"a\",\"b\"]"}
             )
         )
         .run();

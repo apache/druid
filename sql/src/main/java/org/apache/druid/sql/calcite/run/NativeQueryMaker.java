@@ -186,7 +186,9 @@ public class NativeQueryMaker implements QueryMaker
     final QueryResponse<T> results = queryLifecycle.runSimple(
         (Query<T>) query,
         authenticationResult,
-        authorizationResult
+        authorizationResult,
+        // The user-set keys, as distinct from the defaults SQL merged into the context.
+        plannerContext.authContextKeys()
     );
 
     return mapResultSequence(

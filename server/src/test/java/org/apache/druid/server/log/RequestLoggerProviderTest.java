@@ -25,7 +25,7 @@ import com.google.inject.ProvisionException;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
+import org.hamcrest.MatcherAssert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -69,7 +69,7 @@ public class RequestLoggerProviderTest
         RequestLoggerProvider.class,
         NoopRequestLoggerProvider.class
     );
-    Assert.assertThat(provider, CoreMatchers.instanceOf(NoopRequestLoggerProvider.class));
+    MatcherAssert.assertThat(provider, CoreMatchers.instanceOf(NoopRequestLoggerProvider.class));
   }
 
   @Test
