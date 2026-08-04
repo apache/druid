@@ -19,9 +19,7 @@
 
 package org.apache.druid.collections.fastutil;
 
-import it.unimi.dsi.fastutil.Arrays;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntArrays;
 
 public class DruidIntList extends IntArrayList
 {
@@ -76,24 +74,4 @@ public class DruidIntList extends IntArrayList
     size = 0;
   }
 
-  /**
-   * Method gratuitously "borrowed" from IntArrayList, would've been nice if that method wasn't private, but ah well.
-   *
-   * @param capacity the capacity to grow to
-   * @see IntArrayList#grow(int)
-   */
-  @SuppressWarnings("ArrayEquality")
-  private void grow(int capacity)
-  {
-    if (capacity <= a.length) {
-      return;
-    }
-    if (a != IntArrays.DEFAULT_EMPTY_ARRAY) {
-      capacity = (int) Math.max(Math.min((long) a.length + (a.length >> 1), Arrays.MAX_ARRAY_SIZE), capacity);
-    } else if (capacity < DEFAULT_INITIAL_CAPACITY) {
-      capacity = DEFAULT_INITIAL_CAPACITY;
-    }
-    a = IntArrays.forceCapacity(a, capacity, size);
-    assert size <= a.length;
-  }
 }
