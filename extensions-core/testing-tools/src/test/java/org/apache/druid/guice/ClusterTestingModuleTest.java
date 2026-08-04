@@ -86,7 +86,7 @@ public class ClusterTestingModuleTest
       System.setProperty("druid.unsafe.cluster.testing", "false");
 
       // Write out the task payload in a temporary json file
-      File file = File.createTempFile("task.json", null, temporaryFolder);
+      File file = new File(temporaryFolder, "task.json");
       FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
       peon.taskAndStatusFile = List.of(file.getParent(), "1");
 
@@ -117,7 +117,7 @@ public class ClusterTestingModuleTest
       System.setProperty("druid.unsafe.cluster.testing", "true");
 
       // Write out the task payload in a temporary json file
-      File file = File.createTempFile("task.json", null, temporaryFolder);
+      File file = new File(temporaryFolder, "task.json");
       FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
       peon.taskAndStatusFile = List.of(file.getParent(), "1");
 
@@ -155,7 +155,7 @@ public class ClusterTestingModuleTest
 
       // Write out the task payload in a temporary json file
       final String taskJson = MAPPER.writeValueAsString(task);
-      File file = File.createTempFile("task.json", null, temporaryFolder);
+      File file = new File(temporaryFolder, "task.json");
       FileUtils.write(file, taskJson, StandardCharsets.UTF_8);
       peon.taskAndStatusFile = List.of(file.getParent(), "1");
 
@@ -213,7 +213,7 @@ public class ClusterTestingModuleTest
 
       // Write out the task payload in a temporary json file
       final String taskJson = MAPPER.writeValueAsString(task);
-      File file = File.createTempFile("task.json", null, temporaryFolder);
+      File file = new File(temporaryFolder, "task.json");
       FileUtils.write(file, taskJson, StandardCharsets.UTF_8);
       peon.taskAndStatusFile = List.of(file.getParent(), "1");
 
