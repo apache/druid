@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.s3.output;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidProcessingConfigTest;
@@ -57,7 +58,7 @@ public class S3UploadManagerTest
   @BeforeEach
   public void setUp() throws IOException
   {
-    File tempDir = Files.createTempDirectory(temporaryFolder.toPath(), "s3output").toFile();
+    File tempDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "s3output");
     s3OutputConfig = new S3OutputConfig("bucket", "prefix", tempDir, new HumanReadableBytes("100MiB"), 1);
     s3ExportConfig = new S3ExportConfig("tempDir", new HumanReadableBytes("200MiB"), 1, null);
     serviceEmitter = new StubServiceEmitter();

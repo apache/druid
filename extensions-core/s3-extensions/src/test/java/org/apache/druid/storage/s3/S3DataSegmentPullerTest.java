@@ -99,7 +99,7 @@ public class S3DataSegmentPullerTest
       outputStream.write(value);
     }
 
-    final File tmpDir = Files.createTempDirectory(temporaryFolder.toPath(), "gzTestDir").toFile();
+    final File tmpDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "gzTestDir");
 
     EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(key)))
             .andAnswer(() -> new ResponseInputStream<>(
@@ -140,7 +140,7 @@ public class S3DataSegmentPullerTest
       outputStream.write(value);
     }
 
-    File tmpDir = Files.createTempDirectory(temporaryFolder.toPath(), "gzTestDir").toFile();
+    File tmpDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "gzTestDir");
 
     S3Exception exception = (S3Exception) S3Exception.builder()
         .message("S3DataSegmentPullerTest")
@@ -187,7 +187,7 @@ public class S3DataSegmentPullerTest
       outputStream.write(value);
     }
 
-    File tmpDir = Files.createTempDirectory(temporaryFolder.toPath(), "gzTestDir").toFile();
+    File tmpDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "gzTestDir");
 
     S3Exception exception = (S3Exception) S3Exception.builder()
         .message("S3DataSegmentPullerTest")
@@ -313,7 +313,7 @@ public class S3DataSegmentPullerTest
         .build();
     EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject())).andReturn(listResponse).once();
 
-    final File tmpDir = Files.createTempDirectory(temporaryFolder.toPath(), "noZipTestDir").toFile();
+    final File tmpDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "noZipTestDir");
 
     EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(keyPrefix + "meta.smoosh")))
             .andAnswer(() -> new ResponseInputStream<>(

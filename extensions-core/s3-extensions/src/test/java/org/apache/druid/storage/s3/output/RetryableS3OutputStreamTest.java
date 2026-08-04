@@ -21,6 +21,7 @@ package org.apache.druid.storage.s3.output;
 
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidProcessingConfigTest;
@@ -71,7 +72,7 @@ public class RetryableS3OutputStreamTest
   @BeforeEach
   public void setup() throws IOException
   {
-    final File tempDir = Files.createTempDirectory(temporaryFolder.toPath(), "s3output").toFile();
+    final File tempDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "s3output");
     chunkSize = 10L;
     config = new S3OutputConfig(
         "TEST",

@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.s3.output;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -46,7 +47,7 @@ public class S3OutputConfigTest
         () -> new S3OutputConfig(
             BUCKET,
             PREFIX,
-            Files.createTempDirectory(temporaryFolder, "s3output").toFile(),
+            FileUtils.createTempDirInLocation(temporaryFolder, "s3output"),
             HumanReadableBytes.valueOf(chunkSize),
             MAX_RETRY_COUNT,
             true
