@@ -707,7 +707,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
       DimensionsSpec dimensionsSpec,
       InputFormat inputFormat,
       String dataFile
-  ) throws IOException
+  )
   {
     final InputRowSchema schema = new InputRowSchema(timestampSpec, dimensionsSpec, ColumnsFilter.all());
     final FileEntity entity = new FileEntity(new File(dataFile));
