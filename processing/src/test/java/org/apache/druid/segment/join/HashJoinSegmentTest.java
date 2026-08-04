@@ -40,6 +40,7 @@ import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -248,7 +249,7 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
   @Test
   public void test_asCursorFactory()
   {
-    Assert.assertThat(
+    MatcherAssert.assertThat(
         makeJoinSegment().as(CursorFactory.class),
         CoreMatchers.instanceOf(HashJoinSegmentCursorFactory.class)
     );

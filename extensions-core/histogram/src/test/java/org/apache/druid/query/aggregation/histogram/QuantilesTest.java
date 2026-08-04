@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -46,7 +47,7 @@ public class QuantilesTest
     );
 
     Object theObject = mapper.readValue(theString, Object.class);
-    Assert.assertThat(theObject, CoreMatchers.instanceOf(LinkedHashMap.class));
+    MatcherAssert.assertThat(theObject, CoreMatchers.instanceOf(LinkedHashMap.class));
 
     LinkedHashMap theMap = (LinkedHashMap) theObject;
 

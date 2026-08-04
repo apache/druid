@@ -86,6 +86,7 @@ import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.indexing.SegmentTimelineConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
@@ -233,6 +234,8 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     ((InjectableValues.Std) objectMapper.getInjectableValues()).addValue(GroupingEngine.class, groupingEngine);
     ((InjectableValues.Std) objectMapper.getInjectableValues()).addValue(QueryToolChestWarehouse.class, null);
 
+    SegmentTimelineConfig segmentTimelineConfig = mock(SegmentTimelineConfig.class);
+
     Module modules = Modules.combine(
         new DruidGuiceExtensions(),
         new LifecycleModule(),
@@ -250,6 +253,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
                         .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool"))),
         binder -> binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(objectMapper),
         binder -> binder.bind(SegmentCacheManager.class).toInstance(segmentCacheManager),
+        binder -> binder.bind(SegmentTimelineConfig.class).toInstance(segmentTimelineConfig),
         binder -> binder.bind(VirtualStorageManager.class).toInstance(MSQTestBase.makeNilVirtualStorageManager()),
         binder -> binder.bind(GroupingEngine.class).toInstance(groupingEngine)
     );

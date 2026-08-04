@@ -78,6 +78,7 @@ import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.utils.JvmUtils;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsInstanceOf;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -303,11 +304,11 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
   public void testQuery() throws IOException
   {
     Query<?> query = jsonMapper.readValue(getQueryString(), Query.class);
-    Assert.assertThat(query, IsInstanceOf.instanceOf(getExpectedQueryType()));
+    MatcherAssert.assertThat(query, IsInstanceOf.instanceOf(getExpectedQueryType()));
 
     List<MapBasedRow> expectedResults = jsonMapper.readValue(getExpectedResultString(), getExpectedResultType());
     Assert.assertNotNull(expectedResults);
-    Assert.assertThat(expectedResults, IsInstanceOf.instanceOf(List.class));
+    MatcherAssert.assertThat(expectedResults, IsInstanceOf.instanceOf(List.class));
 
     DruidHttpClientConfig httpClientConfig = new DruidHttpClientConfig()
     {

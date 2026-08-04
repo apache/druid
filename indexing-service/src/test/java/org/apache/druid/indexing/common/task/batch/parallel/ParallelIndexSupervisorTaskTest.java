@@ -136,7 +136,7 @@ public class ParallelIndexSupervisorTaskTest
       int maxPartitionSize = sortedPartitionSizes.get(sortedPartitionSizes.size() - 1);
       int partitionSizeRange = maxPartitionSize - minPartitionSize;
 
-      Assert.assertThat(
+      MatcherAssert.assertThat(
           "partition sizes = " + actualPartitionSizes,
           partitionSizeRange,
           Matchers.is(Matchers.both(Matchers.greaterThanOrEqualTo(0)).and(Matchers.lessThanOrEqualTo(1)))

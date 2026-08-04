@@ -52,6 +52,7 @@ The automatic compaction system uses the following syntax:
     "tuningConfig": <parallel indexing task tuningConfig>,
     "granularitySpec": <compaction task granularitySpec>,
     "skipOffsetFromLatest": <time period to avoid compaction>,
+    "skipIntervals": <list of time intervals to avoid compaction>,
     "taskPriority": <compaction task priority>,
     "taskContext": <task context>
 }
@@ -60,6 +61,7 @@ The automatic compaction system uses the following syntax:
 Most fields in the auto-compaction configuration correlate to a typical [Druid ingestion spec](../ingestion/ingestion-spec.md).
 The following properties only apply to auto-compaction:
 * `skipOffsetFromLatest`
+* `skipIntervals`
 * `taskPriority`
 * `taskContext`
 
@@ -293,6 +295,7 @@ Compaction tasks may be interrupted when they interfere with ingestion. For exam
 
 * Enable [concurrent append and replace tasks](#enable-concurrent-append-and-replace) on your datasource and on the ingestion tasks.
 * Set `skipOffsetFromLatest` to reduce the chance of conflicts between ingestion and compaction. See more details in [Skip compaction for latest segments](#skip-compaction-for-latest-segments).
+* Set `skipIntervals` to exclude a specific interval from compaction, for example, while a backfill job is actively writing to that interval or if the interval keeps failing compaction. See more details in [Skip compaction for specific intervals](#skip-compaction-for-specific-intervals).
 * Increase the priority value of compaction tasks relative to ingestion tasks. Only recommended for advanced users. This approach can cause ingestion jobs to fail or lag. To change the priority of compaction tasks, set `taskPriority` to the desired priority value in the auto-compaction configuration. For details on the priority values of different task types, see [Lock priority](../ingestion/tasks.md#lock-priority).
 
 ### Enable concurrent append and replace
@@ -313,6 +316,16 @@ For information on how to do this, see [Concurrent append and replace](../ingest
 The Coordinator compacts segments from newest to oldest. In the auto-compaction configuration, you can set a time period, relative to the end time of the most recent segment, for segments that should not be compacted. Assign this value to `skipOffsetFromLatest`. Note that this offset is not relative to the current time but to the latest segment time. For example, if you want to skip over segments from five days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P5D"`.
 
 To set `skipOffsetFromLatest`, consider how frequently you expect the stream to receive late arriving data. If your stream only occasionally receives late arriving data, the auto-compaction system robustly compacts your data even though data is ingested outside the `skipOffsetFromLatest` window. For most realtime streaming ingestion use cases, it is reasonable to set `skipOffsetFromLatest` to a few hours or a day.
+
+### Skip compaction for specific intervals
+
+In addition to `skipOffsetFromLatest`, you can set `skipIntervals` to a list of time intervals to exclude from compaction. Any candidate compaction interval that overlaps one of these intervals is skipped.
+
+This is useful, for example, when a backfill job is actively writing to a specific interval and you don't want to compact it until the backfill finishes, or when a specific interval consistently fails compaction and you want to exclude it while you investigate:
+
+```json
+"skipIntervals": ["2015-04-01/2015-04-02"]
+```
 
 ## Examples
 
