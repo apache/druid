@@ -54,7 +54,7 @@ public class ArrayOfDoublesSketchSetOpPostAggregatorTest
   public void testConstructorNumArgs()
   {
     Throwable exception = Assertions.assertThrows(IAE.class, () -> {
-      final PostAggregator there = new ArrayOfDoublesSketchSetOpPostAggregator(
+      new ArrayOfDoublesSketchSetOpPostAggregator(
           "a",
           "UNION",
           null,
