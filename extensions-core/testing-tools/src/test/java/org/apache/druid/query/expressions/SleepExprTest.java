@@ -26,8 +26,8 @@ import org.apache.druid.math.expr.FunctionTest;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -59,10 +59,10 @@ public class SleepExprTest extends InitializedNullHandlingTest
     expr.eval(InputBindings.nilBindings()).value();
     final long after = System.currentTimeMillis();
     final long elapsed = after - before;
-    Assert.assertTrue(
-        StringUtils.format("Expected [%s], but actual elapsed was [%s]", expectedTimeElapsedMs, elapsed),
+    Assertions.assertTrue(
         elapsed >= expectedTimeElapsedMs
-        && elapsed < expectedTimeElapsedMs + detla
+        && elapsed < expectedTimeElapsedMs + detla,
+        StringUtils.format("Expected [%s], but actual elapsed was [%s]", expectedTimeElapsedMs, elapsed)
     );
   }
 

@@ -21,8 +21,8 @@ package org.apache.druid.security.pac4j;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class Pac4jCommonConfigTest
 {
@@ -42,8 +42,8 @@ public class Pac4jCommonConfigTest
         Pac4jCommonConfig.class
     );
 
-    Assert.assertEquals("testpass", conf.getCookiePassphrase().getPassword());
-    Assert.assertEquals(10_000L, conf.getReadTimeout().getMillis());
-    Assert.assertTrue(conf.isEnableCustomSslContext());
+    Assertions.assertEquals("testpass", conf.getCookiePassphrase().getPassword());
+    Assertions.assertEquals(10_000L, conf.getReadTimeout().getMillis());
+    Assertions.assertTrue(conf.isEnableCustomSslContext());
   }
 }

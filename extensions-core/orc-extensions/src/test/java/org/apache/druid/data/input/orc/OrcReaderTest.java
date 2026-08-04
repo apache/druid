@@ -43,10 +43,9 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.TransformingInputEntityReader;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,8 +54,8 @@ import java.util.List;
 
 public class OrcReaderTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   @Test
   public void testTest1() throws IOException
@@ -68,13 +67,13 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         "example/test_1.orc"
     );
     try (CloseableIterator<InputRow> iterator = reader.read()) {
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       final InputRow row = iterator.next();
-      Assert.assertEquals(DateTimes.of("2016-01-01T00:00:00.000Z"), row.getTimestamp());
-      Assert.assertEquals("bar", Iterables.getOnlyElement(row.getDimension("col1")));
-      Assert.assertEquals(ImmutableList.of("dat1", "dat2", "dat3"), row.getDimension("col2"));
-      Assert.assertEquals(1.1, row.getMetric("val1").doubleValue(), 0.001);
-      Assert.assertFalse(iterator.hasNext());
+      Assertions.assertEquals(DateTimes.of("2016-01-01T00:00:00.000Z"), row.getTimestamp());
+      Assertions.assertEquals("bar", Iterables.getOnlyElement(row.getDimension("col1")));
+      Assertions.assertEquals(ImmutableList.of("dat1", "dat2", "dat3"), row.getDimension("col2"));
+      Assertions.assertEquals(1.1, row.getMetric("val1").doubleValue(), 0.001);
+      Assertions.assertFalse(iterator.hasNext());
     }
   }
 
@@ -96,16 +95,16 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         "example/test_2.orc"
     );
     try (CloseableIterator<InputRow> iterator = reader.read()) {
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       final InputRow row = iterator.next();
-      Assert.assertEquals(DateTimes.of("2016-01-01T00:00:00.000Z"), row.getTimestamp());
-      Assert.assertEquals("bar", Iterables.getOnlyElement(row.getDimension("col1")));
-      Assert.assertEquals(ImmutableList.of("dat1", "dat2", "dat3"), row.getDimension("col2"));
-      Assert.assertEquals("1.1", Iterables.getOnlyElement(row.getDimension("col3")));
-      Assert.assertEquals("2", Iterables.getOnlyElement(row.getDimension("col4")));
-      Assert.assertEquals("3.5", Iterables.getOnlyElement(row.getDimension("col5")));
-      Assert.assertTrue(row.getDimension("col6").isEmpty());
-      Assert.assertFalse(iterator.hasNext());
+      Assertions.assertEquals(DateTimes.of("2016-01-01T00:00:00.000Z"), row.getTimestamp());
+      Assertions.assertEquals("bar", Iterables.getOnlyElement(row.getDimension("col1")));
+      Assertions.assertEquals(ImmutableList.of("dat1", "dat2", "dat3"), row.getDimension("col2"));
+      Assertions.assertEquals("1.1", Iterables.getOnlyElement(row.getDimension("col3")));
+      Assertions.assertEquals("2", Iterables.getOnlyElement(row.getDimension("col4")));
+      Assertions.assertEquals("3.5", Iterables.getOnlyElement(row.getDimension("col5")));
+      Assertions.assertTrue(row.getDimension("col6").isEmpty());
+      Assertions.assertFalse(iterator.hasNext());
     }
   }
 
@@ -140,25 +139,25 @@ public class OrcReaderTest extends InitializedNullHandlingTest
       int actualRowCount = 0;
 
       // Check the first row
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       InputRow row = iterator.next();
       actualRowCount++;
-      Assert.assertEquals("false", Iterables.getOnlyElement(row.getDimension("boolean1")));
-      Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("byte1")));
-      Assert.assertEquals("1024", Iterables.getOnlyElement(row.getDimension("short1")));
-      Assert.assertEquals("65536", Iterables.getOnlyElement(row.getDimension("int1")));
-      Assert.assertEquals("9223372036854775807", Iterables.getOnlyElement(row.getDimension("long1")));
-      Assert.assertEquals("1.0", Iterables.getOnlyElement(row.getDimension("float1")));
-      Assert.assertEquals("-15.0", Iterables.getOnlyElement(row.getDimension("double1")));
-      Assert.assertEquals("AAECAwQAAA==", Iterables.getOnlyElement(row.getDimension("bytes1")));
-      Assert.assertEquals("hi", Iterables.getOnlyElement(row.getDimension("string1")));
-      Assert.assertEquals("1.23456786547456E7", Iterables.getOnlyElement(row.getDimension("decimal1")));
-      Assert.assertEquals("2", Iterables.getOnlyElement(row.getDimension("struct_list_struct_int")));
-      Assert.assertEquals(ImmutableList.of("1", "2"), row.getDimension("struct_list_struct_intlist"));
-      Assert.assertEquals("good", Iterables.getOnlyElement(row.getDimension("list_struct_string")));
+      Assertions.assertEquals("false", Iterables.getOnlyElement(row.getDimension("boolean1")));
+      Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("byte1")));
+      Assertions.assertEquals("1024", Iterables.getOnlyElement(row.getDimension("short1")));
+      Assertions.assertEquals("65536", Iterables.getOnlyElement(row.getDimension("int1")));
+      Assertions.assertEquals("9223372036854775807", Iterables.getOnlyElement(row.getDimension("long1")));
+      Assertions.assertEquals("1.0", Iterables.getOnlyElement(row.getDimension("float1")));
+      Assertions.assertEquals("-15.0", Iterables.getOnlyElement(row.getDimension("double1")));
+      Assertions.assertEquals("AAECAwQAAA==", Iterables.getOnlyElement(row.getDimension("bytes1")));
+      Assertions.assertEquals("hi", Iterables.getOnlyElement(row.getDimension("string1")));
+      Assertions.assertEquals("1.23456786547456E7", Iterables.getOnlyElement(row.getDimension("decimal1")));
+      Assertions.assertEquals("2", Iterables.getOnlyElement(row.getDimension("struct_list_struct_int")));
+      Assertions.assertEquals(ImmutableList.of("1", "2"), row.getDimension("struct_list_struct_intlist"));
+      Assertions.assertEquals("good", Iterables.getOnlyElement(row.getDimension("list_struct_string")));
 
-      Assert.assertEquals("2", Iterables.getOnlyElement(row.getDimension("struct_list_struct_middleListLength")));
-      Assert.assertEquals(DateTimes.of("2000-03-12T15:00:00.0Z"), row.getTimestamp());
+      Assertions.assertEquals("2", Iterables.getOnlyElement(row.getDimension("struct_list_struct_middleListLength")));
+      Assertions.assertEquals(DateTimes.of("2000-03-12T15:00:00.0Z"), row.getTimestamp());
 
       while (iterator.hasNext()) {
         actualRowCount++;
@@ -166,23 +165,23 @@ public class OrcReaderTest extends InitializedNullHandlingTest
       }
 
       // Check the last row
-      Assert.assertEquals("true", Iterables.getOnlyElement(row.getDimension("boolean1")));
-      Assert.assertEquals("100", Iterables.getOnlyElement(row.getDimension("byte1")));
-      Assert.assertEquals("2048", Iterables.getOnlyElement(row.getDimension("short1")));
-      Assert.assertEquals("65536", Iterables.getOnlyElement(row.getDimension("int1")));
-      Assert.assertEquals("9223372036854775807", Iterables.getOnlyElement(row.getDimension("long1")));
-      Assert.assertEquals("2.0", Iterables.getOnlyElement(row.getDimension("float1")));
-      Assert.assertEquals("-5.0", Iterables.getOnlyElement(row.getDimension("double1")));
-      Assert.assertEquals("", Iterables.getOnlyElement(row.getDimension("bytes1")));
-      Assert.assertEquals("bye", Iterables.getOnlyElement(row.getDimension("string1")));
-      Assert.assertEquals("1.23456786547457E7", Iterables.getOnlyElement(row.getDimension("decimal1")));
-      Assert.assertEquals("2", Iterables.getOnlyElement(row.getDimension("struct_list_struct_int")));
-      Assert.assertEquals(ImmutableList.of("1", "2"), row.getDimension("struct_list_struct_intlist"));
-      Assert.assertEquals("cat", Iterables.getOnlyElement(row.getDimension("list_struct_string")));
-      Assert.assertEquals("5", Iterables.getOnlyElement(row.getDimension("map_struct_int")));
-      Assert.assertEquals(DateTimes.of("2000-03-12T15:00:01.000Z"), row.getTimestamp());
+      Assertions.assertEquals("true", Iterables.getOnlyElement(row.getDimension("boolean1")));
+      Assertions.assertEquals("100", Iterables.getOnlyElement(row.getDimension("byte1")));
+      Assertions.assertEquals("2048", Iterables.getOnlyElement(row.getDimension("short1")));
+      Assertions.assertEquals("65536", Iterables.getOnlyElement(row.getDimension("int1")));
+      Assertions.assertEquals("9223372036854775807", Iterables.getOnlyElement(row.getDimension("long1")));
+      Assertions.assertEquals("2.0", Iterables.getOnlyElement(row.getDimension("float1")));
+      Assertions.assertEquals("-5.0", Iterables.getOnlyElement(row.getDimension("double1")));
+      Assertions.assertEquals("", Iterables.getOnlyElement(row.getDimension("bytes1")));
+      Assertions.assertEquals("bye", Iterables.getOnlyElement(row.getDimension("string1")));
+      Assertions.assertEquals("1.23456786547457E7", Iterables.getOnlyElement(row.getDimension("decimal1")));
+      Assertions.assertEquals("2", Iterables.getOnlyElement(row.getDimension("struct_list_struct_int")));
+      Assertions.assertEquals(ImmutableList.of("1", "2"), row.getDimension("struct_list_struct_intlist"));
+      Assertions.assertEquals("cat", Iterables.getOnlyElement(row.getDimension("list_struct_string")));
+      Assertions.assertEquals("5", Iterables.getOnlyElement(row.getDimension("map_struct_int")));
+      Assertions.assertEquals(DateTimes.of("2000-03-12T15:00:01.000Z"), row.getTimestamp());
 
-      Assert.assertEquals(7500, actualRowCount);
+      Assertions.assertEquals(7500, actualRowCount);
     }
   }
 
@@ -197,19 +196,19 @@ public class OrcReaderTest extends InitializedNullHandlingTest
     );
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       int actualRowCount = 0;
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       final InputRow row = iterator.next();
       actualRowCount++;
-      Assert.assertEquals(DateTimes.of("1969-12-31T16:00:00.0Z"), row.getTimestamp());
-      Assert.assertEquals("2", Iterables.getOnlyElement(row.getDimension("userid")));
-      Assert.assertEquals("foo", Iterables.getOnlyElement(row.getDimension("string1")));
-      Assert.assertEquals("0.8", Iterables.getOnlyElement(row.getDimension("subtype")));
-      Assert.assertEquals("1.2", Iterables.getOnlyElement(row.getDimension("decimal1")));
+      Assertions.assertEquals(DateTimes.of("1969-12-31T16:00:00.0Z"), row.getTimestamp());
+      Assertions.assertEquals("2", Iterables.getOnlyElement(row.getDimension("userid")));
+      Assertions.assertEquals("foo", Iterables.getOnlyElement(row.getDimension("string1")));
+      Assertions.assertEquals("0.8", Iterables.getOnlyElement(row.getDimension("subtype")));
+      Assertions.assertEquals("1.2", Iterables.getOnlyElement(row.getDimension("decimal1")));
       while (iterator.hasNext()) {
         actualRowCount++;
         iterator.next();
       }
-      Assert.assertEquals(25000, actualRowCount);
+      Assertions.assertEquals(25000, actualRowCount);
     }
   }
 
@@ -224,17 +223,17 @@ public class OrcReaderTest extends InitializedNullHandlingTest
     );
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       int actualRowCount = 0;
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       final InputRow row = iterator.next();
       actualRowCount++;
-      Assert.assertEquals(1, row.getDimensions().size());
-      Assert.assertEquals(DateTimes.of("1900-05-05T12:34:56.1Z"), row.getTimestamp());
-      Assert.assertEquals("1900-12-25T00:00:00.000Z", Iterables.getOnlyElement(row.getDimension("date")));
+      Assertions.assertEquals(1, row.getDimensions().size());
+      Assertions.assertEquals(DateTimes.of("1900-05-05T12:34:56.1Z"), row.getTimestamp());
+      Assertions.assertEquals("1900-12-25T00:00:00.000Z", Iterables.getOnlyElement(row.getDimension("date")));
       while (iterator.hasNext()) {
         actualRowCount++;
         iterator.next();
       }
-      Assert.assertEquals(70000, actualRowCount);
+      Assertions.assertEquals(70000, actualRowCount);
     }
   }
 
@@ -249,17 +248,17 @@ public class OrcReaderTest extends InitializedNullHandlingTest
     );
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       int actualRowCount = 0;
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       final InputRow row = iterator.next();
       actualRowCount++;
-      Assert.assertEquals(1, row.getDimensions().size());
-      Assert.assertEquals(DateTimes.of("2038-05-05T12:34:56.1Z"), row.getTimestamp());
-      Assert.assertEquals("2038-12-25T00:00:00.000Z", Iterables.getOnlyElement(row.getDimension("date")));
+      Assertions.assertEquals(1, row.getDimensions().size());
+      Assertions.assertEquals(DateTimes.of("2038-05-05T12:34:56.1Z"), row.getTimestamp());
+      Assertions.assertEquals("2038-12-25T00:00:00.000Z", Iterables.getOnlyElement(row.getDimension("date")));
       while (iterator.hasNext()) {
         actualRowCount++;
         iterator.next();
       }
-      Assert.assertEquals(212000, actualRowCount);
+      Assertions.assertEquals(212000, actualRowCount);
     }
   }
 
@@ -299,22 +298,21 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         final InputRow row = iterator.next();
         actualRowCount++;
 
-        Assert.assertEquals("7.0", Iterables.getOnlyElement(row.getDimension("min")));
-        Assert.assertEquals("8.0", Iterables.getOnlyElement(row.getDimension("avg")));
-        Assert.assertEquals("9.0", Iterables.getOnlyElement(row.getDimension("max")));
-        Assert.assertEquals("24.0", Iterables.getOnlyElement(row.getDimension("sum")));
-        Assert.assertEquals("3", Iterables.getOnlyElement(row.getDimension("len")));
+        Assertions.assertEquals("7.0", Iterables.getOnlyElement(row.getDimension("min")));
+        Assertions.assertEquals("8.0", Iterables.getOnlyElement(row.getDimension("avg")));
+        Assertions.assertEquals("9.0", Iterables.getOnlyElement(row.getDimension("max")));
+        Assertions.assertEquals("24.0", Iterables.getOnlyElement(row.getDimension("sum")));
+        Assertions.assertEquals("3", Iterables.getOnlyElement(row.getDimension("len")));
 
         //deviation of [7,8,9] is 1/3, stddev is sqrt(1/3), approximately 0.8165
-        Assert.assertEquals(0.8165, Double.parseDouble(Iterables.getOnlyElement(row.getDimension("stddev"))), 0.0001);
+        Assertions.assertEquals(0.8165, Double.parseDouble(Iterables.getOnlyElement(row.getDimension("stddev"))), 0.0001);
 
         // we do not support json-path append function for ORC format (see https://github.com/apache/druid/pull/11722)
-        Exception exception = Assert.assertThrows(UnsupportedOperationException.class, () -> {
-          row.getDimension("append");
-        });
-        Assert.assertEquals("Unused", exception.getMessage());
+        Exception exception = Assertions.assertThrows(UnsupportedOperationException.class, () ->
+          row.getDimension("append"));
+        Assertions.assertEquals("Unused", exception.getMessage());
       }
-      Assert.assertEquals(1, actualRowCount);
+      Assertions.assertEquals(1, actualRowCount);
     }
   }
 
@@ -353,10 +351,10 @@ public class OrcReaderTest extends InitializedNullHandlingTest
       int actualRowCount = 0;
 
       // Check the first row
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       InputRow row = iterator.next();
       actualRowCount++;
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableMap.of(
               "list",
               ImmutableList.of(
@@ -366,19 +364,19 @@ public class OrcReaderTest extends InitializedNullHandlingTest
           ),
           row.getRaw("middle")
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("int1", 3, "string1", "good"),
               ImmutableMap.of("int1", 4, "string1", "bad")
           ),
           row.getRaw("list")
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableMap.of(),
           row.getRaw("map")
       );
-      Assert.assertEquals(2L, row.getRaw("struct_list_struct_int"));
-      Assert.assertEquals(DateTimes.of("2000-03-12T15:00:00.0Z"), row.getTimestamp());
+      Assertions.assertEquals(2L, row.getRaw("struct_list_struct_int"));
+      Assertions.assertEquals(DateTimes.of("2000-03-12T15:00:00.0Z"), row.getTimestamp());
 
       while (iterator.hasNext()) {
         actualRowCount++;
@@ -386,7 +384,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
       }
 
       // Check the last row
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableMap.of(
               "list",
               ImmutableList.of(
@@ -396,7 +394,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
           ),
           row.getRaw("middle")
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("int1", 100000000, "string1", "cat"),
               ImmutableMap.of("int1", -100000, "string1", "in"),
@@ -404,17 +402,17 @@ public class OrcReaderTest extends InitializedNullHandlingTest
           ),
           row.getRaw("list")
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableMap.of(
               "chani", ImmutableMap.of("int1", 5, "string1", "chani"),
               "mauddib", ImmutableMap.of("int1", 1, "string1", "mauddib")
           ),
           row.getRaw("map")
       );
-      Assert.assertEquals("2", Iterables.getOnlyElement(row.getDimension("struct_list_struct_int")));
-      Assert.assertEquals("5", Iterables.getOnlyElement(row.getDimension("map_struct_int")));
+      Assertions.assertEquals("2", Iterables.getOnlyElement(row.getDimension("struct_list_struct_int")));
+      Assertions.assertEquals("5", Iterables.getOnlyElement(row.getDimension("map_struct_int")));
 
-      Assert.assertEquals(7500, actualRowCount);
+      Assertions.assertEquals(7500, actualRowCount);
     }
   }
 
@@ -434,7 +432,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
     );
     final FileEntity entity = new FileEntity(new File("example/orc-file-11-format.orc"));
 
-    final InputEntityReader reader = inputFormat.createReader(schema, entity, temporaryFolder.newFolder());
+    final InputEntityReader reader = inputFormat.createReader(schema, entity, newFolder(temporaryFolder, "junit"));
 
     List<String> dims = ImmutableList.of(
         "boolean1",
@@ -455,12 +453,12 @@ public class OrcReaderTest extends InitializedNullHandlingTest
       int actualRowCount = 0;
 
       // Check the first row
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       InputRow row = iterator.next();
 
-      Assert.assertEquals(dims, row.getDimensions());
+      Assertions.assertEquals(dims, row.getDimensions());
       actualRowCount++;
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableMap.of(
               "list",
               ImmutableList.of(
@@ -470,27 +468,27 @@ public class OrcReaderTest extends InitializedNullHandlingTest
           ),
           row.getRaw("middle")
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("int1", 3, "string1", "good"),
               ImmutableMap.of("int1", 4, "string1", "bad")
           ),
           row.getRaw("list")
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableMap.of(),
           row.getRaw("map")
       );
-      Assert.assertEquals(DateTimes.of("2000-03-12T15:00:00.0Z"), row.getTimestamp());
+      Assertions.assertEquals(DateTimes.of("2000-03-12T15:00:00.0Z"), row.getTimestamp());
 
       while (iterator.hasNext()) {
         actualRowCount++;
         row = iterator.next();
-        Assert.assertEquals(dims, row.getDimensions());
+        Assertions.assertEquals(dims, row.getDimensions());
       }
 
       // Check the last row
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableMap.of(
               "list",
               ImmutableList.of(
@@ -500,7 +498,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
           ),
           row.getRaw("middle")
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("int1", 100000000, "string1", "cat"),
               ImmutableMap.of("int1", -100000, "string1", "in"),
@@ -508,7 +506,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
           ),
           row.getRaw("list")
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableMap.of(
               "chani", ImmutableMap.of("int1", 5, "string1", "chani"),
               "mauddib", ImmutableMap.of("int1", 1, "string1", "mauddib")
@@ -516,7 +514,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
           row.getRaw("map")
       );
 
-      Assert.assertEquals(7500, actualRowCount);
+      Assertions.assertEquals(7500, actualRowCount);
     }
   }
 
@@ -558,7 +556,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         transformSpec.toTransformer()
     );
     try (CloseableIterator<InputRow> iterator = transformingReader.read()) {
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       final InputRow row = iterator.next();
       /*
         {
@@ -567,21 +565,21 @@ public class OrcReaderTest extends InitializedNullHandlingTest
           "b": [{"id0": "str0", "id1": "str1"}, {"id0": "str2", "id1": "str3"}]
         }
      */
-      Assert.assertEquals(DateTimes.of("2022-01-01T00:00:00.000Z"), row.getTimestamp());
-      Assert.assertEquals("str0", Iterables.getOnlyElement(row.getDimension("a_id0")));
-      Assert.assertEquals("str0", Iterables.getOnlyElement(row.getDimension("t_a_id0")));
-      Assert.assertEquals("str0", Iterables.getOnlyElement(row.getDimension("b0_id0")));
-      Assert.assertEquals("str0", Iterables.getOnlyElement(row.getDimension("t_b0_id0")));
-      Assert.assertEquals(ImmutableList.of("{id0=str0, id1=str1}", "{id0=str2, id1=str3}"), row.getDimension("b_raw_str"));
-      Assert.assertEquals(ImmutableMap.of("id0", "str0", "id1", "str1"), row.getRaw("a"));
-      Assert.assertEquals(
+      Assertions.assertEquals(DateTimes.of("2022-01-01T00:00:00.000Z"), row.getTimestamp());
+      Assertions.assertEquals("str0", Iterables.getOnlyElement(row.getDimension("a_id0")));
+      Assertions.assertEquals("str0", Iterables.getOnlyElement(row.getDimension("t_a_id0")));
+      Assertions.assertEquals("str0", Iterables.getOnlyElement(row.getDimension("b0_id0")));
+      Assertions.assertEquals("str0", Iterables.getOnlyElement(row.getDimension("t_b0_id0")));
+      Assertions.assertEquals(ImmutableList.of("{id0=str0, id1=str1}", "{id0=str2, id1=str3}"), row.getDimension("b_raw_str"));
+      Assertions.assertEquals(ImmutableMap.of("id0", "str0", "id1", "str1"), row.getRaw("a"));
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("id0", "str0", "id1", "str1"),
               ImmutableMap.of("id0", "str2", "id1", "str3")
           ),
           row.getRaw("b")
       );
-      Assert.assertFalse(iterator.hasNext());
+      Assertions.assertFalse(iterator.hasNext());
     }
   }
 
@@ -630,7 +628,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         transformSpec.toTransformer()
     );
     try (CloseableIterator<InputRow> iterator = transformingReader.read()) {
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       final InputRow row = iterator.next();
       /*
         {
@@ -641,27 +639,27 @@ public class OrcReaderTest extends InitializedNullHandlingTest
           "d": [[1, 2], [3, 4]]
         }
        */
-      Assert.assertEquals(DateTimes.of("2022-01-01T00:00:00.000Z"), row.getTimestamp());
-      Assert.assertEquals("str1", Iterables.getOnlyElement(row.getDimension("a_0")));
-      Assert.assertEquals("str1", Iterables.getOnlyElement(row.getDimension("t_a_0")));
-      Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("b_0")));
-      Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("t_b_0")));
-      Assert.assertEquals("str1", Iterables.getOnlyElement(row.getDimension("c_0_0")));
-      Assert.assertEquals("str1", Iterables.getOnlyElement(row.getDimension("t_c_0_0")));
-      Assert.assertEquals("2", Iterables.getOnlyElement(row.getDimension("d_0_1")));
-      Assert.assertEquals("2", Iterables.getOnlyElement(row.getDimension("t_d_0_1")));
-      Assert.assertEquals(ImmutableList.of("str1", "str2"), row.getRaw("a"));
-      Assert.assertEquals(ImmutableList.of(1, 2), row.getRaw("b"));
-      Assert.assertEquals(
+      Assertions.assertEquals(DateTimes.of("2022-01-01T00:00:00.000Z"), row.getTimestamp());
+      Assertions.assertEquals("str1", Iterables.getOnlyElement(row.getDimension("a_0")));
+      Assertions.assertEquals("str1", Iterables.getOnlyElement(row.getDimension("t_a_0")));
+      Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("b_0")));
+      Assertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("t_b_0")));
+      Assertions.assertEquals("str1", Iterables.getOnlyElement(row.getDimension("c_0_0")));
+      Assertions.assertEquals("str1", Iterables.getOnlyElement(row.getDimension("t_c_0_0")));
+      Assertions.assertEquals("2", Iterables.getOnlyElement(row.getDimension("d_0_1")));
+      Assertions.assertEquals("2", Iterables.getOnlyElement(row.getDimension("t_d_0_1")));
+      Assertions.assertEquals(ImmutableList.of("str1", "str2"), row.getRaw("a"));
+      Assertions.assertEquals(ImmutableList.of(1, 2), row.getRaw("b"));
+      Assertions.assertEquals(
           ImmutableList.of(ImmutableList.of("str1", "str2"), ImmutableList.of("str3", "str4")),
           row.getRaw("c")
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(ImmutableList.of(1, 2), ImmutableList.of(3, 4)),
           row.getRaw("d")
       );
-      Assert.assertArrayEquals(new Object[]{1L, 2L}, (Object[]) row.getRaw("t_d_0"));
-      Assert.assertFalse(iterator.hasNext());
+      Assertions.assertArrayEquals(new Object[]{1L, 2L}, (Object[]) row.getRaw("t_d_0"));
+      Assertions.assertFalse(iterator.hasNext());
     }
   }
 
@@ -688,18 +686,18 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         "example/test_simple.orc"
     );
     try (CloseableIterator<InputRow> iterator = reader.read()) {
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       InputRow row = iterator.next();
 
-      Assert.assertEquals(DateTimes.of("2022-01-01T00:00:00.000Z"), row.getTimestamp());
-      Assert.assertEquals("true", Iterables.getOnlyElement(row.getDimension("c1")));
-      Assert.assertEquals("str1", Iterables.getOnlyElement(row.getDimension("c2")));
+      Assertions.assertEquals(DateTimes.of("2022-01-01T00:00:00.000Z"), row.getTimestamp());
+      Assertions.assertEquals("true", Iterables.getOnlyElement(row.getDimension("c1")));
+      Assertions.assertEquals("str1", Iterables.getOnlyElement(row.getDimension("c2")));
 
       row = iterator.next();
-      Assert.assertEquals(DateTimes.of("2022-01-02T00:00:00.000Z"), row.getTimestamp());
-      Assert.assertEquals(ImmutableList.of(), row.getDimension("c1"));
-      Assert.assertEquals(ImmutableList.of(), row.getDimension("c2"));
-      Assert.assertFalse(iterator.hasNext());
+      Assertions.assertEquals(DateTimes.of("2022-01-02T00:00:00.000Z"), row.getTimestamp());
+      Assertions.assertEquals(ImmutableList.of(), row.getDimension("c1"));
+      Assertions.assertEquals(ImmutableList.of(), row.getDimension("c2"));
+      Assertions.assertFalse(iterator.hasNext());
     }
   }
 
@@ -712,6 +710,15 @@ public class OrcReaderTest extends InitializedNullHandlingTest
   {
     final InputRowSchema schema = new InputRowSchema(timestampSpec, dimensionsSpec, ColumnsFilter.all());
     final FileEntity entity = new FileEntity(new File(dataFile));
-    return inputFormat.createReader(schema, entity, temporaryFolder.newFolder());
+    return inputFormat.createReader(schema, entity, newFolder(temporaryFolder, "junit"));
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException {
+    String subFolder = String.join("/", subDirs);
+    File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 }

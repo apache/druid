@@ -46,21 +46,19 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-@RunWith(Parameterized.class)
 public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
 {
   private static final BloomFilterExtensionModule MODULE = new BloomFilterExtensionModule();
@@ -75,19 +73,18 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
 
   private AggregationTestHelper helper;
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  private File tempFolder;
 
-  public BloomFilterGroupByQueryTest(final GroupByQueryConfig config)
+  public void initBloomFilterGroupByQueryTest(final GroupByQueryConfig config)
   {
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
         Lists.newArrayList(MODULE.getJacksonModules()),
         config,
         tempFolder
     );
   }
 
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -97,15 +94,17 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
     return constructors;
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     helper.close();
   }
 
-  @Test
-  public void testQuery() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testQuery(final GroupByQueryConfig config) throws Exception
   {
+    initBloomFilterGroupByQueryTest(config);
     GroupByQuery query = GroupByQuery.builder()
                                      .setDataSource("test_datasource")
                                      .setGranularity(Granularities.ALL)
@@ -119,14 +118,16 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
     MapBasedRow row = ingestAndQuery(query);
 
     BloomKFilter filter = BloomKFilter.deserialize((ByteBuffer) row.getRaw("blooming_quality"));
-    Assert.assertTrue(filter.testString("mezzanine"));
-    Assert.assertTrue(filter.testString("premium"));
-    Assert.assertFalse(filter.testString("entertainment"));
+    Assertions.assertTrue(filter.testString("mezzanine"));
+    Assertions.assertTrue(filter.testString("premium"));
+    Assertions.assertFalse(filter.testString("entertainment"));
   }
 
-  @Test
-  public void testNestedQuery() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testNestedQuery(final GroupByQueryConfig config) throws Exception
   {
+    initBloomFilterGroupByQueryTest(config);
     GroupByQuery innerQuery = GroupByQuery.builder()
                                           .setDataSource("test_datasource")
                                           .setGranularity(Granularities.ALL)
@@ -146,13 +147,15 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
     MapBasedRow row = ingestAndQuery(query);
 
     BloomKFilter filter = BloomKFilter.deserialize((ByteBuffer) row.getRaw("bloom"));
-    Assert.assertTrue(filter.testLong(13L));
-    Assert.assertFalse(filter.testLong(5L));
+    Assertions.assertTrue(filter.testLong(13L));
+    Assertions.assertFalse(filter.testLong(5L));
   }
 
-  @Test
-  public void testNestedQueryComplex() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testNestedQueryComplex(final GroupByQueryConfig config) throws Exception
   {
+    initBloomFilterGroupByQueryTest(config);
     GroupByQuery innerQuery = GroupByQuery.builder()
                                           .setDataSource("test_datasource")
                                           .setGranularity(Granularities.ALL)
@@ -175,14 +178,16 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
     MapBasedRow row = ingestAndQuery(query);
 
     BloomKFilter filter = BloomKFilter.deserialize((ByteBuffer) row.getRaw("innerBloom"));
-    Assert.assertTrue(filter.testString("mezzanine"));
-    Assert.assertTrue(filter.testString("premium"));
-    Assert.assertFalse(filter.testString("entertainment"));
+    Assertions.assertTrue(filter.testString("mezzanine"));
+    Assertions.assertTrue(filter.testString("premium"));
+    Assertions.assertFalse(filter.testString("entertainment"));
   }
 
-  @Test
-  public void testQueryFakeDimension() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testQueryFakeDimension(final GroupByQueryConfig config) throws Exception
   {
+    initBloomFilterGroupByQueryTest(config);
     GroupByQuery query = GroupByQuery.builder()
                                      .setDataSource("test_datasource")
                                      .setGranularity(Granularities.ALL)
@@ -203,7 +208,7 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
     String serialized = BloomFilterAggregatorTest.filterToString(BloomKFilter.deserialize((ByteBuffer) val));
     String empty = BloomFilterAggregatorTest.filterToString(filter);
 
-    Assert.assertEquals(empty, serialized);
+    Assertions.assertEquals(empty, serialized);
   }
 
   private MapBasedRow ingestAndQuery(GroupByQuery query) throws Exception

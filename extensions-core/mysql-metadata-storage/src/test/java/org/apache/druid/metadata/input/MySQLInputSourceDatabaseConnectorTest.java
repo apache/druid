@@ -29,20 +29,21 @@ import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.storage.mysql.MySQLConnectorDriverConfig;
 import org.apache.druid.metadata.storage.mysql.MySQLMetadataStorageModule;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Set;
 
-@RunWith(MockitoJUnitRunner.class)
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.lenient;
+
+@ExtendWith(MockitoExtension.class)
 public class MySQLInputSourceDatabaseConnectorTest
 {
   private static final JdbcAccessSecurityConfig INJECTED_CONF = newSecurityConfigEnforcingAllowList(ImmutableSet.of());
@@ -50,14 +51,11 @@ public class MySQLInputSourceDatabaseConnectorTest
   @Mock
   private MySQLConnectorDriverConfig mySQLConnectorDriverConfig;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
-    Mockito.doReturn("com.mysql.jdbc.Driver").when(mySQLConnectorDriverConfig).getDriverClassName();
+    lenient().doReturn("com.mysql.jdbc.Driver").when(mySQLConnectorDriverConfig).getDriverClassName();
   }
-
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSerde() throws JsonProcessingException
@@ -87,7 +85,7 @@ public class MySQLInputSourceDatabaseConnectorTest
         mapper.writeValueAsString(connector),
         MySQLInputSourceDatabaseConnector.class
     );
-    Assert.assertEquals(connector, andBack);
+    Assertions.assertEquals(connector, andBack);
 
     // test again with classname
     connector = new MySQLInputSourceDatabaseConnector(
@@ -97,7 +95,7 @@ public class MySQLInputSourceDatabaseConnectorTest
         mySQLConnectorDriverConfig
     );
     andBack = mapper.readValue(mapper.writeValueAsString(connector), MySQLInputSourceDatabaseConnector.class);
-    Assert.assertEquals(connector, andBack);
+    Assertions.assertEquals(connector, andBack);
   }
 
   @Test
@@ -168,19 +166,18 @@ public class MySQLInputSourceDatabaseConnectorTest
 
     JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of(""));
 
-    expectedException.expectMessage(
-        CoreMatchers.anyOf(
-            CoreMatchers.containsString("The property [password] is not in the allowed list"),
-            CoreMatchers.containsString("The property [user] is not in the allowed list")
+    Throwable exception = assertThrows(
+        IllegalArgumentException.class,
+        () -> new MySQLInputSourceDatabaseConnector(
+            connectorConfig,
+            null,
+            securityConfig,
+            mySQLConnectorDriverConfig
         )
     );
-    expectedException.expect(IllegalArgumentException.class);
-
-    new MySQLInputSourceDatabaseConnector(
-        connectorConfig,
-        null,
-        securityConfig,
-        mySQLConnectorDriverConfig
+    assertTrue(
+        exception.getMessage().contains("The property [password] is not in the allowed list")
+            || exception.getMessage().contains("The property [user] is not in the allowed list")
     );
   }
 
@@ -247,45 +244,44 @@ public class MySQLInputSourceDatabaseConnectorTest
 
     JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("none", "nonenone"));
 
-    expectedException.expectMessage(
-        CoreMatchers.anyOf(
-            CoreMatchers.containsString("The property [password] is not in the allowed list"),
-            CoreMatchers.containsString("The property [user] is not in the allowed list")
+    Throwable exception = assertThrows(
+        IllegalArgumentException.class,
+        () -> new MySQLInputSourceDatabaseConnector(
+            connectorConfig,
+            null,
+            securityConfig,
+            mySQLConnectorDriverConfig
         )
     );
-    expectedException.expect(IllegalArgumentException.class);
-
-    new MySQLInputSourceDatabaseConnector(
-        connectorConfig,
-        null,
-        securityConfig,
-        mySQLConnectorDriverConfig
+    assertTrue(
+        exception.getMessage().contains("The property [password] is not in the allowed list")
+            || exception.getMessage().contains("The property [user] is not in the allowed list")
     );
   }
 
   @Test
   public void testFailValidAndInvalidProperty()
   {
-    MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
-    {
-      @Override
-      public String getConnectURI()
+    Throwable exception = assertThrows(IllegalArgumentException.class, () -> {
+      MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
       {
-        return "jdbc:mysql://localhost:3306/test?user=maytas&password=secret&keyonly";
-      }
-    };
+        @Override
+        public String getConnectURI()
+        {
+          return "jdbc:mysql://localhost:3306/test?user=maytas&password=secret&keyonly";
+        }
+      };
 
-    JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("user", "nonenone"));
+      JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("user", "nonenone"));
 
-    expectedException.expectMessage("The property [password] is not in the allowed list");
-    expectedException.expect(IllegalArgumentException.class);
-
-    new MySQLInputSourceDatabaseConnector(
-        connectorConfig,
-        null,
-        securityConfig,
-        mySQLConnectorDriverConfig
-    );
+      new MySQLInputSourceDatabaseConnector(
+          connectorConfig,
+          null,
+          securityConfig,
+          mySQLConnectorDriverConfig
+      );
+    });
+    assertTrue(exception.getMessage().contains("The property [password] is not in the allowed list"));
   }
 
   @Test
@@ -302,19 +298,18 @@ public class MySQLInputSourceDatabaseConnectorTest
 
     JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("user", "nonenone"));
 
-    expectedException.expectMessage(
-        CoreMatchers.anyOf(
-            CoreMatchers.containsString("The property [password] is not in the allowed list"),
-            CoreMatchers.containsString("The property [keyonly] is not in the allowed list")
+    Throwable exception = assertThrows(
+        IllegalArgumentException.class,
+        () -> new MySQLInputSourceDatabaseConnector(
+            connectorConfig,
+            null,
+            securityConfig,
+            mySQLConnectorDriverConfig
         )
     );
-    expectedException.expect(IllegalArgumentException.class);
-
-    new MySQLInputSourceDatabaseConnector(
-        connectorConfig,
-        null,
-        securityConfig,
-        mySQLConnectorDriverConfig
+    assertTrue(
+        exception.getMessage().contains("The property [password] is not in the allowed list")
+            || exception.getMessage().contains("The property [keyonly] is not in the allowed list")
     );
   }
 

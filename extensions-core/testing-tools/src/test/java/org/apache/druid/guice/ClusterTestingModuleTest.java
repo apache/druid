@@ -57,10 +57,9 @@ import org.apache.druid.testing.cluster.task.FaultyCoordinatorClient;
 import org.apache.druid.testing.cluster.task.FaultyOverlordClient;
 import org.apache.druid.testing.cluster.task.FaultyRemoteTaskActionClientFactory;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -76,8 +75,8 @@ public class ClusterTestingModuleTest
       .registerModules(new IndexingServiceTuningConfigModule().getJacksonModules())
       .registerModules(new IndexingServiceInputSourceModule().getJacksonModules());
 
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   @Test
   public void test_peonRunnable_isNotModified_ifTestingIsDisabled() throws IOException
@@ -87,7 +86,7 @@ public class ClusterTestingModuleTest
       System.setProperty("druid.unsafe.cluster.testing", "false");
 
       // Write out the task payload in a temporary json file
-      File file = temporaryFolder.newFile("task.json");
+      File file = File.createTempFile("task.json", null, temporaryFolder);
       FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
       peon.taskAndStatusFile = List.of(file.getParent(), "1");
 
@@ -97,13 +96,13 @@ public class ClusterTestingModuleTest
       final Injector peonInjector = peon.makeInjector(Set.of(NodeRole.PEON));
 
       CoordinatorClient coordinatorClient = peonInjector.getInstance(CoordinatorClient.class);
-      Assert.assertTrue(coordinatorClient instanceof CoordinatorClientImpl);
+      Assertions.assertTrue(coordinatorClient instanceof CoordinatorClientImpl);
 
       OverlordClient overlordClient = peonInjector.getInstance(OverlordClient.class);
-      Assert.assertTrue(overlordClient instanceof OverlordClientImpl);
+      Assertions.assertTrue(overlordClient instanceof OverlordClientImpl);
 
       TaskActionClientFactory taskActionClientFactory = peonInjector.getInstance(TaskActionClientFactory.class);
-      Assert.assertTrue(taskActionClientFactory instanceof RemoteTaskActionClientFactory);
+      Assertions.assertTrue(taskActionClientFactory instanceof RemoteTaskActionClientFactory);
     }
     finally {
       System.clearProperty("druid.unsafe.cluster.testing");
@@ -118,7 +117,7 @@ public class ClusterTestingModuleTest
       System.setProperty("druid.unsafe.cluster.testing", "true");
 
       // Write out the task payload in a temporary json file
-      File file = temporaryFolder.newFile("task.json");
+      File file = File.createTempFile("task.json", null, temporaryFolder);
       FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
       peon.taskAndStatusFile = List.of(file.getParent(), "1");
 
@@ -128,10 +127,10 @@ public class ClusterTestingModuleTest
       final Injector peonInjector = peon.makeInjector(Set.of(NodeRole.PEON));
 
       CoordinatorClient coordinatorClient = peonInjector.getInstance(CoordinatorClient.class);
-      Assert.assertTrue(coordinatorClient instanceof FaultyCoordinatorClient);
+      Assertions.assertTrue(coordinatorClient instanceof FaultyCoordinatorClient);
 
       TaskActionClientFactory taskActionClientFactory = peonInjector.getInstance(TaskActionClientFactory.class);
-      Assert.assertTrue(taskActionClientFactory instanceof FaultyRemoteTaskActionClientFactory);
+      Assertions.assertTrue(taskActionClientFactory instanceof FaultyRemoteTaskActionClientFactory);
     }
     finally {
       System.clearProperty("druid.unsafe.cluster.testing");
@@ -156,7 +155,7 @@ public class ClusterTestingModuleTest
 
       // Write out the task payload in a temporary json file
       final String taskJson = MAPPER.writeValueAsString(task);
-      File file = temporaryFolder.newFile("task.json");
+      File file = File.createTempFile("task.json", null, temporaryFolder);
       FileUtils.write(file, taskJson, StandardCharsets.UTF_8);
       peon.taskAndStatusFile = List.of(file.getParent(), "1");
 
@@ -214,7 +213,7 @@ public class ClusterTestingModuleTest
 
       // Write out the task payload in a temporary json file
       final String taskJson = MAPPER.writeValueAsString(task);
-      File file = temporaryFolder.newFile("task.json");
+      File file = File.createTempFile("task.json", null, temporaryFolder);
       FileUtils.write(file, taskJson, StandardCharsets.UTF_8);
       peon.taskAndStatusFile = List.of(file.getParent(), "1");
 
@@ -244,7 +243,7 @@ public class ClusterTestingModuleTest
       final Injector overlordInjector = overlord.makeInjector(Set.of(NodeRole.OVERLORD));
 
       GlobalTaskLockbox taskLockbox = overlordInjector.getInstance(GlobalTaskLockbox.class);
-      Assert.assertTrue(taskLockbox instanceof FaultyTaskLockbox);
+      Assertions.assertTrue(taskLockbox instanceof FaultyTaskLockbox);
     }
     finally {
       System.clearProperty("druid.unsafe.cluster.testing");
@@ -264,7 +263,7 @@ public class ClusterTestingModuleTest
       final Injector indexerInjector = indexer.makeInjector(Set.of(NodeRole.INDEXER));
 
       OverlordClient overlordClient = indexerInjector.getInstance(OverlordClient.class);
-      Assert.assertTrue(overlordClient instanceof FaultyOverlordClient);
+      Assertions.assertTrue(overlordClient instanceof FaultyOverlordClient);
     }
     finally {
       System.clearProperty("druid.unsafe.cluster.testing");
@@ -273,25 +272,25 @@ public class ClusterTestingModuleTest
 
   private static void verifyTestingConfig(ClusterTestingTaskConfig taskConfig)
   {
-    Assert.assertNotNull(taskConfig);
-    Assert.assertNotNull(taskConfig.getCoordinatorClientConfig());
-    Assert.assertNotNull(taskConfig.getOverlordClientConfig());
-    Assert.assertNotNull(taskConfig.getTaskActionClientConfig());
-    Assert.assertNotNull(taskConfig.getMetadataConfig());
+    Assertions.assertNotNull(taskConfig);
+    Assertions.assertNotNull(taskConfig.getCoordinatorClientConfig());
+    Assertions.assertNotNull(taskConfig.getOverlordClientConfig());
+    Assertions.assertNotNull(taskConfig.getTaskActionClientConfig());
+    Assertions.assertNotNull(taskConfig.getMetadataConfig());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Duration.standardSeconds(10),
         taskConfig.getTaskActionClientConfig().getSegmentPublishDelay()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Duration.standardSeconds(5),
         taskConfig.getTaskActionClientConfig().getSegmentAllocateDelay()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Duration.standardSeconds(30),
         taskConfig.getCoordinatorClientConfig().getMinSegmentHandoffDelay()
     );
-    Assert.assertFalse(
+    Assertions.assertFalse(
         taskConfig.getMetadataConfig().isCleanupPendingSegments()
     );
   }

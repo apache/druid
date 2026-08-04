@@ -21,8 +21,8 @@ package org.apache.druid.security.pac4j;
 
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.pac4j.core.context.Cookie;
 import org.pac4j.core.context.WebContext;
 import org.pac4j.core.profile.CommonProfile;
@@ -53,9 +53,9 @@ public class Pac4jSessionStoreTest
     sessionStore.set(webContext1, "key", "value");
 
     Cookie cookie = cookieCapture.getValue();
-    Assert.assertTrue(cookie.isSecure());
-    Assert.assertTrue(cookie.isHttpOnly());
-    Assert.assertEquals(900, cookie.getMaxAge());
+    Assertions.assertTrue(cookie.isSecure());
+    Assertions.assertTrue(cookie.isHttpOnly());
+    Assertions.assertEquals(900, cookie.getMaxAge());
 
     // For the get test, we need to mock the context to return the cookie
     WebContext webContext2 = EasyMock.mock(WebContext.class);
@@ -63,7 +63,7 @@ public class Pac4jSessionStoreTest
     EasyMock.expect(webContext2.getRequestCookies()).andReturn(Collections.singletonList(cookie));
     EasyMock.replay(webContext2);
 
-    Assert.assertEquals("value", Objects.requireNonNull(sessionStore.get(webContext2, "key")).orElse(null));
+    Assertions.assertEquals("value", Objects.requireNonNull(sessionStore.get(webContext2, "key")).orElse(null));
     EasyMock.verify(webContext2);
   }
 
@@ -82,9 +82,9 @@ public class Pac4jSessionStoreTest
     sessionStore.set(webContext1, "key", "value");
 
     Cookie cookie = cookieCapture.getValue();
-    Assert.assertTrue(cookie.isSecure()); // Should still be secure due to our fix
-    Assert.assertTrue(cookie.isHttpOnly());
-    Assert.assertEquals(900, cookie.getMaxAge());
+    Assertions.assertTrue(cookie.isSecure()); // Should still be secure due to our fix
+    Assertions.assertTrue(cookie.isHttpOnly());
+    Assertions.assertEquals(900, cookie.getMaxAge());
 
     EasyMock.verify(webContext1);
   }
@@ -104,10 +104,10 @@ public class Pac4jSessionStoreTest
     sessionStore.set(webContext, "key", null);
 
     Cookie cookie = cookieCapture.getValue();
-    Assert.assertTrue(cookie.isSecure());
-    Assert.assertTrue(cookie.isHttpOnly());
-    Assert.assertEquals(0, cookie.getMaxAge()); // Should be 0 for null values
-    Assert.assertEquals("", cookie.getValue());
+    Assertions.assertTrue(cookie.isSecure());
+    Assertions.assertTrue(cookie.isHttpOnly());
+    Assertions.assertEquals(0, cookie.getMaxAge()); // Should be 0 for null values
+    Assertions.assertEquals("", cookie.getValue());
 
     EasyMock.verify(webContext);
   }
@@ -127,10 +127,10 @@ public class Pac4jSessionStoreTest
     sessionStore.set(webContext, "key", "");
 
     Cookie cookie = cookieCapture.getValue();
-    Assert.assertTrue(cookie.isSecure());
-    Assert.assertTrue(cookie.isHttpOnly());
-    Assert.assertEquals(0, cookie.getMaxAge()); // Should be 0 for empty string
-    Assert.assertEquals("", cookie.getValue());
+    Assertions.assertTrue(cookie.isSecure());
+    Assertions.assertTrue(cookie.isHttpOnly());
+    Assertions.assertEquals(0, cookie.getMaxAge()); // Should be 0 for empty string
+    Assertions.assertEquals("", cookie.getValue());
 
     EasyMock.verify(webContext);
   }
@@ -150,10 +150,10 @@ public class Pac4jSessionStoreTest
     sessionStore.set(webContext, "key", Collections.emptyMap());
 
     Cookie cookie = cookieCapture.getValue();
-    Assert.assertTrue(cookie.isSecure());
-    Assert.assertTrue(cookie.isHttpOnly());
-    Assert.assertEquals(0, cookie.getMaxAge()); // Should be 0 for empty map
-    Assert.assertEquals("", cookie.getValue());
+    Assertions.assertTrue(cookie.isSecure());
+    Assertions.assertTrue(cookie.isHttpOnly());
+    Assertions.assertEquals(0, cookie.getMaxAge()); // Should be 0 for empty map
+    Assertions.assertEquals("", cookie.getValue());
 
     EasyMock.verify(webContext);
   }
@@ -168,7 +168,7 @@ public class Pac4jSessionStoreTest
     EasyMock.replay(webContext);
 
     Optional<Object> result = sessionStore.get(webContext, "key");
-    Assert.assertFalse(result.isPresent());
+    Assertions.assertFalse(result.isPresent());
 
     EasyMock.verify(webContext);
   }
@@ -183,7 +183,7 @@ public class Pac4jSessionStoreTest
     EasyMock.replay(webContext);
 
     Optional<Object> result = sessionStore.get(webContext, "key");
-    Assert.assertFalse(result.isPresent());
+    Assertions.assertFalse(result.isPresent());
 
     EasyMock.verify(webContext);
   }
@@ -213,24 +213,24 @@ public class Pac4jSessionStoreTest
     sessionStore.set(webContext1, Pac4jConstants.USER_PROFILES, profile);
 
     Cookie cookie = cookieCapture.getValue();
-    Assert.assertTrue(cookie.isSecure());
-    Assert.assertTrue(cookie.isHttpOnly());
-    Assert.assertEquals(900, cookie.getMaxAge());
+    Assertions.assertTrue(cookie.isSecure());
+    Assertions.assertTrue(cookie.isHttpOnly());
+    Assertions.assertEquals(900, cookie.getMaxAge());
 
     WebContext webContext2 = EasyMock.mock(WebContext.class);
     EasyMock.expect(webContext2.getRequestCookies()).andReturn(Collections.singletonList(cookie));
     EasyMock.replay(webContext2);
 
     Optional<Object> value = sessionStore.get(webContext2, Pac4jConstants.USER_PROFILES);
-    Assert.assertTrue(Objects.requireNonNull(value).isPresent());
+    Assertions.assertTrue(Objects.requireNonNull(value).isPresent());
     CommonProfile retrievedProfile = (CommonProfile) value.get();
-    Assert.assertEquals("name", retrievedProfile.getAttribute("display_name"));
+    Assertions.assertEquals("name", retrievedProfile.getAttribute("display_name"));
     
     // Verify sensitive data was removed
-    Assert.assertNull(retrievedProfile.getAttribute("access_token"));
-    Assert.assertNull(retrievedProfile.getAttribute("refresh_token"));
-    Assert.assertNull(retrievedProfile.getAttribute("id_token"));
-    Assert.assertNull(retrievedProfile.getAttribute("credentials"));
+    Assertions.assertNull(retrievedProfile.getAttribute("access_token"));
+    Assertions.assertNull(retrievedProfile.getAttribute("refresh_token"));
+    Assertions.assertNull(retrievedProfile.getAttribute("id_token"));
+    Assertions.assertNull(retrievedProfile.getAttribute("credentials"));
     
     EasyMock.verify(webContext2);
   }
@@ -264,23 +264,23 @@ public class Pac4jSessionStoreTest
     sessionStore.set(webContext1, Pac4jConstants.USER_PROFILES, profiles);
 
     Cookie cookie = cookieCapture.getValue();
-    Assert.assertTrue(cookie.isSecure());
-    Assert.assertTrue(cookie.isHttpOnly());
-    Assert.assertEquals(900, cookie.getMaxAge());
+    Assertions.assertTrue(cookie.isSecure());
+    Assertions.assertTrue(cookie.isHttpOnly());
+    Assertions.assertEquals(900, cookie.getMaxAge());
 
     WebContext webContext2 = EasyMock.mock(WebContext.class);
     EasyMock.expect(webContext2.getRequestCookies()).andReturn(Collections.singletonList(cookie));
     EasyMock.replay(webContext2);
 
     Optional<Object> value = sessionStore.get(webContext2, Pac4jConstants.USER_PROFILES);
-    Assert.assertTrue(Objects.requireNonNull(value).isPresent());
+    Assertions.assertTrue(Objects.requireNonNull(value).isPresent());
     @SuppressWarnings("unchecked")
     Map<String, CommonProfile> retrievedProfiles = (Map<String, CommonProfile>) value.get();
-    Assert.assertEquals(2, retrievedProfiles.size());
+    Assertions.assertEquals(2, retrievedProfiles.size());
     
     // Verify sensitive data was removed from both profiles
-    Assert.assertNull(retrievedProfiles.get("profile1").getAttribute("access_token"));
-    Assert.assertNull(retrievedProfiles.get("profile2").getAttribute("refresh_token"));
+    Assertions.assertNull(retrievedProfiles.get("profile1").getAttribute("access_token"));
+    Assertions.assertNull(retrievedProfiles.get("profile2").getAttribute("refresh_token"));
     
     EasyMock.verify(webContext2);
   }
@@ -293,11 +293,11 @@ public class Pac4jSessionStoreTest
     EasyMock.replay(webContext);
 
     // Test methods that return empty/false for non-JEE contexts
-    Assert.assertFalse(sessionStore.getSessionId(webContext, true).isPresent());
-    Assert.assertFalse(sessionStore.destroySession(webContext));
-    Assert.assertFalse(sessionStore.getTrackableSession(webContext).isPresent());
-    Assert.assertFalse(sessionStore.buildFromTrackableSession(webContext, "test").isPresent());
-    Assert.assertFalse(sessionStore.renewSession(webContext));
+    Assertions.assertFalse(sessionStore.getSessionId(webContext, true).isPresent());
+    Assertions.assertFalse(sessionStore.destroySession(webContext));
+    Assertions.assertFalse(sessionStore.getTrackableSession(webContext).isPresent());
+    Assertions.assertFalse(sessionStore.buildFromTrackableSession(webContext, "test").isPresent());
+    Assertions.assertFalse(sessionStore.renewSession(webContext));
 
     EasyMock.verify(webContext);
   }
@@ -329,12 +329,12 @@ public class Pac4jSessionStoreTest
 
     // Verify that trying to decrypt the invalid cookie throws an exception
     final Pac4jSessionStore sessionStore = new Pac4jSessionStore(COOKIE_PASSPHRASE);
-    RuntimeException exception = Assert.assertThrows(
+    RuntimeException exception = Assertions.assertThrows(
         RuntimeException.class,
         () -> sessionStore.get(getContext, "key")
     );
-    Assert.assertTrue(exception.getMessage().contains("Decryption failed"));
-    Assert.assertNotNull(exception.getCause());
+    Assertions.assertTrue(exception.getMessage().contains("Decryption failed"));
+    Assertions.assertNotNull(exception.getCause());
 
     EasyMock.verify(getContext);
   }
@@ -360,9 +360,9 @@ public class Pac4jSessionStoreTest
     sessionStore.set(webContext, "key", largeData.toString());
 
     Cookie cookie = cookieCapture.getValue();
-    Assert.assertTrue(cookie.isSecure());
-    Assert.assertTrue(cookie.isHttpOnly());
-    Assert.assertEquals(900, cookie.getMaxAge());
+    Assertions.assertTrue(cookie.isSecure());
+    Assertions.assertTrue(cookie.isHttpOnly());
+    Assertions.assertEquals(900, cookie.getMaxAge());
 
     EasyMock.verify(webContext);
   }
