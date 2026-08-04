@@ -4253,8 +4253,15 @@ public interface Function extends NamedFunction
           };
         }
         final Set<Object> set = new ObjectAVLTreeSet<>(lhsArrayType.getElementType().getNullableStrategy());
-        set.addAll(Arrays.asList(rhsArray));
-        return new OverlapConstantArray(set);
+        boolean rhsContainsNull = false;
+        for (Object rhsValue : rhsArray) {
+          if (rhsValue == null) {
+            rhsContainsNull = true;
+          } else {
+            set.add(rhsValue);
+          }
+        }
+        return new OverlapConstantArray(set, rhsContainsNull);
       }
       return this;
     }
@@ -4262,10 +4269,12 @@ public interface Function extends NamedFunction
     private static final class OverlapConstantArray extends ArrayContainsFunction
     {
       final Set<Object> set;
+      final boolean rhsContainsNull;
 
-      public OverlapConstantArray(Set<Object> set)
+      public OverlapConstantArray(Set<Object> set, boolean rhsContainsNull)
       {
         this.set = set;
+        this.rhsContainsNull = rhsContainsNull;
       }
 
       @Override
@@ -4277,7 +4286,7 @@ public interface Function extends NamedFunction
           return ExprEval.ofLong(null);
         }
         for (Object check : array1) {
-          if (set.contains(check)) {
+          if (check == null ? rhsContainsNull : set.contains(check)) {
             return ExprEval.ofLongBoolean(true);
           }
         }
