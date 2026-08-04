@@ -240,10 +240,8 @@ public class ServerSideEncryptingAmazonS3Test
   }
 
   @Test
-  public void testBuilder() throws IOException
+  public void testBuilder()
   {
-    File testFile = File.createTempFile("test-builder", ".txt", temporaryFolder);
-
     S3Client builtClient = EasyMock.createMock(S3Client.class);
     EasyMock.replay(builtClient);
 
