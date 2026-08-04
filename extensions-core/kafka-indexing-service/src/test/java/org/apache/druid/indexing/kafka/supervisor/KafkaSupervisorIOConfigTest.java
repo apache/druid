@@ -275,7 +275,8 @@ public class KafkaSupervisorIOConfigTest
   }
 
   @Test
-  public void testSerdeWithBothExclusiveProperties() {
+  public void testSerdeWithBothExclusiveProperties()
+  {
     Assertions.assertThrows(JsonMappingException.class, () -> {
       String jsonStr = "{\n"
           + "  \"type\": \"kafka\",\n"
@@ -393,17 +394,21 @@ public class KafkaSupervisorIOConfigTest
     Assertions.assertEquals(1, kafkaSupervisorIOConfig.getTaskCount());
 
     Assertions.assertThrows(
-        RuntimeException.class, () -> {
+        RuntimeException.class,
+        () -> {
           autoScalerConfig.put("taskCountStart", 11); // > max task count
           mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class);
-        }, "taskCountMin <= taskCountStart <= taskCountMax"
+        },
+        "taskCountMin <= taskCountStart <= taskCountMax"
     );
 
     Assertions.assertThrows(
-        RuntimeException.class, () -> {
+        RuntimeException.class,
+        () -> {
           autoScalerConfig.put("taskCountStart", 0); // < min task count
           mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class);
-        }, "taskCountMin <= taskCountStart <= taskCountMax"
+        },
+        "taskCountMin <= taskCountStart <= taskCountMax"
     );
   }
 

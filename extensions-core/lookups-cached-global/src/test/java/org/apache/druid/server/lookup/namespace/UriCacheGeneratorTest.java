@@ -25,8 +25,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
@@ -301,7 +301,7 @@ public class UriCacheGeneratorTest
 
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{0}")
-  public void simpleTest(String suffix,Function<File, OutputStream> outStreamSupplier,Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws InterruptedException
+  public void simpleTest(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws InterruptedException
   {
     initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     Assertions.assertEquals(0, scheduler.getActiveEntries());
@@ -314,7 +314,7 @@ public class UriCacheGeneratorTest
 
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{0}")
-  public void simpleTestRegex(String suffix,Function<File, OutputStream> outStreamSupplier,Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws InterruptedException
+  public void simpleTestRegex(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws InterruptedException
   {
     initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
@@ -336,7 +336,7 @@ public class UriCacheGeneratorTest
 
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{0}")
-  public void simplePileONamespacesTest(String suffix,Function<File, OutputStream> outStreamSupplier,Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws InterruptedException
+  public void simplePileONamespacesTest(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws InterruptedException
   {
     initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     final int size = 128;
@@ -369,7 +369,7 @@ public class UriCacheGeneratorTest
 
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{0}")
-  public void testLoadOnlyOnce(String suffix,Function<File, OutputStream> outStreamSupplier,Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws Exception
+  public void testLoadOnlyOnce(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws Exception
   {
     initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     Assertions.assertEquals(0, scheduler.getActiveEntries());
@@ -388,7 +388,7 @@ public class UriCacheGeneratorTest
 
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{0}")
-  public void testMissing(String suffix,Function<File, OutputStream> outStreamSupplier,Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
+  public void testMissing(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
   {
     initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     assertThrows(FileNotFoundException.class, () -> {
@@ -407,7 +407,7 @@ public class UriCacheGeneratorTest
 
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{0}")
-  public void testMissingRegex(String suffix,Function<File, OutputStream> outStreamSupplier,Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
+  public void testMissingRegex(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
   {
     initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     assertThrows(FileNotFoundException.class, () -> {
@@ -427,7 +427,7 @@ public class UriCacheGeneratorTest
 
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{0}")
-  public void testExceptionalCreationDoubleURI(String suffix,Function<File, OutputStream> outStreamSupplier,Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
+  public void testExceptionalCreationDoubleURI(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
   {
     initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     assertThrows(IAE.class, () -> {
@@ -445,7 +445,7 @@ public class UriCacheGeneratorTest
 
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{0}")
-  public void testExceptionalCreationURIWithPattern(String suffix,Function<File, OutputStream> outStreamSupplier,Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
+  public void testExceptionalCreationURIWithPattern(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
   {
     initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     assertThrows(IAE.class, () -> {
@@ -463,7 +463,7 @@ public class UriCacheGeneratorTest
 
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{0}")
-  public void testExceptionalCreationURIWithLegacyPattern(String suffix,Function<File, OutputStream> outStreamSupplier,Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
+  public void testExceptionalCreationURIWithLegacyPattern(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
   {
     initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     assertThrows(IAE.class, () -> {
@@ -481,7 +481,7 @@ public class UriCacheGeneratorTest
 
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{0}")
-  public void testLegacyMix(String suffix,Function<File, OutputStream> outStreamSupplier,Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
+  public void testLegacyMix(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
   {
     initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     assertThrows(IAE.class, () -> {
@@ -499,7 +499,7 @@ public class UriCacheGeneratorTest
 
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{0}")
-  public void testBadPattern(String suffix,Function<File, OutputStream> outStreamSupplier,Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
+  public void testBadPattern(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator)
   {
     initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     assertThrows(IAE.class, () -> {
@@ -517,7 +517,7 @@ public class UriCacheGeneratorTest
 
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{0}")
-  public void testWeirdSchemaOnExactURI(String suffix,Function<File, OutputStream> outStreamSupplier,Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws Exception
+  public void testWeirdSchemaOnExactURI(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws Exception
   {
     initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     final UriExtractionNamespace extractionNamespace = new UriExtractionNamespace(
@@ -543,7 +543,7 @@ public class UriCacheGeneratorTest
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{0}")
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
-  public void testDeleteOnScheduleFail(String suffix,Function<File, OutputStream> outStreamSupplier,Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws Exception
+  public void testDeleteOnScheduleFail(String suffix, Function<File, OutputStream> outStreamSupplier, Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator) throws Exception
   {
     initUriCacheGeneratorTest(suffix, outStreamSupplier, cacheManagerCreator);
     Assertions.assertNull(scheduler.scheduleAndWait(
@@ -565,7 +565,8 @@ public class UriCacheGeneratorTest
     Assertions.assertEquals(0, scheduler.getActiveEntries());
   }
 
-  private static File newFolder(File root, String... subDirs) throws IOException {
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
     String subFolder = String.join("/", subDirs);
     File result = new File(root, subFolder);
     FileUtils.mkdirp(result);

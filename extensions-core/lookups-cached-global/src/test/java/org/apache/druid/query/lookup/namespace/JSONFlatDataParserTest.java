@@ -165,7 +165,8 @@ public class JSONFlatDataParserTest
   }
 
   @Test
-  public void testFailParseOnKeyMissing() {
+  public void testFailParseOnKeyMissing()
+  {
     Throwable exception = assertThrows(NullPointerException.class, () -> {
       final UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
           MAPPER,

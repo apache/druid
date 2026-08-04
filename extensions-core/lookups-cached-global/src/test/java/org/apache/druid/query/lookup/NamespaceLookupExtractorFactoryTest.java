@@ -560,7 +560,8 @@ public class NamespaceLookupExtractorFactoryTest
     verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
-  private static File newFolder(File root, String... subDirs) throws IOException {
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
     String subFolder = String.join("/", subDirs);
     File result = new File(root, subFolder);
     FileUtils.mkdirp(result);
