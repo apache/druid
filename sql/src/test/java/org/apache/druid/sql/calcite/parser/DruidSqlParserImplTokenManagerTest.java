@@ -24,8 +24,8 @@ import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.StringReader;
 
@@ -68,7 +68,7 @@ public class DruidSqlParserImplTokenManagerTest
       );
       assertNextToken(tokenManager, DruidSqlParserImplConstants.IDENTIFIER, DruidSqlParserImplConstants.BQID);
       assertNextToken(tokenManager, DruidSqlParserImplConstants.EOF, DruidSqlParserImplConstants.BQID);
-      Assert.assertTrue(tokenManager.lexicalStateStack.isEmpty());
+      Assertions.assertTrue(tokenManager.lexicalStateStack.isEmpty());
     }
   }
 
@@ -90,7 +90,7 @@ public class DruidSqlParserImplTokenManagerTest
       assertNextToken(tokenManager, DruidSqlParserImplConstants.FROM, DruidSqlParserImplConstants.BQHID);
       assertNextToken(tokenManager, tokenKinds[i], DruidSqlParserImplConstants.BQID);
       assertNextToken(tokenManager, DruidSqlParserImplConstants.IDENTIFIER, DruidSqlParserImplConstants.BQID);
-      Assert.assertTrue(tokenManager.lexicalStateStack.isEmpty());
+      Assertions.assertTrue(tokenManager.lexicalStateStack.isEmpty());
     }
   }
 
@@ -108,9 +108,9 @@ public class DruidSqlParserImplTokenManagerTest
         DruidSqlParserImplConstants.BQID
     );
 
-    Assert.assertNotNull(tableName.specialToken);
-    Assert.assertEquals(DruidSqlParserImplConstants.MULTI_LINE_COMMENT, tableName.specialToken.kind);
-    Assert.assertTrue(tokenManager.lexicalStateStack.isEmpty());
+    Assertions.assertNotNull(tableName.specialToken);
+    Assertions.assertEquals(DruidSqlParserImplConstants.MULTI_LINE_COMMENT, tableName.specialToken.kind);
+    Assertions.assertTrue(tokenManager.lexicalStateStack.isEmpty());
   }
 
   @Test
@@ -119,7 +119,7 @@ public class DruidSqlParserImplTokenManagerTest
     final SqlParser.Config parserConfig = DruidSqlParser.PARSER_CONFIG.withQuoting(Quoting.BACK_TICK_BACKSLASH);
     final SqlSelect select = (SqlSelect) SqlParser.create("SELECT * FROM foo-bar", parserConfig).parseStmt();
 
-    Assert.assertEquals("foo-bar", ((SqlIdentifier) select.getFrom()).getSimple());
+    Assertions.assertEquals("foo-bar", ((SqlIdentifier) select.getFrom()).getSimple());
   }
 
   private static DruidSqlParserImplTokenManager createBigQueryTokenManager(final String input)
@@ -137,8 +137,8 @@ public class DruidSqlParserImplTokenManagerTest
   )
   {
     final Token token = tokenManager.getNextToken();
-    Assert.assertEquals(expectedKind, token.kind);
-    Assert.assertEquals(expectedLexicalState, tokenManager.curLexState);
+    Assertions.assertEquals(expectedKind, token.kind);
+    Assertions.assertEquals(expectedLexicalState, tokenManager.curLexState);
     return token;
   }
 }
